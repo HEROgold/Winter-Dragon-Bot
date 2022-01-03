@@ -1,0 +1,8 @@
+discord.py
+logging
+random
+re
+asyncio
+datetime
+easydev
+colormap

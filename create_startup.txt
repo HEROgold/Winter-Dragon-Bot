@@ -1,0 +1,11 @@
+To create silent startup for this bot:
+
+Rename Main.py to Main.pyw
+
+Or to Create startup with console:
+
+Win + R:
+	type: shell:startup
+	Then: Press Enter
+
+Create shurtcut from main.py(w)	to the shell:startup folder.
