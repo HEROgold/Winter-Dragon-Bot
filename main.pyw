@@ -63,4 +63,4 @@ async def _restart(ctx, extension= None):
         await ctx.send("You are not allowed to use this command.")
 
 #run the bot!
-bot.run("NzQyNzc3NTk2NzM0OTk2NTgy.XzLDiw.MwccdvHGJkp85TDsRmoEXDBEoiY")
+bot.run(mainconfig.token)
