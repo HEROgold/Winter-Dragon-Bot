@@ -13,7 +13,7 @@ class RPG_Setup(commands.Cog):
         else:
             print("RPG Json Loaded.")
 
-    @commands.command()
+    @commands.command(brief="WIP", description="Work in Progress Setup command for RPG optional experience.")
     async def Setup(self, ctx):
         data = await get_data()
         if not ctx.author.id in data:

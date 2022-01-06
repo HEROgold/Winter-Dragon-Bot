@@ -15,7 +15,7 @@ class Stats(commands.Cog):
     #@commands.Cog.listener()
     #EVENt LISTENER EXAPLE!
 
-    @commands.command() # show some guild/server stats
+    @commands.command(brief="WIP", description="Work in progress command to show server stats.") # show some guild/server stats
     @commands.has_permissions(manage_channels=True)
     async def stats(self, ctx):
         guild = ctx.guild

@@ -15,7 +15,7 @@ class Uno(commands.Cog):
     #@commands.Cog.listener()
     #EVENt LISTENER EXAPLE!
 
-    @commands.command()
+    @commands.command(brief="WIP", description="WIP")
     async def Uno(self, ctx):
         red = (255,0,0)
         green =(0,255,0)

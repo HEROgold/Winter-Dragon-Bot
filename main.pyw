@@ -16,7 +16,7 @@ intents.members, intents.presences = True, True
 
 client = discord.Client()
 bot = commands.Bot(intents=intents, command_prefix=commands.when_mentioned_or(mainconfig.prefix), case_insensitive=True)
-bot.remove_command("help")
+#bot.remove_command("help")
 
 @bot.event
 async def on_ready(): # logged in?

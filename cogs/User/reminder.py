@@ -13,7 +13,7 @@ class Reminder(commands.Cog):
         self.bot = bot
 
     #lots of time converters inside command, then send message and wait the needed time to remind the user.
-    @commands.command(aliases=("remind","remember"), pass_context=True)
+    @commands.command(aliases=("remind","remember"), pass_context=True, brief="Usage: reminder (time) (message)", description="Set a reminder for yourself!, Time may end with s, h, d, m for seconds, hours, days, months.")
     async def reminder(self, ctx, time, *, reminder=None):
         print(time)
         print(reminder)

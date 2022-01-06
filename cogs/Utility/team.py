@@ -5,9 +5,9 @@ class Team(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True)
-    async def team(self, ctx, amount:int, *, ctxcont:str):
-        names = ctxcont.split()
+    @commands.command(pass_context=True, brief="Usage: Team (X) (name1) (name2)...", description="Use the team command to create an X number of teams and fill them evenly with all provided names or mentioned users.")
+    async def team(self, ctx, amount:int, *, user_names:str):
+        names = user_names.split()
         length = len(names)
         random.shuffle(names)
         divide = length // amount

@@ -78,7 +78,7 @@ class Poll(commands.Cog):
 
 
     @commands.has_permissions(mention_everyone=True) # the command to initiate the voting.
-    @commands.command(aliases=("vote","voting"), pass_context=True)
+    @commands.command(aliases=("vote","voting"), pass_context=True, brief="Usage: poll {question} [anwser1] [answer2]), {} and [] necessary", description="Use this command to create a poll, (Only works with custom emoji's.)")
     async def poll(self, ctx):
         data = await get_data()
         i = 0
