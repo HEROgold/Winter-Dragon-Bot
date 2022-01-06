@@ -1,28 +1,36 @@
-import discord
+import discord, math, random
 from discord.ext import commands
-
-import discord, random
 
 class Team(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    #@commands.Cog.listener()
-    #EVENt LISTENER EXAPLE!
+    @commands.command(pass_context=True)
+    async def team(self, ctx, amount:int, *, ctxcont:str):
+        names = ctxcont.split()
+        length = len(names)
+        random.shuffle(names)
+        divide = length // amount
+        modulo = length % amount
+        d = {}
+        em = discord.Embed(title="Teams List!", colour=(random.randint(0,16777215)))
+        print(f"modulo {modulo} , divide {divide}")
+        if (math.floor(divide)) <= 0:
+            await ctx.send(f"Not enough Users to fill all teams! got {length} users to fill {amount} teams.")
+        else:
+            for i in range(0, amount):
+                d[i] = {}
+                for x in range(0, math.ceil(divide)):
+                    d[i][x] = names.pop()
+            for i in range(0, math.ceil(modulo)):
+                d[i][x+1] = names.pop()
+            for k,v in d.items():
+                namelist = []
+                for i in v.values():
+                    namelist.append(str(i))
+                em.add_field(name=(f"TEAM {k+1}"), value=namelist)
 
-    @commands.command(pass_context=True) #Clear X ammount of message in channel
-    async def team(self, ctx, *, ctxcont:str):
-        words = ctxcont.split()
-        random.shuffle(words)
-        lenght = len(words)
-        splitwords = lenght//2
-        listA = words[:splitwords]
-        listB = words[splitwords:]
-        print(listA)
-        em = discord.Embed()
-        em.add_field(name="TEAM A", value=listA)
-        em.add_field(name="TEAM B", value=listB)
-        await ctx.send(embed = em)
+            await ctx.send(embed = em)
 
 def setup(bot):
 	bot.add_cog(Team(bot))
