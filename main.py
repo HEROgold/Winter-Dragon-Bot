@@ -68,5 +68,21 @@ async def _restart(ctx, extension= None):
     else:
         await ctx.send("You are not allowed to use this command.")
 
+@bot.command()
+async def unload(ctx, extension= None):
+    if ctx.message.author.id == 216308400336797706:
+        if extension == None:
+            await ctx.send("Please provide a cog to unload.")
+        else:
+            try:
+                bot.unload_extension(extension)
+            except:
+                print(f"unable to reload {extension}")
+                await ctx.send("Unable to reload")
+            print(f"Unloaded {extension}")
+            await ctx.send(f"Unloaded {extension}")
+    else:
+        await ctx.send("You are not allowed to use this command.")
+
 #run the bot!
 bot.run("NzQyNzc3NTk2NzM0OTk2NTgy.XzLDiw.MwccdvHGJkp85TDsRmoEXDBEoiY")
