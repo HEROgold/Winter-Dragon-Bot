@@ -15,16 +15,16 @@ class Uno(commands.Cog):
     #@commands.Cog.listener()
     #EVENt LISTENER EXAPLE!
 
-    @commands.command()
+    @commands.command(brief="WIP", description="WIP")
     async def Uno(self, ctx):
         red = (255,0,0)
         green =(0,255,0)
         blue = (0,0,255)
         yellow = (255,255,0)
         P1, P2, P3, P4 = "1234"
-        player_emojis = (916396145901711421, 916396145918496809, 916396145503244409, 916396146472124456) # Temp usage of Id's!
+        player_emojis = (916396145901711421, 916396145918496809, 916396145503244409, 916396146472124456) # Temp usage of Id's! > Change to create custom emoji's and save those in DB per server/user.
         colours = [red, green, yellow, blue]
-        game_id = random.randrange(0,99999)
+        game_id = random.randrange(0,99999) # TEMP change and use this for DB acces.
         r,g,b = random.choice(colours)
 
         emb = discord.Embed(title=f"Uno Game#{game_id}", description="Join this uno game and try to beat your friends!", color=discord.Color.from_rgb(r,g,b))
@@ -36,18 +36,23 @@ class Uno(commands.Cog):
         send_embed = await ctx.send(embed=emb)
         await ctx.message.delete()
 
-        #data = await get_data()
-        #data[ctx.guild.id] = {}
-        #if not ("emoji_setup", "True" in data.items()):
-        #data[ctx.guild.id]["emoji_setup"] = True
-        #Blue = await ctx.guild.create_custom_emoji(name="Blue_Card", image=".\\cogs/Games/Uno/Uno_Blue")
-        #Red = await ctx.guild.create_custom_emoji(name="Red_Card", image=".\\cogs/Games/Uno/Uno_Red.png")
-        #Green = await ctx.guild.create_custom_emoji(name="Green_Card", image=".\\cogs/Games/Uno/Uno_Green.png")
-        #Yellow = await ctx.guild.create_custom_emoji(name="Yellow_Card", image=".\\cogs/Games/Uno/Uno_Yellow.png")
-        #await set_data(data)
-
         for i in player_emojis:
             await send_embed.add_reaction(ctx.bot.get_emoji(i))
+
+@commands.Cog.listener() #on reaction added to message check if already reacted, then remove reaction if already reacted.
+async def on_raw_reaction_add(self, ctx):
+    id = ctx.message_id
+    member = ctx.user
+    if not member.bot:
+            if member.id in get_data():
+                await message.remove_reaction(emoji, member)
+                dm = await member.create_dm()
+                await dm.send("Your second reaction has been removed.\n You may only join once!")
+            else:
+                users.append(member.id)
+                print(f"{member.id} added to the uno list {users}")
+    else:
+        print(f"{member} is a Bot, Cannot add to the uno list")
 
 async def get_data():
     with open('.\\Database/Uno.json', 'r') as f:
