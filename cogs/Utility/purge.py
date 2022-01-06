@@ -10,7 +10,7 @@ class Purge(commands.Cog):
 
     @commands.command(aliases=("clean","delete"), pass_context=True) #Clear X ammount of message in channel
     @commands.has_permissions(manage_messages=True)
-    async def purge(self, ctx, count=10):
+    async def purge(self, ctx, count):
         if count == -1:
             await ctx.channel.purge()
             confirm = await ctx.send("{} Killed {} Messages.".format(ctx.author.mention, count))
