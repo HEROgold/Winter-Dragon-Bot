@@ -5,14 +5,41 @@ from random import *
 import re
 import datetime
 import emoji
-import json
+import sqlite3
 import os
 
 class Poll(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    users = []
+        conn = sqlite3.connect("./Database/Poll.db")
+        c = conn.cursor()
+        try:
+            c.execute("""CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id int
+            )""")
+        except Exception as i:
+            print(f"\n\nMESSAGS\n{i}\n\n")
+        try:
+            c.execute("""CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id int
+            )""")
+        except Exception as i:
+            print(f"\n\n USERS\n{i}\n\n")
+        try:
+            c.execute("""CREATE TABLE reactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id INTEGER,
+            user_id INTEGER,
+            FOREIGN KEY (message_id) REFERENCES messages(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+            )""")
+        except Exception as i:
+            print(f"\n\n REACTIONS\n{i}\n\n")
+        self.c = c
+        self.conn = conn
 
     def find_message(self, ctx):
            # this is the index of the first character of the title
@@ -43,44 +70,43 @@ class Poll(commands.Cog):
 
     @commands.Cog.listener() #on reaction added to message check if already reacted, then remove reaction if already reacted.
     async def on_raw_reaction_add(self, payload):
-        data = await get_data()
-        if payload.message_id in data:
+        if c.execute(f"SELECT * FROM messages WHERE message_id={payload.message_id}" != None):
             channel = await self.bot.fetch_channel(payload.channel_id)
             emoji = payload.emoji
             message = await channel.fetch_message(payload.message_id)
             guild = await self.bot.fetch_guild(payload.guild_id)
             member = await self.bot.fetch_user(payload.user_id)
-            users = self.users
             if not member.bot:
-                if member.id in users:
+                if c.execute(f"SELECT * FROM reactions WHERE message_id={payload.message_id}, user_id={payload.user_id}" != None):
                     await message.remove_reaction(emoji, member)
                     dm = await member.create_dm()
                     await dm.send("Your second reaction has been removed from the vote.\n To vote for something else, remove your previous reaction!")
                 else:
-                    users.append(member.id)
+                    c.execute(f"INSERT INTO users VALUES {payload.user_id}")
                     print(f"{member.id} added to the poll list {users}")
             else:
-                print(f"{member} is a Bot, Cannot add to the poll listlist")
+                print(f"{member} is a Bot, Cannot add to the poll list")
+        else:
+            print(f"Message id {payload.message_id} not in database")
+        conn.commit()
+        conn.close()
 
     @commands.Cog.listener() #if 1st reaction removed, allow user to react again.
     async def on_raw_reaction_remove(self, payload):
-        data = await get_data()
-        if payload.message_id in data:
+        if c.execute(f"SELECT * FROM messages WHERE message_id={payload.message_id}" != None):
             guild = await self.bot.fetch_guild(payload.guild_id)
             member = await self.bot.fetch_user(payload.user_id)
-            print("reaction removed")
-            users = self.users
-            if member.id in users:
-                users.remove(member.id)
-                print(f"{member.id} removed from poll list {users}")
+            if c.execute(f"SELECT * FROM messagse WHERE message_id={payload.message_id}" == member.id):
+                c.execute(f"DELETE FROM messages WHERE message_id={payload.message_id}")
+                print(f"{member.id} removed from poll list {users} from {payload.message_id}")
             else:
-                print(f"{member.id} is not in poll list {users}")
-
+                print(f"{member.id} is not in poll list {payload.message_id}")
+        conn.commit()
+        conn.close()
 
     @commands.has_permissions(mention_everyone=True) # the command to initiate the voting.
     @commands.command(aliases=("vote","voting"), pass_context=True, brief="Usage: poll {question} [anwser1] [answer2]), {} and [] necessary", description="Use this command to create a poll, (Only works with custom emoji's.)")
     async def poll(self, ctx):
-        data = await get_data()
         i = 0
         message = self.find_message(ctx.message.clean_content)
         option = self.find_options(ctx.message.clean_content, [])
@@ -98,7 +124,10 @@ class Poll(commands.Cog):
 
         for emoji in emojis:
             await send_embed.add_reaction(emoji)
-            print(f"{emoji} emoji added")
+            print(f"{emoji} emoji added to {ctx.message.id}")
+        c.execute(f"INSERT INTO messages VALUES {ctx.message.id}")
+        conn.commit()
+        conn.close()
         await ctx.message.delete()
 
 def setup(bot):

@@ -6,7 +6,8 @@ class Uno(commands.Cog):
         self.bot = bot
         if not os.path.exists('./Database/Uno.json'):
             with open(".\\Database/Uno.json", "w") as f:
-                json.dump("{}", f)
+                data = {}
+                json.dump(data, f)
                 f.close
                 print("Uno Json Created.")
         else:

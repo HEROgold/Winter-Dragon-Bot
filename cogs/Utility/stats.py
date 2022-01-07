@@ -6,7 +6,8 @@ class Stats(commands.Cog):
         self.bot = bot
         if not os.path.exists('./Database/Stats.json'):
             with open("./Database/Stats.json", "w") as f:
-                json.dump("{}", f)
+                data = {}
+                json.dump(data, f)
                 f.close
                 print("Stats Json Created.")
         else:
