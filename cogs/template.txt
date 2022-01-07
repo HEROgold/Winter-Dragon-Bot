@@ -8,7 +8,7 @@ class NAME(commands.Cog):
     #@commands.Cog.listener()
     #EVENt LISTENER EXAPLE!
 
-    @commands.command()
+    @commands.command(brief="WIP", description="WIP")
     async def COMMAND_NAME(self, ctx):
         print("HI")
 
