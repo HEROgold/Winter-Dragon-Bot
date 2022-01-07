@@ -13,10 +13,10 @@ class Purge(commands.Cog):
     async def purge(self, ctx, count:int):
         if count == -1:
             await ctx.channel.purge()
-            confirm = await ctx.send("{} Killed {} Messages.".format(ctx.author.mention, count))
+            await ctx.send("{} Killed {} Messages.".format(ctx.author.mention, count))
         else:
             await ctx.channel.purge(limit=count)
-            confirm = await ctx.send("{} Killed {} Messages.".format(ctx.author.mention, count))
+            await ctx.send("{} Killed {} Messages.".format(ctx.author.mention, count))
 
 def setup(bot):
 	bot.add_cog(Purge(bot))
