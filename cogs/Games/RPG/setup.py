@@ -7,8 +7,10 @@ class RPG_Setup(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         if not os.path.exists('./Database/RPG.json'):
-            with open("./Database/RPG.json", "w") as fdb:
-                fdb.close
+            with open("./Database/RPG.json", "w") as f:
+                data = {}
+                json.dump(data, f)
+                f.close
                 print("RPG Json Created.")
         else:
             print("RPG Json Loaded.")
