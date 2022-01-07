@@ -8,12 +8,14 @@ class Error(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         print(self, error, ctx)
+        dm = await ctx.message.author.create_dm()
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send("Missing a required argument, use the Help command for more information.")
         if isinstance(error, commands.BotMissingPermissions):
             await ctx.send("I do not have enough permissions to use this command!")
         if isinstance(error, commands.CommandNotFound):
-            await ctx.send(error)
+            await ctx.messagedelete()
+            await dm.send(error)
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("You do not have enough permission to use this command.")
         if isinstance(error, commands.TooManyArguments):
@@ -22,7 +24,6 @@ class Error(commands.Cog):
             await ctx.send("This command may only be used in a private messages.")
         if isinstance(error, commands.NoPrivateMessage):
             await ctx.send("This command does not work in private messages.")
-
 def setup(bot):
 	bot.add_cog(Error(bot))
 
@@ -31,7 +32,6 @@ def setup(bot):
 #    'CommandNotFound',
 #    'DisabledCommand',
 #    'CommandInvokeError',
-#    'TooManyArguments',
 #    'UserInputError',
 #    'CommandOnCooldown',
 #    'MaxConcurrencyReached',
