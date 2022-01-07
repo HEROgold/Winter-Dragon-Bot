@@ -45,7 +45,7 @@ class Reminder(commands.Cog):
         else:
             await dm.send(f"I will remind you about {reminder} in {counter}.")
             await asyncio.sleep(seconds)
-            await dm.send(f"Hi, you asked me to remind you about {reminder} {counter} ago.")
+            await dm.send(f"Hi, you asked me to remind you about {reminder}, {counter} ago.")
             return
         
         await dm.send(embed=embed)
