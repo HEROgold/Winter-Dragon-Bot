@@ -1,6 +1,3 @@
-GENERAL
-	Add more config options
-
 TIMER COG
 	Add timer to poll
 	LINK poll command and message id to function to remove emoji's. IT works on ALL emoji addes by bot.
