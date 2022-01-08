@@ -43,7 +43,7 @@ for root, subdirs, files in os.walk("cogs"): #load all needed cogs/classes/comma
         else:
             print(f"Unable to load {file}, it is not a .py file.")
 if not (os.listdir("./cogs")):
-    print("No Cogs To Load!")
+    print("No Cogs Directory To Load!")
 
 @bot.command()
 async def show_cogs(ctx):

@@ -14,7 +14,7 @@ class Error(commands.Cog):
         if isinstance(error, commands.BotMissingPermissions):
             await ctx.send("I do not have enough permissions to use this command!")
         if isinstance(error, commands.CommandNotFound):
-            await ctx.messagedelete()
+            await ctx.message.delete()
             await dm.send(error)
         if isinstance(error, commands.MissingPermissions):
             await ctx.send("You do not have enough permission to use this command.")
