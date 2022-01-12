@@ -65,13 +65,15 @@ async def _restart(ctx, extension=None):
                 for file in files:
                     if file.endswith(".py"):
                         extension = os.path.join(root, file[:-3]).replace("\\", ".")
+                        extensions = []
                         try:
                             bot.reload_extension(extension)
+                            extensions.append(extension)
                         except:
                             print({0})
                             pass
                         print(f"Reloaded {extension}")
-                        await ctx.send(f"Reloaded {extension}")
+                    await ctx.send(f"Reloaded {extensions}")
             await ctx.send(f"Restarted.")
         else:
             try:
