@@ -23,7 +23,7 @@ async def on_ready(): # logged in?
     bot_username = await bot.user.edit(username="Winter Dragon")
     if config.show_logged_in == True:
         print(f"Username changed to {bot_username}")
-        print('Logged on as {bot.user}!')
+        print(f'Logged on as {bot.user}!')
 
 @bot.event
 async def on_message(ctx): # simple chat logger
