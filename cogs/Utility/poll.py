@@ -2,6 +2,7 @@ import discord, re , datetime, emoji, json, os, asyncio
 from discord.ext import commands
 import discord.utils
 from random import *
+from config import poll as config
 
 class Poll(commands.Cog):
     def __init__(self, bot):
@@ -103,6 +104,8 @@ class Poll(commands.Cog):
     async def poll(self, ctx, time="0d"):
         data = self.get_data()
         i = 0
+        if config.time != "0d" and time != "0d":
+            time = config.time
         seconds = 0
         message = self.find_message(ctx.message.clean_content)
         option = self.find_options(ctx.message.clean_content, [])

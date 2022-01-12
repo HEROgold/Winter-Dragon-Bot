@@ -3,14 +3,14 @@ from discord.ext import commands
 import asyncio
 import datetime
 import random
-from config import reminder
+from config import reminder as config
 
 class Reminder(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     #lots of time converters inside command, then send message and wait the needed time to remind the user.
-    @commands.command(aliases=("remind","remember"), pass_context=True, brief="Usage: reminder (time) (message)", description="Set a reminder for yourself!, Time may end with s, h, d, m for seconds, hours, days, months.")
+    @commands.command(aliases=("remind","remember"), pass_context=True, brief="Usage: reminder (time) (message)", description="Set a reminder for yourself!, Time must end with s, h, d, m for seconds, hours, days, months.")
     async def reminder(self, ctx, time, *, reminder=None):
         print(time)
         print(reminder)
@@ -36,9 +36,9 @@ class Reminder(commands.Cog):
             embed.add_field(name='Warning', value='Please specify a proper duration, example: remind 5d give cactus water')
         elif seconds < 60:
             embed.add_field(name='Warning',
-                            value='You have specified a too short duration!\nMinimum duration is {reminderconfig.min_duration} minute(ss).')
+                            value='You have specified a too short duration!\nMinimum duration is {config.min_duration} minute(ss).')
         elif seconds > 31556926:
-            embed.add_field(name='Warning', value='You have specified a too long duration!\nMaximum duration is {reminderconfig.max_duration} days(s).')
+            embed.add_field(name='Warning', value='You have specified a too long duration!\nMaximum duration is {config.max_duration} days(s).')
         else:
             await dm.send(f"I will remind you about {reminder} in {counter}.")
             await asyncio.sleep(seconds)
