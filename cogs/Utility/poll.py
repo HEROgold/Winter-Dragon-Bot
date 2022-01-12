@@ -100,9 +100,10 @@ class Poll(commands.Cog):
 
     @commands.has_permissions(mention_everyone=True) # the command to initiate the voting.
     @commands.command(aliases=("vote","voting"), pass_context=True, brief="Usage: poll {question} [anwser1] [answer2]), {} and [] necessary", description="Use this command to create a poll, (Only works with custom emoji's.)")
-    async def poll(self, ctx):
+    async def poll(self, ctx, time="0d"):
         data = self.get_data()
         i = 0
+        seconds = 0
         message = self.find_message(ctx.message.clean_content)
         option = self.find_options(ctx.message.clean_content, [])
         emojis = self.find_emoji(ctx)
@@ -114,12 +115,28 @@ class Poll(commands.Cog):
         for choice, emoji in zip(option, emojis):
             i += 1
             emb.add_field(name=f"Option {i}", value=choice, inline=True)
-
+            print(f"{emoji} emoji added")
+        if time.lower().endswith("d"):
+            seconds += int(time[:-1]) * 60 * 60 * 24
+            counter = f"{seconds // 60 // 60 // 24} days"
+        if time.lower().endswith("h"):
+            seconds += int(time[:-1]) * 60 * 60
+            counter = f"{seconds // 60 // 60} hours"
+        elif time.lower().endswith("m"):
+            seconds += int(time[:-1]) * 60
+            counter = f"{seconds // 60} minutes"
+        elif time.lower().endswith("s"):
+            seconds += int(time[:-1])
+            counter = f"{seconds} seconds"
+        if seconds == 0:
+            pass
+        elif seconds != 0:
+            date = (datetime.datetime.now() + datetime.timedelta(seconds=seconds)).timestamp()
+            epoch = int(date)
         send_embed = await ctx.send(embed=emb)
-
+        await ctx.send(f"<t:{epoch}:R>")
         for emoji in emojis:
             await send_embed.add_reaction(emoji)
-            print(f"{emoji} emoji added")
         await ctx.message.delete()
         data[send_embed.id] = {}
         self.set_data(data)
