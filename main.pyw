@@ -43,7 +43,7 @@ for root, subdirs, files in os.walk("cogs"): #load all needed cogs/classes/comma
         else:
             print(f"Unable to load {file}, it is not a .py file.")
 if not (os.listdir("./cogs")):
-    print("No Cogs To Load!")
+    print("No Cogs Directory To Load!")
 
 @bot.command()
 async def show_cogs(ctx):
@@ -59,7 +59,7 @@ async def show_cogs(ctx):
 
 @bot.command(aliases=["reload", "restart"]) # reload all available cogs.
 async def _restart(ctx, extension=None):
-    if ctx.message.author.id == 216308400336797706:
+    if ctx.message.author.id == mainconfig.owner_id:
         if extension == None:
             for root, subdirs, files in os.walk("cogs"):
                 for file in files:
@@ -85,7 +85,7 @@ async def _restart(ctx, extension=None):
 
 @bot.command()
 async def unload(ctx, extension=None): # unload specific cog
-    if ctx.message.author.id == 216308400336797706:
+    if ctx.message.author.id == mainconfig.owner_id:
         if extension == None:
             await ctx.send("Please provide a cog to unload.")
         else:
@@ -101,7 +101,7 @@ async def unload(ctx, extension=None): # unload specific cog
 
 @bot.command()
 async def load(ctx, extension=None): # Load specific Cog
-    if ctx.message.author.id == 216308400336797706:
+    if ctx.message.author.id == mainconfig.owner_id:
         if extension == None:
             await ctx.send("Please provide a cog to load.")
         else:

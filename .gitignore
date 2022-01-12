@@ -13,8 +13,6 @@
 # user defined ignores.
 *.png
 mainconfig.py
-*.db
-*.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

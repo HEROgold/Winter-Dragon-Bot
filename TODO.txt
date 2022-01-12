@@ -2,17 +2,9 @@ TIMER COG
 	Add timer to poll
 	LINK poll command and message id to function to remove emoji's. IT works on ALL emoji addes by bot.
 
+STATS COG
+	Bug in update timer text, hangs for a while.
+
 CREATE BAN SYSTEM COG
 	Create role based ban system, save current user roll to database, after ban timer give back roles and remove ban.
 	Import DateTime
-
-UPDATE CHANNEL COG
-	Combine Twitter API for League updates
-
-UNO COG
-	FIX POLL COG REACTION
-
-
-CREATE MESSAGE STORAGE COG
-	Database to store messages, edited messages and deleted messages in.
-	Username, UserID and the content of message.
