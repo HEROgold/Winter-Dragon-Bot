@@ -2,9 +2,9 @@ import discord
 from discord.ext import commands
 import logging
 import os
-import mainconfig
+from config import main as config
 
-# We make use of a config file, change values in mainconfig.py.
+# We make use of a config file, change values in config.py.
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -15,19 +15,19 @@ intents = discord.Intents.default()
 intents.members, intents.presences = True, True
 
 client = discord.Client()
-bot = commands.Bot(intents=intents, command_prefix=commands.when_mentioned_or(mainconfig.prefix), case_insensitive=True)
+bot = commands.Bot(intents=intents, command_prefix=commands.when_mentioned_or(config.prefix), case_insensitive=True)
 #bot.remove_command("help")
 
 @bot.event
 async def on_ready(): # logged in?
     bot_username = await bot.user.edit(username="Winter Dragon")
-    if mainconfig.show_logged_in == True:
-        print(f"Username changed to {0}".format(bot_username))
-        print('Logged on as {0}!'.format(bot.user))
+    if config.show_logged_in == True:
+        print(f"Username changed to {bot_username}")
+        print(f'Logged on as {bot.user}!')
 
 @bot.event
 async def on_message(ctx): # simple chat logger
-    if mainconfig.log_messages == True:
+    if config.log_messages == True:
         print(f'Message from {ctx.author}: {ctx.content}')
     await bot.process_commands(ctx)
 
@@ -59,19 +59,21 @@ async def show_cogs(ctx):
 
 @bot.command(aliases=["reload", "restart"]) # reload all available cogs.
 async def _restart(ctx, extension=None):
-    if ctx.message.author.id == mainconfig.owner_id:
+    if ctx.message.author.id == config.owner_id:
         if extension == None:
             for root, subdirs, files in os.walk("cogs"):
                 for file in files:
                     if file.endswith(".py"):
                         extension = os.path.join(root, file[:-3]).replace("\\", ".")
+                        extensions = []
                         try:
                             bot.reload_extension(extension)
+                            extensions.append(extension)
                         except:
                             print({0})
                             pass
                         print(f"Reloaded {extension}")
-                        await ctx.send(f"Reloaded {extension}")
+                    await ctx.send(f"Reloaded {extensions}")
             await ctx.send(f"Restarted.")
         else:
             try:
@@ -85,7 +87,7 @@ async def _restart(ctx, extension=None):
 
 @bot.command()
 async def unload(ctx, extension=None): # unload specific cog
-    if ctx.message.author.id == mainconfig.owner_id:
+    if ctx.message.author.id == config.owner_id:
         if extension == None:
             await ctx.send("Please provide a cog to unload.")
         else:
@@ -101,7 +103,7 @@ async def unload(ctx, extension=None): # unload specific cog
 
 @bot.command()
 async def load(ctx, extension=None): # Load specific Cog
-    if ctx.message.author.id == mainconfig.owner_id:
+    if ctx.message.author.id == config.owner_id:
         if extension == None:
             await ctx.send("Please provide a cog to load.")
         else:
@@ -116,4 +118,4 @@ async def load(ctx, extension=None): # Load specific Cog
         await ctx.send("You are not allowed to use this command.")
 
 #run the bot!
-bot.run(mainconfig.token)
+bot.run(config.token)

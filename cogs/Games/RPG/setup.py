@@ -15,7 +15,7 @@ class RPG_Setup(commands.Cog):
         else:
             print("RPG Json Loaded.")
 
-    @commands.command(brief="WIP", description="Work in Progress Setup command for RPG optional experience.")
+    @commands.command(brief="WIP", description="Setup command for RPG experience.")
     async def Setup(self, ctx):
         data = await get_data()
         if not ctx.author.id in data:
@@ -26,10 +26,6 @@ class RPG_Setup(commands.Cog):
             data[ctx.author.id]['experience'] = 0
             data[ctx.author.id]['inventory'] = {}
         await set_data(data)
-
-def setup(bot):
-	bot.add_cog(RPG_Setup(bot))
-
 async def get_data():
     with open('.\\Database/RPG.json', 'r') as f:
         gdata = json.load(f)
@@ -38,3 +34,6 @@ async def get_data():
 async def set_data(data):
     with open('.\\Database/RPG.json','w') as f:
          json.dump(data, f)
+
+def setup(bot):
+	bot.add_cog(RPG_Setup(bot))

@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import urbandictionary as ud
+from config import urban as config
 
 class urban(commands.Cog):
     def __init__(self, bot):
@@ -8,15 +9,19 @@ class urban(commands.Cog):
 
     @commands.command(brief="urban (search) | urban random", description="Use the urban random command to get 10 random definitions, use urban (search) to search for a meaning and get its definition.")
     async def urban(self, ctx, *, query):
-        if query == "random":
+        if query == "random" and config.allow_random == True:
+            i = 0
             random = ud.random()
-            print(random)
             emb = discord.Embed(title=f"Dictionary Random")
             emb.set_footer(text="Results are from an API, I am not responsable for results!")
             emb.set_author(name=ctx.author.display_name, icon_url=ctx.author.avatar_url)
             for r in random:
-                emb.add_field(name=r.word, value=r.definition, inline=True)
+                i += 1
+                if i <= config.max_length:
+                    emb.add_field(name=r.word, value=r.definition, inline=True)
             await ctx.send(embed=emb)
+        elif query == "random" and config.allow_random == False:
+            pass
         else:
             defined = ud.define(query)
             if len(defined) > 1:

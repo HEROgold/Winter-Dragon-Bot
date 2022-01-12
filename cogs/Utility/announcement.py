@@ -2,13 +2,11 @@ import discord
 from discord.ext import commands
 import random
 import datetime
+from config import announcement as config
 
 class Announce(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    #@commands.Cog.listener()
-    #EVENt LISTENER EXAPLE!
 
     @commands.has_permissions(mention_everyone=True) # send nice embed message to create an announcement
     @commands.command(aliases=("announcement", "announcey"), pass_context=True, brief="Create an announcement in the current channel, mention everyone.", description="Using this command will ping everyone and put your message in a clean embed!")
@@ -19,9 +17,9 @@ class Announce(commands.Cog):
         emb.timestamp = datetime.datetime.now()
         emb.set_footer(text="Time > ")
         send_embed = await ctx.send(embed=emb)
-        msg = await ctx.send("<@everyone>")
-        print("Announcement made, Pinged everyone")
-        await msg.delete()
+        if config.mention_all == True:
+            msg = await ctx.send("<@everyone>")
+            await msg.delete()
         await ctx.message.delete()
 
 def setup(bot):

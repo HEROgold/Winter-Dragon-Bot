@@ -1,5 +1,6 @@
 ﻿import discord
 from discord.ext import commands
+from config import activity as config
 
 class Activity(commands.Cog):
     def __init__(self, bot):

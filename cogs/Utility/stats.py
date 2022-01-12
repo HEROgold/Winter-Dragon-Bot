@@ -1,6 +1,6 @@
 import discord, os, json, asyncio, datetime
 from discord.ext import commands
-import mainconfig
+#from config import stats as config
 
 class Stats(commands.Cog):
     def __init__(self, bot):
@@ -17,12 +17,12 @@ class Stats(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         while True:
-            await asyncio.sleep(60)# timer to fight ratelimits
             await self.update()
+            await asyncio.sleep(60*5)# timer to fight ratelimits
             
 
     @commands.command()
-    async def stats_reset_global(self, ctx):
+    async def reset_stats(self, ctx):
         if ctx.message.author.id == mainconfig.owner_id:
             data = await get_data()
             for guild in self.bot.guilds:
