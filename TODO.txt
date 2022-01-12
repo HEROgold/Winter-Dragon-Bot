@@ -1,6 +1,3 @@
-STATS COG
-	Bug in update timer text, hangs for a while.
-
 CREATE BAN SYSTEM COG
 	Create role based ban system, save current user roll to database, after ban timer give back roles and remove ban.
 	Import DateTime
