@@ -49,7 +49,7 @@ class Stats(commands.Cog):
                 bot_channel = category["channels"]["bot_channel"]
                 guild_channel = category["channels"]["guild_channel"]
                 time_channel = category["channels"]["time_channel"]
-                await self.bot.get_channel(time_channel).edit(name=(str(time) + " UTC"))
+                #await self.bot.get_channel(time_channel).edit(name=(str(time) + " UTC"))
                 await self.bot.get_channel(online_channel).edit(name=(str(online) + " Online Users"))
                 await self.bot.get_channel(user_channel).edit(name=(str(users) + " Total Users"))
                 await self.bot.get_channel(bot_channel).edit(name=(str(bots) + " Online Bots"))
@@ -72,7 +72,7 @@ class Stats(commands.Cog):
             user_channel = await category.create_voice_channel(name="0 Total Users")
             bot_channel = await category.create_voice_channel(name="0 Total Bots")
             guild_channel = await category.create_voice_channel(name="0 Creation Date")
-            time_channel = await category.create_voice_channel(name="0 UTC")
+            #time_channel = await category.create_voice_channel(name="0 UTC")
 
             data[guild.id] = {}
             data[guild.id][category.id] = {}
@@ -82,7 +82,7 @@ class Stats(commands.Cog):
             data[guild.id][category.id]["channels"]["user_channel"] = user_channel.id
             data[guild.id][category.id]["channels"]["bot_channel"] = bot_channel.id
             data[guild.id][category.id]["channels"]["guild_channel"] = guild_channel.id
-            data[guild.id][category.id]["channels"]["time_channel"] = time_channel.id
+            #data[guild.id][category.id]["channels"]["time_channel"] = time_channel.id
             await ctx.send(f"Stats channels are set up")
         else:
             await ctx.send("Stats channels arleady set up")
