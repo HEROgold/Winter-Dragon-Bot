@@ -24,6 +24,9 @@ class Error(commands.Cog):
             await ctx.send("This command may only be used in a private messages.")
         if isinstance(error, commands.NoPrivateMessage):
             await ctx.send("This command does not work in private messages.")
+        if isinstance(error, discord.HTTPException):
+            print(error)
+            await ctx.send("There is a HTTPException")
 def setup(bot):
 	bot.add_cog(Error(bot))
 
