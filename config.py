@@ -2,8 +2,8 @@ class main:
     prefix = "$"
     show_logged_in = True
     log_messages = True
-    token="NzQyNzc3NTk2NzM0OTk2NTgy.XzLDiw.6OKs5SnBL1tc6xwwCZ1H8N2Z950"
-    owner_id=216308400336797706
+    token="TOKEN"
+    owner_id= YourUserId
 
 class error: # Wether or not to log and message when error is hit.
     ignore_errors               = False
