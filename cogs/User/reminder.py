@@ -3,10 +3,7 @@ from discord.ext import commands
 import asyncio
 import datetime
 import random
-
-class remidnerconfig:
-    min_duration = 1 #This is in minutes
-    max_duration = 1 #This is in years
+from config import reminder
 
 class Reminder(commands.Cog):
     def __init__(self, bot):
@@ -41,7 +38,7 @@ class Reminder(commands.Cog):
             embed.add_field(name='Warning',
                             value='You have specified a too short duration!\nMinimum duration is {reminderconfig.min_duration} minute(ss).')
         elif seconds > 31556926:
-            embed.add_field(name='Warning', value='You have specified a too long duration!\nMaximum duration is {reminderconfig.max_duration} year(s).')
+            embed.add_field(name='Warning', value='You have specified a too long duration!\nMaximum duration is {reminderconfig.max_duration} days(s).')
         else:
             await dm.send(f"I will remind you about {reminder} in {counter}.")
             await asyncio.sleep(seconds)
