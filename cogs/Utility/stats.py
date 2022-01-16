@@ -57,7 +57,7 @@ class Stats(commands.Cog):
 
     @commands.command(brief="Create the Stats category", description="This command will create the Stats category which will show some stats about the server.") # show some guild/server stats
     @commands.has_permissions(manage_channels=True)
-    async def stats(self, ctx, guild=None):
+    async def stats_category(self, ctx, guild=None):
         if guild == None:
             guild = ctx.guild
         overwrite = {
@@ -90,7 +90,7 @@ class Stats(commands.Cog):
 
     @commands.command(brief="Remove the Stats channels", description="This command removes the stat channels from your discord server. This includes the Category as well as all channels in that.") 
     @commands.has_permissions(manage_channels=True)
-    async def remove_stats(self, ctx, guild=None):
+    async def remove_stats_category(self, ctx, guild=None):
         if guild == None:
             guild = ctx.guild
         data = await get_data()
