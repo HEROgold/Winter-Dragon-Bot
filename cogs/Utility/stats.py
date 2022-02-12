@@ -53,7 +53,7 @@ class Stats(commands.Cog):
                 await self.bot.get_channel(online_channel).edit(name=(str(online) + " Online Users"))
                 await self.bot.get_channel(user_channel).edit(name=(str(users) + " Total Users"))
                 await self.bot.get_channel(bot_channel).edit(name=(str(bots) + " Online Bots"))
-                await self.bot.get_channel(guild_channel).edit(name=(str(age) + " Creation Date."))
+                await self.bot.get_channel(guild_channel).edit(name=(str(age) + " Creation Date"))
 
     @commands.command(brief="Create the Stats category", description="This command will create the Stats category which will show some stats about the server.") # show some guild/server stats
     @commands.has_permissions(manage_channels=True)
