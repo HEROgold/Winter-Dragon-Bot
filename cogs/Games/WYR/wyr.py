@@ -1,5 +1,6 @@
 import discord, random, os, json
 from discord.ext import commands
+import config
 
 class Wyr(commands.Cog):
     def __init__(self, bot):
@@ -7,7 +8,14 @@ class Wyr(commands.Cog):
         if not os.path.exists('./Database/WYR.json'): # create json database if it doesnt exist, else load it.
             with open("./Database/WYR.json", "w") as f:
                 data = {}
-                data["id"] = 0
+                data["game_id"] = 0
+                data["questions"] = {}
+                questions = data["questions"]
+                id = 0
+                for question in wyr_questions: # add questions to WYR.json before saving file.
+                        data["questions"][id] = wyr_questions[id]
+                        id += 1
+                        print(id, question)
                 json.dump(data, f)
                 f.close
                 print("WYR Json Created.")
@@ -15,14 +23,18 @@ class Wyr(commands.Cog):
             print("WYR Json Loaded.")
 
     @commands.cooldown(1, 1, commands.BucketType.channel) # Sets cooldown to allow X messages per Y seconds.
-    @commands.command(brief="Asks a would you rather question", description="This comment sends a would you rather question to the channel users can reply to!") # create command + descriptions
+    @commands.command(brief="Asks a would you rather question", description="This command sends a would you rather question to the channel users can reply to!") # create command + descriptions
     async def Wyr(self, ctx): # get json database for game id number.
         data = await get_data() # grab data holding Id for games.
-        id = data["id"]
+        id = data["game_id"]
         id += 1
-        data["id"] = id
+        data["game_id"] = id
+        d = data["questions"]
+        questions = []
+        for k, v in d.items():
+            questions.append(v)
         await set_data(data) # update data file after increasing ID number
-        question = random.choice(wyr_questions)
+        question = random.choice(questions)
         r = random.randrange(0, 255) # random color for value r
         g = random.randrange(0, 255) # random color for value g
         b = random.randrange(0, 255) # random color for value b
@@ -30,8 +42,44 @@ class Wyr(commands.Cog):
         emb.add_field(name="1st option", value="🟦") # add red emoji to message
         emb.add_field(name="2nd option", value="🟥") # add blue emoji to message
         send_embed = await ctx.send(embed=emb)
+        if config.wyr.delete_command == True:
+            await ctx.message.delete()
         await send_embed.add_reaction("🟦") # react with blue emoji
         await send_embed.add_reaction("🟥") # react with red emoji
+
+    @commands.cooldown(1, 1, commands.BucketType.user) # Sets cooldown to allow X messages per Y seconds.
+    @commands.command(brief="Lets you add a Would you Rather question!", description="This command lets you add a would you rather question to the list of questions!") # create command + descriptions
+    async def wyradd(self, ctx, *, wyr_question): # get json database for the questions
+        data = await get_data()
+        if "add" not in data: # check if dictionary excists.
+            data["add"] = {}
+        if "add" in data:
+            data["add"][wyr_question] = False # add question with False value for verify so you can add it later.
+        await set_data(data)
+        if config.wyr.dm_instead == True:
+            dm = await member.create_dm()
+            await dm.send(f"The question ```{wyr_question}``` is added, it will be verified soon.")
+        else:
+            await ctx.send(f"The question ```{wyr_question}``` is added, it will be verified soon.")
+        await ctx.message.delete()
+
+    @commands.command(brief="Bot owner can verify and add questions to the list.")
+    async def wyr_add_verified(self, ctx):
+        if ctx.message.author.id == config.main.owner_id: # check if user is owner of bot
+            data = await get_data()
+            d = data["add"]
+            for k1, v1 in list(d.items()): # iterate over list object from data dictionary, list() is needed to iterate and remove keys after they got added to the WYR database.
+                if v1 == True:
+                    d2 = data["questions"]
+                    for k2, v2 in d2.items(): # !? Iterate over all questions to get the last id in list.
+                        id = int(k2)
+                    id += 1 # last id +1
+                data["questions"][id] = d.pop(k1) # add question with latest id.
+            await set_data(data)
+            await ctx.send("Verified questions are added to the list.")
+        else:
+            ctx.send("You are not allowed to use this command.")
+        
 
 def setup(bot):
 	bot.add_cog(Wyr(bot))
@@ -45,6 +93,7 @@ async def set_data(data):
     with open('.\\Database/WYR.json','w') as f:
          json.dump(data, f)
 
+         # base list of 119 questions. gets added on creation of wyr.json
 wyr_questions = [
     "Would you rather eat a bug or a fly?",
     "Would you rather lick the floor or a broom?",
