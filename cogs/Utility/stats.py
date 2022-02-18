@@ -1,6 +1,5 @@
 import discord, os, json, asyncio, datetime
 from discord.ext import commands
-#from config import stats as config
 
 class Stats(commands.Cog):
     def __init__(self, bot):
