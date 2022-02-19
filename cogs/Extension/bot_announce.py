@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from config import main as config
 
-class bot_announce(commands.Cog):
+class Bot_announce(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -13,4 +13,4 @@ class bot_announce(commands.Cog):
                 await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
 
 def setup(bot):
-	bot.add_cog(bot_announce(bot))
+	bot.add_cog(Bot_announce(bot))

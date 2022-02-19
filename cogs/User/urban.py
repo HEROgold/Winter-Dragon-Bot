@@ -3,7 +3,7 @@ from discord.ext import commands
 import urbandictionary as ud
 from config import urban as config
 
-class urban(commands.Cog):
+class Urban(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
@@ -47,4 +47,4 @@ class urban(commands.Cog):
                 await ctx.send("No results found.")
 
 def setup(bot):
-	bot.add_cog(urban(bot))
+	bot.add_cog(Urban(bot))

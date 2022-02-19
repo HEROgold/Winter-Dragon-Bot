@@ -29,7 +29,7 @@ class Error(commands.Cog):
             print(error)
             await ctx.send("There is a HTTPException")
         if isinstance(error, commands.errors.CommandOnCooldown) and CE.log_CommandError == True:
-            await ctx.send(error)
+            await dm.send(error)
         elif CE.ignore_errors == True:
             print (error)
 def setup(bot):

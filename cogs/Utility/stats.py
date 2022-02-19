@@ -1,6 +1,5 @@
 import discord, os, json, asyncio, datetime
 from discord.ext import commands
-#from config import stats as config
 
 class Stats(commands.Cog):
     def __init__(self, bot):
@@ -53,11 +52,11 @@ class Stats(commands.Cog):
                 await self.bot.get_channel(online_channel).edit(name=(str(online) + " Online Users"))
                 await self.bot.get_channel(user_channel).edit(name=(str(users) + " Total Users"))
                 await self.bot.get_channel(bot_channel).edit(name=(str(bots) + " Online Bots"))
-                await self.bot.get_channel(guild_channel).edit(name=(str(age) + " Creation Date."))
+                await self.bot.get_channel(guild_channel).edit(name=(str(age) + " Creation Date"))
 
     @commands.command(brief="Create the Stats category", description="This command will create the Stats category which will show some stats about the server.") # show some guild/server stats
     @commands.has_permissions(manage_channels=True)
-    async def stats(self, ctx, guild=None):
+    async def stats_category(self, ctx, guild=None):
         if guild == None:
             guild = ctx.guild
         overwrite = {
@@ -90,7 +89,7 @@ class Stats(commands.Cog):
 
     @commands.command(brief="Remove the Stats channels", description="This command removes the stat channels from your discord server. This includes the Category as well as all channels in that.") 
     @commands.has_permissions(manage_channels=True)
-    async def remove_stats(self, ctx, guild=None):
+    async def remove_stats_category(self, ctx, guild=None):
         if guild == None:
             guild = ctx.guild
         data = await get_data()
