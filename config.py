@@ -1,9 +1,19 @@
 class main:
-    prefix = "$"
+    prefix = "$" # default prefix, bot can also just be mentioned.
     show_logged_in = True
     log_messages = True
-    token="TOKEN"
-    owner_id= YourUserId
+    token="" # your discord bot token!
+    owner_id=123456789 # your discord owner id!
+
+class rpg:
+    fix = True
+
+class translate:
+    dm_instead = True # Send a DM with the translated text instead of in the channel the message was first send in.
+
+class wyr:
+    delete_command = False # Delete the message that called the wyr command
+    dm_instead = True # Dm user when they add a question INSTEAD of sendint it to channel.
 
 class error: # Wether or not to log and message when error is hit.
     ignore_errors               = False
@@ -38,7 +48,7 @@ class announcement:
 
 class urban:
     allow_random = True
-    max_length = 3 # Maximum 10
+    max_length = 5 # Maximum 10
 
 class invite:
     dm_user = True # Dm user INSTEAD of sending message to the current chat.
