@@ -46,12 +46,10 @@ class Poll(commands.Cog):
     def get_data(self):
         with open('.\\Database/Poll.json', 'r') as f:
             data = json.load(f)
-            print(f"Get Data:\n data")
         return data
 
     def set_data(self, data):
         with open('.\\Database/Poll.json','w') as f:
-            print(f"Set Data:\n {data}")
             json.dump(data, f)
 
     @commands.Cog.listener() #on reaction added to message check if already reacted, then remove reaction if already reacted.
