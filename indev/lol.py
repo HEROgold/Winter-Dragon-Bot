@@ -5,7 +5,7 @@ import cassiopeia as cass
 class lol(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        cass.set_riot_api_key("RGAPI-a7107938-6c55-4758-857a-27fa2ea877b7")
+        cass.set_riot_api_key("KEY")
 
     #@commands.Cog.listener()
     #EVENt LISTENER EXAPLE!
