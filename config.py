@@ -2,14 +2,17 @@ class main:
     prefix = "$" # default prefix, bot can also just be mentioned.
     show_logged_in = True
     log_messages = True
-    token="" # your discord bot token!
-    owner_id=123456789 # your discord owner id!
+    token = "" # your discord bot token!
+    owner_id = 123456789 # your discord owner id!
 
 class rpg:
     fix = True
 
 class translate:
     dm_instead = True # Send a DM with the translated text instead of in the channel the message was first send in.
+
+class lol:
+    key = "" # Put your RIOT API key here.
 
 class wyr:
     delete_command = False # Delete the message that called the wyr command
