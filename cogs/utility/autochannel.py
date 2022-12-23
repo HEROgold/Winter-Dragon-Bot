@@ -77,6 +77,7 @@ class Autochannel(commands.Cog):
             TextChannel = await CategoryChannel.create_text_channel(name = ChannelName)
         return TextChannel
 
+# TODO: Make slash commands
     @commands.command(name = "autochannel",
                     description = "Use this command to create a category, and voice channel which lets you make more channels for each user!",
                     brief = "Setup some voice channels, and allow users to create their own",
