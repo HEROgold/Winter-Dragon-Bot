@@ -45,7 +45,6 @@ class AutoMod(commands.Cog):
     async def get_automod_channels(self, mod_channel:str, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
         data = await self.get_data()
         guild_id = str(guild.id)
-        logging.info(f"getting {mod_channel} from {guild}")
         # For loop keyerror
         with contextlib.suppress(KeyError, TypeError):
             for category_channel_id in data[guild_id]:
@@ -56,7 +55,6 @@ class AutoMod(commands.Cog):
                 allmod_channel_id = data[guild_id][category_channel_id]["all-categories"]
                 automod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(automod_channel_id))
                 allmod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(allmod_channel_id))
-            logging.info(f"returning channels: {automod_channel.id} and {allmod_channel.id}")
             return (automod_channel, allmod_channel)
 
     # functions to help create channels
