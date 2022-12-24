@@ -5,6 +5,7 @@ import json
 import asyncio
 import contextlib
 from discord.ext import commands
+from discord import app_commands
 
 class Autochannel(commands.Cog):
     def __init__(self, bot) -> None:
@@ -77,58 +78,56 @@ class Autochannel(commands.Cog):
             TextChannel = await CategoryChannel.create_text_channel(name = ChannelName)
         return TextChannel
 
-# TODO: Make slash commands
-    @commands.command(name = "autochannel",
-                    description = "Use this command to create a category, and voice channel which lets you make more channels for each user!",
-                    brief = "Setup some voice channels, and allow users to create their own",
-                    usage= "`autochannel`")
-    @commands.guild_only()
+    @app_commands.command(name="autochannel", description="Set up voice category and channels, which lets each user make their own channels")
     @commands.has_permissions(manage_channels = True)
     @commands.bot_has_permissions(manage_channels = True)
-    @commands.cooldown(1, 200, commands.BucketType.member)
-    async def autochannel(self, ctx:commands.Context):
-        guild_id = ctx.message.guild.id
-        data = await self.get_data()
-        if str(guild_id) not in data:
-            data[guild_id] = {}
-        # Create category channel.
+    async def slash_autochannel(self, interaction:discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
         overwrites = {
-        ctx.guild.default_role: discord.PermissionOverwrite(connect=True, view_channel=True),
-        ctx.guild.me: discord.PermissionOverwrite(connect=True, manage_channels=True, send_messages=True)
-        }
+            guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
+            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
+            }
+        data = await self.get_data()
+        guild_id = str(guild.id)
+        # Create/find category channel
         try:
-            CategoryChannel = discord.utils.get(ctx.guild.channels, id=(int(data[guild_id]["AC Channel"]["id"])))
-            logging.info(f"Category channel found: {CategoryChannel}")
+            data[guild_id]
         except Exception as e:
             if isinstance(e, KeyError):
-                CategoryChannel = await self.CreateCategoryChannel(guild=ctx.guild, overwrites=overwrites, ChannelName="Autochannel")
-                data[guild_id]["AC Channel"] = {}
-                data[guild_id]["AC Channel"]["id"] = CategoryChannel.id
+                data[guild_id] = {"AC Channel":{}}
+        try:
+            ac_id = data[guild_id]["AC Channel"]["id"]
+            ac_category_channel = discord.utils.get(guild.channels, id=ac_id)
+        except Exception as e:
+            if isinstance(e, KeyError):
+                CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName="Autochannel")
+                data[guild_id]["AC Channel"] = {"id": CategoryChannel.id}
             else:
-                logging.info(f"Unexpected Error: {e}")
-        # Create voice channel
+                logging.error(f"Unexpected Error: {e}")
+        # Create/find voice channel
         try:
-            VoiceChannel = discord.utils.get(ctx.guild.channels, id=int(data[guild_id]["AC Channel"]["Voice"]))
-            logging.info(f"Voicechannel found: {VoiceChannel}")
+            voice_channel_id = data[guild_id]["AC Channel"]["Voice"]
+            ac_voice_channel = discord.utils.get(guild.channels, id=voice_channel_id)
         except Exception as e:
             if isinstance(e, KeyError):
-                VoiceChannel = await self.CreateVoiceChannel(guild=ctx.guild, CategoryChannel=CategoryChannel, ChannelName="Join me!")
+                VoiceChannel = await self.CreateVoiceChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName="Join me!")
                 data[guild_id]["AC Channel"]["Voice"] = VoiceChannel.id
             else:
-                logging.info(f"Unexpected Error: {e}")
+                logging.error(f"Unexpected Error: {e}")
+        # Create/find text channel
         try:
-            TextChannel = discord.utils.get(ctx.guild.channels, id=int(data[guild_id]["AC Channel"]["Text"]))
-            logging.info(f"TextChannel found: {TextChannel}")
+            text_channel_id = data[guild_id]["AC Channel"]["Text"]
+            ac_text_chanel = discord.utils.get(guild.channels, id=text_channel_id)
         except Exception as e:
             if isinstance(e, KeyError):
-                Textchannel = await self.CreateTextChannel(guild=ctx.guild, CategoryChannel=CategoryChannel, ChannelName="AutoChannel Info")
+                Textchannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName="AutoChannel Info")
                 msg = await Textchannel.send(f"To create your own voice and text channel, just join the voice channel <#{VoiceChannel.id}>")
                 await msg.pin()
                 data[guild_id]["AC Channel"]["Text"] = Textchannel.id
             else:
-                logging.info(f"Unexpected Error: {e}")
-        # Wait untill user is connected to logged voice channel
-        await ctx.send("The channels are now set up!") # ,\n nothing happend? try the remove command! first!"
+                logging.error(f"Unexpected Error: {e}")
+        await interaction.followup.send("The channels are now set up!")
         await self.set_data(data)
 
     @commands.Cog.listener()
@@ -143,7 +142,11 @@ class Autochannel(commands.Cog):
             voice_id = data[guild_id]["AC Channel"]["Voice"]
             text_id = data[guild_id]["AC Channel"]["Text"]
             if channel_id == voice_id:
-                overwrites = {guild.default_role: discord.PermissionOverwrite(connect=True, view_channel=True), guild.me: discord.PermissionOverwrite(connect=True), member: discord.PermissionOverwrite(connect=True, manage_channels=True)}
+                overwrites = {
+                    guild.default_role: discord.PermissionOverwrite(),
+                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all()),
+                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
+                }
                 try: # Get Users own category channel, or create one
                     CategoryChannel = discord.utils.get(guild.categories, id=(int(data[guild_id][str(member.id)]["id"])))
                 except Exception as e:
