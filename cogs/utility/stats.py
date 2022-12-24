@@ -92,7 +92,7 @@ class Stats(commands.Cog):
                 await self.bot.get_channel(user_channel).edit(name=f"Total Users: {str(users)}")
                 await self.bot.get_channel(bot_channel).edit(name=f"Online Bots: {str(bots)}")
                 await self.bot.get_channel(guild_channel).edit(name=f"Created On: {str(age)}")
-                logging.info(f"updated Guild: {guild} stat channels")
+                logging.info(f"Updated Guild: {guild} stat channels")
 
     # show some guild/server stats
     @commands.hybrid_command(

@@ -9,14 +9,22 @@ import traceback
 
 LOG_LEVEL = logging.INFO
 
-logging.getLogger().setLevel(LOG_LEVEL)
-logger = logging.getLogger('discord')
-logger.setLevel(LOG_LEVEL)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)    
+bot_logger = logging.getLogger()
+bot_logger.setLevel(LOG_LEVEL)
+bot_handler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
+bot_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+bot_logger.addHandler(bot_handler)
+bot_logger.addHandler(logging.StreamHandler())
+
+discord_log = logging.getLogger('discord')
+discord_log.setLevel(LOG_LEVEL)
+discord_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+discord_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+discord_log.addHandler(discord_handler)    
+discord_log.addHandler(logging.StreamHandler())
 
 Intents = discord.Intents.default()
+# Intents = discord.Intents.all()
 Intents.members = True
 Intents.presences = True
 Intents.message_content = True
