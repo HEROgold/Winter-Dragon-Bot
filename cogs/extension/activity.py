@@ -15,7 +15,8 @@ class Activity(commands.Cog):
             "do_not_disturb",
             "idle", "invisible",
             "offline",
-            "online"
+            "online",
+            "random"
         ]
         self.STATUSTYPE = [
             discord.Status.dnd,
@@ -32,6 +33,7 @@ class Activity(commands.Cog):
             "playing",
             "streaming",
             "watching",
+            "random"
         ]
         self.ACTIVITYTYPE = [
             discord.ActivityType.competing,
@@ -79,16 +81,22 @@ class Activity(commands.Cog):
         return status,activity
 
     @app_commands.command(name="bot_activity", description="change bot activity")
-    async def slash_activity(self, interaction: discord.Interaction, status: str, activity: str, msg: str):
+    async def slash_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str=""):
         await interaction.response.defer(ephemeral=True)
         if interaction.user.id != config.main.owner_id or not await self.bot.is_owner(interaction.user):
             await interaction.followup.send("You are not allowed to use this command!", ephemeral=True)
+            return
         elif status.lower() not in self.STATUS:
             await interaction.followup.send(f"Status not found, can only be\n{self.STATUS}",ephemeral=True)
             return
         elif activity.lower() not in self.ACTIVITIES:
             await interaction.followup.send(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
             return
+        elif status.lower() == "random" and activity.lower() == "random":
+            config.activity.periodic_change = True
+            logging.info("Turned on periodic activity change")
+            await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
+            await self.on_ready()
         else:
             StatusAttr = getattr(discord.Status, status, discord.Status.online)
             ActivityType = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
@@ -96,6 +104,8 @@ class Activity(commands.Cog):
             await self.bot.change_presence(status=StatusAttr, activity=ActivityObj)
             await interaction.followup.send("Updated my activity!", ephemeral=True)
             logging.info(f"Activity and status set to {activity} by {interaction.user}")
+            logging.info("Turned off periodic activity change")
+            config.activity.periodic_change = False
 
     @slash_activity.autocomplete("status")
     async def activity_autocomplete_status(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -113,6 +123,5 @@ class Activity(commands.Cog):
             if current.lower() in activity.lower()
         ]
 
-
-async def setup(bot: commands.Bot):
+async def setup(bot:commands.Bot):
     await bot.add_cog(Activity(bot))
