@@ -6,6 +6,8 @@ import os
 import json
 from discord.ext import commands
 
+
+# TODO: Make slash commands
 class AutoMod(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
@@ -40,12 +42,12 @@ class AutoMod(commands.Cog):
             json.dump(data, f)
 
     # Helper function for getting (auto)mod channels
-    async def get_automod_channels(self, mod_channel:str, guild:discord.Guild):
+    async def get_automod_channels(self, mod_channel:str, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
         data = await self.get_data()
         guild_id = str(guild.id)
         logging.info(f"getting {mod_channel} from {guild}")
         # For loop keyerror
-        with contextlib.suppress(KeyError):
+        with contextlib.suppress(KeyError, TypeError):
             for category_channel_id in data[guild_id]:
                 # Convert to string for json/dict syntax
                 category_channel_id = str(category_channel_id)
@@ -58,10 +60,10 @@ class AutoMod(commands.Cog):
             return (automod_channel, allmod_channel)
 
     # functions to help create channels
-    async def CreateCategoryChannel(self, guild:discord.guild, overwrites, ChannelName:str, position:int=2):
+    async def CreateCategoryChannel(self, guild:discord.Guild, overwrites, ChannelName:str, position:int=2) -> discord.CategoryChannel:
         return await guild.create_category(name=ChannelName, overwrites=overwrites, position=position)
 
-    async def CreateTextChannel(self, guild:discord.guild, CategoryChannel, ChannelName:str):
+    async def CreateTextChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str) -> discord.TextChannel:
         # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
         if not CategoryChannel:
             return await guild.create_text_channel(name = ChannelName)
@@ -85,7 +87,7 @@ class AutoMod(commands.Cog):
                 properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
                 if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
                     embed = discord.Embed(title="Channel Changed", description=f"{entry.user.mention} changed {differences} of channel {after.mention}", color=0xFFFF00)
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(Exception,):
             automod_channel, allmod_channel = await self.get_automod_channels("updatedchannels", channel.guild)
             await automod_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
@@ -133,6 +135,7 @@ class AutoMod(commands.Cog):
                 diffs.append(role.mention)
         return diffs
 
+    # FIXME:
     @commands.command(name = "AutomodUpdate",
                     usage="`AutomodUpdate`",
                     description = "Update automod channels")

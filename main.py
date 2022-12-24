@@ -4,6 +4,7 @@ from discord.ext import commands
 import logging
 import os
 from config import main as config
+import traceback
 # We make use of a config file, change values in config.py.
 
 LOG_LEVEL = logging.INFO
@@ -56,7 +57,7 @@ async def mass_load_cogs() -> None:
             await bot.load_extension(cog)
             logging.info(f"Loaded {cog}")
         except Exception as e:
-            logging.warning(f"Error while loading {cog}: {e}")
+            logging.warning(f"Error while loading {cog}: {traceback.print_exc()}")
     if not (os.listdir("./cogs")):
         logging.warning("No Cogs Directory To Load!")
 
@@ -87,7 +88,7 @@ async def _restart(ctx:commands.Context, extension=None):
             logging.info(f"Reloaded {extension}")
             await ctx.send(f"Reloaded {extension}")
         except Exception:
-            await ctx.send(f"error reloading {extension}")
+            await ctx.send(f"error reloading {extension}: {traceback.print_exc()}")
 
 async def mass_reload_cogs(ctx:commands.Context):
     reload_message = ""
@@ -96,7 +97,7 @@ async def mass_reload_cogs(ctx:commands.Context):
         try:
             bot.reload_extension(cog)
         except Exception as e:
-            logging.warning(f"Error while reloading {cog}: {e}")
+            logging.warning(f"Error while reloading {cog}: {traceback.print_exc()}")
         logging.info(f"Reloaded {cog}")
         reload_message += f"Reloaded {cog}\n"
     await ctx.send(f"{reload_message}Restart complete.")
