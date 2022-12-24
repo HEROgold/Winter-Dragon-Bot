@@ -97,6 +97,10 @@ class Activity(commands.Cog):
             logging.info("Turned on periodic activity change")
             await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
             await self.on_ready()
+            return
+        elif status.lower() == "random" or activity.lower() == "random":
+            await interaction.followup.send("Both status and activity need to be random or not chosen.", ephemeral=True)
+            return
         else:
             StatusAttr = getattr(discord.Status, status, discord.Status.online)
             ActivityType = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
