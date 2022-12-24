@@ -58,10 +58,10 @@ class Autochannel(commands.Cog):
             logging.info("Cleaned Autochannels")
             await asyncio.sleep(60*60)
 
-    async def CreateCategoryChannel(self, guild:discord.guild, overwrites, ChannelName:str, position:int=2):
+    async def CreateCategoryChannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite, ChannelName:str, position:int=2):
         return await guild.create_category(name=ChannelName, overwrites=overwrites, position=position)
 
-    async def CreateVoiceChannel(self, guild:discord.guild, CategoryChannel, ChannelName:str):
+    async def CreateVoiceChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str):
         # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
         if not CategoryChannel:
             VoiceChannel = await guild.create_voice_channel(name = ChannelName)
@@ -69,7 +69,7 @@ class Autochannel(commands.Cog):
             VoiceChannel = await CategoryChannel.create_voice_channel(name = ChannelName)
         return VoiceChannel
 
-    async def CreateTextChannel(self, guild:discord.guild, CategoryChannel, ChannelName:str):
+    async def CreateTextChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str):
         # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
         if not CategoryChannel:
             TextChannel = await guild.create_text_channel(name = ChannelName)
