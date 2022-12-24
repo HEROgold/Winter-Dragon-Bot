@@ -3,11 +3,9 @@ import datetime
 import json
 import logging
 import os
-from re import S
 import discord
 from discord import app_commands
 from discord.ext import commands
-from config import main as mainconfig
 
 
 class Stats(commands.Cog):
@@ -118,7 +116,7 @@ class Stats(commands.Cog):
             user_channel = await category.create_voice_channel(name="Total Users")
             bot_channel = await category.create_voice_channel(name="Total Bots")
             guild_channel = await category.create_voice_channel(name="Created On:")
-            time_channel = await category.create_voice_channel(name="UTC Time")
+            # time_channel = await category.create_voice_channel(name="UTC Time")
             data[guild.id] = {category.id: {}}
             data[guild.id][category.id]["channels"] = {
                 "category_channel": category.id,
@@ -126,7 +124,7 @@ class Stats(commands.Cog):
                 "user_channel": user_channel.id,
                 "bot_channel": bot_channel.id,
                 "guild_channel": guild_channel.id,
-                "time_channel": time_channel.id,
+                # "time_channel": time_channel.id,
             }
             await ctx.send("Stats channels are set up")
         else:
