@@ -5,9 +5,9 @@ import discord
 import os
 import json
 from discord.ext import commands
+from discord import app_commands
 
 
-# TODO: Make slash commands
 class AutoMod(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
@@ -32,7 +32,7 @@ class AutoMod(commands.Cog):
             logging.info("Automod Json Loaded.")
 
     # Helper functions to laod and update database
-    async def get_data(self) -> dict:
+    async def get_data(self) -> dict[str,dict[str,dict[str,int]]]:
         with open(self.DBLocation, 'r') as f:
             data = json.load(f)
         return data
@@ -45,10 +45,10 @@ class AutoMod(commands.Cog):
     async def get_automod_channels(self, mod_channel:str, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
         data = await self.get_data()
         guild_id = str(guild.id)
+        # Convert to string for json/dict syntax
         # For loop keyerror
         with contextlib.suppress(KeyError, TypeError):
             for category_channel_id in data[guild_id]:
-                # Convert to string for json/dict syntax
                 category_channel_id = str(category_channel_id)
                 # Get channels to send the messages in
                 automod_channel_id = data[guild_id][category_channel_id][mod_channel]
@@ -73,7 +73,10 @@ class AutoMod(commands.Cog):
         async for entry in channel.guild.audit_logs(limit=1):
             if entry.action is discord.AuditLogAction.channel_create:
                 embed = discord.Embed(title="Channel Created", description=f"{entry.user.mention} created {channel.type} {entry.target.mention or channel.mention}", color=0x00FF00)
-        automod_channel, allmod_channel = await self.get_automod_channels("createdchannels", channel.guild)
+        with contextlib.suppress(TypeError):
+            # FIXME: there needs to be a better solution
+            # Supress typeerror for when channel isnt found.
+            automod_channel, allmod_channel = await self.get_automod_channels("createdchannels", channel.guild)
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 
@@ -95,7 +98,10 @@ class AutoMod(commands.Cog):
         async for entry in channel.guild.audit_logs(limit=1):
             if entry.action is discord.AuditLogAction.channel_delete:
                 embed = discord.Embed(title="Channel Deleted", description=f"{entry.user.mention} deleted {channel.type} {channel.name}", color=0xff0000)
-        automod_channel, allmod_channel = await self.get_automod_channels("deletedchannels", channel.guild)
+        with contextlib.suppress(TypeError):
+            # FIXME: there needs to be a better solution
+            # Supress typeerror for when channel isnt found.
+            automod_channel, allmod_channel = await self.get_automod_channels("deletedchannels", channel.guild)
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 
@@ -133,49 +139,51 @@ class AutoMod(commands.Cog):
                 diffs.append(role.mention)
         return diffs
 
-    # FIXME:
-    @commands.command(name = "AutomodUpdate",
-                    usage="`AutomodUpdate`",
+    @app_commands.command(name = "automod_update",
                     description = "Update automod channels")
     @commands.guild_only()
     @commands.cooldown(1, 2, commands.BucketType.member)
-    async def commandName(self, ctx:commands.Context):
+    async def slash_automod_update(self, interaction:discord.Interaction):
+        if not await self.bot.is_owner(interaction.user):
+            await interaction.response.send_message("You may not this command!")
+            return
+        await interaction.response.defer(ephemeral=True)
         data = await self.get_data()
         categories = [i.lower() for i in self.AutomodCategories]
-        difference = []
-        for guild, category in data.items():
-            category:dict
-            for channels in category.values():
-                difference.extend(channel for channel in channels if channel in categories)
-                # Returns
-                # 1= ['all-categories', 'createdchannels', 'updatedchannels', 'deletedchannels', 'createdinvites', 'memberupdates']
-                # 2= ['all-categories', 'createdchannels', 'updatedchannels', 'deletedchannels', 'createdinvites', 'memberupdates', 'newmemberjoined']
-                # difference.extend(channel for channel in channels if channel not in categories)
-                # Returns
-                # 1= [ ]
-                # 2= ['all-categories', 'createdchannels', 'updatedchannels', 'deletedchannels', 'createdinvites', 'memberupdates', 'newmemberjoined']
-                # Wanted
-                # 1= ['newmemberjoined]
-                # 2= ['all-categories', 'createdchannels', 'updatedchannels', 'deletedchannels', 'createdinvites', 'memberupdates']
-        logging.info(difference, categories)
+        try:
+            for guild_id, v in data.items():
+                guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+                difference = []
+                for category_id, channels in v.items():
+                    category_obj = discord.utils.get(guild.categories, id=int(category_id))
+                    difference.extend(channel for channel in categories if channel not in channels.keys())
+                for channel_name in difference:
+                    channel_name:str
+                    new_log_channel = await self.CreateTextChannel(guild=guild, CategoryChannel=category_obj, ChannelName=channel_name)
+                    data[guild_id][category_id][channel_name] = new_log_channel.id
+        except Exception as e:
+            await interaction.followup.send(e, ephemeral=True)
+            logging.error(e)
+        await interaction.followup.send("Updated automod channels on all servers!")
+        await self.set_data(data)
 
-    @commands.command(name = "AddAutomod",
-                    usage="`AddAutomod`",
+    @app_commands.command(name = "automod_add",
                     description = "Enables automatic moderation for this server, and creates a channel for all logs.")
     @commands.guild_only()
     @commands.has_permissions(administrator = True)
     @commands.bot_has_permissions(manage_channels = True)
     @commands.cooldown(1, 2, commands.BucketType.member)
-    async def automod(self, ctx:commands.Context):
+    async def slash_automod_add(self, interaction:discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        guild = interaction.guild
         overwrites = {
-        ctx.guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=False),
-        ctx.guild.me: discord.PermissionOverwrite(connect=True)
+            guild.default_role: discord.PermissionOverwrite(),
+            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
         }
-        guild = ctx.guild
         data = await self.get_data()
         try:
             if data[str(guild.id)]:
-                await ctx.send("Automod channels are already set up.")
+                await interaction.followup.send("Automod channels are already set up.")
                 return
         except KeyError as e:
             logging.info(e)
@@ -185,19 +193,21 @@ class AutoMod(commands.Cog):
         for AutomodCategory in AutomodCategories:
             TextChannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{AutomodCategory}")
             data[guild.id][CategoryChannel.id][TextChannel.name] = TextChannel.id
-        await ctx.send("Set up automod category and channels")
+        await interaction.followup.send("Set up automod category and channels")
         await self.set_data(data)
 
-    @commands.command(name = "RemoveAutomod",
-                    usage="`RemoveAutomod`",
-                    description = "Disables automatic moderation for this server, and removes the log channels.")
+    @app_commands.command(
+        name = "automod_remove",
+        description = "Disables automatic moderation for this server, and removes the log channels.",
+        )
     @commands.guild_only()
     @commands.has_permissions(administrator = True)
     @commands.bot_has_permissions(manage_channels = True)
     @commands.cooldown(1, 2, commands.BucketType.member)
-    async def RemoveAutomod(self, ctx:commands.Context):
+    async def slash_automod_remove(self, interaction:discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
         data = await self.get_data()
-        guild = ctx.guild
+        guild = interaction.guild
         for CatChannelId, Channels in data[str(guild.id)].items():
             for ChannelName, ChannelId in Channels.items():
                 TextChannel:discord.TextChannel = discord.utils.get(guild.text_channels, id=ChannelId)
@@ -208,7 +218,7 @@ class AutoMod(commands.Cog):
             del CatChannelId
         del data[str(guild.id)]
         await self.set_data(data)
-        await ctx.send("Removed and disabled AutomodChannels")
+        await interaction.followup.send("Removed and disabled AutomodChannels")
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(AutoMod(bot))
