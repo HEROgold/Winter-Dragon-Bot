@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 from discord.ext import commands
 from discord import app_commands
+import config
 
 class Autochannel(commands.Cog):
     def __init__(self, bot) -> None:
@@ -23,7 +24,7 @@ class Autochannel(commands.Cog):
             logging.info("Autochannel Json Loaded.")
 
     # Helper functions to laod and update database
-    async def get_data(self) -> dict:
+    async def get_data(self) -> dict[str, dict[str, dict[str, int]]]:
         with open(self.DBLocation, 'r') as f:
             data = json.load(f)
         return data
@@ -36,28 +37,28 @@ class Autochannel(commands.Cog):
     async def on_ready(self):
         # Delete empty channels, and categories every hour since startup.
         # When loaded, loop over all guilds, and check if they are in DB
-        while True:
-            # logging.info("Cleaning Autochannels...")
-            logging.info("Cleaning Autochannels...")
-            data = await self.get_data()
-            for guild_id, guild_channels in data.items():
-                guild:discord.Guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-                for key, channels in guild_channels.items():
-                    if key == "AC Channel":
+        logging.info("Cleaning Autochannels...")
+        data = await self.get_data()
+        for guild_id, guild_channels in data.items():
+            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+            for key, channels in guild_channels.items():
+                if key == "AC Channel":
+                    continue
+                channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
+                if channel.type is discord.ChannelType.voice:
+                    empty = len(channel.members) <= 0
+                    if not empty:
                         continue
-                    channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
-                    if channel.type is discord.ChannelType.voice:
-                        empty = len(channel.members) <= 0
-                        if not empty:
-                            continue
-                        for channel_name, channel_id in channels.items():
-                            channel = discord.utils.get(guild.channels, id=int(channel_id))
-                            await channel.delete()
-                        del data[guild.id][key]
-            await self.set_data(data)
-            # logging.info("Cleaned Autochannels")
-            logging.info("Cleaned Autochannels")
-            await asyncio.sleep(60*60)
+                    for channel_name, channel_id in channels.items():
+                        channel = discord.utils.get(guild.channels, id=int(channel_id))
+                        await channel.delete()
+                    del data[guild.id][key]
+        await self.set_data(data)
+        logging.info("Cleaned Autochannels")
+        if config.autochannel.clean_timer == 0:
+            return
+        await asyncio.sleep(config.autochannel.clean_timer)
+        await self.on_ready()
 
     async def CreateCategoryChannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite, ChannelName:str, position:int=2):
         return await guild.create_category(name=ChannelName, overwrites=overwrites, position=position)
@@ -175,6 +176,8 @@ class Autochannel(commands.Cog):
                         logging.info(f"Unexpected Error: {e}")
             await self.set_data(data)
         if before.channel:
+            # FIXME: doesnt seem to remove channel and data
+            # On_ready does work
             with contextlib.suppress(KeyError):
                 channel = before.channel
                 guild = channel.guild
