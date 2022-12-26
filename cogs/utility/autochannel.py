@@ -45,14 +45,15 @@ class Autochannel(commands.Cog):
                 if key == "AC Channel":
                     continue
                 channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
-                if channel.type is discord.ChannelType.voice:
-                    empty = len(channel.members) <= 0
-                    if not empty:
-                        continue
-                    for channel_name, channel_id in channels.items():
-                        channel = discord.utils.get(guild.channels, id=int(channel_id))
-                        await channel.delete()
-                    del data[guild.id][key]
+                with contextlib.suppress(AttributeError):
+                    if channel.type is discord.ChannelType.voice:
+                        empty = len(channel.members) <= 0
+                        if not empty:
+                            continue
+                        for channel_name, channel_id in channels.items():
+                            channel = discord.utils.get(guild.channels, id=int(channel_id))
+                            await channel.delete()
+                        del data[guild.id][key]
         await self.set_data(data)
         logging.info("Cleaned Autochannels")
         if config.autochannel.clean_timer == 0:
