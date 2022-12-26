@@ -42,7 +42,7 @@ class Steam(commands.Cog):
             await asyncio.sleep(60*60*6)
             # timer to fight ratelimits and unnecessary checks in seconds increased to> * minutes * hours
 
-    async def get_data(self) -> dict:
+    async def get_data(self) -> dict[str, list]:
         with open(self.DBLocation, 'r') as f:
             data = json.load(f)
         return data
@@ -67,8 +67,7 @@ class Steam(commands.Cog):
             try:
                 sales.append([title.text, sale.text, url])
             except Exception as e:
-                if e is None:
-                    logging.info("Could not append:", e)
+                logging.info("Could not append:", e)
         return sales
 
     async def dupe_check(self, html:str, htmlFile:str) -> bool:
@@ -85,8 +84,8 @@ class Steam(commands.Cog):
                     b.append(j)
         except Exception as e:
             logging.info(e)
-        a.sort()  # key=i[0]
-        b.sort()  # key=j[0]
+        a.sort()
+        b.sort()
         logging.debug(f"SteamLists: {a}, {b}")
         if from_html == from_file or a == b:
             logging.info("Steam File and Html are the same!")
@@ -137,7 +136,7 @@ class Steam(commands.Cog):
         if len(embed.fields) != 0:
             await interaction.response.send_message(embed=embed)
         else:
-            await interaction.response.send_message("No free steam games found...")
+            await interaction.response.send_message("No free steam games found.")
 
     @app_commands.command(name = "remove_free_steam", description = "No longer get notified of free steam games")
     async def slash_RemFreeGames(self, interaction:discord.Interaction):
