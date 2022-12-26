@@ -47,6 +47,8 @@ class AutoMod(commands.Cog):
         guild_id = str(guild.id)
         # Convert to string for json/dict syntax
         # For loop keyerror
+        automod_channel = None
+        allmod_channel = None
         with contextlib.suppress(KeyError, TypeError):
             for category_channel_id in data[guild_id]:
                 category_channel_id = str(category_channel_id)
@@ -73,10 +75,7 @@ class AutoMod(commands.Cog):
         async for entry in channel.guild.audit_logs(limit=1):
             if entry.action is discord.AuditLogAction.channel_create:
                 embed = discord.Embed(title="Channel Created", description=f"{entry.user.mention} created {channel.type} {entry.target.mention or channel.mention}", color=0x00FF00)
-        with contextlib.suppress(TypeError):
-            # FIXME: there needs to be a better solution
-            # Supress typeerror for when channel isnt found.
-            automod_channel, allmod_channel = await self.get_automod_channels("createdchannels", channel.guild)
+        automod_channel, allmod_channel = await self.get_automod_channels("createdchannels", channel.guild)
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 
@@ -98,10 +97,7 @@ class AutoMod(commands.Cog):
         async for entry in channel.guild.audit_logs(limit=1):
             if entry.action is discord.AuditLogAction.channel_delete:
                 embed = discord.Embed(title="Channel Deleted", description=f"{entry.user.mention} deleted {channel.type} {channel.name}", color=0xff0000)
-        with contextlib.suppress(TypeError):
-            # FIXME: there needs to be a better solution
-            # Supress typeerror for when channel isnt found.
-            automod_channel, allmod_channel = await self.get_automod_channels("deletedchannels", channel.guild)
+        automod_channel, allmod_channel = await self.get_automod_channels("deletedchannels", channel.guild)
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 
