@@ -34,6 +34,38 @@ class TeamSlash(commands.Cog):
         await self.set_data(data)
         logging.info("Teams cleaned")
 
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
+        data = await self.get_data()
+        try:
+            t = data[guild_id]
+        except KeyError:
+            return
+        channel = before.channel
+        guild = channel.guild
+        guild_id = str(guild.id)
+        channels_list:list = data[guild_id]["Category"]["Channels"]
+        if before.channel.id not in channels_list:
+            return
+        if len(channel.members) <= 0:
+            voice_channel = discord.utils.get(guild.voice_channels, id=channel.id)
+            await voice_channel.delete()
+            channels_list.remove(voice_channel.id)
+            if not channels_list:
+                category_id:int = data[guild_id]["Category"]["id"]
+                category_channel = discord.utils.get(guild.categories, id=category_id)
+                await category_channel.delete()
+                self.data_cleanup(data, guild_id)
+            await self.set_data(data)
+
+    def data_cleanup(self, data, guild_id):
+        del data[guild_id]["Category"]["id"]
+        del data[guild_id]["Category"]["Channels"]
+        if not data[guild_id]["Category"]:
+            del data[guild_id]["Category"]
+        if not data[guild_id]:
+            del data[guild_id]
+
     async def get_teams_channels(self, channels_list:list[int], guild_id:str) -> list[discord.VoiceChannel]|None:
         try:
             guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
@@ -54,7 +86,7 @@ class TeamSlash(commands.Cog):
             logging.info("Teams Json Loaded.")
 
     # Helper functions to laod and update database
-    async def get_data(self) -> dict:
+    async def get_data(self) -> dict[str, dict[str, dict[str, int | list]]]:
         with open(self.DBLocation, 'r') as f:
             data = json.load(f)
         return data
@@ -88,6 +120,7 @@ class TeamSlash(commands.Cog):
         logging.info(f"teams: {teams}")
         return teams
 
+# TODO: Add vote system to command.
     @app_commands.command(name="teams", description="Randomly split all users in voice chat, in teams")
     async def slash_team(self, interaction:discord.Interaction, team_count:int=2):
         try:
