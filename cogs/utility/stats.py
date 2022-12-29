@@ -178,8 +178,7 @@ class Stats(commands.Cog):
     @app_commands.command(name="stats_category_reset", description="Reset stats of all servers")
     async def reset_stats(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
-            await interaction.response.send_message("You don't have permissions to use this command", ephemeral=True)
-            return
+            raise commands.NotOwner
         logging.info("Resetting stats channels")
         data = await self.get_data()
         await interaction.response.defer(ephemeral=True)

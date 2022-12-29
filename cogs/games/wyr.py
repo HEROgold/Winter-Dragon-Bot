@@ -4,97 +4,94 @@ import random
 import os
 import json
 from discord.ext import commands
-import config
+from discord import app_commands
 import rainbow
 
 class Wyr(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
-        if not os.path.exists('./Database/WYR.json'): # create json database if it doesnt exist, else load it.
+        self.DBLocation = "./Database/WYR.json"
+        self.setup_db()
+
+    def setup_db(self):
+        if not os.path.exists(self.DBLocation):
             with open("./Database/WYR.json", "w") as f:
                 data = {"game_id": 0, "questions": {}}
                 questions = data["questions"]
-                for question_id, question in enumerate(wyr_questions): # add questions to WYR.json before saving file.
-                    data["questions"][question_id] = wyr_questions[question_id]
+                for question_id, question in enumerate(wyr_default_questions):
+                    data["questions"][question_id] = wyr_default_questions[question_id]
                 json.dump(data, f)
                 f.close
                 logging.info("WYR Json Created.")
         else:
             logging.info("WYR Json Loaded.")
 
-    async def get_data():
-        with open('.\\Database/WYR.json', 'r') as f:
-            gdata = json.load(f)
-        return gdata
+    async def get_data(self) -> dict[str,int|dict[str, str]]:
+        with open(self.DBLocation, 'r') as f:
+            data = json.load(f)
+        return data
 
     async def set_data(self, data):
-        with open('.\\Database/WYR.json','w') as f:
+        with open(self.DBLocation,'w') as f:
             json.dump(data, f)
 
-    @commands.cooldown(1, 1, commands.BucketType.channel) # Sets cooldown to allow X messages per Y seconds.
-    @commands.command(brief="Asks a would you rather question",
-                    description="This command sends a would you rather question to the channel users can reply to!",
-                    usage = "`wyr`") # create command + descriptions
-    async def Wyr(self, ctx:commands.Context): # get json database for game id number.
-        data = await self.get_data() # grab data holding Id for games.
+    @app_commands.command(
+        name="would_you_rather",
+        description="Sends a would you rather question to the channel users can reply to!",
+        )
+    async def slash_Wyr(self, interaction:discord.Interaction):
+        data = await self.get_data()
         question_id = data["game_id"]
         question_id += 1
         data["game_id"] = question_id
         d = data["questions"]
         questions = [v for k, v in d.items()]
-        await self.set_data(data) # update data file after increasing ID number
+        await self.set_data(data)
         question = random.choice(questions)
         emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=random.choice(rainbow.RAINBOW))
-        emb.add_field(name="1st option", value="🟦") # add red emoji to message
-        emb.add_field(name="2nd option", value="🟥") # add blue emoji to message
-        send_embed = await ctx.send(embed=emb)
-        if config.wyr.delete_command == True:
-            await ctx.message.delete()
-        await send_embed.add_reaction("🟦") # react with blue emoji
-        await send_embed.add_reaction("🟥") # react with red emoji
+        emb.add_field(name="1st option", value="🟦")
+        emb.add_field(name="2nd option", value="🟥")
+        send_msg = await interaction.channel.send(embed=emb)
+        await send_msg.add_reaction("🟦")
+        await send_msg.add_reaction("🟥")
+        await interaction.response.send_message("Question send", ephemeral=True)
 
-    @commands.cooldown(1, 1, commands.BucketType.user) # Sets cooldown to allow X messages per Y seconds.
-    @commands.command(brief="Lets you add a Would you Rather question!",
-                    description="This command lets you add a would you rather question to the list of questions!",
-                    usage = "`wyradd [question]`:\nExamples: `wyradd Would you rather eat a mouse, or eat a rat`") # create command + descriptions
-    async def wyradd(self, ctx:commands.Context, *, wyr_question): # get json database for the questions
+    @app_commands.command(
+        name="would_you_rather_add",
+        description="Lets you add a would you rather question to the list of questions!"
+        )
+    async def slash_wyradd(self, interaction:discord.Interaction, wyr_question:str):
         data = await self.get_data()
-        if "add" not in data: # check if dictionary excists.
+        if "add" not in data:
             data["add"] = {}
         if "add" in data:
-            data["add"][wyr_question] = False # add question with False value for verify so you can add it later.
+            data["add"][wyr_question] = False
         await self.set_data(data)
-        if config.wyr.dm_instead == True:
-            dm = await ctx.author.create_dm()
-            await dm.send(f"The question ```{wyr_question}``` is added, it will be verified soon.")
-        else:
-            await ctx.send(f"The question ```{wyr_question}``` is added, it will be verified soon.")
-        await ctx.message.delete()
+        await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified soon.", ephemeral=True)
 
-    @commands.command(brief="Bot owner can verify and add questions to the list.",
-                    description = "Add all questions stored in the WYR database file, to the questions data section.")
-    async def wyr_add_verified(self, ctx:commands.Context):
-        if not await self.bot.is_owner(ctx.message.author):
-            ctx.send("You are not allowed to use this command.")
-            return
+    @app_commands.command(
+        name="wyr_add_verified",
+        description = "Add all questions stored in the WYR database file, to the questions data section.")
+    async def wyr_add_verified(self, interaction:discord.Interaction):
+        if not await self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
         data = await self.get_data()
         d = data["add"]
-        for k1, v1 in list(d.items()): # iterate over list object from data dictionary, list() is needed to iterate and remove keys after they got added to the WYR database.
+        for k1, v1 in list(d.items()):
             if v1 == True:
                 d2 = data["questions"]
-                for k2, v2 in d2.items(): # !? Iterate over all questions to get the last id in list.
+                for k2, v2 in d2.items():
                     question_id = int(k2)
-                question_id += 1 # last id +1
-            data["questions"][question_id] = d.pop(k1) # add question with latest id.
+                question_id += 1
+                data["questions"][question_id] = d.pop(k1)
         await self.set_data(data)
-        await ctx.send("Verified questions are added to the list.")
-
+        await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Wyr(bot))
 
-        # base list of 119 questions. gets added on creation of wyr.json
-wyr_questions = [
+
+wyr_default_questions = [
     "Would you rather eat a bug or a fly?",
     "Would you rather lick the floor or a broom?",
     "Would you rather eat ice cream or cake?",

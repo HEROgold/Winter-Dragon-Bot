@@ -14,11 +14,12 @@ class Poll(commands.Cog):
     def __init__(self, bot) -> None:
         super().__init__()
         self.bot:commands.bot = bot
-        self.check_database()
+        self.DBLocation = "./Database/Poll.json"
+        self.setup_db()
         asyncio.get_running_loop().create_task(self.clean_up())
 
-    def check_database(self):
-        if not os.path.exists('./Database/Poll.json'):
+    def setup_db(self):
+        if not os.path.exists(self.DBLocation):
             with open("./Database/Poll.json", "w") as f:
                 data = {}
                 json.dump(data, f)
@@ -37,12 +38,12 @@ class Poll(commands.Cog):
             await asyncio.sleep(60*60)
 
     async def get_data(self) -> dict:
-        with open('.\\Database/Poll.json', 'r') as f:
+        with open(self.DBLocation, 'r') as f:
             data = json.load(f)
         return data
 
     async def set_data(self, data) -> None:
-        with open('.\\Database/Poll.json','w') as f:
+        with open(self.DBLocation,'w') as f:
             json.dump(data, f)
 
     @commands.Cog.listener()
@@ -79,7 +80,7 @@ class Poll(commands.Cog):
         data = await self.get_data()
         emb = discord.Embed(title="Poll", description=f"{question}", colour=0xff5511)
         emb.timestamp = datetime.datetime.now()
-        date = (datetime.datetime.now() + datetime.timedelta(seconds=time_in_sec)).timestamp()
+        date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=time_in_sec)).timestamp()
         epoch = int(date)
         options:list = options.split(sep=",")
         for i, option in enumerate(options):

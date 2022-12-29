@@ -10,7 +10,9 @@ class get_message(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.DBLocation = "./Database/Message.json"
-        # Create database if it doesn't exist, else load it
+        self.setup_db()
+
+    def setup_db(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {}

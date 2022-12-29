@@ -1,29 +1,32 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import random
 import datetime
-from config import announcement as config
+import config
+import rainbow
 
 class Announce(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
 
-    @commands.has_permissions(mention_everyone=True) # send nice embed message to create an announcement
-    @commands.command(aliases=("announcement", "announcey"),
-    pass_context=True, brief="Create an announcement in the current channel, mention everyone.",
+    @app_commands.command(
+    name="announcement",
     description="Using this command will ping everyone and put your message in a clean embed!"
     )
-    async def announce(self, ctx:commands.Context, *, message):
-        member = ctx.author
-        emb = discord.Embed(title="Announcement!", description=f"{message}", colour=(random.randint(0,16777215)))
-        emb.set_author(name=(member.display_name), icon_url=(member.avatar_url))
+    @app_commands.checks.bot_has_permissions(mention_everyone=True)
+    @app_commands.checks.has_permissions(mention_everyone=True)
+    async def announce(self, interaction:discord.Interaction, message:str):
+        await interaction.response.defer()
+        member = interaction.user
+        emb = discord.Embed(title="Announcement!", description=f"{message}", colour=random.choice(rainbow.RAINBOW))
+        emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
         emb.timestamp = datetime.datetime.now()
-        emb.set_footer(text="Time > ")
-        send_embed = await ctx.send(embed=emb)
-        if config.mention_all == True:
-            msg = await ctx.send("<@everyone>")
-            await msg.delete()
-        await ctx.message.delete()
+        await interaction.followup.send(embed=emb)
+        if config.announcement.mention_all == True:
+            mass_ping = await interaction.channel.send("<@everyone>")
+            await mass_ping.delete()
+
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Announce(bot))
