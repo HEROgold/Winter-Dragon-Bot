@@ -6,6 +6,7 @@ import os
 from config import main as config
 import traceback
 # We make use of a config file, change values in config.py.
+# TODO: properly set up permissions
 
 LOG_LEVEL = logging.INFO
 

@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import discord
 import math
@@ -19,18 +20,23 @@ class TeamSlash(commands.Cog):
         logging.info("Cleaning Teams channels")
         data = await self.get_data()
         for guild_id in list(data):
-            channels_list:list = data[guild_id]["Category"]["Channels"]
+            channels_list = None
+            category_id = None
+            with contextlib.suppress(KeyError):
+                channels_list:list = data[guild_id]["Category"]["Channels"]
+                category_id:int = data[guild_id]["Category"]["id"]
+            if not category_id:
+                continue
+            if not channels_list:
+                guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+                category_channel:discord.CategoryChannel = discord.utils.get(guild.channels, id=category_id)
+                await category_channel.delete()
+                del data[guild_id]
             async for channel in self.get_teams_channels(channels_list, guild_id):
                 channel:discord.VoiceChannel
                 if len(channel.members) == 0:
                     await channel.delete()
                     channels_list.remove(channel.id)
-            if not channels_list:
-                category_id:int = data[guild_id]["Category"]["id"]
-                guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-                category_channel:discord.CategoryChannel = discord.utils.get(guild.channels, id=category_id)
-                await category_channel.delete()
-                del data[guild_id]
         await self.set_data(data)
         logging.info("Teams cleaned")
 
@@ -38,13 +44,15 @@ class TeamSlash(commands.Cog):
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
         data = await self.get_data()
         try:
+            guild_id = str(member.guild.id)
             t = data[guild_id]
-        except KeyError:
+        except KeyError or AttributeError as e:
             return
         channel = before.channel
         guild = channel.guild
         guild_id = str(guild.id)
-        channels_list:list = data[guild_id]["Category"]["Channels"]
+        with contextlib.suppress(KeyError):
+            channels_list = list(data[guild_id]["Category"]["Channels"])
         if before.channel.id not in channels_list:
             return
         if len(channel.members) <= 0:
@@ -54,6 +62,8 @@ class TeamSlash(commands.Cog):
             if not channels_list:
                 category_id:int = data[guild_id]["Category"]["id"]
                 category_channel = discord.utils.get(guild.categories, id=category_id)
+                for text_channel in category_channel.text_channels:
+                    await text_channel.delete()
                 await category_channel.delete()
                 self.data_cleanup(data, guild_id)
             await self.set_data(data)
@@ -61,6 +71,7 @@ class TeamSlash(commands.Cog):
     def data_cleanup(self, data, guild_id):
         del data[guild_id]["Category"]["id"]
         del data[guild_id]["Category"]["Channels"]
+        del data[guild_id]["Category"]["Votes_channel"]
         if not data[guild_id]["Category"]:
             del data[guild_id]["Category"]
         if not data[guild_id]:
@@ -117,25 +128,78 @@ class TeamSlash(commands.Cog):
         for k,v in teams.items():
             user_id = [j.id for j in v.values()]
             teams[k] = user_id
-        logging.info(f"teams: {teams}")
+        logging.info(f"creating teams: {teams}")
         return teams
 
-# TODO: Add vote system to command.
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):
+        if user.bot == True or reaction.emoji != "✅":
+            return
+        data = await self.get_data()
+        guild = user.guild
+        guild_id = str(guild.id)
+        to_vote:list[dict[str, list]] = data[guild_id]["Category"]["Votes_channel"]["Teams"]
+        for teams in to_vote:
+            try:
+                teams = {int(k):v for k,v in teams.items()}
+            except Exception as e:
+                logging.error(e)
+            for members in teams.values():
+                reaction_users = [user async for user in reaction.users()]
+                if user.id in members and user in reaction_users and reaction.count >= len(members):
+                    await reaction.message.delete()
+                    await self.move_members(teams, guild)
+
     @app_commands.command(name="teams", description="Randomly split all users in voice chat, in teams")
     async def slash_team(self, interaction:discord.Interaction, team_count:int=2):
+        await interaction.response.defer()
         try:
             members = interaction.user.voice.channel.members
         except AttributeError as e:
-            await interaction.response.send_message("Could not get members from voice channel.", ephemeral=True)
+            await interaction.followup.send("Could not get members from voice channel.", ephemeral=True)
             return
         if len(members) < team_count:
-            await interaction.response.send_message(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")
+            await interaction.followup.send(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")
             return
         guild = interaction.guild
+        # Create chat with vote system, when all members in voicechat vote YES, move.
         category_channel = await self.get_teams_category(interaction=interaction)
         teams = await self.DevideTeams(TeamCount=team_count, members=members)
-        await interaction.response.send_message("Splitting teams, Have fun!")
-        await self.move_members(category_channel, teams, guild)
+        vote_channel = await self.create_vote(interaction, guild, teams)
+        await interaction.followup.send(f"Created vote to move members. Go to {vote_channel.mention} to vote.")
+
+    async def create_vote(self, interaction:discord.Interaction, guild:discord.Guild, teams:dict) -> discord.TextChannel|None:
+        category_channel = await self.get_teams_category(interaction=interaction)
+        vote_text_channel = await self.get_votes_channel(category_channel)
+        await self.send_vote_message(interaction, vote_text_channel, teams)
+        return vote_text_channel
+
+    async def send_vote_message(self, interaction:discord.Interaction, vote_text_channel:discord.TextChannel, teams:dict):
+        data = await self.get_data()
+        guild = interaction.guild
+        guild_id = str(guild.id)
+        for team_id, team_members_id in teams.items():
+            vote_txt = f"{interaction.user.mention} used `/Teams`\nThe following users need to vote:"
+            members = [discord.utils.get(guild.members, id=member_id) for member_id in team_members_id]
+            for member in members:
+                vote_txt += f"\n{member.mention}"
+            vote_msg = await vote_text_channel.send(vote_txt)
+            await vote_msg.add_reaction("✅")
+            await vote_msg.add_reaction("⛔")
+            data[guild_id]["Category"]["Votes_channel"]["Teams"] = [teams]
+        await self.set_data(data)
+
+    async def get_votes_channel(self, category_channel:discord.CategoryChannel) -> discord.TextChannel:
+        data = await self.get_data()
+        guild_id = str(category_channel.guild.id)
+        try:
+            vote_ch_id = data[guild_id]["Category"]["Votes_channel"]["id"]
+            vote_text_channel = discord.utils.get(category_channel.channels, id=vote_ch_id)
+        except KeyError as e:
+            vote_text_channel = await category_channel.create_text_channel(name="Team splits")
+            data[guild_id]["Category"]["Votes_channel"] = {"id": vote_text_channel.id}
+            await self.set_data(data)
+        return vote_text_channel
 
     async def get_teams_category(self, interaction:discord.Interaction) -> discord.CategoryChannel|None:
         data = await self.get_data()
@@ -143,14 +207,14 @@ class TeamSlash(commands.Cog):
         guild_id = str(guild.id)
         category_channel = None
         overwrites = {
-            guild.default_role: discord.PermissionOverwrite(),
+            guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=True, add_reactions=True, read_message_history=True, speak=True, send_messages=True),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
             }
         try:
             category_id:int = data[guild_id]["Category"]["id"]
         except KeyError:
             logging.info(f"Creating Teams category for {guild}")
-            category_channel:discord.CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=10)
+            category_channel:discord.CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
             category_id = category_channel.id
             data[guild_id] = {"Category":{"id":category_id}}
             await self.set_data(data)
@@ -161,14 +225,17 @@ class TeamSlash(commands.Cog):
             category_channel = await self.get_teams_category(interaction=interaction)
         return category_channel
 
-    async def move_members(self, category_channel:discord.CategoryChannel, teams:dict[int,list[discord.Member]], guild:discord.Guild):
+    async def move_members(self, teams:dict[int,list[discord.Member]], guild:discord.Guild):
         for team, member_ids in teams.items():
             data = await self.get_data()
             try:
-                channels_list = data[str(category_channel.guild.id)]["Category"]["Channels"]
+                channels_list = data[str(guild.id)]["Category"]["Channels"]
             except KeyError as e:
-                channels_list = data[str(category_channel.guild.id)]["Category"]["Channels"] = []
-            team_name = f"Team {team+1}"
+                channels_list = data[str(guild.id)]["Category"]["Channels"] = []
+            team_number = int(team) + 1
+            team_name = f"Team {team_number}"
+            category_id = data[str(guild.id)]["Category"]["id"]
+            category_channel = discord.utils.get(guild.categories, id=category_id)
             team_voice = await self.CreateVoiceChannel(guild, category_channel, team_name)
             channels_list.append(team_voice.id)
             await self.set_data(data)

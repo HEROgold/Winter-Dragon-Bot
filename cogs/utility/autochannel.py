@@ -45,14 +45,15 @@ class Autochannel(commands.Cog):
                 if key == "AC Channel":
                     continue
                 channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
-                if channel.type is discord.ChannelType.voice:
-                    empty = len(channel.members) <= 0
-                    if not empty:
-                        continue
-                    for channel_name, channel_id in channels.items():
-                        channel = discord.utils.get(guild.channels, id=int(channel_id))
-                        await channel.delete()
-                    del data[guild.id][key]
+                with contextlib.suppress(AttributeError):
+                    if channel.type is discord.ChannelType.voice:
+                        empty = len(channel.members) <= 0
+                        if not empty:
+                            continue
+                        for channel_name, channel_id in channels.items():
+                            channel = discord.utils.get(guild.channels, id=int(channel_id))
+                            await channel.delete()
+                        del data[guild.id][key]
         await self.set_data(data)
         logging.info("Cleaned Autochannels")
         if config.autochannel.clean_timer == 0:
@@ -85,9 +86,10 @@ class Autochannel(commands.Cog):
     async def slash_autochannel(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
+        # FIXME: permissions issuse
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
+            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
         data = await self.get_data()
         guild_id = str(guild.id)
@@ -145,8 +147,8 @@ class Autochannel(commands.Cog):
             if channel_id == voice_id:
                 overwrites = {
                     guild.default_role: discord.PermissionOverwrite(),
-                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all()),
-                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
+                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
+                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
                 }
                 try: # Get Users own category channel, or create one
                     CategoryChannel = discord.utils.get(guild.categories, id=(int(data[guild_id][str(member.id)]["id"])))
