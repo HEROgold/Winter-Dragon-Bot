@@ -1,3 +1,4 @@
+import logging
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -13,15 +14,22 @@ class Purge(commands.Cog):
         if count == -1:
             count = config.purge.limit
         if count <= config.purge.limit:
-            # await interaction.channel.purge(limit=count)
-            messages = await self.history_delete(interaction=interaction, count=count)
-            await interaction.followup.send(f"Killed {len(messages)} Messages.", ephemeral=True)
+            if config.purge.use_history_instead:
+                messages = await self.history_delete(interaction=interaction, count=count)
+                await interaction.followup.send(f"Killed {len(messages)} Messages.", ephemeral=True)
+                return
+            else:
+                if interaction.channel.type == discord.ChannelType.private:
+                    await interaction.followup.send("Cannot use purge in DM Channels!")
+                    return
+                await interaction.channel.purge(limit=count)
+                await interaction.followup.send(f"Killed {count} Messages", ephemeral=True)
         else:
             await interaction.followup.send(f"Too many message to kill! The limit is set to {config.purge.limit}", ephemeral=True)
 
     async def history_delete(self, interaction:discord.Interaction, count:int) -> list[discord.Message]:
         messages = []
-        async for amount, message in enumerate(interaction.channel.history(limit=count)):
+        async for message in interaction.channel.history(limit=count):
             message:discord.Message
             await message.delete()
             messages.append(message)
