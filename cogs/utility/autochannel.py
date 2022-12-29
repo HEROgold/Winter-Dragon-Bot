@@ -86,9 +86,10 @@ class Autochannel(commands.Cog):
     async def slash_autochannel(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
+        # FIXME: permissions issuse
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
+            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
         data = await self.get_data()
         guild_id = str(guild.id)
@@ -146,8 +147,8 @@ class Autochannel(commands.Cog):
             if channel_id == voice_id:
                 overwrites = {
                     guild.default_role: discord.PermissionOverwrite(),
-                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all()),
-                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.all())
+                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
+                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
                 }
                 try: # Get Users own category channel, or create one
                     CategoryChannel = discord.utils.get(guild.categories, id=(int(data[guild_id][str(member.id)]["id"])))
