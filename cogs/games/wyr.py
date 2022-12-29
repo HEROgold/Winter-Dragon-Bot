@@ -5,6 +5,7 @@ import os
 import json
 from discord.ext import commands
 import config
+import rainbow
 
 class Wyr(commands.Cog):
     def __init__(self, bot):
@@ -43,10 +44,7 @@ class Wyr(commands.Cog):
         questions = [v for k, v in d.items()]
         await self.set_data(data) # update data file after increasing ID number
         question = random.choice(questions)
-        r = random.randrange(0, 255) # random color for value r
-        g = random.randrange(0, 255) # random color for value g
-        b = random.randrange(0, 255) # random color for value b
-        emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=discord.Color.from_rgb(r,g,b)) # set random color for embed based on values r, g ,b
+        emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="1st option", value="🟦") # add red emoji to message
         emb.add_field(name="2nd option", value="🟥") # add blue emoji to message
         send_embed = await ctx.send(embed=emb)

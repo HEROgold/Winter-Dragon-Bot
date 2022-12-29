@@ -6,8 +6,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from discord import app_commands
-import config
-
+import random
+import rainbow
 
 class Stats(commands.Cog):
     def __init__(self, bot):
@@ -137,7 +137,7 @@ class Stats(commands.Cog):
         bots = sum(member.bot == True for member in guild.members)
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         creation_date = guild.created_at.strftime("%Y-%m-%d")
-        embed=discord.Embed(title=f"{guild.name} Stats", description=f"Information about {guild.name}", color=0xff0000)
+        embed=discord.Embed(title=f"{guild.name} Stats", description=f"Information about {guild.name}", color=random.choice(rainbow.RAINBOW))
         embed.add_field(name="Users", value=guild.member_count, inline=True)
         embed.add_field(name="Bots", value=bots, inline=True)
         embed.add_field(name="Online", value=online, inline=True)
