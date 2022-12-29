@@ -3,7 +3,6 @@ import logging
 import discord
 from discord.ext import commands
 from discord import app_commands
-import config
 
 class Sync(commands.Cog):
     def __init__(self, bot:commands.Bot):
@@ -28,8 +27,7 @@ class Sync(commands.Cog):
     @app_commands.command(name="sync_all", description="Sync all commands on all servers")
     async def slash_sync_all(self, interaction: discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
-            interaction.response.send_message("No permissions to run this command", ephemeral=True)
-            return
+            raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
         await self.bot.tree.sync()
         await interaction.followup.send("Sync complete", ephemeral=True)

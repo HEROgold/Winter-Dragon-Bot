@@ -82,11 +82,10 @@ class Activity(commands.Cog):
 
     @app_commands.command(name="bot_activity", description="change bot activity")
     async def slash_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str=""):
-        await interaction.response.defer(ephemeral=True)
         if not await self.bot.is_owner(interaction.user):
-            await interaction.followup.send("You are not allowed to use this command!", ephemeral=True)
-            return
-        elif status.lower() not in self.STATUS:
+            raise commands.NotOwner
+        await interaction.response.defer(ephemeral=True)
+        if status.lower() not in self.STATUS:
             await interaction.followup.send(f"Status not found, can only be\n{self.STATUS}",ephemeral=True)
             return
         elif activity.lower() not in self.ACTIVITIES:

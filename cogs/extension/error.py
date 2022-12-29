@@ -1,65 +1,102 @@
 import logging
+import datetime
 import discord
 from discord.ext import commands
+from discord import app_commands
 from config import error as CE
 
 class Error(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
+        self.help_msg = ""
+
+    # -> Option 1 --- Change on_error to self.on_error on load
+    def cog_load(self):
+        tree = self.bot.tree
+        tree.on_error = self.on_app_command_error
+
+    # -> Option 1 --- Change back to default on_error on unload
+    def cog_unload(self):
+        tree = self.bot.tree
+        tree.on_error = tree.__class__.on_error
+
+    async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError):
+        logging.info(f"Error from: {interaction}")
+        await self.error_check(interaction, error)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx:commands.Context, error):
+    async def on_command_error(self, ctx:commands.Context, error:commands.CommandError):
+        logging.info(f"Error from: {ctx}")
+        await self.error_check(ctx, error)
+
+    async def get_dm(self, x:discord.Interaction|commands.Context) -> discord.DMChannel:
+        if isinstance(x, commands.Context):
+            ctx:commands.Context = x
+            try:
+                await ctx.message.delete()
+            except discord.Forbidden:
+                logging.warning("Not allowed to remove message from dm")
+            dm = await ctx.message.author.create_dm()
+            self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
+        elif isinstance(x, discord.Interaction):
+            interaction:discord.Interaction = x
+            dm = await interaction.user.create_dm()
+            self.help_msg = f"`help {interaction.command.name}`" if interaction else "`help`"
+        logging.info(f"Error.py: Returning dm channel {dm.recipient}")
+        return dm
+
+    async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError):
         # sourcery skip: low-code-quality
-        dm = await ctx.message.author.create_dm()
-        help_msg = f"`help {ctx.command}`" if ctx else "`help`"
-        if CE.always_send_errors == True:
-            await dm.send(f"Always_send_errors is set to true, skipping error handling and giving error directly.\n{error}")
-        elif CE.ignore_errors == True:
-            logging.info(f"Ignoring error {error}")
-        elif isinstance(error, commands.MissingRequiredArgument) and CE.log_MissingRequiredArgument == True:
-            await ctx.send(f"Missing a required argument, use {help_msg} for more information.")
-        elif isinstance(error, commands.BotMissingPermissions) and CE.log_BotMissingPermissions == True:
-            await ctx.send("I do not have enough permissions to use this command!")
-        elif isinstance(error, commands.MissingPermissions) and CE.log_MissingPermissions == True:
-            await ctx.send("You do not have enough permission to use this command.")
-        elif isinstance(error, commands.CommandNotFound) and CE.log_CommandNotFound == True:
-            await ctx.message.delete()
-            await dm.send("Command not found, try `help` to find all available commands")
-        elif isinstance(error, commands.TooManyArguments) and CE.log_TooManyArguments == True:
-            await ctx.send(f"Too many arguments given. use {help_msg} for more information")
-        elif isinstance(error, commands.PrivateMessageOnly) and CE.log_PrivateMessageOnly == True:
-            await ctx.send("This command may only be used in a private messages.")
-        elif isinstance(error, commands.NoPrivateMessage) and CE.log_NoPrivateMessage == True:
-            await ctx.send("This command does not work in private messages.")
-        elif isinstance(error, discord.HTTPException) and CE.log_HTTPException == True:
+        dm = await self.get_dm(x)
+        if CE.always_log_errors == True:
             logging.error(error)
-            await ctx.send(f"There is a HTTPException, {error}")
-        elif isinstance(error, commands.errors.CommandOnCooldown) and CE.log_CooldownError == True:
-            await ctx.message.delete()
+        if CE.ignore_errors == True:
+            return
+        elif isinstance(error, commands.MissingRequiredArgument) and CE.MissingRequiredArgument == True:
+            await dm.send(f"Missing a required argument, use {self.help_msg} for more information.")
+        elif isinstance(error, commands.BotMissingPermissions | app_commands.errors.BotMissingPermissions) and CE.BotMissingPermissions == True:
+            await dm.send("I do not have enough permissions to use this command!")
+        elif isinstance(error, commands.MissingPermissions | app_commands.errors.MissingPermissions) and CE.MissingPermissions == True:
+            await dm.send("You do not have enough permission to use this command.")
+        elif isinstance(error, commands.CommandNotFound | app_commands.errors.CommandNotFound) and CE.CommandNotFound == True:
+            await dm.send("Command not found, try `help` to find all available commands")
+        elif isinstance(error, commands.TooManyArguments) and CE.TooManyArguments == True:
+            await dm.send(f"Too many arguments given. use {self.help_msg} for more information")
+        elif isinstance(error, commands.PrivateMessageOnly) and CE.PrivateMessageOnly == True:
+            await dm.send("This command may only be used in a private messages.")
+        elif isinstance(error, commands.NoPrivateMessage | app_commands.errors.NoPrivateMessage) and CE.NoPrivateMessage == True:
+            await dm.send("This command does not work in private messages.")
+        elif isinstance(error, discord.HTTPException) and CE.HTTPException == True:
+            await dm.send(f"There is a HTTPException, {error}")
+        elif isinstance(error, commands.errors.CommandOnCooldown | app_commands.errors.CommandOnCooldown) and CE.CooldownError == True:
             await dm.send(error)
-        elif isinstance(error, commands.errors.CommandNotFound) and CE.log_CommandNotFound == True:
+        elif isinstance(error, commands.errors.DisabledCommand) and CE.DisabledCommand == True:
             await dm.send(error)
-        elif isinstance(error, commands.errors.DisabledCommand) and CE.log_DisabledCommand == True:
-            await ctx.message.delete()
-            await dm.send(error)
-        elif isinstance(error, commands.errors.MissingRole) and CE.log_UserMissingRole == True:
+        elif isinstance(error, commands.errors.MissingRole | app_commands.errors.MissingRole) and CE.UserMissingRole == True:
             await dm.send("You are missing a required role")
-        elif isinstance(error, commands.errors.BotMissingRole) and CE.log_UserMissingRole == True:
+        elif isinstance(error, commands.errors.BotMissingRole) and CE.UserMissingRole == True:
             await dm.send("This bot is missing a required role")
+        elif isinstance(error, commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError) and CE.CommandInvokeError == True:
+            for arg in error.args:
+                if "NotOwner" in arg and CE.NotOwner == True:
+                    await dm.send("Only the bot owner(s) may use this command!")
+                else:
+                    await dm.send(f"Error during command execution: {error}")
         else:
-            logging.error(f"Unexpected error: {error}")
-            await dm.send(f"Unexpected error, try {help_msg} for help with commands, or contact bot creator.")
+            code = datetime.datetime.now(datetime.timezone.utc).timestamp()
+            logging.error(f"Unexpected error, CODE: {code}, Error: {error}")
+            await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact bot creator with the following code `{code}`")
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Error(bot))
 
 # TODO add remaining error types
+# REMINDER: app_commands.errors
+# Add app commands checks
 # USE commands.errors TO AUTOFILL  ERRORS TOO
 #    'CheckAnyFailure',
-#    'CommandInvokeError',
 #    'UserInputError',
 #    'MaxConcurrencyReached',
-#    'NotOwner',
 #    'MessageNotFound',
 #    'MemberNotFound',
 #    'UserNotFound',

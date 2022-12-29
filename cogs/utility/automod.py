@@ -22,7 +22,6 @@ class AutoMod(commands.Cog):
             "MemberJoined",
             "MemberLeft"
         ]
-        # Create database if it doesn't exist, else load it
         self.setup_db()
 
     def setup_db(self):
@@ -243,8 +242,7 @@ class AutoMod(commands.Cog):
     @commands.cooldown(1, 2, commands.BucketType.member)
     async def slash_automod_update(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
-            await interaction.response.send_message("You may not this command!")
-            return
+            raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
         data = await self.get_data()
         categories = [i.lower() for i in self.AutomodCategories]
