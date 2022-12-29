@@ -13,7 +13,9 @@ class Autochannel(commands.Cog):
         super().__init__()
         self.bot:commands.Bot = bot
         self.DBLocation = "./Database/Autochannel.json"
-        # Create database if it doesn't exist, else load it
+        self.setup_db()
+
+    def setup_db(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {}
@@ -86,7 +88,6 @@ class Autochannel(commands.Cog):
     async def slash_autochannel(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
-        # FIXME: permissions issuse
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())

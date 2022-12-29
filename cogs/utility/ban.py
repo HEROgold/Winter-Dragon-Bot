@@ -12,6 +12,9 @@ class Ban(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.DBLocation = "./Database/Ban.json"
+        self.setup_db()
+
+    def setup_db(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {}

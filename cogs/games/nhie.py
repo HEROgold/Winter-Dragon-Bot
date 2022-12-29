@@ -4,85 +4,79 @@ import os
 import json
 import random
 from discord.ext import commands
-import config
+from discord import app_commands
 import rainbow
 
 class nhie(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
-        # create json database if it doesnt exist, else load it.
-        if not os.path.exists('./Database/NHIE.json'): 
-            with open("./Database/NHIE.json", "w") as f:
+        self.DBLocation = "./Database/NHIE.json"
+        self.setup_db()
+
+    def setup_db(self):
+        if not os.path.exists(self.DBLocation): 
+            with open(self.DBLocation, "w") as f:
                 data = {"game_id": 0, "questions": {}}
                 questions = data["questions"]
-                # add questions to NHIE.json before saving file.
-                for question_id, question in enumerate(nhie_questions): 
-                    data["questions"][question_id] = nhie_questions[question_id]
+                for question_id, question in enumerate(nhie_default_questions): 
+                    data["questions"][question_id] = nhie_default_questions[question_id]
                 json.dump(data, f)
                 f.close
                 logging.info("NHIE Json Created.")
         else:
             logging.info("NHIE Json Loaded.")
 
-    async def get_data():
-        with open('.\\Database/NHIE.json', 'r') as f:
-            gdata = json.load(f)
-        return gdata
+    async def get_data(self) -> dict[str,int|dict[str, str]]:
+        with open(self.DBLocation, 'r') as f:
+            data = json.load(f)
+        return data
 
     async def set_data(self, data):
-        with open('.\\Database/NHIE.json','w') as f:
+        with open(self.DBLocation,'w') as f:
             json.dump(data, f)
 
-    @commands.command(
-                    brief="Get a Never have i ever question!",
-                    description = "Use this to get a never have i ever question, that you can reply to!",
-                    usage = "`nhie`:")
-    @commands.guild_only()
-    @commands.has_permissions()
-    @commands.cooldown(1, 2, commands.BucketType.member)
-    async def nhie(self, ctx:commands.Context):
+    @app_commands.command(
+        name="never_have_i_ever",
+        description = "Use this to get a never have i ever question, that you can reply to"
+    )
+    @app_commands.guild_only()
+    @commands.cooldown(1, 2)
+    async def slash_nhie(self, interaction:discord.Interaction):
         data = await self.get_data() 
         game_id = data["game_id"]
         game_id += 1
         data["game_id"] = game_id
-        d = data["questions"]
+        d:dict = data["questions"]
         questions = [v for k, v in d.items()]
         await self.set_data(data) 
         question = random.choice(questions)
         emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
         emb.add_field(name="Never", value="⛔")
-        send_embed = await ctx.send(embed=emb)
-        if config.wyr.delete_command == True:
-            await ctx.message.delete()
-        await send_embed.add_reaction("✅")
-        await send_embed.add_reaction("⛔")
+        send_msg = await interaction.channel.send(embed=emb)
+        await send_msg.add_reaction("✅")
+        await send_msg.add_reaction("⛔")
+        await interaction.response.send_message("Question send", ephemeral=True)
 
-    @commands.cooldown(1, 1, commands.BucketType.user)
-    @commands.command(brief="Lets you add a Never Have I Ever question!",
-                    description="This command lets you add a Never Have I Ever question to the list of questions!",
-                    usage = "`nhieadd [question]:\n Exmaple: `nhieadd Never have i ever had an apple`")
-    async def nhieadd(self, ctx:commands.Context, *, nhie_question):
+    @app_commands.command(
+        name = "never_have_i_ever_add",
+        description="Lets you add a Never Have I Ever question"
+        )
+    async def slash_nhieadd(self, interaction:discord.Interaction, nhie_question:str):
         data = await self.get_data()
         if "add" not in data:
             data["add"] = {}
         if "add" in data:
             data["add"][nhie_question] = False
         await self.set_data(data)
-        if config.wyr.dm_instead == True:
-            dm = await ctx.author.create_dm()
-            await dm.send(f"The question ```{nhie_question}``` is added, it will be verified soon.")
-        else:
-            await ctx.send(f"The question ```{nhie_question}``` is added, it will be verified soon.")
-        await ctx.message.delete()
+        await interaction.response.send_message(f"The question ```{nhie_question}``` is added, it will be verified later.", ephemeral=True)
 
-    # local variable 'id' referenced before assignment
-    @commands.command(brief="Bot owner can verify and add questions to the list.",
-                    description = "Add all questions stored in the NHIE database file, to the questions data section.")
-    async def nvie_add_verified(self, ctx:commands.Context):
-        if not await self.bot.is_owner(ctx.message.author):
-            ctx.send("You are not allowed to use this command.")
-            return
+    @app_commands.command(
+        name = "nhie_add_add_verified",
+        description = "Add all questions stored in the NHIE database file, to the questions data section.")
+    async def slash_nvie_add_verified(self, interaction:discord.Interaction):
+        if not await self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
         data = await self.get_data()
         d = data["add"]
         for k1, v1 in list(d.items()):
@@ -91,13 +85,14 @@ class nhie(commands.Cog):
                 for k2, v2 in d2.items():
                     question_id = int(k2)
                 question_id += 1
-            data["questions"][question_id] = d.pop(k1)
+                data["questions"][question_id] = d.pop(k1)
         await self.set_data(data)
+        await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(nhie(bot))
 
-nhie_questions = [
+nhie_default_questions = [
 "Never have I ever gone skinny dipping.",
 "Never have I ever gone on a blind date.",
 "Never have I ever creeped an ex on social media.",
