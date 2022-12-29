@@ -4,7 +4,8 @@ import discord
 import config
 from discord.ext import commands
 from discord.ui import Button, View
-
+import random
+import rainbow
 
 class Help(commands.Cog):
     def __init__(self, bot:commands.Bot):
@@ -19,7 +20,7 @@ class Help(commands.Cog):
                 return
             for command in chat_list:
                 if str(command) == HelpInput:
-                    embed = discord.Embed(title=f"Command {HelpInput}", color=0xffaf00)
+                    embed = discord.Embed(title=f"Command {HelpInput}", color=random.choice(rainbow.RAINBOW))
                     embed.add_field(name="Brief", value=command.brief, inline=False)
                     embed.add_field(name="Description", value=command.description, inline=False)
                     embed.add_field(name="Usage", value=command.usage, inline=False)

@@ -5,6 +5,7 @@ import json
 import random
 from discord.ext import commands
 import config
+import rainbow
 
 class nhie(commands.Cog):
     def __init__(self, bot):
@@ -48,10 +49,7 @@ class nhie(commands.Cog):
         questions = [v for k, v in d.items()]
         await self.set_data(data) 
         question = random.choice(questions)
-        r = random.randrange(0, 255) # random color for value r
-        g = random.randrange(0, 255) # random color for value g
-        b = random.randrange(0, 255) # random color for value b
-        emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=discord.Color.from_rgb(r,g,b))
+        emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
         emb.add_field(name="Never", value="⛔")
         send_embed = await ctx.send(embed=emb)
