@@ -6,7 +6,8 @@ import os
 from config import main as config
 import traceback
 # We make use of a config file, change values in config.py.
-# TODO: properly set up permissions
+# Switch to slash_commands
+# Todo: remove json, start using actual database.
 
 LOG_LEVEL = logging.INFO
 
@@ -74,7 +75,7 @@ async def mass_load_cogs() -> None:
             brief = "Show loaded cogs(For bot developer only)",
             usage = "`show_cogs`")
 async def show_cogs(ctx:commands.Context):
-    if ctx.message.author.id != config.owner_id and not await bot.is_owner(ctx.message.author):
+    if not await bot.is_owner(ctx.message.author):
         return
     cogs = get_cogs()
     logging.info(f"Showing {cogs} to {ctx.author}")
@@ -86,7 +87,7 @@ async def show_cogs(ctx:commands.Context):
             brief = "Reload cogs (For bot developer only)",
             usage = "`reload [cog]`:\n Examples: `reload cogs.extension.error`,\n`reload`")
 async def _restart(ctx:commands.Context, extension=None):
-    if ctx.message.author.id != config.owner_id and not await bot.is_owner(ctx.message.author):
+    if not await bot.is_owner(ctx.message.author):
         await ctx.send("You are not allowed to use this command.")
         return
     if extension is None:
@@ -115,7 +116,7 @@ async def mass_reload_cogs(ctx:commands.Context):
             brief = "Unload cogs (For bot developer only)",
             usage = "`reload [cog]`:\n Examples: `reload cogs.extension.error`")
 async def unload(ctx:commands.Context, extension=None):
-    if ctx.message.author.id == config.owner_id or bot.is_owner(ctx.message.author):
+    if bot.is_owner(ctx.message.author):
         if extension is None:
             await ctx.send("Please provide a cog to unload.")
         else:
@@ -133,19 +134,19 @@ async def unload(ctx:commands.Context, extension=None):
             brief = "Load cogs (For bot developer only)",
             usage = "`Load [cog]`:\n Examples: `load cogs.extension.error`")
 async def load(ctx:commands.Context, extension=None):
-    if ctx.message.author.id == config.owner_id or await bot.is_owner(ctx.message.author):
-        if extension is None:
-            await ctx.send("Please provide a cog to load.")
-        else:
-            try:
-                bot.load_extension(extension)
-                logging.info(f"Loaded {extension}")
-                await ctx.send(f"Loaded {extension}")
-            except Exception:
-                logging.warning(f"unable to load {extension}")
-                await ctx.send(f"Unable to load {extension}")
-    else:
+    if not await bot.is_owner(ctx.message.author):
         await ctx.send("You are not allowed to use this command.")
+        return
+    if extension is None:
+        await ctx.send("Please provide a cog to load.")
+    else:
+        try:
+            bot.load_extension(extension)
+            logging.info(f"Loaded {extension}")
+            await ctx.send(f"Loaded {extension}")
+        except Exception:
+            logging.warning(f"unable to load {extension}")
+            await ctx.send(f"Unable to load {extension}")
 
 async def main():
     async with bot:

@@ -12,7 +12,7 @@ class Invite(commands.Cog):
         )
     @commands.has_permissions()
     async def invite(self, interaction:discord.Interaction):
-        await interaction.response.send_message("https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=8&scope=bot", ephemeral=True)
+        await interaction.response.send_message("https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot", ephemeral=True)
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Invite(bot))
