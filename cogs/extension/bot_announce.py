@@ -9,7 +9,7 @@ class Bot_announce(commands.Cog):
 
     @app_commands.command(name="bot_announce", description="Announce important messages on all servers the bot runs on")
     async def slash_global_announce(self, interaction: discord.Interaction, msg:str):
-        if interaction.user.id != config.owner_id and not await self.bot.is_owner(interaction.user):
+        if not await self.bot.is_owner(interaction.user):
             await interaction.response.send_message("Not enough permissions to run this command", ephemeral=True)
             return
         for guild in self.bot.guilds:

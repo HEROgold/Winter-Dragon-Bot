@@ -76,21 +76,21 @@ class Wyr(commands.Cog):
     @commands.command(brief="Bot owner can verify and add questions to the list.",
                     description = "Add all questions stored in the WYR database file, to the questions data section.")
     async def wyr_add_verified(self, ctx:commands.Context):
-        if ctx.message.author.id == config.owner_id or await self.bot.is_owner(ctx.message.author): # check if user is owner of bot
-            data = await self.get_data()
-            d = data["add"]
-            for k1, v1 in list(d.items()): # iterate over list object from data dictionary, list() is needed to iterate and remove keys after they got added to the WYR database.
-                if v1 == True:
-                    d2 = data["questions"]
-                    for k2, v2 in d2.items(): # !? Iterate over all questions to get the last id in list.
-                        question_id = int(k2)
-                    question_id += 1 # last id +1
-                data["questions"][question_id] = d.pop(k1) # add question with latest id.
-            await self.set_data(data)
-            await ctx.send("Verified questions are added to the list.")
-        else:
+        if not await self.bot.is_owner(ctx.message.author):
             ctx.send("You are not allowed to use this command.")
-        
+            return
+        data = await self.get_data()
+        d = data["add"]
+        for k1, v1 in list(d.items()): # iterate over list object from data dictionary, list() is needed to iterate and remove keys after they got added to the WYR database.
+            if v1 == True:
+                d2 = data["questions"]
+                for k2, v2 in d2.items(): # !? Iterate over all questions to get the last id in list.
+                    question_id = int(k2)
+                question_id += 1 # last id +1
+            data["questions"][question_id] = d.pop(k1) # add question with latest id.
+        await self.set_data(data)
+        await ctx.send("Verified questions are added to the list.")
+
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Wyr(bot))

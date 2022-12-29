@@ -27,7 +27,7 @@ class Sync(commands.Cog):
 
     @app_commands.command(name="sync_all", description="Sync all commands on all servers")
     async def slash_sync_all(self, interaction: discord.Interaction):
-        if interaction.user.id != config.main.owner_id and not await self.bot.is_owner(interaction.user):
+        if not await self.bot.is_owner(interaction.user):
             interaction.response.send_message("No permissions to run this command", ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)

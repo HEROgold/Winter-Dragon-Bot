@@ -82,20 +82,19 @@ class nhie(commands.Cog):
     @commands.command(brief="Bot owner can verify and add questions to the list.",
                     description = "Add all questions stored in the NHIE database file, to the questions data section.")
     async def nvie_add_verified(self, ctx:commands.Context):
-        if ctx.message.author.id == config.owner_id or await self.bot.is_owner(ctx.message.author):
-            data = await self.get_data()
-            d = data["add"]
-            for k1, v1 in list(d.items()):
-                if v1 == True:
-                    d2 = data["questions"]
-                    for k2, v2 in d2.items():
-                        question_id = int(k2)
-                    question_id += 1
-                data["questions"][question_id] = d.pop(k1)
-            await self.set_data(data)
-            await ctx.send("Verified questions are added to the list.")
-        else:
+        if not await self.bot.is_owner(ctx.message.author):
             ctx.send("You are not allowed to use this command.")
+            return
+        data = await self.get_data()
+        d = data["add"]
+        for k1, v1 in list(d.items()):
+            if v1 == True:
+                d2 = data["questions"]
+                for k2, v2 in d2.items():
+                    question_id = int(k2)
+                question_id += 1
+            data["questions"][question_id] = d.pop(k1)
+        await self.set_data(data)
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(nhie(bot))
