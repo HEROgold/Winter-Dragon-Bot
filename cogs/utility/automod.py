@@ -1,17 +1,21 @@
 import contextlib
 import itertools
-import logging
-import discord
-import os
 import json
-from discord.ext import commands
+import logging
+import os
+
+import discord
 from discord import app_commands
+from discord.ext import commands
+
+import config
+import dragon_database
 
 
 class AutoMod(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
-        self.DBLocation = "./Database/Automod.json"
+        self.logger = logging.getLogger("winter_dragon.automod")
         self.AutomodCategories = [
             "All-categories",
             "CreatedChannels",
@@ -22,27 +26,38 @@ class AutoMod(commands.Cog):
             "MemberJoined",
             "MemberLeft"
         ]
-        self.setup_db()
+        self.bot:commands.Bot = bot
+        self.database_name = "Automod"
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def setup_db(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {}
                 json.dump(data, f)
                 f.close
-                logging.info("Automod Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("Automod Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
-    # Helper functions to laod and update database
     async def get_data(self) -> dict[str,dict[str,dict[str,int]]]:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
         return data
 
-    async def set_data(self, data:dict):
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     # Helper function for getting (auto)mod channels
     async def get_automod_channels(self, mod_channel:str, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
@@ -165,10 +180,10 @@ class AutoMod(commands.Cog):
                 else:
                     raise TypeError
         except TypeError as e:
-            logging.warning(e)
+            self.logger.warning(e)
             embed = discord.Embed(title="Member Left", description=f"{member.mention} Left the server", color=0xFF0000)
         if not embed:
-            logging.error("Got no embed on_member_remove from automod.py")
+            self.logger.error("Got no embed on_member_remove from automod.py")
         with contextlib.suppress(TypeError):
             automod_channel, allmod_channel = await self.get_automod_channels("updatedchannels", member.guild)
             await automod_channel.send(embed=embed)
@@ -202,7 +217,7 @@ class AutoMod(commands.Cog):
                 await interaction.followup.send("Automod channels are already set up.")
                 return
         except KeyError as e:
-            logging.info(e)
+            self.logger.info(e)
         AutomodCategories = self.AutomodCategories
         CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName="Dragon Automod", position=99)
         data[guild.id] = {CategoryChannel.id: {}}
@@ -259,7 +274,7 @@ class AutoMod(commands.Cog):
                     data[guild_id][category_id][channel_name] = new_log_channel.id
         except Exception as e:
             await interaction.followup.send(e, ephemeral=True)
-            logging.error(e)
+            self.logger.error(e)
         await interaction.followup.send("Updated automod channels on all servers!")
         await self.set_data(data)
 

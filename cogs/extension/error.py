@@ -1,14 +1,19 @@
-import logging
 import datetime
+import logging
+
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
+
 from config import error as CE
+
 
 class Error(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.help_msg = ""
+        self.logger = logging.getLogger("winter_dragon.error")
+
 
     # -> Option 1 --- Change on_error to self.on_error on load
     def cog_load(self):
@@ -21,12 +26,12 @@ class Error(commands.Cog):
         tree.on_error = tree.__class__.on_error
 
     async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError):
-        logging.info(f"Error from: {interaction}")
+        self.logger.debug(f"Error from: {interaction.command.name}")
         await self.error_check(interaction, error)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx:commands.Context, error:commands.CommandError):
-        logging.info(f"Error from: {ctx}")
+        self.logger.debug(f"Error from: {ctx.command.name}")
         await self.error_check(ctx, error)
 
     async def get_dm(self, x:discord.Interaction|commands.Context) -> discord.DMChannel:
@@ -35,21 +40,21 @@ class Error(commands.Cog):
             try:
                 await ctx.message.delete()
             except discord.Forbidden:
-                logging.warning("Not allowed to remove message from dm")
+                self.logger.warning("Not allowed to remove message from dm")
             dm = await ctx.message.author.create_dm()
             self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         elif isinstance(x, discord.Interaction):
             interaction:discord.Interaction = x
             dm = await interaction.user.create_dm()
             self.help_msg = f"`help {interaction.command.name}`" if interaction else "`help`"
-        logging.info(f"Error.py: Returning dm channel {dm.recipient}")
+        self.logger.debug(f"Returning dm channel {dm.recipient}")
         return dm
 
     async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError):
         # sourcery skip: low-code-quality
         dm = await self.get_dm(x)
         if CE.always_log_errors == True:
-            logging.error(error)
+            self.logger.exception(error)
         if CE.ignore_errors == True:
             return
         elif isinstance(error, commands.MissingRequiredArgument) and CE.MissingRequiredArgument == True:
@@ -84,7 +89,7 @@ class Error(commands.Cog):
                     await dm.send(f"Error during command execution: {error}")
         else:
             code = datetime.datetime.now(datetime.timezone.utc).timestamp()
-            logging.error(f"Unexpected error, CODE: {code}, Error: {error}")
+            self.logger.error(f"Unexpected error, CODE: {code}, Error: {error}")
             await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact bot creator with the following code `{code}`")
 
 async def setup(bot:commands.Bot):

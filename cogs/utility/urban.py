@@ -1,14 +1,15 @@
 import discord
-from discord.ext import commands
-from discord import app_commands
 import urbandictionary as ud
+from discord import app_commands
+from discord.ext import commands
+
 from config import urban as config
+
 
 class Urban(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
 
-    # TODO: slash
     @app_commands.command(
         name="urban",
         description="Use random command to get 10 random definitions,or for a meaning and get its definition."

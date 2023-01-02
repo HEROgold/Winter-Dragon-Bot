@@ -1,39 +1,54 @@
-import logging
-import discord
-import random
-import os
 import json
-from discord.ext import commands
+import logging
+import os
+import random
+
+import discord
 from discord import app_commands
+from discord.ext import commands
+
+import config
+import dragon_database
 import rainbow
 
 class Wyr(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
-        self.DBLocation = "./Database/WYR.json"
-        self.setup_db()
+        self.database_name = "WYR"
+        self.logger = logging.getLogger("winter_dragon.wyr")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def setup_db(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation):
-            with open("./Database/WYR.json", "w") as f:
+            with open(self.DBLocation, "w") as f:
                 data = {"game_id": 0, "questions": {}}
                 questions = data["questions"]
                 for question_id, question in enumerate(wyr_default_questions):
                     data["questions"][question_id] = wyr_default_questions[question_id]
                 json.dump(data, f)
                 f.close
-                logging.info("WYR Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("WYR Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
         return data
 
     async def set_data(self, data):
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     @app_commands.command(
         name="would_you_rather",

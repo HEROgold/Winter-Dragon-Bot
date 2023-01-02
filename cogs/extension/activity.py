@@ -1,15 +1,18 @@
 ﻿import asyncio
 import logging
 import random
+
 import discord
-import config
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
+
+import config
 
 
 class Activity(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
+        self.logger = logging.getLogger("winter_dragon.activity")
         self.STATUS = [
             "dnd",
             "do_not_disturb",
@@ -63,7 +66,7 @@ class Activity(commands.Cog):
         if status is None or activity is None:
             activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
         await self.bot.change_presence(status=status, activity=activity)
-        logging.info(f"Activity and status set to {activity}")
+        self.logger.info(f"Activity and status set to {activity}")
         if config.activity.periodic_change == True:
             await asyncio.sleep(config.activity.periodic_time)
             await self.on_ready()
@@ -93,7 +96,7 @@ class Activity(commands.Cog):
             return
         elif status.lower() == "random" and activity.lower() == "random":
             config.activity.periodic_change = True
-            logging.info("Turned on periodic activity change")
+            self.logger.info("Turned on periodic activity change")
             await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
             await self.on_ready()
             return
@@ -106,8 +109,8 @@ class Activity(commands.Cog):
             ActivityObj = discord.Activity(type=ActivityType, name=msg)
             await self.bot.change_presence(status=StatusAttr, activity=ActivityObj)
             await interaction.followup.send("Updated my activity!", ephemeral=True)
-            logging.info(f"Activity and status set to {activity} by {interaction.user}")
-            logging.info("Turned off periodic activity change")
+            self.logger.info(f"Activity and status set to {activity} by {interaction.user}")
+            self.logger.info("Turned off periodic activity change")
             config.activity.periodic_change = False
 
     @slash_activity.autocomplete("status")

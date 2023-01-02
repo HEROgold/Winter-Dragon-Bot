@@ -1,19 +1,23 @@
 import asyncio
 import logging
+
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
+
 
 class Sync(commands.Cog):
     def __init__(self, bot:commands.Bot):
-        self.bot=bot
+        self.bot = bot
+        self.logger = logging.getLogger("winter_dragon.sync")
+
 
     @commands.Cog.listener()
     async def on_ready(self):
         await asyncio.sleep(2)
-        logging.info("Syncing slash commands...")
+        self.logger.info("Syncing slash commands...")
         await self.bot.tree.sync()
-        logging.info("Synced slash commands")
+        self.logger.info("Synced slash commands")
 
     @app_commands.command(name="sync", description="Sync slash commands for this server")
     async def slash_sync(self, interaction: discord.Interaction):

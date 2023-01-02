@@ -1,39 +1,64 @@
-import logging
-import discord
-import os
-import requests
 import asyncio
-from config import steam as config
-from bs4 import BeautifulSoup
 import json
+import logging
+import os
+
+import discord
+import requests
+from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import commands
+
+import config
+import dragon_database
+import config
 
 class Steam(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
-        DBLocation = '.\\Database/SteamMention.json'
-        htmlFile = '.\\Database/SteamPage.html'
-        self.DBLocation = DBLocation
-        self.htmlFile = htmlFile
-        self.database_setup()
+        self.database_name = "SteamMention"
+        self.htmlFile = '.\\Database/SteamPage.html'
+        self.logger = logging.getLogger("winter_dragon.steam")
+        self.setup_html()
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def database_setup(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {"user_id" : []}
                 json.dump(data, f)
                 f.close
-                logging.info("SteamMention Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("SteamMention Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
+
+    def setup_html(self):
         if not os.path.exists(self.htmlFile):
             with open(self.htmlFile, "w") as f:
                 f.write("")
                 f.close()
-            logging.info("Empty Steam Html created")
+            self.logger.info("Empty Steam Html created")
         else:
-            logging.info("Steam Html found")
+            self.logger.info("Steam Html found")
+
+    async def get_data(self) -> dict[str, list]:
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
+        return data
+
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -42,16 +67,7 @@ class Steam(commands.Cog):
             await asyncio.sleep(60*60*6)
             # timer to fight ratelimits and unnecessary checks in seconds increased to> * minutes * hours
 
-    async def get_data(self) -> dict[str, list]:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
-        return data
-
-    async def set_data(self, data:dict):
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
-
-    async def get_html(self, url=config.url) -> str:
+    async def get_html(self, url=config.steam.url) -> str:
         requests.get(url)
         r = requests.get(url)
         return r.text
@@ -67,7 +83,7 @@ class Steam(commands.Cog):
             try:
                 sales.append([title.text, sale.text, url])
             except Exception as e:
-                logging.info("Could not append:", e)
+                self.logger.info("Could not append:", e)
         return sales
 
     async def dupe_check(self, html:str, htmlFile:str) -> bool:
@@ -83,12 +99,12 @@ class Steam(commands.Cog):
                     a.append(i)
                     b.append(j)
         except Exception as e:
-            logging.info(e)
+            self.logger.info(e)
         a.sort()
         b.sort()
-        logging.debug(f"SteamLists: {a}, {b}")
+        self.logger.debug(f"SteamLists: {a}, {b}")
         if from_html == from_file or a == b:
-            logging.info("Steam File and Html are the same!")
+            self.logger.info("Steam File and Html are the same!")
             return True
         else:
             return False
@@ -114,7 +130,7 @@ class Steam(commands.Cog):
                 field_val = i[2]
                 embed.add_field(name=name, value=field_val, inline=False)
             else:
-                logging.info(i)
+                self.logger.info(i)
                 continue
         for id in data["user_id"]:
             user = self.bot.get_user(int(id))
