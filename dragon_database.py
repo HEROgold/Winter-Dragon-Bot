@@ -55,7 +55,7 @@ class Database():
     async def set_data(self, collection_name:str, data:dict) -> None:
         collection = await self.__get_collection__(collection_name)
         try:
-            self.logger.info(f"Updating/replacing data in {collection_name}")
+            self.logger.info(f"Updating/replacing data in database: {self.target_database} collection: {collection_name}")
             l_data = list(collection.find())
             d_data = l_data[0]
             print(d_data['_id'])
