@@ -1,8 +1,9 @@
-import config
 import discord
 import flag
-from discord.ext import commands
 import openai
+from discord.ext import commands
+
+import config
 
 
 class Translate(commands.Cog):

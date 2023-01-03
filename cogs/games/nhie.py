@@ -1,19 +1,27 @@
-import logging
-import discord
-import os
 import json
+import logging
+import os
 import random
-from discord.ext import commands
+
+import discord
 from discord import app_commands
+from discord.ext import commands
+
+import config
+import dragon_database
 import rainbow
+
 
 class nhie(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
-        self.DBLocation = "./Database/NHIE.json"
-        self.setup_db()
+        self.database_name = "NHIE"
+        self.logger = logging.getLogger("winter_dragon.nhie")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def setup_db(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation): 
             with open(self.DBLocation, "w") as f:
                 data = {"game_id": 0, "questions": {}}
@@ -22,18 +30,26 @@ class nhie(commands.Cog):
                     data["questions"][question_id] = nhie_default_questions[question_id]
                 json.dump(data, f)
                 f.close
-                logging.info("NHIE Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("NHIE Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
         return data
 
     async def set_data(self, data):
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     @app_commands.command(
         name="never_have_i_ever",

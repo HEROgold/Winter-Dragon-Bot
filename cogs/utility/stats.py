@@ -2,19 +2,52 @@ import asyncio
 import json
 import logging
 import os
+import random
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord import app_commands
-import random
+
+import config
+import dragon_database
 import rainbow
 
+
 class Stats(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
-        DBLocation = ".\\Database/Stats.json"
-        self.DBLocation = DBLocation
-        self.setup_db()
+        self.database_name = "Stats"
+        self.logger = logging.getLogger("winter_dragon.stats")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
+
+    def setup_json(self):
+        if not os.path.exists(self.DBLocation):
+            with open(self.DBLocation, "w") as f:
+                data = {}
+                json.dump(data, f)
+                f.close
+                self.logger.info(f"{self.database_name} Json Created.")
+        else:
+            self.logger.info(f"{self.database_name} Json Loaded.")
+
+    async def get_data(self) -> dict[str, dict[str, dict[str, dict[str, int]]]]:
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
+        return data
+
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -39,7 +72,7 @@ class Stats(commands.Cog):
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         if online > peak_count:
             await peak_channel.edit(name=f"Peak Online: {peak_count}")
-            logging.info(f"New peak online reached for {guild}!")
+            self.logger.info(f"New peak online reached for {guild}!")
 
     def setup_db(self):
         if not os.path.exists(self.DBLocation):
@@ -47,18 +80,9 @@ class Stats(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                logging.info("Stats Json Created.")
+                self.logger.info("Stats Json Created.")
         else:
-            logging.info("Stats Json Loaded.")
-
-    async def get_data(self) -> dict[str, dict[str, dict[str, dict[str, int]]]]:
-        with open(self.DBLocation, "r") as f:
-            data = json.load(f)
-        return data
-
-    async def set_data(self, data):
-        with open(self.DBLocation, "w") as f:
-            json.dump(data, f)
+            self.logger.info("Stats Json Loaded.")
 
     async def create_stats_channels(self, guild:discord.Guild) -> None:
         data = await self.get_data()
@@ -90,7 +114,7 @@ class Stats(commands.Cog):
         guild_dict = data[guild_id]
         category = list(guild_dict.values())[0]
         channels = list(category.values())[0]
-        logging.info(f"Removing {channels}")
+        self.logger.info(f"Removing {channels}")
         for channel_name, channel_id in channels.items():
             channel = discord.utils.get(guild.channels, id=int(channel_id))
             await channel.delete()
@@ -126,7 +150,7 @@ class Stats(commands.Cog):
                 await self.bot.get_channel(bot_channel_id).edit(name=f"Online Bots: {str(bots)}")
                 await self.bot.get_channel(guild_channel_id).edit(name=f"Created On: {str(age)}")
                 await peak_channel.edit(name=f"Peak Online: {peak_online}")
-                logging.info(f"Updated Guild: {guild} stat channels")
+                self.logger.info(f"Updated Guild: {guild} stat channels")
 
     @app_commands.guild_only()
     @app_commands.command(name="servers_stats", description="Get some information about the server!")
@@ -179,7 +203,7 @@ class Stats(commands.Cog):
     async def reset_stats(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        logging.info("Resetting stats channels")
+        self.logger.info("Resetting stats channels")
         data = await self.get_data()
         await interaction.response.defer(ephemeral=True)
         for guild in self.bot.guilds:
@@ -187,7 +211,7 @@ class Stats(commands.Cog):
                 guild = discord.utils.get(self.bot.guilds, id=guild.id)
                 await self.remove_stats_channels(guild=guild)
                 await self.create_stats_channels(guild=guild)
-                logging.info(f"Reset stats for: {guild}")
+                self.logger.info(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all server stat channels", ephemeral=True)
 
 async def setup(bot:commands.Bot):

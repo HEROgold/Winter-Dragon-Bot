@@ -1,41 +1,67 @@
 import asyncio
 import datetime
-import logging
-import discord
 import json
+import logging
 import os
-import config
-from discord.ext import commands
+
+import discord
 from discord import app_commands
+from discord.ext import commands
+
+import config
+import dragon_database
+
 
 class Ban(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
-        self.DBLocation = "./Database/Ban.json"
-        self.setup_db()
+        self.database_name = "Ban"
+        self.logger = logging.getLogger("winter_dragon.ban")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def setup_db(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {}
                 json.dump(data, f)
                 f.close
-                logging.info("Ban Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("Ban Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
+    async def get_data(self) -> dict[str,int|dict[str, str]]:
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
+        return data
+
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
+
+    # TODO change while loop to be same as activity.py
     @commands.Cog.listener()
     async def on_ready(self):
         while True:
             data = await self.get_data()
             to_delete = []
+            self.logger.debug(data)
             for member_id, d_data in list(data.items()):
                 ban_time = d_data["Epoch_unban"]
                 if datetime.datetime.now().timestamp() >= ban_time:
                     guild_id = d_data["guild_id"]
                     member = discord.utils.get(self.bot.get_all_members(), id=int(member_id))
                     guild = discord.utils.get(self.bot.guilds, id=guild_id)
-                    logging.info(f"Unbanning {d_data['Name']} for guild {guild_id}")
+                    self.logger.info(f"Unbanning {d_data['Name']} for guild {guild_id}")
                     await self.unban_member(member=member, guild=guild)
                     to_delete.append(member_id)
             for id in to_delete:
@@ -52,17 +78,7 @@ class Ban(commands.Cog):
             try:
                 await member.add_roles(role)
             except Exception as e:
-                logging.info(f"Trying to add role {role.name} got error: {e}")
-
-    # Helper functions to laod and update database
-    async def get_data(self) -> dict:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
-        return data
-
-    async def set_data(self, data:dict):
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
+                self.logger.info(f"Trying to add role {role.name} got error: {e}")
 
     def get_seconds(self, seconds, minutes, hours, days) -> int:
         hours += days*24

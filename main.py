@@ -1,30 +1,32 @@
 import asyncio
-import discord
-from discord.ext import commands
-from discord import app_commands
 import logging
 import os
-from config import main as config
 import traceback
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+from config import main as config
+
 # We make use of a config file, change values in config.py.
-# Switch to slash_commands
-# TODO: remove json, start using actual database. MongoDB for example.
 
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
 
-bot_logger = logging.getLogger()
+bot_logger = logging.getLogger("winter_dragon")
+discord_logger = logging.getLogger('discord')
+
 bot_logger.setLevel(LOG_LEVEL)
 bot_handler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
 bot_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 bot_logger.addHandler(bot_handler)
 bot_logger.addHandler(logging.StreamHandler())
 
-discord_log = logging.getLogger('discord')
-discord_log.setLevel(LOG_LEVEL)
+discord_logger.setLevel(LOG_LEVEL)
 discord_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 discord_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-discord_log.addHandler(discord_handler)    
-discord_log.addHandler(logging.StreamHandler())
+discord_logger.addHandler(discord_handler)    
+# discord_logger.addHandler(logging.StreamHandler())
 
 Intents = discord.Intents.default()
 # Intents = discord.Intents.all()
@@ -46,9 +48,9 @@ async def on_ready():
     # Rename not needed
     bot_username = await bot.user.edit(username="Winter Dragon")
     print("Bot is running!")
-    logging.info(f"Username updated to {bot_username}")
+    bot_logger.info(f"Username updated to {bot_username}")
     if config.show_logged_in == True:
-        logging.info(f'Logged on as {bot.user}!')
+        bot_logger.info(f'Logged on as {bot.user}!')
 
 async def innit():
     await mass_load_cogs()
@@ -68,11 +70,11 @@ async def mass_load_cogs() -> None:
     for cog in cogs:
         try:
             await bot.load_extension(cog)
-            logging.info(f"Loaded {cog}")
+            bot_logger.info(f"Loaded {cog}")
         except Exception as e:
-            logging.warning(f"Error while loading {cog}: {traceback.print_exc()}")
+            bot_logger.warning(f"Error while loading {cog}: {traceback.print_exc()}")
     if not (os.listdir("./cogs")):
-        logging.warning("No Cogs Directory To Load!")
+        bot_logger.warning("No Cogs Directory To Load!")
 
 async def mass_reload_cogs(interaction:discord.Interaction):
     reload_message = ""
@@ -81,8 +83,8 @@ async def mass_reload_cogs(interaction:discord.Interaction):
         try:
             bot.reload_extension(cog)
         except Exception as e:
-            logging.warning(f"Error while reloading {cog}: {traceback.print_exc()}")
-        logging.info(f"Reloaded {cog}")
+            bot_logger.warning(f"Error while reloading {cog}: {traceback.print_exc()}")
+        bot_logger.info(f"Reloaded {cog}")
         reload_message += f"Reloaded {cog}\n"
     await interaction.followup.send(f"{reload_message}Restart complete.")
 
@@ -94,7 +96,7 @@ async def slash_show_cogs(interaction:discord.Interaction):
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
     cogs = await get_cogs()
-    logging.info(f"Showing {cogs} to {interaction.user}")
+    bot_logger.info(f"Showing {cogs} to {interaction.user}")
     await interaction.response.send_message(f"{cogs}", ephemeral=True)
 
 @tree.command(
@@ -110,7 +112,7 @@ async def slash_restart(interaction:discord.Interaction, extension:str):
     else:
         try:
             await bot.reload_extension(extension)
-            logging.info(f"Reloaded {extension}")
+            bot_logger.info(f"Reloaded {extension}")
             await interaction.followup.send(f"Reloaded {extension}", ephemeral=True)
         except Exception:
             await interaction.followup.send(f"error reloading {extension}: {traceback.print_exc()}", ephemeral=True)
@@ -136,10 +138,10 @@ async def slash_unload(interaction:discord.Interaction, extension:str):
     else:
         try:
             await bot.unload_extension(extension)
-            logging.info(f"Unloaded {extension}")
+            bot_logger.info(f"Unloaded {extension}")
             await interaction.followup.send(f"Unloaded {extension}", ephemeral=True)
         except Exception:
-            logging.warning(f"unable to reload {extension}")
+            bot_logger.warning(f"unable to reload {extension}")
             await interaction.followup.send(f"Unable to reload {extension}", ephemeral=True)
 
 @slash_unload.autocomplete("extension")
@@ -160,10 +162,10 @@ async def slash_load(interaction:discord.Interaction, extension:str):
     interaction.response.defer()
     try:
         await bot.load_extension(extension)
-        logging.info(f"Loaded {extension}")
+        bot_logger.info(f"Loaded {extension}")
         await interaction.followup.send(f"Loaded {extension}", ephemeral=True)
     except Exception:
-        logging.warning(f"unable to load {extension}")
+        bot_logger.warning(f"unable to load {extension}")
         await interaction.followup.send(f"Unable to load {extension}", ephemeral=True)
 
 @slash_load.autocomplete("extension")

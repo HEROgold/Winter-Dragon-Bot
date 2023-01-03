@@ -1,50 +1,69 @@
+import asyncio
 import contextlib
-import logging
-import discord
 import datetime
 import json
+import logging
 import os
-import asyncio
-from discord.ext import commands
-from discord import app_commands
+
+import discord
 import num2words
+from discord import app_commands
+from discord.ext import commands
+
+import config
+import dragon_database
 
 
 class Poll(commands.Cog):
-    def __init__(self, bot) -> None:
+    def __init__(self, bot:commands.Bot):
         super().__init__()
         self.bot:commands.bot = bot
-        self.DBLocation = "./Database/Poll.json"
-        self.setup_db()
-        asyncio.get_running_loop().create_task(self.clean_up())
+        self.database_name = "Poll"
+        self.logger = logging.getLogger("winter_dragon.poll")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def setup_db(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation):
-            with open("./Database/Poll.json", "w") as f:
+            with open(self.DBLocation, "w") as f:
                 data = {}
                 json.dump(data, f)
                 f.close
-                logging.info("Poll Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("Poll Json Loaded.")
-
-    async def clean_up(self) -> None:
-        while True:
-            data = await self.get_data()
-            for k, v in list(data.items()):
-                if v["Time"] <= datetime.datetime.now().timestamp():
-                    del data[k]
-            await self.set_data(data)
-            await asyncio.sleep(60*60)
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
+        print(data)
         return data
 
-    async def set_data(self, data) -> None:
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        data = await self.get_data()
+        if not data:
+            return
+        self.logger.debug(data)
+        for k, v in list(data.items()):
+            if v["Time"] <= datetime.datetime.now().timestamp():
+                del data[k]
+        await self.set_data(data)
+        await asyncio.sleep(60*60)
+        await self.on_ready()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):

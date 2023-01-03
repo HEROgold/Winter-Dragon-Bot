@@ -1,37 +1,52 @@
-import discord
+import asyncio
+import datetime
+import json
 import logging
 import os
-import json
-import datetime
-from discord.ext import commands
+
+import discord
 from discord import app_commands
-import asyncio
+from discord.ext import commands
+
+import config
+import dragon_database
+
 
 class Reminder(commands.Cog):
-    def __init__(self, bot) -> None:
-        super().__init__()
+    def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
-        self.DBLocation = "./Database/Reminder.json"
-        self.setup_db()
+        self.database_name = "Reminder"
+        self.logger = logging.getLogger("winter_dragon.reminder")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
 
-    def setup_db(self):
+    def setup_json(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {}
                 json.dump(data, f)
                 f.close
-                logging.info("Reminder Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            logging.info("Reminder Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, list[dict[str, str|int]]]:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data:dict = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
         return data
 
-    async def set_data(self, data) -> None:
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -41,6 +56,7 @@ class Reminder(commands.Cog):
 
     async def send_reminder(self):
         data = await self.get_data()
+        self.logger.debug(data)
         for member_id, remind_list in list(data.items()):
             for i, remind_data in enumerate(remind_list):
                 if remind_data["unix_time"] <= datetime.datetime.now(datetime.timezone.utc).timestamp():
@@ -49,10 +65,10 @@ class Reminder(commands.Cog):
                     reminder = remind_data["reminder"]
                     await dm.send(f"I'm here to remind you about\n{reminder}")
                     del remind_list[i]
-                    logging.info(f"Reminded {member}, and removed it.")
+                    self.logger.info(f"Reminded {member}, and removed it.")
             if not remind_list:
                 del data[member_id]
-                logging.info(f"Removing empty reminder for id {member_id}")
+                self.logger.info(f"Removing empty reminder for id {member_id}")
         await self.set_data(data)
 
     @app_commands.command(

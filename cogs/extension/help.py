@@ -1,15 +1,20 @@
 import logging
+import random
 from math import ceil
+
 import discord
-import config
 from discord.ext import commands
 from discord.ui import Button, View
-import random
+
+import config
 import rainbow
+
 
 class Help(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
+        self.logger = logging.getLogger("winter_dragon.help")
+
 
     async def CreateButton(self, label:str, style:discord.ButtonStyle):
         return Button(label=label, style=style)
@@ -70,7 +75,7 @@ class Help(commands.Cog):
                 await ctx.send("The page number cannot be 0 or less then 0.")
                 return
         except Exception as e:
-            logging.error(f"Help.py: {e}")
+            self.logger.error(f"Help.py: {e}")
 
         if isinstance(HelpInput, int):
             ButtonLeft = await self.CreateButton(label=f"Help {HelpInput-1}", style=discord.ButtonStyle.primary)

@@ -1,28 +1,63 @@
 import contextlib
-import logging
-import discord
-import math
-import random
-import os
 import json
-from discord.ext import commands
+import logging
+import math
+import os
+import random
+
+import discord
 from discord import app_commands
+from discord.ext import commands
+
+import config
+import dragon_database
+
 
 class TeamSlash(commands.Cog):
-    def __init__(self, bot) -> None:
-        super().__init__()
+    def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
-        self.DBLocation = "./Database/Teams.json"
-        self.setup_db()
+        self.database_name = "Teams"
+        self.logger = logging.getLogger("winter_dragon.teams")
+        if not config.main.use_database:
+            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.setup_json()
+
+    def setup_json(self):
+        if not os.path.exists(self.DBLocation):
+            with open(self.DBLocation, "w") as f:
+                data = {}
+                json.dump(data, f)
+                f.close
+                self.logger.info(f"{self.database_name} Json Created.")
+        else:
+            self.logger.info(f"{self.database_name} Json Loaded.")
+
+    async def get_data(self) -> dict[str, dict[str, dict[str, int | list]]]:
+        if config.main.use_database:
+            db = dragon_database.Database()
+            data = await db.get_data(self.database_name)
+        else:
+            with open(self.DBLocation, 'r') as f:
+                data = json.load(f)
+        return data
+
+    async def set_data(self, data):
+        if config.main.use_database:
+            db = dragon_database.Database()
+            await db.set_data(self.database_name, data=data)
+        else:
+            with open(self.DBLocation,'w') as f:
+                json.dump(data, f)
 
     @commands.Cog.listener()
     async def on_ready(self):
-        logging.info("Cleaning Teams channels")
+        self.logger.info("Cleaning Teams channels")
         data = await self.get_data()
         for guild_id in list(data):
             channels_list = None
             category_id = None
             with contextlib.suppress(KeyError):
+                self.logger.debug(data)
                 channels_list:list = data[guild_id]["Category"]["Channels"]
                 category_id:int = data[guild_id]["Category"]["id"]
             if not category_id:
@@ -38,7 +73,7 @@ class TeamSlash(commands.Cog):
                     await channel.delete()
                     channels_list.remove(channel.id)
         await self.set_data(data)
-        logging.info("Teams cleaned")
+        self.logger.info("Teams cleaned")
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
@@ -85,27 +120,6 @@ class TeamSlash(commands.Cog):
         except KeyError:
             yield None
 
-    def setup_db(self):
-        # Create database if it doesn't exist, else load it
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
-                data = {}
-                json.dump(data, f)
-                f.close
-                logging.info("Teams Json Created.")
-        else:
-            logging.info("Teams Json Loaded.")
-
-    # Helper functions to laod and update database
-    async def get_data(self) -> dict[str, dict[str, dict[str, int | list]]]:
-        with open(self.DBLocation, 'r') as f:
-            data = json.load(f)
-        return data
-
-    async def set_data(self, data:dict):
-        with open(self.DBLocation,'w') as f:
-            json.dump(data, f)
-
     async def CreateVoiceChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str) -> discord.VoiceChannel:
         # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
         if not CategoryChannel:
@@ -128,7 +142,7 @@ class TeamSlash(commands.Cog):
         for k,v in teams.items():
             user_id = [j.id for j in v.values()]
             teams[k] = user_id
-        logging.info(f"creating teams: {teams}")
+        self.logger.info(f"creating teams: {teams}")
         return teams
 
     @commands.Cog.listener()
@@ -143,7 +157,7 @@ class TeamSlash(commands.Cog):
             try:
                 teams = {int(k):v for k,v in teams.items()}
             except Exception as e:
-                logging.error(e)
+                self.logger.error(e)
             for members in teams.values():
                 reaction_users = [user async for user in reaction.users()]
                 if user.id in members and user in reaction_users and reaction.count >= len(members):
@@ -213,7 +227,7 @@ class TeamSlash(commands.Cog):
         try:
             category_id:int = data[guild_id]["Category"]["id"]
         except KeyError:
-            logging.info(f"Creating Teams category for {guild}")
+            self.logger.info(f"Creating Teams category for {guild}")
             category_channel:discord.CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
             category_id = category_channel.id
             data[guild_id] = {"Category":{"id":category_id}}
@@ -240,7 +254,7 @@ class TeamSlash(commands.Cog):
             channels_list.append(team_voice.id)
             await self.set_data(data)
             for member_id in member_ids:
-                logging.info(f"Moving {member_id} to {team_voice}")
+                self.logger.info(f"Moving {member_id} to {team_voice}")
                 member = discord.utils.get(guild.members, id=member_id)
                 await member.move_to(team_voice)
 

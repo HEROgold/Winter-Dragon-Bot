@@ -1,17 +1,22 @@
-import logging
-import discord
-import os
 import asyncio
+import logging
+import os
 import random
-import rainbow
+
+import discord
 from craiyon import Craiyon
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
+
+import rainbow
+
 
 class ImageGen(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.CrAIyonDataBase = "./Database/crAIyon/"
         self.bot:commands.Bot = bot
+        self.logger = logging.getLogger("winter_dragon.imggen")
+
 
     async def generate_images(self, interaction:discord.Interaction, dm:discord.DMChannel, query:str) -> None:
         os.makedirs(f"{self.CrAIyonDataBase}/{interaction.user.id}", exist_ok=True)
@@ -24,7 +29,7 @@ class ImageGen(commands.Cog):
             await dm.send(file=discord.File(f"{self.CrAIyonDataBase}{interaction.user.id}/image-{i+1}.png"), embed=embed)
             os.remove(f"{self.CrAIyonDataBase}{interaction.user.id}/image-{i+1}.png")
         os.rmdir(f"{self.CrAIyonDataBase}/{interaction.user.id}")
-        logging.info(f"Removing {i} image from {interaction.user.id}")
+        self.logger.info(f"Removing {i} image from {interaction.user.id}")
 
     @app_commands.command(name = "image_gen",
                     description = "Request an AI to make an image, and when its done get it send to you")
@@ -33,7 +38,7 @@ class ImageGen(commands.Cog):
         dm = await interaction.user.create_dm()
         await interaction.response.defer(ephemeral=True)
         await interaction.followup.send("Proccessing images, please be patient.", ephemeral=True)
-        logging.info(f"Requesting images for {interaction.user} with query {query}")
+        self.logger.info(f"Requesting images for {interaction.user} with query {query}")
         # Run in another thread, to not get blocked on waiting generation
         asyncio.new_event_loop().create_task(await self.generate_images(interaction, dm, query))
 
