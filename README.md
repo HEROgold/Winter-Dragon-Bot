@@ -15,8 +15,8 @@ This project uses lots of modules that need to be downloaded, these can be insta
 To use MongoDB make sure in config.py the following settings are applied
 
 * in class main:
-`use_database:bool = True`
-`database_name:str = "YourDatabaseName"`
+  `use_database:bool = True`
+  `database_name:str = "YourDatabaseName"`
 * in class: database:
   `IP_PORT:str = "localhost:27017"`
   `USER_PASS:str = "User:Password"`
@@ -27,19 +27,12 @@ If you dont use MongoDB, you can use json files by changing config.py to match t
 * In class main:
   ``use_database:bool = False``
 
-
 ## Features:
 
-    The use of MongoDB for a proper solution,
-
-    A backup solution for when database isn't used
-
-    Mutliple slash commands with lots of features
-
-    customizability using a config file
-
-    2 seperate log files for the bot and discord.
-
-    Lots of error handling
-
-    And more!
+The use of MongoDB for a proper solution,
+A backup solution for when database isn't used
+Mutliple slash commands with lots of features
+customizability using a config file
+2 seperate log files for the bot and discord.
+Lots of error handling
+And more!
