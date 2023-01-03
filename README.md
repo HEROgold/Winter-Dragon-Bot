@@ -10,7 +10,8 @@ causing a more robust, error-free and secure project!
 
 ## How to install:
 
-This project uses lots of modules that need to be downloaded, these can be installed using `pip install -r requirements.txt`
+This project uses lots of modules that need to be downloaded, these can be installed using `
+pip install -r requirements.txt`
 
 To use MongoDB make sure in config.py the following settings are applied
 
