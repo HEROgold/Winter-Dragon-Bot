@@ -12,6 +12,7 @@ class Purge(commands.Cog):
         self.bot:commands.Bot = bot
 
     @app_commands.command(name="purge", description="Purge X amount of messages")
+    @app_commands.guild_only()
     async def slash_purge(self, interaction:discord.Interaction, count:int):
         await interaction.response.defer(ephemeral=True)
         if count == -1:
