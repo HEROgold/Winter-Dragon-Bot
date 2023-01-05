@@ -27,9 +27,9 @@ class Reminder(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, list[dict[str, str|int]]]:
         if config.main.use_database:
@@ -51,6 +51,7 @@ class Reminder(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         await self.send_reminder()
+        # seconds > minutes > hours
         await asyncio.sleep(60)
         await self.on_ready()
 
@@ -65,10 +66,10 @@ class Reminder(commands.Cog):
                     reminder = remind_data["reminder"]
                     await dm.send(f"I'm here to remind you about\n{reminder}")
                     del remind_list[i]
-                    self.logger.info(f"Reminded {member}, and removed it.")
+                    self.logger.debug(f"Reminded {member}, and removed it.")
             if not remind_list:
                 del data[member_id]
-                self.logger.info(f"Removing empty reminder for id {member_id}")
+                self.logger.debug(f"Removing empty reminder for id {member_id}")
         await self.set_data(data)
 
     @app_commands.command(

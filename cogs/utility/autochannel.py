@@ -27,9 +27,9 @@ class Autochannel(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, int]]]:
         if config.main.use_database:
@@ -52,7 +52,10 @@ class Autochannel(commands.Cog):
     async def on_ready(self):
         # Delete empty channels, and categories every hour since startup.
         # When loaded, loop over all guilds, and check if they are in DB
-        self.logger.info("Cleaning Autochannels...")
+        await self.cleanup()
+
+    async def cleanup(self):
+        self.logger.debug("Cleaning Autochannels...")
         data = await self.get_data()
         self.logger.debug(data)
         for guild_id, guild_channels in data.items():
@@ -71,11 +74,11 @@ class Autochannel(commands.Cog):
                             await channel.delete()
                         del data[guild.id][key]
         await self.set_data(data)
-        self.logger.info("Cleaned Autochannels")
-        if config.autochannel.clean_timer == 0:
-            return
-        await asyncio.sleep(config.autochannel.clean_timer)
-        await self.on_ready()
+        self.logger.debug("Cleaned Autochannels")
+        if config.database.PERIODIC_CLEANUP:
+            # seconds > minuts > hours
+            await asyncio.sleep(60*60*1)
+            await self.cleanup()
 
     async def CreateCategoryChannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite, ChannelName:str, position:int=2):
         return await guild.create_category(name=ChannelName, overwrites=overwrites, position=position)
@@ -97,8 +100,8 @@ class Autochannel(commands.Cog):
         return TextChannel
 
     @app_commands.command(name="autochannel", description="Set up voice category and channels, which lets each user make their own channels")
-    @commands.has_permissions(manage_channels = True)
-    @commands.bot_has_permissions(manage_channels = True)
+    @app_commands.checks.has_permissions(manage_channels = True)
+    @app_commands.checks.bot_has_permissions(manage_channels = True)
     async def slash_autochannel(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
@@ -172,7 +175,7 @@ class Autochannel(commands.Cog):
                         CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName=f"{member.name}", position=99)
                         data[guild_id][member.id] = {"id": CategoryChannel.id}
                     else:
-                        self.logger.info(f"Unexpected Error: {e}")
+                        self.logger.exception(f"Unexpected Error: {e}")
                 try: # Get Users own voice channel, or create one
                     VoiceChannel = discord.utils.get(guild.voice_channels, id=(int(data[guild_id][str(member.id)]["Voice"])))
                     await member.move_to(VoiceChannel)
@@ -182,7 +185,7 @@ class Autochannel(commands.Cog):
                         data[guild_id][member.id]["Voice"] = VoiceChannel.id
                         await member.move_to(VoiceChannel)
                     else:
-                        self.logger.info(f"Unexpected Error: {e}")
+                        self.logger.exception(f"Unexpected Error: {e}")
                 try: # Get Users own text channel, or create one
                     TextChannel = discord.utils.get(guild.text_channels, id=(int(data[guild_id][str(member.id)]["Text"])))
                 except Exception as e:
@@ -190,7 +193,7 @@ class Autochannel(commands.Cog):
                         TextChannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Text")
                         data[guild_id][member.id]["Text"] = TextChannel.id
                     else:
-                        self.logger.info(f"Unexpected Error: {e}")
+                        self.logger.exception(f"Unexpected Error: {e}")
             await self.set_data(data)
         if before.channel:
             # FIXME: doesnt seem to remove channel and data

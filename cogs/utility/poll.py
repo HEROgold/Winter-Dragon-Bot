@@ -30,9 +30,9 @@ class Poll(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict:
         if config.main.use_database:
@@ -54,16 +54,20 @@ class Poll(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        await self.cleanup()
+
+    async def cleanup(self):
         data = await self.get_data()
+        self.logger.debug("Cleaning poll database")
         if not data:
             return
-        self.logger.debug(data)
         for k, v in list(data.items()):
             if v["Time"] <= datetime.datetime.now().timestamp():
                 del data[k]
         await self.set_data(data)
         await asyncio.sleep(60*60)
-        await self.on_ready()
+        if config.database.PERIODIC_CLEANUP:
+            await self.cleanup()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):
@@ -92,6 +96,7 @@ class Poll(commands.Cog):
         await self.set_data(data)
 
     @app_commands.command(name = "poll", description="Send a poll to ask users questions")
+    @app_commands.guild_only()
     async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str):
         if interaction.user.guild_permissions.administrator != True:
             return

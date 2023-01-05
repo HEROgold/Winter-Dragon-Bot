@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from config import main as config
-
+import dragon_database
 # We make use of a config file, change values in config.py.
 
 LOG_LEVEL = logging.DEBUG
@@ -46,14 +46,16 @@ if config.enable_custom_help:
 @bot.event
 async def on_ready():
     # Rename not needed
-    bot_username = await bot.user.edit(username="Winter Dragon")
+    # bot_username = await bot.user.edit(username="Winter Dragon")
+    # bot_logger.info(f"Username updated to {bot_username}")
     print("Bot is running!")
-    bot_logger.info(f"Username updated to {bot_username}")
     if config.show_logged_in == True:
         bot_logger.info(f'Logged on as {bot.user}!')
 
 async def innit():
     await mass_load_cogs()
+    DB = dragon_database.Database()
+    await DB.get_client()
 
 async def get_cogs() -> list[str]:
     extensions = []
@@ -96,7 +98,7 @@ async def slash_show_cogs(interaction:discord.Interaction):
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
     cogs = await get_cogs()
-    bot_logger.info(f"Showing {cogs} to {interaction.user}")
+    bot_logger.debug(f"Showing {cogs} to {interaction.user}")
     await interaction.response.send_message(f"{cogs}", ephemeral=True)
 
 @tree.command(

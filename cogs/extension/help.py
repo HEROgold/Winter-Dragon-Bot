@@ -15,7 +15,6 @@ class Help(commands.Cog):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.help")
 
-
     async def CreateButton(self, label:str, style:discord.ButtonStyle):
         return Button(label=label, style=style)
 
@@ -56,6 +55,7 @@ class Help(commands.Cog):
             view.add_item(item)
         return view
 
+    # TODO: rewrite help for slash commands WITH buttons
     @commands.command(description = "Use this command to get information about all available commands.",
                     brief = "Sends this help page!",
                     usage = "help [page or command]:\nExample:`help 1`, `help invite`")
@@ -65,6 +65,8 @@ class Help(commands.Cog):
         # 3 types of commands, Chat, Slash (/) And all.
         # all_list = self.bot.all_commands # Command raised an exception: AttributeError: 'str' object has no attribute 'name'
         # slash_list = self.bot.application_commands # Command raised an exception: AttributeError: 'str' object has no attribute 'name'
+        for i in self.bot.tree.walk_commands():
+            self.logger.debug(i)
         chat_list = self.bot.commands
         view = View()
         if HelpInput is None:

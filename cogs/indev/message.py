@@ -25,9 +25,9 @@ class get_message(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, str]]]:
         if config.main.use_database:
@@ -47,10 +47,29 @@ class get_message(commands.Cog):
                 json.dump(data, f)
 
     @app_commands.command(name = "get_messages", description = f"get and store the last {config.message.limit} messages, in each channel from this server!")
+    @app_commands.guild_only()
+    @app_commands.checks.cooldown(1, 300)
     async def slash_get_message(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        data = await self.get_data()
         guild = interaction.guild
+        await self.get_message(interaction, guild)
+        await interaction.followup.send("Updated my database!", ephemeral=True)
+        self.logger.info("finished updating messages")
+
+    @app_commands.command(name="mass_get_messages", description=f"get and store the last {config.message.limit} messages, in each channel from each server!")
+    @app_commands.guild_only()
+    @app_commands.checks.cooldown(1, 300)
+    async def slash_mass_get__message(self, interaction:discord.Interaction):
+        if not await self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
+        await interaction.response.defer(ephemeral=True)
+        for guild in self.bot.guilds:
+            await self.get_message(interaction, guild)
+        await interaction.followup.send("Updated my database!", ephemeral=True)
+        self.logger.info("finished updating messages")
+
+    async def get_message(self, interaction:discord.Interaction, guild:discord.Guild=None) -> None:
+        data = await self.get_data()
         guild_id = str(guild.id)
         if guild_id not in data:
             data[guild_id] = {}
@@ -62,14 +81,13 @@ class get_message(commands.Cog):
                 if str(message.id) in data[guild_id][channel_id]:
                     break
                 if message.content in ["", "[Original Message Deleted]"]:
-                    # Skipt empty contents (I.e. Bot embeds etc.)
+                    # Skip empty contents (I.e. Bot embeds etc.)
                     continue
-                data[guild_id][channel_id][message.id] = str(message.content)
+                data[guild_id][channel_id][str(message.id)] = str(message.content)
             if not data[guild_id][channel_id]:
                 # Clean-up data if channel has no messages.
                 del data[guild_id][channel_id]
         await self.set_data(data)
-        await interaction.followup.send("Updated my database!", ephemeral=True)
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(get_message(bot))

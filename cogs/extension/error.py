@@ -89,7 +89,7 @@ class Error(commands.Cog):
                     await dm.send(f"Error during command execution: {error}")
         else:
             code = datetime.datetime.now(datetime.timezone.utc).timestamp()
-            self.logger.error(f"Unexpected error, CODE: {code}, Error: {error}")
+            self.logger.exception(f"Unexpected error, CODE: {code}, Error: {error}")
             await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact bot creator with the following code `{code}`")
 
 async def setup(bot:commands.Bot):

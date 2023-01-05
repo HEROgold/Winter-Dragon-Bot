@@ -28,9 +28,9 @@ class Stats(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, dict[str, int]]]]:
         if config.main.use_database:
@@ -51,9 +51,7 @@ class Stats(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        while True:
-            await self.update()
-            await asyncio.sleep(60 * 5)  # timer to fight ratelimits
+        await self.update()
 
     @commands.Cog.listener()
     async def on_member_update(self, before:discord.Member, after:discord.Member):
@@ -80,9 +78,9 @@ class Stats(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info("Stats Json Created.")
+                self.logger.debug("Stats Json Created.")
         else:
-            self.logger.info("Stats Json Loaded.")
+            self.logger.debug("Stats Json Loaded.")
 
     async def create_stats_channels(self, guild:discord.Guild) -> None:
         data = await self.get_data()
@@ -114,7 +112,7 @@ class Stats(commands.Cog):
         guild_dict = data[guild_id]
         category = list(guild_dict.values())[0]
         channels = list(category.values())[0]
-        self.logger.info(f"Removing {channels}")
+        self.logger.debug(f"Removing {channels}")
         for channel_name, channel_id in channels.items():
             channel = discord.utils.get(guild.channels, id=int(channel_id))
             await channel.delete()
@@ -145,12 +143,15 @@ class Stats(commands.Cog):
                 except ValueError:
                     peak_count = 0
                 peak_online = max(online, peak_count)
-                await self.bot.get_channel(online_channel_id).edit(name=f"Online Users {str(online)}")
+                await self.bot.get_channel(online_channel_id).edit(name=f"Online Users: {str(online)}")
                 await self.bot.get_channel(user_channel_id).edit(name=f"Total Users: {str(users)}")
                 await self.bot.get_channel(bot_channel_id).edit(name=f"Online Bots: {str(bots)}")
                 await self.bot.get_channel(guild_channel_id).edit(name=f"Created On: {str(age)}")
                 await peak_channel.edit(name=f"Peak Online: {peak_online}")
-                self.logger.info(f"Updated Guild: {guild} stat channels")
+                self.logger.debug(f"Updated Guild: {guild} stat channels")
+        # timer to fight ratelimits
+        await asyncio.sleep(60 * 5)
+        await self.update()
 
     @app_commands.guild_only()
     @app_commands.command(name="servers_stats", description="Get some information about the server!")
@@ -173,8 +174,9 @@ class Stats(commands.Cog):
         name="stats_category_add",
         description="This command will create the Stats category which will show some stats about the server."
     )
-    @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_channels=True)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_add(self, interaction:discord.Interaction):
         data = await self.get_data()
         guild_id = str(interaction.guild.id)
@@ -188,8 +190,9 @@ class Stats(commands.Cog):
         name="stats_category_remove",
         description="This command removes the stat channels. Including the Category and all channels in there."
     )
-    @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_channels=True)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_remove_stats_category(self, interaction:discord.Interaction):
         data = await self.get_data()
         if str(interaction.guild.id) not in data:
@@ -203,7 +206,7 @@ class Stats(commands.Cog):
     async def reset_stats(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        self.logger.info("Resetting stats channels")
+        self.logger.info(f"Resetting all guild/stats channels > by: {interaction.user}")
         data = await self.get_data()
         await interaction.response.defer(ephemeral=True)
         for guild in self.bot.guilds:
@@ -211,7 +214,7 @@ class Stats(commands.Cog):
                 guild = discord.utils.get(self.bot.guilds, id=guild.id)
                 await self.remove_stats_channels(guild=guild)
                 await self.create_stats_channels(guild=guild)
-                self.logger.info(f"Reset stats for: {guild}")
+                self.logger.debug(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all server stat channels", ephemeral=True)
 
 async def setup(bot:commands.Bot):

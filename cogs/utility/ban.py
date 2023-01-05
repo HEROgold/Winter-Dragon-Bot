@@ -27,9 +27,9 @@ class Ban(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
         if config.main.use_database:
@@ -48,26 +48,30 @@ class Ban(commands.Cog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    # TODO change while loop to be same as activity.py
     @commands.Cog.listener()
     async def on_ready(self):
-        while True:
-            data = await self.get_data()
-            to_delete = []
-            self.logger.debug(data)
-            for member_id, d_data in list(data.items()):
-                ban_time = d_data["Epoch_unban"]
-                if datetime.datetime.now().timestamp() >= ban_time:
-                    guild_id = d_data["guild_id"]
-                    member = discord.utils.get(self.bot.get_all_members(), id=int(member_id))
-                    guild = discord.utils.get(self.bot.guilds, id=guild_id)
-                    self.logger.info(f"Unbanning {d_data['Name']} for guild {guild_id}")
-                    await self.unban_member(member=member, guild=guild)
-                    to_delete.append(member_id)
-            for id in to_delete:
-                del data[str(id)]
-            await self.set_data(data=data)
-            await asyncio.sleep(60)
+        await self.unban_check()
+
+    async def unban_check(self):
+        data = await self.get_data()
+        self.logger.debug("Checkin unban states")
+        to_delete = []
+        for member_id, d_data in list(data.items()):
+            ban_time = d_data["Epoch_unban"]
+            if datetime.datetime.now().timestamp() >= ban_time:
+                guild_id = d_data["guild_id"]
+                member = discord.utils.get(self.bot.get_all_members(), id=int(member_id))
+                guild = discord.utils.get(self.bot.guilds, id=guild_id)
+                self.logger.debug(f"Unbanning {d_data['Name']} for guild {guild_id}")
+                await self.unban_member(member=member, guild=guild)
+                to_delete.append(member_id)
+        for id in to_delete:
+            del data[str(id)]
+        await self.set_data(data=data)
+        # seconds > minuts > hours
+        await asyncio.sleep(60*60*1)
+        if config.database.PERIODIC_CLEANUP:
+            await self.unban_check()
 
     async def unban_member(self, member:discord.Member, guild:discord.Guild):
         data = await self.get_data()
@@ -78,7 +82,7 @@ class Ban(commands.Cog):
             try:
                 await member.add_roles(role)
             except Exception as e:
-                self.logger.info(f"Trying to add role {role.name} got error: {e}")
+                self.logger.exception(f"Trying to add role {role.name} got error: {e}")
 
     def get_seconds(self, seconds, minutes, hours, days) -> int:
         hours += days*24
@@ -97,6 +101,7 @@ class Ban(commands.Cog):
             seconds = config.ban.default_bantime
         data = await self.get_data()
         member = discord.utils.get(interaction.guild.members, id=int(member_id))
+        # member_id = str(member.id)
         if member_id in data:
             epoch_unban = int(data[member_id]["Epoch_unban"])
             await interaction.followup.send(f"{member.mention} is already banned. Unbanning in <t:{epoch_unban}:R>", ephemeral=True)

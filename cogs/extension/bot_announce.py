@@ -8,6 +8,7 @@ class Bot_announce(commands.Cog):
         self.bot:commands.Bot = bot
 
     @app_commands.command(name="bot_announce", description="Announce important messages on all servers the bot runs on")
+    @app_commands.guild_only()
     async def slash_global_announce(self, interaction: discord.Interaction, msg:str):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner

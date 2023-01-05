@@ -12,7 +12,7 @@ class Welcome(commands.Cog):
         self.logger = logging.getLogger("winter_dragon.welcome")
 
     
-    @commands.Cog.listener() # Welcome a user if they join!
+    @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
         channel = member.guild.system_channel
         if channel is not None and config.welcome.dm_user == False:

@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import json
 import logging
@@ -28,9 +29,9 @@ class TeamSlash(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, int | list]]]:
         if config.main.use_database:
@@ -51,7 +52,10 @@ class TeamSlash(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.logger.info("Cleaning Teams channels")
+        await self.cleanup()
+
+    async def cleanup(self):
+        self.logger.debug("Cleaning Teams channels")
         data = await self.get_data()
         for guild_id in list(data):
             channels_list = None
@@ -73,7 +77,10 @@ class TeamSlash(commands.Cog):
                     await channel.delete()
                     channels_list.remove(channel.id)
         await self.set_data(data)
-        self.logger.info("Teams cleaned")
+        self.logger.debug("Teams cleaned")
+        await asyncio.sleep(60*60)
+        if config.database.PERIODIC_CLEANUP:
+            await self.cleanup()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
@@ -142,7 +149,7 @@ class TeamSlash(commands.Cog):
         for k,v in teams.items():
             user_id = [j.id for j in v.values()]
             teams[k] = user_id
-        self.logger.info(f"creating teams: {teams}")
+        self.logger.debug(f"creating teams: {teams}")
         return teams
 
     @commands.Cog.listener()
@@ -165,6 +172,7 @@ class TeamSlash(commands.Cog):
                     await self.move_members(teams, guild)
 
     @app_commands.command(name="teams", description="Randomly split all users in voice chat, in teams")
+    @app_commands.guild_only()
     async def slash_team(self, interaction:discord.Interaction, team_count:int=2):
         await interaction.response.defer()
         try:
@@ -227,7 +235,7 @@ class TeamSlash(commands.Cog):
         try:
             category_id:int = data[guild_id]["Category"]["id"]
         except KeyError:
-            self.logger.info(f"Creating Teams category for {guild}")
+            self.logger.debug(f"Creating Teams category for {guild}")
             category_channel:discord.CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
             category_id = category_channel.id
             data[guild_id] = {"Category":{"id":category_id}}
@@ -254,7 +262,7 @@ class TeamSlash(commands.Cog):
             channels_list.append(team_voice.id)
             await self.set_data(data)
             for member_id in member_ids:
-                self.logger.info(f"Moving {member_id} to {team_voice}")
+                self.logger.debug(f"Moving {member_id} to {team_voice}")
                 member = discord.utils.get(guild.members, id=member_id)
                 await member.move_to(team_voice)
 

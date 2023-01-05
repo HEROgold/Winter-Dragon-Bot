@@ -11,7 +11,6 @@ class Invite(commands.Cog):
         name="invite",
         description="Invite this bot to your own server!",
         )
-    @commands.has_permissions()
     async def invite(self, interaction:discord.Interaction):
         await interaction.response.send_message("https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot", ephemeral=True)
 
