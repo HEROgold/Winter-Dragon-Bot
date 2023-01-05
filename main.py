@@ -74,7 +74,7 @@ async def mass_load_cogs() -> None:
             await bot.load_extension(cog)
             bot_logger.info(f"Loaded {cog}")
         except Exception as e:
-            bot_logger.warning(f"Error while loading {cog}: {traceback.print_exc()}")
+            bot_logger.exception(f"Error while loading {cog}")
     if not (os.listdir("./cogs")):
         bot_logger.warning("No Cogs Directory To Load!")
 
@@ -85,7 +85,7 @@ async def mass_reload_cogs(interaction:discord.Interaction):
         try:
             bot.reload_extension(cog)
         except Exception as e:
-            bot_logger.warning(f"Error while reloading {cog}: {traceback.print_exc()}")
+            bot_logger.exception(f"Error while reloading {cog}")
         bot_logger.info(f"Reloaded {cog}")
         reload_message += f"Reloaded {cog}\n"
     await interaction.followup.send(f"{reload_message}Restart complete.")

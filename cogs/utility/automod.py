@@ -202,7 +202,7 @@ class AutoMod(commands.Cog):
         name = "automod_add",
         description = "Enables automatic moderation for this server, and creates a channel for all logs."
         )
-    @app_commands.checks.guild_only()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
     @app_commands.checks.cooldown(1, 100)
@@ -233,7 +233,7 @@ class AutoMod(commands.Cog):
         name = "automod_remove",
         description = "Disables automatic moderation for this server, and removes the log channels.",
         )
-    @app_commands.checks.guild_only()
+    @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
     @app_commands.checks.cooldown(1, 100)
@@ -257,7 +257,7 @@ class AutoMod(commands.Cog):
         name = "automod_update",
         description = "Update automod channels"
         )
-    @app_commands.checks.guild_only()
+    @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 1000)
     async def slash_automod_update(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
