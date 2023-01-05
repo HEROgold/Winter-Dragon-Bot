@@ -30,18 +30,18 @@ class Steam(commands.Cog):
                 data = {"user_id" : []}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     def setup_html(self):
         if not os.path.exists(self.htmlFile):
             with open(self.htmlFile, "w") as f:
                 f.write("")
                 f.close()
-            self.logger.info("Empty Steam Html created")
+            self.logger.debug("Empty Steam Html created")
         else:
-            self.logger.info("Steam Html found")
+            self.logger.debug("Steam Html found")
 
     async def get_data(self) -> dict[str, list]:
         if config.main.use_database:
@@ -62,10 +62,7 @@ class Steam(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        while True:
-            await self.update()
-            await asyncio.sleep(60*60*6)
-            # timer to fight ratelimits and unnecessary checks in seconds increased to> * minutes * hours
+        await self.update()
 
     async def get_html(self, url=config.steam.url) -> str:
         requests.get(url)
@@ -83,7 +80,7 @@ class Steam(commands.Cog):
             try:
                 sales.append([title.text, sale.text, url])
             except Exception as e:
-                self.logger.info("Could not append:", e)
+                self.logger.exception("Could not append:", e)
         return sales
 
     async def dupe_check(self, html:str, htmlFile:str) -> bool:
@@ -99,12 +96,12 @@ class Steam(commands.Cog):
                     a.append(i)
                     b.append(j)
         except Exception as e:
-            self.logger.info(e)
+            self.logger.exception(e)
         a.sort()
         b.sort()
         self.logger.debug(f"SteamLists: {a}, {b}")
         if from_html == from_file or a == b:
-            self.logger.info("Steam File and Html are the same!")
+            self.logger.debug("Steam File and Html are the same!")
             return True
         else:
             return False
@@ -130,13 +127,17 @@ class Steam(commands.Cog):
                 field_val = i[2]
                 embed.add_field(name=name, value=field_val, inline=False)
             else:
-                self.logger.info(i)
+                self.logger.debug(i)
                 continue
         for id in data["user_id"]:
             user = self.bot.get_user(int(id))
             dm = await user.create_dm()
             if len(embed.fields) != 0:
                 await dm.send(embed=embed)
+        # timer to fight ratelimits and unnecessary checks in seconds
+        # seconds > minutes > hours
+        await asyncio.sleep(60*60*6)
+        await self.update()
 
     @app_commands.command(name = "showfreesteam", description= "Get a list of 100% Sale steam games.")
     async def SlashFreeSteam(self, interaction: discord.Interaction):

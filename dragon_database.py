@@ -22,9 +22,10 @@ class Database():
             AUTH_METHOD = config.database.AUTH_METHOD
             CONNECTION_STRING = f"mongodb://{USER_PASS}@{IP_PORT}/?authMechanism={AUTH_METHOD}"
         except Exception as e:
-            logging.warning("Defaulting to localhost connection due to error", e)
+            self.logger.warning("Defaulting to localhost connection due to error", e)
             IP_PORT = "localhost:27017"
             CONNECTION_STRING = f"mongodb://{IP_PORT}"
+        self.logger.debug("Connecting to database")
         return MongoClient(CONNECTION_STRING)
 
     async def __get_database__(self, database_name:str) -> mdb.Database:
@@ -55,13 +56,10 @@ class Database():
     async def set_data(self, collection_name:str, data:dict) -> None:
         collection = await self.__get_collection__(collection_name)
         try:
-            self.logger.info(f"Updating/replacing data in database: {self.target_database} collection: {collection_name}")
-            l_data = list(collection.find())
-            d_data = l_data[0]
-            print(d_data['_id'])
+            self.logger.debug(f"Updating/replacing data in database: {self.target_database}, in collection: {collection_name}")
             collection.replace_one(filter={}, replacement=data, upsert=True)
         except IndexError:
-            self.logger.info(f"Empty database {collection_name}, inserting data")
+            self.logger.debug(f"Empty database {collection_name}, inserting data")
             collection.insert_one(data)
 
 async def main():

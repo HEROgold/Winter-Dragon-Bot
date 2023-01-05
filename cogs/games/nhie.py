@@ -30,9 +30,9 @@ class nhie(commands.Cog):
                     data["questions"][question_id] = nhie_default_questions[question_id]
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
         if config.main.use_database:
@@ -55,8 +55,7 @@ class nhie(commands.Cog):
         name="never_have_i_ever",
         description = "Use this to get a never have i ever question, that you can reply to"
     )
-    @app_commands.guild_only()
-    @commands.cooldown(1, 2)
+    @app_commands.checks.cooldown(1, 10)
     async def slash_nhie(self, interaction:discord.Interaction):
         data = await self.get_data() 
         game_id = data["game_id"]

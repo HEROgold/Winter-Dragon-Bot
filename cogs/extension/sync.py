@@ -15,12 +15,13 @@ class Sync(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         await asyncio.sleep(2)
-        self.logger.info("Syncing slash commands...")
+        self.logger.info("Syncing slash commands")
         await self.bot.tree.sync()
         self.logger.info("Synced slash commands")
 
     @app_commands.command(name="sync", description="Sync slash commands for this server")
-    async def slash_sync(self, interaction: discord.Interaction):
+    @app_commands.guild_only()
+    async def slash_sync(self, interaction:discord.Interaction):
         if not interaction.permissions.administrator:
             interaction.response.send_message("No permissions to run this command", ephemeral=True)
             return
@@ -29,7 +30,7 @@ class Sync(commands.Cog):
         await interaction.followup.send("Sync complete", ephemeral=True)
 
     @app_commands.command(name="sync_all", description="Sync all commands on all servers")
-    async def slash_sync_all(self, interaction: discord.Interaction):
+    async def slash_sync_all(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)

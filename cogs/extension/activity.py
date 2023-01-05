@@ -66,7 +66,7 @@ class Activity(commands.Cog):
         if status is None or activity is None:
             activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
         await self.bot.change_presence(status=status, activity=activity)
-        self.logger.info(f"Activity and status set to {activity}")
+        self.logger.debug(f"Activity and status set to {activity}")
         if config.activity.periodic_change == True:
             await asyncio.sleep(config.activity.periodic_time)
             await self.on_ready()
@@ -96,7 +96,7 @@ class Activity(commands.Cog):
             return
         elif status.lower() == "random" and activity.lower() == "random":
             config.activity.periodic_change = True
-            self.logger.info("Turned on periodic activity change")
+            self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
             await self.on_ready()
             return
@@ -109,8 +109,8 @@ class Activity(commands.Cog):
             ActivityObj = discord.Activity(type=ActivityType, name=msg)
             await self.bot.change_presence(status=StatusAttr, activity=ActivityObj)
             await interaction.followup.send("Updated my activity!", ephemeral=True)
-            self.logger.info(f"Activity and status set to {activity} by {interaction.user}")
-            self.logger.info("Turned off periodic activity change")
+            self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
+            self.logger.info(f"Turned off periodic activity change by {interaction.user}")
             config.activity.periodic_change = False
 
     @slash_activity.autocomplete("status")
