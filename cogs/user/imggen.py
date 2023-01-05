@@ -17,7 +17,6 @@ class ImageGen(commands.Cog):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.imggen")
 
-
     async def generate_images(self, interaction:discord.Interaction, dm:discord.DMChannel, query:str) -> None:
         os.makedirs(f"{self.CrAIyonDataBase}/{interaction.user.id}", exist_ok=True)
         generator = Craiyon() # Instantiates the api wrapper
@@ -29,7 +28,7 @@ class ImageGen(commands.Cog):
             await dm.send(file=discord.File(f"{self.CrAIyonDataBase}{interaction.user.id}/image-{i+1}.png"), embed=embed)
             os.remove(f"{self.CrAIyonDataBase}{interaction.user.id}/image-{i+1}.png")
         os.rmdir(f"{self.CrAIyonDataBase}/{interaction.user.id}")
-        self.logger.info(f"Removing {i} image from {interaction.user.id}")
+        self.logger.debug(f"Removing {i} image from {interaction.user.id}")
 
     @app_commands.command(name = "image_gen",
                     description = "Request an AI to make an image, and when its done get it send to you")
@@ -38,9 +37,12 @@ class ImageGen(commands.Cog):
         dm = await interaction.user.create_dm()
         await interaction.response.defer(ephemeral=True)
         await interaction.followup.send("Proccessing images, please be patient.", ephemeral=True)
-        self.logger.info(f"Requesting images for {interaction.user} with query {query}")
+        self.logger.debug(f"Requesting images for {interaction.user} with query {query}")
         # Run in another thread, to not get blocked on waiting generation
-        asyncio.new_event_loop().create_task(await self.generate_images(interaction, dm, query))
+        # FIXME: blocks the event loop, and blocks whole bot untill images are generated!
+        await interaction.followup.send("Due to an issue in the bot's code, we've disabled this functionality!")
+        # await asyncio.to_thread(await self.generate_images(interaction, dm, query))
+        # asyncio.new_event_loop().create_task(await self.generate_images(interaction, dm, query))
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(ImageGen(bot))
