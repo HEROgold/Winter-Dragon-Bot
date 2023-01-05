@@ -38,9 +38,9 @@ class AutoMod(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.debug(f"{self.database_name} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,dict[str,dict[str,int]]]:
         if config.main.use_database:
@@ -198,12 +198,14 @@ class AutoMod(commands.Cog):
                 diffs.append(role.mention)
         return diffs
 
-    @app_commands.command(name = "automod_add",
-                    description = "Enables automatic moderation for this server, and creates a channel for all logs.")
-    @commands.guild_only()
-    @commands.has_permissions(administrator = True)
-    @commands.bot_has_permissions(manage_channels = True)
-    @commands.cooldown(1, 2, commands.BucketType.member)
+    @app_commands.command(
+        name = "automod_add",
+        description = "Enables automatic moderation for this server, and creates a channel for all logs."
+        )
+    @app_commands.checks.guild_only()
+    @app_commands.checks.has_permissions(administrator = True)
+    @app_commands.checks.bot_has_permissions(manage_channels = True)
+    @app_commands.checks.cooldown(1, 100)
     async def slash_automod_add(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
@@ -217,7 +219,7 @@ class AutoMod(commands.Cog):
                 await interaction.followup.send("Automod channels are already set up.")
                 return
         except KeyError as e:
-            self.logger.info(e)
+            self.logger.exception(e)
         AutomodCategories = self.AutomodCategories
         CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName="Dragon Automod", position=99)
         data[guild.id] = {CategoryChannel.id: {}}
@@ -231,10 +233,10 @@ class AutoMod(commands.Cog):
         name = "automod_remove",
         description = "Disables automatic moderation for this server, and removes the log channels.",
         )
-    @commands.guild_only()
-    @commands.has_permissions(administrator = True)
-    @commands.bot_has_permissions(manage_channels = True)
-    @commands.cooldown(1, 2, commands.BucketType.member)
+    @app_commands.checks.guild_only()
+    @app_commands.checks.has_permissions(administrator = True)
+    @app_commands.checks.bot_has_permissions(manage_channels = True)
+    @app_commands.checks.cooldown(1, 100)
     async def slash_automod_remove(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         data = await self.get_data()
@@ -251,10 +253,12 @@ class AutoMod(commands.Cog):
         await self.set_data(data)
         await interaction.followup.send("Removed and disabled AutomodChannels")
 
-    @app_commands.command(name = "automod_update",
-                    description = "Update automod channels")
-    @commands.guild_only()
-    @commands.cooldown(1, 2, commands.BucketType.member)
+    @app_commands.command(
+        name = "automod_update",
+        description = "Update automod channels"
+        )
+    @app_commands.checks.guild_only()
+    @app_commands.checks.cooldown(1, 1000)
     async def slash_automod_update(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
