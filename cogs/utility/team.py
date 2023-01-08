@@ -178,7 +178,7 @@ class TeamSlash(commands.Cog):
         try:
             members = interaction.user.voice.channel.members
         except AttributeError as e:
-            await interaction.followup.send("Could not get members from voice channel.", ephemeral=True)
+            await interaction.followup.send("Could not get members from voice channel.")
             return
         if len(members) < team_count:
             await interaction.followup.send(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")

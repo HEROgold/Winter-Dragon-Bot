@@ -108,7 +108,7 @@ async def slash_show_cogs(interaction:discord.Interaction):
 async def slash_restart(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
-    interaction.response.defer()
+    await interaction.response.defer()
     if extension is None :
         await mass_reload_cogs(interaction)
     else:
@@ -134,7 +134,7 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
 async def slash_unload(interaction:discord.Interaction, extension:str):
     if not bot.is_owner(interaction.user):
         raise commands.NotOwner
-    await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
     if extension is None:
         await interaction.followup.send("Please provide a cog to unload.", ephemeral=True)
     else:
@@ -161,7 +161,7 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
 async def slash_load(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
-    interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
     try:
         await bot.load_extension(extension)
         bot_logger.info(f"Loaded {extension}")

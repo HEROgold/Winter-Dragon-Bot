@@ -9,7 +9,7 @@ from pymongo import database as mdb
 
 import config
 
-
+# Commented some debug loggers, to filter out spam.
 class Database():
     def __init__(self) -> None:
         self.target_database = config.main.database_name
@@ -25,15 +25,17 @@ class Database():
             self.logger.warning("Defaulting to localhost connection due to error", e)
             IP_PORT = "localhost:27017"
             CONNECTION_STRING = f"mongodb://{IP_PORT}"
-        self.logger.debug("Connecting to database")
+        # self.logger.debug("Getting MongoClient connection")
         return MongoClient(CONNECTION_STRING)
 
     async def __get_database__(self, database_name:str) -> mdb.Database:
         MC = await self.get_client()
+        # self.logger.debug(f"Getting database: {database_name}")
         return MC.get_database(database_name)
 
     async def __get_collection__(self, collection_name:str) -> mcol.Collection:
         database = await self.__get_database__(self.target_database)
+        self.logger.debug(f"Getting database collection: {collection_name}")
         return database.get_collection(collection_name)
 
     # HACK: to transform data from MongoDB to python dictionary:
@@ -49,7 +51,7 @@ class Database():
             j_data = json.dumps(d_data)
             data = json.loads(j_data)
         except IndexError as e:
-            self.logger.warning(f"Returning empty dictionary because of the folliwing Error: {e}")
+            self.logger.info("Returning empty dictionary because no data was found")
             data = {}
         return data
 

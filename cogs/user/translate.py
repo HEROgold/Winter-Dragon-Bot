@@ -21,8 +21,7 @@ class Translate(commands.Cog):
         dm = await member.create_dm()
         clean_content = reaction.message.clean_content
         if len(clean_content) >= config.translate.limit:
-            msg = "Cannot translate, the message is too long."
-            emb = discord.Embed(title="Cannot Translate", description=msg)
+            emb = discord.Embed(title="Cannot Translate", description="The message is too long to translate")
         else:
             response = openai.Completion.create(
                 model= "text-davinci-003",

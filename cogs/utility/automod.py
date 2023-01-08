@@ -11,7 +11,8 @@ from discord.ext import commands
 import config
 import dragon_database
 
-
+# TODO: Make group, and add subcommands
+# automod add, automod remove, automod update
 class AutoMod(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot

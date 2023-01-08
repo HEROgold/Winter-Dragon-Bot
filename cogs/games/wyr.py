@@ -11,6 +11,8 @@ import config
 import dragon_database
 import rainbow
 
+# TODO: Make group, and add subcommands
+# wyr, wyr add, wyr verified
 class Wyr(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot

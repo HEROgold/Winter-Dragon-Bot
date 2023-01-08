@@ -18,7 +18,7 @@ class love(commands.Cog):
         emb = discord.Embed(
             title="Love Meter",
             description=" ",
-            colour=0xFF0000,
+            color=0xFF0000,
         )
         random.seed((user.id + member.id))
         emb.add_field(

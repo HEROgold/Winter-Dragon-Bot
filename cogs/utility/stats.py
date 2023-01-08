@@ -12,7 +12,8 @@ import config
 import dragon_database
 import rainbow
 
-
+# TODO: Make group, and add subcommands
+# Stats add, Stats remove, Stats show
 class Stats(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot

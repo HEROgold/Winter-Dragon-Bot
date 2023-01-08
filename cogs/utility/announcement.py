@@ -22,7 +22,7 @@ class Announce(commands.Cog):
     async def announce(self, interaction:discord.Interaction, message:str):
         await interaction.response.defer()
         member = interaction.user
-        emb = discord.Embed(title="Announcement!", description=f"{message}", colour=random.choice(rainbow.RAINBOW))
+        emb = discord.Embed(title="Announcement!", description=f"{message}", color=random.choice(rainbow.RAINBOW))
         emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
         emb.timestamp = datetime.datetime.now()
         await interaction.followup.send(embed=emb)

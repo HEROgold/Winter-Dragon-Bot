@@ -13,6 +13,8 @@ import config
 import dragon_database
 import config
 
+# TODO: Make group, and add subcommands
+# Steam add, Steam remove, Steam free
 class Steam(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
@@ -67,6 +69,7 @@ class Steam(commands.Cog):
     async def get_html(self, url=config.steam.url) -> str:
         requests.get(url)
         r = requests.get(url)
+        self.logger.debug("returning steam page")
         return r.text
 
     async def find_free_sale(self, html) -> list:
@@ -88,6 +91,9 @@ class Steam(commands.Cog):
         with open(htmlFile, "r", encoding="utf-8") as f:
             from_file = await self.find_free_sale(f.read())
         from_html = await self.find_free_sale(html)
+        if from_file == []:
+            self.logger.debug("Copied SteamPage.html is empty")
+            return False
         a = []
         b = []
         try:
@@ -101,9 +107,10 @@ class Steam(commands.Cog):
         b.sort()
         self.logger.debug(f"SteamLists: {a}, {b}")
         if from_html == from_file or a == b:
-            self.logger.debug("Steam File and Html are the same!")
+            self.logger.debug("Steam File and Html are the same.")
             return True
         else:
+            self.logger.debug("Steam File and Html are not the same.")
             return False
 
     async def update(self):
@@ -119,6 +126,7 @@ class Steam(commands.Cog):
         # Get data from html file, and send DM containing free steam games
         sale_data = await self.find_free_sale(html)
         data = await self.get_data() # stored user id's
+        self.logger.debug("after database")
         embed=discord.Embed(title="Free Steam Game", description="New free Steam Games have been found!", color=0x094d7f)
         # Code below is dupe from the command
         for i in sale_data:
@@ -136,7 +144,7 @@ class Steam(commands.Cog):
                 await dm.send(embed=embed)
         # timer to fight ratelimits and unnecessary checks in seconds
         # seconds > minutes > hours
-        await asyncio.sleep(60*60*6)
+        await asyncio.sleep(60*60*1)
         await self.update()
 
     @app_commands.command(name = "showfreesteam", description= "Get a list of 100% Sale steam games.")

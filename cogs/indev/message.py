@@ -9,7 +9,11 @@ from discord.ext import commands
 import config
 import dragon_database
 
-
+# TODO: Make group, and add subcommands
+# message get, message ranks, message query
+# message query should try and count all the times a user said the query
+# message ranks should count the top 10 most said words
+# TODO: Add statistics to show to players
 class get_message(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
