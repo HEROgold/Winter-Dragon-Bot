@@ -58,6 +58,8 @@ class Reminder(commands.Cog):
     async def send_reminder(self):
         data = await self.get_data()
         self.logger.debug(data)
+        if not data:
+            return
         for member_id, remind_list in list(data.items()):
             for i, remind_data in enumerate(remind_list):
                 if remind_data["unix_time"] <= datetime.datetime.now(datetime.timezone.utc).timestamp():

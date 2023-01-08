@@ -54,7 +54,7 @@ class Ban(commands.Cog):
 
     async def unban_check(self):
         data = await self.get_data()
-        self.logger.debug("Checkin unban states")
+        self.logger.debug("Checking unban states")
         to_delete = []
         for member_id, d_data in list(data.items()):
             ban_time = d_data["Epoch_unban"]
@@ -95,12 +95,13 @@ class Ban(commands.Cog):
 
     @app_commands.command(name="temp_ban", description="Ban members temporarily")
     @app_commands.guild_only()
-    async def slash_ban(self, interaction:discord.Interaction, member_id:str, seconds:int=0, minutes:int=0, hours:int=0, days:int=0, reason:str=None):
+    async def slash_ban(self, interaction:discord.Interaction, member:discord.Member, seconds:int=0, minutes:int=0, hours:int=0, days:int=0, reason:str=None):
         await interaction.response.defer(ephemeral=True)
         if (seconds and minutes and hours and days) == 0:
             seconds = config.ban.default_bantime
         data = await self.get_data()
-        member = discord.utils.get(interaction.guild.members, id=int(member_id))
+        # member = discord.utils.get(interaction.guild.members, id=int(member_id))
+        member_id = str(member.id)
         # member_id = str(member.id)
         if member_id in data:
             epoch_unban = int(data[member_id]["Epoch_unban"])

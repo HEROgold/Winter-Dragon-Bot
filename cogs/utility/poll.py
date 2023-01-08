@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import random
 
 import discord
 import num2words
@@ -12,8 +13,10 @@ from discord.ext import commands
 
 import config
 import dragon_database
+import rainbow
 
-
+# TODO: Make time based system with reply to original message
+# mentioning the winning poll
 class Poll(commands.Cog):
     def __init__(self, bot:commands.Bot):
         super().__init__()
@@ -95,14 +98,14 @@ class Poll(commands.Cog):
             UsersList.remove(user.id)
         await self.set_data(data)
 
-    @app_commands.command(name = "poll", description="Send a poll to ask users questions")
+    @app_commands.command(name = "poll", description="Send a poll to ask users questions. use `,` to seperate each option")
     @app_commands.guild_only()
     async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str):
         if interaction.user.guild_permissions.administrator != True:
             return
         await interaction.response.defer()
         data = await self.get_data()
-        emb = discord.Embed(title="Poll", description=f"{question}", colour=0xff5511)
+        emb = discord.Embed(title="Poll", description=f"{question}", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
         date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=time_in_sec)).timestamp()
         epoch = int(date)

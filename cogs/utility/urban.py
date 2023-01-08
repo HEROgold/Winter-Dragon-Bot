@@ -5,7 +5,8 @@ from discord.ext import commands
 
 from config import urban as config
 
-
+# TODO: Make group, and add subcommands
+# Urban random, urban query
 class Urban(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot

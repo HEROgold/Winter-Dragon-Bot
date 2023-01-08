@@ -11,7 +11,8 @@ import config
 import dragon_database
 import rainbow
 
-
+# TODO: Make group, and add subcommands
+# nhie, nhie add, nhie verified
 class nhie(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot

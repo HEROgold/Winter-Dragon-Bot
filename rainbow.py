@@ -89,5 +89,4 @@ RAINBOW = [
     0xff0033,
     0xff0022,
     0xff0011,
-    0xff0000,
 ]
