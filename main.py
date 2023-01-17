@@ -43,7 +43,11 @@ client = discord.Client(intents=Intents)
 bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 tree = bot.tree
 
-support_guild = bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+# FIXME: support_guild returns as None
+# support_guild = bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+
+# if not support_guild:
+    # raise TypeError("Support Guild is None")
 
 if config.Main.CUSTOM_HELP:
     bot.remove_command("help")
