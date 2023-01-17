@@ -7,6 +7,8 @@ from discord.ext import commands
 
 import config
 
+# FIXME: Sync command gets synced to only the correct guild,
+# however all other @app_commands.guilds() decorators are synced globaly..
 class Sync(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot = bot
