@@ -12,14 +12,14 @@ import config
 # Commented some debug loggers, to filter out spam.
 class Database():
     def __init__(self) -> None:
-        self.target_database = config.main.database_name
+        self.target_database = config.Main.DATABASE_NAME
         self.logger = logging.getLogger("winter_dragon.database")
 
     async def get_client(self) -> MongoClient:
         try:
-            IP_PORT = config.database.IP_PORT
-            USER_PASS = config.database.USER_PASS
-            AUTH_METHOD = config.database.AUTH_METHOD
+            IP_PORT = config.Database.IP_PORT
+            USER_PASS = config.Database.USER_PASS
+            AUTH_METHOD = config.Database.AUTH_METHOD
             CONNECTION_STRING = f"mongodb://{USER_PASS}@{IP_PORT}/?authMechanism={AUTH_METHOD}"
         except Exception as e:
             self.logger.warning("Defaulting to localhost connection due to error", e)

@@ -11,14 +11,12 @@ import config
 import dragon_database
 import rainbow
 
-# TODO: Make group, and add subcommands
-# wyr, wyr add, wyr verified
-class Wyr(commands.Cog):
+class WouldYouRather(commands.GroupCog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.database_name = "WYR"
         self.logger = logging.getLogger("winter_dragon.wyr")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -36,7 +34,7 @@ class Wyr(commands.Cog):
             self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -45,7 +43,7 @@ class Wyr(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -53,7 +51,7 @@ class Wyr(commands.Cog):
                 json.dump(data, f)
 
     @app_commands.command(
-        name="would_you_rather",
+        name="show",
         description="Sends a would you rather question to the channel users can reply to!",
         )
     async def slash_Wyr(self, interaction:discord.Interaction):
@@ -74,7 +72,7 @@ class Wyr(commands.Cog):
         await interaction.response.send_message("Question send", ephemeral=True)
 
     @app_commands.command(
-        name="would_you_rather_add",
+        name="add",
         description="Lets you add a would you rather question to the list of questions!"
         )
     async def slash_wyradd(self, interaction:discord.Interaction, wyr_question:str):
@@ -86,9 +84,11 @@ class Wyr(commands.Cog):
         await self.set_data(data)
         await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified soon.", ephemeral=True)
 
+    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(
-        name="wyr_add_verified",
-        description = "Add all questions stored in the WYR database file, to the questions data section.")
+        name="add_verified",
+        description = "Add all questions stored in the WYR database file, to the questions data section."
+        )
     async def wyr_add_verified(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
@@ -105,7 +105,7 @@ class Wyr(commands.Cog):
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 async def setup(bot:commands.Bot):
-	await bot.add_cog(Wyr(bot))
+	await bot.add_cog(WouldYouRather(bot))
 
 
 wyr_default_questions = [

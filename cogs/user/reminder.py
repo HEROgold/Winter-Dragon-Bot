@@ -17,7 +17,7 @@ class Reminder(commands.Cog):
         self.bot:commands.Bot = bot
         self.database_name = "Reminder"
         self.logger = logging.getLogger("winter_dragon.reminder")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -32,7 +32,7 @@ class Reminder(commands.Cog):
             self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, list[dict[str, str|int]]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data:dict = await db.get_data(self.database_name)
         else:
@@ -41,7 +41,7 @@ class Reminder(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:

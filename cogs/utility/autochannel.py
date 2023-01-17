@@ -11,14 +11,12 @@ from discord.ext import commands
 import config
 import dragon_database
 
-# TODO: Make group, and add subcommands
-# autochannel add, autochannel remove
-class Autochannel(commands.Cog):
+class Autochannel(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.database_name = "Autochannel"
         self.logger = logging.getLogger("winter_dragon.autochannel")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -33,7 +31,7 @@ class Autochannel(commands.Cog):
             self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, int]]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -42,7 +40,7 @@ class Autochannel(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -75,8 +73,8 @@ class Autochannel(commands.Cog):
                             await channel.delete()
                         del data[guild.id][key]
         await self.set_data(data)
-        self.logger.debug("Cleaned Autochannels")
-        if config.database.PERIODIC_CLEANUP:
+        self.logger.info("Database cleaned up")
+        if config.Database.PERIODIC_CLEANUP:
             # seconds > minuts > hours
             await asyncio.sleep(60*60*1)
             await self.cleanup()
@@ -100,10 +98,15 @@ class Autochannel(commands.Cog):
             TextChannel = await CategoryChannel.create_text_channel(name = ChannelName)
         return TextChannel
 
-    @app_commands.command(name="autochannel", description="Set up voice category and channels, which lets each user make their own channels")
+    # TODO: cleaner code
+    # TODO: add remove command
+    @app_commands.command(
+        name = "add",
+        description = "Set up voice category and channels, which lets each user make their own channels"
+        )
     @app_commands.checks.has_permissions(manage_channels = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
-    async def slash_autochannel(self, interaction:discord.Interaction):
+    async def slash_autochannel_add(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         overwrites = {
@@ -163,42 +166,44 @@ class Autochannel(commands.Cog):
             channel_id = channel.id
             voice_id = data[guild_id]["AC Channel"]["Voice"]
             text_id = data[guild_id]["AC Channel"]["Text"]
-            if channel_id == voice_id:
-                overwrites = {
-                    guild.default_role: discord.PermissionOverwrite(),
-                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
-                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
-                }
-                try: # Get Users own category channel, or create one
-                    CategoryChannel = discord.utils.get(guild.categories, id=(int(data[guild_id][str(member.id)]["id"])))
-                except Exception as e:
-                    if isinstance(e, KeyError):
-                        CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName=f"{member.name}", position=99)
-                        data[guild_id][member.id] = {"id": CategoryChannel.id}
-                    else:
-                        self.logger.exception(f"Unexpected Error: {e}")
-                try: # Get Users own voice channel, or create one
-                    VoiceChannel = discord.utils.get(guild.voice_channels, id=(int(data[guild_id][str(member.id)]["Voice"])))
+            if channel_id != voice_id:
+                return
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(),
+                guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
+                member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
+            }
+            try: # Get Users own category channel, or create one
+                CategoryChannel = discord.utils.get(guild.categories, id=(int(data[guild_id][str(member.id)]["id"])))
+            except Exception as e:
+                if isinstance(e, KeyError):
+                    CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName=f"{member.name}", position=99)
+                    data[guild_id][member.id] = {"id": CategoryChannel.id}
+                else:
+                    self.logger.exception(f"Unexpected Error: {e}")
+            try: # Get Users own voice channel, or create one
+                VoiceChannel = discord.utils.get(guild.voice_channels, id=(int(data[guild_id][str(member.id)]["Voice"])))
+                await member.move_to(VoiceChannel)
+            except Exception as e:
+                if isinstance(e, KeyError):
+                    VoiceChannel = await self.CreateVoiceChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Voice")
+                    data[guild_id][member.id]["Voice"] = VoiceChannel.id
                     await member.move_to(VoiceChannel)
-                except Exception as e:
-                    if isinstance(e, KeyError):
-                        VoiceChannel = await self.CreateVoiceChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Voice")
-                        data[guild_id][member.id]["Voice"] = VoiceChannel.id
-                        await member.move_to(VoiceChannel)
-                    else:
-                        self.logger.exception(f"Unexpected Error: {e}")
-                try: # Get Users own text channel, or create one
-                    TextChannel = discord.utils.get(guild.text_channels, id=(int(data[guild_id][str(member.id)]["Text"])))
-                except Exception as e:
-                    if isinstance(e, KeyError):
-                        TextChannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Text")
-                        data[guild_id][member.id]["Text"] = TextChannel.id
-                    else:
-                        self.logger.exception(f"Unexpected Error: {e}")
+                else:
+                    self.logger.exception(f"Unexpected Error: {e}")
+            try: # Get Users own text channel, or create one
+                TextChannel = discord.utils.get(guild.text_channels, id=(int(data[guild_id][str(member.id)]["Text"])))
+            except Exception as e:
+                if isinstance(e, KeyError):
+                    TextChannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Text")
+                    data[guild_id][member.id]["Text"] = TextChannel.id
+                else:
+                    self.logger.exception(f"Unexpected Error: {e}")
+            # FIXME: Data doesn't push updates to database?
+            self.logger.debug(data)
             await self.set_data(data)
         if before.channel:
-            # FIXME: doesnt seem to remove channel and data
-            # On_ready does work
+            # FIXME: doesnt remove channels
             with contextlib.suppress(KeyError):
                 channel = before.channel
                 guild = channel.guild

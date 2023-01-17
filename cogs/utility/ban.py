@@ -17,7 +17,7 @@ class Ban(commands.Cog):
         self.bot:commands.Bot = bot
         self.database_name = "Ban"
         self.logger = logging.getLogger("winter_dragon.ban")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -32,7 +32,7 @@ class Ban(commands.Cog):
             self.logger.debug(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -41,7 +41,7 @@ class Ban(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -70,7 +70,7 @@ class Ban(commands.Cog):
         await self.set_data(data=data)
         # seconds > minuts > hours
         await asyncio.sleep(60*60*1)
-        if config.database.PERIODIC_CLEANUP:
+        if config.Database.PERIODIC_CLEANUP:
             await self.unban_check()
 
     async def unban_member(self, member:discord.Member, guild:discord.Guild):
@@ -98,7 +98,7 @@ class Ban(commands.Cog):
     async def slash_ban(self, interaction:discord.Interaction, member:discord.Member, seconds:int=0, minutes:int=0, hours:int=0, days:int=0, reason:str=None):
         await interaction.response.defer(ephemeral=True)
         if (seconds and minutes and hours and days) == 0:
-            seconds = config.ban.default_bantime
+            seconds = config.Ban.DEFAULT_BANTIME
         data = await self.get_data()
         # member = discord.utils.get(interaction.guild.members, id=int(member_id))
         member_id = str(member.id)
@@ -117,6 +117,7 @@ class Ban(commands.Cog):
         data[member.id]= {"Name" : member.name, "Roles": roles, "Epoch_unban" : epoch, "Reason" : reason_msg, "guild_id" : interaction.guild.id}
         await self.set_data(data=data)
 
+        # TODO: Add member role, which has some permissions
         banned_role = discord.utils.get(interaction.guild.roles, name="Banned")
         if banned_role is None:
             banned_role = await self.create_banned_role(interaction.guild)

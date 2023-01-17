@@ -26,7 +26,7 @@ class Announce(commands.Cog):
         emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
         emb.timestamp = datetime.datetime.now()
         await interaction.followup.send(embed=emb)
-        if config.announcement.mention_all == True:
+        if config.Announcement.MENTION_ALL == True:
             mass_ping = await interaction.channel.send("<@everyone>")
             await mass_ping.delete()
 

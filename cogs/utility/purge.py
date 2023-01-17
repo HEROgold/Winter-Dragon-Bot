@@ -16,9 +16,9 @@ class Purge(commands.Cog):
     async def slash_purge(self, interaction:discord.Interaction, count:int):
         await interaction.response.defer(ephemeral=True)
         if count == -1:
-            count = config.purge.limit
-        if count <= config.purge.limit:
-            if config.purge.use_history_instead:
+            count = config.Purge.LIMIT
+        if count <= config.Purge.LIMIT:
+            if config.Purge.USE_HISTORY:
                 messages = await self.history_delete(interaction=interaction, count=count)
                 await interaction.followup.send(f"Killed {len(messages)} Messages.", ephemeral=True)
                 return
@@ -29,7 +29,7 @@ class Purge(commands.Cog):
                 await interaction.channel.purge(limit=count)
                 await interaction.followup.send(f"Killed {count} Messages", ephemeral=True)
         else:
-            await interaction.followup.send(f"Too many message to kill! The limit is set to {config.purge.limit}", ephemeral=True)
+            await interaction.followup.send(f"Too many message to kill! The limit is set to {config.Purge.LIMIT}", ephemeral=True)
 
     async def history_delete(self, interaction:discord.Interaction, count:int) -> list[discord.Message]:
         messages = []
