@@ -72,7 +72,7 @@ class Steam(commands.GroupCog):
         self.logger.debug("returning steam page")
         return r.text
 
-    async def find_free_sale(self, html) -> list:
+    async def sale_from_html(self, html) -> list:
         sales = []
         soup = BeautifulSoup(html, "html.parser")
         for i in soup.find_all(class_="col search_discount responsive_secondrow"):
@@ -88,31 +88,32 @@ class Steam(commands.GroupCog):
 
     async def dupe_check(self, html:str, html_file_path:str) -> bool:
         from_file = await self.sale_from_file(html_file_path)
-        from_html = await self.find_free_sale(html)
+        from_html = await self.sale_from_html(html)
+        a_hundred, b_hundred = self.find_100_sales(from_file, from_html)
         if from_file == []:
             self.logger.debug("Copied SteamPage.html is empty")
             return False
-        a, b = self.html_to_list(from_file, from_html)
         if from_html == from_file:
             self.logger.debug("Steam File and Html are the same.")
             return True
-        elif a == b:
+        elif a_hundred == b_hundred:
             self.logger.debug("Sales from File and Html are the same")
             return True
         else:
             self.logger.debug("Steam File and Html are not the same.")
-            return False
+            return await self.check_new(a_hundred, b_hundred)
 
     async def sale_from_file(self, html_file_path):
         with open(html_file_path, "r", encoding="utf-8") as f:
-            from_file = await self.find_free_sale(f.read())
+            from_file = await self.sale_from_html(f.read())
         return from_file
 
-    def html_to_list(self, from_file, from_html):
+    def find_100_sales(self, from_file, from_html) -> list[list]:
         a = []
         b = []
         try:
             for i,j in zip(from_file, from_html):
+                # Keep both lists same size!
                 if i[1] == "-100%" or j[1] == "-100%":
                     a.append(i)
                     b.append(j)
@@ -123,16 +124,13 @@ class Steam(commands.GroupCog):
         self.logger.debug(f"SteamLists: {a}, {b}")
         return a, b
 
-    async def check_new(self, a:list, b:list) -> bool:
-        self.logger.debug("Checking for new item")
-        for item in a:
-            if item in b:
-                self.logger.debug(f"a: {item}")
-                continue
-        for item in b:
-            if item in a:
-                self.logger.debug(f"b: {item}")
-                continue
+    async def check_new(self, from_file:list[list], from_html:list[list]) -> bool:
+        self.logger.debug(f"Checking for new item(s): a={from_file} b={from_html}")
+        for sale in from_html:
+            if sale not in from_file and sale[1] == "-100%":
+                self.logger.debug(f"new from_html: {sale}")
+                return True
+        return False
 
     async def update(self) -> None:
         """
@@ -150,7 +148,7 @@ class Steam(commands.GroupCog):
         with open(self.htmlFile, "w", encoding="utf-8") as f:
             f.write(html)
             f.close()
-        sales_html = await self.find_free_sale(html)
+        sales_html = await self.sale_from_html(html)
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
         embed.set_footer(text="You can disable this by using `/remove_free_steam`")
         embed = await self.populate_embed(sales_html, embed)
@@ -185,7 +183,7 @@ class Steam(commands.GroupCog):
     @app_commands.command(name = "show", description= "Get a list of 100% Sale steam games.")
     async def slash_show(self, interaction: discord.Interaction):
         html = await self.get_html()
-        sales_html = await self.find_free_sale(html)
+        sales_html = await self.sale_from_html(html)
         embed=discord.Embed(title="Free Steam Game", description="Free Steam Games!", color=0x094d7f)
         embed = await self.populate_embed(sales_html, embed)
         if len(embed.fields) != 0:
