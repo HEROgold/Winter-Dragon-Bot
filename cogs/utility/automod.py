@@ -11,8 +11,7 @@ from discord.ext import commands
 import config
 import dragon_database
 
-# TODO: add more debug
-class AutoMod(commands.GroupCog):
+class Automod(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.automod")
@@ -24,7 +23,9 @@ class AutoMod(commands.GroupCog):
             "CreatedInvites",
             "MemberUpdates",
             "MemberJoined",
-            "MemberLeft"
+            "MemberLeft",
+            "MessageEdited",
+            "MessageDeleted"
         ]
         self.bot:commands.Bot = bot
         self.database_name = "Automod"
@@ -38,9 +39,9 @@ class AutoMod(commands.GroupCog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,dict[str,dict[str,int]]]:
         if config.Main.USE_DATABASE:
@@ -59,43 +60,32 @@ class AutoMod(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    # Helper function for getting (auto)mod channels
     async def get_automod_channels(self, mod_channel:str, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
         data = await self.get_data()
         guild_id = str(guild.id)
-        # Convert to string for json/dict syntax
-        # For loop keyerror
         automod_channel = None
         allmod_channel = None
         with contextlib.suppress(KeyError, TypeError):
             for category_channel_id in data[guild_id]:
                 category_channel_id = str(category_channel_id)
-                # Get channels to send the messages in
                 automod_channel_id = data[guild_id][category_channel_id][mod_channel.lower()]
                 allmod_channel_id = data[guild_id][category_channel_id]["all-categories"]
                 automod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(automod_channel_id))
                 allmod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(allmod_channel_id))
             return (automod_channel, allmod_channel)
 
-    # functions to help create channels
-    async def CreateCategoryChannel(self, guild:discord.Guild, overwrites, ChannelName:str, position:int=2) -> discord.CategoryChannel:
-        return await guild.create_category(name=ChannelName, overwrites=overwrites, position=position)
-
-    async def CreateTextChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str) -> discord.TextChannel:
-        # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
-        if not CategoryChannel:
-            return await guild.create_text_channel(name = ChannelName)
-        else:
-            return await CategoryChannel.create_text_channel(name = ChannelName)
-
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel:discord.abc.GuildChannel):
         self.logger.debug(f"On channel create: guild='{channel.guild}' channel='{channel}'")
         async for entry in channel.guild.audit_logs(limit=1):
-            if entry.action is discord.AuditLogAction.channel_create:
-                embed = discord.Embed(title="Channel Created", description=f"{entry.user.mention} created {channel.type} {entry.target.mention or channel.mention}", color=0x00FF00)
+            if entry.action == discord.AuditLogAction.channel_create:
+                embed = discord.Embed(
+                    title="Channel Created",
+                    description=f"{entry.user.mention} created {channel.type} {entry.target.mention or channel.mention} with reason: {entry.reason or None}",
+                    color=0x00FF00
+                    )
         with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("updatedchannels", channel.guild)
+            automod_channel, allmod_channel = await self.get_automod_channels("CreatedChannels", channel.guild)
             await automod_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
 
@@ -105,10 +95,16 @@ class AutoMod(commands.GroupCog):
         self.logger.debug(f"On channel update: guild='{channel.guild}' channel='{channel}'")
         embed = None
         async for entry in channel.guild.audit_logs(limit=1):
-            if entry.action is discord.AuditLogAction.channel_update:
+            if entry.action == discord.AuditLogAction.channel_update:
                 properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
                 if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
-                    embed = discord.Embed(title="Channel Changed", description=f"{entry.user.mention} changed {differences} of channel {after.mention}", color=0xFFFF00)
+                    if "name" in differences or before.name != after.name:
+                        name_change = f"{before.name} to {after.name}"
+                    embed = discord.Embed(
+                        title="Channel Changed",
+                        description=f"{entry.user.mention} changed {differences} of channel {name_change or after.mention} with reason: {entry.reason or None}",
+                        color=0xFFFF00
+                        )
         if not embed:
             return
         with contextlib.suppress(TypeError):
@@ -121,12 +117,16 @@ class AutoMod(commands.GroupCog):
         self.logger.debug(f"On channel delete: guild='{channel.guild}' channel='{channel}'")
         embed = None
         async for entry in channel.guild.audit_logs(limit=1):
-            if entry.action is discord.AuditLogAction.channel_delete:
-                embed = discord.Embed(title="Channel Deleted", description=f"{entry.user.mention} deleted {channel.type} {channel.name}", color=0xff0000)
+            if entry.action == discord.AuditLogAction.channel_delete:
+                embed = discord.Embed(
+                    title="Channel Deleted",
+                    description=f"{entry.user.mention} deleted {channel.type} {channel.name} with reason: {entry.reason or None}",
+                    color=0xff0000
+                    )
         if not embed:
             return
         with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("updatedchannels", channel.guild)
+            automod_channel, allmod_channel = await self.get_automod_channels("DeletedChannels", channel.guild)
             await automod_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
 
@@ -135,8 +135,12 @@ class AutoMod(commands.GroupCog):
         self.logger.debug(f"On invite create: guild='{invite.guild}' invite='{invite}'")
         embed = None
         async for entry in invite.guild.audit_logs(limit=1):
-            if entry.action is discord.AuditLogAction.invite_create:
-                embed = discord.Embed(title="Created Invite", description=f"{entry.user} Created invite {entry.target or invite} with reason {entry.reason or None}", color=0x00ff00)
+            if entry.action == discord.AuditLogAction.invite_create:
+                embed = discord.Embed(
+                    title="Created Invite",
+                    description=f"{entry.user} Created invite {entry.target or invite} with reason: {entry.reason or None}",
+                    color=0x00ff00
+                    )
         if not embed:
             return
         with contextlib.suppress(TypeError):
@@ -150,18 +154,21 @@ class AutoMod(commands.GroupCog):
         self.logger.debug(f"On member update: guild='{member.guild}', member='{member}'")
         embed = None
         async for entry in member.guild.audit_logs(limit=1):
-            if entry.action is discord.AuditLogAction.member_role_update:
+            if entry.action == discord.AuditLogAction.member_role_update:
                 diffs = self.get_role_difference(entry)
             else:
                 diffs = ""
             if entry.action in [discord.AuditLogAction.member_update, discord.AuditLogAction.member_role_update]:
                 properts = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
                 if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
-                    embed = discord.Embed(title="Member Update", description=f"{entry.user.mention} Changed {differences} {diffs} of {before.mention}", color=0xFFFF00)
+                    embed = discord.Embed(
+                        title="Member Update", description=f"{entry.user.mention} Changed {differences} {diffs} of {before.mention} with reason: {entry.reason or None}",
+                        color=0xFFFF00
+                        )
         if not embed:
             return
         with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("updatedchannels", after.guild)
+            automod_channel, allmod_channel = await self.get_automod_channels("memberupdates", after.guild)
             await automod_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
 
@@ -170,7 +177,11 @@ class AutoMod(commands.GroupCog):
         self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
         with contextlib.suppress(TypeError):
             automod_channel, allmod_channel = await self.get_automod_channels("MemberJoined", member.guild)
-        embed = discord.Embed(title="Member Joined", description=f"{member.mention} Joined the server", color=0x00FF00)
+        embed = discord.Embed(
+            title="Member Joined",
+            description=f"{member.mention} Joined the server",
+            color=0x00FF00
+            )
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 
@@ -178,18 +189,27 @@ class AutoMod(commands.GroupCog):
     async def on_member_remove(self, member:discord.Member):
         self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
         embed=None
-        try:
-            async for entry in member.guild.audit_logs(limit=1):
-                if entry.action == discord.AuditLogAction.ban:
-                    embed = discord.Embed(title="Member Kicked", description=f"{entry.user.mention} Banned {member.mention}", color=0xFF0000)
-                elif entry.action == discord.AuditLogAction.kick:
-                    embed = discord.Embed(title="Member Kicked", description=f"{entry.user.mention} Kicked {member.mention}", color=0xFF0000)
-                else:
-                    embed = discord.Embed(title="Member Left", description=f"{member.mention} Left the server", color=0xFF0000)
-            if not embed:
-                raise TypeError("Got Nonetype, expected Embed")
-        except Exception as e:
-            self.logger.exception(e)
+        async for entry in member.guild.audit_logs(limit=1):
+            if entry.action == discord.AuditLogAction.ban:
+                embed = discord.Embed(
+                    title="Member Banned",
+                    description=f"{entry.user.mention} Banned {member.mention} with reason: {entry.reason or None}",
+                    color=0xFF0000
+                    )
+            elif entry.action == discord.AuditLogAction.kick:
+                embed = discord.Embed(
+                    title="Member Kicked",
+                    description=f"{entry.user.mention} Kicked {member.mention} with reason: {entry.reason or None}",
+                    color=0xFF0000
+                    )
+            else:
+                embed = discord.Embed(
+                    title="Member Left",
+                    description=f"{member.mention} Left the server",
+                    color=0xFF0000
+                )
+        if not embed:
+            raise TypeError("Expected discord.Embed")
         with contextlib.suppress(TypeError):
             automod_channel, allmod_channel = await self.get_automod_channels("memberleft", member.guild)
             await automod_channel.send(embed=embed)
@@ -204,9 +224,41 @@ class AutoMod(commands.GroupCog):
                 diffs.append(role.mention)
         return diffs
 
+    @commands.Cog.listener()
+    async def on_message_edit(self, before:discord.Message, after:discord.Message):
+        self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, \ncontent=\n{before.clean_content()}, \nchanged=\n{after.clean_content()}")
+        with contextlib.suppress(TypeError):
+            automod_channel, allmod_channel = await self.get_automod_channels("MessageEdited", before.guild)
+        embed = discord.Embed(
+            title="Message Edited",
+            description=f"{before.author.mention} Edited a message",
+            color=0xFFFF00
+        )
+        embed.add_field(name="Old", value=f"`{before.clean_content()}`")
+        embed.add_field(name="New", value=f"`{after.clean_content()}`")
+        automod_channel.send(embed=embed)
+        allmod_channel.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_message_delete(self, message:discord.Message):
+        self.logger.debug(f"Message deleted: guild='{message.guild}', channel='{message.channel}', \ncontent=\n'{message.clean_content()}'")
+        with contextlib.suppress(TypeError):
+            automod_channel, allmod_channel = await self.get_automod_channels("MessageDeleted", message.guild)
+        async for entry in message.guild.audit_logs(limit=1):
+            if entry.action == entry.action.message_delete:
+                embed = discord.Embed(
+                    title="Message Deleted",
+                    description=f"{entry.user.mention} Deleted message `{message.clean_content()}`, send by {message.author.mention} with reason {entry.reason or None}",
+                    color=0xFF0000
+                )
+                automod_channel.send(embed=embed)
+                allmod_channel.send(embed=embed)
+            elif entry.action == entry.action.message_bulk_delete:
+                self.logger.debug(entry)
+
     @app_commands.command(
         name = "add",
-        description = "Enables automatic moderation for this server, and creates a channel for all logs."
+        description = "Enables automatic moderation/logging for this server, and creates a channel for all logs."
         )
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator = True)
@@ -227,13 +279,13 @@ class AutoMod(commands.GroupCog):
         except KeyError as e:
             self.logger.exception(e)
         AutomodCategories = self.AutomodCategories
-        CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName="Dragon Automod", position=99)
+        CategoryChannel = await guild.create_category(name="Dragon Automod", overwrites=overwrites, position=99)
         data[guild.id] = {CategoryChannel.id: {}}
         for AutomodCategory in AutomodCategories:
-            TextChannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{AutomodCategory}")
+            TextChannel = await CategoryChannel.create_text_channel(name=f"{AutomodCategory}")
             data[guild.id][CategoryChannel.id][TextChannel.name] = TextChannel.id
         await interaction.followup.send("Set up automod category and channels")
-        self.logger.debug(f"Setup automod for {interaction.guild}")
+        self.logger.info(f"Setup automod for {interaction.guild}")
         await self.set_data(data)
 
     @app_commands.command(
@@ -259,7 +311,7 @@ class AutoMod(commands.GroupCog):
         del data[str(guild.id)]
         await self.set_data(data)
         await interaction.followup.send("Removed and disabled AutomodChannels")
-        self.logger.debug(f"Removed automod for {interaction.guild}")
+        self.logger.info(f"Removed automod for {interaction.guild}")
 
     @app_commands.command(
         name = "update",
@@ -281,9 +333,9 @@ class AutoMod(commands.GroupCog):
                     difference.extend(channel for channel in categories if channel not in channels.keys())
                 for channel_name in difference:
                     channel_name:str
-                    new_log_channel = await self.CreateTextChannel(guild=guild, CategoryChannel=category_obj, ChannelName=channel_name)
+                    new_log_channel = await category_obj.create_text_channel(channel_name, reason="Automod update")
                     data[guild_id][category_id][channel_name] = new_log_channel.id
-                self.logger.info(f"Updated automod for {guild}")
+                self.logger.info(f"Updated automod for guild=`{guild}`")
         except Exception as e:
             await interaction.followup.send(e, ephemeral=True)
             self.logger.error(e)
@@ -291,4 +343,4 @@ class AutoMod(commands.GroupCog):
         await self.set_data(data)
 
 async def setup(bot:commands.Bot):
-    await bot.add_cog(AutoMod(bot))
+    await bot.add_cog(Automod(bot))
