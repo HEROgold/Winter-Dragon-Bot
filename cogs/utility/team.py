@@ -29,9 +29,9 @@ class Team(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, int | list]]]:
         if config.Main.USE_DATABASE:
@@ -55,7 +55,7 @@ class Team(commands.Cog):
         await self.cleanup()
 
     async def cleanup(self):
-        self.logger.debug("Cleaning Teams channels")
+        self.logger.info("Cleaning Teams channels")
         data = await self.get_data()
         change = False
         for guild_id in list(data):
@@ -153,7 +153,7 @@ class Team(commands.Cog):
         for k,v in teams.items():
             user_id = [j.id for j in v.values()]
             teams[k] = user_id
-        self.logger.debug(f"creating teams: {teams}")
+        self.logger.info(f"creating teams: {teams}")
         return teams
 
     @commands.Cog.listener()
@@ -239,7 +239,7 @@ class Team(commands.Cog):
         try:
             category_id:int = data[guild_id]["Category"]["id"]
         except KeyError:
-            self.logger.debug(f"Creating Teams category for {guild}")
+            self.logger.info(f"Creating Teams category for {guild}")
             category_channel:discord.CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
             category_id = category_channel.id
             data[guild_id] = {"Category":{"id":category_id}}
