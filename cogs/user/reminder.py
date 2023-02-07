@@ -27,9 +27,9 @@ class Reminder(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, list[dict[str, str|int]]]:
         if config.Main.USE_DATABASE:
@@ -57,7 +57,6 @@ class Reminder(commands.Cog):
 
     async def send_reminder(self):
         data = await self.get_data()
-        self.logger.debug(data)
         if not data:
             return
         for member_id, remind_list in list(data.items()):
