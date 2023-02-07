@@ -7,9 +7,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config import main as config
+import config
 import dragon_database
-# We make use of a config file, change values in config.py.
+
+
+# We make use of a config.Main file, change values in config.Main.py.
+# TODO: Push owner only commands in specific guild.
 
 LOG_LEVEL = logging.DEBUG
 
@@ -31,16 +34,28 @@ discord_logger.addHandler(discord_handler)
 Intents = discord.Intents.default()
 # Intents = discord.Intents.all()
 Intents.members = True
+Intents.guilds = True
 Intents.presences = True
+# Intents.guild_messages = True
+# Intents.dm_messages = True
+Intents.messages = True
 Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
 
 client = discord.Client(intents=Intents)
-bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.prefix), case_insensitive=True)
+bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 tree = bot.tree
 
-if config.enable_custom_help:
+# FIXME: support_guild returns as None
+# Only work when bot is ready. https://stackoverflow.com/questions/63090280/i-cant-get-certain-guild-with-discord-py
+support_guild = bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+
+if not support_guild:
+    bot_logger.debug(f"Support guild: guild={support_guild}")
+    # raise TypeError("Support Guild is None")
+
+if config.Main.CUSTOM_HELP:
     bot.remove_command("help")
 
 @bot.event
@@ -49,7 +64,7 @@ async def on_ready():
     # bot_username = await bot.user.edit(username="Winter Dragon")
     # bot_logger.info(f"Username updated to {bot_username}")
     print("Bot is running!")
-    if config.show_logged_in == True:
+    if config.Main.SHOW_LOGGED_IN == True:
         bot_logger.info(f'Logged on as {bot.user}!')
 
 async def innit():
@@ -92,7 +107,8 @@ async def mass_reload_cogs(interaction:discord.Interaction):
 
 @tree.command(
     name = "show_cogs",
-    description= "Show loaded cogs(For bot developer only)"
+    description= "Show loaded cogs (For bot developer only)",
+    guild = support_guild
     )
 async def slash_show_cogs(interaction:discord.Interaction):
     if not await bot.is_owner(interaction.user):
@@ -102,8 +118,9 @@ async def slash_show_cogs(interaction:discord.Interaction):
     await interaction.response.send_message(f"{cogs}", ephemeral=True)
 
 @tree.command(
-    name="reload",
-    description = "Reload a specified or all available cogs"
+    name = "reload",
+    description = "Reload a specified or all available cogs (For bot developer only)",
+    guild = support_guild
     )
 async def slash_restart(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
@@ -129,7 +146,8 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
 
 @tree.command(
     name = "unload",
-    description = "Unload a specified cog"
+    description = "Unload a specified cog (For bot developer only)",
+    guild = support_guild
     )
 async def slash_unload(interaction:discord.Interaction, extension:str):
     if not bot.is_owner(interaction.user):
@@ -156,7 +174,8 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
 
 @tree.command(
     name = "load",
-    description = "Load a specified or all available cogs"
+    description = "Load a specified or all available cogs (For bot developer only)",
+    guild = support_guild
     )
 async def slash_load(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
@@ -182,7 +201,7 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
 async def main():
     async with bot:
         await innit()
-        await bot.start(config.token)
+        await bot.start(config.Main.TOKEN)
 
 #run the bot!
 if __name__ == "__main__":

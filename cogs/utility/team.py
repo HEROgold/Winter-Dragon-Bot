@@ -14,12 +14,12 @@ import config
 import dragon_database
 
 
-class TeamSlash(commands.Cog):
+class Team(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.database_name = "Teams"
         self.logger = logging.getLogger("winter_dragon.teams")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -29,12 +29,12 @@ class TeamSlash(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, int | list]]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -43,7 +43,7 @@ class TeamSlash(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -55,8 +55,9 @@ class TeamSlash(commands.Cog):
         await self.cleanup()
 
     async def cleanup(self):
-        self.logger.debug("Cleaning Teams channels")
+        self.logger.info("Cleaning Teams channels")
         data = await self.get_data()
+        change = False
         for guild_id in list(data):
             channels_list = None
             category_id = None
@@ -64,6 +65,7 @@ class TeamSlash(commands.Cog):
                 self.logger.debug(data)
                 channels_list:list = data[guild_id]["Category"]["Channels"]
                 category_id:int = data[guild_id]["Category"]["id"]
+                change = True
             if not category_id:
                 continue
             if not channels_list:
@@ -71,15 +73,17 @@ class TeamSlash(commands.Cog):
                 category_channel:discord.CategoryChannel = discord.utils.get(guild.channels, id=category_id)
                 await category_channel.delete()
                 del data[guild_id]
+                change = True
             async for channel in self.get_teams_channels(channels_list, guild_id):
                 channel:discord.VoiceChannel
                 if len(channel.members) == 0:
                     await channel.delete()
                     channels_list.remove(channel.id)
-        await self.set_data(data)
-        self.logger.debug("Teams cleaned")
+        if change:
+            await self.set_data(data)
+        self.logger.info("Database cleaned up")
         await asyncio.sleep(60*60)
-        if config.database.PERIODIC_CLEANUP:
+        if config.Database.PERIODIC_CLEANUP:
             await self.cleanup()
 
     @commands.Cog.listener()
@@ -149,7 +153,7 @@ class TeamSlash(commands.Cog):
         for k,v in teams.items():
             user_id = [j.id for j in v.values()]
             teams[k] = user_id
-        self.logger.debug(f"creating teams: {teams}")
+        self.logger.info(f"creating teams: {teams}")
         return teams
 
     @commands.Cog.listener()
@@ -235,7 +239,7 @@ class TeamSlash(commands.Cog):
         try:
             category_id:int = data[guild_id]["Category"]["id"]
         except KeyError:
-            self.logger.debug(f"Creating Teams category for {guild}")
+            self.logger.info(f"Creating Teams category for {guild}")
             category_channel:discord.CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
             category_id = category_channel.id
             data[guild_id] = {"Category":{"id":category_id}}
@@ -267,4 +271,4 @@ class TeamSlash(commands.Cog):
                 await member.move_to(team_voice)
 
 async def setup(bot:commands.Bot):
-	await bot.add_cog(TeamSlash(bot))
+	await bot.add_cog(Team(bot))

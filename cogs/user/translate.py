@@ -9,7 +9,7 @@ import config
 class Translate(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
-        openai.api_key = config.translate.api_key
+        openai.api_key = config.Translate.API_KEY
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, member:discord.Member|discord.User):
@@ -20,14 +20,14 @@ class Translate(commands.Cog):
             return
         dm = await member.create_dm()
         clean_content = reaction.message.clean_content
-        if len(clean_content) >= config.translate.limit:
+        if len(clean_content) >= config.Translate.LIMIT:
             emb = discord.Embed(title="Cannot Translate", description="The message is too long to translate")
         else:
             response = openai.Completion.create(
                 model= "text-davinci-003",
                 prompt= f"Translate {clean_content} into {landcode}",
                 temperature=0.3,
-                max_tokens=config.translate.limit,
+                max_tokens=config.Translate.LIMIT,
                 top_p=1.0,
                 frequency_penalty=0.0,
                 presence_penalty=0.0
@@ -35,7 +35,7 @@ class Translate(commands.Cog):
             msg = response["choices"][0]["text"]
             emb = discord.Embed(title="Translated Text", description=msg)
             emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
-        if config.translate.dm_instead == True:
+        if config.Translate.DM_INSTEAD == True:
             await dm.send(embed=emb)
         else:
             await reaction.message.channel.send(embed=emb)

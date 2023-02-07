@@ -17,7 +17,6 @@ class Announce(commands.Cog):
     name="announcement",
     description="Using this command will ping everyone and put your message in a clean embed!"
     )
-    @app_commands.checks.bot_has_permissions(mention_everyone=True)
     @app_commands.checks.has_permissions(mention_everyone=True)
     async def announce(self, interaction:discord.Interaction, message:str):
         await interaction.response.defer()
@@ -26,7 +25,7 @@ class Announce(commands.Cog):
         emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
         emb.timestamp = datetime.datetime.now()
         await interaction.followup.send(embed=emb)
-        if config.announcement.mention_all == True:
+        if config.Announcement.MENTION_ALL == True:
             mass_ping = await interaction.channel.send("<@everyone>")
             await mass_ping.delete()
 

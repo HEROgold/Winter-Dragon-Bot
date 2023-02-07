@@ -11,14 +11,12 @@ import config
 import dragon_database
 import rainbow
 
-# TODO: Make group, and add subcommands
-# nhie, nhie add, nhie verified
-class nhie(commands.Cog):
+class NeverHaveIEver(commands.GroupCog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.database_name = "NHIE"
         self.logger = logging.getLogger("winter_dragon.nhie")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -31,12 +29,12 @@ class nhie(commands.Cog):
                     data["questions"][question_id] = nhie_default_questions[question_id]
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -45,7 +43,7 @@ class nhie(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -53,7 +51,7 @@ class nhie(commands.Cog):
                 json.dump(data, f)
 
     @app_commands.command(
-        name="never_have_i_ever",
+        name="show",
         description = "Use this to get a never have i ever question, that you can reply to"
     )
     @app_commands.checks.cooldown(1, 10)
@@ -75,7 +73,7 @@ class nhie(commands.Cog):
         await interaction.response.send_message("Question send", ephemeral=True)
 
     @app_commands.command(
-        name = "never_have_i_ever_add",
+        name = "add",
         description="Lets you add a Never Have I Ever question"
         )
     async def slash_nhieadd(self, interaction:discord.Interaction, nhie_question:str):
@@ -88,8 +86,10 @@ class nhie(commands.Cog):
         await interaction.response.send_message(f"The question ```{nhie_question}``` is added, it will be verified later.", ephemeral=True)
 
     @app_commands.command(
-        name = "nhie_add_add_verified",
-        description = "Add all questions stored in the NHIE database file, to the questions data section.")
+        name = "add_verified",
+        description = "Add all questions stored in the NHIE database file, to the questions data section."
+        )
+    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     async def slash_nvie_add_verified(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
@@ -106,7 +106,7 @@ class nhie(commands.Cog):
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 async def setup(bot:commands.Bot):
-    await bot.add_cog(nhie(bot))
+    await bot.add_cog(NeverHaveIEver(bot))
 
 nhie_default_questions = [
 "Never have I ever gone skinny dipping.",

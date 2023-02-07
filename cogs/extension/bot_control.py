@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import logging
 import random
 
@@ -8,8 +8,7 @@ from discord.ext import commands
 
 import config
 
-
-class Activity(commands.Cog):
+class Botc(commands.GroupCog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.activity")
@@ -67,12 +66,12 @@ class Activity(commands.Cog):
             activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
         await self.bot.change_presence(status=status, activity=activity)
         self.logger.debug(f"Activity and status set to {activity}")
-        if config.activity.periodic_change == True:
-            await asyncio.sleep(config.activity.periodic_time)
+        if config.Activity.periodic_change == True:
+            await asyncio.sleep(config.Activity.PERIODIC_TIME)
             await self.on_ready()
 
     def get_random_activity(self):
-        if config.activity.random_activity != True:
+        if config.Activity.RANDOM_ACTIVITY != True:
             return None
         status = None
         activity_type = None
@@ -83,8 +82,9 @@ class Activity(commands.Cog):
         activity:discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUSMSG))
         return status,activity
 
-    @app_commands.command(name="bot_activity", description="change bot activity")
-    async def slash_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str=""):
+    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    @app_commands.command(name="activity", description="change bot activity")
+    async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str=""):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
@@ -95,7 +95,7 @@ class Activity(commands.Cog):
             await interaction.followup.send(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
             return
         elif status.lower() == "random" and activity.lower() == "random":
-            config.activity.periodic_change = True
+            config.Activity.periodic_change = True
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
             await self.on_ready()
@@ -111,9 +111,9 @@ class Activity(commands.Cog):
             await interaction.followup.send("Updated my activity!", ephemeral=True)
             self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
             self.logger.info(f"Turned off periodic activity change by {interaction.user}")
-            config.activity.periodic_change = False
+            config.Activity.periodic_change = False
 
-    @slash_activity.autocomplete("status")
+    @slash_bot_activity.autocomplete("status")
     async def activity_autocomplete_status(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=stat, value=stat)
@@ -121,7 +121,7 @@ class Activity(commands.Cog):
             if current.lower() in stat.lower()
         ]
 
-    @slash_activity.autocomplete("activity")
+    @slash_bot_activity.autocomplete("activity")
     async def activity_autocomplete_activitytype(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=activity, value=activity)
@@ -129,5 +129,18 @@ class Activity(commands.Cog):
             if current.lower() in activity.lower()
         ]
 
+    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    @app_commands.command(
+        name = "announce",
+        description = "Announce important messages on all servers the bot runs on"
+        )
+    @app_commands.guild_only()
+    async def slash_bot_announce(self, interaction: discord.Interaction, msg:str):
+        if not await self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
+        for guild in self.bot.guilds:
+            await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
+        await interaction.response.send_message("Message send to all update channels on all servers!", ephemeral=True)
+
 async def setup(bot:commands.Bot):
-    await bot.add_cog(Activity(bot))
+	await bot.add_cog(Botc(bot))

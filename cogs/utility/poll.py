@@ -17,13 +17,13 @@ import rainbow
 
 # TODO: Make time based system with reply to original message
 # mentioning the winning poll
-class Poll(commands.Cog):
+class Poll(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         super().__init__()
         self.bot:commands.bot = bot
         self.database_name = "Poll"
         self.logger = logging.getLogger("winter_dragon.poll")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -33,12 +33,12 @@ class Poll(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -48,7 +48,7 @@ class Poll(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -61,7 +61,7 @@ class Poll(commands.Cog):
 
     async def cleanup(self):
         data = await self.get_data()
-        self.logger.debug("Cleaning poll database")
+        self.logger.info("Cleaning poll database")
         if not data:
             return
         for k, v in list(data.items()):
@@ -69,7 +69,7 @@ class Poll(commands.Cog):
                 del data[k]
         await self.set_data(data)
         await asyncio.sleep(60*60)
-        if config.database.PERIODIC_CLEANUP:
+        if config.Database.PERIODIC_CLEANUP:
             await self.cleanup()
 
     @commands.Cog.listener()
@@ -98,7 +98,10 @@ class Poll(commands.Cog):
             UsersList.remove(user.id)
         await self.set_data(data)
 
-    @app_commands.command(name = "poll", description="Send a poll to ask users questions. use `,` to seperate each option")
+    @app_commands.command(
+        name = "create",
+        description = "Send a poll to ask users questions. use `,` to seperate each option"
+        )
     @app_commands.guild_only()
     async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str):
         if interaction.user.guild_permissions.administrator != True:
@@ -123,7 +126,7 @@ class Poll(commands.Cog):
         for i, option in enumerate(options):
             if i >= 10:
                 break
-            allowed_emojis = [
+            ALLOWED_EMOJIS = [
                 "1️⃣",
                 "2️⃣",
                 "3️⃣",
@@ -135,7 +138,7 @@ class Poll(commands.Cog):
                 "9️⃣",
                 "🔟",
             ]
-            await msg.add_reaction(allowed_emojis[i])
+            await msg.add_reaction(ALLOWED_EMOJIS[i])
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Poll(bot))

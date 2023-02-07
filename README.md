@@ -32,9 +32,15 @@ If you dont use MongoDB, you can use json files by changing config.py to match t
 ## Features:
 
 The use of MongoDB for a proper solution,
-A backup solution for when database isn't used
+
+A backup option for when database isn't used
+
 Mutliple slash commands with lots of features
+
 customizability using a config file
+
 2 seperate log files for the bot and discord.
+
 Lots of error handling
+
 And more!

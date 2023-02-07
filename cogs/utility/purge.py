@@ -10,26 +10,30 @@ import config
 class Purge(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
+        self.logger = logging.getLogger("winter_dragon.purge")
 
     @app_commands.command(name="purge", description="Purge X amount of messages")
     @app_commands.guild_only()
     async def slash_purge(self, interaction:discord.Interaction, count:int):
         await interaction.response.defer(ephemeral=True)
         if count == -1:
-            count = config.purge.limit
-        if count <= config.purge.limit:
-            if config.purge.use_history_instead:
-                messages = await self.history_delete(interaction=interaction, count=count)
-                await interaction.followup.send(f"Killed {len(messages)} Messages.", ephemeral=True)
-                return
-            else:
-                if interaction.channel.type == discord.ChannelType.private:
-                    await interaction.followup.send("Cannot use purge in DM Channels!")
-                    return
-                await interaction.channel.purge(limit=count)
-                await interaction.followup.send(f"Killed {count} Messages", ephemeral=True)
+            count = config.Purge.LIMIT
+        if interaction.channel.type == discord.ChannelType.private:
+            await interaction.followup.send("Cannot use purge in DM Channels!")
+            return
+        if count <= config.Purge.LIMIT:
+            history_messages_count = 0
+            purged_count = 0
+            purged = await interaction.channel.purge(limit=count)
+            purged_count = len(purged)
+            self.logger.debug(f"Purged: {purged_count}")
+            if purged_count < count and config.Purge.USE_HISTORY == True:
+                history_messages = await self.history_delete(interaction=interaction, count=(count - purged_count))
+                history_messages_count = len(history_messages)
+                self.logger.debug(f"History killed: {history_messages_count}")
+            await interaction.followup.send(f"Killed {history_messages_count + purged_count} Messages", ephemeral=True)
         else:
-            await interaction.followup.send(f"Too many message to kill! The limit is set to {config.purge.limit}", ephemeral=True)
+            await interaction.followup.send(f"Too many message to kill! The limit is {config.Purge.LIMIT}", ephemeral=True)
 
     async def history_delete(self, interaction:discord.Interaction, count:int) -> list[discord.Message]:
         messages = []

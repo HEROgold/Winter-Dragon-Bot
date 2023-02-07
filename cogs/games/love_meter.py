@@ -4,7 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 
 
-class love(commands.Cog):
+class Love(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
 
@@ -30,4 +30,4 @@ class love(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(love(bot))
+    await bot.add_cog(Love(bot))

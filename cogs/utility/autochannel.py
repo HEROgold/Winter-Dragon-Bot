@@ -11,14 +11,12 @@ from discord.ext import commands
 import config
 import dragon_database
 
-# TODO: Make group, and add subcommands
-# autochannel add, autochannel remove
-class Autochannel(commands.Cog):
+class Autochannel(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.database_name = "Autochannel"
         self.logger = logging.getLogger("winter_dragon.autochannel")
-        if not config.main.use_database:
+        if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
 
@@ -28,12 +26,12 @@ class Autochannel(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, int]]]:
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
         else:
@@ -42,7 +40,7 @@ class Autochannel(commands.Cog):
         return data
 
     async def set_data(self, data):
-        if config.main.use_database:
+        if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.database_name, data=data)
         else:
@@ -53,170 +51,237 @@ class Autochannel(commands.Cog):
     async def on_ready(self):
         # Delete empty channels, and categories every hour since startup.
         # When loaded, loop over all guilds, and check if they are in DB
-        await self.cleanup()
+        # await self.database_cleanup()
+        pass
 
-    async def cleanup(self):
-        self.logger.debug("Cleaning Autochannels...")
+    async def database_cleanup(self):
+        self.logger.info("Cleaning Autochannels...")
         data = await self.get_data()
-        self.logger.debug(data)
-        for guild_id, guild_channels in data.items():
-            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-            for key, channels in guild_channels.items():
-                if key == "AC Channel":
-                    continue
-                channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
-                with contextlib.suppress(AttributeError):
-                    if channel.type is discord.ChannelType.voice:
-                        empty = len(channel.members) <= 0
-                        if not empty:
-                            continue
-                        for channel_name, channel_id in channels.items():
-                            channel = discord.utils.get(guild.channels, id=int(channel_id))
-                            await channel.delete()
-                        del data[guild.id][key]
+        for guild_id, guild_categories in list(data.items()):
+            cleaned = await self._clean_categories(guild_categories, guild_id)
+            if cleaned == True:
+                del data[guild_categories]
         await self.set_data(data)
-        self.logger.debug("Cleaned Autochannels")
-        if config.database.PERIODIC_CLEANUP:
+        self.logger.info("Database cleaned up")
+        if config.Database.PERIODIC_CLEANUP:
             # seconds > minuts > hours
             await asyncio.sleep(60*60*1)
-            await self.cleanup()
+            await self.database_cleanup()
 
-    async def CreateCategoryChannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite, ChannelName:str, position:int=2):
-        return await guild.create_category(name=ChannelName, overwrites=overwrites, position=position)
+    # TODO: cleaned == true when data is empty > aka all channels are cleaned
+    async def _clean_categories(self, guild_categories:dict, guild_id:str) -> dict:
+        self.logger.info(f"Cleaning Category {guild_categories}")
+        cleaned = False
+        guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+        for key, channels in list(guild_categories.items()):
+            if key == "AC Channel":
+                continue
+            cleaned = await self._clean_channels(channels, key, guild)
+            if cleaned == False:
+                break
+        return cleaned
 
-    async def CreateVoiceChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str):
-        # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
-        if not CategoryChannel:
-            VoiceChannel = await guild.create_voice_channel(name = ChannelName)
-        else:
-            VoiceChannel = await CategoryChannel.create_voice_channel(name = ChannelName)
-        return VoiceChannel
+    async def _clean_channels(self, channels:dict, key:str, guild:discord.Guild) -> bool:
+        self.logger.info(f"Cleaning Channels {channels}")
+        guild = discord.utils.get(self.bot.guilds, id=int(guild))
+        channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
+        with contextlib.suppress(AttributeError):
+            if channel.type is discord.ChannelType.voice:
+                empty = len(channel.members) <= 0
+                if not empty:
+                    return False
+                for channel_id in channels.values():
+                    channel = discord.utils.get(guild.channels, id=int(channel_id))
+                    await channel.delete()
+        return True
 
-    async def CreateTextChannel(self, guild:discord.Guild, CategoryChannel:discord.CategoryChannel, ChannelName:str):
-        # sourcery skip: assign-if-exp, inline-immediately-returned-variable, lift-return-into-if, swap-if-expression
-        if not CategoryChannel:
-            TextChannel = await guild.create_text_channel(name = ChannelName)
-        else:
-            TextChannel = await CategoryChannel.create_text_channel(name = ChannelName)
-        return TextChannel
-
-    @app_commands.command(name="autochannel", description="Set up voice category and channels, which lets each user make their own channels")
+    @app_commands.command(
+        name = "remove",
+        description="Remove the autochannel from this server"
+    )
     @app_commands.checks.has_permissions(manage_channels = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
-    async def slash_autochannel(self, interaction:discord.Interaction):
+    async def slash_autochannel_remove(self, interaction:discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        data = await self.get_data()
+        guild_id = interaction.guild.id
+        if not (guild_data := data[str(guild_id)]):
+            await interaction.followup.send("No autochannel found. use `/autochannel add` to add them.")
+            return
+        guild_data:dict
+        guild = discord.utils.get(self.bot.guilds, id=guild_id)
+        with contextlib.suppress(AttributeError):
+            for channels in list(guild_data.values()):
+                self.logger.debug(f"Deleting {channels}")
+                category_channel = discord.utils.get(guild.channels, id=int(channels["id"]))
+                voice_channel = discord.utils.get(guild.channels, id=int(channels["Voice"]))
+                text_channel = discord.utils.get(guild.channels, id=int(channels["Text"]))
+                await category_channel.delete()
+                await voice_channel.delete()
+                await text_channel.delete()
+            del data[str(guild_id)]
+        await self.set_data(data)
+        with contextlib.suppress(discord.app_commands.CommandInvokeError):
+            await interaction.followup.send("Removed the autochannels")
+
+    @app_commands.command(
+        name = "add",
+        description = "Set up voice category and channels, which lets each user make their own channels"
+        )
+    @app_commands.checks.has_permissions(manage_channels = True)
+    @app_commands.checks.bot_has_permissions(manage_channels = True)
+    async def slash_autochannel_add(self, interaction:discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
-        data = await self.get_data()
+        data = await self._setup_autochannel(guild, overwrites)
+        await interaction.followup.send("The channels are set up!\n use `/autochannel remove` before adding again to avoid issues.")
+        await self.set_data(data)
+
+    async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> dict:
         guild_id = str(guild.id)
-        # Create/find category channel
+        data = await self._get_guild_data(guild_id)
+        CategoryChannel, data = await self._get_autochannel_category(guild, overwrites, data, "AC Channel")
+        VoiceChannel, data = await self._get_autochannel_voice(guild, CategoryChannel, data, "AC Channel")
+        TextChannel, data = await self._get_autochannel_text(guild, CategoryChannel, VoiceChannel, data, "AC Channel")
+        await VoiceChannel.edit(name="Join Me!", reason="Autochannel rename")
+        await TextChannel.edit(name="Autochannel Info", reason="Autochannel rename")
+        return data
+
+    async def _get_autochannel_text(
+        self,
+        guild:discord.Guild,
+        CategoryChannel:discord.CategoryChannel,
+        VoiceChannel:discord.VoiceChannel,
+        data:dict,
+        text_channel_name:str
+    ) -> tuple[discord.TextChannel,dict]:
+        guild_id = str(guild.id)
+        try:
+            text_channel_id = data[guild_id][text_channel_name]["Text"]
+            TextChannel = discord.utils.get(guild.channels, id=text_channel_id)
+            if not TextChannel:
+                raise KeyError
+            self.logger.debug(f"Found {TextChannel}")
+        except KeyError:
+            TextChannel = await CategoryChannel.create_text_channel(name=text_channel_name)
+            msg = await TextChannel.send(f"To create your own voice and text channel, just join the voice channel <#{VoiceChannel.id}>")
+            await msg.pin()
+            data[guild_id][text_channel_name]["Text"] = TextChannel.id
+            self.logger.debug(f"Created {TextChannel}")
+        return TextChannel, data
+
+    async def _get_autochannel_voice(
+        self,
+        guild:discord.Guild,
+        CategoryChannel:discord.CategoryChannel,
+        data:dict,
+        voice_channel_name:str
+    ) -> tuple[discord.VoiceChannel,dict]:
+        guild_id = str(guild.id)
+        try:
+            voice_channel_id = data[guild_id][voice_channel_name]["Voice"]
+            VoiceChannel = discord.utils.get(guild.channels, id=voice_channel_id)
+            if not VoiceChannel:
+                raise KeyError
+            self.logger.debug(f"Found {VoiceChannel}")
+        except KeyError:
+                VoiceChannel = await CategoryChannel.create_voice_channel(name=voice_channel_name)
+                data[guild_id][voice_channel_name]["Voice"] = VoiceChannel.id
+                self.logger.debug(f"Created {VoiceChannel}")
+        return VoiceChannel, data
+
+    async def _get_autochannel_category(
+        self,
+        guild:discord.Guild,
+        overwrites:discord.PermissionOverwrite,
+        data:dict,
+        category_name:str
+    ) -> tuple[discord.CategoryChannel,dict]:
+        """Get or create category channels, then returns the Channel and changed data/dict
+
+        Args:
+            guild (discord.Guild):
+            overwrites (discord.PermissionOverwrite):
+            guild_id (str): Guild Id to look for
+
+        Returns:
+            discord.CategoryChannel:
+        """
+        guild_id = str(guild.id)
+        try:
+            ac_id = data[guild_id][category_name]["id"]
+            CategoryChannel = discord.utils.get(guild.channels, id=ac_id)
+            if not CategoryChannel:
+                raise KeyError
+            self.logger.debug(f"Found {CategoryChannel}")
+        except KeyError:
+                CategoryChannel = await guild.create_category(name=category_name, overwrites=overwrites, reason="Autochannel")
+                data[guild_id][category_name] = {"id": CategoryChannel.id}
+                self.logger.debug(f"Created {CategoryChannel}")
+        return CategoryChannel, data
+
+    async def _get_guild_data(self, guild_id:str):
+        data = await self.get_data()
         try:
             data[guild_id]
-        except Exception as e:
-            if isinstance(e, KeyError):
+            self.logger.debug(f"Found data for {guild_id}")
+        except KeyError:
                 data[guild_id] = {"AC Channel":{}}
-        try:
-            ac_id = data[guild_id]["AC Channel"]["id"]
-            ac_category_channel = discord.utils.get(guild.channels, id=ac_id)
-        except Exception as e:
-            if isinstance(e, KeyError):
-                CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName="Autochannel")
-                data[guild_id]["AC Channel"] = {"id": CategoryChannel.id}
-            else:
-                self.logger.error(f"Unexpected Error: {e}")
-        # Create/find voice channel
-        try:
-            voice_channel_id = data[guild_id]["AC Channel"]["Voice"]
-            ac_voice_channel = discord.utils.get(guild.channels, id=voice_channel_id)
-        except Exception as e:
-            if isinstance(e, KeyError):
-                VoiceChannel = await self.CreateVoiceChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName="Join me!")
-                data[guild_id]["AC Channel"]["Voice"] = VoiceChannel.id
-            else:
-                self.logger.error(f"Unexpected Error: {e}")
-        # Create/find text channel
-        try:
-            text_channel_id = data[guild_id]["AC Channel"]["Text"]
-            ac_text_chanel = discord.utils.get(guild.channels, id=text_channel_id)
-        except Exception as e:
-            if isinstance(e, KeyError):
-                Textchannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName="AutoChannel Info")
-                msg = await Textchannel.send(f"To create your own voice and text channel, just join the voice channel <#{VoiceChannel.id}>")
-                await msg.pin()
-                data[guild_id]["AC Channel"]["Text"] = Textchannel.id
-            else:
-                self.logger.error(f"Unexpected Error: {e}")
-        await interaction.followup.send("The channels are now set up!")
-        await self.set_data(data)
+                self.logger.debug(f"Created data for {guild_id}")
+        return data
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
-        # sourcery skip: low-code-quality
         data = await self.get_data()
         if after.channel:
-            channel = after.channel
-            guild = channel.guild
+            guild = after.channel.guild
             guild_id = str(guild.id)
-            channel_id = channel.id
+            channel_id = after.channel.id
             voice_id = data[guild_id]["AC Channel"]["Voice"]
             text_id = data[guild_id]["AC Channel"]["Text"]
-            if channel_id == voice_id:
-                overwrites = {
-                    guild.default_role: discord.PermissionOverwrite(),
-                    guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
-                    member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
-                }
-                try: # Get Users own category channel, or create one
-                    CategoryChannel = discord.utils.get(guild.categories, id=(int(data[guild_id][str(member.id)]["id"])))
-                except Exception as e:
-                    if isinstance(e, KeyError):
-                        CategoryChannel = await self.CreateCategoryChannel(guild=guild, overwrites=overwrites, ChannelName=f"{member.name}", position=99)
-                        data[guild_id][member.id] = {"id": CategoryChannel.id}
-                    else:
-                        self.logger.exception(f"Unexpected Error: {e}")
-                try: # Get Users own voice channel, or create one
-                    VoiceChannel = discord.utils.get(guild.voice_channels, id=(int(data[guild_id][str(member.id)]["Voice"])))
-                    await member.move_to(VoiceChannel)
-                except Exception as e:
-                    if isinstance(e, KeyError):
-                        VoiceChannel = await self.CreateVoiceChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Voice")
-                        data[guild_id][member.id]["Voice"] = VoiceChannel.id
-                        await member.move_to(VoiceChannel)
-                    else:
-                        self.logger.exception(f"Unexpected Error: {e}")
-                try: # Get Users own text channel, or create one
-                    TextChannel = discord.utils.get(guild.text_channels, id=(int(data[guild_id][str(member.id)]["Text"])))
-                except Exception as e:
-                    if isinstance(e, KeyError):
-                        TextChannel = await self.CreateTextChannel(guild=guild, CategoryChannel=CategoryChannel, ChannelName=f"{member.name}'s Text")
-                        data[guild_id][member.id]["Text"] = TextChannel.id
-                    else:
-                        self.logger.exception(f"Unexpected Error: {e}")
+            if channel_id != voice_id:
+                return
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(),
+                guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
+                member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
+            }
+            member_id = str(member.id)
+            CategoryChannel, data = await self._get_autochannel_category(guild, overwrites, data, category_name=member_id)
+            VoiceChannel, data = await self._get_autochannel_voice(guild, CategoryChannel, data, voice_channel_name=member_id)
+            TextChannel, data = await self._get_autochannel_text(guild, CategoryChannel, VoiceChannel, data, text_channel_name=member_id)
             await self.set_data(data)
+            await member.move_to(VoiceChannel)
+            if CategoryChannel.name == member_id:
+                await CategoryChannel.edit(name=f"{member.name}'s Channels", reason="Autochannel Renamed to username")
+            if VoiceChannel.name == member_id:
+                await VoiceChannel.edit(name=f"{member.name}'s Voice", reason="Autochannel Renamed to username")
+            if TextChannel.name == member_id:
+                await TextChannel.edit(name=f"{member.name}'s Text", reason="Autochannel Renamed to username")
         if before.channel:
-            # FIXME: doesnt seem to remove channel and data
-            # On_ready does work
             with contextlib.suppress(KeyError):
                 channel = before.channel
                 guild = channel.guild
                 member_id = str(member.id)
                 guild_id = str(guild.id)
                 channel_id = channel.id
-                voice_id:int = data[guild_id][member_id]["Voice"]
-                if channel_id == voice_id and len(channel.members) <= 0:
-                    category_id:int = data[guild_id][member_id]["id"]
-                    text_id:int = data[guild_id][member_id]["Text"]
-                    category_channel:discord.CategoryChannel = discord.utils.get(guild.categories, id=category_id)
-                    voice_channel:discord.VoiceChannel = discord.utils.get(guild.voice_channels, id=voice_id)
-                    AC_text:discord.TextChannel = discord.utils.get(guild.text_channels, id=text_id)
-                    await voice_channel.delete()
-                    await AC_text.delete()
-                    await category_channel.delete()
-                    del data[guild_id][member_id]
-                    await self.set_data(data)
+                voice_id = data[guild_id][member_id]["Voice"]
+                if channel_id != voice_id or len(channel.members) > 0:
+                    return
+                category_id = data[guild_id][member_id]["id"]
+                text_id = data[guild_id][member_id]["Text"]
+                category_channel = discord.utils.get(guild.categories, id=category_id)
+                voice_channel = discord.utils.get(guild.voice_channels, id=voice_id)
+                AC_text = discord.utils.get(guild.text_channels, id=text_id)
+                await voice_channel.delete(reason="Autochannel is empty")
+                await AC_text.delete(reason="Autochannel is empty")
+                await category_channel.delete(reason="Autochannel is empty")
+                del data[guild_id][member_id]
+                await self.set_data(data)
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(Autochannel(bot))

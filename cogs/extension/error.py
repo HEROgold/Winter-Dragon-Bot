@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config import error as CE
+from config import Error as CE
 
 
 class Error(commands.Cog):
@@ -26,12 +26,14 @@ class Error(commands.Cog):
         tree.on_error = tree.__class__.on_error
 
     async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError):
-        self.logger.debug(f"Error from: {interaction.command.name}")
+        if type(error) != app_commands.errors.CommandNotFound:
+            self.logger.debug(f"Error from: {interaction.command.name}")
         await self.error_check(interaction, error)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx:commands.Context, error:commands.CommandError):
-        self.logger.debug(f"Error from: {ctx.command.name}")
+        if type(error) != commands.errors.CommandNotFound:
+            self.logger.debug(f"Error from: {ctx.command.name}")
         await self.error_check(ctx, error)
 
     async def get_dm(self, x:discord.Interaction|commands.Context) -> discord.DMChannel:
@@ -53,46 +55,52 @@ class Error(commands.Cog):
     async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError):
         # sourcery skip: low-code-quality
         dm = await self.get_dm(x)
-        if CE.always_log_errors == True:
+        code = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        if CE.ALWAYS_LOG_ERRORS == True:
             self.logger.exception(error)
-        if CE.ignore_errors == True:
+        if CE.IGNORE_ERRORS == True:
             return
-        elif isinstance(error, commands.MissingRequiredArgument) and CE.MissingRequiredArgument == True:
-            await dm.send(f"Missing a required argument, use {self.help_msg} for more information.")
-        elif isinstance(error, commands.BotMissingPermissions | app_commands.errors.BotMissingPermissions) and CE.BotMissingPermissions == True:
-            await dm.send("I do not have enough permissions to use this command!")
-        elif isinstance(error, commands.MissingPermissions | app_commands.errors.MissingPermissions) and CE.MissingPermissions == True:
-            await dm.send("You do not have enough permission to use this command.")
-        elif isinstance(error, commands.CommandNotFound | app_commands.errors.CommandNotFound) and CE.CommandNotFound == True:
-            await dm.send("Command not found, try `help` to find all available commands")
-        elif isinstance(error, commands.TooManyArguments) and CE.TooManyArguments == True:
-            await dm.send(f"Too many arguments given. use {self.help_msg} for more information")
-        elif isinstance(error, commands.PrivateMessageOnly) and CE.PrivateMessageOnly == True:
-            await dm.send("This command may only be used in a private messages.")
-        elif isinstance(error, commands.NoPrivateMessage | app_commands.errors.NoPrivateMessage) and CE.NoPrivateMessage == True:
-            await dm.send("This command does not work in private messages.")
-        elif isinstance(error, discord.HTTPException) and CE.HTTPException == True:
-            await dm.send(f"There is a HTTPException, {error}")
-        elif isinstance(error, commands.errors.CommandOnCooldown | app_commands.errors.CommandOnCooldown) and CE.CooldownError == True:
-            await dm.send(error)
-        elif isinstance(error, commands.errors.DisabledCommand) and CE.DisabledCommand == True:
-            await dm.send(error)
-        elif isinstance(error, commands.errors.MissingRole | app_commands.errors.MissingRole) and CE.UserMissingRole == True:
-            await dm.send("You are missing a required role")
-        elif isinstance(error, commands.errors.BotMissingRole) and CE.UserMissingRole == True:
-            await dm.send("This bot is missing a required role")
-        elif isinstance(error, commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError) and CE.CommandInvokeError == True:
-            for arg in error.args:
-                if "NotOwner" in arg and CE.NotOwner == True:
-                    await dm.send("Only the bot owner(s) may use this command!")
-                else:
-                    await dm.send(f"Error during command execution: {error}")
-        else:
-            code = datetime.datetime.now(datetime.timezone.utc).timestamp()
-            self.logger.exception(f"Unexpected error, CODE: {code}, Error: {error}")
-            await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact bot creator with the following code `{code}`")
+        self.logger.debug(f"ErrorType: {type(error)}")
+        match type(error):
+            case commands.errors.MissingRequiredArgument:
+                await dm.send(f"Missing a required argument, use {self.help_msg} for more information.")
+            case commands.errors.BotMissingPermissions | app_commands.errors.BotMissingPermissions:
+                await dm.send("I do not have enough permissions to use this command!")
+            case commands.errors.MissingPermissions | app_commands.errors.MissingPermissions:
+                await dm.send("You do not have enough permission to use this command.")
+            case commands.errors.CommandNotFound | app_commands.errors.CommandNotFound:
+                await dm.send("Command not found, try `help` to find all available commands")
+            case commands.errors.TooManyArguments:
+                await dm.send(f"Too many arguments given. use {self.help_msg} for more information")
+            case commands.errors.PrivateMessageOnly:
+                await dm.send("This command may only be used in a private messages.")
+            case commands.errors.NoPrivateMessage | app_commands.errors.NoPrivateMessage:
+                await dm.send("This command does not work in private messages.")
+            case discord.HTTPException:
+                await dm.send("There is a HTTPException")
+            case commands.errors.CommandOnCooldown | app_commands.errors.CommandOnCooldown:
+                await dm.send(error)
+            case commands.errors.DisabledCommand:
+                await dm.send(error)
+            case commands.errors.MissingRole | app_commands.errors.MissingRole:
+                await dm.send("You are missing a required role")
+            case commands.errors.BotMissingRole:
+                await dm.send("This bot is missing a required role")
+            case discord.errors.NotFound:
+                self.logger.error(f"NotfoundError: CODE: {code}")
+            case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
+                for arg in error.args:
+                    if "NotOwner" in arg:
+                        await dm.send("Only the bot owner(s) may use this command!")
+                    else:
+                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\n use `/support` to join the official discord server")
+                        self.logger.error(f"Error executing command, CODE: {code}")
+            case _:
+                self.logger.error(f"Unexpected error, CODE: {code}")
+                await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\n use `/support` to join the official discord server")
 
 async def setup(bot:commands.Bot):
+    # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Error(bot))
 
 # TODO add remaining error types
