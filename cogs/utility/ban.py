@@ -27,9 +27,9 @@ class Ban(commands.Cog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
         if config.Main.USE_DATABASE:
@@ -62,7 +62,7 @@ class Ban(commands.Cog):
                 guild_id = d_data["guild_id"]
                 member = discord.utils.get(self.bot.get_all_members(), id=int(member_id))
                 guild = discord.utils.get(self.bot.guilds, id=guild_id)
-                self.logger.debug(f"Unbanning {d_data['Name']} for guild {guild_id}")
+                self.logger.info(f"Unbanning {d_data['Name']} for guild {guild_id}")
                 await self.unban_member(member=member, guild=guild)
                 to_delete.append(member_id)
         for id in to_delete:
