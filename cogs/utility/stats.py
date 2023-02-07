@@ -27,9 +27,9 @@ class Stats(commands.GroupCog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, dict[str, int]]]]:
         if config.Main.USE_DATABASE:
@@ -56,7 +56,7 @@ class Stats(commands.GroupCog):
     @commands.Cog.listener()
     async def on_member_update(self, before:discord.Member, after:discord.Member):
         member = before or after
-        self.logger.debug(f"Member update: guild='{member.guild}, member='{member}'")
+        self.logger.debug(f"Member update: guild='{member.guild}', member='{member}'")
         guild = member.guild
         data = await self.get_data()
         guild_id = data[str(guild.id)]
@@ -69,9 +69,9 @@ class Stats(commands.GroupCog):
         except ValueError:
             peak_count = 0
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
-        self.logger.debug(f"Online count: {online}") 
+        # self.logger.debug(f"Online count: {online}")
         if online > peak_count:
-            await peak_channel.edit(name=f"Peak Online: {peak_count}")
+            await peak_channel.edit(name=f"Peak Online: {peak_count}", reason="Reached new peak of online members")
             self.logger.info(f"New peak online reached for {guild}!")
 
     def setup_db(self):
@@ -80,9 +80,9 @@ class Stats(commands.GroupCog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug("Stats Json Created.")
+                self.logger.info("Stats Json Created.")
         else:
-            self.logger.debug("Stats Json Loaded.")
+            self.logger.info("Stats Json Loaded.")
 
     async def create_stats_channels(self, guild:discord.Guild) -> None:
         data = await self.get_data()
@@ -107,7 +107,7 @@ class Stats(commands.GroupCog):
             "guild_channel": guild_channel.id,
             "peak_online" : peak_channel.id
         }
-        await self.logger.debug(f"Created stats channels for: guild='{guild}'")
+        await self.logger.info(f"Created stats channels for: guild='{guild}'")
         await self.set_data(data)
 
     async def remove_stats_channels(self, guild:discord.Guild) -> None:
@@ -116,7 +116,7 @@ class Stats(commands.GroupCog):
         guild_dict = data[guild_id]
         category = list(guild_dict.values())[0]
         channels = list(category.values())[0]
-        self.logger.debug(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
+        self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
         for channel_name, channel_id in channels.items():
             channel = discord.utils.get(guild.channels, id=int(channel_id))
             await channel.delete()
@@ -128,7 +128,8 @@ class Stats(commands.GroupCog):
         guilds = self.bot.guilds
         for guild in guilds:
             if str(guild.id) in data:
-                await asyncio.sleep(1)  # timer between guilds to fight ratelimits
+                # timer between guilds to fight ratelimits
+                await asyncio.sleep(1)
                 guild_id = data[str(guild.id)]
                 category = list(guild_id.values())[0]
                 channels = list(category.values())[0]
@@ -147,11 +148,11 @@ class Stats(commands.GroupCog):
                 except ValueError:
                     peak_count = 0
                 peak_online = max(online, peak_count)
-                await self.bot.get_channel(online_channel_id).edit(name=f"Online Users: {str(online)}")
-                await self.bot.get_channel(user_channel_id).edit(name=f"Total Users: {str(users)}")
-                await self.bot.get_channel(bot_channel_id).edit(name=f"Online Bots: {str(bots)}")
-                await self.bot.get_channel(guild_channel_id).edit(name=f"Created On: {str(age)}")
-                await peak_channel.edit(name=f"Peak Online: {peak_online}")
+                await self.bot.get_channel(online_channel_id).edit(name=f"Online Users: {str(online)}", reason="Stats update")
+                await self.bot.get_channel(user_channel_id).edit(name=f"Total Users: {str(users)}", reason="Stats update")
+                await self.bot.get_channel(bot_channel_id).edit(name=f"Online Bots: {str(bots)}", reason="Stats update")
+                await self.bot.get_channel(guild_channel_id).edit(name=f"Created On: {str(age)}", reason="Stats update")
+                await peak_channel.edit(name=f"Peak Online: {peak_online}", reason="Stats update")
                 self.logger.info(f"Updated stat channels: guild='{guild}'")
         # timer to fight ratelimits
         await asyncio.sleep(60 * 5)
@@ -219,7 +220,7 @@ class Stats(commands.GroupCog):
                 guild = discord.utils.get(self.bot.guilds, id=guild.id)
                 await self.remove_stats_channels(guild=guild)
                 await self.create_stats_channels(guild=guild)
-                self.logger.debug(f"Reset stats for: {guild}")
+                self.logger.info(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all server stat channels", ephemeral=True)
 
 async def setup(bot:commands.Bot):
