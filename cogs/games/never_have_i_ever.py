@@ -29,9 +29,9 @@ class NeverHaveIEver(commands.GroupCog):
                     data["questions"][question_id] = nhie_default_questions[question_id]
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str,int|dict[str, str]]:
         if config.Main.USE_DATABASE:
