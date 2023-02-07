@@ -34,7 +34,11 @@ discord_logger.addHandler(discord_handler)
 Intents = discord.Intents.default()
 # Intents = discord.Intents.all()
 Intents.members = True
+Intents.guilds = True
 Intents.presences = True
+# Intents.guild_messages = True
+# Intents.dm_messages = True
+Intents.messages = True
 Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
@@ -44,9 +48,11 @@ bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(co
 tree = bot.tree
 
 # FIXME: support_guild returns as None
-# support_guild = bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+# Only work when bot is ready. https://stackoverflow.com/questions/63090280/i-cant-get-certain-guild-with-discord-py
+support_guild = bot.get_guild(config.Main.SUPPORT_GUILD_ID)
 
-# if not support_guild:
+if not support_guild:
+    bot_logger.debug(f"Support guild: guild={support_guild}")
     # raise TypeError("Support Guild is None")
 
 if config.Main.CUSTOM_HELP:
