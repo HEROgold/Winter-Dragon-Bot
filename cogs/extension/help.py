@@ -16,9 +16,6 @@ class Help(commands.Cog):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.help")
 
-    async def CreateButton(self, label:str, style:discord.ButtonStyle):
-        return Button(label=label, style=style)
-
     async def CreateHelpEmbed(self, HelpInput:str|int, commands_list:list[app_commands.Command]|list[commands.Command]) -> discord.Embed|discord.ui.View:
         if isinstance(HelpInput, str):
             embed = discord.Embed(title=f"Command {HelpInput}", color=random.choice(rainbow.RAINBOW))
@@ -84,8 +81,8 @@ class Help(commands.Cog):
         else:
             query = page or command
         commands = self.bot.tree.get_commands()
-        command_names = [i.name for i in commands]
-        self.logger.debug(command_names)
+        # command_names = [i.name for i in commands]
+        # self.logger.debug(command_names)
         embed, view = await self.CreateHelpEmbed(HelpInput=query, commands_list=commands)
         if view is None:
             await interaction.response.send_message(embed=embed)
@@ -131,8 +128,8 @@ class Help(commands.Cog):
         Returns:
             discord.ui.View
         """
-        ButtonLeft = await self.CreateButton(label=f"Help {HelpInput-1}", style=discord.ButtonStyle.primary)
-        ButtonRight = await self.CreateButton(label=f"Help {HelpInput+1}", style=discord.ButtonStyle.primary)
+        ButtonLeft = Button(label=f"Help {HelpInput-1}", style=discord.ButtonStyle.primary)
+        ButtonRight = Button(label=f"Help {HelpInput+1}", style=discord.ButtonStyle.primary)
     # Defines functions inside ButtonHandler because each button needs their own.
         async def ButtonAction(interaction:discord.Interaction, HelpInput:int):
             embed, view = await self.CreateHelpEmbed(HelpInput=HelpInput, commands_list=commands_list)
@@ -146,6 +143,8 @@ class Help(commands.Cog):
                 NewView = await self.UpdateView(view, ButtonRight)
             elif MoreThenMax:
                 NewView = await self.UpdateView(view, ButtonLeft)
+            else:
+                self.logger.debug("NewView Else Escape")
             self.logger.debug("Editing original help message")
             # FIXME: Could not send response, sending followup instead: local variable 'NewView' referenced before assignment
             try:
