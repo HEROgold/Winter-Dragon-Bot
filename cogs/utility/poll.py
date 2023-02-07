@@ -33,9 +33,9 @@ class Poll(commands.GroupCog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
@@ -61,7 +61,7 @@ class Poll(commands.GroupCog):
 
     async def cleanup(self):
         data = await self.get_data()
-        self.logger.debug("Cleaning poll database")
+        self.logger.info("Cleaning poll database")
         if not data:
             return
         for k, v in list(data.items()):
