@@ -25,7 +25,7 @@ class Database():
             self.logger.warning("Defaulting to localhost connection due to error", e)
             IP_PORT = "localhost:27017"
             CONNECTION_STRING = f"mongodb://{IP_PORT}"
-        # self.logger.debug("Getting MongoClient connection")
+        # self.logger.info("Getting MongoClient connection")
         return MongoClient(CONNECTION_STRING)
 
     async def __get_database__(self, database_name:str) -> mdb.Database:
@@ -51,14 +51,14 @@ class Database():
             j_data = json.dumps(d_data)
             data = json.loads(j_data)
         except IndexError as e:
-            self.logger.info("Returning empty dictionary because no data was found")
+            self.logger.debug("Returning empty dictionary because no data was found")
             data = {}
         return data
 
     async def set_data(self, collection_name:str, data:dict) -> None:
         collection = await self.__get_collection__(collection_name)
         try:
-            self.logger.debug(f"Updating/replacing data in database: {self.target_database}, in collection: {collection_name}")
+            self.logger.info(f"Updating/replacing data in database: {self.target_database}, in collection: {collection_name}")
             collection.replace_one(filter={}, replacement=data, upsert=True)
         except IndexError:
             self.logger.debug(f"Empty database {collection_name}, inserting data")
