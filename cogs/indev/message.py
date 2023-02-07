@@ -14,6 +14,28 @@ import dragon_database
 # message ranks should count the top 10 most said words
 # TODO: Add statistics to show to players for message ranks
 
+
+# TODO: Add tracker for when user edits or deletes message > psuedocode copied from automod
+#    async def on_message_edit(self, before:discord.Message, after:discord.Message):
+#        self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content={before.clean_content()}, changed={after.clean_content()}")
+#        with contextlib.suppress(TypeError):
+#            automod_channel, allmod_channel = await self.get_automod_channels("MessageEdited", before.guild)
+#        try:
+#            async for entry in before.guild.audit_logs(limit=1):
+#                pass
+#        except Exception as e:
+#            self.logger.exception(e)
+#
+#    async def on_message_delete(self, message:discord.Message):
+#        self.logger.debug(f"Message edited: guild='{message.guild}', channel='{message.channel}', content='{message.clean_content()}'")
+#        try:
+#            async for entry in message.guild.audit_logs(limit=1):
+#                if entry.action == entry.action.message_delete:
+#                    pass
+#        except Exception as e:
+#            self.logger.exception(e)
+#
+
 class Messages(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
@@ -29,9 +51,9 @@ class Messages(commands.GroupCog):
                 data = {}
                 json.dump(data, f)
                 f.close
-                self.logger.debug(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.database_name} Json Created.")
         else:
-            self.logger.debug(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.database_name} Json Loaded.")
 
     async def get_data(self) -> dict[str, dict[str, dict[str, str]]]:
         if config.Main.USE_DATABASE:
@@ -79,7 +101,7 @@ class Messages(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_message(self, message:discord.Message):
-        if not message.guild or message.content == "":
+        if not message.guild or message.clean_content() == "":
             return
         self.logger.debug(f"Collecting message: member='{message.author}', id='{message.id}' content='{message.content}'")
         guild = message.guild
