@@ -40,6 +40,7 @@ class Messages(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.database_name = "Message"
+        self.data = None
         self.logger = logging.getLogger("winter_dragon.message")
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
@@ -55,7 +56,7 @@ class Messages(commands.GroupCog):
         else:
             self.logger.info(f"{self.database_name} Json Loaded.")
 
-    async def get_data(self) -> dict[str, dict[str, dict[str, str]]]:
+    async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
@@ -71,6 +72,12 @@ class Messages(commands.GroupCog):
         else:
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
+
+    async def cog_load(self):
+        self.data = await self.get_data()
+
+    async def cog_unload(self):
+        await self.set_data(self.data)
 
     @app_commands.command(
         name = "get",
@@ -101,40 +108,52 @@ class Messages(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_message(self, message:discord.Message):
-        if not message.guild or message.clean_content() == "":
+        if not message.guild or message.clean_content == "":
             return
+        if not self.data:
+            self.data = await self.get_data()
         self.logger.debug(f"Collecting message: member='{message.author}', id='{message.id}' content='{message.content}'")
         guild = message.guild
         guild_id = str(guild.id)
         channel = message.channel
         channel_id = str(channel.id)
-        data = await self.get_data()
-        data[guild_id][channel_id][str(message.id)] = {"member_id":str(message.author.id), "content":str(message.content)}
-        await self.set_data(data)
+        message_id = str(message.id)
+        self.data[guild_id] = {
+            channel_id:{
+                message_id:{
+                    "member_id":message.author.id,
+                    "content":message.content
+                    }
+                }
+            }
+        await self.set_data(self.data)
 
     async def get_message(self, interaction:discord.Interaction, guild:discord.Guild=None) -> None:
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         guild_id = str(guild.id)
-        if guild_id not in data:
-            data[guild_id] = {}
-        for channel in interaction.guild.channels:
+        if guild is None:
+            guild = interaction.guild
+        if guild_id not in self.data:
+            self.data[guild_id] = {}
+        for channel in guild.channels:
             if channel.type in [discord.ChannelType.category, discord.ChannelType.forum]:
                 continue
             channel_id = str(channel.id)
-            if channel_id not in data[guild_id]:
-                data[guild_id][channel_id] = {}
+            if channel_id not in self.data[guild_id]:
+                self.data[guild_id][channel_id] = {}
             self.logger.debug(f"Getting messages from: guild='{guild}, channel='{channel}'")
             async for message in channel.history(limit=config.Message.LIMIT):
-                if str(message.id) in data[guild_id][channel_id]:
+                if str(message.id) in self.data[guild_id][channel_id]:
                     break
                 if message.content in ["", "[Original Message Deleted]"]:
                     # Skip empty contents (I.e. Bot embeds etc.)
                     continue
-                data[guild_id][channel_id][str(message.id)] = {"member_id":str(message.author.id), "content":str(message.content)}
-            if not data[guild_id][channel_id]:
+                self.data[guild_id][channel_id][str(message.id)] = {"member_id":str(message.author.id), "content":str(message.content)}
+            if not self.data[guild_id][channel_id]:
                 # Clean-up data if channel has no messages.
-                del data[guild_id][channel_id]
-        await self.set_data(data)
+                del self.data[guild_id][channel_id]
+        await self.set_data(self.data)
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(Messages(bot))
