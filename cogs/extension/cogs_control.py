@@ -64,7 +64,7 @@ class Cogs(commands.GroupCog):
             reload_message += f"Reloaded {cog}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    # @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(
         name = "show",
         description= "Show loaded cogs (For bot developer only)"
@@ -76,7 +76,7 @@ class Cogs(commands.GroupCog):
         self.logger.debug(f"Showing {cogs} to {interaction.user}")
         await interaction.response.send_message(f"{cogs}", ephemeral=True)
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    # @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(
         name = "reload",
         description = "Reload a specified or all available cogs (For bot developer only)"
@@ -93,8 +93,8 @@ class Cogs(commands.GroupCog):
                 self.logger.info(f"Reloaded {extension}")
                 await interaction.followup.send(f"Reloaded {extension}", ephemeral=True)
             except Exception:
-                await interaction.followup.send(f"error reloading {extension}: {traceback.print_exc()}", ephemeral=True)
-    
+                await interaction.followup.send(f"error reloading {extension}", ephemeral=True)
+
     @slash_restart.autocomplete("extension")
     async def restart_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         return [
@@ -103,7 +103,7 @@ class Cogs(commands.GroupCog):
             if current.lower() in extension.lower()
         ]
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    # @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(
         name = "unload",
         description = "Unload a specified cog (For bot developer only)"
@@ -131,7 +131,7 @@ class Cogs(commands.GroupCog):
             if current.lower() in extension.lower()
         ]
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    # @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(
         name = "load",
         description = "Load a specified or all available cogs (For bot developer only)"
