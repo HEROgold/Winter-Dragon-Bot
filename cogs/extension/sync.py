@@ -13,14 +13,6 @@ class Sync(commands.Cog):
         self.bot = bot
         self.logger = logging.getLogger("winter_dragon.sync")
 
-    # No need to keep syncing.
-    # @commands.Cog.listener()
-    # async def on_ready(self):
-    #     await asyncio.sleep(2)
-    #     global_sync = await self.bot.tree.sync()
-    #     local_sync = await self.bot.tree.sync(guild=self.bot.get_guild(config.Main.SUPPORT_GUILD_ID))
-    #     self.logger.info(f"Synced slash commands: global_commands={global_sync} guild_commands={local_sync}")
-
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="sync", description="Sync all commands on all servers (Bot dev only)")
     async def slash_sync_all(self, interaction:discord.Interaction):
