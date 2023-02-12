@@ -67,7 +67,7 @@ class BotC(commands.GroupCog):
         self.logger.debug(f"Activity and status set to {activity}")
         if config.Activity.periodic_change == True:
             await asyncio.sleep(config.Activity.PERIODIC_TIME)
-            await self.cog_unload()
+            await self.cog_load()
 
     def get_random_activity(self):
         if config.Activity.RANDOM_ACTIVITY != True:
