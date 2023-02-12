@@ -73,8 +73,10 @@ class Messages(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    async def cog_load(self):
-        self.data = await self.get_data()
+    @commands.Cog.listener()
+    async def on_ready(self):
+        if not self.data:
+            self.data = await self.get_data()
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -108,6 +110,8 @@ class Messages(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_message(self, message:discord.Message):
+        if not config.Main.LOG_MESSAGES:
+            return
         if not message.guild or message.clean_content == "":
             return
         if not self.data:

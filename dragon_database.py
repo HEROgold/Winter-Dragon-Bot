@@ -29,9 +29,9 @@ class Database():
         return MongoClient(CONNECTION_STRING)
 
     async def __get_database__(self, database_name:str) -> mdb.Database:
-        MC = await self.get_client()
+        mc = await self.get_client()
         # self.logger.debug(f"Getting database: {database_name}")
-        return MC.get_database(database_name)
+        return mc.get_database(database_name)
 
     async def __get_collection__(self, collection_name:str) -> mcol.Collection:
         database = await self.__get_database__(self.target_database)

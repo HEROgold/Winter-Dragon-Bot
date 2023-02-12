@@ -49,12 +49,13 @@ class Reminder(commands.Cog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    async def cog_load(self):
+    @commands.Cog.listener()
+    async def on_ready(self):
         self.data = await self.get_data()
         await self.send_reminder()
         # seconds > minutes > hours
         await asyncio.sleep(60)
-        await self.cog_load()
+        await self.on_ready()
 
     async def cog_unload(self):
         await self.set_data(self.data)

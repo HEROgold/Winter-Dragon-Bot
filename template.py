@@ -39,12 +39,6 @@ class Temp(commands.Cog):
                 data = json.load(f)
         return data
 
-    async def cog_load(self):
-        self.data = await self.get_data()
-
-    async def cog_unload(self):
-        await self.set_data(self.data)
-
     async def set_data(self, data):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
@@ -52,6 +46,14 @@ class Temp(commands.Cog):
         else:
             with open(self.DBLocation, "w") as f:
                 json.dump(data, f)
+
+    # FIXME: seems to cause issues with loading cogs?
+    async def cog_load(self):
+        self.data = await self.get_data()
+
+    async def cog_unload(self):
+        await self.set_data(self.data)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Temp(bot))
