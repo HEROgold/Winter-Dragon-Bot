@@ -21,6 +21,7 @@ class Poll(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         super().__init__()
         self.bot:commands.bot = bot
+        self.data = None
         self.database_name = "Poll"
         self.logger = logging.getLogger("winter_dragon.poll")
         if not config.Main.USE_DATABASE:
@@ -55,19 +56,23 @@ class Poll(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def cog_load(self):
+        self.data = await self.get_data()
         await self.cleanup()
 
+    async def cog_unload(self):
+        await self.set_data(self.data)
+
     async def cleanup(self):
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         self.logger.info("Cleaning poll database")
-        if not data:
+        if not self.data:
             return
-        for k, v in list(data.items()):
+        for k, v in list(self.data.items()):
             if v["Time"] <= datetime.datetime.now().timestamp():
-                del data[k]
-        await self.set_data(data)
+                del self.data[k]
+        await self.set_data(self.data)
         await asyncio.sleep(60*60)
         if config.Database.PERIODIC_CLEANUP:
             await self.cleanup()
@@ -76,14 +81,15 @@ class Poll(commands.GroupCog):
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):
         if user.bot == True:
             return
-        data = await self.get_data()
-        if str(reaction.message.id) not in data:
+        if not self.data:
+            self.data = await self.get_data()
+        if str(reaction.message.id) not in self.data:
             return
-        UsersList:list = data[str(reaction.message.id)]["Users"]
-        time:int = data[str(reaction.message.id)]["Time"]
+        UsersList:list = self.data[str(reaction.message.id)]["Users"]
+        time:int = self.data[str(reaction.message.id)]["Time"]
         if user.id not in UsersList and time >= datetime.datetime.now().timestamp():
             UsersList.append(user.id)
-            await self.set_data(data)
+            await self.set_data(self.data)
         else:
             await reaction.remove(user)
             dm = await user.create_dm()
@@ -91,12 +97,13 @@ class Poll(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_reaction_remove(self, reaction:discord.Reaction, user:discord.Member|discord.User):
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         with contextlib.suppress(KeyError):
-            UsersList:list = data[str(reaction.message.id)]["Users"]
+            UsersList:list = self.data[str(reaction.message.id)]["Users"]
         if user.id in UsersList and UsersList.count(user.id) >= 2:
             UsersList.remove(user.id)
-        await self.set_data(data)
+        await self.set_data(self.data)
 
     @app_commands.command(
         name = "create",
@@ -107,7 +114,8 @@ class Poll(commands.GroupCog):
         if interaction.user.guild_permissions.administrator != True:
             return
         await interaction.response.defer()
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         emb = discord.Embed(title="Poll", description=f"{question}", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
         date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=time_in_sec)).timestamp()
@@ -121,8 +129,8 @@ class Poll(commands.GroupCog):
             emb.add_field(name=f":{num2words.num2words(i+1)}:", value=clean_option, inline=True)
         emb.add_field(name="Time-out", value=f"<t:{epoch}:R>", inline=False)
         msg:discord.Message = await interaction.followup.send(embed=emb)
-        data[str(msg.id)] = {"Time":epoch, "Question": question, "Options":options, "Users":[]}
-        await self.set_data(data)
+        self.data[str(msg.id)] = {"Time":epoch, "Question": question, "Options":options, "Users":[]}
+        await self.set_data(self.data)
         for i, option in enumerate(options):
             if i >= 10:
                 break

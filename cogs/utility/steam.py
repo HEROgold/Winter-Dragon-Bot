@@ -23,6 +23,7 @@ class Steam(commands.GroupCog):
         self.htmlFile = '.\\Database/SteamPage.html'
         self.logger = logging.getLogger("winter_dragon.steam")
         self.setup_html()
+        self.data = None
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
             self.setup_json()
@@ -46,7 +47,7 @@ class Steam(commands.GroupCog):
         else:
             self.logger.info("Steam local Html exists")
 
-    async def get_data(self) -> dict[str, list]:
+    async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
@@ -63,9 +64,12 @@ class Steam(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def cog_load(self):
+        self.data = await self.get_data()
         await self.update()
+
+    async def cog_unload(self):
+        await self.set_data(self.data)
 
     async def get_html(self, url=config.Steam.URL) -> str:
         requests.get(url)
@@ -164,8 +168,9 @@ class Steam(commands.GroupCog):
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
         embed.set_footer(text="You can disable this by using `/steam remove `")
         embed = await self.populate_embed(sales_html, embed)
-        data = await self.get_data()
-        for id in data["user_id"]:
+        if not self.data:
+            self.data = await self.get_data()
+        for id in self.data["user_id"]:
             user = self.bot.get_user(int(id))
             dm = await user.create_dm()
             if len(embed.fields) != 0:
@@ -214,25 +219,27 @@ class Steam(commands.GroupCog):
 
     @app_commands.command(name = "remove", description = "No longer get notified of free steam games")
     async def slash_remove(self, interaction:discord.Interaction):
-        data = await self.get_data()
-        id_list = data["user_id"]
+        if not self.data:
+            self.data = await self.get_data()
+        id_list = self.data["user_id"]
         if interaction.user.id in id_list:
             id_list.remove(interaction.user.id)
             await interaction.response.send_message("I not notify you of new steam games anymore.", ephemeral=True)
         else:
             await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
-        await self.set_data(data)
+        await self.set_data(self.data)
 
     @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction):
-        data = await self.get_data()
-        id_list = data["user_id"]
+        if not self.data:
+            self.data = await self.get_data()
+        id_list = self.data["user_id"]
         if interaction.user.id not in id_list:
             id_list.append(interaction.user.id)
             await interaction.response.send_message("I will notify you of new steam games!", ephemeral=True)
         else:
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
-        await self.set_data(data)
+        await self.set_data(self.data)
 
 async def setup(bot:commands.Bot):
     await bot.add_cog(Steam(bot))

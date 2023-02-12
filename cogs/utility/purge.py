@@ -14,7 +14,10 @@ class Purge(commands.Cog):
 
     @app_commands.command(name="purge", description="Purge X amount of messages")
     @app_commands.guild_only()
+    @app_commands.checks.has_permissions(manage_messages=True)
     async def slash_purge(self, interaction:discord.Interaction, count:int):
+        if interaction.user.guild_permissions.manage_messages == False:
+            return
         await interaction.response.defer(ephemeral=True)
         if count == -1:
             count = config.Purge.LIMIT

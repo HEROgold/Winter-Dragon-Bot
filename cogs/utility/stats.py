@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -16,6 +17,7 @@ class Stats(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
         self.database_name = "Stats"
+        self.data = None
         self.logger = logging.getLogger("winter_dragon.stats")
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
@@ -31,7 +33,7 @@ class Stats(commands.GroupCog):
         else:
             self.logger.info(f"{self.database_name} Json Loaded.")
 
-    async def get_data(self) -> dict[str, dict[str, dict[str, dict[str, int]]]]:
+    async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
@@ -48,18 +50,21 @@ class Stats(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def cog_load(self):
+        self.data = await self.get_data()
         await self.update()
 
-    # TODO: bug?
+    async def cog_unload(self):
+        await self.set_data(self.data)
+
     @commands.Cog.listener()
     async def on_member_update(self, before:discord.Member, after:discord.Member):
         member = before or after
         self.logger.debug(f"Member update: guild='{member.guild}', member='{member}'")
         guild = member.guild
-        data = await self.get_data()
-        guild_id = data[str(guild.id)]
+        if not self.data:
+            self.data = await self.get_data()
+        guild_id = self.data[str(guild.id)]
         category = list(guild_id.values())[0]
         channels = list(category.values())[0]
         peak_channel_id = channels["peak_online"]
@@ -69,7 +74,6 @@ class Stats(commands.GroupCog):
         except ValueError:
             peak_count = 0
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
-        # self.logger.debug(f"Online count: {online}")
         if online > peak_count:
             await peak_channel.edit(name=f"Peak Online: {peak_count}", reason="Reached new peak of online members")
             self.logger.info(f"New peak online reached for {guild}!")
@@ -84,8 +88,9 @@ class Stats(commands.GroupCog):
         else:
             self.logger.info("Stats Json Loaded.")
 
-    async def create_stats_channels(self, guild:discord.Guild) -> None:
-        data = await self.get_data()
+    async def create_stats_channels(self, guild:discord.Guild, reason:str=None) -> None:
+        if not self.data:
+            self.data = await self.get_data()
         overwrite = {
             guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=True),
             guild.me: discord.PermissionOverwrite(connect=True),
@@ -93,13 +98,13 @@ class Stats(commands.GroupCog):
         guild_id = str(guild.id)
         category = await guild.create_category(name="Stats", overwrites=overwrite, position=0)
         category_id = str(category.id)
-        online_channel = await category.create_voice_channel(name="Online Users:")
-        user_channel = await category.create_voice_channel(name="Total Users:")
-        bot_channel = await category.create_voice_channel(name="Total Bots:")
-        guild_channel = await category.create_voice_channel(name="Created On:")
-        peak_channel = await category.create_voice_channel(name="Peak Online:")
-        data[guild_id] = {category_id: {}}
-        data[guild_id][category_id]["channels"] = {
+        online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
+        user_channel = await category.create_voice_channel(name="Total Users:", reason=reason)
+        bot_channel = await category.create_voice_channel(name="Total Bots:", reason=reason)
+        guild_channel = await category.create_voice_channel(name="Created On:", reason=reason)
+        peak_channel = await category.create_voice_channel(name="Peak Online:", reason=reason)
+        self.data[guild_id] = {category_id: {}}
+        self.data[guild_id][category_id]["channels"] = {
             "category_channel": category.id,
             "online_channel": online_channel.id,
             "user_channel": user_channel.id,
@@ -107,30 +112,33 @@ class Stats(commands.GroupCog):
             "guild_channel": guild_channel.id,
             "peak_online" : peak_channel.id
         }
-        await self.logger.info(f"Created stats channels for: guild='{guild}'")
-        await self.set_data(data)
+        self.logger.info(f"Created stats channels for: guild='{guild}'")
+        await self.set_data(self.data)
 
-    async def remove_stats_channels(self, guild:discord.Guild) -> None:
-        data = await self.get_data()
+    async def remove_stats_channels(self, guild:discord.Guild, reason:str=None) -> None:
+        if not self.data:
+            self.data = await self.get_data()
         guild_id = str(guild.id)
-        guild_dict = data[guild_id]
+        guild_dict = self.data[guild_id]
         category = list(guild_dict.values())[0]
         channels = list(category.values())[0]
         self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
         for channel_name, channel_id in channels.items():
-            channel = discord.utils.get(guild.channels, id=int(channel_id))
-            await channel.delete()
-        del data[guild_id]
-        await self.set_data(data)
+            with contextlib.suppress(AttributeError):
+                channel = discord.utils.get(guild.channels, id=int(channel_id))
+                await channel.delete(reason=reason)
+        del self.data[guild_id]
+        await self.set_data(self.data)
 
     async def update(self):
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         guilds = self.bot.guilds
         for guild in guilds:
-            if str(guild.id) in data:
+            if str(guild.id) in self.data:
                 # timer between guilds to fight ratelimits
                 await asyncio.sleep(1)
-                guild_id = data[str(guild.id)]
+                guild_id = self.data[str(guild.id)]
                 category = list(guild_id.values())[0]
                 channels = list(category.values())[0]
                 users = sum(member.bot == False for member in guild.members)
@@ -143,10 +151,11 @@ class Stats(commands.GroupCog):
                 guild_channel_id = channels["guild_channel"]
                 peak_channel_id = channels["peak_online"]
                 peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
-                try:
-                    peak_count = int(peak_channel.name[13:])
-                except ValueError:
-                    peak_count = 0
+                with contextlib.suppress(AttributeError):
+                    try:
+                        peak_count = int(peak_channel.name[13:])
+                    except ValueError:
+                        peak_count = 0
                 peak_online = max(online, peak_count)
                 await self.bot.get_channel(online_channel_id).edit(name=f"Online Users: {str(online)}", reason="Stats update")
                 await self.bot.get_channel(user_channel_id).edit(name=f"Total Users: {str(users)}", reason="Stats update")
@@ -168,11 +177,14 @@ class Stats(commands.GroupCog):
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         creation_date = guild.created_at.strftime("%Y-%m-%d")
         embed=discord.Embed(title=f"{guild.name} Stats", description=f"Information about {guild.name}", color=random.choice(rainbow.RAINBOW))
-        embed.add_field(name="Users", value=guild.member_count, inline=True)
-        embed.add_field(name="Bots", value=bots, inline=True)
-        embed.add_field(name="Online", value=online, inline=True)
-        embed.add_field(name="Created on", value=creation_date, inline=True)
-        embed.add_field(name="Afk channel", value=guild.afk_channel.mention, inline=True)
+        try:
+            embed.add_field(name="Users", value=guild.member_count, inline=True)
+            embed.add_field(name="Bots", value=bots, inline=True)
+            embed.add_field(name="Online", value=online, inline=True)
+            embed.add_field(name="Created on", value=creation_date, inline=True)
+            embed.add_field(name="Afk channel", value=guild.afk_channel.mention, inline=True)
+        except AttributeError as e:
+            self.logger.warning(f"{e}: Likely caused by non-existing AFK channel")
         self.logger.debug(f"Showing guild stats: guild='{interaction.guild}' user={interaction.user}")
         await interaction.followup.send(embed=embed)
 
@@ -184,10 +196,11 @@ class Stats(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_add(self, interaction:discord.Interaction):
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         guild_id = str(interaction.guild.id)
-        if guild_id not in data:
-            await self.create_stats_channels(guild=interaction.guild)
+        if guild_id not in self.data:
+            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using `/stats add`")
             await interaction.response.send_message("Stats channels are set up", ephemeral=True)
         else:
             await interaction.response.send_message("Stats channels arleady set up", ephemeral=True)
@@ -200,11 +213,12 @@ class Stats(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_remove_stats_category(self, interaction:discord.Interaction):
-        data = await self.get_data()
-        if str(interaction.guild.id) not in data:
+        if not self.data:
+            self.data = await self.get_data()
+        if str(interaction.guild.id) not in self.data:
             await interaction.response.send_message("No stats stats found to remove.", ephemeral=True)
             return
-        await self.remove_stats_channels(guild=interaction.guild)
+        await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using `/stats remove`")
         await interaction.response.send_message("Removed stats channels", ephemeral=True)
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
@@ -213,14 +227,14 @@ class Stats(commands.GroupCog):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
-        data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         await interaction.response.defer(ephemeral=True)
-        for guild in self.bot.guilds:
-            if str(guild.id) in data:
-                guild = discord.utils.get(self.bot.guilds, id=guild.id)
-                await self.remove_stats_channels(guild=guild)
-                await self.create_stats_channels(guild=guild)
-                self.logger.info(f"Reset stats for: {guild}")
+        for guild_id in self.data.keys():
+            guild = discord.utils.get(self.bot.guilds, id=guild_id)
+            await self.remove_stats_channels(guild=guild, reason="Resetting all stats channels")
+            await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
+            self.logger.info(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all server stat channels", ephemeral=True)
 
 async def setup(bot:commands.Bot):

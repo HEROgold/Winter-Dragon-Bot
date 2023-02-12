@@ -22,7 +22,7 @@ class Invite(commands.Cog):
     async def slash_support(self, interaction:discord.Interaction):
         guild:discord.Guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
         channel = guild.system_channel or guild.channels[0]
-        invite = await channel.create_invite(max_uses=1, max_age=60, reason="Support command")
+        invite = await channel.create_invite(max_uses=1, max_age=60, reason=f"Support command used by {interaction.user.mention}")
         await interaction.response.send_message(invite.url, ephemeral=True)
 
 async def setup(bot:commands.Bot):

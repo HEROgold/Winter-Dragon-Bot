@@ -15,6 +15,7 @@ import dragon_database
 class Reminder(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot:commands.Bot = bot
+        self.data = None
         self.database_name = "Reminder"
         self.logger = logging.getLogger("winter_dragon.reminder")
         if not config.Main.USE_DATABASE:
@@ -31,7 +32,7 @@ class Reminder(commands.Cog):
         else:
             self.logger.info(f"{self.database_name} Json Loaded.")
 
-    async def get_data(self) -> dict[str, list[dict[str, str|int]]]:
+    async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data:dict = await db.get_data(self.database_name)
@@ -48,18 +49,22 @@ class Reminder(commands.Cog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self):
+    async def cog_load(self):
+        self.data = await self.get_data()
         await self.send_reminder()
         # seconds > minutes > hours
         await asyncio.sleep(60)
-        await self.on_ready()
+        await self.cog_load()
+
+    async def cog_unload(self):
+        await self.set_data(self.data)
 
     async def send_reminder(self):
-        data = await self.get_data()
-        if not data:
+        if not self.data:
+            self.data = await self.get_data()
+        if not self.data:
             return
-        for member_id, remind_list in list(data.items()):
+        for member_id, remind_list in list(self.data.items()):
             for i, remind_data in enumerate(remind_list):
                 if remind_data["unix_time"] <= datetime.datetime.now(datetime.timezone.utc).timestamp():
                     member:discord.Member = discord.utils.get(self.bot.users, id=int(member_id))
@@ -69,9 +74,9 @@ class Reminder(commands.Cog):
                     del remind_list[i]
                     self.logger.debug(f"Reminded {member}, and removed it.")
             if not remind_list:
-                del data[member_id]
+                del self.data[member_id]
                 self.logger.debug(f"Removing empty reminder for id {member_id}")
-        await self.set_data(data)
+        await self.set_data(self.data)
 
     @app_commands.command(
         name="remind",
@@ -83,17 +88,18 @@ class Reminder(commands.Cog):
             return
         else:
             seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
+        if not self.data:
+            self.data = await self.get_data()
         member = interaction.user
-        data = await self.get_data()
         time = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds)).timestamp()
         epoch = int(time)
         member_id = str(member.id)
         try:
-            reminders = data[member_id]
+            reminders = self.data[member_id]
             reminders.append({"reminder": reminder, "unix_time": epoch})
         except KeyError:
-            reminders = data[member_id] = [{"reminder": reminder, "unix_time": epoch}]
-        await self.set_data(data)
+            self.data[member_id] = [{"reminder": reminder, "unix_time": epoch}]
+        await self.set_data(self.data)
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
 
     def get_seconds(self, seconds, minutes, hours, days) -> int:
