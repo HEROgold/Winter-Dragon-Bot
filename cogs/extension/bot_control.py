@@ -59,7 +59,8 @@ class BotC(commands.GroupCog):
             "Magically spawning a wedding cake"
         ]
 
-    async def cog_load(self):
+    @commands.Cog.listener()
+    async def on_ready(self):
         status, activity = self.get_random_activity()
         if status is None or activity is None:
             activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
@@ -67,7 +68,7 @@ class BotC(commands.GroupCog):
         self.logger.debug(f"Activity and status set to {activity}")
         if config.Activity.periodic_change == True:
             await asyncio.sleep(config.Activity.PERIODIC_TIME)
-            await self.cog_load()
+            await self.on_ready()
 
     def get_random_activity(self):
         if config.Activity.RANDOM_ACTIVITY != True:
@@ -97,7 +98,7 @@ class BotC(commands.GroupCog):
             config.Activity.periodic_change = True
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
-            await self.cog_load()
+            await self.on_ready()
             return
         elif status.lower() == "random" or activity.lower() == "random":
             await interaction.followup.send("Both status and activity need to be random or not chosen.", ephemeral=True)

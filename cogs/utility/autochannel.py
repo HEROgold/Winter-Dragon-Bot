@@ -48,7 +48,8 @@ class Autochannel(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    async def cog_load(self):
+    @commands.Cog.listener()
+    async def on_ready(self):
         # TODO:
         # Delete empty channels, and categories every hour since startup.
         # When loaded, loop over all guilds, and check if they are in DB

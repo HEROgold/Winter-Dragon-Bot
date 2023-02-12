@@ -51,8 +51,10 @@ class Team(commands.Cog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
-    async def cog_load(self):
-        self.data = await self.get_data()
+    @commands.Cog.listener()
+    async def on_ready(self):
+        if not self.data:
+            self.data = await self.get_data()
         await self.cleanup()
 
     async def cog_unload(self):
