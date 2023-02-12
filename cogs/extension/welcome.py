@@ -5,7 +5,7 @@ from discord.ext import commands
 
 import config
 
-
+# TODO: add database, allow each server to disable this!
 class Welcome(commands.Cog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
