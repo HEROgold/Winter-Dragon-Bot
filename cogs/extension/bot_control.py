@@ -8,7 +8,7 @@ from discord.ext import commands
 
 import config
 
-class Botc(commands.GroupCog):
+class BotC(commands.GroupCog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.activity")
@@ -142,4 +142,4 @@ class Botc(commands.GroupCog):
         await interaction.response.send_message("Message send to all update channels on all servers!", ephemeral=True)
 
 async def setup(bot:commands.Bot):
-	await bot.add_cog(Botc(bot))
+	await bot.add_cog(BotC(bot))
