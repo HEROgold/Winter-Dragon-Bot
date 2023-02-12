@@ -62,6 +62,12 @@ class TicTacToe(commands.GroupCog):
             with open(self.DBLocation, "w") as f:
                 json.dump(data, f)
 
+    async def cog_load(self):
+        self.data = await self.get_data()
+
+    async def cog_unload(self):
+        await self.set_data(self.data)
+
     async def update_view(self, view:discord.ui.View, *items) -> discord.ui.View:
         view.clear_items()
         for item in items:

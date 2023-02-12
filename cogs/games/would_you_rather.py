@@ -15,6 +15,7 @@ class WouldYouRather(commands.GroupCog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.database_name = "WYR"
+        self.data = None
         self.logger = logging.getLogger("winter_dragon.wyr")
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.database_name}.json"
@@ -25,15 +26,15 @@ class WouldYouRather(commands.GroupCog):
             with open(self.DBLocation, "w") as f:
                 data = {"game_id": 0, "questions": {}}
                 questions = data["questions"]
-                for question_id, question in enumerate(wyr_default_questions):
-                    data["questions"][question_id] = wyr_default_questions[question_id]
+                for question_id, question in enumerate(wyr_base_questions):
+                    data["questions"][question_id] = wyr_base_questions[question_id]
                 json.dump(data, f)
                 f.close
                 self.logger.info(f"{self.database_name} Json Created.")
         else:
             self.logger.info(f"{self.database_name} Json Loaded.")
 
-    async def get_data(self) -> dict[str,int|dict[str, str]]:
+    async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.database_name)
@@ -50,18 +51,24 @@ class WouldYouRather(commands.GroupCog):
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
+    async def cog_load(self):
+        self.data = await self.get_data()
+
+    async def cog_unload(self):
+        await self.set_data(self.data)
+
     @app_commands.command(
         name="show",
         description="Sends a would you rather question to the channel users can reply to!",
         )
     async def slash_Wyr(self, interaction:discord.Interaction):
-        data = await self.get_data()
-        question_id = data["game_id"]
+        if not self.data:
+            self.data = await self.get_data()
+        question_id = self.data["game_id"]
         question_id += 1
-        data["game_id"] = question_id
-        d = data["questions"]
+        self.data["game_id"] = question_id
+        d = self.data["questions"]
         questions = [v for k, v in d.items()]
-        await self.set_data(data)
         question = random.choice(questions)
         emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="1st option", value="🟦")
@@ -69,19 +76,21 @@ class WouldYouRather(commands.GroupCog):
         send_msg = await interaction.channel.send(embed=emb)
         await send_msg.add_reaction("🟦")
         await send_msg.add_reaction("🟥")
-        await interaction.response.send_message("Question send", ephemeral=True)
+        await interaction.response.send_message("Question send", ephemeral=True, delete_after=2)
+        await self.set_data(self.data)
 
     @app_commands.command(
         name="add",
         description="Lets you add a would you rather question to the list of questions!"
         )
     async def slash_wyradd(self, interaction:discord.Interaction, wyr_question:str):
-        data = await self.get_data()
-        if "add" not in data:
-            data["add"] = {}
-        if "add" in data:
-            data["add"][wyr_question] = False
-        await self.set_data(data)
+        if not self.data:
+            self.data = await self.get_data()
+        if "add" not in self.data:
+            self.data["add"] = {}
+        if "add" in self.data:
+            self.data["add"][wyr_question] = False
+        await self.set_data(self.data)
         await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified soon.", ephemeral=True)
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
@@ -92,23 +101,24 @@ class WouldYouRather(commands.GroupCog):
     async def wyr_add_verified(self, interaction:discord.Interaction):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        data = await self.get_data()
-        d = data["add"]
+        if not self.data:
+            self.data = await self.get_data()
+        d = self.data["add"]
         for k1, v1 in list(d.items()):
             if v1 == True:
-                d2 = data["questions"]
+                d2 = self.data["questions"]
                 for k2, v2 in d2.items():
                     question_id = int(k2)
                 question_id += 1
-                data["questions"][question_id] = d.pop(k1)
-        await self.set_data(data)
+                self.data["questions"][question_id] = d.pop(k1)
+        await self.set_data(self.data)
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 async def setup(bot:commands.Bot):
 	await bot.add_cog(WouldYouRather(bot))
 
 
-wyr_default_questions = [
+wyr_base_questions = [
     "Would you rather eat a bug or a fly?",
     "Would you rather lick the floor or a broom?",
     "Would you rather eat ice cream or cake?",
