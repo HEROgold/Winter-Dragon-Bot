@@ -9,7 +9,7 @@ from discord import app_commands
 import config
 import dragon_database
 
-class Welcome(commands.Cog):
+class Welcome(commands.GroupCog):
     def __init__(self, bot):
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.welcome")
@@ -56,30 +56,50 @@ class Welcome(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member):
-        channel = member.guild.system_channel
         if not self.data[str(member.guild.id)]["enabled"]:
             return
+        if not self.data:
+            self.data = await self.get_data()
+        channel = member.guild.system_channel
+        default_msg = f"Welcome {member.mention} to {member.guild},\nyou may use `/help` to see what commands I have!"
+        custom_msg = self.data[str(member.guild.id)]["message"]
         if channel is not None and config.Welcome.DM == False:
-            await channel.send(f"Welcome {member.mention} to {member.guild}")
+            if custom_msg:
+                await channel.send(custom_msg)
+            else:
+                await channel.send(default_msg)
         elif channel is not None and config.Welcome.DM == True and member.bot == False:
             dm = await member.create_dm()
-            await dm.send(f"Welcome {member.mention} to {member.guild}, you may use `/help` to see what commands i have!")
+            if custom_msg:
+                await dm.send(custom_msg)
+            else:
+                await dm.send(default_msg)
         else:
             self.logger.warning("No system_channel to welcome user to, and dm is disabled.")
 
+    @app_commands.guild_only()
     @app_commands.command(
         name="enable",
         description="Enable welcome message"
     )
     async def slash_enable(self, interaction:discord.Interaction):
-        self.data[str(interaction.guild.id)] = {"enabled":True}
+        self.data[str(interaction.guild.id)] = {"enabled" : True}
 
+    @app_commands.guild_only()
     @app_commands.command(
         name="disable",
         description="Disable welcome message"
     )
-    async def slash_enable(self, interaction:discord.Interaction):
-        self.data[str(interaction.guild.id)] = {"enabled":False}
+    async def slash_disable(self, interaction:discord.Interaction):
+        self.data[str(interaction.guild.id)] = {"enabled" : False}
+
+    @app_commands.command(
+        name="message",
+        description="set the welcome message for your guild"
+    )
+    async def slash_message(self, interaction:discord.Interaction, message:str):
+        self.data[str(interaction.guild.id)] = {"message" : message}
 
 async def setup(bot:commands.Bot):
+    # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Welcome(bot))
