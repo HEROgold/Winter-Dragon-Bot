@@ -26,7 +26,7 @@ class Stats(commands.GroupCog):
     def setup_json(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
-                data = {}
+                data = self.data
                 json.dump(data, f)
                 f.close
                 self.logger.info(f"{self.database_name} Json Created.")
@@ -79,16 +79,6 @@ class Stats(commands.GroupCog):
         if online > peak_count:
             await peak_channel.edit(name=f"Peak Online: {peak_count}", reason="Reached new peak of online members")
             self.logger.info(f"New peak online reached for {guild}!")
-
-    def setup_db(self):
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
-                data = {}
-                json.dump(data, f)
-                f.close
-                self.logger.info("Stats Json Created.")
-        else:
-            self.logger.info("Stats Json Loaded.")
 
     async def create_stats_channels(self, guild:discord.Guild, reason:str=None) -> None:
         if not self.data:

@@ -49,7 +49,7 @@ class Messages(commands.GroupCog):
     def setup_json(self):
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
-                data = {}
+                data = self.data
                 json.dump(data, f)
                 f.close
                 self.logger.info(f"{self.database_name} Json Created.")
