@@ -13,8 +13,8 @@ import dragon_database
 
 
 class AutoCogReloader(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot: commands.Bot = bot
+    def __init__(self, bot:commands.Bot) -> None:
+        self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = {
             "timestamp": datetime.datetime.now().timestamp(),
@@ -42,7 +42,7 @@ class AutoCogReloader(commands.Cog):
             self.logger.info("Starting Auto Reloader.")
             while True:
                 await self.auto_reload()
-                await asyncio.sleep(2)
+                await asyncio.sleep(5)
 
     def get_cog_data(self) -> None:
         for root, _, files in os.walk("cogs"):
