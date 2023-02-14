@@ -80,7 +80,7 @@ class BotC(commands.GroupCog):
         while activity_type in [discord.ActivityType.custom, None]:
             activity_type:discord.ActivityType = random.choice(self.ACTIVITYTYPE)
         activity:discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUSMSG))
-        return status,activity
+        return status, activity
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="activity", description="change bot activity")
