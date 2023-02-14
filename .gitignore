@@ -155,3 +155,4 @@ cython_debug/
 #.idea/
 config.py
 Reminders.txt
+.vscode
