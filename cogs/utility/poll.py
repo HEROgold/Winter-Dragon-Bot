@@ -18,16 +18,23 @@ import rainbow
 # TODO: Make time based system with reply to original message
 # mentioning the winning poll
 class Poll(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
-        self.data = None
+        self.data = {
+            "DUMMY_GUILD_ID":{
+                "Time": 0,
+                "Question": "DUMMY",
+                "Options": [],
+                "Users": []
+            }
+        }
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -47,7 +54,7 @@ class Poll(commands.GroupCog):
         print(data)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -56,7 +63,7 @@ class Poll(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
         while config.Database.PERIODIC_CLEANUP:
@@ -64,10 +71,10 @@ class Poll(commands.GroupCog):
             await asyncio.sleep(60*60)
             # seconds > minuts > hours
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         if not self.data:
             self.data = await self.get_data()
         self.logger.info("Cleaning poll database")
@@ -79,14 +86,14 @@ class Poll(commands.GroupCog):
         await self.set_data(self.data)
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):
+    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
         if user.bot == True:
             return
         if not self.data:
             self.data = await self.get_data()
         if str(reaction.message.id) not in self.data:
             return
-        UsersList:list = self.data[str(reaction.message.id)]["Users"]
+        UsersList = self.data[str(reaction.message.id)]["Users"]
         time:int = self.data[str(reaction.message.id)]["Time"]
         if user.id not in UsersList and time >= datetime.datetime.now().timestamp():
             UsersList.append(user.id)
@@ -97,21 +104,21 @@ class Poll(commands.GroupCog):
             await dm.send("Your new reaction has been removed from the vote.\n You cannot for something else.")
 
     @commands.Cog.listener()
-    async def on_reaction_remove(self, reaction:discord.Reaction, user:discord.Member|discord.User):
+    async def on_reaction_remove(self, reaction:discord.Reaction, user:discord.Member|discord.User) -> None:
         if not self.data:
             self.data = await self.get_data()
         with contextlib.suppress(KeyError):
-            UsersList:list = self.data[str(reaction.message.id)]["Users"]
+            UsersList = self.data[str(reaction.message.id)]["Users"]
         if user.id in UsersList and UsersList.count(user.id) >= 2:
             UsersList.remove(user.id)
         await self.set_data(self.data)
 
     @app_commands.command(
         name = "create",
-        description = "Send a poll to ask users questions. use `,` to seperate each option"
+        description = "Send a poll to ask users questions. use: , (comma) to seperate each option"
         )
     @app_commands.guild_only()
-    async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str):
+    async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str) -> None:
         if interaction.user.guild_permissions.administrator != True:
             return
         await interaction.response.defer()
@@ -149,5 +156,5 @@ class Poll(commands.GroupCog):
             ]
             await msg.add_reaction(ALLOWED_EMOJIS[i])
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Poll(bot))

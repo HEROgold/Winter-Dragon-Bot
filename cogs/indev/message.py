@@ -37,7 +37,7 @@ import dragon_database
 #
 
 class Messages(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -46,7 +46,7 @@ class Messages(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -65,7 +65,7 @@ class Messages(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -74,11 +74,11 @@ class Messages(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     @app_commands.command(
@@ -87,7 +87,7 @@ class Messages(commands.GroupCog):
         )
     @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 300)
-    async def slash_get_message(self, interaction:discord.Interaction):
+    async def slash_get_message(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         await self.get_message(interaction, guild)
@@ -99,7 +99,7 @@ class Messages(commands.GroupCog):
         description = f"get and store the last {config.Message.LIMIT} messages, in each channel from each server!"
         )
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-    async def slash_mass_get__message(self, interaction:discord.Interaction):
+    async def slash_mass_get__message(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
@@ -109,7 +109,7 @@ class Messages(commands.GroupCog):
         self.logger.info("Finished updating messages")
 
     @commands.Cog.listener()
-    async def on_message(self, message:discord.Message):
+    async def on_message(self, message:discord.Message) -> None:
         if not config.Main.LOG_MESSAGES:
             return
         if not message.guild or message.clean_content == "":

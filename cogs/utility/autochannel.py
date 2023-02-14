@@ -12,7 +12,7 @@ import config
 import dragon_database
 
 class Autochannel(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -21,7 +21,7 @@ class Autochannel(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -40,7 +40,7 @@ class Autochannel(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -49,7 +49,7 @@ class Autochannel(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         # TODO:
         # Delete empty channels, and categories every hour since startup.
         # When loaded, loop over all guilds, and check if they are in DB
@@ -57,11 +57,11 @@ class Autochannel(commands.GroupCog):
         #   await self.database_cleanup()
         self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
 
-    async def database_cleanup(self):
+    async def database_cleanup(self) -> None:
         self.logger.info("Cleaning Autochannels...")
         if not self.data:
             self.data = await self.get_data()
@@ -110,7 +110,7 @@ class Autochannel(commands.GroupCog):
     )
     @app_commands.checks.has_permissions(manage_channels = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
-    async def slash_autochannel_remove(self, interaction:discord.Interaction):
+    async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         if not self.data:
             self.data = await self.get_data()
@@ -141,7 +141,7 @@ class Autochannel(commands.GroupCog):
         )
     @app_commands.checks.has_permissions(manage_channels = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
-    async def slash_autochannel_add(self, interaction:discord.Interaction):
+    async def slash_autochannel_add(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         overwrites = {
@@ -236,7 +236,7 @@ class Autochannel(commands.GroupCog):
         return CategoryChannel
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
+    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
         if not self.data:
             self.data = await self.get_data()
         if after.channel:
@@ -285,5 +285,5 @@ class Autochannel(commands.GroupCog):
                 del self.data[guild_id][member_id]
         await self.set_data(self.data)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Autochannel(bot))

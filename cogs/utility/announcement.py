@@ -10,7 +10,7 @@ import rainbow
 
 
 class Announce(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
 
     @app_commands.command(
@@ -18,7 +18,7 @@ class Announce(commands.Cog):
     description="Using this command will ping everyone and put your message in a clean embed!"
     )
     @app_commands.checks.has_permissions(mention_everyone=True)
-    async def announce(self, interaction:discord.Interaction, message:str):
+    async def announce(self, interaction:discord.Interaction, message:str) -> None:
         await interaction.response.defer()
         member = interaction.user
         emb = discord.Embed(title="Announcement!", description=f"{message}", color=random.choice(rainbow.RAINBOW))
@@ -30,5 +30,5 @@ class Announce(commands.Cog):
             await mass_ping.delete()
 
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Announce(bot))

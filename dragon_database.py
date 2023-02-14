@@ -18,13 +18,11 @@ class Database():
     async def get_client(self) -> MongoClient:
         try:
             IP_PORT = config.Database.IP_PORT
-            USER_PASS = config.Database.USER_PASS
-            AUTH_METHOD = config.Database.AUTH_METHOD
+            USER_PASS = config.Database.USER_PASS or "localhost:27017"
+            AUTH_METHOD = config.Database.AUTH_METHOD or f"mongodb://{IP_PORT}"
             CONNECTION_STRING = f"mongodb://{USER_PASS}@{IP_PORT}/?authMechanism={AUTH_METHOD}"
         except Exception as e:
             self.logger.warning("Defaulting to localhost connection due to error", e)
-            IP_PORT = "localhost:27017"
-            CONNECTION_STRING = f"mongodb://{IP_PORT}"
         # self.logger.info("Getting MongoClient connection")
         return MongoClient(CONNECTION_STRING)
 
@@ -42,7 +40,7 @@ class Database():
     # unlist data using l_data > 
     # create valid (string) json format using json.dumps > 
     # change (string) json back to python dict using json.loads
-    async def get_data(self, collection_name:str):
+    async def get_data(self, collection_name:str) -> dict:
         collection = await self.__get_collection__(collection_name)
         l_data = list(collection.find())
         try:
@@ -50,7 +48,7 @@ class Database():
             del d_data['_id']
             j_data = json.dumps(d_data)
             data = json.loads(j_data)
-        except IndexError as e:
+        except IndexError:
             self.logger.debug("Returning empty dictionary because no data was found")
             data = {}
         return data
@@ -67,7 +65,6 @@ class Database():
 async def main():
     db = Database()
     db.logger.warning("Database.py should only be used for testing!")
-    mc = await db.get_client()
     print(await db.get_data("Message"))
 
 if __name__ == "__main__":

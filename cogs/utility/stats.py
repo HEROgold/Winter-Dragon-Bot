@@ -9,12 +9,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from typing import NoReturn
+
 import config
 import dragon_database
 import rainbow
 
 class Stats(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -23,7 +25,7 @@ class Stats(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -42,7 +44,7 @@ class Stats(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -51,7 +53,7 @@ class Stats(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> NoReturn:
         if not self.data:
             self.data = await self.get_data()
         while True:
@@ -59,11 +61,11 @@ class Stats(commands.GroupCog):
             await asyncio.sleep(60 * 5)
             await self.update()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     @commands.Cog.listener()
-    async def on_member_update(self, before:discord.Member, after:discord.Member):
+    async def on_member_update(self, before:discord.Member, after:discord.Member) -> None:
         member = before or after
         self.logger.debug(f"Member update: guild='{member.guild}', member='{member}'")
         guild = member.guild
@@ -118,14 +120,14 @@ class Stats(commands.GroupCog):
         category = list(guild_dict.values())[0]
         channels = list(category.values())[0]
         self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
-        for channel_name, channel_id in channels.items():
+        for channel_id in channels.values():
             with contextlib.suppress(AttributeError):
                 channel = discord.utils.get(guild.channels, id=int(channel_id))
                 await channel.delete(reason=reason)
         del self.data[guild_id]
         await self.set_data(self.data)
 
-    async def update(self):
+    async def update(self) -> None:
         if not self.data:
             self.data = await self.get_data()
         guilds = self.bot.guilds
@@ -161,10 +163,10 @@ class Stats(commands.GroupCog):
 
     @app_commands.guild_only()
     @app_commands.command(name="show", description="Get some information about the server!")
-    async def slash_stats_show(self, interaction:discord.Interaction):
+    async def slash_stats_show(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
-        users = sum(member.bot == False for member in guild.members)
+        # users = sum(member.bot == False for member in guild.members)
         bots = sum(member.bot == True for member in guild.members)
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         creation_date = guild.created_at.strftime("%Y-%m-%d")
@@ -187,7 +189,7 @@ class Stats(commands.GroupCog):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
-    async def slash_stats_category_add(self, interaction:discord.Interaction):
+    async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         guild_id = str(interaction.guild.id)
@@ -204,7 +206,7 @@ class Stats(commands.GroupCog):
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
-    async def slash_remove_stats_category(self, interaction:discord.Interaction):
+    async def slash_remove_stats_category(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         if str(interaction.guild.id) not in self.data:
@@ -215,7 +217,7 @@ class Stats(commands.GroupCog):
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="reset", description="Reset stats of all servers")
-    async def reset_stats(self, interaction:discord.Interaction):
+    async def reset_stats(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
@@ -229,5 +231,5 @@ class Stats(commands.GroupCog):
             self.logger.info(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all server stat channels", ephemeral=True)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Stats(bot))

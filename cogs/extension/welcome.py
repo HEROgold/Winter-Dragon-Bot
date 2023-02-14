@@ -1,3 +1,4 @@
+
 import logging
 import json
 import os
@@ -10,16 +11,16 @@ import config
 import dragon_database
 
 class Welcome(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
-        self.data = None
+        self.data = {"DUMMY_GUILD_ID":{"enabled":True}}
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -38,7 +39,7 @@ class Welcome(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -47,15 +48,15 @@ class Welcome(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     @commands.Cog.listener()
-    async def on_member_join(self, member:discord.Member):
+    async def on_member_join(self, member:discord.Member) -> None:
         if not self.data[str(member.guild.id)]["enabled"]:
             return
         if not self.data:
@@ -82,7 +83,7 @@ class Welcome(commands.GroupCog):
         name="enable",
         description="Enable welcome message"
     )
-    async def slash_enable(self, interaction:discord.Interaction):
+    async def slash_enable(self, interaction:discord.Interaction) -> None:
         self.data[str(interaction.guild.id)] = {"enabled" : True}
 
     @app_commands.guild_only()
@@ -90,16 +91,16 @@ class Welcome(commands.GroupCog):
         name="disable",
         description="Disable welcome message"
     )
-    async def slash_disable(self, interaction:discord.Interaction):
+    async def slash_disable(self, interaction:discord.Interaction) -> None:
         self.data[str(interaction.guild.id)] = {"enabled" : False}
 
     @app_commands.command(
         name="message",
         description="set the welcome message for your guild"
     )
-    async def slash_message(self, interaction:discord.Interaction, message:str):
+    async def slash_message(self, interaction:discord.Interaction, message:str) -> None:
         self.data[str(interaction.guild.id)] = {"message" : message}
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Welcome(bot))

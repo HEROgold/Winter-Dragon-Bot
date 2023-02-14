@@ -8,12 +8,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from typing import NoReturn
+
 import config
 import dragon_database
 
 
 class Ban(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -22,7 +24,7 @@ class Ban(commands.Cog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -41,7 +43,7 @@ class Ban(commands.Cog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -50,7 +52,7 @@ class Ban(commands.Cog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> NoReturn:
         if not self.data:
             self.data = await self.get_data()
         while True:
@@ -58,10 +60,10 @@ class Ban(commands.Cog):
                 await asyncio.sleep(60*60*1)
                 # seconds > minuts > hours
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
-    async def unban_check(self):
+    async def unban_check(self) -> None:
         if not self.data:
             self.data = await self.get_data()
         self.logger.debug("Checking unban states")
@@ -79,7 +81,7 @@ class Ban(commands.Cog):
             del self.data[str(id)]
         await self.set_data(data=self.data)
 
-    async def unban_member(self, member:discord.Member, guild:discord.Guild):
+    async def unban_member(self, member:discord.Member, guild:discord.Guild) -> None:
         if not self.data:
             self.data = await self.get_data()
         banned_role = discord.utils.get(guild.roles, name="Banned")
@@ -102,7 +104,16 @@ class Ban(commands.Cog):
 
     @app_commands.command(name="temp_ban", description="Ban members temporarily")
     @app_commands.guild_only()
-    async def slash_ban(self, interaction:discord.Interaction, member:discord.Member, seconds:int=0, minutes:int=0, hours:int=0, days:int=0, reason:str=None):
+    async def slash_ban(
+        self,
+        interaction:discord.Interaction,
+        member:discord.Member,
+        seconds:int=0,
+        minutes:int=0,
+        hours:int=0,
+        days:int=0,
+        reason:str=None
+    ) -> None:
         await interaction.response.defer(ephemeral=True)
         if (seconds and minutes and hours and days) == 0:
             seconds = config.Ban.DEFAULT_BANTIME
@@ -166,5 +177,5 @@ class Ban(commands.Cog):
             for time in times if current.lower() in time.lower()
         ]
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Ban(bot))

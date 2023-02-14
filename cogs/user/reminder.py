@@ -8,12 +8,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from typing import NoReturn
+
 import config
 import dragon_database
 
 
 class Reminder(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -22,7 +24,7 @@ class Reminder(commands.Cog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -41,7 +43,7 @@ class Reminder(commands.Cog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -50,17 +52,17 @@ class Reminder(commands.Cog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> NoReturn:
         if not self.data:
             self.data = await self.get_data()
         while True:
             await self.send_reminder()
             await asyncio.sleep(60)
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
-    async def send_reminder(self):
+    async def send_reminder(self) -> None:
         if not self.data:
             self.data = await self.get_data()
         if not self.data:
@@ -83,7 +85,7 @@ class Reminder(commands.Cog):
         name="remind",
         description = "Set a reminder for yourself!",
         )
-    async def slash_reminder(self, interaction:discord.Interaction, reminder:str, minutes:int=0, hours:int=0, days:int=0):
+    async def slash_reminder(self, interaction:discord.Interaction, reminder:str, minutes:int=0, hours:int=0, days:int=0) -> None:
         if minutes == 0 and hours == 0 and days == 0:
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
             return
@@ -109,5 +111,5 @@ class Reminder(commands.Cog):
         seconds += minutes * 60
         return seconds
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Reminder(bot))

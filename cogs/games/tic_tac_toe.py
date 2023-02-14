@@ -13,7 +13,7 @@ import dragon_database
 import rainbow
 
 class TicTacToe(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -35,7 +35,7 @@ class TicTacToe(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -54,7 +54,7 @@ class TicTacToe(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -63,11 +63,11 @@ class TicTacToe(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     async def update_view(self, view:discord.ui.View, *items) -> discord.ui.View:
@@ -81,11 +81,11 @@ class TicTacToe(commands.GroupCog):
         name = "stats",
         description="view tic-tac-toe stats"
     )
-    async def slash_leader_board(self, interaction:discord.Interaction):
+    async def slash_leader_board(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         gs_temp = None
-        for game_id, game_data in self.data.items():
+        for game_data in self.data.values():
             status:str = game_data["status"]
             if not status.startswith("finished"):
                 continue
@@ -121,7 +121,7 @@ class TicTacToe(commands.GroupCog):
         name="new",
         description="Start a tic tac toe game, which player can join"
     )
-    async def slash_tic_tac_toe(self, interaction:discord.Interaction):
+    async def slash_tic_tac_toe(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         if not self.data:
@@ -214,7 +214,7 @@ class TicTacToe(commands.GroupCog):
 
         return player_1_btn, player_2_btn
 
-    async def _join_game_button_(self, interaction:discord.Interaction):
+    async def _join_game_button_(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer()
         original_interaction = await interaction.original_response()
         for game_id, game_data in self.data.items():
@@ -242,7 +242,7 @@ class TicTacToe(commands.GroupCog):
             if game_data["member1"]["id"] != 0 and game_data["member2"]["id"] != 0 :
                 await self.start_game(interaction=interaction, game_data=game_data)
 
-    async def _leave_game_button_(self, interaction:discord.Interaction):
+    async def _leave_game_button_(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer()
         original_interaction = await interaction.original_response()
         for game_id, game_data in self.data.items():
@@ -271,7 +271,7 @@ class TicTacToe(commands.GroupCog):
 # BUTTON end
 # GAME start
 
-    async def start_game(self, interaction:discord.Interaction, game_data:str):
+    async def start_game(self, interaction:discord.Interaction, game_data:str) -> None:
         await interaction.edit_original_response(content="Game is starting soon!", view=None)
         game_data["status"] = "setup"
         await self.game_handler(interaction, game_data)
@@ -320,14 +320,14 @@ class TicTacToe(commands.GroupCog):
         await self.game_handler(interaction, game_data)
         self.logger.debug(f"Placing move check > end. empty=`{empty}`")
 
-    async def game_handler(self, interaction:discord.Interaction, game_data:dict, view:View=View()):
+    async def game_handler(self, interaction:discord.Interaction, game_data:dict, view:View=View()) -> None:
         player_1 = game_data["member1"]
         player_2 = game_data["member2"]
         member1:discord.Member = discord.utils.get(interaction.guild.members, id=player_1["id"])
         # member2:discord.Member = discord.utils.get(interaction.guild.members, id=player_2["id"])
         try:
             gsam = game_data["gamestate"]
-        except KeyError as e:
+        except KeyError:
             gsam = None
         if not gsam:
             game_data["gamestate"] = {
@@ -363,26 +363,26 @@ class TicTacToe(commands.GroupCog):
         }
         game_msg = f'{gamestate["game_msg"]["turn_msg"]}{gamestate["game_msg"]["board"]}'
 
-        async def place_move_1(interaction:discord.Interaction):
+        async def place_move_1(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 1)
-        async def place_move_2(interaction:discord.Interaction):
+        async def place_move_2(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 2)
-        async def place_move_3(interaction:discord.Interaction):
+        async def place_move_3(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 3)
-        async def place_move_4(interaction:discord.Interaction):
+        async def place_move_4(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 4)
-        async def place_move_5(interaction:discord.Interaction):
+        async def place_move_5(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 5)
-        async def place_move_6(interaction:discord.Interaction):
+        async def place_move_6(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 6)
-        async def place_move_7(interaction:discord.Interaction):
+        async def place_move_7(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 7)
-        async def place_move_8(interaction:discord.Interaction):
+        async def place_move_8(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 8)
-        async def place_move_9(interaction:discord.Interaction):
+        async def place_move_9(interaction:discord.Interaction) -> None:
             await self.place_move(interaction, 9)
 
-        async def exit_func(interaction:discord.Interaction):
+        async def exit_func(interaction:discord.Interaction) -> None:
             status = game_data["status"]
             if status not in ["finished-draw", "finished-player2", "finished-player1"]:
                 game_data["status"] = "finished-abandoned"
@@ -477,12 +477,12 @@ class TicTacToe(commands.GroupCog):
         # self.logger.debug(f"GameUpdate: game_data=`{game_data}")
         await self.set_data(self.data)
 
-    async def win_checker(self, playermoves:list):
+    async def win_checker(self, playermoves:list) -> bool:
         for i in range(len(playermoves)):
             self.logger.debug(f"win_check: i=`{i}` moves=`{playermoves[i:i+3]}` return=`{playermoves in self.WINNING_MOVES}`")
             if playermoves[i:i+3] in self.WINNING_MOVES:
                 return True
         return False
 
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(TicTacToe(bot))

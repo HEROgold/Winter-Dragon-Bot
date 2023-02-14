@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import re
+from typing import NoReturn
 
 import discord
 import requests
@@ -13,11 +14,11 @@ from discord.ext import commands
 
 import config
 import dragon_database
-import config
 import rainbow
 
+
 class Steam(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.htmlFile = '.\\Database/SteamPage.html'
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
@@ -27,7 +28,7 @@ class Steam(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = {"user_id" : []}
@@ -37,7 +38,7 @@ class Steam(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
-    def setup_html(self):
+    def setup_html(self) -> None:
         if not os.path.exists(self.htmlFile):
             with open(self.htmlFile, "w") as f:
                 f.write("")
@@ -55,7 +56,7 @@ class Steam(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -64,7 +65,7 @@ class Steam(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> NoReturn:
         if not self.data:
             self.data = await self.get_data()
         while True:
@@ -72,7 +73,7 @@ class Steam(commands.GroupCog):
             await asyncio.sleep(60*60*1)
             await self.update()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     async def get_html(self, url=config.Steam.URL) -> str:
@@ -86,7 +87,7 @@ class Steam(commands.GroupCog):
         soup = BeautifulSoup(html, "html.parser")
         for i in soup.find_all(class_="col search_discount responsive_secondrow"):
             i:BeautifulSoup
-            item = i.parent.parent.parent
+            item:BeautifulSoup = i.parent.parent.parent
             url = item["href"]
             title = item.find("span", {"class": "title"})
             sale_amount = i.find("span") or sale_amount["text":"-1000%!"]
@@ -117,7 +118,7 @@ class Steam(commands.GroupCog):
             self.logger.debug("Steam File and Html not the same. Checking for new sales.")
             return not await self.check_new(a_hundred, b_hundred)
 
-    async def sale_from_file(self, html_file_path):
+    async def sale_from_file(self, html_file_path) -> list:
         with open(html_file_path, "r", encoding="utf-8") as f:
             from_file = await self.sale_from_html(f.read())
         return from_file
@@ -194,7 +195,7 @@ class Steam(commands.GroupCog):
             if i[1] == "-100%":
                 name = i[0]
                 field_val = i[2]
-                regex_game_id = "(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
+                regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
                 game_id = re.findall(regex_game_id, field_val)
                 self.logger.debug(f"regex game_id=`{game_id}`")
                 # TODO: Check this on next sale!
@@ -207,7 +208,7 @@ class Steam(commands.GroupCog):
 
     @app_commands.command(name = "show", description= "Get a list of 100% Sale steam games.")
     @app_commands.checks.cooldown(1, 300)
-    async def slash_show(self, interaction: discord.Interaction):
+    async def slash_show(self, interaction: discord.Interaction) -> None:
         html = await self.get_html()
         sales_html = await self.sale_from_html(html)
         embed=discord.Embed(title="Free Steam Game", description="Free Steam Games!", color=0x094d7f)
@@ -218,7 +219,7 @@ class Steam(commands.GroupCog):
             await interaction.response.send_message("No free steam games found.")
 
     @app_commands.command(name = "remove", description = "No longer get notified of free steam games")
-    async def slash_remove(self, interaction:discord.Interaction):
+    async def slash_remove(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         id_list = self.data["user_id"]
@@ -230,7 +231,7 @@ class Steam(commands.GroupCog):
         await self.set_data(self.data)
 
     @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
-    async def slash_add(self, interaction:discord.Interaction):
+    async def slash_add(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         id_list = self.data["user_id"]
@@ -241,5 +242,5 @@ class Steam(commands.GroupCog):
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
         await self.set_data(self.data)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Steam(bot))

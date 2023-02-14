@@ -2,7 +2,6 @@ import json
 import logging
 import os
 
-import discord
 from discord import app_commands
 from discord.ext import commands
 
@@ -11,7 +10,7 @@ import dragon_database
 
 
 class Temp(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -20,7 +19,7 @@ class Temp(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -39,7 +38,7 @@ class Temp(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -48,12 +47,18 @@ class Temp(commands.GroupCog):
                 json.dump(data, f)
 
     # FIXME: seems to cause issues with loading cogs?
-    async def cog_load(self):
+    async def cog_load(self) -> None:
         self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
+    @app_commands.command(
+        name="TEMP",
+        description="TEMP"
+    )
+    async def slash_TEMP(self) -> None:
+        pass
 
-async def setup(bot: commands.Bot):
-    await bot.add_cog(Temp(bot))
+async def setup(bot:commands.Bot) -> None:
+    await bot.add_cog(Temp(bot)) # type: ignore

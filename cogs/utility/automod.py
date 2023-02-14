@@ -14,9 +14,15 @@ import dragon_database
 
 
 class Automod(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.data = None
+        self.data = {
+            "DUMMY_GUILD_ID":{
+                "DUMMY_CATEGORY_ID":{
+                    "DUMMY_CHANNEL_NAME": 0
+                }
+            }
+        }
         self.DATABASE_NAME = self.__class__.__name__
         self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
@@ -36,7 +42,7 @@ class Automod(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -55,7 +61,7 @@ class Automod(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -64,11 +70,11 @@ class Automod(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     async def get_automod_channels(self, mod_channel:str, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
@@ -91,7 +97,7 @@ class Automod(commands.GroupCog):
 
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_guild_channel_create(self, channel:discord.abc.GuildChannel):
+    async def on_guild_channel_create(self, channel:discord.abc.GuildChannel) -> None:
         self.logger.debug(f"On channel create: guild='{channel.guild}' channel='{channel}'")
         async for entry in channel.guild.audit_logs(limit=1):
             if entry.action == discord.AuditLogAction.channel_create:
@@ -107,7 +113,7 @@ class Automod(commands.GroupCog):
 
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_guild_channel_update(self, before:discord.abc.GuildChannel, after:discord.abc.GuildChannel):
+    async def on_guild_channel_update(self, before:discord.abc.GuildChannel, after:discord.abc.GuildChannel) -> None:
         channel = after or before
         self.logger.debug(f"On channel update: guild='{channel.guild}' channel='{channel}'")
         embed = None
@@ -131,7 +137,7 @@ class Automod(commands.GroupCog):
 
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_guild_channel_delete(self, channel:discord.abc.GuildChannel):
+    async def on_guild_channel_delete(self, channel:discord.abc.GuildChannel) -> None:
         self.logger.debug(f"On channel delete: guild='{channel.guild}' channel='{channel}'")
         embed = None
         async for entry in channel.guild.audit_logs(limit=1):
@@ -150,7 +156,7 @@ class Automod(commands.GroupCog):
 
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_invite_create(self, invite:discord.Invite):
+    async def on_invite_create(self, invite:discord.Invite) -> None:
         self.logger.debug(f"On invite create: guild='{invite.guild}' invite='{invite}'")
         embed = None
         async for entry in invite.guild.audit_logs(limit=1):
@@ -169,7 +175,7 @@ class Automod(commands.GroupCog):
 
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_member_update(self, before:discord.Member, after:discord.Member):
+    async def on_member_update(self, before:discord.Member, after:discord.Member) -> None:
         member = before or after
         self.logger.debug(f"On member update: guild='{member.guild}', member='{member}'")
         embed = None
@@ -193,7 +199,7 @@ class Automod(commands.GroupCog):
             await allmod_channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_member_join(self, member:discord.Member):
+    async def on_member_join(self, member:discord.Member) -> None:
         self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
         with contextlib.suppress(TypeError):
             automod_channel, allmod_channel = await self.get_automod_channels("MemberJoined", member.guild)
@@ -207,7 +213,7 @@ class Automod(commands.GroupCog):
 
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_member_remove(self, member:discord.Member):
+    async def on_member_remove(self, member:discord.Member) -> None:
         self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
         embed=None
         async for entry in member.guild.audit_logs(limit=1):
@@ -219,7 +225,7 @@ class Automod(commands.GroupCog):
             await automod_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
 
-    def get_member_left_embed(self, member:discord.Member, entry:discord.AuditLogEntry):
+    def get_member_left_embed(self, member:discord.Member, entry:discord.AuditLogEntry) -> discord.Embed:
         if entry.action == discord.AuditLogAction.ban:
             return discord.Embed(
                 title="Member Banned",
@@ -250,7 +256,7 @@ class Automod(commands.GroupCog):
 
     # TODO: Filter out Tic-tac-toe
     @commands.Cog.listener()
-    async def on_message_edit(self, before:discord.Message, after:discord.Message):
+    async def on_message_edit(self, before:discord.Message, after:discord.Message) -> None:
         ttt_regex = r"(?:\|  (?:_|o|x)  )+\|\n\|(?:(?:_____)+(?:\+|))+(?:\|\n|\|)"
         reg_found = re.findall(ttt_regex, before.clean_content)
         if reg_found != []:
@@ -277,7 +283,7 @@ class Automod(commands.GroupCog):
     # FIXME/TODO: doesn`t post on purge
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_message_delete(self, message:discord.Message):
+    async def on_message_delete(self, message:discord.Message) -> None:
         self.logger.debug(f"Message deleted: guild='{message.guild}', channel='{message.channel}', content='{message.clean_content}'")
         with contextlib.suppress(TypeError):
             automod_channel, allmod_channel = await self.get_automod_channels("MessageDeleted", message.guild)
@@ -308,7 +314,7 @@ class Automod(commands.GroupCog):
     @app_commands.checks.has_permissions(administrator = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
     @app_commands.checks.cooldown(1, 100)
-    async def slash_automod_add(self, interaction:discord.Interaction):
+    async def slash_automod_add(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         overwrites = {
@@ -341,7 +347,7 @@ class Automod(commands.GroupCog):
     @app_commands.checks.has_permissions(administrator = True)
     @app_commands.checks.bot_has_permissions(manage_channels = True)
     @app_commands.checks.cooldown(1, 100)
-    async def slash_automod_remove(self, interaction:discord.Interaction):
+    async def slash_automod_remove(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         if not self.data:
             self.data = await self.get_data()
@@ -364,7 +370,7 @@ class Automod(commands.GroupCog):
         description = "Update automod channels"
         )
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-    async def slash_automod_update(self, interaction:discord.Interaction):
+    async def slash_automod_update(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
@@ -379,7 +385,7 @@ class Automod(commands.GroupCog):
         await interaction.followup.send("Updated automod channels on all servers!")
         await self.set_data(self.data)
 
-    async def update_automod(self, categories):
+    async def update_automod(self, categories) -> None:
         for guild_id, v in self.data.items():
             guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
             difference = []
@@ -392,5 +398,5 @@ class Automod(commands.GroupCog):
                 self.data[guild_id][category_id][channel_name] = new_log_channel.id
             self.logger.info(f"Updated automod for guild=`{guild}`")
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Automod(bot))
