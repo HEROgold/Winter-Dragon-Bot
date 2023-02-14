@@ -1,3 +1,5 @@
+import logging
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -5,14 +7,18 @@ from discord.ext import commands
 import config
 
 class Invite(commands.Cog):
-    def __init__(self, bot):
-        self.bot:commands.Bot = bot
+    def __init__(self, bot:commands.Bot):
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.data = None
+        self.DATABASE_NAME = self.__class__.__name__
 
     @app_commands.command(
         name="invite",
         description="Invite this bot to your own server!",
         )
     async def slash_invite(self, interaction:discord.Interaction):
+        self.logger.debug(f"Invite created for: id=`{interaction.user.id}`")
         await interaction.response.send_message("https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot", ephemeral=True)
 
     @app_commands.command(

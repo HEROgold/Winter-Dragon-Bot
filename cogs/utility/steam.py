@@ -18,14 +18,13 @@ import rainbow
 
 class Steam(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
-        self.bot:commands.Bot = bot
-        self.database_name = "SteamMention"
         self.htmlFile = '.\\Database/SteamPage.html'
-        self.logger = logging.getLogger("winter_dragon.steam")
-        self.setup_html()
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
+        self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
     def setup_json(self):
@@ -34,9 +33,9 @@ class Steam(commands.GroupCog):
                 data = {"user_id" : []}
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
     def setup_html(self):
         if not os.path.exists(self.htmlFile):
@@ -50,7 +49,7 @@ class Steam(commands.GroupCog):
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.database_name)
+            data = await db.get_data(self.DATABASE_NAME)
         else:
             with open(self.DBLocation, 'r') as f:
                 data = json.load(f)
@@ -59,7 +58,7 @@ class Steam(commands.GroupCog):
     async def set_data(self, data):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.database_name, data=data)
+            await db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)

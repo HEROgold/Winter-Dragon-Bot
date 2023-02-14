@@ -16,12 +16,12 @@ import dragon_database
 # TODO: needs testing
 class Team(commands.Cog):
     def __init__(self, bot:commands.Bot):
-        self.bot:commands.Bot = bot
-        self.database_name = "Teams"
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
-        self.logger = logging.getLogger("winter_dragon.teams")
+        self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
     def setup_json(self):
@@ -30,14 +30,14 @@ class Team(commands.Cog):
                 data = self.data
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.database_name)
+            data = await db.get_data(self.DATABASE_NAME)
         else:
             with open(self.DBLocation, 'r') as f:
                 data = json.load(f)
@@ -46,7 +46,7 @@ class Team(commands.Cog):
     async def set_data(self, data):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.database_name, data=data)
+            await db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
@@ -116,7 +116,7 @@ class Team(commands.Cog):
                     await text_channel.delete()
                 await category_channel.delete()
                 self.data_cleanup(self.data, guild_id)
-        await self.set_data(self.data)
+                await self.set_data(self.data)
 
     def data_cleanup(self, data, guild_id):
         del data[guild_id]["Category"]["id"]
@@ -265,7 +265,6 @@ class Team(commands.Cog):
             category_channel = discord.utils.get(guild.categories, id=category_id)
             team_voice = await category_channel.create_voice_channel(name=team_name)
             channels_list.append(team_voice.id)
-            await self.set_data(self.data)
             for member_id in member_ids:
                 self.logger.debug(f"Moving {member_id} to {team_voice}")
                 member = discord.utils.get(guild.members, id=member_id)

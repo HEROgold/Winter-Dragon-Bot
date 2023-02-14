@@ -12,11 +12,14 @@ from discord.ext import commands
 import config
 import dragon_database
 
+
 class Automod(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
-        self.bot:commands.Bot = bot
+        self.bot = bot
         self.data = None
-        self.logger = logging.getLogger("winter_dragon.automod")
+        self.DATABASE_NAME = self.__class__.__name__
+        self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.AutomodCategories = [
             "All-categories",
             "CreatedChannels",
@@ -29,10 +32,8 @@ class Automod(commands.GroupCog):
             "MessageEdited",
             "MessageDeleted"
         ]
-        self.bot:commands.Bot = bot
-        self.database_name = "Automod"
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
     def setup_json(self):
@@ -41,14 +42,14 @@ class Automod(commands.GroupCog):
                 data = self.data
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.database_name)
+            data = await db.get_data(self.DATABASE_NAME)
         else:
             with open(self.DBLocation, 'r') as f:
                 data = json.load(f)
@@ -57,7 +58,7 @@ class Automod(commands.GroupCog):
     async def set_data(self, data):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.database_name, data=data)
+            await db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
@@ -255,6 +256,9 @@ class Automod(commands.GroupCog):
         if reg_found != []:
             self.logger.debug(f"Message edited but is Tic-Tac-Toe: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, found=`{reg_found}`")
             return
+        if before.clean_content() is None:
+            self.logger.debug(f"Empty content on Before=`{before}")
+            return
         self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, changed=`{after.clean_content}`")
         with contextlib.suppress(TypeError):
             automod_channel, allmod_channel = await self.get_automod_channels("MessageEdited", before.guild)
@@ -265,6 +269,8 @@ class Automod(commands.GroupCog):
         )
         embed.add_field(name="Old", value=f"`{before.clean_content}`")
         embed.add_field(name="New", value=f"`{after.clean_content}`")
+        if automod_channel is None or allmod_channel is None:
+            return
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 

@@ -12,13 +12,13 @@ import dragon_database
 import rainbow
 
 class WouldYouRather(commands.GroupCog):
-    def __init__(self, bot):
-        self.bot:commands.Bot = bot
-        self.database_name = "WYR"
+    def __init__(self, bot:commands.Bot):
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
-        self.logger = logging.getLogger("winter_dragon.wyr")
+        self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
     def setup_json(self):
@@ -30,14 +30,14 @@ class WouldYouRather(commands.GroupCog):
                     data["questions"][question_id] = wyr_base_questions[question_id]
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.database_name)
+            data = await db.get_data(self.DATABASE_NAME)
         else:
             with open(self.DBLocation, 'r') as f:
                 data = json.load(f)
@@ -46,7 +46,7 @@ class WouldYouRather(commands.GroupCog):
     async def set_data(self, data):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.database_name, data=data)
+            await db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)

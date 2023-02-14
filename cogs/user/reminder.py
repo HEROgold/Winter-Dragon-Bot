@@ -14,12 +14,12 @@ import dragon_database
 
 class Reminder(commands.Cog):
     def __init__(self, bot:commands.Bot):
-        self.bot:commands.Bot = bot
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
-        self.database_name = "Reminder"
-        self.logger = logging.getLogger("winter_dragon.reminder")
+        self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.database_name}.json"
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
     def setup_json(self):
@@ -28,14 +28,14 @@ class Reminder(commands.Cog):
                 data = self.data
                 json.dump(data, f)
                 f.close
-                self.logger.info(f"{self.database_name} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
         else:
-            self.logger.info(f"{self.database_name} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data:dict = await db.get_data(self.database_name)
+            data:dict = await db.get_data(self.DATABASE_NAME)
         else:
             with open(self.DBLocation, 'r') as f:
                 data = json.load(f)
@@ -44,14 +44,15 @@ class Reminder(commands.Cog):
     async def set_data(self, data):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.database_name, data=data)
+            await db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation,'w') as f:
                 json.dump(data, f)
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.data = await self.get_data()
+        if not self.data:
+            self.data = await self.get_data()
         while True:
             await self.send_reminder()
             await asyncio.sleep(60)
@@ -67,7 +68,7 @@ class Reminder(commands.Cog):
         for member_id, remind_list in list(self.data.items()):
             for i, remind_data in enumerate(remind_list):
                 if remind_data["unix_time"] <= datetime.datetime.now(datetime.timezone.utc).timestamp():
-                    member:discord.Member = discord.utils.get(self.bot.users, id=int(member_id))
+                    member:discord.Member = discord.utils.get(self.bot.users, id=int(member_id)) # type: ignore
                     dm = await member.create_dm()
                     reminder = remind_data["reminder"]
                     await dm.send(f"I'm here to remind you about\n{reminder}")

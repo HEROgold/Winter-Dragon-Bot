@@ -97,121 +97,17 @@ async def mass_load() -> None:
     if not (os.listdir("./cogs")):
         bot_logger.warning("No Cogs Directory To Load!")
 
-async def mass_unload() -> None:
-    cogs = await get_cogs()
-    for cog in cogs:
-        try:
-            await bot.unload_extension(cog)
-            bot_logger.info(f"Unloaded {cog}")
-        except commands.errors.ExtensionNotLoaded:
-            bot_logger.warning(f"Cog not loaded before unload: {cog}")
-    if not (os.listdir("./cogs")):
-        bot_logger.warning("No Cogs Directory To Unload!")
-
-async def mass_reload(interaction:discord.Interaction) -> None:
-    reload_message = ""
-    cogs = await get_cogs()
-    for cog in cogs:
-        try:
-            bot.reload_extension(cog)
-        except Exception as e:
-            bot_logger.exception(f"Error while reloading {cog}")
-        bot_logger.info(f"Reloaded {cog}")
-        reload_message += f"Reloaded {cog}\n"
-    await interaction.followup.send(f"{reload_message}Restart complete.")
-
 @tree.command(
-    name = "show",
-    description = "Show loaded cogs (For bot developer only)",
+    name = "shutdown",
+    description = "(For bot developer only)",
     guild = support_guild
     )
-async def slash_show_cogs(interaction:discord.Interaction):
+async def slash_shutdown(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
-    cogs = await get_cogs()
-    bot_logger.debug(f"Showing {cogs} to {interaction.user}")
-    await interaction.response.send_message(f"{cogs}", ephemeral=True)
+    await interaction.response.send_message("Shutting down...",ephemeral=True)
+    terminate()
 
-@tree.command(
-    name = "reload",
-    description = "Reload a specified or all available cogs (For bot developer only)",
-    guild = support_guild
-    )
-async def slash_restart(interaction:discord.Interaction, extension:str):
-    if not await bot.is_owner(interaction.user):
-        raise commands.NotOwner
-    await interaction.response.defer()
-    if extension is None :
-        await mass_reload(interaction)
-    else:
-        try:
-            await bot.reload_extension(extension)
-            bot_logger.info(f"Reloaded {extension}")
-            await interaction.followup.send(f"Reloaded {extension}", ephemeral=True)
-        except Exception:
-            await interaction.followup.send(f"error reloading {extension}", ephemeral=True)
-
-@slash_restart.autocomplete("extension")
-async def restart_autocomplete_extension(interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-    return [
-        app_commands.Choice(name=extension, value=extension)
-        for extension in bot.extensions
-        if current.lower() in extension.lower()
-    ]
-
-@tree.command(
-    name = "unload",
-    description = "Unload a specified cog (For bot developer only)",
-    guild = support_guild
-    )
-async def slash_unload(interaction:discord.Interaction, extension:str):
-    if not bot.is_owner(interaction.user):
-        raise commands.NotOwner
-    await interaction.response.defer(ephemeral=True)
-    if extension is None:
-        await interaction.followup.send("Please provide a cog to unload.", ephemeral=True)
-    else:
-        try:
-            await bot.unload_extension(extension)
-            bot_logger.info(f"Unloaded {extension}")
-            await interaction.followup.send(f"Unloaded {extension}", ephemeral=True)
-        except Exception:
-            bot_logger.warning(f"unable to unload {extension}")
-            await interaction.followup.send(f"Unable to unload {extension}", ephemeral=True)
-
-@slash_unload.autocomplete("extension")
-async def restart_autocomplete_extension(interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-    return [
-        app_commands.Choice(name=extension, value=extension)
-        for extension in bot.extensions
-        if current.lower() in extension.lower()
-    ]
-
-@tree.command(
-    name = "load",
-    description = "Load a specified or all available cogs (For bot developer only)",
-    guild = support_guild
-    )
-async def slash_load(interaction:discord.Interaction, extension:str):
-    if not await bot.is_owner(interaction.user):
-        raise commands.NotOwner
-    await interaction.response.defer(ephemeral=True)
-    try:
-        await bot.load_extension(extension)
-        bot_logger.info(f"Loaded {extension}")
-        await interaction.followup.send(f"Loaded {extension}", ephemeral=True)
-    except Exception:
-        bot_logger.warning(f"unable to load {extension}")
-        await interaction.followup.send(f"Unable to load {extension}", ephemeral=True)
-
-@slash_load.autocomplete("extension")
-async def restart_autocomplete_extension(interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-    cogs = await get_cogs()
-    return [
-        app_commands.Choice(name=extension, value=extension)
-        for extension in cogs
-        if current.lower() in extension.lower()
-    ]
 
 #run the bot!
 if __name__ == "__main__":

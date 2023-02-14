@@ -11,7 +11,7 @@ import config
 class Sync(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot = bot
-        self.logger = logging.getLogger("winter_dragon.sync")
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="sync", description="Sync all commands on all servers (Bot dev only)")

@@ -8,9 +8,9 @@ import config
 
 
 class Purge(commands.Cog):
-    def __init__(self, bot):
-        self.bot:commands.Bot = bot
-        self.logger = logging.getLogger("winter_dragon.purge")
+    def __init__(self, bot:commands.Bot):
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
     @app_commands.command(name="purge", description="Purge X amount of messages")
     @app_commands.guild_only()

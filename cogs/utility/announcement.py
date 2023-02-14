@@ -10,8 +10,8 @@ import rainbow
 
 
 class Announce(commands.Cog):
-    def __init__(self, bot):
-        self.bot:commands.Bot = bot
+    def __init__(self, bot:commands.Bot):
+        self.bot = bot
 
     @app_commands.command(
     name="announcement",
