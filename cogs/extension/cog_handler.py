@@ -42,7 +42,7 @@ class AutoCogReloader(commands.Cog):
             self.logger.info("Starting Auto Reloader.")
             while True:
                 await self.auto_reload()
-                await asyncio.sleep(2)
+                await asyncio.sleep(5)
 
     def get_cog_data(self) -> None:
         for root, _, files in os.walk("cogs"):
