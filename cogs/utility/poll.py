@@ -60,7 +60,10 @@ class Poll(commands.GroupCog):
     async def on_ready(self):
         if not self.data:
             self.data = await self.get_data()
-        await self.cleanup()
+        while config.Database.PERIODIC_CLEANUP:
+            await self.cleanup()
+            await asyncio.sleep(60*60)
+            # seconds > minuts > hours
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -75,9 +78,6 @@ class Poll(commands.GroupCog):
             if v["Time"] <= datetime.datetime.now().timestamp():
                 del self.data[k]
         await self.set_data(self.data)
-        await asyncio.sleep(60*60)
-        if config.Database.PERIODIC_CLEANUP:
-            await self.cleanup()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):

@@ -54,7 +54,10 @@ class Stats(commands.GroupCog):
     async def on_ready(self):
         if not self.data:
             self.data = await self.get_data()
-        await self.update()
+        while True:
+            # seconds > minuts > hours
+            await asyncio.sleep(60 * 5)
+            await self.update()
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -155,9 +158,6 @@ class Stats(commands.GroupCog):
                 await self.bot.get_channel(guild_channel_id).edit(name=f"Created On: {str(age)}", reason="Stats update")
                 await peak_channel.edit(name=f"Peak Online: {peak_online}", reason="Stats update")
                 self.logger.info(f"Updated stat channels: guild='{guild}'")
-        # timer to fight ratelimits
-        await asyncio.sleep(60 * 5)
-        await self.update()
 
     @app_commands.guild_only()
     @app_commands.command(name="show", description="Get some information about the server!")

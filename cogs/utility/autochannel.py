@@ -53,7 +53,8 @@ class Autochannel(commands.GroupCog):
         # TODO:
         # Delete empty channels, and categories every hour since startup.
         # When loaded, loop over all guilds, and check if they are in DB
-        # await self.database_cleanup()
+        # while config.Database.PERIODIC_CLEANUP:
+        #   await self.database_cleanup()
         self.data = await self.get_data()
 
     async def cog_unload(self):

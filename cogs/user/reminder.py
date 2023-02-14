@@ -52,10 +52,9 @@ class Reminder(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         self.data = await self.get_data()
-        await self.send_reminder()
-        # seconds > minutes > hours
-        await asyncio.sleep(60)
-        await self.on_ready()
+        while True:
+            await self.send_reminder()
+            await asyncio.sleep(60)
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -76,7 +75,7 @@ class Reminder(commands.Cog):
                     self.logger.debug(f"Reminded {member}, and removed it.")
             if not remind_list:
                 del self.data[member_id]
-                self.logger.debug(f"Removing empty reminder for id {member_id}")
+                self.logger.debug(f"Removing empty reminder(s) for id=`{member_id}`")
         await self.set_data(self.data)
 
     @app_commands.command(

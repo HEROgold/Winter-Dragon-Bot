@@ -53,7 +53,10 @@ class Ban(commands.Cog):
     async def on_ready(self):
         if not self.data:
             self.data = await self.get_data()
-        await self.unban_check()
+        while True:
+                await self.unban_check()
+                await asyncio.sleep(60*60*1)
+                # seconds > minuts > hours
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -75,10 +78,6 @@ class Ban(commands.Cog):
         for id in to_delete:
             del self.data[str(id)]
         await self.set_data(data=self.data)
-        # seconds > minuts > hours
-        await asyncio.sleep(60*60*1)
-        if config.Database.PERIODIC_CLEANUP:
-            await self.unban_check()
 
     async def unban_member(self, member:discord.Member, guild:discord.Guild):
         if not self.data:
