@@ -12,5 +12,6 @@
         "reportMissingParameterType": "none",
         "reportUnnecessaryComparison": "none",
         "reportMissingTypeStubs": "none",
+        "reportOptionalSubscript": "none"
     }
 }
