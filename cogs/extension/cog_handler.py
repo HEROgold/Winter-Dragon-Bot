@@ -13,8 +13,8 @@ import dragon_database
 
 
 class AutoCogReloader(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot: commands.Bot = bot
+    def __init__(self, bot:commands.Bot) -> None:
+        self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = {
             "timestamp": datetime.datetime.now().timestamp(),

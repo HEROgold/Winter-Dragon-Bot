@@ -11,7 +11,7 @@ import config
 class BotC(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot:commands.Bot = bot
-        self.logger = logging.getLogger("winter_dragon.activity")
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.STATUS = [
             "dnd",
             "do_not_disturb",
