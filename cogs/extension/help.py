@@ -13,8 +13,8 @@ import rainbow
 
 class Help(commands.Cog):
     def __init__(self, bot:commands.Bot):
-        self.bot:commands.Bot = bot
-        self.logger = logging.getLogger("winter_dragon.help")
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
     async def CreateHelpEmbed(self, HelpInput:str|int, commands_list:list[app_commands.Command]|list[commands.Command]) -> discord.Embed|discord.ui.View:
         if isinstance(HelpInput, str):

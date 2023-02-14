@@ -13,9 +13,9 @@ import rainbow
 class Image(commands.GroupCog):
     def __init__(self, bot:commands.Bot):
         self.CrAIyonDataBase = "./Database/crAIyon/"
-        self.bot:commands.Bot = bot
+        self.bot = bot
         self.image_watcher.start()
-        self.logger = logging.getLogger("winter_dragon.imggen")
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
     def cog_unload(self):
         self.image_watcher.cancel()

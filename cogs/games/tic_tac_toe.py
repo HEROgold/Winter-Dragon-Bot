@@ -13,11 +13,11 @@ import dragon_database
 import rainbow
 
 class TicTacToe(commands.GroupCog):
-    def __init__(self, bot: commands.Bot):
-        self.bot: commands.Bot = bot
-        self.logger = logging.getLogger("winter_dragon.TicTacToe")
+    def __init__(self, bot:commands.Bot):
+        self.bot = bot
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
-        self.DATABASE_NAME = "TicTacToe"
+        self.DATABASE_NAME = self.__class__.__name__
         self.WINNING_MOVES = [
             # Left > Right
             [1,2,3],

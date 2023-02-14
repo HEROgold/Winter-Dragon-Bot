@@ -66,7 +66,7 @@ class Database():
 
 async def main():
     db = Database()
-    logging.getLogger(db.logger).warning("Database.py should only be used for testing!")
+    db.logger.warning("Database.py should only be used for testing!")
     mc = await db.get_client()
     print(await db.get_data("Message"))
 
