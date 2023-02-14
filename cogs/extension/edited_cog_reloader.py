@@ -36,26 +36,6 @@ class AutoCogReloader(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
-    async def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, "r") as f:
-                data = json.load(f)
-        return data
-
-    async def set_data(self, data):
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "w") as f:
-                json.dump(data, f)
-
-    async def cog_unload(self):
-        await self.set_data(self.data)
-
     @commands.Cog.listener()
     async def on_ready(self):
         if not self.data["files"]:
