@@ -14,7 +14,8 @@ class Welcome(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
-        self.data = {"DUMMY_GUILD_ID":{"enabled":True}}
+        self.data = None
+        # self.data = {"DUMMY_GUILD_ID":{"enabled":True}}
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
@@ -57,10 +58,11 @@ class Welcome(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member) -> None:
-        if not self.data[str(member.guild.id)]["enabled"]:
-            return
         if not self.data:
             self.data = await self.get_data()
+        enabled = self.data[str(member.guild.id)]["enabled"]
+        if not enabled:
+            return
         channel = member.guild.system_channel
         default_msg = f"Welcome {member.mention} to {member.guild},\nyou may use `/help` to see what commands I have!"
         custom_msg = self.data[str(member.guild.id)]["message"]
@@ -85,6 +87,7 @@ class Welcome(commands.GroupCog):
     )
     async def slash_enable(self, interaction:discord.Interaction) -> None:
         self.data[str(interaction.guild.id)] = {"enabled" : True}
+        await interaction.response.send_message("Enabled welcome message.")
 
     @app_commands.guild_only()
     @app_commands.command(
@@ -93,6 +96,7 @@ class Welcome(commands.GroupCog):
     )
     async def slash_disable(self, interaction:discord.Interaction) -> None:
         self.data[str(interaction.guild.id)] = {"enabled" : False}
+        await interaction.response.send_message("Disabled welcome message.")
 
     @app_commands.command(
         name="message",
@@ -100,6 +104,7 @@ class Welcome(commands.GroupCog):
     )
     async def slash_message(self, interaction:discord.Interaction, message:str) -> None:
         self.data[str(interaction.guild.id)] = {"message" : message}
+        await interaction.response.send_message(f"Changed welcome message to\n{message}.")
 
 async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
