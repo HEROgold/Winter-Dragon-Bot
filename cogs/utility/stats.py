@@ -127,14 +127,11 @@ class Stats(commands.GroupCog):
         del self.data[guild_id]
         await self.set_data(self.data)
 
-    async def update(self) -> None:
+    async def update(self) -> None:  # sourcery skip: low-code-quality
         if not self.data:
             self.data = await self.get_data()
-        # Note: for guild in guild, with if instead of getting guild from id from data
+        # Note: keep for loop with if.
         # because fetching guild won't let the bot get members from guild. Commented code below, don't work>
-        # for guild_id, guild_data in self.data.items():
-            # guild = await self.bot.fetch_guild(guild_id, with_counts=True)
-            # category = list(guild_data.values())[0]
         guilds = self.bot.guilds
         for guild in guilds:
             if str(guild.id) not in self.data:
