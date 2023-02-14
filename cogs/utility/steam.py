@@ -68,7 +68,10 @@ class Steam(commands.GroupCog):
     async def on_ready(self):
         if not self.data:
             self.data = await self.get_data()
-        await self.update()
+        while True:
+            # seconds > minutes > hours
+            await asyncio.sleep(60*60*1)
+            await self.update()
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -177,10 +180,6 @@ class Steam(commands.GroupCog):
             dm = await user.create_dm()
             if len(embed.fields) != 0:
                 await dm.send(embed=embed)
-        # timer to fight ratelimits and unnecessary checks in seconds
-        # seconds > minutes > hours
-        await asyncio.sleep(60*60*1)
-        await self.update()
 
     async def populate_embed(self, sales:list, embed:discord.Embed) -> discord.Embed:
         """Fills an embed with sales, and then returns the populated embed

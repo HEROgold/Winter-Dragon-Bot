@@ -55,7 +55,9 @@ class Team(commands.Cog):
     async def on_ready(self):
         if not self.data:
             self.data = await self.get_data()
-        await self.cleanup()
+        while config.Database.PERIODIC_CLEANUP:
+            await self.cleanup()
+            await asyncio.sleep(60*60)
 
     async def cog_unload(self):
         await self.set_data(self.data)
@@ -86,9 +88,6 @@ class Team(commands.Cog):
                     channels_list.remove(channel.id)
         self.logger.info("Database cleaned up")
         await self.set_data(self.data)
-        await asyncio.sleep(60*60)
-        if config.Database.PERIODIC_CLEANUP:
-            await self.cleanup()
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):

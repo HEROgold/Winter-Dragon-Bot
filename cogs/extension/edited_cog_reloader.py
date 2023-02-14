@@ -40,7 +40,9 @@ class AutoCogReloader(commands.GroupCog):
     async def on_ready(self):
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
-            await self.auto_reload()
+            while True:
+                await self.auto_reload()
+                await asyncio.sleep(2)
 
     def get_cog_data(self) -> None:
         for root, subdirs, files in os.walk("cogs"):
@@ -83,8 +85,6 @@ class AutoCogReloader(commands.GroupCog):
             del self.data["edited"][file_data]
         else:
             self.data["timestamp"] = datetime.datetime.now().timestamp()
-        await asyncio.sleep(1)
-        await self.auto_reload()
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AutoCogReloader(bot))
