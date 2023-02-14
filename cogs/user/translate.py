@@ -1,3 +1,4 @@
+
 import discord
 import flag
 import openai
@@ -7,12 +8,12 @@ import config
 
 
 class Translate(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         openai.api_key = config.Translate.API_KEY
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction:discord.Reaction, member:discord.Member|discord.User):
+    async def on_reaction_add(self, reaction:discord.Reaction, member:discord.Member|discord.User) -> None:
         if member.bot == True:
             return
         landcode:str = flag.dflagize(reaction.emoji)[1:-1]
@@ -40,5 +41,5 @@ class Translate(commands.Cog):
         else:
             await reaction.message.channel.send(embed=emb)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Translate(bot))

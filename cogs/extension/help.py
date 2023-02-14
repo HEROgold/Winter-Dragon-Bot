@@ -22,7 +22,7 @@ class Help(commands.Cog):
             for command in commands_list:
                 embed = self.PopulateCommandEmbed(HelpInput, embed, command)
             return embed, None
-        elif isinstance(HelpInput, int):
+        else:
             page_number = HelpInput
             embed = discord.Embed(title=f"Help page {page_number}", description="Description and explanation of all commands", color=random.choice(rainbow.RAINBOW))
             for i, command in enumerate(commands_list):
@@ -38,9 +38,6 @@ class Help(commands.Cog):
                     continue
             view = await self.ButtonHandler(HelpInput, commands_list, View())
             return embed, view
-        else:
-            self.logger.warning("HelpInput is not str or int.")
-            return None
 
     def PopulateCommandEmbed(self, HelpInput:str, embed:discord.Embed, command:commands.Command|app_commands.Command) -> discord.Embed:
         self.logger.debug(f"Target command: {HelpInput}")
@@ -52,9 +49,9 @@ class Help(commands.Cog):
                 embed.add_field(name="Brief", value=command.brief, inline=False)
                 embed.add_field(name="Description", value=command.description, inline=False)
                 embed.add_field(name="Usage", value=command.usage, inline=False)
-        elif isinstance(command, app_commands.Command):
-            self.logger.debug(f"from app_commands.Command: {command.name}")
+        else:
             command:app_commands.Command
+            self.logger.debug(f"from app_commands.Command: {command.name}")
             if command.name == HelpInput:
                 self.logger.debug(f"{command.name}, {command.description}")
                 embed.add_field(name="Description", value=command.description, inline=False)

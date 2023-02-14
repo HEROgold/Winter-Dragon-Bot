@@ -9,7 +9,7 @@ from discord.ext import commands
 import config
 
 class BotC(commands.GroupCog):
-    def __init__(self, bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot:commands.Bot = bot
         self.logger = logging.getLogger("winter_dragon.activity")
         self.STATUS = [
@@ -60,7 +60,7 @@ class BotC(commands.GroupCog):
         ]
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         status, activity = self.get_random_activity()
         if status is None or activity is None:
             activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
@@ -70,7 +70,7 @@ class BotC(commands.GroupCog):
             await asyncio.sleep(config.Activity.PERIODIC_TIME)
             await self.on_ready()
 
-    def get_random_activity(self):
+    def get_random_activity(self) -> tuple[discord.Status, discord.Activity] | None:
         if config.Activity.RANDOM_ACTIVITY != True:
             return None
         status = None
@@ -84,7 +84,7 @@ class BotC(commands.GroupCog):
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="activity", description="change bot activity")
-    async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str=""):
+    async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str="") -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
@@ -135,12 +135,12 @@ class BotC(commands.GroupCog):
         description = "Announce important messages on all servers the bot runs on"
         )
     @app_commands.guild_only()
-    async def slash_bot_announce(self, interaction: discord.Interaction, msg:str):
+    async def slash_bot_announce(self, interaction: discord.Interaction, msg:str) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         for guild in self.bot.guilds:
             await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
         await interaction.response.send_message("Message send to all update channels on all servers!", ephemeral=True)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(BotC(bot))

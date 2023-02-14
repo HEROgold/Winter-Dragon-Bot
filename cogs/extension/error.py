@@ -9,29 +9,29 @@ from config import Error as CE
 
 
 class Error(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot:commands.Bot = bot
         self.help_msg = ""
         self.logger = logging.getLogger("winter_dragon.error")
 
 
     # -> Option 1 --- Change on_error to self.on_error on load
-    def cog_load(self):
+    def cog_load(self) -> None: # type: ignore
         tree = self.bot.tree
         tree.on_error = self.on_app_command_error
 
     # -> Option 1 --- Change back to default on_error on unload
-    def cog_unload(self):
+    def cog_unload(self) -> None: # type: ignore
         tree = self.bot.tree
         tree.on_error = tree.__class__.on_error
 
-    async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError):
+    async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError) -> None:
         if type(error) != app_commands.errors.CommandNotFound:
             self.logger.debug(f"Error from: {interaction.command.name}")
         await self.error_check(interaction, error)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx:commands.Context, error:commands.CommandError):
+    async def on_command_error(self, ctx:commands.Context, error:commands.CommandError) -> None:
         if type(error) != commands.errors.CommandNotFound:
             self.logger.debug(f"Error from: {ctx.command.name}")
         await self.error_check(ctx, error)
@@ -45,14 +45,14 @@ class Error(commands.Cog):
                 self.logger.warning("Not allowed to remove message from dm")
             dm = await ctx.message.author.create_dm()
             self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
-        elif isinstance(x, discord.Interaction):
+        else:
             interaction:discord.Interaction = x
             dm = await interaction.user.create_dm()
             self.help_msg = f"`help {interaction.command.name}`" if interaction else "`help`"
         self.logger.debug(f"Returning dm channel {dm.recipient}")
         return dm
 
-    async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError):
+    async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError) -> None:
         # sourcery skip: low-code-quality
         dm = await self.get_dm(x)
         code = datetime.datetime.now(datetime.timezone.utc).timestamp()
@@ -99,7 +99,7 @@ class Error(commands.Cog):
                 self.logger.error(f"Unexpected error, CODE: {code}")
                 await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\n use `/support` to join the official discord server")
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Error(bot))
 

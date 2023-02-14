@@ -4,7 +4,6 @@ import os
 from atexit import register
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 import config
@@ -60,25 +59,25 @@ if config.Main.CUSTOM_HELP:
     bot.remove_command("help")
 
 @bot.event
-async def on_ready():
+async def on_ready() -> None:
     print("Bot is running!")
     if config.Main.SHOW_LOGGED_IN == True:
         bot_logger.info(f'Logged on as {bot.user}!')
 
-async def main():
+async def main() -> None:
     async with bot:
         await mass_load()
         await bot.start(config.Main.TOKEN)
 
 @register
-def terminate():
+def terminate() -> None:
     # Client.close unloads cogs first.
     asyncio.run(client.close())
     bot_logger.info("Logged off")
 
 async def get_cogs() -> list[str]:
     extensions = []
-    for root, subdirs, files in os.walk("cogs"):
+    for root, _, files in os.walk("cogs"):
         extensions.extend(
             os.path.join(root, file[:-3]).replace("\\", ".")
             for file in files
@@ -92,7 +91,7 @@ async def mass_load() -> None:
         try:
             await bot.load_extension(cog)
             bot_logger.info(f"Loaded {cog}")
-        except Exception as e:
+        except Exception:
             bot_logger.exception(f"Error while loading {cog}")
     if not (os.listdir("./cogs")):
         bot_logger.warning("No Cogs Directory To Load!")
@@ -102,7 +101,7 @@ async def mass_load() -> None:
     description = "(For bot developer only)",
     guild = support_guild
     )
-async def slash_shutdown(interaction:discord.Interaction, extension:str):
+async def slash_shutdown(interaction:discord.Interaction, extension:str) -> None:
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
     await interaction.response.send_message("Shutting down...",ephemeral=True)

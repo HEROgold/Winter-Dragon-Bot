@@ -12,7 +12,7 @@ import dragon_database
 import rainbow
 
 class NeverHaveIEver(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -21,12 +21,11 @@ class NeverHaveIEver(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation): 
             with open(self.DBLocation, "w") as f:
                 data = {"game_id": 0, "questions": {}}
-                questions = data["questions"]
-                for question_id, question in enumerate(nhie_base_questions): 
+                for question_id, _ in enumerate(nhie_base_questions): 
                     data["questions"][question_id] = nhie_base_questions[question_id]
                 json.dump(data, f)
                 f.close
@@ -43,7 +42,7 @@ class NeverHaveIEver(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -52,11 +51,11 @@ class NeverHaveIEver(commands.GroupCog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     @app_commands.command(
@@ -64,14 +63,14 @@ class NeverHaveIEver(commands.GroupCog):
         description = "Use this to get a never have i ever question, that you can reply to"
     )
     @app_commands.checks.cooldown(1, 10)
-    async def slash_nhie(self, interaction:discord.Interaction):
+    async def slash_nhie(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         game_id = self.data["game_id"]
         game_id += 1
         self.data["game_id"] = game_id
         d:dict = self.data["questions"]
-        questions = [v for k, v in d.items()]
+        questions = list(d.values())
         question = random.choice(questions)
         emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
@@ -86,7 +85,7 @@ class NeverHaveIEver(commands.GroupCog):
         name = "add",
         description="Lets you add a Never Have I Ever question"
         )
-    async def slash_nhieadd(self, interaction:discord.Interaction, nhie_question:str):
+    async def slash_nhieadd(self, interaction:discord.Interaction, nhie_question:str) -> None:
         if not self.data:
             self.data = await self.get_data()
         if "add" not in self.data:
@@ -101,23 +100,24 @@ class NeverHaveIEver(commands.GroupCog):
         description = "Add all questions stored in the NHIE database file, to the questions data section."
         )
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-    async def slash_nvie_add_verified(self, interaction:discord.Interaction):
+    async def slash_nvie_add_verified(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         if not self.data:
             self.data = await self.get_data()
+        # TODO: look and test > refactor
         d = self.data["add"]
         for k1, v1 in list(d.items()):
             if v1 == True:
                 d2 = self.data["questions"]
-                for k2, v2 in d2.items():
+                for k2 in d2.keys():
                     question_id = int(k2)
                 question_id += 1
                 self.data["questions"][question_id] = d.pop(k1)
         await self.set_data(self.data)
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(NeverHaveIEver(bot))
 
 nhie_base_questions = [

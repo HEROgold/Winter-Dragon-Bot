@@ -11,17 +11,17 @@ from discord.ext import commands, tasks
 import rainbow
 
 class Image(commands.GroupCog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.CrAIyonDataBase = "./Database/crAIyon/"
         self.bot = bot
         self.image_watcher.start()
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
-    def cog_unload(self):
+    def cog_unload(self) -> None: # type: ignore
         self.image_watcher.cancel()
 
     @tasks.loop(seconds=180)
-    async def image_watcher(self):
+    async def image_watcher(self) -> None:
         for root, subdirs, files in os.walk(self.CrAIyonDataBase):
             self.logger.debug(f"{root}, {subdirs}, {files}")
             try:
@@ -50,7 +50,7 @@ class Image(commands.GroupCog):
     @app_commands.command(name = "generate",
                     description = "Request an AI to make an image, and when its done get it send to you")
     @app_commands.checks.cooldown(1, 300)
-    async def slash_imggen(self, interaction:discord.Interaction, *, query:str):
+    async def slash_imggen(self, interaction:discord.Interaction, *, query:str) -> None:
         dm = await interaction.user.create_dm()
         await interaction.response.defer(ephemeral=True)
         await interaction.followup.send("Creating images, please be patient.", ephemeral=True)
@@ -58,5 +58,5 @@ class Image(commands.GroupCog):
         loop = asyncio.get_event_loop()
         asyncio.ensure_future(loop.run_in_executor(None, self.generate_images, interaction, dm, query))
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Image(bot))

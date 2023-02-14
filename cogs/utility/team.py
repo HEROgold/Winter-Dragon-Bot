@@ -15,7 +15,7 @@ import dragon_database
 
 # TODO: needs testing
 class Team(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -24,7 +24,7 @@ class Team(commands.Cog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -43,7 +43,7 @@ class Team(commands.Cog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -52,18 +52,18 @@ class Team(commands.Cog):
                 json.dump(data, f)
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data:
             self.data = await self.get_data()
         while config.Database.PERIODIC_CLEANUP:
             await self.cleanup()
             await asyncio.sleep(60*60)
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     # FIXME: doesnt delete channels
-    async def cleanup(self):
+    async def cleanup(self) -> None:
         self.logger.info("Cleaning Teams channels")
         if not self.data:
             self.data = await self.get_data()
@@ -90,13 +90,13 @@ class Team(commands.Cog):
         await self.set_data(self.data)
 
     @commands.Cog.listener()
-    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState):
+    async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
         if not self.data:
             self.data = await self.get_data()
         try:
             guild_id = str(member.guild.id)
-            t = self.data[guild_id]
-        except KeyError or AttributeError as e:
+            _ = self.data[guild_id]
+        except KeyError or AttributeError:
             return
         channel = before.channel
         guild = channel.guild
@@ -118,7 +118,7 @@ class Team(commands.Cog):
                 self.data_cleanup(self.data, guild_id)
                 await self.set_data(self.data)
 
-    def data_cleanup(self, data, guild_id):
+    def data_cleanup(self, data, guild_id) -> None:
         del data[guild_id]["Category"]["id"]
         del data[guild_id]["Category"]["Channels"]
         del data[guild_id]["Category"]["Votes_channel"]
@@ -154,7 +154,7 @@ class Team(commands.Cog):
 
     # FIXME: and test me
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member):
+    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
         if user.bot == True or reaction.emoji != "✅":
             return
         if not self.data:
@@ -175,18 +175,18 @@ class Team(commands.Cog):
 
     @app_commands.command(name="teams", description="Randomly split all users in voice chat, in teams")
     @app_commands.guild_only()
-    async def slash_team(self, interaction:discord.Interaction, team_count:int=2):
+    async def slash_team(self, interaction:discord.Interaction, team_count:int=2) -> None:
         # await interaction.response.send_message("Creating channels.", ephemeral=True, delete_after=5)
         await interaction.response.defer()
         try:
             members = interaction.user.voice.channel.members
-        except AttributeError as e:
+        except AttributeError:
             await interaction.followup.send("Could not get members from voice channel.")
             return
         if len(members) < team_count:
             await interaction.followup.send(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")
             return
-        category_channel = await self.get_teams_category(interaction=interaction)
+        await self.get_teams_category(interaction=interaction)
         teams = await self.DevideTeams(TeamCount=team_count, members=members)
         vote_channel = await self.create_vote(interaction, teams)
         await interaction.followup.send(f"Created vote to move members. Go to {vote_channel.mention} to vote.")
@@ -197,7 +197,7 @@ class Team(commands.Cog):
         await self.send_vote_message(interaction, vote_text_channel, teams)
         return vote_text_channel
 
-    async def send_vote_message(self, interaction:discord.Interaction, vote_text_channel:discord.TextChannel, teams:dict):
+    async def send_vote_message(self, interaction:discord.Interaction, vote_text_channel:discord.TextChannel, teams:dict) -> None:
         if not self.data:
             self.data = await self.get_data()
         guild = interaction.guild
@@ -221,7 +221,7 @@ class Team(commands.Cog):
         try:
             vote_ch_id = self.data[guild_id]["Category"]["Votes_channel"]["id"]
             vote_text_channel = discord.utils.get(category_channel.channels, id=vote_ch_id)
-        except KeyError as e:
+        except KeyError:
             vote_text_channel = await category_channel.create_text_channel(name="Team splits")
             self.data[guild_id]["Category"]["Votes_channel"] = {"id": vote_text_channel.id}
             await self.set_data(self.data)
@@ -251,13 +251,13 @@ class Team(commands.Cog):
         await self.set_data(self.data)
         return category_channel
 
-    async def move_members(self, teams:dict[str,list[discord.Member]], guild:discord.Guild):
+    async def move_members(self, teams:dict[str,list[discord.Member]], guild:discord.Guild) -> None:
         for team, member_ids in teams.items():
             if not self.data:
                 self.data = await self.get_data()
             try:
                 channels_list = self.data[str(guild.id)]["Category"]["Channels"]
-            except KeyError as e:
+            except KeyError:
                 channels_list = self.data[str(guild.id)]["Category"]["Channels"] = []
             team_number = int(team) + 1
             team_name = f"Team {team_number}"
@@ -270,5 +270,5 @@ class Team(commands.Cog):
                 member = discord.utils.get(guild.members, id=member_id)
                 await member.move_to(team_voice)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Team(bot))

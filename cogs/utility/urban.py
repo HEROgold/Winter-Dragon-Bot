@@ -6,14 +6,14 @@ from discord.ext import commands
 import config
 
 class Urban(commands.GroupCog):
-    def __init__(self, bot):
+    def __init__(self, bot) -> None:
         self.bot:commands.Bot = bot
 
     @app_commands.command(
         name="random",
         description="get random definitions"
     )
-    async def slash_urban_random(self, interaction:discord.Interaction):
+    async def slash_urban_random(self, interaction:discord.Interaction) -> None:
         if config.Urban.ALLOW_RANDOM == True:
             random = ud.random()
             emb = discord.Embed(title="Dictionary Random")
@@ -31,7 +31,7 @@ class Urban(commands.GroupCog):
         name="search",
         description="Look into urban dictionary for a meaning and its definition."
         )
-    async def slash_urban(self, interaction:discord.Interaction, query:str):
+    async def slash_urban(self, interaction:discord.Interaction, query:str) -> None:
         defined = ud.define(query)
         if len(defined) > 1:
             emb = discord.Embed(title=f"Dictionary Search {query}")
@@ -53,5 +53,5 @@ class Urban(commands.GroupCog):
         else:
             await interaction.followup.send("No results found.")
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Urban(bot))

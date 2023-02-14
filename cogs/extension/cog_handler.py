@@ -13,7 +13,7 @@ import dragon_database
 
 
 class AutoCogReloader(commands.Cog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = {
@@ -26,7 +26,7 @@ class AutoCogReloader(commands.Cog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -37,7 +37,7 @@ class AutoCogReloader(commands.Cog):
             self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
 
     @commands.Cog.listener()
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
             while True:
@@ -45,7 +45,7 @@ class AutoCogReloader(commands.Cog):
                 await asyncio.sleep(2)
 
     def get_cog_data(self) -> None:
-        for root, subdirs, files in os.walk("cogs"):
+        for root, _, files in os.walk("cogs"):
             for file in files:
                 if not file.endswith(".py"):
                     continue
@@ -58,13 +58,13 @@ class AutoCogReloader(commands.Cog):
                 with open(file_path, "r") as f:
                     edit_timestamp = os.path.getmtime(file_path)
                     self.data["files"][file] = {
-                            "filepath": file_path,
+                            "filepath": f.name,
                             "cog_path": cog_path,
                             "edit_time": edit_timestamp
                         }
 
     async def check_edits(self) -> None:
-        files:dict = self.data["files"]
+        files = self.data["files"]
         self.get_cog_data()
         for file in files:
             start_time = self.data["timestamp"]
@@ -87,7 +87,7 @@ class AutoCogReloader(commands.Cog):
             self.data["timestamp"] = datetime.datetime.now().timestamp()
 
 class CogsC(commands.GroupCog):
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
@@ -96,7 +96,7 @@ class CogsC(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
 
-    def setup_json(self):
+    def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
                 data = self.data
@@ -115,7 +115,7 @@ class CogsC(commands.GroupCog):
                 data = json.load(f)
         return data
 
-    async def set_data(self, data):
+    async def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
@@ -123,12 +123,12 @@ class CogsC(commands.GroupCog):
             with open(self.DBLocation, "w") as f:
                 json.dump(data, f)
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     async def get_cogs(self) -> list[str]:
         extensions = []
-        for root, subdirs, files in os.walk("cogs"):
+        for root, _, files in os.walk("cogs"):
             extensions.extend(
                 os.path.join(root, file[:-3]).replace("\\", ".")
                 for file in files
@@ -143,7 +143,7 @@ class CogsC(commands.GroupCog):
             try:
                 await self.bot.reload_extension(cog)
             except Exception as e:
-                self.logger.exception(f"Error while reloading {cog}")
+                self.logger.exception(f"Error while reloading {cog}: error=`{e}`")
             self.logger.info(f"Reloaded {cog}")
             reload_message += f"Reloaded {cog}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
@@ -152,7 +152,7 @@ class CogsC(commands.GroupCog):
         name = "show",
         description = "Show loaded cogs (For bot developer only)"
         )
-    async def slash_show_cogs(self, interaction:discord.Interaction):
+    async def slash_show_cogs(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         cogs = await self.get_cogs()
@@ -163,11 +163,11 @@ class CogsC(commands.GroupCog):
         name = "reload",
         description = "Reload a specified or all available cogs (For bot developer only)"
         )
-    async def slash_restart(self, interaction:discord.Interaction, extension:str=None): # type: ignore
+    async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer()
-        if extension is None :
+        if extension is None:
             await self.mass_reload(interaction)
         else:
             try:
@@ -189,7 +189,7 @@ class CogsC(commands.GroupCog):
         name = "unload",
         description = "Unload a specified cog (For bot developer only)"
         )
-    async def slash_unload(self, interaction:discord.Interaction, extension:str):
+    async def slash_unload(self, interaction:discord.Interaction, extension:str) -> None:
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
@@ -216,7 +216,7 @@ class CogsC(commands.GroupCog):
         name = "load",
         description = "Load a specified or all available cogs (For bot developer only)"
         )
-    async def slash_load(self, interaction:discord.Interaction, extension:str):
+    async def slash_load(self, interaction:discord.Interaction, extension:str) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         await interaction.response.defer(ephemeral=True)
@@ -237,6 +237,6 @@ class CogsC(commands.GroupCog):
             if current.lower() in extension.lower()
         ]
 
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(AutoCogReloader(bot))
     await bot.add_cog(CogsC(bot))

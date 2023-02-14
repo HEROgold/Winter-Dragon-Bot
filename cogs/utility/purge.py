@@ -8,14 +8,14 @@ import config
 
 
 class Purge(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
     @app_commands.command(name="purge", description="Purge X amount of messages")
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_messages=True)
-    async def slash_purge(self, interaction:discord.Interaction, count:int):
+    async def slash_purge(self, interaction:discord.Interaction, count:int) -> None:
         if interaction.user.guild_permissions.manage_messages == False:
             return
         await interaction.response.defer(ephemeral=True)
@@ -46,5 +46,5 @@ class Purge(commands.Cog):
             messages.append(message)
         return messages
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Purge(bot))
