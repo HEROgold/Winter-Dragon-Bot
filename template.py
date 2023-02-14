@@ -10,12 +10,12 @@ import config
 import dragon_database
 
 
-class Temp(commands.Cog):
+class Temp(commands.GroupCog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
-        self.logger = logging.getLogger("winter_dragon.TEMP")
+        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
-        self.DATABASE_NAME = "TEMP"
+        self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()

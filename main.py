@@ -1,16 +1,15 @@
 import asyncio
 import contextlib
+import datetime
 import logging
 import os
+from atexit import register
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from atexit import register
 
 import config
-import dragon_database
-
 
 # Change values/settings in config.py.
 # TODO: Push owner only commands in specific guild.
@@ -49,6 +48,16 @@ client = discord.Client(intents=Intents)
 bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 tree = bot.tree
 
+# FIXME: find a way to get guild OBJECT without await and after bot is ready
+# TODO: move commands to support only server/guild
+# support_guild = asyncio.run(bot.fetch_guild(config.Main.SUPPORT_GUILD_ID))
+support_guild = discord.utils.get(bot.guilds, id=config.Main.SUPPORT_GUILD_ID)
+
+# Define empty vars for checks.
+ar = None
+
+bot_logger.debug(f"Support guild id: {support_guild}")
+
 if config.Main.CUSTOM_HELP:
     bot.remove_command("help")
 
@@ -65,8 +74,7 @@ async def main():
 
 @register
 def terminate():
-    with contextlib.suppress(commands.errors.ExtensionNotLoaded):
-        asyncio.run(mass_unload())
+    # Client.close unloads cogs first.
     asyncio.run(client.close())
     bot_logger.info("Logged off")
 
@@ -97,8 +105,8 @@ async def mass_unload() -> None:
         try:
             await bot.unload_extension(cog)
             bot_logger.info(f"Unloaded {cog}")
-        except Exception as e:
-            bot_logger.exception(f"Error while unloading {cog}")
+        except commands.errors.ExtensionNotLoaded:
+            bot_logger.warning(f"Cog not loaded before unload: {cog}")
     if not (os.listdir("./cogs")):
         bot_logger.warning("No Cogs Directory To Unload!")
 
@@ -114,10 +122,10 @@ async def mass_reload(interaction:discord.Interaction) -> None:
         reload_message += f"Reloaded {cog}\n"
     await interaction.followup.send(f"{reload_message}Restart complete.")
 
-# @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-@app_commands.command(
+@tree.command(
     name = "show",
-    description= "Show loaded cogs (For bot developer only)"
+    description = "Show loaded cogs (For bot developer only)",
+    guild = support_guild
     )
 async def slash_show_cogs(interaction:discord.Interaction):
     if not await bot.is_owner(interaction.user):
@@ -126,10 +134,10 @@ async def slash_show_cogs(interaction:discord.Interaction):
     bot_logger.debug(f"Showing {cogs} to {interaction.user}")
     await interaction.response.send_message(f"{cogs}", ephemeral=True)
 
-# @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-@app_commands.command(
+@tree.command(
     name = "reload",
-    description = "Reload a specified or all available cogs (For bot developer only)"
+    description = "Reload a specified or all available cogs (For bot developer only)",
+    guild = support_guild
     )
 async def slash_restart(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
@@ -153,10 +161,10 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
         if current.lower() in extension.lower()
     ]
 
-# @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-@app_commands.command(
+@tree.command(
     name = "unload",
-    description = "Unload a specified cog (For bot developer only)"
+    description = "Unload a specified cog (For bot developer only)",
+    guild = support_guild
     )
 async def slash_unload(interaction:discord.Interaction, extension:str):
     if not bot.is_owner(interaction.user):
@@ -170,8 +178,8 @@ async def slash_unload(interaction:discord.Interaction, extension:str):
             bot_logger.info(f"Unloaded {extension}")
             await interaction.followup.send(f"Unloaded {extension}", ephemeral=True)
         except Exception:
-            bot_logger.warning(f"unable to reload {extension}")
-            await interaction.followup.send(f"Unable to reload {extension}", ephemeral=True)
+            bot_logger.warning(f"unable to unload {extension}")
+            await interaction.followup.send(f"Unable to unload {extension}", ephemeral=True)
 
 @slash_unload.autocomplete("extension")
 async def restart_autocomplete_extension(interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -181,10 +189,10 @@ async def restart_autocomplete_extension(interaction:discord.Interaction, curren
         if current.lower() in extension.lower()
     ]
 
-# @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-@app_commands.command(
+@tree.command(
     name = "load",
-    description = "Load a specified or all available cogs (For bot developer only)"
+    description = "Load a specified or all available cogs (For bot developer only)",
+    guild = support_guild
     )
 async def slash_load(interaction:discord.Interaction, extension:str):
     if not await bot.is_owner(interaction.user):
