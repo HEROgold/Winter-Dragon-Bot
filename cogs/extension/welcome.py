@@ -86,8 +86,12 @@ class Welcome(commands.GroupCog):
         description="Enable welcome message"
     )
     async def slash_enable(self, interaction:discord.Interaction) -> None:
-        self.data[str(interaction.guild.id)] = {"enabled" : True}
-        await interaction.response.send_message("Enabled welcome message.")
+        self.data = {
+            str(interaction.guild.id): {
+                "enabled" : True
+                }
+        }
+        await interaction.response.send_message("Enabled welcome message.", ephemeral=True)
 
     @app_commands.guild_only()
     @app_commands.command(
@@ -95,16 +99,25 @@ class Welcome(commands.GroupCog):
         description="Disable welcome message"
     )
     async def slash_disable(self, interaction:discord.Interaction) -> None:
-        self.data[str(interaction.guild.id)] = {"enabled" : False}
-        await interaction.response.send_message("Disabled welcome message.")
+        self.data = {
+            str(interaction.guild.id): {
+                "enabled" : False
+                }
+        }
+        await interaction.response.send_message("Disabled welcome message.", ephemeral=True)
 
     @app_commands.command(
         name="message",
         description="set the welcome message for your guild"
     )
     async def slash_message(self, interaction:discord.Interaction, message:str) -> None:
-        self.data[str(interaction.guild.id)] = {"message" : message}
-        await interaction.response.send_message(f"Changed welcome message to\n{message}.")
+        self.data = {
+            str(interaction.guild.id): {
+                "message" : message
+                }
+        }
+        await interaction.response.send_message(f"Changed welcome message to\n{message}.", ephemeral=True)
+        await self.set_data(self.data)
 
 async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
