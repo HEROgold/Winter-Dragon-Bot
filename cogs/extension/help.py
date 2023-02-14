@@ -139,14 +139,13 @@ class Help(commands.Cog):
             self.logger.debug(f"Checking HelpInput values: {HelpInput}")
             if HelpInput > 1 and not MoreThenMax:
                 NewView = await self.UpdateView(view, ButtonLeft, ButtonRight)
-            elif HelpInput < 1:
+            elif HelpInput <= 1:
                 NewView = await self.UpdateView(view, ButtonRight)
             elif MoreThenMax:
                 NewView = await self.UpdateView(view, ButtonLeft)
             else:
                 self.logger.debug("NewView Else Escape")
             self.logger.debug("Editing original help message")
-            # FIXME: Could not send response, sending followup instead: local variable 'NewView' referenced before assignment
             try:
                 await interaction.response.edit_message(embed=embed, view=NewView)
             except Exception as e:
