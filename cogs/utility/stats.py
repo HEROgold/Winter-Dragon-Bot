@@ -57,9 +57,9 @@ class Stats(commands.GroupCog):
         if not self.data:
             self.data = await self.get_data()
         while True:
+            await self.update()
             # seconds > minuts > hours
             await asyncio.sleep(60 * 5)
-            await self.update()
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
@@ -130,36 +130,51 @@ class Stats(commands.GroupCog):
     async def update(self) -> None:
         if not self.data:
             self.data = await self.get_data()
+        # Note: for guild in guild, with if instead of getting guild from id from data
+        # because fetching guild won't let the bot get members from guild. Commented code below, don't work>
+        # for guild_id, guild_data in self.data.items():
+            # guild = await self.bot.fetch_guild(guild_id, with_counts=True)
+            # category = list(guild_data.values())[0]
         guilds = self.bot.guilds
         for guild in guilds:
-            if str(guild.id) in self.data:
-                # timer between guilds to fight ratelimits
-                await asyncio.sleep(1)
-                guild_id = self.data[str(guild.id)]
-                category = list(guild_id.values())[0]
-                channels = list(category.values())[0]
-                users = sum(member.bot == False for member in guild.members)
-                bots = sum(member.bot == True for member in guild.members)
-                online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
-                age = guild.created_at.strftime("%Y-%m-%d")
-                online_channel_id = channels["online_channel"]
-                user_channel_id = channels["user_channel"]
-                bot_channel_id = channels["bot_channel"]
-                guild_channel_id = channels["guild_channel"]
-                peak_channel_id = channels["peak_online"]
-                peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
-                with contextlib.suppress(AttributeError):
-                    try:
-                        peak_count = int(peak_channel.name[13:])
-                    except ValueError:
-                        peak_count = 0
-                peak_online = max(online, peak_count)
-                await self.bot.get_channel(online_channel_id).edit(name=f"Online Users: {str(online)}", reason="Stats update")
-                await self.bot.get_channel(user_channel_id).edit(name=f"Total Users: {str(users)}", reason="Stats update")
-                await self.bot.get_channel(bot_channel_id).edit(name=f"Online Bots: {str(bots)}", reason="Stats update")
-                await self.bot.get_channel(guild_channel_id).edit(name=f"Created On: {str(age)}", reason="Stats update")
-                await peak_channel.edit(name=f"Peak Online: {peak_online}", reason="Stats update")
-                self.logger.info(f"Updated stat channels: guild='{guild}'")
+            if str(guild.id) not in self.data:
+                continue
+            self.logger.info(f"Updating stat channels: guild='{guild}'")
+            guild_id = self.data[str(guild.id)]
+            category = list(guild_id.values())[0]
+            channels = list(category.values())[0]
+            online_channel_id = channels["online_channel"]
+            user_channel_id = channels["user_channel"]
+            bot_channel_id = channels["bot_channel"]
+            guild_channel_id = channels["guild_channel"]
+            peak_channel_id = channels["peak_online"]
+            peak_channel = discord.utils.get(guild.channels, id=peak_channel_id) or await guild.fetch_channel(peak_channel_id)
+            guild_channel = discord.utils.get(guild.channels, id=guild_channel_id) or await guild.fetch_channel(guild_channel_id)
+            bot_channel = discord.utils.get(guild.channels, id=bot_channel_id) or await guild.fetch_channel(bot_channel_id)
+            user_channel = discord.utils.get(guild.channels, id=user_channel_id) or await guild.fetch_channel(user_channel_id)
+            online_channel = discord.utils.get(guild.channels, id=online_channel_id) or await guild.fetch_channel(online_channel_id)
+            self.logger.debug(f"Channels list: {peak_channel}, {user_channel}, {bot_channel}, {online_channel}, {guild_channel}")
+            try:
+                peak_count = int(peak_channel.name[13:])
+            except ValueError:
+                peak_count = 0
+            users = sum(member.bot == False for member in guild.members)
+            bots = sum(member.bot == True for member in guild.members)
+            online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
+            peak_online = max(online, peak_count)
+            age = guild.created_at.strftime("%Y-%m-%d")
+            self.logger.debug(f"Channels Stats: {peak_online},{users}, {bots}, {online},  {age}, {list(guild.members)}")
+            if ((new_name := f"Online Users: {online}") != online_channel.name):
+                await online_channel.edit(name=new_name, reason="Stats update")
+            if ((new_name := f"Total Users: {users}") != user_channel.name):
+                await user_channel.edit(name=new_name, reason="Stats update")
+            if ((new_name := f"Online Bots: {bots}") != bot_channel.name):
+                await bot_channel.edit(name=new_name, reason="Stats update")
+            if ((new_name := f"Created On: {age}") != guild_channel.name):
+                await guild_channel.edit(name=new_name, reason="Stats update")
+            if ((new_name := f"Peak Online: {peak_online}") != peak_channel.name):
+                await peak_channel.edit(name=new_name, reason="Stats update")
+            self.logger.info(f"Updated stat channels: guild='{guild}'")
 
     @app_commands.guild_only()
     @app_commands.command(name="show", description="Get some information about the server!")
