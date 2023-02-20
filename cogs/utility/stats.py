@@ -15,6 +15,7 @@ import config
 import dragon_database
 import rainbow
 
+@app_commands.guild_only()
 class Stats(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -173,7 +174,6 @@ class Stats(commands.GroupCog):
                 await peak_channel.edit(name=new_name, reason="Stats update")
             self.logger.info(f"Updated stat channels: guild='{guild}'")
 
-    @app_commands.guild_only()
     @app_commands.command(name="show", description="Get some information about the server!")
     async def slash_stats_show(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -198,7 +198,6 @@ class Stats(commands.GroupCog):
         name="add",
         description="This command will create the Stats category which will show some stats about the server."
     )
-    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
@@ -215,7 +214,6 @@ class Stats(commands.GroupCog):
         name="remove",
         description="This command removes the stat channels. Including the Category and all channels in there."
     )
-    @app_commands.guild_only()
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_remove_stats_category(self, interaction:discord.Interaction) -> None:

@@ -262,7 +262,7 @@ class Automod(commands.GroupCog):
         if reg_found != []:
             self.logger.debug(f"Message edited but is Tic-Tac-Toe: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, found=`{reg_found}`")
             return
-        if before.clean_content() is None:
+        if before.clean_content is None:
             self.logger.debug(f"Empty content on Before=`{before}")
             return
         self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, changed=`{after.clean_content}`")
@@ -311,8 +311,8 @@ class Automod(commands.GroupCog):
         description = "Enables automatic moderation/logging for this server, and creates a channel for all logs."
         )
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(administrator = True)
-    @app_commands.checks.bot_has_permissions(manage_channels = True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     async def slash_automod_add(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -344,8 +344,8 @@ class Automod(commands.GroupCog):
         description = "Disables automatic moderation for this server, and removes the log channels.",
         )
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(administrator = True)
-    @app_commands.checks.bot_has_permissions(manage_channels = True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     async def slash_automod_remove(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)

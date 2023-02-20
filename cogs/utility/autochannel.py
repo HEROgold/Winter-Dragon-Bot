@@ -11,6 +11,9 @@ from discord.ext import commands
 import config
 import dragon_database
 
+@app_commands.guild_only()
+@app_commands.checks.has_permissions(manage_channels = True)
+@app_commands.checks.bot_has_permissions(manage_channels = True)
 class Autochannel(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -108,8 +111,6 @@ class Autochannel(commands.GroupCog):
         name = "remove",
         description="Remove the autochannel from this server"
     )
-    @app_commands.checks.has_permissions(manage_channels = True)
-    @app_commands.checks.bot_has_permissions(manage_channels = True)
     async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         if not self.data:
@@ -139,8 +140,6 @@ class Autochannel(commands.GroupCog):
         name = "add",
         description = "Set up voice category and channels, which lets each user make their own channels"
         )
-    @app_commands.checks.has_permissions(manage_channels = True)
-    @app_commands.checks.bot_has_permissions(manage_channels = True)
     async def slash_autochannel_add(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild

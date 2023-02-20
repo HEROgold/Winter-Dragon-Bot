@@ -56,7 +56,7 @@ class Database():
     async def set_data(self, collection_name:str, data:dict) -> None:
         collection = await self.__get_collection__(collection_name)
         try:
-            self.logger.info(f"Updating/replacing data in database: {self.target_database}, in collection: {collection_name}")
+            self.logger.debug(f"Updating/replacing data in database: {self.target_database}, in collection: {collection_name}")
             collection.replace_one(filter={}, replacement=data, upsert=True)
         except IndexError:
             self.logger.debug(f"Empty database {collection_name}, inserting data")

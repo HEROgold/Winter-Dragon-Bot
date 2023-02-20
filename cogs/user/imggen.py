@@ -49,7 +49,7 @@ class Image(commands.GroupCog):
 
     @app_commands.command(name = "generate",
                     description = "Request an AI to make an image, and when its done get it send to you")
-    @app_commands.checks.cooldown(1, 300)
+    @app_commands.checks.cooldown(1, 360)
     async def slash_imggen(self, interaction:discord.Interaction, *, query:str) -> None:
         dm = await interaction.user.create_dm()
         await interaction.response.defer(ephemeral=True)

@@ -17,18 +17,12 @@ import rainbow
 
 # TODO: Make time based system with reply to original message
 # mentioning the winning poll
+# TODO: Add suggestions with dedicated channel etc.
 class Poll(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
-        self.data = {
-            "DUMMY_GUILD_ID":{
-                "Time": 0,
-                "Question": "DUMMY",
-                "Options": [],
-                "Users": []
-            }
-        }
+        self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
@@ -97,7 +91,6 @@ class Poll(commands.GroupCog):
         time:int = self.data[str(reaction.message.id)]["Time"]
         if user.id not in UsersList and time >= datetime.datetime.now().timestamp():
             UsersList.append(user.id)
-            await self.set_data(self.data)
         else:
             await reaction.remove(user)
             dm = await user.create_dm()
@@ -111,7 +104,6 @@ class Poll(commands.GroupCog):
             UsersList = self.data[str(reaction.message.id)]["Users"]
         if user.id in UsersList and UsersList.count(user.id) >= 2:
             UsersList.remove(user.id)
-        await self.set_data(self.data)
 
     @app_commands.command(
         name = "create",
@@ -138,7 +130,6 @@ class Poll(commands.GroupCog):
         emb.add_field(name="Time-out", value=f"<t:{epoch}:R>", inline=False)
         msg:discord.Message = await interaction.followup.send(embed=emb)
         self.data[str(msg.id)] = {"Time":epoch, "Question": question, "Options":options, "Users":[]}
-        await self.set_data(self.data)
         for i, option in enumerate(options):
             if i >= 10:
                 break
@@ -155,6 +146,7 @@ class Poll(commands.GroupCog):
                 "🔟",
             ]
             await msg.add_reaction(ALLOWED_EMOJIS[i])
+        await self.set_data(self.data)
 
 async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Poll(bot))

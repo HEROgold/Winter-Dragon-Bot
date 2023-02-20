@@ -14,6 +14,8 @@ import config
 import dragon_database
 
 # TODO: needs testing
+
+@app_commands.guild_only()
 class Team(commands.Cog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -173,8 +175,10 @@ class Team(commands.Cog):
             await reaction.message.delete()
             await self.move_members(teams, guild)
 
-    @app_commands.command(name="teams", description="Randomly split all users in voice chat, in teams")
-    @app_commands.guild_only()
+    @app_commands.command(
+            name="teams",
+            description="Randomly split all users in voice chat, in teams"
+            )
     async def slash_team(self, interaction:discord.Interaction, team_count:int=2) -> None:
         # await interaction.response.send_message("Creating channels.", ephemeral=True, delete_after=5)
         await interaction.response.defer()

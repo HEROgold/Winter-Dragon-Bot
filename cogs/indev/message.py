@@ -87,6 +87,7 @@ class Messages(commands.GroupCog):
         )
     @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 300)
+    @app_commands.checks.has_permissions(manage_message=True)
     async def slash_get_message(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild

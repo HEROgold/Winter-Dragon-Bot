@@ -10,6 +10,8 @@ from discord import app_commands
 import config
 import dragon_database
 
+@app_commands.guild_only()
+@app_commands.checks.has_permissions(administrator=True)
 class Welcome(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -80,7 +82,6 @@ class Welcome(commands.GroupCog):
         else:
             self.logger.warning("No system_channel to welcome user to, and dm is disabled.")
 
-    @app_commands.guild_only()
     @app_commands.command(
         name="enable",
         description="Enable welcome message"
@@ -93,7 +94,6 @@ class Welcome(commands.GroupCog):
         }
         await interaction.response.send_message("Enabled welcome message.", ephemeral=True)
 
-    @app_commands.guild_only()
     @app_commands.command(
         name="disable",
         description="Disable welcome message"
