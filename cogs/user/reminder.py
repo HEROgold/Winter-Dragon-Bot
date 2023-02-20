@@ -7,6 +7,7 @@ import os
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ext import tasks
 
 from typing import NoReturn
 
@@ -54,11 +55,14 @@ class Reminder(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self) -> NoReturn:
         while True:
-            self.logger.debug(f"Loop data check > {self.data}")
             await self.send_reminder()
             await asyncio.sleep(60)
 
     async def cog_unload(self) -> None:
+        await self.set_data(self.data)
+
+    @tasks.loop(hours=1)
+    async def update_database(self) -> None:
         await self.set_data(self.data)
 
     async def send_reminder(self) -> None:
@@ -79,7 +83,6 @@ class Reminder(commands.Cog):
             if not remind_list:
                 del self.data[member_id]
                 self.logger.debug(f"Removing empty reminder(s) for id=`{member_id}`")
-        await self.set_data(self.data)
 
     @app_commands.command(
         name="remind",
@@ -102,7 +105,6 @@ class Reminder(commands.Cog):
             reminders.append({"reminder": reminder, "unix_time": epoch})
         except KeyError:
             self.data[member_id] = [{"reminder": reminder, "unix_time": epoch}]
-        await self.set_data(self.data)
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
 
     def get_seconds(self, seconds:int=0, minutes:int=0, hours:int=0, days:int=0) -> int:
