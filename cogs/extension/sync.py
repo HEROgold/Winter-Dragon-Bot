@@ -6,8 +6,6 @@ from discord.ext import commands
 
 import config
 
-# FIXME: Sync command gets synced to only the correct guild,
-# however all other @app_commands.guilds() decorators are synced globaly..
 class Sync(commands.Cog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -21,7 +19,8 @@ class Sync(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         global_sync = await self.bot.tree.sync()
         local_sync = await self.bot.tree.sync(guild=self.bot.get_guild(config.Main.SUPPORT_GUILD_ID))
-        self.logger.info(f"Synced slash commands: global_commands={global_sync} guild_commands={local_sync}")
+        self.logger.warning("Synced slash commands!")
+        self.logger.debug(f"Synced commands: global_commands={global_sync} guild_commands={local_sync}")
         await interaction.followup.send("Sync complete", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
