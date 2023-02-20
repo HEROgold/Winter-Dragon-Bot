@@ -144,7 +144,7 @@ class CogsC(commands.GroupCog):
                 await self.bot.reload_extension(cog)
             except Exception as e:
                 self.logger.exception(f"Error while reloading {cog}: error=`{e}`")
-            self.logger.info(f"Reloaded {cog}")
+            self.logger.info(f"Reloaded {cog}, {interaction.user}")
             reload_message += f"Reloaded {cog}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
 
