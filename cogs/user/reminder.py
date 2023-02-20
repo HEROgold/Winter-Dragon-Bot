@@ -53,9 +53,8 @@ class Reminder(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> NoReturn:
-        if not self.data:
-            self.data = await self.get_data()
         while True:
+            self.logger.debug(f"Loop data check > {self.data}")
             await self.send_reminder()
             await asyncio.sleep(60)
 
@@ -66,6 +65,7 @@ class Reminder(commands.Cog):
         if not self.data:
             self.data = await self.get_data()
         if not self.data:
+            self.logger.warning("Could not get data.")
             return
         for member_id, remind_list in list(self.data.items()):
             for i, remind_data in enumerate(remind_list):
@@ -105,7 +105,7 @@ class Reminder(commands.Cog):
         await self.set_data(self.data)
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
 
-    def get_seconds(self, seconds, minutes, hours, days) -> int:
+    def get_seconds(self, seconds:int=0, minutes:int=0, hours:int=0, days:int=0) -> int:
         hours += days * 24
         minutes += hours * 60
         seconds += minutes * 60
