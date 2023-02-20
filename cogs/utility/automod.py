@@ -275,7 +275,7 @@ class Automod(commands.GroupCog):
         )
         embed.add_field(name="Old", value=f"`{before.clean_content}`")
         embed.add_field(name="New", value=f"`{after.clean_content}`")
-        if automod_channel is None or allmod_channel is None:
+        if not automod_channel or not allmod_channel:
             return
         await automod_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
