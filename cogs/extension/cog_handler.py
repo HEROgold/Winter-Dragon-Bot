@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime
 import json
 import logging
@@ -80,7 +81,8 @@ class AutoCogReloader(commands.Cog):
         if not self.data["edited"]:
             await self.check_edits()
         for file_data in list(self.data["edited"]):
-            await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
+            with contextlib.suppress(commands.errors.ExtensionNotLoaded):
+                await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
             self.logger.info(f"Automatically reloaded {file_data}")
             del self.data["edited"][file_data]
         else:
@@ -166,7 +168,7 @@ class CogsC(commands.GroupCog):
     async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         if extension is None:
             await self.mass_reload(interaction)
         else:
