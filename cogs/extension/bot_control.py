@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import config
 
+@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class BotC(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot:commands.Bot = bot
@@ -82,7 +83,6 @@ class BotC(commands.GroupCog):
         activity:discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUSMSG))
         return status, activity
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="activity", description="change bot activity")
     async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str="") -> None:
         if not await self.bot.is_owner(interaction.user):
@@ -129,7 +129,6 @@ class BotC(commands.GroupCog):
             if current.lower() in activity.lower()
         ]
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(
         name = "announce",
         description = "Announce important messages on all servers the bot runs on"
