@@ -17,6 +17,7 @@ class WouldYouRather(commands.GroupCog):
         self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
+        self.set_default_data()
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
             self.setup_json()
@@ -24,14 +25,16 @@ class WouldYouRather(commands.GroupCog):
     def setup_json(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "w") as f:
-                data = {"game_id": 0, "questions": {}}
-                for question_id, _ in enumerate(wyr_base_questions):
-                    data["questions"][question_id] = wyr_base_questions[question_id]
-                json.dump(data, f)
+                json.dump(self.data, f)
                 f.close
                 self.logger.info(f"{self.DATABASE_NAME} Json Created.")
         else:
             self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+
+    def set_default_data(self) -> None:
+        self.data = {"game_id": 0, "questions": {}}
+        for question_id, _ in enumerate(wyr_base_questions):
+            self.data["questions"][str(question_id)] = wyr_base_questions[question_id]
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
@@ -74,6 +77,7 @@ class WouldYouRather(commands.GroupCog):
         emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="1st option", value="🟦")
         emb.add_field(name="2nd option", value="🟥")
+        # TODO: Add emoji's directly using the interaction.
         send_msg = await interaction.channel.send(embed=emb)
         await send_msg.add_reaction("🟦")
         await send_msg.add_reaction("🟥")
