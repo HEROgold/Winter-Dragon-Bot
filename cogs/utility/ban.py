@@ -104,7 +104,7 @@ class Ban(commands.Cog):
 
     @app_commands.command(name="temp_ban", description="Ban members temporarily")
     @app_commands.guild_only()
-    @app_commands.checks.has_permissions(ban=True)
+    @app_commands.checks.has_permissions(ban_members=True)
     async def slash_ban(
         self,
         interaction:discord.Interaction,
