@@ -46,7 +46,6 @@ class Urban(commands.GroupCog):
         UD_DEFINE_URL = 'http://api.urbandictionary.com/v0/define?term='
         response = requests.get(UD_DEFINE_URL + urllib.parse.quote(query))
         json = response.json()
-        # defined_list:list[dict] = json["list"]
         defined = json["list"]
         self.logger.debug(f"defined: {defined}")
         if len(defined) > 1:
