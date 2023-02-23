@@ -9,13 +9,16 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import rainbow
+import config
 
 class Image(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.CrAIyonDataBase = "./Database/crAIyon/"
         self.bot = bot
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+
+    async def cog_load(self) -> None:
         self.image_watcher.start()
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
 
     def cog_unload(self) -> None: # type: ignore
         self.image_watcher.cancel()
@@ -52,8 +55,7 @@ class Image(commands.GroupCog):
     @app_commands.checks.cooldown(1, 360)
     async def slash_imggen(self, interaction:discord.Interaction, *, query:str) -> None:
         dm = await interaction.user.create_dm()
-        await interaction.response.defer(ephemeral=True)
-        await interaction.followup.send("Creating images, please be patient.", ephemeral=True)
+        await interaction.response.send_message("Creating images, please be patient.", ephemeral=True)
         self.logger.debug(f"Requesting images for {interaction.user} with query {query}")
         loop = asyncio.get_event_loop()
         asyncio.ensure_future(loop.run_in_executor(None, self.generate_images, interaction, dm, query))
