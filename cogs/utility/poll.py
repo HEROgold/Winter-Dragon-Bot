@@ -1,7 +1,6 @@
-import asyncio
 import contextlib
 import datetime
-import json
+import pickle
 import logging
 import os
 import random
@@ -9,7 +8,7 @@ import random
 import discord
 import num2words
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 import dragon_database
@@ -21,31 +20,30 @@ import rainbow
 class Poll(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
-        print(data)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -53,21 +51,19 @@ class Poll(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
-        while config.Database.PERIODIC_CLEANUP:
-            await self.cleanup()
-            await asyncio.sleep(60*60)
-            # seconds > minuts > hours
+        if config.Database.PERIODIC_CLEANUP:
+            self.cleanup.start()
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
+    @tasks.loop(seconds=3600)
     async def cleanup(self) -> None:
         if not self.data:
             self.data = await self.get_data()
@@ -113,7 +109,6 @@ class Poll(commands.GroupCog):
     async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str) -> None:
         if interaction.user.guild_permissions.administrator != True:
             return
-        await interaction.response.defer()
         if not self.data:
             self.data = await self.get_data()
         emb = discord.Embed(title="Poll", description=f"{question}", color=random.choice(rainbow.RAINBOW))
@@ -123,12 +118,12 @@ class Poll(commands.GroupCog):
         options:list = options.split(sep=",")
         for i, option in enumerate(options):
             if i >= 10:
-                await interaction.followup.send("Only 10 options are supported", ephemeral=True)
+                await interaction.response.send_message("Only 10 options are supported", ephemeral=True)
                 break
             clean_option = option.strip()
             emb.add_field(name=f":{num2words.num2words(i+1)}:", value=clean_option, inline=True)
         emb.add_field(name="Time-out", value=f"<t:{epoch}:R>", inline=False)
-        msg:discord.Message = await interaction.followup.send(embed=emb)
+        msg:discord.Message = await interaction.response.send_message(embed=emb)
         self.data[str(msg.id)] = {"Time":epoch, "Question": question, "Options":options, "Users":[]}
         for i, option in enumerate(options):
             if i >= 10:

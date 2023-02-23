@@ -6,13 +6,14 @@ from discord import app_commands
 from discord.ext import commands
 
 from config import Error as CE
+from config import Main as CM
 
 
 class Error(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot:commands.Bot = bot
         self.help_msg = ""
-        self.logger = logging.getLogger("winter_dragon.error")
+        self.logger = logging.getLogger(f"{CM.BOT_NAME}.error")
 
 
     # -> Option 1 --- Change on_error to self.on_error on load
@@ -93,11 +94,11 @@ class Error(commands.Cog):
                     if "NotOwner" in arg:
                         await dm.send("Only the bot owner(s) may use this command!")
                     else:
-                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\n use `/support` to join the official discord server")
+                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\nuse </invite server:1057851788310614086> to join the official discord server")
                         self.logger.error(f"Error executing command, CODE: {code}")
             case _:
                 self.logger.error(f"Unexpected error, CODE: {code}")
-                await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\n use `/support` to join the official discord server")
+                await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\nuse `</invite server:1057851788310614086>` to join the official discord server")
 
 async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name

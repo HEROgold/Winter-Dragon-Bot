@@ -17,7 +17,7 @@ import config
 
 LOG_LEVEL = logging.DEBUG
 
-bot_logger = logging.getLogger("winter_dragon")
+bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
 discord_logger = logging.getLogger('discord')
 
 bot_logger.setLevel(LOG_LEVEL)

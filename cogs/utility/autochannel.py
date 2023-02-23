@@ -1,12 +1,11 @@
-import asyncio
 import contextlib
-import json
+import pickle
 import logging
 import os
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 import dragon_database
@@ -17,30 +16,30 @@ import dragon_database
 class Autochannel(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -48,36 +47,27 @@ class Autochannel(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
-        # TODO:
-        # Delete empty channels, and categories every hour since startup.
-        # When loaded, loop over all guilds, and check if they are in DB
-        # while config.Database.PERIODIC_CLEANUP:
-        #   await self.database_cleanup()
-        self.data = await self.get_data()
+    async def cog_load(self) -> None:
+        if not self.data:
+            self.data = await self.get_data()
+        if config.Database.PERIODIC_CLEANUP:
+            self.database_cleanup.start()
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
-
+    @tasks.loop(seconds=3600)
     async def database_cleanup(self) -> None:
         self.logger.info("Cleaning Autochannels...")
-        if not self.data:
-            self.data = await self.get_data()
         for guild_id, guild_categories in list(self.data.items()):
             cleaned = await self._clean_categories(guild_categories, guild_id)
             if cleaned == True:
                 del self.data[guild_categories]
         await self.set_data(self.data)
         self.logger.info("Database cleaned up")
-        if config.Database.PERIODIC_CLEANUP:
-            # seconds > minuts > hours
-            await asyncio.sleep(60*60*1)
-            await self.database_cleanup()
 
     # TODO: cleaned == true when data is empty > aka all channels are cleaned
     # ??? Needs testing
@@ -112,12 +102,11 @@ class Autochannel(commands.GroupCog):
         description="Remove the autochannel from this server"
     )
     async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True)
         if not self.data:
             self.data = await self.get_data()
         guild_id = interaction.guild.id
         if not (guild_data := self.data[str(guild_id)]):
-            await interaction.followup.send("No autochannel found. use `/autochannel add` to add them.")
+            await interaction.response.send_message("No autochannel found. use `/autochannel add` to add them.")
             return
         guild_data:dict
         guild = discord.utils.get(self.bot.guilds, id=guild_id)
@@ -134,21 +123,21 @@ class Autochannel(commands.GroupCog):
         await self.set_data(self.data)
         # Why this suppress here?
         with contextlib.suppress(discord.app_commands.CommandInvokeError):
-            await interaction.followup.send("Removed the autochannels")
+            await interaction.response.send_message("Removed the autochannels")
 
     @app_commands.command(
         name = "add",
         description = "Set up voice category and channels, which lets each user make their own channels"
         )
     async def slash_autochannel_add(self, interaction:discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
         await self._setup_autochannel(guild, overwrites)
-        await interaction.followup.send("The channels are set up!\n use `/autochannel remove` before adding again to avoid issues.")
+        # TODO: mention command
+        await interaction.response.send_message("The channels are set up!\n use `/autochannel remove` before adding again to avoid issues.")
         await self.set_data(self.data)
 
     async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> None:

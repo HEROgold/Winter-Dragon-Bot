@@ -1,4 +1,4 @@
-import json
+import pickle
 import logging
 import os
 
@@ -39,30 +39,30 @@ import dragon_database
 class Messages(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -70,11 +70,10 @@ class Messages(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
@@ -89,10 +88,9 @@ class Messages(commands.GroupCog):
     @app_commands.checks.cooldown(1, 300)
     @app_commands.checks.has_permissions(manage_messages=True)
     async def slash_get_message(self, interaction:discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         await self.get_message(interaction, guild)
-        await interaction.followup.send("Updated my database!", ephemeral=True)
+        await interaction.response.send_message("Updated my database!", ephemeral=True)
         self.logger.info("Finished updating messages")
 
     @app_commands.command(
@@ -103,10 +101,9 @@ class Messages(commands.GroupCog):
     async def slash_mass_get__message(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer(ephemeral=True)
         for guild in self.bot.guilds:
             await self.get_message(interaction, guild)
-        await interaction.followup.send("Updated my database!", ephemeral=True)
+        await interaction.response.send_message("Updated my database!", ephemeral=True)
         self.logger.info("Finished updating messages")
 
     @commands.Cog.listener()

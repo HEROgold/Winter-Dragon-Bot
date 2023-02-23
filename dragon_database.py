@@ -1,5 +1,6 @@
 import asyncio
-import json
+# import pickle
+import pickle
 import logging
 
 # import pymongo
@@ -12,8 +13,8 @@ import config
 # Commented some debug loggers, to filter out spam.
 class Database():
     def __init__(self) -> None:
-        self.target_database = config.Main.DATABASE_NAME
-        self.logger = logging.getLogger("winter_dragon.database")
+        self.target_database = config.Main.BOT_NAME
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.database")
 
     async def get_client(self) -> MongoClient:
         try:
@@ -38,16 +39,16 @@ class Database():
 
     # HACK: to transform data from MongoDB to python dictionary:
     # unlist data using l_data > 
-    # create valid (string) json format using json.dumps > 
-    # change (string) json back to python dict using json.loads
+    # create valid (string) format using pickle.dumps > 
+    # change (string) back to python dict using pickle.loads
     async def get_data(self, collection_name:str) -> dict:
         collection = await self.__get_collection__(collection_name)
         l_data = list(collection.find())
         try:
             d_data = l_data[0]
             del d_data['_id']
-            j_data = json.dumps(d_data)
-            data = json.loads(j_data)
+            j_data = pickle.dumps(d_data)
+            data = pickle.loads(j_data)
         except IndexError:
             self.logger.debug("Returning empty dictionary because no data was found")
             data = {}
@@ -62,7 +63,7 @@ class Database():
             self.logger.debug(f"Empty database {collection_name}, inserting data")
             collection.insert_one(data)
 
-async def main():
+async def main() -> None:
     db = Database()
     db.logger.warning("Database.py should only be used for testing!")
     print(await db.get_data("Message"))

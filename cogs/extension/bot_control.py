@@ -4,7 +4,7 @@ import random
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 
@@ -12,7 +12,7 @@ import config
 class BotC(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot:commands.Bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.STATUS = [
             "dnd",
             "do_not_disturb",
@@ -60,16 +60,17 @@ class BotC(commands.GroupCog):
             "Magically spawning a wedding cake"
         ]
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    @tasks.loop(seconds=config.Activity.PERIODIC_TIME)
+    async def activity_switch(self) -> None:
+        if config.Activity.periodic_change != True:
+            self.activity_switch.stop()
+            return
         status, activity = self.get_random_activity()
         if status is None or activity is None:
             activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
         await self.bot.change_presence(status=status, activity=activity)
         self.logger.debug(f"Activity and status set to {activity}")
-        if config.Activity.periodic_change == True:
-            await asyncio.sleep(config.Activity.PERIODIC_TIME)
-            await self.on_ready()
+        await asyncio.sleep(config.Activity.PERIODIC_TIME)
 
     def get_random_activity(self) -> tuple[discord.Status, discord.Activity] | None:
         if config.Activity.RANDOM_ACTIVITY != True:
@@ -87,31 +88,31 @@ class BotC(commands.GroupCog):
     async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str="") -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer(ephemeral=True)
         if status.lower() not in self.STATUS:
-            await interaction.followup.send(f"Status not found, can only be\n{self.STATUS}",ephemeral=True)
+            await interaction.response.send_message(f"Status not found, can only be\n{self.STATUS}",ephemeral=True)
             return
         elif activity.lower() not in self.ACTIVITIES:
-            await interaction.followup.send(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
+            await interaction.response.send_message(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
             return
         elif status.lower() == "random" and activity.lower() == "random":
             config.Activity.periodic_change = True
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
-            await interaction.followup.send("I will randomly change my status and activity", ephemeral=True)
-            await self.on_ready()
+            await interaction.response.send_message("I will randomly change my status and activity", ephemeral=True)
+            self.activity_switch.start()
             return
         elif status.lower() == "random" or activity.lower() == "random":
-            await interaction.followup.send("Both status and activity need to be random or not chosen.", ephemeral=True)
+            await interaction.response.send_message("Both status and activity need to be random or not chosen.", ephemeral=True)
             return
         else:
             StatusAttr = getattr(discord.Status, status, discord.Status.online)
             ActivityType = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
             ActivityObj = discord.Activity(type=ActivityType, name=msg)
             await self.bot.change_presence(status=StatusAttr, activity=ActivityObj)
-            await interaction.followup.send("Updated my activity!", ephemeral=True)
+            await interaction.response.send_message("Updated my activity!", ephemeral=True)
             self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
             self.logger.info(f"Turned off periodic activity change by {interaction.user}")
             config.Activity.periodic_change = False
+            await self.activity_switch.stop()
 
     @slash_bot_activity.autocomplete("status")
     async def activity_autocomplete_status(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:

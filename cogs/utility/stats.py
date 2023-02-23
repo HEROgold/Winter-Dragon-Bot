@@ -1,15 +1,12 @@
-import asyncio
 import contextlib
-import json
+import pickle
 import logging
 import os
 import random
 
 import discord
 from discord import app_commands
-from discord.ext import commands
-
-from typing import NoReturn
+from discord.ext import commands, tasks
 
 import config
 import dragon_database
@@ -19,30 +16,30 @@ import rainbow
 class Stats(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -50,17 +47,13 @@ class Stats(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> NoReturn:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
-        while True:
-            await self.update()
-            # seconds > minuts > hours
-            await asyncio.sleep(60 * 5)
+        self.update.start()
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
@@ -128,9 +121,13 @@ class Stats(commands.GroupCog):
         del self.data[guild_id]
         await self.set_data(self.data)
 
+    @tasks.loop(seconds=3600)
     async def update(self) -> None:  # sourcery skip: low-code-quality
         if not self.data:
             self.data = await self.get_data()
+        # TODO: remove after cog_load() is added/working
+        if not self.data:
+            return
         # Note: keep for loop with if.
         # because fetching guild won't let the bot get members from guild. Commented code below, don't work>
         guilds = self.bot.guilds
@@ -176,7 +173,6 @@ class Stats(commands.GroupCog):
 
     @app_commands.command(name="show", description="Get some information about the server!")
     async def slash_stats_show(self, interaction:discord.Interaction) -> None:
-        await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         # users = sum(member.bot == False for member in guild.members)
         bots = sum(member.bot == True for member in guild.members)
@@ -192,7 +188,7 @@ class Stats(commands.GroupCog):
         except AttributeError as e:
             self.logger.warning(f"{e}: Likely caused by non-existing AFK channel")
         self.logger.debug(f"Showing guild stats: guild='{interaction.guild}' user={interaction.user}")
-        await interaction.followup.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(
         name="add",
@@ -233,13 +229,12 @@ class Stats(commands.GroupCog):
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         if not self.data:
             self.data = await self.get_data()
-        await interaction.response.defer(ephemeral=True)
         for guild_id in self.data.keys():
             guild = discord.utils.get(self.bot.guilds, id=guild_id)
             await self.remove_stats_channels(guild=guild, reason="Resetting all stats channels")
             await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
             self.logger.info(f"Reset stats for: {guild}")
-        await interaction.followup.send("Reset all server stat channels", ephemeral=True)
+        await interaction.response.send_message("Reset all server stat channels", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Stats(bot))
