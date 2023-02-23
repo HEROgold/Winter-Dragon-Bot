@@ -1,44 +1,42 @@
-import asyncio
-import json
+import pickle
 import logging
 import os
 import random
 import re
-from typing import NoReturn
 
 import discord
 import requests
 from bs4 import BeautifulSoup
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 import dragon_database
 import rainbow
 
-
+# FIXME: Doesnt send messagse!!!!
 class Steam(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.htmlFile = '.\\Database/SteamPage.html'
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
+        self.setup_html_file()
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
-                data = {"user_id" : []}
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(self.data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    def setup_html(self) -> None:
+    def setup_html_file(self) -> None:
         if not os.path.exists(self.htmlFile):
             with open(self.htmlFile, "w") as f:
                 f.write("")
@@ -51,9 +49,9 @@ class Steam(commands.GroupCog):
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -61,17 +59,15 @@ class Steam(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> NoReturn:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
-        while True:
-            # seconds > minutes > hours
-            await asyncio.sleep(60*60*1)
-            await self.update()
+        if not self.data:
+            self.data = {"user_id":[]}
+        self.update.start()
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
@@ -92,7 +88,7 @@ class Steam(commands.GroupCog):
             title = item.find("span", {"class": "title"})
             sale_amount = i.find("span") or sale_amount["text":"-1000%!"]
             try:
-                # FIXME: Attribute error
+                # FIXME: Attribute error, might have been super rare case
                 # self.logger.debug(f"Sale_from_html: \ntitle='{title.text}',\nurl='{url}',\nsale='{sale_amount.text}'")
                 # self.logger.debug(f"HTML: item='{item}'")
                 sales.append([title.text, sale_amount.text, url])
@@ -109,14 +105,14 @@ class Steam(commands.GroupCog):
             self.logger.debug("Copied SteamPage.html is empty.")
             return False
         if from_html == from_file:
-            self.logger.debug("Steam File and Html are the same.")
+            self.logger.debug("Steam File and Html are the same, not checking new sales")
             return True
         elif a_hundred == b_hundred:
-            self.logger.debug("Sales from File and Html are the same.")
+            self.logger.debug("Sales from File and Html are the same, not checking new sales.")
             return True
         else:
             self.logger.debug("Steam File and Html not the same. Checking for new sales.")
-            return not await self.check_new(a_hundred, b_hundred)
+            return await self.check_new(a_hundred, b_hundred)
 
     async def sale_from_file(self, html_file_path) -> list:
         with open(html_file_path, "r", encoding="utf-8") as f:
@@ -133,7 +129,7 @@ class Steam(commands.GroupCog):
                 b.append(j)
         a.sort()
         b.sort()
-        self.logger.debug(f"SteamLists: {a}, {b}")
+        self.logger.debug(f"SteamLists: \n{a}, \n{b}")
         return a, b
 
     async def check_new(self, from_file:list[list], from_html:list[list]) -> bool:
@@ -151,16 +147,16 @@ class Steam(commands.GroupCog):
             if sale not in from_file and sale[1] == "-100%":
                 self.logger.info(f"New sale found from_html: {sale}")
                 return True
+        self.logger.info(f"No new sale found from_html: {sale}")
         return False
 
+    @tasks.loop(seconds=21600) # 6 hours > 21600
     async def update(self) -> None:
         """
         Check if the sales from Html request and Html file are the same
 
         When they are not, replaces old .html with the latest one
         and creates a discord Embed object to send and notify users.
-
-        WARNING this uses a timer and loops itself every so often!
         """
         html = await self.get_html()
         dupe = await self.dupe_check(html, self.htmlFile)
@@ -173,12 +169,11 @@ class Steam(commands.GroupCog):
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
         embed.set_footer(text="You can disable this by using `/steam remove `")
         embed = await self.populate_embed(sales_html, embed)
-        if not self.data:
-            self.data = await self.get_data()
         for id in self.data["user_id"]:
             user = self.bot.get_user(int(id))
-            dm = await user.create_dm()
-            if len(embed.fields) != 0:
+            dm = user.dm_channel or await user.create_dm()
+            self.logger.debug(f"Showing {user}, {embed}")
+            if len(embed.fields) > 0:
                 await dm.send(embed=embed)
 
     async def populate_embed(self, sales:list, embed:discord.Embed) -> discord.Embed:
@@ -193,17 +188,17 @@ class Steam(commands.GroupCog):
         """
         for i in sales:
             if i[1] == "-100%":
-                name = i[0]
-                field_val = i[2]
+                game_title = i[0]
+                game_url = i[2]
                 regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
-                game_id = re.findall(regex_game_id, field_val)
-                self.logger.debug(f"regex game_id=`{game_id}`")
+                game_id = re.findall(regex_game_id, game_url)
                 # TODO: Check this on next sale!
                 # 'https://store.steampowered.com/app/2279791/Forspoken_Cats_Meow_Cloak/?snr=1_7_7_2300_150_1'
                 # https://store.steampowered.com/
                 # then add steam://rungameid/2279791
-                run_game_id = f"steam://rungameid/{game_id[0]}"
-                embed.add_field(name=name, value=f"{field_val}\nInstall here:{run_game_id}", inline=False)
+                run_game_id = f"steam://rungameid/{game_id[0] or game_id}"
+                embed.add_field(name=game_title, value=f"{game_url}\nInstall here: {run_game_id}", inline=False)
+                self.logger.debug(f"Pupulate embed with:\nSale: {i}\nGameId: {game_id}")
         return embed
 
     @app_commands.command(name = "show", description= "Get a list of 100% Sale steam games.")
