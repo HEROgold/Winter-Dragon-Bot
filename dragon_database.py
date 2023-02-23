@@ -37,10 +37,11 @@ class Database():
         self.logger.debug(f"Getting database collection: {collection_name}")
         return database.get_collection(collection_name)
 
-    # HACK: to transform data from MongoDB to python dictionary:
-    # unlist data using l_data > 
-    # create valid (string) format using pickle.dumps > 
-    # change (string) back to python dict using pickle.loads
+    # HACK:
+    # to transform data from MongoDB to python dictionary:
+    # list data in l_data > 
+    # create valid format using pickle.dumps > 
+    # change back to python dict using pickle.loads
     async def get_data(self, collection_name:str) -> dict:
         collection = await self.__get_collection__(collection_name)
         l_data = list(collection.find())
