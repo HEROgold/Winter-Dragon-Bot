@@ -145,7 +145,7 @@ class CogsC(commands.GroupCog):
                 self.logger.exception(f"Error while reloading {cog}: error=`{e}`")
             self.logger.info(f"Reloaded {cog}, {interaction.user}")
             reload_message += f"Reloaded {cog}\n"
-        await interaction.followup.send(f"{reload_message}Restart complete.")
+        await interaction.response.send_message(f"{reload_message}Restart complete.")
 
     @app_commands.command(
         name = "show",
