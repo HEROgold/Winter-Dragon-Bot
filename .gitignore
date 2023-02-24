@@ -156,3 +156,4 @@ cython_debug/
 config.py
 Reminders.txt
 # .vscode
+/logs

@@ -1,3 +1,4 @@
+# TODO: remove a guild category, AND ALL channels inside
 import pickle
 import logging
 import os
@@ -9,8 +10,8 @@ from discord.ext import commands
 import config
 import dragon_database
 
-
-class Temp(commands.GroupCog):
+@app_commands.guild_only()
+class ChannelUtils(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
@@ -53,25 +54,20 @@ class Temp(commands.GroupCog):
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
-    # TEMP_GROUP = app_commands.Group(name="TEMPGroup", description="TEMP")
-    # @TEMP_GROUP.command()
 
+    categories = app_commands.Group(name="categories", description="Manage your categories")
 
-    @app_commands.command(
-        name="TEMP",
-        description="TEMP"
+    @categories.command(
+        name="delete",
+        description="Delete a category and ALL channels inside."
     )
-    async def slash_TEMP(selfself, interaction:discord.Interaction) -> None:
-        pass
-
-    @slash_TEMP.autocomplete("")
-    async def activity_autocomplete_status(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        return [
-            app_commands.Choice(name=i, value=i)
-            for i in []
-            if current.lower() in i.lower()
-        ]
-    
+    @app_commands.checks.has_permissions(manage_channels=True)
+    async def slash_cat_delete(self, interaction:discord.Interaction, category:discord.CategoryChannel) -> None:
+        await interaction.response.defer(ephemeral=True)
+        for channel in category.channels:
+            await channel.delete(reason=f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
+        await category.delete(f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
+        await interaction.followup.send("Channel's removed", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
-    await bot.add_cog(Temp(bot)) # type: ignore
+    await bot.add_cog(ChannelUtils(bot)) # type: ignore

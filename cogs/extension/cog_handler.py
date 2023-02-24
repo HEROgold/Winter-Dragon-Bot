@@ -1,12 +1,12 @@
-import asyncio
+import contextlib
 import datetime
-import json
+import pickle
 import logging
 import os
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 import dragon_database
@@ -15,7 +15,7 @@ import dragon_database
 class AutoCogReloader(commands.Cog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = {
             "timestamp": datetime.datetime.now().timestamp(),
             "files": {},
@@ -23,26 +23,23 @@ class AutoCogReloader(commands.Cog):
             }
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
-            while True:
-                await self.auto_reload()
-                await asyncio.sleep(5)
+            self.auto_reload.start()
 
     def get_cog_data(self) -> None:
         for root, _, files in os.walk("cogs"):
@@ -76,11 +73,13 @@ class AutoCogReloader(commands.Cog):
                 self.data["edited"][file] = self.data["files"][file]
         # self.logger.debug(f"{self.data}")
 
+    @tasks.loop(seconds=5)
     async def auto_reload(self) -> None:  # sourcery skip: useless-else-on-loop
         if not self.data["edited"]:
             await self.check_edits()
         for file_data in list(self.data["edited"]):
-            await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
+            with contextlib.suppress(commands.errors.ExtensionNotLoaded):
+                await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
             self.logger.info(f"Automatically reloaded {file_data}")
             del self.data["edited"][file_data]
         else:
@@ -89,30 +88,30 @@ class AutoCogReloader(commands.Cog):
 class CogsC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, "r") as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -120,8 +119,8 @@ class CogsC(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation, "w") as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
@@ -144,9 +143,9 @@ class CogsC(commands.GroupCog):
                 await self.bot.reload_extension(cog)
             except Exception as e:
                 self.logger.exception(f"Error while reloading {cog}: error=`{e}`")
-            self.logger.info(f"Reloaded {cog}")
+            self.logger.info(f"Reloaded {cog}, {interaction.user}")
             reload_message += f"Reloaded {cog}\n"
-        await interaction.followup.send(f"{reload_message}Restart complete.")
+        await interaction.response.send_message(f"{reload_message}Restart complete.")
 
     @app_commands.command(
         name = "show",
@@ -166,16 +165,16 @@ class CogsC(commands.GroupCog):
     async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer()
         if extension is None:
             await self.mass_reload(interaction)
         else:
             try:
                 await self.bot.reload_extension(extension)
                 self.logger.info(f"Reloaded {extension}")
-                await interaction.followup.send(f"Reloaded {extension}", ephemeral=True)
-            except Exception:
-                await interaction.followup.send(f"error reloading {extension}", ephemeral=True)
+                await interaction.response.send_message(f"Reloaded {extension}", ephemeral=True)
+            except Exception as e:
+                self.logger.exception(f"unable to unload {extension}, {e}")
+                await interaction.response.send_message(f"error reloading {extension}", ephemeral=True)
 
     @slash_restart.autocomplete("extension")
     async def restart_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -192,17 +191,16 @@ class CogsC(commands.GroupCog):
     async def slash_unload(self, interaction:discord.Interaction, extension:str) -> None:
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer(ephemeral=True)
         if extension is None:
-            await interaction.followup.send("Please provide a cog to unload.", ephemeral=True)
+            await interaction.response.send_message("Please provide a cog to unload.", ephemeral=True)
         else:
             try:
                 await self.bot.unload_extension(extension)
                 self.logger.info(f"Unloaded {extension}")
                 await interaction.followup.send(f"Unloaded {extension}", ephemeral=True)
-            except Exception:
-                self.logger.exception(f"unable to unload {extension}")
-                await interaction.followup.send(f"Unable to unload {extension}", ephemeral=True)
+            except Exception as e:
+                self.logger.exception(f"unable to unload {extension}, {e}")
+                await interaction.response.send_message(f"Unable to unload {extension}", ephemeral=True)
 
     @slash_unload.autocomplete("extension")
     async def unload_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -219,14 +217,13 @@ class CogsC(commands.GroupCog):
     async def slash_load(self, interaction:discord.Interaction, extension:str) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer(ephemeral=True)
         try:
             await self.bot.load_extension(extension)
             self.logger.info(f"Loaded {extension}")
-            await interaction.followup.send(f"Loaded {extension}", ephemeral=True)
-        except Exception:
-            self.logger.exception(f"unable to load {extension}")
-            await interaction.followup.send(f"Unable to load {extension}", ephemeral=True)
+            await interaction.response.send_message(f"Loaded {extension}", ephemeral=True)
+        except Exception as e:
+            self.logger.exception(f"unable to unload {extension}, {e}")
+            await interaction.response.send_message(f"Unable to load {extension}", ephemeral=True)
 
     @slash_load.autocomplete("extension")
     async def load_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:

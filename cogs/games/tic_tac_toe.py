@@ -12,6 +12,7 @@ import config
 import dragon_database
 import rainbow
 
+@app_commands.guild_only()
 class TicTacToe(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot

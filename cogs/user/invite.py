@@ -7,15 +7,15 @@ from discord.ext import commands
 
 import config
 
-class Invite(commands.Cog):
+class Invite(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
 
     @app_commands.command(
-        name="invite",
+        name="bot",
         description="Invite this bot to your own server!",
         )
     async def slash_invite(self, interaction:discord.Interaction) -> None:
@@ -23,7 +23,7 @@ class Invite(commands.Cog):
         await interaction.response.send_message("https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot", ephemeral=True)
 
     @app_commands.command(
-        name="support",
+        name="server",
         description="get invited to the official support server"
     )
     async def slash_support(self, interaction:discord.Interaction) -> None:

@@ -1,4 +1,4 @@
-import json
+import pickle
 import logging
 import os
 import random
@@ -14,32 +14,35 @@ import rainbow
 class NeverHaveIEver(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
+        self.set_default_data()
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation): 
-            with open(self.DBLocation, "w") as f:
-                data = {"game_id": 0, "questions": {}}
-                for question_id, _ in enumerate(nhie_base_questions): 
-                    data["questions"][question_id] = nhie_base_questions[question_id]
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(self.data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
+
+    def set_default_data(self) -> None:
+        self.data = {"game_id": 0, "questions": {}}
+        for question_id, _ in enumerate(nhie_base_questions):
+            self.data["questions"][str(question_id)] = nhie_base_questions[question_id]
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -47,11 +50,10 @@ class NeverHaveIEver(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
@@ -75,6 +77,7 @@ class NeverHaveIEver(commands.GroupCog):
         emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
         emb.add_field(name="Never", value="⛔")
+        # TODO: Add emoji's directly using the interaction.
         send_msg = await interaction.channel.send(embed=emb)
         await send_msg.add_reaction("✅")
         await send_msg.add_reaction("⛔")

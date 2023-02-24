@@ -1,7 +1,10 @@
 import asyncio
+from datetime import datetime
 import logging
 import os
 from atexit import register
+import shutil
+import sys
 
 import discord
 from discord.ext import commands
@@ -10,11 +13,10 @@ import config
 
 # Change values/settings in config.py.
 # TODO: Push owner only commands in specific guild.
-# TODO: check all commands for correct permissions checks!
 
 LOG_LEVEL = logging.DEBUG
 
-bot_logger = logging.getLogger("winter_dragon")
+bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
 discord_logger = logging.getLogger('discord')
 
 bot_logger.setLevel(LOG_LEVEL)
@@ -46,12 +48,8 @@ bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(co
 tree = bot.tree
 
 # FIXME: find a way to get guild OBJECT without await and after bot is ready
-# TODO: move commands to support only server/guild
 # support_guild = asyncio.run(bot.fetch_guild(config.Main.SUPPORT_GUILD_ID))
 support_guild = discord.utils.get(bot.guilds, id=config.Main.SUPPORT_GUILD_ID)
-
-# Define empty vars for checks.
-ar = None
 
 bot_logger.debug(f"Support guild id: {support_guild}")
 
@@ -71,9 +69,18 @@ async def main() -> None:
 
 @register
 def terminate() -> None:
-    # Client.close unloads cogs first.
-    asyncio.run(client.close())
+    # Client.close unloads cogs.
+    try:
+        asyncio.run(client.close())
+    except Exception as e:
+        bot_logger.warning(f"Likely shutdown command: {e}")
     bot_logger.info("Logged off")
+    if not os.path.exists(config.Main.LOG_PATH):
+        os.mkdir(config.Main.LOG_PATH)
+    bot_logger.info("Saved log files")
+    log_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    shutil.copy(src="bot.log", dst=f"{config.Main.LOG_PATH}/bot_{log_time}.log")
+    shutil.copy(src="discord.log", dst=f"{config.Main.LOG_PATH}/discord_{log_time}.log")
 
 async def get_cogs() -> list[str]:
     extensions = []
@@ -101,12 +108,13 @@ async def mass_load() -> None:
     description = "(For bot developer only)",
     guild = support_guild
     )
-async def slash_shutdown(interaction:discord.Interaction, extension:str) -> None:
+async def slash_shutdown(interaction:discord.Interaction) -> None:
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
     await interaction.response.send_message("Shutting down...",ephemeral=True)
     terminate()
-
+    await client.close()
+    sys.exit()
 
 #run the bot!
 if __name__ == "__main__":

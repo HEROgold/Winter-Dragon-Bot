@@ -1,6 +1,5 @@
-import asyncio
 import contextlib
-import json
+import pickle
 import logging
 import math
 import os
@@ -8,39 +7,41 @@ import random
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 import dragon_database
 
 # TODO: needs testing
+
+@app_commands.guild_only()
 class Team(commands.Cog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -48,25 +49,27 @@ class Team(commands.Cog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
-        while config.Database.PERIODIC_CLEANUP:
-            await self.cleanup()
-            await asyncio.sleep(60*60)
+        if config.Database.PERIODIC_CLEANUP:
+            self.cleanup.start()
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
     # FIXME: doesnt delete channels
+    @tasks.loop(seconds=3600)
     async def cleanup(self) -> None:
         self.logger.info("Cleaning Teams channels")
         if not self.data:
             self.data = await self.get_data()
+        # TODO: remove 2nd check after load_cog() is working.
+        if not self.data:
+            return
         for guild_id in list(self.data):
             channels_list = None
             category_id = None
@@ -173,23 +176,24 @@ class Team(commands.Cog):
             await reaction.message.delete()
             await self.move_members(teams, guild)
 
-    @app_commands.command(name="teams", description="Randomly split all users in voice chat, in teams")
-    @app_commands.guild_only()
+    @app_commands.command(
+            name="teams",
+            description="Randomly split all users in voice chat, in teams"
+            )
     async def slash_team(self, interaction:discord.Interaction, team_count:int=2) -> None:
         # await interaction.response.send_message("Creating channels.", ephemeral=True, delete_after=5)
-        await interaction.response.defer()
         try:
             members = interaction.user.voice.channel.members
         except AttributeError:
-            await interaction.followup.send("Could not get members from voice channel.")
+            await interaction.response.send_message("Could not get members from voice channel.")
             return
         if len(members) < team_count:
-            await interaction.followup.send(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")
+            await interaction.response.send_message(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")
             return
         await self.get_teams_category(interaction=interaction)
         teams = await self.DevideTeams(TeamCount=team_count, members=members)
         vote_channel = await self.create_vote(interaction, teams)
-        await interaction.followup.send(f"Created vote to move members. Go to {vote_channel.mention} to vote.")
+        await interaction.response.send_message(f"Created vote to move members. Go to {vote_channel.mention} to vote.")
 
     async def create_vote(self, interaction:discord.Interaction, teams:dict) -> discord.TextChannel|None:
         category_channel = await self.get_teams_category(interaction=interaction)

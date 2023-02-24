@@ -1,6 +1,6 @@
 
 import logging
-import json
+import pickle
 import os
 
 import discord
@@ -10,34 +10,36 @@ from discord import app_commands
 import config
 import dragon_database
 
+@app_commands.guild_only()
+@app_commands.checks.has_permissions(administrator=True)
 class Welcome(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         # self.data = {"DUMMY_GUILD_ID":{"enabled":True}}
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, "r") as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -45,11 +47,10 @@ class Welcome(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation, "w") as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
 
@@ -80,7 +81,6 @@ class Welcome(commands.GroupCog):
         else:
             self.logger.warning("No system_channel to welcome user to, and dm is disabled.")
 
-    @app_commands.guild_only()
     @app_commands.command(
         name="enable",
         description="Enable welcome message"
@@ -93,7 +93,6 @@ class Welcome(commands.GroupCog):
         }
         await interaction.response.send_message("Enabled welcome message.", ephemeral=True)
 
-    @app_commands.guild_only()
     @app_commands.command(
         name="disable",
         description="Disable welcome message"
