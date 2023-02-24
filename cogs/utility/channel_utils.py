@@ -65,8 +65,8 @@ class ChannelUtils(commands.GroupCog):
     async def slash_cat_delete(self, interaction:discord.Interaction, category:discord.CategoryChannel) -> None:
         await interaction.response.defer(ephemeral=True)
         for channel in category.channels:
-            await channel.delete()
-        await category.delete()
+            await channel.delete(reason=f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
+        await category.delete(f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
         await interaction.followup.send("Channel's removed", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
