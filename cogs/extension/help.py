@@ -10,13 +10,13 @@ from discord import app_commands
 import config
 import rainbow
 
-
+# TODO: Rewrite/cleanup
 class Help(commands.Cog):
-    def __init__(self, bot:commands.Bot):
+    def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
 
-    async def CreateHelpEmbed(self, HelpInput:str|int, commands_list:list[app_commands.Command]|list[commands.Command]) -> discord.Embed|discord.ui.View:
+    async def CreateHelpEmbed(self, HelpInput:str|int, commands_list:list[app_commands.AppCommand]|list[commands.Command]) -> discord.Embed|discord.ui.View:
         if isinstance(HelpInput, str):
             embed = discord.Embed(title=f"Command {HelpInput}", color=random.choice(rainbow.RAINBOW))
             for command in commands_list:
@@ -39,22 +39,23 @@ class Help(commands.Cog):
             view = await self.ButtonHandler(HelpInput, commands_list, View())
             return embed, view
 
-    def PopulateCommandEmbed(self, HelpInput:str, embed:discord.Embed, command:commands.Command|app_commands.Command) -> discord.Embed:
-        self.logger.debug(f"Target command: {HelpInput}")
+    def PopulateCommandEmbed(self, HelpInput:str, embed:discord.Embed, command:commands.Command|app_commands.AppCommand) -> discord.Embed:
+        # self.logger.debug(f"Target command: {HelpInput}")
         if isinstance(command, commands.Command):
             command:commands.Command
-            self.logger.debug(f"from commands.Command: {command.name}")
+            # self.logger.debug(f"from commands.Command (text): {command.name}")
             if command.name == HelpInput:
                 self.logger.debug(command.name, command.brief, command.description, command.usage)
                 embed.add_field(name="Brief", value=command.brief, inline=False)
                 embed.add_field(name="Description", value=command.description, inline=False)
                 embed.add_field(name="Usage", value=command.usage, inline=False)
         else:
-            command:app_commands.Command
-            self.logger.debug(f"from app_commands.Command: {command.name}")
+            command:app_commands.AppCommand
+            # self.logger.debug(f"from app_commands.AppCommand (slash): {command.name}")
             if command.name == HelpInput:
                 self.logger.debug(f"{command.name}, {command.description}")
                 embed.add_field(name="Description", value=command.description, inline=False)
+                embed.add_field(name="Exapmle use", value=command.mention, inline=False)
         return embed
 
     async def UpdateView(self, view:discord.ui.View, *items) -> discord.ui.View:
@@ -68,7 +69,7 @@ class Help(commands.Cog):
         description="Get information about commands!"
     )
     @app_commands.checks.cooldown(1, 5)
-    async def slash_help(self, interaction:discord.Interaction, page:int=None, command:str=None):
+    async def slash_help(self, interaction:discord.Interaction, page:int=None, command:str=None) -> None:
         if page and page <= 0:
             await interaction.response.send_message("Page has to be 1 or bigger")
             return
@@ -77,9 +78,8 @@ class Help(commands.Cog):
             return
         else:
             query = page or command
-        commands = self.bot.tree.get_commands()
-        # command_names = [i.name for i in commands]
-        # self.logger.debug(command_names)
+        # commands = self.bot.tree.get_commands()
+        commands = await self.bot.tree.fetch_commands()
         embed, view = await self.CreateHelpEmbed(HelpInput=query, commands_list=commands)
         if view is None:
             await interaction.response.send_message(embed=embed)
@@ -100,7 +100,7 @@ class Help(commands.Cog):
                     brief = "Sends this help page!",
                     usage = "help [page or command]:\nExample:`help 1`, `help invite`")
     @commands.cooldown(1, 2, commands.BucketType.member)
-    async def help(self, ctx:commands.Context, HelpInput):
+    async def help(self, ctx:commands.Context, HelpInput) -> None:
         commands_list = self.bot.commands
         if HelpInput is None:
             HelpInput = 1
@@ -128,7 +128,7 @@ class Help(commands.Cog):
         ButtonLeft = Button(label=f"Help {HelpInput-1}", style=discord.ButtonStyle.primary)
         ButtonRight = Button(label=f"Help {HelpInput+1}", style=discord.ButtonStyle.primary)
     # Defines functions inside ButtonHandler because each button needs their own.
-        async def ButtonAction(interaction:discord.Interaction, HelpInput:int):
+        async def ButtonAction(interaction:discord.Interaction, HelpInput:int) -> None:
             embed, view = await self.CreateHelpEmbed(HelpInput=HelpInput, commands_list=commands_list)
             ButtonLeft.label = f"Help {HelpInput-1}"
             ButtonRight.label = f"Help {HelpInput+1}"
@@ -150,13 +150,13 @@ class Help(commands.Cog):
                 await interaction.followup.edit_message(embed=embed, view=NewView)
 
         self.logger.debug("Defining Left Button action")
-        async def ButtonLeftAction(interaction:discord.Interaction):
+        async def ButtonLeftAction(interaction:discord.Interaction) -> None:
             nonlocal HelpInput
             HelpInput -= 1
             await ButtonAction(interaction, HelpInput)
 
         self.logger.debug("Defining Right Button action")
-        async def ButtonRightAction(interaction:discord.Interaction):
+        async def ButtonRightAction(interaction:discord.Interaction) -> None:
             nonlocal HelpInput
             HelpInput += 1
             await ButtonAction(interaction, HelpInput)
@@ -173,5 +173,5 @@ class Help(commands.Cog):
         return view
     # End ButtonHandler
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Help(bot))
