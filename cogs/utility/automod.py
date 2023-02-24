@@ -1,6 +1,6 @@
 import contextlib
 import itertools
-import json
+import pickle
 import logging
 import os
 import re
@@ -16,16 +16,11 @@ import dragon_database
 class Automod(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.data = {
-            "DUMMY_GUILD_ID":{
-                "DUMMY_CATEGORY_ID":{
-                    "DUMMY_CHANNEL_NAME": 0
-                }
-            }
-        }
+        # {"DUMMY_GUILD_ID":{"DUMMY_CATEGORY_ID":{"DUMMY_CHANNEL_NAME": 0}}}
+        self.data = None
         self.DATABASE_NAME = self.__class__.__name__
-        self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.AutomodCategories = [
             "All-categories",
             "CreatedChannels",
@@ -39,26 +34,26 @@ class Automod(commands.GroupCog):
             "MessageDeleted"
         ]
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
             data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, 'r') as f:
-                data = json.load(f)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
     async def set_data(self, data) -> None:
@@ -66,13 +61,14 @@ class Automod(commands.GroupCog):
             db = dragon_database.Database()
             await db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation,'w') as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
             self.data = await self.get_data()
+        if not self.data:
+            self.data = {}
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
@@ -81,7 +77,7 @@ class Automod(commands.GroupCog):
         if not self.data:
             self.data = await self.get_data()
         if not guild:
-            self.logger.debug("No guild during fetch: Likely caused by sending embed in user DM's")
+            self.logger.debug("No guild during fetch")
             return None, None
         guild_id = str(guild.id)
         automod_channel = None
@@ -315,26 +311,27 @@ class Automod(commands.GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     async def slash_automod_add(self, interaction:discord.Interaction) -> None:
+        # defer here to avoid getting timeout
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none())
         }
-        if not self.data:
-            self.data = await self.get_data()
+        guild_id = str(guild.id)
         try:
-            if self.data[str(guild.id)]:
+            if self.data[guild_id]:
                 await interaction.followup.send("Automod channels are already set up.")
                 return
         except KeyError as e:
-            self.logger.exception(e)
+            self.logger.error(e)
         AutomodCategories = self.AutomodCategories
         CategoryChannel = await guild.create_category(name="Dragon Automod", overwrites=overwrites, position=99)
-        self.data[guild.id] = {CategoryChannel.id: {}}
+        category_channel_id = str(CategoryChannel.id)
+        self.data[guild_id] = {category_channel_id: {}}
         for AutomodCategory in AutomodCategories:
             TextChannel = await CategoryChannel.create_text_channel(name=f"{AutomodCategory}")
-            self.data[guild.id][CategoryChannel.id][TextChannel.name] = TextChannel.id
+            self.data[guild_id][category_channel_id][TextChannel.name] = TextChannel.id
         await interaction.followup.send("Set up automod category and channels")
         self.logger.info(f"Setup automod for {interaction.guild}")
         await self.set_data(self.data)
@@ -348,18 +345,22 @@ class Automod(commands.GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     async def slash_automod_remove(self, interaction:discord.Interaction) -> None:
+        # Defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
         if not self.data:
             self.data = await self.get_data()
         guild = interaction.guild
-        for CatChannelId, Channels in self.data[str(guild.id)].items():
-            for ChannelName, ChannelId in Channels.items():
-                TextChannel:discord.TextChannel = discord.utils.get(guild.text_channels, id=ChannelId)
-                await TextChannel.delete()
-                del ChannelName
-            CategoryChannel:discord.CategoryChannel = discord.utils.get(guild.categories, id=int(CatChannelId))
-            await CategoryChannel.delete()
-            del CatChannelId
+        try:
+            for CatChannelId, Channels in self.data[str(guild.id)].items():
+                for ChannelName, ChannelId in Channels.items():
+                    TextChannel:discord.TextChannel = discord.utils.get(guild.text_channels, id=ChannelId)
+                    await TextChannel.delete()
+                    del ChannelName
+                CategoryChannel:discord.CategoryChannel = discord.utils.get(guild.categories, id=int(CatChannelId))
+                await CategoryChannel.delete()
+                del CatChannelId
+        except KeyError:
+            await interaction.followup.send("Can't find AutomodChannels Consider using </automod add:1067239606044606585>")
         del self.data[str(guild.id)]
         await self.set_data(self.data)
         await interaction.followup.send("Removed and disabled AutomodChannels")
@@ -371,9 +372,10 @@ class Automod(commands.GroupCog):
         )
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     async def slash_automod_update(self, interaction:discord.Interaction) -> None:
+        # defer here to avoid timeout
+        await interaction.response.defer(ephemeral=True)
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.defer(ephemeral=True)
         if not self.data:
             self.data = await self.get_data()
         categories = [i.lower() for i in self.AutomodCategories]
