@@ -53,12 +53,25 @@ class Temp(commands.GroupCog):
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
+    # TEMP_GROUP = app_commands.Group(name="TEMPGroup", description="TEMP")
+    # @TEMP_GROUP.command()
+
+
     @app_commands.command(
         name="TEMP",
         description="TEMP"
     )
-    async def slash_TEMP(self) -> None:
+    async def slash_TEMP(selfself, interaction:discord.Interaction) -> None:
         pass
+
+    @slash_TEMP.autocomplete("")
+    async def activity_autocomplete_status(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+        return [
+            app_commands.Choice(name=i, value=i)
+            for i in []
+            if current.lower() in i.lower()
+        ]
+    
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Temp(bot)) # type: ignore
