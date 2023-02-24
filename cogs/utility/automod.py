@@ -250,7 +250,6 @@ class Automod(commands.GroupCog):
                 diffs.append(role.mention)
         return diffs
 
-    # TODO: Filter out Tic-tac-toe
     @commands.Cog.listener()
     async def on_message_edit(self, before:discord.Message, after:discord.Message) -> None:
         ttt_regex = r"(?:\|  (?:_|o|x)  )+\|\n\|(?:(?:_____)+(?:\+|))+(?:\|\n|\|)"
@@ -326,11 +325,11 @@ class Automod(commands.GroupCog):
         except KeyError as e:
             self.logger.error(e)
         AutomodCategories = self.AutomodCategories
-        CategoryChannel = await guild.create_category(name="Dragon Automod", overwrites=overwrites, position=99)
+        CategoryChannel = await guild.create_category(name="Dragon Automod", overwrites=overwrites, position=99, reason="Adding Automod channels")
         category_channel_id = str(CategoryChannel.id)
         self.data[guild_id] = {category_channel_id: {}}
         for AutomodCategory in AutomodCategories:
-            TextChannel = await CategoryChannel.create_text_channel(name=f"{AutomodCategory}")
+            TextChannel = await CategoryChannel.create_text_channel(name=f"{AutomodCategory}", reason="Adding Automod channels")
             self.data[guild_id][category_channel_id][TextChannel.name] = TextChannel.id
         await interaction.followup.send("Set up automod category and channels")
         self.logger.info(f"Setup automod for {interaction.guild}")
