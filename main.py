@@ -13,7 +13,6 @@ import config
 
 # Change values/settings in config.py.
 # TODO: Push owner only commands in specific guild.
-# TODO: check all commands for correct permissions checks!
 
 LOG_LEVEL = logging.DEBUG
 
@@ -49,7 +48,6 @@ bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(co
 tree = bot.tree
 
 # FIXME: find a way to get guild OBJECT without await and after bot is ready
-# TODO: move commands to support only server/guild
 # support_guild = asyncio.run(bot.fetch_guild(config.Main.SUPPORT_GUILD_ID))
 support_guild = discord.utils.get(bot.guilds, id=config.Main.SUPPORT_GUILD_ID)
 

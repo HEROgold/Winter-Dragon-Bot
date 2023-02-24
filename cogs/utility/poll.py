@@ -17,6 +17,7 @@ import rainbow
 # TODO: Make time based system with reply to original message
 # mentioning the winning poll
 # TODO: Add suggestions with dedicated channel etc.
+# Rewrite?
 class Poll(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot

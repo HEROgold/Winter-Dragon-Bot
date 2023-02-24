@@ -129,7 +129,6 @@ class Ban(commands.Cog):
         self.data[member.id]= {"Name" : member.name, "Roles": roles, "Epoch_unban" : epoch, "Reason" : reason_msg, "guild_id" : interaction.guild.id}
         await self.set_data(data=self.data)
 
-        # TODO: Add member role, which has some permissions
         banned_role = discord.utils.get(interaction.guild.roles, name="Banned")
         if banned_role is None:
             banned_role = await self.create_banned_role(interaction.guild)
