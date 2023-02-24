@@ -14,7 +14,6 @@ import config
 import dragon_database
 import rainbow
 
-# FIXME: Doesnt send messagse!!!!
 class Steam(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.htmlFile = '.\\Database/SteamPage.html'
@@ -88,9 +87,6 @@ class Steam(commands.GroupCog):
             title = item.find("span", {"class": "title"})
             sale_amount = i.find("span") or sale_amount["text":"-1000%!"]
             try:
-                # FIXME: Attribute error, might have been super rare case
-                # self.logger.debug(f"Sale_from_html: \ntitle='{title.text}',\nurl='{url}',\nsale='{sale_amount.text}'")
-                # self.logger.debug(f"HTML: item='{item}'")
                 sales.append([title.text, sale_amount.text, url])
             except Exception as e:
                 self.logger.exception(f"Could not append: {e}")
