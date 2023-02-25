@@ -118,7 +118,7 @@ class Automod(commands.GroupCog):
                 properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
                 if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
                     if "name" in differences or before.name != after.name:
-                        name_change = f"`{before.name}` to `{after.name}`"
+                        name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
                     embed = discord.Embed(
                         title="Channel Changed",
                         description=f"{entry.user.mention} changed {differences} of channel {name_change or after.mention} with reason: {entry.reason or None}",
