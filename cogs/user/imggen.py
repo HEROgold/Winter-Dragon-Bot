@@ -26,7 +26,7 @@ class Image(commands.GroupCog):
     @tasks.loop(seconds=180)
     async def image_watcher(self) -> None:
         for root, subdirs, files in os.walk(self.CrAIyonDataBase):
-            self.logger.debug(f"{root}, {subdirs}, {files}")
+            self.logger.debug(f"Scanning files: {root}, {subdirs}, {files}")
             try:
                 member = await self.bot.fetch_user(int(root[19:]))
             except ValueError:

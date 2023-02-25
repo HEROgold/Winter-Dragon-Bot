@@ -1,3 +1,4 @@
+import contextlib
 import pickle
 import logging
 import os
@@ -108,7 +109,8 @@ class Steam(commands.GroupCog):
             return True
         else:
             self.logger.debug("Steam File and Html not the same. Checking for new sales.")
-            return await self.check_new(a_hundred, b_hundred)
+            # Inverse return check_new() after checking and no dupe is found
+            return not await self.check_new(a_hundred, b_hundred)
 
     async def sale_from_file(self, html_file_path) -> list:
         with open(html_file_path, "r", encoding="utf-8") as f:
@@ -167,7 +169,7 @@ class Steam(commands.GroupCog):
         embed = await self.populate_embed(sales_html, embed)
         for id in self.data["user_id"]:
             user = self.bot.get_user(int(id))
-            dm = user.dm_channel or await user.create_dm()
+            dm = await user.create_dm() if user.dm_channel is None else user.dm_channel
             self.logger.debug(f"Showing {user}, {embed}")
             if len(embed.fields) > 0:
                 await dm.send(embed=embed)
@@ -188,11 +190,9 @@ class Steam(commands.GroupCog):
                 game_url = i[2]
                 regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
                 game_id = re.findall(regex_game_id, game_url)
-                # TODO: Check this on next sale!
-                # 'https://store.steampowered.com/app/2279791/Forspoken_Cats_Meow_Cloak/?snr=1_7_7_2300_150_1'
-                # https://store.steampowered.com/
-                # then add steam://rungameid/2279791
-                run_game_id = f"steam://rungameid/{game_id[0] or game_id}"
+                with contextlib.suppress(IndexError):
+                    game_id = game_id[0]
+                run_game_id = f"steam://rungameid/{game_id}"
                 embed.add_field(name=game_title, value=f"{game_url}\nInstall here: {run_game_id}", inline=False)
                 self.logger.debug(f"Pupulate embed with:\nSale: {i}\nGameId: {game_id}")
         return embed

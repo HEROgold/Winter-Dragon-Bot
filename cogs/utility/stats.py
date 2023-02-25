@@ -89,11 +89,11 @@ class Stats(commands.GroupCog):
         guild_id = str(guild.id)
         category = await guild.create_category(name="Stats", overwrites=overwrite, position=0)
         category_id = str(category.id)
-        online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
         user_channel = await category.create_voice_channel(name="Total Users:", reason=reason)
+        online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
         bot_channel = await category.create_voice_channel(name="Total Bots:", reason=reason)
-        guild_channel = await category.create_voice_channel(name="Created On:", reason=reason)
         peak_channel = await category.create_voice_channel(name="Peak Online:", reason=reason)
+        guild_channel = await category.create_voice_channel(name="Created On:", reason=reason)
         self.data[guild_id] = {category_id: {}}
         self.data[guild_id][category_id]["channels"] = {
             "category_channel": category.id,
@@ -138,11 +138,11 @@ class Stats(commands.GroupCog):
             guild_id = self.data[str(guild.id)]
             category = list(guild_id.values())[0]
             channels = list(category.values())[0]
-            online_channel_id = channels["online_channel"]
             user_channel_id = channels["user_channel"]
+            online_channel_id = channels["online_channel"]
             bot_channel_id = channels["bot_channel"]
-            guild_channel_id = channels["guild_channel"]
             peak_channel_id = channels["peak_online"]
+            guild_channel_id = channels["guild_channel"]
             peak_channel = discord.utils.get(guild.channels, id=peak_channel_id) or await guild.fetch_channel(peak_channel_id)
             guild_channel = discord.utils.get(guild.channels, id=guild_channel_id) or await guild.fetch_channel(guild_channel_id)
             bot_channel = discord.utils.get(guild.channels, id=bot_channel_id) or await guild.fetch_channel(bot_channel_id)

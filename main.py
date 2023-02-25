@@ -1,10 +1,10 @@
 import asyncio
-from datetime import datetime
 import logging
 import os
-from atexit import register
 import shutil
 import sys
+from atexit import register
+from datetime import datetime
 
 import discord
 from discord.ext import commands
