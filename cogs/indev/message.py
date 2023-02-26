@@ -7,34 +7,13 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 
 # TODO: create commands: message ranks, message query
 # message query should try and count all the times a user said the query
 # message ranks should count the top 10 most said words
-# TODO: Add statistics to show to players for message ranks
+# TODO: Add statistics (graphs?) to show to players for message ranks
 
-
-# TODO: Add tracker for when user edits or deletes message > psuedocode copied from automod
-#    async def on_message_edit(self, before:discord.Message, after:discord.Message):
-#        self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content={before.clean_content()}, changed={after.clean_content()}")
-#        with contextlib.suppress(TypeError):
-#            automod_channel, allmod_channel = await self.get_automod_channels("MessageEdited", before.guild)
-#        try:
-#            async for entry in before.guild.audit_logs(limit=1):
-#                pass
-#        except Exception as e:
-#            self.logger.exception(e)
-#
-#    async def on_message_delete(self, message:discord.Message):
-#        self.logger.debug(f"Message edited: guild='{message.guild}', channel='{message.channel}', content='{message.clean_content()}'")
-#        try:
-#            async for entry in message.guild.audit_logs(limit=1):
-#                if entry.action == entry.action.message_delete:
-#                    pass
-#        except Exception as e:
-#            self.logger.exception(e)
-#
 
 class Messages(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:

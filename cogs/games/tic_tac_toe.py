@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 import rainbow
 
 @app_commands.guild_only()
