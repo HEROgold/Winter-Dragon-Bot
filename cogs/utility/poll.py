@@ -1,4 +1,3 @@
-import contextlib
 import datetime
 import pickle
 import logging
@@ -11,13 +10,11 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
+import tools.app_command_tools as app_command_tools
 import rainbow
 
-# TODO: Make time based system with reply to original message
-# mentioning the winning poll
-# TODO: Add suggestions with dedicated channel etc.
-# Rewrite?
+
 class Poll(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -56,93 +53,170 @@ class Poll(commands.GroupCog):
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
-        if not self.data:
-            self.data = await self.get_data()
-        if config.Database.PERIODIC_CLEANUP:
-            self.cleanup.start()
+        self.data = await self.get_data()
+        self.anounce_winners.start()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
-
-    @tasks.loop(seconds=3600)
-    async def cleanup(self) -> None:
-        if not self.data:
-            self.data = await self.get_data()
-        self.logger.info("Cleaning poll database")
-        if not self.data:
-            return
-        for k, v in list(self.data.items()):
-            if v["Time"] <= datetime.datetime.now().timestamp():
-                del self.data[k]
         await self.set_data(self.data)
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
         if user.bot == True:
             return
-        if not self.data:
-            self.data = await self.get_data()
-        if str(reaction.message.id) not in self.data:
+        guild_id = str(reaction.message.guild.id)
+        if guild_id not in self.data:
             return
-        UsersList = self.data[str(reaction.message.id)]["Users"]
-        time:int = self.data[str(reaction.message.id)]["Time"]
-        if user.id not in UsersList and time >= datetime.datetime.now().timestamp():
-            UsersList.append(user.id)
+        pol = self.data[guild_id]["polls"][str(reaction.message.id)]
+        voted_users:list = pol["Users"]
+        vote_epoch_end:int = pol["Time"]
+        dm = user.dm_channel or await user.create_dm()
+        if user.id not in voted_users and datetime.datetime.now(datetime.timezone.utc).timestamp() <= vote_epoch_end:
+            voted_users.append(user.id)
+            await reaction.remove(user)
+            pol["Votes"][reaction.emoji]["count"] += 1
+            await self.set_data(self.data)
+        elif datetime.datetime.now().timestamp() <= vote_epoch_end:
+            await reaction.remove(user)
+            await dm.send("You cannot vote anymore, You can only vote for one thing.")
         else:
             await reaction.remove(user)
-            dm = await user.create_dm()
-            await dm.send("Your new reaction has been removed from the vote.\n You cannot for something else.")
+            await dm.send("You cannot vote anymore, The vote time has ran out.")
 
-    @commands.Cog.listener()
-    async def on_reaction_remove(self, reaction:discord.Reaction, user:discord.Member|discord.User) -> None:
-        if not self.data:
-            self.data = await self.get_data()
-        with contextlib.suppress(KeyError):
-            UsersList = self.data[str(reaction.message.id)]["Users"]
-        if user.id in UsersList and UsersList.count(user.id) >= 2:
-            UsersList.remove(user.id)
+    # FIXME: Doesn't edit messages
+    @tasks.loop(seconds=60)
+    async def anounce_winners(self) -> None:
+        for guild_id, guild_data in self.data.items(): #type: ignore
+            self.logger.debug(f"checking {guild_id}")
+            # self.logger.debug(f"{guild_data['polls']}")
+            for msg_id, poll_data in list(guild_data["polls"].items()):
+                self.logger.debug("looping over polls")
+                # self.logger.debug(f"{poll_data}")
+                if poll_data["Time"] <= datetime.datetime.now(datetime.timezone.utc).timestamp():
+                    self.logger.debug("Time not met")
+                    continue
+                self.logger.debug("Announcing Winner")
+                # Get message then edit message with the same embed and add the winning option as text.
+                channel = await self.bot.fetch_channel(int(guild_data["poll_channel"]))
+                msg = await channel.fetch_message(msg_id)
+                self.logger.debug(f"{msg}")
+                embed = msg.embeds[0]
+                self.logger.debug(f"{embed}")
+                for field in embed.fields:
+                    field.name = "test"
+                    field.value = "test"
+                    field.inline = False
+                    # field.name += f" Votes: {poll_data['polls'][str(msg.id)]['Votes'][field.name[1:-1]]['count']}"
+                await msg.edit(embed=embed)
+                # del poll_data
 
+
+    @app_commands.checks.has_permissions()
     @app_commands.command(
-        name = "create",
-        description = "Send a poll to ask users questions. use: , (comma) to seperate each option"
-        )
-    @app_commands.guild_only()
-    async def slash_poll(self, interaction:discord.Interaction, time_in_sec:int, question:str, *, options:str) -> None:
-        if interaction.user.guild_permissions.administrator != True:
+        name="create",
+        description="Create a poll"
+    )
+    async def slash_poll_create(
+        self,
+        interaction:discord.Interaction,
+        message:str,
+        minutes:int,
+        choice1:str,
+        hours:int=0,
+        days:int=0,
+        choice2:str=None,
+        choice3:str=None,
+        choice4:str=None,
+        choice5:str=None,
+        choice6:str=None,
+        choice7:str=None,
+        choice8:str=None,
+        choice9:str=None,
+        choice10:str=None,
+        ) -> None:
+        options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
+        guild_id = str(interaction.guild.id)
+        poll_channel_id, poll_channel = await self.get_poll_channels(guild_id)
+        if not poll_channel_id:
+            act = app_command_tools.ACT(bot=self.bot)
+            await act.fetch_app_commands()
+            channel_command = act.get_app_command(self.slash_poll_set_channel)
+            await interaction.response.send_message(f"No channel found to send poll. use </poll channel:{channel_command.id}> to set one", ephemeral=True) # </poll channel:ID>
             return
-        if not self.data:
-            self.data = await self.get_data()
-        emb = discord.Embed(title="Poll", description=f"{question}", color=random.choice(rainbow.RAINBOW))
+        emb = discord.Embed(title="Poll", description=f"{message}\n\n", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
-        date = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=time_in_sec)).timestamp()
-        epoch = int(date)
-        options:list = options.split(sep=",")
+        # create dynamic emoji from 1 to 10 > change name for 10 to keycap_ten
         for i, option in enumerate(options):
-            if i >= 10:
-                await interaction.response.send_message("Only 10 options are supported", ephemeral=True)
-                break
-            clean_option = option.strip()
-            emb.add_field(name=f":{num2words.num2words(i+1)}:", value=clean_option, inline=True)
-        emb.add_field(name="Time-out", value=f"<t:{epoch}:R>", inline=False)
-        msg:discord.Message = await interaction.response.send_message(embed=emb)
-        self.data[str(msg.id)] = {"Time":epoch, "Question": question, "Options":options, "Users":[]}
+            if option is None:
+                continue
+            j = i+1
+            emb.add_field(name=f":{'keycap_ten' if j == 10 else num2words.num2words(j)}:", value=option, inline=True)
+        timeout_epoch = self.relative_epoch(minutes, hours, days)
+        emb.add_field(name="Time Left", value=f"<t:{timeout_epoch}:R>", inline=False)
+        emb.set_footer(text="You may only vote once, and cannot change this.")
+        await interaction.response.send_message("Poll created", ephemeral=True, delete_after=10)
+        msg = await poll_channel.send(embed=emb)
+        ALLOWED_EMOJIS = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟",]
         for i, option in enumerate(options):
-            if i >= 10:
-                break
-            ALLOWED_EMOJIS = [
-                "1️⃣",
-                "2️⃣",
-                "3️⃣",
-                "4️⃣",
-                "5️⃣",
-                "6️⃣",
-                "7️⃣",
-                "8️⃣",
-                "9️⃣",
-                "🔟",
-            ]
+            if option is None:
+                continue
             await msg.add_reaction(ALLOWED_EMOJIS[i])
+        self.data[guild_id]["polls"][str(msg.id)] = {
+            "Time": timeout_epoch,
+            "Question": message,
+            "Votes": {str(ALLOWED_EMOJIS[i]):{"msg":option,"count":0} for i, option in enumerate(options)},
+            "Users": [],
+        }
         await self.set_data(self.data)
+
+    def relative_epoch(self, minutes, hours, days) -> int:
+        return int(
+            (
+                datetime.datetime.now(datetime.timezone.utc)
+                + datetime.timedelta(
+                    seconds=self.get_seconds(minutes=minutes, hours=hours, days=days)
+                )
+            ).timestamp()
+        )
+
+    async def get_poll_channels(self, guild_id) -> tuple[int, discord.TextChannel]:
+        try:
+            self.data[guild_id]
+        except KeyError:
+            self.data[guild_id] = {}
+        try:
+            poll_channel_id:int = self.data[guild_id]["poll_channel"]
+            poll_channel = await self.bot.fetch_channel(int(self.data[guild_id]["poll_channel"]))
+        except KeyError:
+            poll_channel_id = None
+        try:
+            self.data[guild_id]["polls"]
+        except KeyError:
+            self.data[guild_id]["polls"] = {}
+        return poll_channel_id,poll_channel
+
+    @app_commands.checks.has_permissions(manage_channels=True)
+    @app_commands.command(
+        name="channel",
+        description="Set the poll channel"
+    )
+    async def slash_poll_set_channel(self, interaction:discord.Interaction, channel:discord.TextChannel) -> None:
+        try:
+            guild_id = str(interaction.guild.id)
+            poll_channel = self.data[guild_id]["poll_channel"]
+        except KeyError:
+            poll_channel = None
+        if not poll_channel:
+            await interaction.response.send_message(f"Set poll channel  to {channel.mention}",)
+        else:
+            await interaction.response.send_message(f"Changed poll channel to {channel.mention}")
+        self.data[guild_id] = {"poll_channel": channel.id}
+
+
+    def get_seconds(self, seconds:int=0, minutes:int=0, hours:int=0, days:int=0) -> int:
+        hours += days * 24
+        minutes += hours * 60
+        seconds += minutes * 60
+        return seconds
 
 async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Poll(bot))
