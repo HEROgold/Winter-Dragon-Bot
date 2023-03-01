@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ext import tasks
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 
 
 class Reminder(commands.Cog):

@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from config import Error as CE
 from config import Main as CM
+from tools import app_command_tools
 
 
 class Error(commands.Cog):
@@ -36,9 +37,9 @@ class Error(commands.Cog):
             self.logger.debug(f"Error from: {ctx.command.name}")
         await self.error_check(ctx, error)
 
-    async def get_dm(self, x:discord.Interaction|commands.Context) -> discord.DMChannel:
-        if isinstance(x, commands.Context):
-            ctx:commands.Context = x
+    async def get_dm(self, i:discord.Interaction|commands.Context) -> discord.DMChannel:
+        if isinstance(i, commands.Context):
+            ctx:commands.Context = i
             try:
                 await ctx.message.delete()
             except discord.Forbidden:
@@ -46,9 +47,14 @@ class Error(commands.Cog):
             dm = await ctx.message.author.create_dm()
             self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         else:
-            interaction:discord.Interaction = x
+            interaction:discord.Interaction = i
             dm = await interaction.user.create_dm()
-            self.help_msg = f"`help {interaction.command.name}`" if interaction else "`help`"
+            act = app_command_tools.ACT(bot=self.bot)
+            app_command = act.get_app_command(interaction.command)
+            try:
+                self.help_msg = f"`/help command {app_command.mention}`"
+            except AttributeError:
+                self.help_msg = "`/help command help`"
         self.logger.debug(f"Returning dm channel {dm.recipient}")
         return dm
 

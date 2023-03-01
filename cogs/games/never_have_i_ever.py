@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 import rainbow
 
 class NeverHaveIEver(commands.GroupCog):
@@ -77,7 +77,7 @@ class NeverHaveIEver(commands.GroupCog):
         emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
         emb.add_field(name="Never", value="⛔")
-        # TODO: Add emoji's directly using the interaction.
+        # TODO: Add emoji's directly using the interaction. > look at poll 162
         send_msg = await interaction.channel.send(embed=emb)
         await send_msg.add_reaction("✅")
         await send_msg.add_reaction("⛔")
@@ -108,17 +108,21 @@ class NeverHaveIEver(commands.GroupCog):
             raise commands.NotOwner
         if not self.data:
             self.data = await self.get_data()
-        # TODO: look and test > refactor
-        d = self.data["add"]
+        # TODO: Test
+        try:
+            d = self.data["add"]
+        except KeyError:
+            await interaction.response.send_message("No questions to add", ephemeral=True)
+            return
         for k1, v1 in list(d.items()):
             if v1 == True:
-                d2 = self.data["questions"]
-                for k2 in d2.keys():
-                    question_id = int(k2)
-                question_id += 1
+                question_id = self.get_question_id()
                 self.data["questions"][question_id] = d.pop(k1)
         await self.set_data(self.data)
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
+
+    def get_question_id(self) -> None:
+        return len(self.data["questions"].keys())
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(NeverHaveIEver(bot))

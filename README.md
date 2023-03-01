@@ -16,26 +16,26 @@ This project uses lots of modules that need to be downloaded, these can be insta
 
 To use MongoDB make sure in config.py the following settings are applied
 
-* in class main:
+* in class Main:
   `use_database:bool = True`
   `database_name:str = "YourDatabaseName"`
-* in class: database:
+* in class Database:
   `IP_PORT:str = "localhost:27017"`
   `USER_PASS:str = "User:Password"`
   `AUTH_METHOD:str = "SCRAM-SHA-256"`
 
-If you dont use MongoDB, you can use json files by changing config.py to match the folliwing:
+If you dont use MongoDB, you can use files by changing config.py to match the following:
 
 * In class main:
-  ``use_database:bool = False``
+  ``USE_DATABASE:bool = True``
 
 ## Features:
 
-The use of MongoDB for a proper solution,
+The use of MongoDB for a proper database solution,
 
-A backup option for when database isn't used
+A option for when MongoDB isn't used
 
-Mutliple slash commands with lots of features
+Lots of slash commands with lots of features
 
 customizability using a config file
 

@@ -1,4 +1,3 @@
-# TODO: remove a guild category, AND ALL channels inside
 import pickle
 import logging
 import os
@@ -8,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 
 @app_commands.guild_only()
 class ChannelUtils(commands.GroupCog):
@@ -53,7 +52,6 @@ class ChannelUtils(commands.GroupCog):
 
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
-
 
     categories = app_commands.Group(name="categories", description="Manage your categories")
 

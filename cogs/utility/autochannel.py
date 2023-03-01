@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(manage_channels = True)
@@ -85,7 +85,6 @@ class Autochannel(commands.GroupCog):
 
     async def _clean_channels(self, channels:dict, guild:discord.Guild) -> bool:
         self.logger.info(f"Cleaning Channels {channels}")
-        guild = discord.utils.get(self.bot.guilds, id=int(guild))
         channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
         with contextlib.suppress(AttributeError):
             if channel.type is discord.ChannelType.voice:
@@ -143,7 +142,7 @@ class Autochannel(commands.GroupCog):
     async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> None:
         CategoryChannel = await self._get_autochannel_category(guild, overwrites, "AC Channel")
         VoiceChannel = await self._get_autochannel_voice(guild, CategoryChannel, "AC Channel")
-        TextChannel = await self._get_autochannel_text(guild, CategoryChannel, VoiceChannel, "AC Channel")
+        TextChannel = await self._get_autochannel_text(guild, CategoryChannel, "AC Channel")
         await VoiceChannel.edit(name="Join Me!", reason="Autochannel rename")
         await TextChannel.edit(name="Autochannel Info", reason="Autochannel rename")
 
@@ -151,7 +150,6 @@ class Autochannel(commands.GroupCog):
         self,
         guild:discord.Guild,
         CategoryChannel:discord.CategoryChannel,
-        VoiceChannel:discord.VoiceChannel,
         text_channel_name:str
     ) -> discord.TextChannel:
         guild_id = str(guild.id)
@@ -164,8 +162,8 @@ class Autochannel(commands.GroupCog):
                 raise KeyError
             self.logger.debug(f"Found {TextChannel}")
         except KeyError:
-            TextChannel = await CategoryChannel.create_text_channel(name=text_channel_name)
-            msg = await TextChannel.send(f"To create your own voice and text channel, just join the voice channel <#{VoiceChannel.id}>")
+            TextChannel = await CategoryChannel.create_text_channel(name=text_channel_name, reason="Autochannel")
+            msg = await TextChannel.send(f"To create your own voice and text channel, just join the voice channel <#{self.data[guild_id]['AC Channel']['Voice']}>")
             await msg.pin()
             self.data[guild_id][text_channel_name]["Text"] = TextChannel.id
             self.logger.debug(f"Created {TextChannel}")
@@ -187,7 +185,7 @@ class Autochannel(commands.GroupCog):
                 raise KeyError
             self.logger.debug(f"Found {VoiceChannel}")
         except KeyError:
-                VoiceChannel = await CategoryChannel.create_voice_channel(name=voice_channel_name)
+                VoiceChannel = await CategoryChannel.create_voice_channel(name=voice_channel_name, reason="Autochannel")
                 self.data[guild_id][voice_channel_name]["Voice"] = VoiceChannel.id
                 self.logger.debug(f"Created {VoiceChannel}")
         return VoiceChannel
@@ -244,7 +242,7 @@ class Autochannel(commands.GroupCog):
             member_id = str(member.id)
             CategoryChannel = await self._get_autochannel_category(guild, overwrites, category_name=member_id)
             VoiceChannel = await self._get_autochannel_voice(guild, CategoryChannel, voice_channel_name=member_id)
-            TextChannel = await self._get_autochannel_text(guild, CategoryChannel, VoiceChannel, text_channel_name=member_id)
+            TextChannel = await self._get_autochannel_text(guild, CategoryChannel, text_channel_name=member_id)
             await member.move_to(VoiceChannel)
             if CategoryChannel.name == member_id:
                 await CategoryChannel.edit(name=f"{member.name}'s Channels", reason="Autochannel Renamed to username")

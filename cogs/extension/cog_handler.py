@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import dragon_database
+import tools.dragon_database as dragon_database
 
 
 class AutoCogReloader(commands.Cog):
@@ -136,6 +136,7 @@ class CogsC(commands.GroupCog):
         return extensions
 
     async def mass_reload(self, interaction:discord.Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
         reload_message = ""
         cogs = await self.get_cogs()
         for cog in cogs:
@@ -143,9 +144,9 @@ class CogsC(commands.GroupCog):
                 await self.bot.reload_extension(cog)
             except Exception as e:
                 self.logger.exception(f"Error while reloading {cog}: error=`{e}`")
-            self.logger.info(f"Reloaded {cog}, {interaction.user}")
+            self.logger.info(f"Reloaded {cog}")
             reload_message += f"Reloaded {cog}\n"
-        await interaction.response.send_message(f"{reload_message}Restart complete.")
+        await interaction.followup.send(f"{reload_message}Restart complete.")
 
     @app_commands.command(
         name = "show",
@@ -166,8 +167,10 @@ class CogsC(commands.GroupCog):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         if extension is None:
+            self.logger.warning("Reloaded all cogs")
             await self.mass_reload(interaction)
         else:
+            self.logger.info(f"{interaction.user} used /reload")
             try:
                 await self.bot.reload_extension(extension)
                 self.logger.info(f"Reloaded {extension}")

@@ -17,10 +17,13 @@ class Sync(commands.Cog):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         global_sync = await self.bot.tree.sync()
-        local_sync = await self.bot.tree.sync(guild=self.bot.get_guild(config.Main.SUPPORT_GUILD_ID))
-        self.logger.warning("Synced slash commands!")
+        guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+        local_sync = await self.bot.tree.sync(guild=guild)
+        self.logger.warning(f"{interaction.user} Synced slash commands!")
         self.logger.debug(f"Synced commands: global_commands={global_sync} guild_commands={local_sync}")
-        await interaction.response.send_message("Sync complete", ephemeral=True)
+        global_list = [command.name for command in global_sync]
+        local_list = [command.name for command in local_sync]
+        await interaction.response.send_message(f"Sync complete\nGlobaly synced: {global_list}\nLocally synced: {local_list} to {guild}", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Sync(bot))
