@@ -86,15 +86,15 @@ class Poll(commands.GroupCog):
     @tasks.loop(seconds=60)
     async def anounce_winners(self) -> None:
         for guild_id, guild_data in self.data.items(): #type: ignore
-            self.logger.debug(f"checking {guild_id}")
+            # self.logger.debug(f"checking {guild_id}")
             # self.logger.debug(f"{guild_data['polls']}")
             for msg_id, poll_data in list(guild_data["polls"].items()):
-                self.logger.debug("looping over polls")
+                # self.logger.debug("looping over polls")
                 # self.logger.debug(f"{poll_data}")
                 if poll_data["Time"] <= datetime.datetime.now(datetime.timezone.utc).timestamp():
-                    self.logger.debug("Time not met")
+                    # self.logger.debug("Time not met")
                     continue
-                self.logger.debug("Announcing Winner")
+                # self.logger.debug("Announcing Winner")
                 # Get message then edit message with the same embed and add the winning option as text.
                 channel = await self.bot.fetch_channel(int(guild_data["poll_channel"]))
                 msg = await channel.fetch_message(msg_id)
