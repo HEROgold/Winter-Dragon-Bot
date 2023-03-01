@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import random
 
@@ -60,21 +59,25 @@ class BotC(commands.GroupCog):
             "Magically spawning a wedding cake"
         ]
 
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        self.activity_switch.start()
+
     @tasks.loop(seconds=config.Activity.PERIODIC_TIME)
     async def activity_switch(self) -> None:
-        if config.Activity.periodic_change != True:
+        if config.Activity.RANDOM_ACTIVITY != True:
             self.activity_switch.stop()
             return
         status, activity = self.get_random_activity()
-        if status is None or activity is None:
-            activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
+        # if status is None or activity is None:
+            # activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
         await self.bot.change_presence(status=status, activity=activity)
         self.logger.debug(f"Activity and status set to {activity}")
-        await asyncio.sleep(config.Activity.PERIODIC_TIME)
+        if config.Activity.PERIODIC_CHANGE != True:
+            self.activity_switch.stop()
+            return
 
     def get_random_activity(self) -> tuple[discord.Status, discord.Activity] | None:
-        if config.Activity.RANDOM_ACTIVITY != True:
-            return None
         status = None
         activity_type = None
         while status in [discord.Status.invisible, discord.Status.offline, None]:
@@ -95,7 +98,7 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
             return
         elif status.lower() == "random" and activity.lower() == "random":
-            config.Activity.periodic_change = True
+            config.Activity.PERIODIC_CHANGE = True
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.response.send_message("I will randomly change my status and activity", ephemeral=True)
             self.activity_switch.start()
@@ -111,8 +114,8 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message("Updated my activity!", ephemeral=True)
             self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
             self.logger.info(f"Turned off periodic activity change by {interaction.user}")
-            config.Activity.periodic_change = False
-            await self.activity_switch.stop()
+            config.Activity.PERIODIC_CHANGE = False
+            self.activity_switch.stop()
 
     @slash_bot_activity.autocomplete("status")
     async def activity_autocomplete_status(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
