@@ -158,6 +158,7 @@ class Error(commands.Cog):
             # case commands.errors.ExtensionNotFound:
             #     await dm.send(error)
             case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
+                self.logger.error(f"Args: {error.args}")
                 for arg in error.args:
                     if "NotOwner" in arg:
                         await dm.send("Only the bot owner(s) may use this command!")
