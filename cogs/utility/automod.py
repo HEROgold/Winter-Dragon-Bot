@@ -4,6 +4,7 @@ import pickle
 import logging
 import os
 import re
+from enum import Enum
 
 import discord
 from discord import app_commands
@@ -12,7 +13,25 @@ from discord.ext import commands
 import config
 import tools.dragon_database as dragon_database
 
-class Automod(commands.GroupCog):
+class LogCategories(Enum):
+    ALL:str = "ALL-CATEGORIES"
+    CREATEDCHANNELS:str = "CREATEDCHANNELS"
+    UPDATEDCHANNELS:str = "UPDATEDCHANNELS"
+    DELETEDCHANNELS:str = "DELETEDCHANNELS"
+    CREATEDINVITES:str = "CREATEDINVITES"
+    MEMBERUPDATES:str = "MEMBERUPDATES"
+    MEMBERMOVED:str = "MEMBERMOVED"
+    MEMBERJOINED:str = "MEMBERJOINED"
+    MEMBERLEFT:str = "MEMBERLEFT"
+    EDITEDMESSAGES:str = "EDITEDMESSAGES"
+    DELETEDMESSAGES:str = "DELETEDMESSAGES"
+    CREATEDROLES:str = "CREATEDROLES"
+    UPDATEDROLES:str = "UPDATEDROLES"
+    DELETEDROLE:str = "DELETEDROLES"
+
+
+# TODO: added role, updated role, deleted role,
+class DragonLog(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         # {"DUMMY_GUILD_ID":{"DUMMY_CATEGORY_ID":{"DUMMY_CHANNEL_NAME": 0}}}
@@ -20,18 +39,7 @@ class Automod(commands.GroupCog):
         self.DATABASE_NAME = self.__class__.__name__
         self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.AutomodCategories = [
-            "All-categories",
-            "CreatedChannels",
-            "UpdatedChannels",
-            "DeletedChannels",
-            "CreatedInvites",
-            "MemberUpdates",
-            "MemberJoined",
-            "MemberLeft",
-            "MessageEdited",
-            "MessageDeleted"
-        ]
+
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
             self.setup_db_file()
@@ -72,170 +80,55 @@ class Automod(commands.GroupCog):
     async def cog_unload(self) -> None:
         await self.set_data(self.data)
 
-    async def get_automod_channels(self, mod_channel:str|None, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
+    def check_guild_data(self, guild:str|discord.Guild) -> None:
+        if guild == discord.Guild:
+            guild = str(guild.id)
+        try:
+            self.data[guild]
+        except KeyError:
+            self.data[guild] = {}
+
+    def check_disabled(self, guild:discord.Guild, category:LogCategories) -> bool:
+        try:
+            self.data[str(guild.id)]["disabled"][category]
+            return True
+        except KeyError:
+            return False
+
+    async def get_DragonLog_channels(self, mod_channel:LogCategories|None, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
+        mod_channel_name:str = mod_channel.value
+        self.logger.debug(f"{mod_channel_name}, {mod_channel}")
         if not self.data:
             self.data = await self.get_data()
         if not guild:
-            self.logger.debug("No guild during automod channel fetching")
+            self.logger.debug("No guild during DragonLog channel fetching")
             return None, None
         guild_id = str(guild.id)
-        automod_channel = None
+        mod_channel = None
         allmod_channel = None
-        with contextlib.suppress(KeyError, TypeError):
+        # with contextlib.suppress(KeyError, TypeError):
+        try:
             for category_channel_id in self.data[guild_id]:
                 category_channel_id = str(category_channel_id)
-                allmod_channel_id = self.data[guild_id][category_channel_id]["all-categories"]
-                allmod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(allmod_channel_id))
-                if not mod_channel:
+                all_mod_channel_id = self.data[guild_id][category_channel_id][LogCategories.ALL.value.lower()]
+                allmod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(all_mod_channel_id))
+                if not mod_channel_name:
                     return None, allmod_channel
-                automod_channel_id = self.data[guild_id][category_channel_id][mod_channel.lower()]
-                automod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(automod_channel_id))
-            return automod_channel, allmod_channel
+                DragonLog_channel_id = self.data[guild_id][category_channel_id][mod_channel_name.lower()]
+                mod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(DragonLog_channel_id))
+            self.logger.debug("Returning found log channels")
+            return mod_channel, allmod_channel
+        except Exception as e:
+            self.logger.exception(f"Can be ignored!: {e}")
 
-    @commands.Cog.listener()
-    @app_commands.checks.bot_has_permissions(view_audit_log=True)
-    async def on_audit_log_entry_create(self, entry:discord.AuditLogEntry) -> None:
-        action = discord.AuditLogAction
-        self.logger.debug(f"Action: {action}, Target:{entry.target} Dict: {entry.__dict__}")
-        # await self.generic_change(entry)
-        match entry.action:
-            case action.channel_create:
-                await self.on_guild_channel_create(entry)
-            case action.channel_delete:
-                await self.on_guild_channel_delete(entry)
-            case action.channel_update:
-                await self.on_guild_channel_update(entry)
-            case action.invite_create:
-                await self.on_invite_create(entry)
-            case action.member_update:
-                await self.on_member_update(entry, False)
-            case action.member_role_update:
-                await self.on_member_update(entry, True)
-            case action.member_move:
-                await self.on_member_move(entry)
-            case _:
-                await self.generic_change(entry)
-
-    async def on_guild_channel_create(self, entry:discord.AuditLogEntry) -> None:
-        self.logger.debug(f"On channel create: guild='{entry.guild}' channel='{entry.target}'")
-        channel = entry.target
-        embed = discord.Embed(
-            title="Channel Created",
-            description=f"{entry.user.mention} created {channel.type} {channel.mention or entry.target.mention} with reason: {entry.reason or None}",
-            color=0x00FF00
-            )
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("CreatedChannels", entry.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
-
-    async def on_guild_channel_update(self, entry:discord.AuditLogEntry) -> None:
-        before:discord.abc.GuildChannel = entry.before
-        after:discord.abc.GuildChannel = entry.after
-        channel = after or before
-        self.logger.debug(f"On channel update: guild='{entry.guild}' channel='{channel}'")
-        embed = None
-        properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
-        if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
-            if "name" in differences or before.name != after.name:
-                name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
-            embed = discord.Embed(
-                title="Channel Changed",
-                description=f"{entry.user.mention} changed {differences} of channel {name_change or after.mention} with reason: {entry.reason or None}",
-                color=0xFFFF00
-                )
-        if not embed:
-            return
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("updatedchannels", entry.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
-
-    async def on_guild_channel_delete(self, entry:discord.AuditLogEntry) -> None:
-        channel: discord.abc.GuildChannel = entry.before
-        self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
-        embed = None
-        embed = discord.Embed(
-            title="Channel Deleted",
-            description=f"{entry.user.mention} deleted {channel.type} `{channel.name}` with reason: {entry.reason or None}",
-            color=0xff0000
-            )
-        if not embed:
-            return
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("DeletedChannels", entry.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
-
-    async def on_invite_create(self, entry:discord.AuditLogEntry) -> None:
-        invite:discord.Invite = entry.target
-        self.logger.debug(f"On invite create: guild='{entry.guild}' invite='{invite}'")
-        embed = None
-        embed = discord.Embed(
-            title="Created Invite",
-            description=f"{entry.user} Created invite {entry.target or invite} with reason: {entry.reason or None}",
-            color=0x00ff00
-            )
-        if not embed:
-            return
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("CreatedInvites", entry.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
-
-    async def on_member_update(self, entry:discord.AuditLogEntry, is_role:bool) -> None:
-        before:discord.Member = entry.before
-        after:discord.Member = entry.after
-        self.logger.debug(f"On member update: guild='{entry.guild}', member='{after}'")
-        diffs = self.get_role_difference(entry) if is_role else ""
-        embed = None
-        properts = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
-        if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
-            embed = discord.Embed(
-                title="Member Update", description=f"{entry.user.mention} Changed {differences} {diffs} of {before.mention} with reason: {entry.reason or None}",
-                color=0xFFFF00
-                )
-        if not embed:
-            return
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("memberupdates", entry.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
-
-    async def on_member_move(self, entry:discord.AuditLogEntry) -> None:
-        embed = discord.Embed(
-            title="Member Joined",
-            description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
-            color=0x00FF00
-            )
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("memberupdates", entry.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
-
-    async def on_member_join(self, member:discord.Member) -> None:
-        self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("MemberJoined", member.guild)
-        embed = discord.Embed(
-            title="Member Joined",
-            description=f"{member.mention} Joined the server",
-            color=0x00FF00
-            )
-        await automod_channel.send(embed=embed)
-        await allmod_channel.send(embed=embed)
-
-    async def on_member_remove(self, member:discord.Member) -> None:
-        self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
-        embed=None
-        async for entry in member.guild.audit_logs(limit=1):
-            embed = self.get_member_left_embed(member, entry)
-        if not embed:
-            raise TypeError(f"Expected discord.Embed, got {embed}")
-        with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("memberleft", member.guild)
-            await automod_channel.send(embed=embed)
-            await allmod_channel.send(embed=embed)
+    def get_role_difference(self, entry:discord.AuditLogEntry) -> list[discord.Role]:
+        diffs = []
+        for change1, change2 in zip(entry.changes.before, entry.changes.after):
+            diff = [c1 or c2 for c1, c2 in itertools.zip_longest(change1[1], change2[1])]
+            for role in diff:
+                role = discord.utils.get(entry.guild.roles, id=role.id)
+                diffs.append(role.mention)
+        return diffs
 
     def get_member_left_embed(self, member:discord.Member, entry:discord.AuditLogEntry) -> discord.Embed:
         if entry.action == discord.AuditLogAction.ban:
@@ -256,6 +149,168 @@ class Automod(commands.GroupCog):
                 description=f"{member.mention} Left the server",
                 color=0xFF0000,
             )
+
+# ENTRIES START
+
+    @commands.Cog.listener()
+    @app_commands.checks.bot_has_permissions(view_audit_log=True)
+    async def on_audit_log_entry_create(self, entry:discord.AuditLogEntry) -> None:
+        action = discord.AuditLogAction
+        # self.logger.debug(f"Action: {action}, Target:{entry.target} Dict: {entry.__dict__}")
+        # await self.generic_change(entry)
+        match entry.action:
+            case action.channel_create:
+                await self.on_guild_channel_create(entry)
+            case action.channel_delete:
+                await self.on_guild_channel_delete(entry)
+            case action.channel_update:
+                await self.on_guild_channel_update(entry)
+            case action.invite_create:
+                await self.on_invite_create(entry)
+            case action.member_update:
+                await self.on_member_update(entry, False)
+            case action.member_role_update:
+                await self.on_member_update(entry, True)
+            case action.member_move:
+                await self.on_member_move(entry)
+            case action.role_create:
+                await self.on_role_create(entry)
+            case action.role_update:
+                await self.on_role_update(entry)
+            case action.role_delete:
+                await self.on_role_delete(entry)
+            case _:
+                await self.generic_change(entry)
+
+    async def on_guild_channel_create(self, entry:discord.AuditLogEntry) -> None:
+        self.logger.debug(f"On channel create: guild='{entry.guild}' channel='{entry.target}'")
+        self.check_disabled(entry.guild, LogCategories.CREATEDCHANNELS)
+        channel = entry.target
+        embed = discord.Embed(
+            title="Channel Created",
+            description=f"{entry.user.mention} created {channel.type} {channel.mention or entry.target.mention} with reason: {entry.reason or None}",
+            color=0x00FF00
+            )
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.CREATEDCHANNELS, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    async def on_guild_channel_update(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.UPDATEDCHANNELS)
+        before:discord.abc.GuildChannel = entry.before
+        after:discord.abc.GuildChannel = entry.after
+        channel = after or before
+        self.logger.debug(f"On channel update: guild='{entry.guild}' channel='{channel}'")
+        embed = None
+        properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
+        if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
+            if "name" in differences or before.name != after.name:
+                name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
+            embed = discord.Embed(
+                title="Channel Changed",
+                description=f"{entry.user.mention} changed {differences} of channel {name_change or after.mention} with reason: {entry.reason or None}",
+                color=0xFFFF00
+                )
+        if not embed:
+            return
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.UPDATEDCHANNELS, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    async def on_guild_channel_delete(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.DELETEDCHANNELS)
+        channel: discord.abc.GuildChannel = entry.before
+        self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
+        embed = None
+        embed = discord.Embed(
+            title="Channel Deleted",
+            description=f"{entry.user.mention} deleted {channel.type} `{channel.name}` with reason: {entry.reason or None}",
+            color=0xff0000
+            )
+        if not embed:
+            return
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.DELETEDCHANNELS, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    # TODO: print invite code, bug? entry.target is not invite
+    async def on_invite_create(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.CREATEDINVITES)
+        invite:discord.Invite = entry.target
+        self.logger.debug(f"On invite create: guild='{entry.guild}' invite='{invite}'")
+        embed = None
+        embed = discord.Embed(
+            title="Created Invite",
+            description=f"{entry.user} Created invite {entry.target or invite} with reason: {entry.reason or None}",
+            color=0x00ff00
+            )
+        if not embed:
+            return
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.CREATEDINVITES, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    async def on_member_update(self, entry:discord.AuditLogEntry, is_role:bool) -> None:
+        self.check_disabled(entry.guild, LogCategories.MEMBERUPDATES)
+        before:discord.Member = entry.before
+        after:discord.Member = entry.after
+        self.logger.debug(f"On member update: guild='{entry.guild}', member='{after}'")
+        diffs = self.get_role_difference(entry) if is_role else ""
+        embed = None
+        properts = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
+        if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
+            embed = discord.Embed(
+                title="Member Update", description=f"{entry.user.mention} Changed {differences} {diffs} of {before.mention} with reason: {entry.reason or None}",
+                color=0xFFFF00
+                )
+        if not embed:
+            return
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.MEMBERUPDATES, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    async def on_member_move(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.MEMBERMOVED)
+        embed = discord.Embed(
+            title="Member Joined",
+            description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
+            color=0x00FF00
+            )
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.MEMBERMOVED, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    async def on_member_join(self, member:discord.Member) -> None:
+        self.check_disabled(member.guild, LogCategories.MEMBERJOINED)
+        self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.MEMBERJOINED, member.guild)
+        embed = discord.Embed(
+            title="Member Joined",
+            description=f"{member.mention} Joined the server",
+            color=0x00FF00
+            )
+        await DragonLog_channel.send(embed=embed)
+        await allmod_channel.send(embed=embed)
+
+    async def on_member_remove(self, member:discord.Member) -> None:
+        self.check_disabled(member.guild, LogCategories.MEMBERLEFT)
+        self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
+        embed=None
+        async for entry in member.guild.audit_logs(limit=1):
+            embed = self.get_member_left_embed(member, entry)
+        if not embed:
+            raise TypeError(f"Expected discord.Embed, got {embed}")
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.MEMBERLEFT, member.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
 
     # TODO: Needs to look cleaner, also doesnt always get type. IE on invite remove
     async def generic_change(self, entry:discord.AuditLogEntry) -> None:
@@ -286,21 +341,55 @@ class Automod(commands.GroupCog):
             embed.add_field(name=change2[0], value=change2[1], inline=True)
             embed.add_field(name="\u200b", value="\u200b", inline=False)
         with contextlib.suppress(TypeError):
-            _, allmod_channel = await self.get_automod_channels(None, entry.guild)
+            _, allmod_channel = await self.get_DragonLog_channels(None, entry.guild)
             await allmod_channel.send(embed=embed)
 
+    async def on_role_create(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.CREATEDROLES)
+        self.logger.debug(f"On role create: guild='{entry.guild}' channel='{entry.target}'")
+        role:discord.Role = entry.target
+        embed = discord.Embed(
+            title="Role Created",
+            description=f"{entry.user.mention} created {role.mention or entry.target.mention} with permissions {role.permissions} with reason: {entry.reason or None}",
+            color=0x00FF00
+            )
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.CREATEDROLES, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
 
-    def get_role_difference(self, entry:discord.AuditLogEntry) -> list[discord.Role]:
-        diffs = []
-        for change1, change2 in zip(entry.changes.before, entry.changes.after):
-            diff = [c1 or c2 for c1, c2 in itertools.zip_longest(change1[1], change2[1])]
-            for role in diff:
-                role = discord.utils.get(entry.guild.roles, id=role.id)
-                diffs.append(role.mention)
-        return diffs
+    async def on_role_update(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.UPDATEDROLES)
+        self.logger.debug(f"On role update: guild='{entry.guild}', role='{entry.target}'")
+        role:discord.Role = entry.target
+        
+        embed = discord.Embed(
+            title="Role Updated",
+            description=f"{entry.user.mention} created {role.mention or entry.target.mention} with reason: {entry.reason or None}",
+            color=0xFFFF00
+            )
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.UPDATEDROLES, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
+
+    async def on_role_delete(self, entry:discord.AuditLogEntry) -> None:
+        self.check_disabled(entry.guild, LogCategories.DELETEDROLE)
+        self.logger.debug(f"On role delete: guild='{entry.guild}', role='{entry.target}'")
+        role:discord.Role = entry.target
+        embed = discord.Embed(
+            title="Role Removed",
+            description=f"{entry.user.mention} created {role or entry.target} with reason: {entry.reason or None}",
+            color=0xFF0000
+            )
+        with contextlib.suppress(TypeError):
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.DELETEDROLE, entry.guild)
+            await DragonLog_channel.send(embed=embed)
+            await allmod_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before:discord.Message, after:discord.Message) -> None:
+        self.check_disabled(after.guild, LogCategories.EDITEDMESSAGES)
         ttt_regex = r"(?:\|  (?:_|o|x)  )+\|\n\|(?:(?:_____)+(?:\+|))+(?:\|\n|\|)"
         reg_found = re.findall(ttt_regex, before.clean_content)
         if reg_found != []:
@@ -313,7 +402,7 @@ class Automod(commands.GroupCog):
             return
         self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, changed=`{after.clean_content}`")
         with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("MessageEdited", before.guild)
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.EDITEDMESSAGES, before.guild)
         embed = discord.Embed(
             title="Message Edited",
             description=f"{before.author.mention} Edited a message",
@@ -321,16 +410,17 @@ class Automod(commands.GroupCog):
         )
         embed.add_field(name="Old", value=f"`{before.clean_content}`")
         embed.add_field(name="New", value=f"`{after.clean_content}`")
-        await automod_channel.send(embed=embed)
+        await DragonLog_channel.send(embed=embed)
         await allmod_channel.send(embed=embed)
 
     # FIXME/TODO: doesn`t post on purge
     @commands.Cog.listener()
     @app_commands.checks.bot_has_permissions(view_audit_log=True)
     async def on_message_delete(self, message:discord.Message) -> None:
+        self.check_disabled(message.guild, LogCategories.DELETEDMESSAGES)
         self.logger.debug(f"Message deleted: guild='{message.guild}', channel='{message.channel}', content='{message.clean_content}'")
         with contextlib.suppress(TypeError):
-            automod_channel, allmod_channel = await self.get_automod_channels("MessageDeleted", message.guild)
+            DragonLog_channel, allmod_channel = await self.get_DragonLog_channels(LogCategories.DELETEDMESSAGES, message.guild)
         async for entry in message.guild.audit_logs(limit=1):
             if message.clean_content == "":
                 return
@@ -339,7 +429,7 @@ class Automod(commands.GroupCog):
                 description=f"{entry.user.mention} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}",
                 color=0xFF0000
             )
-            await automod_channel.send(embed=embed)
+            await DragonLog_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
             # Idk, maybe not needed tbh
             # if entry.action == entry.action.message_delete:
@@ -352,6 +442,9 @@ class Automod(commands.GroupCog):
             #     # likely removed own message
             #     self.logger.debug(entry)
 
+# ENTRIES END
+# COMMANDS START
+
     @app_commands.command(
         name = "add",
         description = "Enables automatic moderation/logging for this server, and creates a channel for all logs."
@@ -360,7 +453,7 @@ class Automod(commands.GroupCog):
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
-    async def slash_automod_add(self, interaction:discord.Interaction) -> None:
+    async def slash_DragonLog_add(self, interaction:discord.Interaction) -> None:
         # defer here to avoid getting timeout
         await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
@@ -371,19 +464,19 @@ class Automod(commands.GroupCog):
         guild_id = str(guild.id)
         try:
             if self.data[guild_id]:
-                await interaction.followup.send("Automod channels are already set up.")
+                await interaction.followup.send("DragonLog channels are already set up.")
                 return
         except KeyError as e:
             self.logger.error(e)
-        AutomodCategories = self.AutomodCategories
-        CategoryChannel = await guild.create_category(name="Dragon Automod", overwrites=overwrites, position=99, reason="Adding Automod channels")
+        CategoryChannel = await guild.create_category(name="Dragon DragonLog", overwrites=overwrites, position=99, reason="Adding DragonLog channels")
         category_channel_id = str(CategoryChannel.id)
         self.data[guild_id] = {category_channel_id: {}}
-        for AutomodCategory in AutomodCategories:
-            TextChannel = await CategoryChannel.create_text_channel(name=f"{AutomodCategory}", reason="Adding Automod channels")
+        for LogCategory in LogCategories:
+            log_category:str = LogCategory.value
+            TextChannel = await CategoryChannel.create_text_channel(name=f"{log_category.lower()}", reason="Adding DragonLog channels")
             self.data[guild_id][category_channel_id][TextChannel.name] = TextChannel.id
-        await interaction.followup.send("Set up automod category and channels")
-        self.logger.info(f"Setup automod for {interaction.guild}")
+        await interaction.followup.send("Set up DragonLog category and channels")
+        self.logger.info(f"Setup DragonLog for {interaction.guild}")
         await self.set_data(self.data)
 
     @app_commands.command(
@@ -394,7 +487,7 @@ class Automod(commands.GroupCog):
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
-    async def slash_automod_remove(self, interaction:discord.Interaction) -> None:
+    async def slash_DragonLog_remove(self, interaction:discord.Interaction) -> None:
         # Defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
         if not self.data:
@@ -402,53 +495,149 @@ class Automod(commands.GroupCog):
         guild = interaction.guild
         try:
             for CatChannelId, Channels in self.data[str(guild.id)].items():
-                for ChannelName, ChannelId in Channels.items():
-                    TextChannel:discord.TextChannel = discord.utils.get(guild.text_channels, id=ChannelId)
-                    await TextChannel.delete()
-                    del ChannelName
+                try:
+                    for ChannelName, ChannelId in Channels.items():
+                        TextChannel:discord.TextChannel = discord.utils.get(guild.text_channels, id=ChannelId)
+                        await TextChannel.delete()
+                        del ChannelName
+                except AttributeError:
+                    continue
                 CategoryChannel:discord.CategoryChannel = discord.utils.get(guild.categories, id=int(CatChannelId))
                 await CategoryChannel.delete()
                 del CatChannelId
         except KeyError:
-            await interaction.followup.send("Can't find AutomodChannels Consider using </automod add:1067239606044606585>")
+            await interaction.followup.send("Can't find DragonLogChannels Consider using </DragonLog add:1067239606044606585>")
         del self.data[str(guild.id)]
         await self.set_data(self.data)
-        await interaction.followup.send("Removed and disabled AutomodChannels")
-        self.logger.info(f"Removed automod for {interaction.guild}")
+        await interaction.followup.send("Removed and disabled DragonLogChannels")
+        self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
     @app_commands.command(
         name = "update",
-        description = "Update automod channels"
+        description = "Update DragonLog channels"
         )
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-    async def slash_automod_update(self, interaction:discord.Interaction) -> None:
+    async def slash_DragonLog_update(self, interaction:discord.Interaction, guild_id:str=None) -> None:
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         if not self.data:
             self.data = await self.get_data()
-        categories = [i.lower() for i in self.AutomodCategories]
+        if guild_id:
+            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+        else:
+            guild = None
+        await self.update_DragonLog(guild=guild)
+        await interaction.followup.send("Updated DragonLog channels on all servers!")
+
+    async def update_DragonLog(self, guild:discord.Guild=None) -> None:
+        self.logger.debug(f"Updating DragonLog for guild=`{guild}`")
+        if not guild:
+            for guild_id in self.data: # type: ignore
+                guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+                await self.update_DragonLog(guild=guild)
+        difference = []
         try:
-            await self.update_automod(categories)
-        except Exception as e:
-            await interaction.followup.send(e, ephemeral=True)
-            self.logger.exception(e)
-        await interaction.followup.send("Updated automod channels on all servers!")
+            disabled = self.data[str(guild.id)]["disabled"]
+        except KeyError:
+            disabled = []
+        guild_data = self.data[str(guild.id)]
+        for category_id, channels in guild_data.items():
+            try:
+                category_id = int(category_id)
+            except ValueError:
+                continue
+            category_obj = discord.utils.get(guild.categories, id=category_id)
+            difference.extend(
+                channel for channel in [i.value.lower() for i in LogCategories]
+                if channel not in disabled
+                if channel not in channels.keys()
+                )
+        for channel_name in difference:
+            channel_name:str
+            new_log_channel = await category_obj.create_text_channel(channel_name, reason="DragonLog update")
+            self.data[str(guild.id)][str(category_id)][channel_name] = new_log_channel.id
+        self.logger.info(f"Updated DragonLog for guild=`{guild}`")
         await self.set_data(self.data)
 
-    async def update_automod(self, categories) -> None:
-        for guild_id, v in self.data.items():
-            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-            difference = []
-            for category_id, channels in v.items():
-                category_obj = discord.utils.get(guild.categories, id=int(category_id))
-                difference.extend(channel for channel in categories if channel not in channels.keys())
-            for channel_name in difference:
-                channel_name:str
-                new_log_channel = await category_obj.create_text_channel(channel_name, reason="Automod update")
-                self.data[guild_id][category_id][channel_name] = new_log_channel.id
-            self.logger.info(f"Updated automod for guild=`{guild}`")
+# TODO: autocomplete doesnt work with enum.value.lower
+
+    # def get_enabled_disabled(self, guild_id) -> tuple[list, list]:
+    #     try:
+    #         enabled = self.data[guild_id]["enabled"]
+    #     except KeyError:
+    #         self.data[guild_id]["enabled"] = []
+    #         disabled = self.data[guild_id]["enabled"]
+    #     try:
+    #         disabled = self.data[guild_id]["disabled"]
+    #     except KeyError:
+    #         self.data[guild_id]["disabled"] = []
+    #         disabled = self.data[guild_id]["disabled"]
+    #     return enabled, disabled
+
+    # @app_commands.command(
+    #     name = "enable",
+    #     description = "Enables automatic moderation for a specific category.",
+    #     )
+    # @app_commands.guild_only()
+    # @app_commands.checks.has_permissions(administrator=True)
+    # @app_commands.checks.bot_has_permissions(manage_channels=True)
+    # async def slash_DragonLog_enable(self, interaction:discord.Interaction, category:str) -> None:
+    #     guild_id = str(interaction.guild.id)
+    #     self.check_guild_data(guild_id)
+    #     enabled, disabled = self.get_enabled_disabled(guild_id)
+    #     if category not in enabled:
+    #         enabled.append(category)
+    #         await self.update_DragonLog(guild=interaction.guild)
+    #         await interaction.response.send_message(f"Enabled {category}", ephemeral=True)
+    #     elif category == "All-categories":
+    #         await interaction.response.send_message("Cannot change All-categories", ephemeral=True)
+    #     else:
+    #         await interaction.response.send_message(f"{category} is already enabled", ephemeral=True)
+    #     if category in disabled:
+    #         disabled.pop(category)
+    #     await self.set_data(self.data)
+
+    # @slash_DragonLog_enable.autocomplete("category")
+    # async def enable_autocomplete_category(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    #     return [
+    #         app_commands.Choice(name=i, value=i)
+    #         for i in LogCategories
+    #         if current.lower() in i.value.lower()
+    #     ]
+
+    # @app_commands.command(
+    #     name = "disable",
+    #     description = "Disables automatic moderation for a specific category.",
+    #     )
+    # @app_commands.guild_only()
+    # @app_commands.checks.has_permissions(administrator=True)
+    # @app_commands.checks.bot_has_permissions(manage_channels=True)
+    # async def slash_DragonLog_disable(self, interaction:discord.Interaction, category:str) -> None:
+    #     guild_id = str(interaction.guild.id)
+    #     self.check_guild_data(guild_id)
+    #     enabled, disabled = self.get_enabled_disabled(guild_id)
+    #     if category not in disabled:
+    #         disabled.append(category)
+    #         await interaction.response.send_message(f"Disabled {category}", ephemeral=True)
+    #     elif category == "All-categories":
+    #         await interaction.response.send_message("Cannot change All-categories", ephemeral=True)
+    #     else:
+    #         await interaction.response.send_message(f"{category} is already disabled", ephemeral=True)
+    #     if category in enabled:
+    #         enabled.pop(category)
+    #     await self.set_data(self.data)
+
+    # @slash_DragonLog_disable.autocomplete("category")
+    # async def disable_autocomplete_category(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    #     return [
+    #         app_commands.Choice(name=i, value=i)
+    #         for i in LogCategories
+    #         if current.lower() in i.value.lower()
+    #     ]
+
+# COMMANDS END
 
 async def setup(bot:commands.Bot) -> None:
-    await bot.add_cog(Automod(bot))
+    await bot.add_cog(DragonLog(bot))

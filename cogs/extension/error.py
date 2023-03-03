@@ -28,13 +28,13 @@ class Error(commands.Cog):
 
     async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError) -> None:
         if type(error) != app_commands.errors.CommandNotFound:
-            self.logger.debug(f"Error from: {interaction.command.name}")
+            self.logger.debug(f"Error from interaction: {interaction.command.name}")
         await self.error_check(interaction, error)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx:commands.Context, error:commands.CommandError) -> None:
         if type(error) != commands.errors.CommandNotFound:
-            self.logger.debug(f"Error from: {ctx.command.name}")
+            self.logger.debug(f"Error from ctx: {ctx.command.name}")
         await self.error_check(ctx, error)
 
     async def get_dm(self, i:discord.Interaction|commands.Context) -> discord.DMChannel:
@@ -50,12 +50,19 @@ class Error(commands.Cog):
             interaction:discord.Interaction = i
             dm = await interaction.user.create_dm()
             act = app_command_tools.ACT(bot=self.bot)
-            app_command = act.get_app_command(interaction.command)
+            app_command, custom_mention = await act.get_sub_app_command(interaction.command)
             try:
-                self.help_msg = f"`/help command {app_command.mention}`"
+                self.help_msg = f"{custom_mention or app_command.mention}"
             except AttributeError:
-                self.help_msg = "`/help command help`"
-        self.logger.debug(f"Returning dm channel {dm.recipient}")
+                help_command = await act.get_app_command(self.bot.tree.get_command("help"))
+                self.logger.debug(f"{help_command} {help_command.options}")
+                for sub in help_command.options:
+                    self.logger.debug(f"{sub}")
+                    if type(sub) == app_commands.Argument and sub.name == "command":
+                        # TODO: pre fill with the command argument
+                        self.help_msg = f"</{help_command.name} command:{help_command.id}>"
+                        break
+        self.logger.debug(f"Returning dm channel {dm.recipient}, with message {self.help_msg}")
         return dm
 
     async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError) -> None:
@@ -66,6 +73,8 @@ class Error(commands.Cog):
             self.logger.exception(error)
         if CE.IGNORE_ERRORS == True:
             return
+        invite_command = await app_command_tools.ACT(bot=self.bot).get_app_command(self.bot.tree.get_command("invite"))
+        server_invite = f"</{invite_command} server:{invite_command.id}>"        
         self.logger.debug(f"ErrorType: {type(error)}")
         match type(error):
             case commands.errors.MissingRequiredArgument:
@@ -149,15 +158,16 @@ class Error(commands.Cog):
             # case commands.errors.ExtensionNotFound:
             #     await dm.send(error)
             case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
+                self.logger.error(f"Args: {error.args}")
                 for arg in error.args:
                     if "NotOwner" in arg:
                         await dm.send("Only the bot owner(s) may use this command!")
                     else:
-                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\nuse </invite server:1057851788310614086> to join the official discord server")
                         self.logger.error(f"Error executing command, CODE: {code}")
+                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\nTry {self.help_msg}, Or Use {server_invite} to join the official bot server")
             case _:
                 self.logger.error(f"Unexpected error, CODE: {code}")
-                await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\nuse `</invite server:1057851788310614086>` to join the official discord server")
+                await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\nuse {server_invite} to join the official bot server")
 
 async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name

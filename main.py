@@ -38,6 +38,7 @@ Intents.guilds = True
 Intents.presences = True
 # Intents.guild_messages = True
 # Intents.dm_messages = True
+Intents.moderation = True
 Intents.messages = True
 Intents.message_content = True
 Intents.auto_moderation_configuration = True
@@ -47,9 +48,11 @@ client = discord.Client(intents=Intents)
 bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 tree = bot.tree
 
-# FIXME: find a way to get guild OBJECT without await and after bot is ready
+# FIXME: find a way to get/fetch guild OBJECT without await and before bot is starting/ready
 # support_guild = asyncio.run(bot.fetch_guild(config.Main.SUPPORT_GUILD_ID))
+# support_guild = await bot.fetch_guild(config.Main.SUPPORT_GUILD_ID)
 support_guild = discord.utils.get(bot.guilds, id=config.Main.SUPPORT_GUILD_ID)
+
 
 bot_logger.debug(f"Support guild id: {support_guild}")
 
@@ -65,6 +68,7 @@ async def on_ready() -> None:
 async def main() -> None:
     async with bot:
         await mass_load()
+        await bot.load_extension("jishaku")
         await bot.start(config.Main.TOKEN)
 
 @register
@@ -77,10 +81,12 @@ def terminate() -> None:
     bot_logger.info("Logged off")
     if not os.path.exists(config.Main.LOG_PATH):
         os.mkdir(config.Main.LOG_PATH)
-    bot_logger.info("Saved log files")
     log_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    shutil.copy(src="bot.log", dst=f"{config.Main.LOG_PATH}/bot_{log_time}.log")
-    shutil.copy(src="discord.log", dst=f"{config.Main.LOG_PATH}/discord_{log_time}.log")
+    if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
+        os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
+    bot_logger.info("Saved log files")
+    shutil.copy(src="bot.log", dst=f"{config.Main.LOG_PATH}/{log_time}/bot_.log")
+    shutil.copy(src="discord.log", dst=f"{config.Main.LOG_PATH}/{log_time}/discord_.log")
 
 async def get_cogs() -> list[str]:
     extensions = []

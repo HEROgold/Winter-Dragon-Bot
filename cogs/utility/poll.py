@@ -138,9 +138,8 @@ class Poll(commands.GroupCog):
         poll_channel_id, poll_channel = await self.get_poll_channels(guild_id)
         if not poll_channel_id:
             act = app_command_tools.ACT(bot=self.bot)
-            await act.fetch_app_commands()
-            channel_command = act.get_app_command(self.slash_poll_set_channel)
-            await interaction.response.send_message(f"No channel found to send poll. use </poll channel:{channel_command.id}> to set one", ephemeral=True) # </poll channel:ID>
+            _, custom_mention = await act.get_sub_app_command(self.slash_poll_set_channel)
+            await interaction.response.send_message(f"No channel found to send poll. use {custom_mention} to set one", ephemeral=True) # </poll channel:ID>
             return
         emb = discord.Embed(title="Poll", description=f"{message}\n\n", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
@@ -178,21 +177,22 @@ class Poll(commands.GroupCog):
             ).timestamp()
         )
 
-    async def get_poll_channels(self, guild_id) -> tuple[int, discord.TextChannel]:
+    async def get_poll_channels(self, guild_id:str) -> tuple[int, discord.TextChannel]:
         try:
             self.data[guild_id]
         except KeyError:
             self.data[guild_id] = {}
         try:
             poll_channel_id:int = self.data[guild_id]["poll_channel"]
-            poll_channel = await self.bot.fetch_channel(int(self.data[guild_id]["poll_channel"]))
-        except KeyError:
+            poll_channel = await self.bot.fetch_channel(poll_channel_id)
+        except (KeyError, discord.errors.NotFound):
             poll_channel_id = None
+            poll_channel = None
         try:
             self.data[guild_id]["polls"]
         except KeyError:
             self.data[guild_id]["polls"] = {}
-        return poll_channel_id,poll_channel
+        return poll_channel_id, poll_channel
 
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.command(

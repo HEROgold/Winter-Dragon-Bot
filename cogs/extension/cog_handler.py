@@ -1,4 +1,3 @@
-import contextlib
 import datetime
 import pickle
 import logging
@@ -60,7 +59,7 @@ class AutoCogReloader(commands.Cog):
                             "edit_time": edit_timestamp
                         }
 
-    async def check_edits(self) -> None:
+    def check_edits(self) -> None:
         files = self.data["files"]
         self.get_cog_data()
         for file in files:
@@ -76,11 +75,13 @@ class AutoCogReloader(commands.Cog):
     @tasks.loop(seconds=5)
     async def auto_reload(self) -> None:  # sourcery skip: useless-else-on-loop
         if not self.data["edited"]:
-            await self.check_edits()
+            self.check_edits()
         for file_data in list(self.data["edited"]):
-            with contextlib.suppress(commands.errors.ExtensionNotLoaded):
+            try:
                 await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
-            self.logger.info(f"Automatically reloaded {file_data}")
+                self.logger.info(f"Automatically reloaded {file_data}")
+            except commands.errors.ExtensionNotLoaded:
+                self.logger.warning(f"Cannot reload {file_data}, it's not loaded")
             del self.data["edited"][file_data]
         else:
             self.data["timestamp"] = datetime.datetime.now().timestamp()
@@ -149,10 +150,20 @@ class CogsC(commands.GroupCog):
         await interaction.followup.send(f"{reload_message}Restart complete.")
 
     @app_commands.command(
+            name="crash",
+            description="Raise a random Exception (Bot Dev only)",
+    )
+    async def slash_crash(self, interaction:discord.Interaction) -> None:
+        if not await self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
+        await interaction.response.send_message("Crashing wiht discord.app_commands.errors.CommandInvokeError")
+        raise commands.CommandInvokeError("Test Exception")
+
+    @app_commands.command(
         name = "show",
         description = "Show loaded cogs (For bot developer only)"
         )
-    async def slash_show_cogs(self, interaction:discord.Interaction) -> None:
+    async def slash_show(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         cogs = await self.get_cogs()
