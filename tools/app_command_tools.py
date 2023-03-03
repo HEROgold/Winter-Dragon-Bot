@@ -1,47 +1,62 @@
-
 import logging
 
 import discord # type: ignore
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import config
 
-
+class CommandNotFound(Exception):
+    pass
 class ACT():
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.fetch_app_commands.start()
 
-    @tasks.loop(reconnect=False)
-    async def fetch_app_commands(self) -> None:
-        self.app_commands = await self.tree.fetch_commands()
+    def is_group(self, app_command:app_commands.AppCommand) -> None:
+        self.logger.debug(f"Checking is_group: {app_command.name}")
+        return any(type(i) == app_commands.AppCommandGroup for i in app_command.options)
 
-    @fetch_app_commands.after_loop
-    async def fetch_app_commands_after(self) -> None:
-        self.fetch_app_commands.stop()
-
-    def is_group(self, command:app_commands.AppCommand) -> None:
-        try:
-            for _ in command:
+    def is_subcommand(self, app_command:app_commands.AppCommand, command:app_commands.Command) -> None:
+        for option in app_command.options:
+            if (
+                type(option) == app_commands.AppCommandGroup
+                and command.name in option.name
+            ):
+                self.logger.debug(f"Found subcommand: {command.name}")
                 return True
-        except TypeError:
-            return False
+        return False
 
-    def get_app_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None) -> app_commands.AppCommand:
-        if not self.app_commands:
-            raise AttributeError(f"app_commands is not found in {self.__class__}")
-        self.logger.debug(f"Getting {command.name} from {self.app_commands}")
+    async def get_sub_app_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
+        """Returns the full app_command and a custom mention that can be used to mention the subcommand"""
+        if not app_command:
+            app_command = await self.get_app_command(command.parent, guild)
+        if self.is_group(app_command):
+            self.logger.debug(f"{app_command.name} is a group")
+            if self.is_subcommand(app_command, command):
+                custom_mention = f"</{app_command.name} {command.name}:{app_command.id}>"
+        else:
+            self.logger.debug(f"Subcommand {command.name} not found in {self.app_commands}")
+            return None
+        self.logger.debug(f"Returning {app_command}")
+        return app_command, custom_mention
+
+    async def get_app_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None) -> app_commands.AppCommand:
+        """Gets the app_command from a command"""
+        if type(command) == app_commands.AppCommand:
+            self.logger.debug(f"Quick return for {command.name}, already an AppCommand")
+            return command
+        self.logger.debug(f"Trying to get AppCommand: {command.name}")
+        self.app_commands = await self.tree.fetch_commands(guild=guild)
         for app_command in self.app_commands:
             self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
-            if self.is_group(app_command):
-                self.logger.debug(f"{app_command.name} is iterable")
             if command.name == app_command.name:
                 self.logger.debug(f"Found {app_command}")
-                break 
+                break
         else:
-            self.logger.debug(f"{command.name} not found in {self.app_commands}")
+            self.logger.debug(f"Command {command.name} not found in {self.app_commands}")
+            return None
+        self.logger.debug(f"Getting {command.name} from {self.app_commands}")
         self.logger.debug(f"Returning {app_command}")
         return app_command
