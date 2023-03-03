@@ -2,7 +2,6 @@ import datetime
 import pickle
 import logging
 import os
-from random import shuffle
 
 import discord
 from discord import app_commands
@@ -157,14 +156,8 @@ class CogsC(commands.GroupCog):
     async def slash_crash(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        exceptions = []
-        exceptions.extend(discord.errors)
-        exceptions.extend(commands.errors)
-        exceptions.extend(app_commands.errors)
-        shuffle(exceptions)
-        random_exception = exceptions[0]
-        await interaction.response.send_message(f"Random exception is {random_exception}")
-        raise random_exception
+        await interaction.response.send_message("Crashing wiht discord.app_commands.errors.CommandInvokeError")
+        raise commands.CommandInvokeError("Test Exception")
 
     @app_commands.command(
         name = "show",
