@@ -64,7 +64,7 @@ class ChannelUtils(commands.GroupCog):
         await interaction.response.defer(ephemeral=True)
         for channel in category.channels:
             await channel.delete(reason=f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
-        await category.delete(f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
+        await category.delete(reason=f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
         await interaction.followup.send("Channel's removed", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
