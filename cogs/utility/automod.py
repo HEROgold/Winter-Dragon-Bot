@@ -236,6 +236,7 @@ class DragonLog(commands.GroupCog):
             await DragonLog_channel.send(embed=embed)
             await allmod_channel.send(embed=embed)
 
+    # TODO: print invite code, bug? entry.target is not invite
     async def on_invite_create(self, entry:discord.AuditLogEntry) -> None:
         self.check_disabled(entry.guild, LogCategories.CREATEDINVITES)
         invite:discord.Invite = entry.target
