@@ -65,13 +65,13 @@ class Temp(commands.GroupCog):
         pass
 
     @slash_TEMP.autocomplete("")
-    async def activity_autocomplete_status(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    async def COMMAND_autocoplete_VARIABLE(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=i, value=i)
             for i in []
             if current.lower() in i.lower()
         ]
-    
+
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Temp(bot)) # type: ignore
