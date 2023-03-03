@@ -23,6 +23,8 @@ class Sync(commands.Cog):
         self.logger.debug(f"Synced commands: global_commands={global_sync} guild_commands={local_sync}")
         global_list = [command.name for command in global_sync]
         local_list = [command.name for command in local_sync]
+        global_list.sort()
+        local_list.sort()
         await interaction.response.send_message(f"Sync complete\nGlobaly synced: {global_list}\nLocally synced: {local_list} to {guild}", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:
