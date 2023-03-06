@@ -143,8 +143,8 @@ class CogsC(commands.GroupCog):
         for cog in cogs:
             try:
                 await self.bot.reload_extension(cog)
-            except Exception as e:
-                self.logger.exception(f"Error while reloading {cog}: error=`{e}`")
+            except commands.errors.ExtensionNotLoaded:
+                self.logger.exception(f"Cog not loaded {cog}")
             self.logger.info(f"Reloaded {cog}")
             reload_message += f"Reloaded {cog}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
@@ -177,16 +177,17 @@ class CogsC(commands.GroupCog):
     async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
+        self.logger.info(f"{interaction.user} used /reload")
         if extension is None:
             self.logger.warning("Reloaded all cogs")
             await self.mass_reload(interaction)
         else:
-            self.logger.info(f"{interaction.user} used /reload")
             try:
                 await self.bot.reload_extension(extension)
                 self.logger.info(f"Reloaded {extension}")
                 await interaction.response.send_message(f"Reloaded {extension}", ephemeral=True)
             except Exception as e:
+                self.logger.critical("REMOVE `except Exception`!")
                 self.logger.exception(f"unable to unload {extension}, {e}")
                 await interaction.response.send_message(f"error reloading {extension}", ephemeral=True)
 
@@ -213,6 +214,7 @@ class CogsC(commands.GroupCog):
                 self.logger.info(f"Unloaded {extension}")
                 await interaction.followup.send(f"Unloaded {extension}", ephemeral=True)
             except Exception as e:
+                self.logger.critical("REMOVE `except Exception`!")
                 self.logger.exception(f"unable to unload {extension}, {e}")
                 await interaction.response.send_message(f"Unable to unload {extension}", ephemeral=True)
 
@@ -236,6 +238,7 @@ class CogsC(commands.GroupCog):
             self.logger.info(f"Loaded {extension}")
             await interaction.response.send_message(f"Loaded {extension}", ephemeral=True)
         except Exception as e:
+            self.logger.critical("REMOVE `except Exception`!")
             self.logger.exception(f"unable to unload {extension}, {e}")
             await interaction.response.send_message(f"Unable to load {extension}", ephemeral=True)
 
