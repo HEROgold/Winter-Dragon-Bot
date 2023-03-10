@@ -118,7 +118,7 @@ class DragonLog(commands.GroupCog):
                 mod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(DragonLog_channel_id))
             self.logger.debug("Returning found log channels")
             return mod_channel, allmod_channel
-        except Exception as e:
+        except (KeyError, TypeError) as e:
             self.logger.exception(f"Can be ignored!: {e}")
 
     def get_role_difference(self, entry:discord.AuditLogEntry) -> list[discord.Role]:
@@ -641,3 +641,19 @@ class DragonLog(commands.GroupCog):
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(DragonLog(bot))
+
+
+# FIXME: 207
+# 2023-03-03 16:59:49,172:ERROR:discord.client: Ignoring exception in on_audit_log_entry_create
+# Traceback (most recent call last):
+#   File "C:\Users\marti\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\discord\client.py", line 441, in _run_event
+#     await coro(*args, **kwargs)
+#   File "C:\Users\marti\Documents\GitHub\Winter-Dragon-Bot\cogs\utility\automod.py", line 167, in on_audit_log_entry_create
+#     await self.on_guild_channel_update(entry)
+#   File "C:\Users\marti\Documents\GitHub\Winter-Dragon-Bot\cogs\utility\automod.py", line 207, in on_guild_channel_update
+#     if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
+#                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#   File "C:\Users\marti\Documents\GitHub\Winter-Dragon-Bot\cogs\utility\automod.py", line 207, in <listcomp>
+#     if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
+#                                                     ^^^^^^^^^^^^^^^^^^^^^
+# AttributeError: 'AuditLogDiff' object has no attribute 'overwrites'

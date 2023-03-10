@@ -104,13 +104,10 @@ class Help(commands.Cog):
         commands_list = self.bot.commands
         if HelpInput is None:
             HelpInput = 1
-        try:
-            HelpInput = int(HelpInput)
-            if HelpInput <= 0:
-                await ctx.send("The page number cannot be 0 or less then 0.")
-                return
-        except Exception as e:
-            self.logger.error(f"Help.py: {e}")
+        HelpInput = int(HelpInput)
+        if HelpInput <= 0:
+            await ctx.send("The page number cannot be 0 or less then 0.")
+            return
         embed, view = await self.CreateHelpEmbed(HelpInput=HelpInput, commands_list=commands_list)
         await ctx.send(embed=embed, view=view)
 
@@ -145,7 +142,7 @@ class Help(commands.Cog):
             self.logger.debug("Editing original help message")
             try:
                 await interaction.response.edit_message(embed=embed, view=NewView)
-            except Exception as e:
+            except discord.errors.InteractionResponded as e:
                 self.logger.warning(f"Could not send response, sending followup instead: {e}")
                 await interaction.followup.edit_message(embed=embed, view=NewView)
 

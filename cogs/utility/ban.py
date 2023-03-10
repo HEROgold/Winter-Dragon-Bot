@@ -81,10 +81,7 @@ class Ban(commands.Cog):
         await member.remove_roles(banned_role, reason=f"Unbanning {member.name}")
         for role_id in self.data[str(member.id)]["Roles"]:
             role = discord.utils.get(guild.roles, id=role_id)
-            try:
-                await member.add_roles(role)
-            except Exception as e:
-                self.logger.exception(f"Trying to add role {role.name} got error: {e}")
+            await member.add_roles(role)
 
     def get_seconds(self, seconds, minutes, hours, days) -> int:
         hours += days*24
