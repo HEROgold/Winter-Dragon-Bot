@@ -65,7 +65,10 @@ class Stats(commands.GroupCog):
         guild = member.guild
         if not self.data:
             self.data = await self.get_data()
-        guild_id = self.data[str(guild.id)]
+        try:
+            guild_id = self.data[str(guild.id)]
+        except KeyError:
+            return
         category = list(guild_id.values())[0]
         channels = list(category.values())[0]
         peak_channel_id = channels["peak_online"]
@@ -179,14 +182,14 @@ class Stats(commands.GroupCog):
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         creation_date = guild.created_at.strftime("%Y-%m-%d")
         embed=discord.Embed(title=f"{guild.name} Stats", description=f"Information about {guild.name}", color=random.choice(rainbow.RAINBOW))
+        embed.add_field(name="Users", value=guild.member_count, inline=True)
+        embed.add_field(name="Bots", value=bots, inline=True)
+        embed.add_field(name="Online", value=online, inline=True)
+        embed.add_field(name="Created on", value=creation_date, inline=True)
         try:
-            embed.add_field(name="Users", value=guild.member_count, inline=True)
-            embed.add_field(name="Bots", value=bots, inline=True)
-            embed.add_field(name="Online", value=online, inline=True)
-            embed.add_field(name="Created on", value=creation_date, inline=True)
             embed.add_field(name="Afk channel", value=guild.afk_channel.mention, inline=True)
         except AttributeError as e:
-            self.logger.warning(f"{e}: Likely caused by non-existing AFK channel")
+            self.logger.warning(f"Error caused by non-existing AFK channel: {e}")
         self.logger.debug(f"Showing guild stats: guild='{interaction.guild}' user={interaction.user}")
         await interaction.response.send_message(embed=embed)
 
