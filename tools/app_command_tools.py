@@ -29,7 +29,7 @@ class Converter():
                 return True
         return False
 
-    async def get_sub_app_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
+    async def get_app_sub_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
         """Returns the full app_command and a custom mention that can be used to mention the subcommand"""
         if not app_command:
             app_command = await self.get_app_command(command.parent, guild)
@@ -58,6 +58,6 @@ class Converter():
         else:
             self.logger.debug(f"Command {command.name} not found in {self.app_commands}")
             return None
-        self.logger.debug(f"Getting {command.name} from {self.app_commands}")
+        # self.logger.debug(f"Getting {command.name} from {self.app_commands}")
         self.logger.debug(f"Returning {app_command}")
         return app_command
