@@ -137,7 +137,7 @@ class Poll(commands.GroupCog):
         guild_id = str(interaction.guild.id)
         poll_channel_id, poll_channel = await self.get_poll_channels(guild_id)
         if not poll_channel_id:
-            act = app_command_tools.ACT(bot=self.bot)
+            act = app_command_tools.Converter(bot=self.bot)
             _, custom_mention = await act.get_sub_app_command(self.slash_poll_set_channel)
             await interaction.response.send_message(f"No channel found to send poll. use {custom_mention} to set one", ephemeral=True) # </poll channel:ID>
             return

@@ -8,7 +8,8 @@ import config
 
 class CommandNotFound(Exception):
     pass
-class ACT():
+
+class Converter():
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.tree = self.bot.tree

@@ -49,7 +49,7 @@ class Error(commands.Cog):
         else:
             interaction:discord.Interaction = i
             dm = await interaction.user.create_dm()
-            act = app_command_tools.ACT(bot=self.bot)
+            act = app_command_tools.Converter(bot=self.bot)
             app_command, custom_mention = await act.get_sub_app_command(interaction.command)
             try:
                 self.help_msg = f"{custom_mention or app_command.mention}"
@@ -73,7 +73,7 @@ class Error(commands.Cog):
             self.logger.exception(error)
         if CE.IGNORE_ERRORS == True:
             return
-        invite_command = await app_command_tools.ACT(bot=self.bot).get_app_command(self.bot.tree.get_command("invite"))
+        invite_command = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.tree.get_command("invite"))
         server_invite = f"</{invite_command} server:{invite_command.id}>"        
         self.logger.debug(f"ErrorType: {type(error)}")
         match type(error):
