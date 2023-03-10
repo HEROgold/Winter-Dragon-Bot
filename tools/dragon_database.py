@@ -17,13 +17,10 @@ class Database():
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.database")
 
     async def get_client(self) -> MongoClient:
-        try:
-            IP_PORT = config.Database.IP_PORT
-            USER_PASS = config.Database.USER_PASS or "localhost:27017"
-            AUTH_METHOD = config.Database.AUTH_METHOD or f"mongodb://{IP_PORT}"
-            CONNECTION_STRING = f"mongodb://{USER_PASS}@{IP_PORT}/?authMechanism={AUTH_METHOD}"
-        except Exception as e:
-            self.logger.warning("Defaulting to localhost connection due to error", e)
+        IP_PORT = config.Database.IP_PORT
+        USER_PASS = config.Database.USER_PASS or "localhost:27017"
+        AUTH_METHOD = config.Database.AUTH_METHOD or f"mongodb://{IP_PORT}"
+        CONNECTION_STRING = f"mongodb://{USER_PASS}@{IP_PORT}/?authMechanism={AUTH_METHOD}"
         # self.logger.info("Getting MongoClient connection")
         return MongoClient(CONNECTION_STRING)
 
