@@ -62,6 +62,5 @@ class Converter():
         else:
             self.logger.debug(f"Command {command.name} not found in {self.app_commands}")
             return None
-        # self.logger.debug(f"Getting {command.name} from {self.app_commands}")
         self.logger.debug(f"Returning {app_command}")
         return app_command
