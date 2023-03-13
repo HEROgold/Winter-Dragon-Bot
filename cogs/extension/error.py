@@ -61,8 +61,8 @@ class Error(commands.Cog):
         self.logger.debug(f"{help_command} {help_command.options}")
         for sub in help_command.options:
             self.logger.debug(f"{sub}")
+            # TODO: pre fill with the command argument > test
             if type(sub) == app_commands.Argument and sub.name == "command":
-                        # TODO: pre fill with the command argument
                 self.help_msg = f"</{help_command.name} command:{help_command.id}>"
                 return
         return
