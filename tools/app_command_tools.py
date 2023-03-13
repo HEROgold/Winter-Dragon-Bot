@@ -29,16 +29,16 @@ class Converter():
                 return True
         return False
 
-    async def get_app_sub_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
+    async def get_app_sub_command(self, sub_command:app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
         """Returns the full app_command and a custom mention that can be used to mention the subcommand"""
         if not app_command:
-            app_command = await self.get_app_command(command.parent, guild)
+            app_command = await self.get_app_command(sub_command.parent, guild)
         if self.is_group(app_command):
             self.logger.debug(f"{app_command.name} is a group")
-            if self.is_subcommand(app_command, command):
-                custom_mention = f"</{app_command.name} {command.name}:{app_command.id}>"
+            if self.is_subcommand(app_command, sub_command):
+                custom_mention = f"</{app_command.name} {sub_command.name}:{app_command.id}>"
         else:
-            self.logger.debug(f"Subcommand {command.name} not found in {self.app_commands}")
+            self.logger.debug(f"Subcommand {sub_command.name} not found in {self.app_commands}")
             return None
         self.logger.debug(f"Returning {app_command}")
         return app_command, custom_mention
@@ -51,7 +51,7 @@ class Converter():
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
         self.app_commands = await self.tree.fetch_commands(guild=guild)
         for app_command in self.app_commands:
-            self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
+            # self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
             if command.name == app_command.name:
                 self.logger.debug(f"Found {app_command}")
                 break
