@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
 
 class Ban(commands.Cog):
     def __init__(self, bot:commands.Bot) -> None:

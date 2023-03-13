@@ -11,7 +11,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
 
 class LogCategories(Enum):
     ALL:str = "ALL-CATEGORIES"
@@ -118,8 +118,8 @@ class DragonLog(commands.GroupCog):
                 mod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(DragonLog_channel_id))
             self.logger.debug("Returning found log channels")
             return mod_channel, allmod_channel
-        except (KeyError, TypeError) as e:
-            self.logger.exception(f"Can be ignored!: {e}")
+        except (KeyError, TypeError):
+            self.logger.debug(f"Guild has no automod category: {guild}")
 
     def get_role_difference(self, entry:discord.AuditLogEntry) -> list[discord.Role]:
         diffs = []

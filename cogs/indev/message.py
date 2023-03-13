@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
 
 # TODO: create commands: message ranks, message query
 # message query should try and count all the times a user said the query

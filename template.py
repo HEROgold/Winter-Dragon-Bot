@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
 
 
 class Temp(commands.GroupCog):
@@ -32,6 +32,7 @@ class Temp(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
+    # TODO: Change/add get_data and set_data to use sql (exapmle?)
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()

@@ -1,13 +1,15 @@
-import pickle
 import logging
 import os
+import pickle
 
-import discord # type: ignore
+import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
+from tools import app_command_tools
+
 
 @app_commands.guild_only()
 class ChannelUtils(commands.GroupCog):
@@ -62,9 +64,10 @@ class ChannelUtils(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     async def slash_cat_delete(self, interaction:discord.Interaction, category:discord.CategoryChannel) -> None:
         await interaction.response.defer(ephemeral=True)
+        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.slash_cat_delete)
         for channel in category.channels:
-            await channel.delete(reason=f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
-        await category.delete(reason=f"Deleted by {interaction.user.mention} using `/channel-utils categories delete`")
+            await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
+        await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
         await interaction.followup.send("Channel's removed", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:

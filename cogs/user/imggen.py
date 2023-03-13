@@ -8,8 +8,9 @@ from craiyon import Craiyon
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import rainbow
 import config
+import rainbow
+
 
 class Image(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
@@ -46,7 +47,6 @@ class Image(commands.GroupCog):
         user_dir = f"{self.CrAIyonDataBase}/{interaction.user.id}"
         os.makedirs(user_dir, exist_ok=True)
         generator = Craiyon() # Instantiates the api wrapper
-        self.logger.debug(f"Generating images for {interaction.user}")
         result = generator.generate(query) # Generates 9 images by default and cannot change that
         result.save_images(user_dir)
 
