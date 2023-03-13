@@ -1,14 +1,14 @@
 import datetime
-import pickle
 import logging
 import os
+import pickle
 
 import discord
-from discord import app_commands
+from discord import NotFound, app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
 
 
 class AutoCogReloader(commands.Cog):
@@ -204,19 +204,18 @@ class CogsC(commands.GroupCog):
         description = "Unload a specified cog (For bot developer only)"
         )
     async def slash_unload(self, interaction:discord.Interaction, extension:str) -> None:
+        # sourcery skip: use-contextlib-suppress
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        if extension is None:
-            await interaction.response.send_message("Please provide a cog to unload.", ephemeral=True)
-        else:
-            try:
-                await self.bot.unload_extension(extension)
-                self.logger.info(f"Unloaded {extension}")
-                await interaction.followup.send(f"Unloaded {extension}", ephemeral=True)
-            except Exception as e:
-                self.logger.critical("REMOVE `except Exception`!")
-                self.logger.exception(f"unable to unload {extension}, {e}")
-                await interaction.response.send_message(f"Unable to unload {extension}", ephemeral=True)
+        try:
+            self.logger.info(f"Unloaded {extension}")
+            await self.bot.unload_extension(extension)
+        except NotFound:
+            pass
+        except Exception as e:
+            self.logger.critical("REMOVE `except Exception`!")
+            self.logger.exception(f"unable to unload {extension}, {e}")
+        await interaction.response.send_message(f"Unloaded {extension}", ephemeral=True)
 
     @slash_unload.autocomplete("extension")
     async def unload_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
