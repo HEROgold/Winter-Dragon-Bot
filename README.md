@@ -31,7 +31,7 @@ If you dont use MongoDB, you can use files by changing config.py to match the fo
 
 ## Features:
 
-The use of MongoDB for a proper database solution,
+The use of MongoDB as a database solution,
 
 A option for when MongoDB isn't used
 

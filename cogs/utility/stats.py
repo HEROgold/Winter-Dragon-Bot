@@ -1,7 +1,7 @@
 import contextlib
-import pickle
 import logging
 import os
+import pickle
 import random
 
 import discord
@@ -9,8 +9,9 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
 import rainbow
+from tools import app_command_tools, dragon_database
+
 
 @app_commands.guild_only()
 class Stats(commands.GroupCog):
@@ -65,7 +66,10 @@ class Stats(commands.GroupCog):
         guild = member.guild
         if not self.data:
             self.data = await self.get_data()
-        guild_id = self.data[str(guild.id)]
+        try:
+            guild_id = self.data[str(guild.id)]
+        except KeyError:
+            return
         category = list(guild_id.values())[0]
         channels = list(category.values())[0]
         peak_channel_id = channels["peak_online"]
@@ -179,14 +183,14 @@ class Stats(commands.GroupCog):
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         creation_date = guild.created_at.strftime("%Y-%m-%d")
         embed=discord.Embed(title=f"{guild.name} Stats", description=f"Information about {guild.name}", color=random.choice(rainbow.RAINBOW))
+        embed.add_field(name="Users", value=guild.member_count, inline=True)
+        embed.add_field(name="Bots", value=bots, inline=True)
+        embed.add_field(name="Online", value=online, inline=True)
+        embed.add_field(name="Created on", value=creation_date, inline=True)
         try:
-            embed.add_field(name="Users", value=guild.member_count, inline=True)
-            embed.add_field(name="Bots", value=bots, inline=True)
-            embed.add_field(name="Online", value=online, inline=True)
-            embed.add_field(name="Created on", value=creation_date, inline=True)
             embed.add_field(name="Afk channel", value=guild.afk_channel.mention, inline=True)
         except AttributeError as e:
-            self.logger.warning(f"{e}: Likely caused by non-existing AFK channel")
+            self.logger.warning(f"Error caused by non-existing AFK channel: {e}")
         self.logger.debug(f"Showing guild stats: guild='{interaction.guild}' user={interaction.user}")
         await interaction.response.send_message(embed=embed)
 
@@ -197,11 +201,12 @@ class Stats(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
+        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_stats_category_add)
         if not self.data:
             self.data = await self.get_data()
         guild_id = str(interaction.guild.id)
         if guild_id not in self.data:
-            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using `/stats add`")
+            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
             await interaction.response.send_message("Stats channels are set up", ephemeral=True)
         else:
             await interaction.response.send_message("Stats channels arleady set up", ephemeral=True)
@@ -212,13 +217,14 @@ class Stats(commands.GroupCog):
     )
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
-    async def slash_remove_stats_category(self, interaction:discord.Interaction) -> None:
+    async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         if str(interaction.guild.id) not in self.data:
             await interaction.response.send_message("No stats stats found to remove.", ephemeral=True)
             return
-        await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using `/stats remove`")
+        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_stats_category_remove)
+        await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
         await interaction.response.send_message("Removed stats channels", ephemeral=True)
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)

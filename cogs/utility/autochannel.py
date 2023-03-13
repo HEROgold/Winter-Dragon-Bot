@@ -1,14 +1,15 @@
 import contextlib
-import pickle
 import logging
 import os
+import pickle
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
+from tools import app_command_tools, dragon_database
+
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(manage_channels = True)
@@ -62,25 +63,25 @@ class Autochannel(commands.GroupCog):
     @tasks.loop(seconds=3600)
     async def database_cleanup(self) -> None:
         self.logger.info("Cleaning Autochannels...")
-        for guild_id, guild_categories in list(self.data.items()):
-            cleaned = await self._clean_categories(guild_categories, guild_id)
+        for guild_id, autochannel_categories in list(self.data.items()):
+            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+            cleaned = await self._clean_categories(autochannel_categories, guild)
             if cleaned == True:
-                del self.data[guild_categories]
+                self.logger.debug(f"Most (or all) channels from {guild_id} are cleaned.")
+                # del self.data[autochannel_categories]
         await self.set_data(self.data)
         self.logger.info("Database cleaned up")
 
-    # TODO: cleaned == true when data is empty > aka all channels are cleaned
-    # ??? Needs testing
-    async def _clean_categories(self, guild_categories:dict, guild_id:str) -> dict:
-        self.logger.info(f"Cleaning Category {guild_categories}")
+    async def _clean_categories(self, autochannel_categories:dict, guild:discord.Guild) -> dict:
+        self.logger.info(f"Cleaning Category {autochannel_categories}")
         cleaned = False
-        guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-        for key, channels in list(guild_categories.items()):
+        for key, channels in list(autochannel_categories.items()):
             if key == "AC Channel":
                 continue
             cleaned = await self._clean_channels(channels, guild)
             if cleaned == False:
-                break
+                continue
+            del self.data[str(guild.id)][key]
         return cleaned
 
     async def _clean_channels(self, channels:dict, guild:discord.Guild) -> bool:
@@ -105,7 +106,8 @@ class Autochannel(commands.GroupCog):
             self.data = await self.get_data()
         guild_id = interaction.guild.id
         if not (guild_data := self.data[str(guild_id)]):
-            await interaction.response.send_message("No autochannel found. use `/autochannel add` to add them.")
+            _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_autochannel_add)
+            await interaction.response.send_message(f"No autochannel found. use {c_mention} to add them.")
             return
         guild_data:dict
         guild = discord.utils.get(self.bot.guilds, id=guild_id)
@@ -135,8 +137,8 @@ class Autochannel(commands.GroupCog):
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
         await self._setup_autochannel(guild, overwrites)
-        # TODO: mention command
-        await interaction.response.send_message("The channels are set up!\n use `/autochannel remove` before adding again to avoid issues.")
+        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_autochannel_remove)
+        await interaction.response.send_message(f"The channels are set up!\n use {c_mention} before adding again to avoid issues.")
         await self.set_data(self.data)
 
     async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> None:
@@ -217,7 +219,10 @@ class Autochannel(commands.GroupCog):
             self.logger.debug(f"Found {CategoryChannel}")
         except KeyError:
                 CategoryChannel = await guild.create_category(name=category_name, overwrites=overwrites, reason="Autochannel")
-                self.data[guild_id][category_name] = {"id": CategoryChannel.id}
+                try:
+                    self.data[guild_id][category_name] = {"id": CategoryChannel.id}
+                except KeyError:
+                    self.data[guild_id] = {category_name:{"id": CategoryChannel.id}}
                 self.logger.debug(f"Created {CategoryChannel}")
         return CategoryChannel
 
@@ -251,6 +256,9 @@ class Autochannel(commands.GroupCog):
             if TextChannel.name == member_id:
                 await TextChannel.edit(name=f"{member.name}'s Text", reason="Autochannel Renamed to username")
         if before.channel:
+            # remove against spam, maybe start self.database_cleanup?
+            # Test code below, before removing anything under contexlib.
+            # await self._clean_categories(autochannel_categories=str(member.id), guild_id=str(before.channel.guild.id))
             with contextlib.suppress(KeyError):
                 channel = before.channel
                 guild = channel.guild
@@ -262,9 +270,9 @@ class Autochannel(commands.GroupCog):
                     return
                 category_id = self.data[guild_id][member_id]["id"]
                 text_id = self.data[guild_id][member_id]["Text"]
-                category_channel = discord.utils.get(guild.categories, id=category_id)
-                voice_channel = discord.utils.get(guild.voice_channels, id=voice_id)
-                AC_text = discord.utils.get(guild.text_channels, id=text_id)
+                category_channel = discord.utils.get(guild.categories, id=int(category_id))
+                voice_channel = discord.utils.get(guild.voice_channels, id=int(voice_id))
+                AC_text = discord.utils.get(guild.text_channels, id=int(text_id))
                 await voice_channel.delete(reason="Autochannel is empty")
                 await AC_text.delete(reason="Autochannel is empty")
                 await category_channel.delete(reason="Autochannel is empty")

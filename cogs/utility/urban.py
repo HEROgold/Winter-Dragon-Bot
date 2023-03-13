@@ -50,7 +50,7 @@ class Urban(commands.GroupCog):
         self.logger.debug(f"defined: {defined}")
         if len(defined) > 1:
             emb = discord.Embed(title=f"Dictionary Search: {query}")
-            emb.set_footer(text="Results are from an API!")
+            emb.set_footer(text="Results are from api.urbandictionary.com")
             emb.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar)
             emb.add_field(name="1", value=defined[0]["definition"], inline=True)
             emb.add_field(name="2", value=defined[1]["definition"], inline=True)

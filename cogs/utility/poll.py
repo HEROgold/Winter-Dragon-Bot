@@ -1,7 +1,7 @@
 import datetime
-import pickle
 import logging
 import os
+import pickle
 import random
 
 import discord
@@ -10,9 +10,8 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
-import tools.app_command_tools as app_command_tools
 import rainbow
+from tools import app_command_tools, dragon_database
 
 
 class Poll(commands.GroupCog):
@@ -137,8 +136,8 @@ class Poll(commands.GroupCog):
         guild_id = str(interaction.guild.id)
         poll_channel_id, poll_channel = await self.get_poll_channels(guild_id)
         if not poll_channel_id:
-            act = app_command_tools.ACT(bot=self.bot)
-            _, custom_mention = await act.get_sub_app_command(self.slash_poll_set_channel)
+            act = app_command_tools.Converter(bot=self.bot)
+            _, custom_mention = await act.get_app_sub_command(self.slash_poll_set_channel)
             await interaction.response.send_message(f"No channel found to send poll. use {custom_mention} to set one", ephemeral=True) # </poll channel:ID>
             return
         emb = discord.Embed(title="Poll", description=f"{message}\n\n", color=random.choice(rainbow.RAINBOW))

@@ -9,8 +9,9 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 import config
-import tools.dragon_database as dragon_database
 import rainbow
+from tools import dragon_database
+
 
 @app_commands.guild_only()
 class TicTacToe(commands.GroupCog):

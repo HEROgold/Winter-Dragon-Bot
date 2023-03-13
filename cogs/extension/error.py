@@ -27,6 +27,8 @@ class Error(commands.Cog):
         tree.on_error = tree.__class__.on_error
 
     async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError) -> None:
+        if interaction.command.name == "shutdown":
+            return
         if type(error) != app_commands.errors.CommandNotFound:
             self.logger.debug(f"Error from interaction: {interaction.command.name}")
         await self.error_check(interaction, error)
@@ -38,44 +40,52 @@ class Error(commands.Cog):
         await self.error_check(ctx, error)
 
     async def get_dm(self, i:discord.Interaction|commands.Context) -> discord.DMChannel:
-        if isinstance(i, commands.Context):
-            ctx:commands.Context = i
-            try:
-                await ctx.message.delete()
-            except discord.Forbidden:
-                self.logger.warning("Not allowed to remove message from dm")
-            dm = await ctx.message.author.create_dm()
-            self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
+        if type(i) == commands.Context:
+            dm = await self.ctx_error_handler(i)
         else:
-            interaction:discord.Interaction = i
-            dm = await interaction.user.create_dm()
-            act = app_command_tools.ACT(bot=self.bot)
-            app_command, custom_mention = await act.get_sub_app_command(interaction.command)
-            try:
-                self.help_msg = f"{custom_mention or app_command.mention}"
-            except AttributeError:
-                help_command = await act.get_app_command(self.bot.tree.get_command("help"))
-                self.logger.debug(f"{help_command} {help_command.options}")
-                for sub in help_command.options:
-                    self.logger.debug(f"{sub}")
-                    if type(sub) == app_commands.Argument and sub.name == "command":
-                        # TODO: pre fill with the command argument
-                        self.help_msg = f"</{help_command.name} command:{help_command.id}>"
-                        break
+            dm = await self.app_command_error_handler(i)
         self.logger.debug(f"Returning dm channel {dm.recipient}, with message {self.help_msg}")
         return dm
 
+    async def app_command_error_handler(self, interaction:discord.Interaction) -> discord.DMChannel:
+        act = app_command_tools.Converter(bot=self.bot)
+        try:
+            app_command, custom_mention = await act.get_app_sub_command(interaction.command)
+            self.help_msg = f"{custom_mention or app_command.mention}"
+        except AttributeError:
+            await self.app_sub_command_handler(act)
+        return interaction.user.dm_channel or await interaction.user.create_dm()
+
+    async def app_sub_command_handler(self, act:app_command_tools.Converter) -> None:
+        help_command = await act.get_app_command(self.bot.tree.get_command("help"))
+        self.logger.debug(f"{help_command} {help_command.options}")
+        for sub in help_command.options:
+            self.logger.debug(f"{sub}")
+            # TODO: pre fill with the command argument > test
+            if type(sub) == app_commands.Argument and sub.name == "command":
+                self.help_msg = f"</{help_command.name} command:{help_command.id}>"
+                return
+        return
+
+    async def ctx_error_handler(self, ctx:commands.Context) -> discord.DMChannel:
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            self.logger.warning("Not allowed to remove message from dm")
+        self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
+        return ctx.author.dm_channel or await ctx.message.author.create_dm()
+
     async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError) -> None:
         # sourcery skip: low-code-quality
+        self.logger.debug(f"ErrorType: {type(error)}, error: {error.args}")
         dm = await self.get_dm(x)
         code = datetime.datetime.now(datetime.timezone.utc).timestamp()
         if CE.ALWAYS_LOG_ERRORS == True:
             self.logger.exception(error)
         if CE.IGNORE_ERRORS == True:
             return
-        invite_command = await app_command_tools.ACT(bot=self.bot).get_app_command(self.bot.tree.get_command("invite"))
-        server_invite = f"</{invite_command} server:{invite_command.id}>"        
-        self.logger.debug(f"ErrorType: {type(error)}")
+        invite_command = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.tree.get_command("invite"))
+        server_invite = f"</{invite_command} server:{invite_command.id}>"
         match type(error):
             case commands.errors.MissingRequiredArgument:
                 await dm.send(f"Missing a required argument, use {self.help_msg} for more information.")

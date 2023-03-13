@@ -85,8 +85,8 @@ def terminate() -> None:
     if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
         os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
     bot_logger.info("Saved log files")
-    shutil.copy(src="bot.log", dst=f"{config.Main.LOG_PATH}/{log_time}/bot_.log")
-    shutil.copy(src="discord.log", dst=f"{config.Main.LOG_PATH}/{log_time}/discord_.log")
+    shutil.copy(src="bot.log", dst=f"{config.Main.LOG_PATH}/{log_time}/bot.log")
+    shutil.copy(src="discord.log", dst=f"{config.Main.LOG_PATH}/{log_time}/discord.log")
 
 async def get_cogs() -> list[str]:
     extensions = []

@@ -1,19 +1,21 @@
-import pickle
 import logging
 import os
+import pickle
 
-import discord # type: ignore
+import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
+from tools import dragon_database
 
 
 class Temp(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(
+            f"{config.Main.BOT_NAME}.{self.__class__.__name__}"
+        )
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         if not config.Main.USE_DATABASE:
@@ -30,6 +32,7 @@ class Temp(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
+    # TODO: Change/add get_data and set_data to use sql (exapmle?)
     async def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
@@ -56,16 +59,14 @@ class Temp(commands.GroupCog):
     # TEMP_GROUP = app_commands.Group(name="TEMPGroup", description="TEMP")
     # @TEMP_GROUP.command()
 
-
-    @app_commands.command(
-        name="TEMP",
-        description="TEMP"
-    )
-    async def slash_TEMP(selfself, interaction:discord.Interaction) -> None:
+    @app_commands.command(name="TEMP", description="TEMP")
+    async def slash_TEMP(selfself, interaction: discord.Interaction) -> None:
         pass
 
     @slash_TEMP.autocomplete("")
-    async def COMMAND_autocoplete_VARIABLE(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    async def COMMAND_autocoplete_VARIABLE(
+        self, interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=i, value=i)
             for i in []
@@ -73,5 +74,5 @@ class Temp(commands.GroupCog):
         ]
 
 
-async def setup(bot:commands.Bot) -> None:
-    await bot.add_cog(Temp(bot)) # type: ignore
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(Temp(bot))  # type: ignore

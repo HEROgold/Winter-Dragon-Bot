@@ -1,6 +1,6 @@
-import pickle
 import logging
 import os
+import pickle
 import random
 
 import discord
@@ -8,8 +8,9 @@ from discord import app_commands
 from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
 import rainbow
+from tools import dragon_database
+
 
 class NeverHaveIEver(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
