@@ -11,7 +11,7 @@ class CommandNotFound(Exception):
 
 class Converter():
     bot: commands.Bot
-    tree: commands.Bot.tree
+    tree: app_commands.CommandTree
     logger: logging.Logger
 
     def __init__(self, bot) -> None:
