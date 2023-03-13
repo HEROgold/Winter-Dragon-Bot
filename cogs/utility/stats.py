@@ -1,7 +1,7 @@
 import contextlib
-import pickle
 import logging
 import os
+import pickle
 import random
 
 import discord
@@ -9,8 +9,9 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
 import rainbow
+from tools import app_command_tools, dragon_database
+
 
 @app_commands.guild_only()
 class Stats(commands.GroupCog):
@@ -200,11 +201,12 @@ class Stats(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
+        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_stats_category_add)
         if not self.data:
             self.data = await self.get_data()
         guild_id = str(interaction.guild.id)
         if guild_id not in self.data:
-            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using `/stats add`")
+            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
             await interaction.response.send_message("Stats channels are set up", ephemeral=True)
         else:
             await interaction.response.send_message("Stats channels arleady set up", ephemeral=True)
@@ -215,13 +217,14 @@ class Stats(commands.GroupCog):
     )
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
-    async def slash_remove_stats_category(self, interaction:discord.Interaction) -> None:
+    async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
         if str(interaction.guild.id) not in self.data:
             await interaction.response.send_message("No stats stats found to remove.", ephemeral=True)
             return
-        await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using `/stats remove`")
+        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_stats_category_remove)
+        await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
         await interaction.response.send_message("Removed stats channels", ephemeral=True)
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)

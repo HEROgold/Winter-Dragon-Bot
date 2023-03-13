@@ -1,14 +1,15 @@
 import contextlib
-import pickle
 import logging
 import os
+import pickle
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
+from tools import app_command_tools, dragon_database
+
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(manage_channels = True)
@@ -105,7 +106,8 @@ class Autochannel(commands.GroupCog):
             self.data = await self.get_data()
         guild_id = interaction.guild.id
         if not (guild_data := self.data[str(guild_id)]):
-            await interaction.response.send_message("No autochannel found. use `/autochannel add` to add them.")
+            _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_autochannel_add)
+            await interaction.response.send_message(f"No autochannel found. use {c_mention} to add them.")
             return
         guild_data:dict
         guild = discord.utils.get(self.bot.guilds, id=guild_id)
@@ -135,8 +137,8 @@ class Autochannel(commands.GroupCog):
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
         await self._setup_autochannel(guild, overwrites)
-        # TODO: mention command
-        await interaction.response.send_message("The channels are set up!\n use `/autochannel remove` before adding again to avoid issues.")
+        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_autochannel_remove)
+        await interaction.response.send_message(f"The channels are set up!\n use {c_mention} before adding again to avoid issues.")
         await self.set_data(self.data)
 
     async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> None:
@@ -217,7 +219,10 @@ class Autochannel(commands.GroupCog):
             self.logger.debug(f"Found {CategoryChannel}")
         except KeyError:
                 CategoryChannel = await guild.create_category(name=category_name, overwrites=overwrites, reason="Autochannel")
-                self.data[guild_id][category_name] = {"id": CategoryChannel.id}
+                try:
+                    self.data[guild_id][category_name] = {"id": CategoryChannel.id}
+                except KeyError:
+                    self.data[guild_id] = {category_name:{"id": CategoryChannel.id}}
                 self.logger.debug(f"Created {CategoryChannel}")
         return CategoryChannel
 
