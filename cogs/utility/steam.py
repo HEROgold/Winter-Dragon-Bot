@@ -1,7 +1,6 @@
-import contextlib
-import pickle
 import logging
 import os
+import pickle
 import random
 import re
 
@@ -12,16 +11,21 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
 import rainbow
+from tools import app_command_tools, dragon_database
+from tools import dragon_database_MySql as dbsql
+
 
 class Steam(commands.GroupCog):
+    data : dict = None
+    user_list: list = None
+
     def __init__(self, bot:commands.Bot) -> None:
         self.htmlFile = '.\\Database/SteamPage.html'
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
         self.DATABASE_NAME = self.__class__.__name__
+        # self.data = {"user_id":[]}
         self.setup_html_file()
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
@@ -67,10 +71,14 @@ class Steam(commands.GroupCog):
             self.data = await self.get_data()
         if not self.data:
             self.data = {"user_id":[]}
+        self.user_list = self.data["user_id"]
+        self.logger.debug(f"{self.data}")
         self.update.start()
 
+    # TODO: remove dict when using MySql
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.logger.debug(f"{self.data}")
+        await self.set_data({"user_id": self.user_list})
 
     async def get_html(self, url=config.Steam.URL) -> str:
         requests.get(url)
@@ -90,6 +98,7 @@ class Steam(commands.GroupCog):
             try:
                 sales.append([title.text, sale_amount.text, url])
             except Exception as e:
+                self.logger.critical("REMOVE `except Exception`!")
                 self.logger.exception(f"Could not append: {e}")
                 continue
         return sales
@@ -140,12 +149,12 @@ class Steam(commands.GroupCog):
         Returns:
             bool: True when new sale is found, false on loop ending
         """
-        self.logger.debug(f"Checking for new item(s): a={from_file} b={from_html}")
+        self.logger.debug(f"Checking for new item(s): \na={from_file}\nb={from_html}")
         for sale in from_html:
             if sale not in from_file and sale[1] == "-100%":
                 self.logger.info(f"New sale found from_html: {sale}")
                 return True
-        self.logger.info(f"No new sale found from_html: {sale}")
+        self.logger.info("No new sale from_html")
         return False
 
     @tasks.loop(seconds=21600) # 6 hours > 21600
@@ -160,15 +169,17 @@ class Steam(commands.GroupCog):
         dupe = await self.dupe_check(html, self.htmlFile)
         if dupe == True:
             return None
+        sales_html = await self.sale_from_html(html)
         with open(self.htmlFile, "w", encoding="utf-8") as f:
             f.write(html)
             f.close()
-        sales_html = await self.sale_from_html(html)
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
-        embed.set_footer(text="You can disable this by using `/steam remove `")
+        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.slash_remove)
+        embed.set_footer(text=f"You can disable this by using {cmd.mention}")
         embed = await self.populate_embed(sales_html, embed)
-        for id in self.data["user_id"]:
-            user = self.bot.get_user(int(id))
+        self.logger.debug(f"Got embed with sales, {embed}")
+        for user_id in self.user_list:
+            user = self.bot.get_user(user_id)
             dm = await user.create_dm() if user.dm_channel is None else user.dm_channel
             self.logger.debug(f"Showing {user}, {embed}")
             if len(embed.fields) > 0:
@@ -190,11 +201,15 @@ class Steam(commands.GroupCog):
                 game_url = i[2]
                 regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
                 game_id = re.findall(regex_game_id, game_url)
-                with contextlib.suppress(IndexError):
+                # with contextlib.suppress(IndexError):
+                try:
                     game_id = game_id[0]
+                except IndexError as e:
+                    self.logger.exception(e)
                 run_game_id = f"steam://rungameid/{game_id}"
                 embed.add_field(name=game_title, value=f"{game_url}\nInstall here: {run_game_id}", inline=False)
                 self.logger.debug(f"Pupulate embed with:\nSale: {i}\nGameId: {game_id}")
+        self.logger.debug("Returning filled embed")
         return embed
 
     @app_commands.command(name = "show", description= "Get a list of 100% Sale steam games.")
@@ -204,34 +219,58 @@ class Steam(commands.GroupCog):
         sales_html = await self.sale_from_html(html)
         embed=discord.Embed(title="Free Steam Game", description="Free Steam Games!", color=0x094d7f)
         embed = await self.populate_embed(sales_html, embed)
-        if len(embed.fields) != 0:
+        if len(embed.fields) > 0:
             await interaction.response.send_message(embed=embed)
         else:
             await interaction.response.send_message("No free steam games found.")
 
+    # TODO: directly add to sql database
+    @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
+    async def slash_add(self, interaction:discord.Interaction) -> None:
+        if interaction.user.id not in self.user_list:
+            self.user_list.append(interaction.user.id)
+            await interaction.response.send_message("I will notify you of new steam games!", ephemeral=True)
+            await self.set_data({"user_id": self.user_list})
+        else:
+            await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
+        # db = dbsql.Database()
+        # ses = db.session
+        # ses.add(interaction.user.id)
+        # ses.commit()
+        # ses.close()
+
+    # TODO: directly remove from sql database
     @app_commands.command(name = "remove", description = "No longer get notified of free steam games")
     async def slash_remove(self, interaction:discord.Interaction) -> None:
-        if not self.data:
-            self.data = await self.get_data()
-        id_list = self.data["user_id"]
-        if interaction.user.id in id_list:
-            id_list.remove(interaction.user.id)
+        if interaction.user.id in self.user_list:
+            self.user_list.remove(interaction.user.id)
             await interaction.response.send_message("I not notify you of new steam games anymore.", ephemeral=True)
         else:
             await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
-        await self.set_data(self.data)
-
-    @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
-    async def slash_add(self, interaction:discord.Interaction) -> None:
-        if not self.data:
-            self.data = await self.get_data()
-        id_list = self.data["user_id"]
-        if interaction.user.id not in id_list:
-            id_list.append(interaction.user.id)
-            await interaction.response.send_message("I will notify you of new steam games!", ephemeral=True)
-        else:
-            await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
-        await self.set_data(self.data)
+        await self.set_data({"user_id": self.user_list})
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Steam(bot))
+
+# FIXME: Test/check if its fixed yet
+# 2023-03-02 21:56:57,997:INFO:winter_dragon.Autochannel: Database cleaned up
+# 2023-03-02 21:57:10,891:DEBUG:winter_dragon.Steam: Returning Steam html from url
+# 2023-03-02 21:57:11,523:DEBUG:winter_dragon.Steam: SteamLists: 
+# [['A Nostru Racing', '-100%', 'https://store.steampowered.com/bundle/24048/A_Nostru_Racing/?snr=1_7_7_2300_150_1'], ['Blackout Z: Deluxe Edition', '-89%', 'https://store.steampowered.com/bundle/5128/Blackout_Z_Deluxe_Edition/?snr=1_7_7_2300_150_1'], ['Chef Life - BON APPÉTIT PACK', '-100%', 'https://store.steampowered.com/app/1788350/Chef_Life__BON_APPTIT_PACK/?snr=1_7_7_2300_150_1'], ['The Adventurer Episode 1-2', '-96%', 'https://store.steampowered.com/bundle/18034/The_Adventurer_Episode_12/?snr=1_7_7_2300_150_1']], 
+# [['A Nostru Racing', '-100%', 'https://store.steampowered.com/bundle/24048/A_Nostru_Racing/?snr=1_7_7_2300_150_1'], ['Black Desert', '-100%', 'https://store.steampowered.com/app/582660/Black_Desert/?snr=1_7_7_2300_150_1'], ['Chef Life - BON APPÉTIT PACK', '-100%', 'https://store.steampowered.com/app/1788350/Chef_Life__BON_APPTIT_PACK/?snr=1_7_7_2300_150_1'], ['Figment', '-100%', 'https://store.steampowered.com/app/493540/Figment/?snr=1_7_7_2300_150_1']]
+# 2023-03-02 21:57:11,523:DEBUG:winter_dragon.Steam: Steam File and Html not the same. Checking for new sales.
+# 2023-03-02 21:57:11,523:DEBUG:winter_dragon.Steam: Checking for new item(s): a=[['A Nostru Racing', '-100%', 'https://store.steampowered.com/bundle/24048/A_Nostru_Racing/?snr=1_7_7_2300_150_1'], ['Blackout Z: Deluxe Edition', '-89%', 'https://store.steampowered.com/bundle/5128/Blackout_Z_Deluxe_Edition/?snr=1_7_7_2300_150_1'], ['Chef Life - BON APPÉTIT PACK', '-100%', 'https://store.steampowered.com/app/1788350/Chef_Life__BON_APPTIT_PACK/?snr=1_7_7_2300_150_1'], ['The Adventurer Episode 1-2', '-96%', 'https://store.steampowered.com/bundle/18034/The_Adventurer_Episode_12/?snr=1_7_7_2300_150_1']] b=[['A Nostru Racing', '-100%', 'https://store.steampowered.com/bundle/24048/A_Nostru_Racing/?snr=1_7_7_2300_150_1'], ['Black Desert', '-100%', 'https://store.steampowered.com/app/582660/Black_Desert/?snr=1_7_7_2300_150_1'], ['Chef Life - BON APPÉTIT PACK', '-100%', 'https://store.steampowered.com/app/1788350/Chef_Life__BON_APPTIT_PACK/?snr=1_7_7_2300_150_1'], ['Figment', '-100%', 'https://store.steampowered.com/app/493540/Figment/?snr=1_7_7_2300_150_1']]
+# 2023-03-02 21:57:11,523:INFO:winter_dragon.Steam: New sale found from_html: ['Black Desert', '-100%', 'https://store.steampowered.com/app/582660/Black_Desert/?snr=1_7_7_2300_150_1']
+# 2023-03-02 21:57:11,864:DEBUG:winter_dragon.Steam: Pupulate embed with:
+# Sale: ['Black Desert', '-100%', 'https://store.steampowered.com/app/582660/Black_Desert/?snr=1_7_7_2300_150_1']
+# GameId: 582660
+# 2023-03-02 21:57:11,864:DEBUG:winter_dragon.Steam: Pupulate embed with:
+# Sale: ['Figment', '-100%', 'https://store.steampowered.com/app/493540/Figment/?snr=1_7_7_2300_150_1']
+# GameId: 493540
+# 2023-03-02 21:57:11,864:DEBUG:winter_dragon.Steam: Pupulate embed with:
+# Sale: ['Chef Life - BON APPÉTIT PACK', '-100%', 'https://store.steampowered.com/app/1788350/Chef_Life__BON_APPTIT_PACK/?snr=1_7_7_2300_150_1']
+# GameId: 1788350
+# 2023-03-02 21:57:11,864:DEBUG:winter_dragon.Steam: Pupulate embed with:
+# Sale: ['A Nostru Racing', '-100%', 'https://store.steampowered.com/bundle/24048/A_Nostru_Racing/?snr=1_7_7_2300_150_1']
+# GameId: []
+# 2023-03-02 21:57:11,865:INFO:winter_dragon.Team: Cleaning Teams channels
