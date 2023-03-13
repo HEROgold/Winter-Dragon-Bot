@@ -1,14 +1,15 @@
 
 import logging
-import pickle
 import os
+import pickle
 
 import discord
-from discord.ext import commands
 from discord import app_commands
+from discord.ext import commands
 
 import config
-import tools.dragon_database as dragon_database
+from tools import app_command_tools, dragon_database
+
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(administrator=True)
@@ -65,7 +66,8 @@ class Welcome(commands.GroupCog):
         if not enabled:
             return
         channel = member.guild.system_channel
-        default_msg = f"Welcome {member.mention} to {member.guild},\nyou may use `/help` to see what commands I have!"
+        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.bot.get_command("help"))
+        default_msg = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
         custom_msg = self.data[str(member.guild.id)]["message"]
         if channel is not None and config.Welcome.DM == False:
             if custom_msg:
