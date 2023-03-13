@@ -10,7 +10,11 @@ class CommandNotFound(Exception):
     pass
 
 class Converter():
-    def __init__(self, bot:commands.Bot) -> None:
+    bot: commands.Bot
+    tree: commands.Bot.tree
+    logger: logging.Logger
+
+    def __init__(self, bot) -> None:
         self.bot = bot
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
