@@ -37,7 +37,7 @@ class Converter:
         return False
 
     async def get_app_sub_command(self, sub_command:app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
-        """Returns the full app_command and a custom mention that can be used to mention the subcommand"""
+        """Returns the full app_command and a string that can be used to mention the subcommand"""
         if not sub_command:
             raise CommandNotFound
         if not app_command:
@@ -86,7 +86,7 @@ class Converter:
                 self.cache["global"]
             except KeyError:
                 self.cache = {"global": await self.tree.fetch_commands()}
-        elif guild:
+        else:
             self.logger.debug(f"getting {guild} commands list")
             try:
                 self.cache[str(guild.id)]
@@ -95,4 +95,4 @@ class Converter:
 
     async def _get_commands(self, guild: discord.Guild) -> list[app_commands.AppCommand]:
         await self._cache_handler(guild)
-        return (self.cache["global"] if not guild else self.cache[str(guild.id)])
+        return self.cache[str(guild.id)] if guild else self.cache["global"]
