@@ -66,16 +66,18 @@ class Welcome(commands.GroupCog):
         if not enabled:
             return
         channel = member.guild.system_channel
-        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.bot.get_command("help"))
+        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.get_command("help"))
         default_msg = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
         custom_msg = self.data[str(member.guild.id)]["message"]
         if channel is not None and config.Welcome.DM == False:
+            self.logger.warning("sending welcome to guilds system_channel")
             if custom_msg:
                 await channel.send(custom_msg)
             else:
                 await channel.send(default_msg)
         elif channel is not None and config.Welcome.DM == True and member.bot == False:
-            dm = await member.create_dm()
+            self.logger.warning("sending welcome to user's dm")
+            dm = member.dm_channel or await member.create_dm()
             if custom_msg:
                 await dm.send(custom_msg)
             else:
