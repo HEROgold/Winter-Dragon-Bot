@@ -1,16 +1,17 @@
 import contextlib
-import pickle
 import logging
 import math
 import os
+import pickle
 import random
+from collections.abc import Generator
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-import tools.dragon_database as dragon_database
+from tools import app_command_tools, dragon_database
 
 # TODO: needs testing
 
@@ -62,77 +63,85 @@ class Team(commands.Cog):
         await self.set_data(self.data)
 
     # FIXME: doesnt delete channels
+    # TODO: test if fixed/test
     @tasks.loop(seconds=3600)
     async def cleanup(self) -> None:
         self.logger.info("Cleaning Teams channels")
         if not self.data:
-            self.data = await self.get_data()
-        # TODO: remove 2nd check after load_cog() is working.
-        if not self.data:
             return
         for guild_id in list(self.data):
-            channels_list = None
-            category_id = None
-            with contextlib.suppress(KeyError):
-                self.logger.debug(self.data)
-                channels_list:list = self.data[guild_id]["Category"]["Channels"]
-                category_id:int = self.data[guild_id]["Category"]["id"]
-            if not category_id:
+            try:
+                _ = self.data[guild_id]
+    
+            except (KeyError, AttributeError):
+                return
+            try:
+                channels_list = list(self.data[guild_id]["Category"]["Channels"])
+            except KeyError:
+                return
+            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
+            if not guild or not channels_list:
                 continue
-            if not channels_list:
-                guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-                category_channel:discord.CategoryChannel = discord.utils.get(guild.channels, id=category_id)
+            self.logger.debug(f"Cleaning {guild}")
+            for channel_id in channels_list:
+                channel = guild.get_channel(int(channel_id))
+                if not channel:
+                    a:list = self.data[guild_id]["Category"]["Channels"]
+                    a.remove(channel_id)
+                    continue
+                self.logger.debug(f"Cleanup: {channel}")
+                if type(channel) != discord.VoiceChannel:
+                    self.logger.debug(f"Cleanup: Not voice, {channel}")
+                    continue
+                self.logger.debug(f"Cleanup: Is voice {channel}")
+                if len(channel.members) > 0:
+                    continue
+    
+                voice_channel = discord.utils.get(guild.voice_channels, id=channel.id)
+                await voice_channel.delete()
+                channels_list.remove(voice_channel.id)
+                if channels_list:
+                    continue
+    
+                del self.data[guild_id]["Category"]["Channels"]
+                category_id: int = self.data[guild_id]["Category"]["id"]
+                category_channel = discord.utils.get(guild.categories, id=category_id)
+                for text_channel in category_channel.text_channels:
+                    await text_channel.delete()
                 await category_channel.delete()
-                del self.data[guild_id]
-            async for channel in self.get_teams_channels(channels_list, guild_id):
-                channel:discord.VoiceChannel
-                if len(channel.members) == 0:
-                    await channel.delete()
-                    channels_list.remove(channel.id)
-        self.logger.info("Database cleaned up")
-        await self.set_data(self.data)
+                del self.data[guild_id]["Category"]["id"]
+                await self.set_data(self.data)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
-        if not self.data:
-            self.data = await self.get_data()
         try:
             guild_id = str(member.guild.id)
             _ = self.data[guild_id]
-        except KeyError or AttributeError:
+        except (KeyError, AttributeError):
             return
-        channel = before.channel
-        guild = channel.guild
-        guild_id = str(guild.id)
         with contextlib.suppress(KeyError):
             channels_list = list(self.data[guild_id]["Category"]["Channels"])
         if before.channel.id not in channels_list:
             return
+        channel = before.channel
         if len(channel.members) <= 0:
+            guild = channel.guild
             voice_channel = discord.utils.get(guild.voice_channels, id=channel.id)
             await voice_channel.delete()
             channels_list.remove(voice_channel.id)
             if not channels_list:
+                del self.data[guild_id]["Category"]["Channels"]
                 category_id:int = self.data[guild_id]["Category"]["id"]
                 category_channel = discord.utils.get(guild.categories, id=category_id)
                 for text_channel in category_channel.text_channels:
                     await text_channel.delete()
                 await category_channel.delete()
-                self.data_cleanup(self.data, guild_id)
+                del self.data[guild_id]["Category"]["id"]
                 await self.set_data(self.data)
 
-    def data_cleanup(self, data, guild_id) -> None:
-        del data[guild_id]["Category"]["id"]
-        del data[guild_id]["Category"]["Channels"]
-        del data[guild_id]["Category"]["Votes_channel"]
-        if not data[guild_id]["Category"]:
-            del data[guild_id]["Category"]
-        if not data[guild_id]:
-            del data[guild_id]
 
-    async def get_teams_channels(self, channels_list:list[int], guild_id:str) -> list[discord.VoiceChannel]|None:
+    async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  Generator[discord.VoiceChannel]:
         try:
-            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
             for channel_id in channels_list:
                 yield discord.utils.get(guild.voice_channels, id=channel_id)
         except KeyError:
@@ -155,26 +164,50 @@ class Team(commands.Cog):
         self.logger.info(f"creating teams: {teams}")
         return teams
 
-    # FIXME: and test me
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
+        self.logger.debug(f"{user} reacted with {reaction}")
         if user.bot == True or reaction.emoji != "✅":
+            self.logger.debug("user is bot, or emoji not ✅")
             return
-        if not self.data:
-            self.data = await self.get_data()
         guild = user.guild
         guild_id = str(guild.id)
-        teams:dict = self.data[guild_id]["Category"]["Votes_channel"]["Teams"]
-        voted = teams["voted"] or []
-        # total_members = list(teams.values().count())
-        for members in teams.values():
-            if user.id in members:
-                voted.append(user.id)
-        teams["voted"] = voted
-        self.logger.debug(f"teams=`{teams}`, user_id=`{user.id}`, voted=`{voted}`, temp=`{list(teams.values())}")
-        if user.id in voted and reaction.count >= len(members+1):
-            await reaction.message.delete()
-            await self.move_members(teams, guild)
+        if not self.data:
+            self.data = await self.get_data()
+        return await self.vote_handler(reaction, user, guild, guild_id)
+
+    async def vote_handler(self, reaction:discord.Reaction, user:discord.Member, guild:discord.Guild, guild_id:str) -> None:
+        try:
+            d_teams:dict = self.data[guild_id]["Category"]["Votes_channel"]["Teams"]
+        except KeyError:
+            return
+        for team_key, team_group in list(d_teams.items()):
+            team_group:dict
+            self.logger.debug(f"teamgroup = {team_group}")
+            try:
+                voted = team_group["voted"]
+            except KeyError:
+                voted = team_group["voted"] = []
+            to_vote = []
+            for k, v in team_group.items():
+                if k != "voted":
+                    to_vote.extend(v)
+            for team_id in list(team_group):
+                if team_id == "voted":
+                    continue
+                self.logger.debug(f"team=`{team_id}`, user_id=`{user.id}`")
+                if user.id not in to_vote:
+                    self.logger.debug(f"removing {reaction}, {user.id}: not in {to_vote} or {user.bot}")
+                    await reaction.remove(user)
+                    continue
+                elif user.id not in voted:
+                    voted.append(user.id)
+            self.logger.debug(f"to vote= {to_vote}, voted= {voted}")
+            if len(voted) == len(to_vote):
+                await reaction.message.delete()
+                del team_group["voted"]
+                await self.team_move(team_group, guild)
+                del d_teams[team_key]
 
     @app_commands.command(
             name="teams",
@@ -185,15 +218,15 @@ class Team(commands.Cog):
         try:
             members = interaction.user.voice.channel.members
         except AttributeError:
-            await interaction.response.send_message("Could not get members from voice channel.")
+            await interaction.response.send_message("Could not get members from voice channel.", ephemeral=True)
             return
         if len(members) < team_count:
-            await interaction.response.send_message(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}")
+            await interaction.response.send_message(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}", ephemeral=True)
             return
         await self.get_teams_category(interaction=interaction)
         teams = await self.DevideTeams(TeamCount=team_count, members=members)
         vote_channel = await self.create_vote(interaction, teams)
-        await interaction.response.send_message(f"Created vote to move members. Go to {vote_channel.mention} to vote.")
+        await interaction.response.send_message(f"Created vote to move members. Go to {vote_channel.mention} to vote.", ephemeral=True)
 
     async def create_vote(self, interaction:discord.Interaction, teams:dict) -> discord.TextChannel|None:
         category_channel = await self.get_teams_category(interaction=interaction)
@@ -206,16 +239,23 @@ class Team(commands.Cog):
             self.data = await self.get_data()
         guild = interaction.guild
         guild_id = str(guild.id)
-        vote_txt = f"{interaction.user.mention} used `/Teams`\nThe following users need to vote:"
-        members = []
-        for i in teams.values():
-            members.extend(discord.utils.get(guild.members, id=j) for j in i)
-        for member in members:
-            vote_txt += f"\n{member.mention}"
+        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_team)
+        vote_txt = f"{interaction.user.mention} used {cmd.mention}\nThe following users need to vote:"
+        for k, i in teams.items():
+            vote_txt += f"\nTeam {int(k) + 1}"
+            members = [discord.utils.get(guild.members, id=j) for j in i]
+            for member in members:
+                vote_txt += f"\n{member.mention}"
         vote_msg = await vote_text_channel.send(vote_txt)
         await vote_msg.add_reaction("✅")
         await vote_msg.add_reaction("⛔")
-        self.data[guild_id]["Category"]["Votes_channel"]["Teams"] = teams
+        try:
+            d_teams:dict = self.data[guild_id]["Category"]["Votes_channel"]["Teams"]
+        except KeyError:
+            d_teams = self.data[guild_id]["Category"]["Votes_channel"]["Teams"] = {}
+        index = str(len(d_teams.keys()))
+        d_teams[index] = teams
+        # self.logger.debug(f"teams:{teams}, index:{index}, dteams{d_teams}")
         await self.set_data(self.data)
 
     async def get_votes_channel(self, category_channel:discord.CategoryChannel) -> discord.TextChannel:
@@ -255,7 +295,7 @@ class Team(commands.Cog):
         await self.set_data(self.data)
         return category_channel
 
-    async def move_members(self, teams:dict[str,list[discord.Member]], guild:discord.Guild) -> None:
+    async def team_move(self, teams:dict[str,list[discord.Member]], guild:discord.Guild) -> None:
         for team, member_ids in teams.items():
             if not self.data:
                 self.data = await self.get_data()
