@@ -73,7 +73,7 @@ class Autochannel(commands.GroupCog):
         self.logger.info("Database cleaned up")
 
     async def _clean_categories(self, autochannel_categories:dict, guild:discord.Guild) -> dict:
-        self.logger.info(f"Cleaning Category {autochannel_categories}")
+        self.logger.info(f"Cleaning {guild} Category {autochannel_categories}")
         cleaned = False
         for key, channels in list(autochannel_categories.items()):
             if key == "AC Channel":
@@ -104,13 +104,17 @@ class Autochannel(commands.GroupCog):
     async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
         if not self.data:
             self.data = await self.get_data()
-        guild_id = interaction.guild.id
-        if not (guild_data := self.data[str(guild_id)]):
-            _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_autochannel_add)
+        guild_id = str(interaction.guild.id)
+        try:
+            self.data[guild_id]
+            (guild_data := self.data[guild_id])
+            guild_data:dict
+        except KeyError:
+            _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_autochannel_add)
             await interaction.response.send_message(f"No autochannel found. use {c_mention} to add them.")
             return
-        guild_data:dict
         guild = discord.utils.get(self.bot.guilds, id=guild_id)
+        await interaction.response.defer()
         with contextlib.suppress(AttributeError):
             for channels in list(guild_data.values()):
                 self.logger.debug(f"Deleting {channels}")
@@ -120,25 +124,24 @@ class Autochannel(commands.GroupCog):
                 await category_channel.delete()
                 await voice_channel.delete()
                 await text_channel.delete()
-            del self.data[str(guild_id)]
+            del self.data[guild_id]
         await self.set_data(self.data)
-        # Why this suppress here?
-        with contextlib.suppress(discord.app_commands.CommandInvokeError):
-            await interaction.response.send_message("Removed the autochannels")
+        await interaction.followup.send("Removed the autochannels")
 
     @app_commands.command(
         name = "add",
         description = "Set up voice category and channels, which lets each user make their own channels"
         )
     async def slash_autochannel_add(self, interaction:discord.Interaction) -> None:
+        await interaction.response.defer()
         guild = interaction.guild
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
             }
         await self._setup_autochannel(guild, overwrites)
-        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_autochannel_remove)
-        await interaction.response.send_message(f"The channels are set up!\n use {c_mention} before adding again to avoid issues.")
+        _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_autochannel_remove)
+        await interaction.followup.send(f"The channels are set up!\n use {c_mention} before adding again to avoid issues.")
         await self.set_data(self.data)
 
     async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> None:
@@ -164,11 +167,16 @@ class Autochannel(commands.GroupCog):
                 raise KeyError
             self.logger.debug(f"Found {TextChannel}")
         except KeyError:
-            TextChannel = await CategoryChannel.create_text_channel(name=text_channel_name, reason="Autochannel")
-            msg = await TextChannel.send(f"To create your own voice and text channel, just join the voice channel <#{self.data[guild_id]['AC Channel']['Voice']}>")
+            TextChannel = await CategoryChannel.create_text_channel(
+                name=text_channel_name, reason="Autochannel"
+            )
+            msg = await TextChannel.send(
+                f"To create your own voice and text channel, just join the voice channel <#{self.data[guild_id]['AC Channel']['Voice']}>"
+            )
             await msg.pin()
             self.data[guild_id][text_channel_name]["Text"] = TextChannel.id
             self.logger.debug(f"Created {TextChannel}")
+        
         return TextChannel
 
     async def _get_autochannel_voice(
