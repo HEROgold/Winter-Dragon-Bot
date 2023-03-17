@@ -14,7 +14,7 @@ import config
 from tools import dragon_database
 
 class LogCategories(Enum):
-    ALL:str = "ALL-CATEGORIES"
+    GLOBAL:str = "ALL-CATEGORIES"
     CREATEDCHANNELS:str = "CREATEDCHANNELS"
     UPDATEDCHANNELS:str = "UPDATEDCHANNELS"
     DELETEDCHANNELS:str = "DELETEDCHANNELS"
@@ -95,29 +95,29 @@ class DragonLog(commands.GroupCog):
         except KeyError:
             return False
 
-    async def get_DragonLog_channels(self, mod_channel:LogCategories|None, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
-        mod_channel_name:str = mod_channel.value
-        self.logger.debug(f"{mod_channel_name}, {mod_channel}")
-        if not self.data:
-            self.data = await self.get_data()
+    async def get_DragonLog_channels(self, log_category:LogCategories, guild:discord.Guild) -> tuple[discord.TextChannel, discord.TextChannel]:
         if not guild:
             self.logger.debug("No guild during DragonLog channel fetching")
             return None, None
         guild_id = str(guild.id)
-        mod_channel = None
-        allmod_channel = None
-        # with contextlib.suppress(KeyError, TypeError):
+        if log_channel := log_category.value:
+            log_channel:str
+            self.logger.debug(f"{log_channel}, {log_category}")
+            mod_channel:discord.TextChannel = discord.utils.get(
+                guild.channels,
+                id=int(
+                    self.data[guild_id][category_channel_id][log_channel.lower()]
+                )
+            ) or None
         try:
             for category_channel_id in self.data[guild_id]:
                 category_channel_id = str(category_channel_id)
-                all_mod_channel_id = self.data[guild_id][category_channel_id][LogCategories.ALL.value.lower()]
-                allmod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(all_mod_channel_id))
-                if not mod_channel_name:
-                    return None, allmod_channel
-                DragonLog_channel_id = self.data[guild_id][category_channel_id][mod_channel_name.lower()]
-                mod_channel:discord.TextChannel = discord.utils.get(guild.channels, id=int(DragonLog_channel_id))
-            self.logger.debug("Returning found log channels")
-            return mod_channel, allmod_channel
+                global_log_channel_id = self.data[guild_id][category_channel_id][LogCategories.GLOBAL.value.lower()]
+                global_log_channel:discord.TextChannel = discord.utils.get(
+                    guild.channels, id=int(global_log_channel_id)
+                ) or None
+            self.logger.debug("Returning named and global log channels")
+            return mod_channel, global_log_channel
         except (KeyError, TypeError):
             self.logger.debug(f"Guild has no automod category: {guild}")
 
