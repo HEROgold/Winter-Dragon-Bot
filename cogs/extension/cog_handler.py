@@ -86,6 +86,7 @@ class AutoCogReloader(commands.Cog):
         else:
             self.data["timestamp"] = datetime.datetime.now().timestamp()
 
+@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class CogsC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
