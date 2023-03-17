@@ -64,7 +64,7 @@ class ChannelUtils(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     async def slash_cat_delete(self, interaction:discord.Interaction, category:discord.CategoryChannel) -> None:
         await interaction.response.defer(ephemeral=True)
-        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.slash_cat_delete)
+        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_cat_delete)
         for channel in category.channels:
             await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
         await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")

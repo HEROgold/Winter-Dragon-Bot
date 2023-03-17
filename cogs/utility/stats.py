@@ -201,7 +201,7 @@ class Stats(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
-        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_stats_category_add)
+        _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_add)
         if not self.data:
             self.data = await self.get_data()
         guild_id = str(interaction.guild.id)
@@ -223,7 +223,7 @@ class Stats(commands.GroupCog):
         if str(interaction.guild.id) not in self.data:
             await interaction.response.send_message("No stats stats found to remove.", ephemeral=True)
             return
-        _, c_mention = await app_command_tools.Converter(self.bot).get_app_sub_command(self.slash_stats_category_remove)
+        _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_remove)
         await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
         await interaction.response.send_message("Removed stats channels", ephemeral=True)
 

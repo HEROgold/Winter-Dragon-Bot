@@ -174,7 +174,7 @@ class Steam(commands.GroupCog):
             f.write(html)
             f.close()
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
-        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.slash_remove)
+        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_remove)
         embed.set_footer(text=f"You can disable this by using {cmd.mention}")
         embed = await self.populate_embed(sales_html, embed)
         self.logger.debug(f"Got embed with sales, {embed}")
