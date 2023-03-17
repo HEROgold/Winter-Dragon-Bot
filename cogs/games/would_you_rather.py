@@ -77,7 +77,6 @@ class WouldYouRather(commands.GroupCog):
         emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="1st option", value="🟦")
         emb.add_field(name="2nd option", value="🟥")
-        # TODO: Add emoji's directly using the interaction.
         send_msg = await interaction.channel.send(embed=emb)
         await send_msg.add_reaction("🟦")
         await send_msg.add_reaction("🟥")
