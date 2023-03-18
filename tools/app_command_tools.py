@@ -61,6 +61,7 @@ class Converter:
             raise CommandNotFound
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
         app_commands_list = await self._get_commands(guild)
+        self.logger.debug(f"cmd list: {app_commands_list}")
         for app_command in app_commands_list:
             # self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
             if command.name == app_command.name:
@@ -84,15 +85,21 @@ class Converter:
             self.logger.debug("getting global commands list")
             try:
                 self.cache["global"]
+                self.logger.debug("Got global commands list")
             except KeyError:
+                self.logger.debug("Creating global commands list")
                 self.cache = {"global": await self.tree.fetch_commands()}
         else:
             self.logger.debug(f"getting {guild} commands list")
             try:
                 self.cache[str(guild.id)]
+                self.logger.debug(f"Got {guild} commands list")
             except KeyError:
+                self.logger.debug(f"Creating {guild} commands list")
                 self.cache = {str(guild.id): await self.tree.fetch_commands(guild=guild)}
+        self.logger.debug(f"Updated cache to: {self.cache}")
 
     async def _get_commands(self, guild: discord.Guild) -> list[app_commands.AppCommand]:
         await self._cache_handler(guild)
+        self.logger.debug(f'fetched cache: {self.cache[str(guild.id)] if guild else self.cache["global"]}')
         return self.cache[str(guild.id)] if guild else self.cache["global"]
