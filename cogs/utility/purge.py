@@ -15,7 +15,7 @@ class Purge(commands.Cog):
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
 
     @app_commands.command(name="purge", description="Purge X amount of messages, use history to delete older messages.")
-    @app_commands.checks.has_permissions(manage_messages=True)
+    @app_commands.checks.has_permissions(manage_messages=True, manage_channels=True)
     async def slash_purge(self, interaction:discord.Interaction, count:int, use_history:bool=False) -> None:
         if count == -1:
             count = config.Purge.LIMIT
@@ -34,7 +34,7 @@ class Purge(commands.Cog):
                 history_messages = await self.history_delete(interaction=interaction, count=(count - purged_count))
                 history_messages_count = len(history_messages)
                 self.logger.debug(f"History killed: {history_messages_count}")
-            await interaction.followup.send("_", ephemeral=True)
+            await interaction.followup.send(f"Killed {history_messages_count + purged_count}", ephemeral=True)
             await interaction.channel.send(f"{interaction.user.mention} Killed {history_messages_count + purged_count} Messages")
         else:
             await interaction.response.send_message(f"Too many message to kill! The limit is {config.Purge.LIMIT}", ephemeral=True)
