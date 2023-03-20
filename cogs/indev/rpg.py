@@ -143,9 +143,9 @@ class Player:
 
     def bal_to_coin(self) -> dict[str, int]:
         bronze_coin = str(self.balance)[-2:]
-        silver_coin = str(self.balance)[-4:-3]
-        gold_coin = str(self.balance)[-6:-5]
-        platinum_coin = str(self.balance)[:-6]
+        silver_coin = str(self.balance)[-5:-3]
+        gold_coin = str(self.balance)[-8:-6]
+        platinum_coin = str(self.balance)[:-8]
         result = {
             "bronze": bronze_coin,
             "silver": silver_coin,
