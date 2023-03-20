@@ -417,7 +417,7 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         test_player, tests = await self._run_tests(interaction)
-        self.logger.debug(f"after changes: {test_player.__dict__=}")
+        self.logger.debug(f"tests results: {test_player.__dict__=}")
         emb = discord.Embed(title="Tests")
         for k, v in tests.items():
             emb.add_field(name=k, value=("Succes" if v is True else "Failed"), inline=False)
