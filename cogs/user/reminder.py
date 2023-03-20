@@ -31,37 +31,37 @@ class Reminder(commands.Cog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
-        self.data = await self.get_data()
+        self.data = self.get_data()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @tasks.loop(hours=1)
     async def update_database(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @tasks.loop(seconds=60)
     async def send_reminder(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if not self.data:
             self.logger.warning("Could not get data.")
             return
@@ -89,7 +89,7 @@ class Reminder(commands.Cog):
         else:
             seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         member = interaction.user
         time = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds)).timestamp()
         epoch = int(time)

@@ -55,31 +55,31 @@ class DragonLog(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if not self.data:
             self.data = {}
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     def check_guild_data(self, guild:str|discord.Guild) -> None:
         if guild == discord.Guild:
@@ -478,7 +478,7 @@ class DragonLog(commands.GroupCog):
             self.data[guild_id][category_channel_id][text_channel.name] = text_channel.id
         await interaction.followup.send("Set up DragonLog category and channels")
         self.logger.info(f"Setup DragonLog for {interaction.guild}")
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @app_commands.command(
         name = "remove",
@@ -492,7 +492,7 @@ class DragonLog(commands.GroupCog):
         # Defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         guild = interaction.guild
         try:
             for category_channel_id, channels in self.data[str(guild.id)].items():
@@ -510,7 +510,7 @@ class DragonLog(commands.GroupCog):
         except KeyError:
             await interaction.followup.send("Can't find DragonLogChannels Consider using </DragonLog add:1067239606044606585>")
         del self.data[str(guild.id)]
-        await self.set_data(self.data)
+        self.set_data(self.data)
         await interaction.followup.send("Removed and disabled DragonLogChannels")
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
@@ -525,7 +525,7 @@ class DragonLog(commands.GroupCog):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if guild_id:
             guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
         else:
@@ -561,7 +561,7 @@ class DragonLog(commands.GroupCog):
             new_log_channel = await category_obj.create_text_channel(channel_name, reason="DragonLog update")
             self.data[str(guild.id)][str(category_id)][channel_name] = new_log_channel.id
         self.logger.info(f"Updated DragonLog for guild=`{guild}`")
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
 # TODO: autocomplete doesnt work with enum.value.lower
 
@@ -599,7 +599,7 @@ class DragonLog(commands.GroupCog):
     #         await interaction.response.send_message(f"{category} is already enabled", ephemeral=True)
     #     if category in disabled:
     #         disabled.pop(category)
-    #     await self.set_data(self.data)
+    #     self.set_data(self.data)
 
     # @slash_DragonLog_enable.autocomplete("category")
     # async def enable_autocomplete_category(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
@@ -629,7 +629,7 @@ class DragonLog(commands.GroupCog):
     #         await interaction.response.send_message(f"{category} is already disabled", ephemeral=True)
     #     if category in enabled:
     #         enabled.pop(category)
-    #     await self.set_data(self.data)
+    #     self.set_data(self.data)
 
     # @slash_DragonLog_disable.autocomplete("category")
     # async def disable_autocomplete_category(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:

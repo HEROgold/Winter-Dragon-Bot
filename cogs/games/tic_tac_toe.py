@@ -36,26 +36,26 @@ class TicTacToe(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if not self.data:
             self.data = {
                 "DUMMY": {
@@ -66,7 +66,7 @@ class TicTacToe(commands.GroupCog):
                 }
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def update_view(self, view:discord.ui.View, *items) -> discord.ui.View:
         view.clear_items()
@@ -81,7 +81,7 @@ class TicTacToe(commands.GroupCog):
     )
     async def slash_leader_board(self, interaction:discord.Interaction) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         game_restults = None
         for game_data in self.data.values():
             status:str = game_data["status"]
@@ -129,7 +129,7 @@ class TicTacToe(commands.GroupCog):
         await interaction.response.send_message("Lobby created!\nJoin here to start playing!", view=view)
         resp_msg = await interaction.original_response()
         self.data[str(resp_msg.id)] = {"status":"waiting", "member1":{"id":0}, "member2":{"id":0}}
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
@@ -266,7 +266,7 @@ class TicTacToe(commands.GroupCog):
                 game_data=game_data
             )
         )
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
 # Modified code from https://github.com/Rapptz/discord.py/blob/master/examples/views/tic_tac_toe.py
 # To avoid other players intervening

@@ -37,29 +37,29 @@ class NeverHaveIEver(commands.GroupCog):
         for question_id, _ in enumerate(nhie_base_questions):
             self.data["questions"][str(question_id)] = nhie_base_questions[question_id]
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @app_commands.command(
         name="show",
@@ -68,7 +68,7 @@ class NeverHaveIEver(commands.GroupCog):
     @app_commands.checks.cooldown(1, 10)
     async def slash_nhie(self, interaction:discord.Interaction) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         game_id = self.data["game_id"]
         game_id += 1
         self.data["game_id"] = game_id
@@ -83,7 +83,7 @@ class NeverHaveIEver(commands.GroupCog):
         await send_msg.add_reaction("✅")
         await send_msg.add_reaction("⛔")
         await interaction.response.send_message("Question send", ephemeral=True, delete_after=2)
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @app_commands.command(
         name = "add",
@@ -91,12 +91,12 @@ class NeverHaveIEver(commands.GroupCog):
         )
     async def slash_nhieadd(self, interaction:discord.Interaction, nhie_question:str) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if "add" not in self.data:
             self.data["add"] = {}
         if "add" in self.data:
             self.data["add"][nhie_question] = False
-        await self.set_data(self.data)
+        self.set_data(self.data)
         await interaction.response.send_message(f"The question ```{nhie_question}``` is added, it will be verified later.", ephemeral=True)
 
     @app_commands.command(
@@ -108,7 +108,7 @@ class NeverHaveIEver(commands.GroupCog):
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         # TODO: Test
         try:
             d = self.data["add"]
@@ -119,7 +119,7 @@ class NeverHaveIEver(commands.GroupCog):
             if v1 == True:
                 question_id = self.get_question_id()
                 self.data["questions"][question_id] = d.pop(k1)
-        await self.set_data(self.data)
+        self.set_data(self.data)
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
     def get_question_id(self) -> int:

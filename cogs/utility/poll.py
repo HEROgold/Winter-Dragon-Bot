@@ -34,29 +34,29 @@ class Poll(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
-        self.data = await self.get_data()
+        self.data = self.get_data()
         self.anounce_winners.start()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
@@ -73,7 +73,7 @@ class Poll(commands.GroupCog):
             voted_users.append(user.id)
             await reaction.remove(user)
             pol["Votes"][reaction.emoji]["count"] += 1
-            await self.set_data(self.data)
+            self.set_data(self.data)
         elif datetime.datetime.now().timestamp() <= vote_epoch_end:
             await reaction.remove(user)
             await dm.send("You cannot vote anymore, You can only vote for one thing.")
@@ -164,7 +164,7 @@ class Poll(commands.GroupCog):
             "Votes": {str(ALLOWED_EMOJIS[i]):{"msg":option,"count":0} for i, option in enumerate(options)},
             "Users": [],
         }
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     def relative_epoch(self, minutes, hours, days) -> int:
         return int(

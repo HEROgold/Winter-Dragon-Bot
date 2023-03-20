@@ -184,33 +184,33 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if not self.data:
             self.data = {"players":{}}
         # self.logger.debug(self.data)
 
     async def cog_unload(self) -> None:
         # self.logger.debug(f"{self.data}")
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     def check_item_by_types(self, items:Iterable[Item], *type_to_check:str) -> bool:
         """Check if item type exists in Iterable
@@ -261,7 +261,7 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
             player_data["inventory"] = self._inventory_obj_to_dict(player)
             self.data["players"][str(player.player_id)] = player_data
             self.logger.debug(f"p_data: {player_data}")
-            await self.set_data(self.data)
+            self.set_data(self.data)
         except KeyError as e:
             self.logger.exception(f"No player data to save: {e}")
 

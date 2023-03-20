@@ -34,31 +34,31 @@ class Autochannel(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if config.Database.PERIODIC_CLEANUP:
             self.database_cleanup.start()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @tasks.loop(seconds=3600)
     async def database_cleanup(self) -> None:
@@ -73,7 +73,7 @@ class Autochannel(commands.GroupCog):
             cleaned = await self._clean_categories(autochannel_categories, guild)
             if cleaned == True:
                 self.logger.debug(f"Most (or all) channels from {guild.name} are cleaned.")
-        await self.set_data(self.data)
+        self.set_data(self.data)
         self.logger.info("Database cleaned up")
 
     async def _clean_categories(self, autochannel_categories:dict, guild:discord.Guild) -> dict:
@@ -110,7 +110,7 @@ class Autochannel(commands.GroupCog):
     )
     async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         guild_id = str(interaction.guild.id)
         try:
             self.data[guild_id]
@@ -134,7 +134,7 @@ class Autochannel(commands.GroupCog):
                 except AttributeError as e:
                     self.logger.debug(f"{e}")
             del self.data[guild_id]
-            await self.set_data(self.data)
+            self.set_data(self.data)
         await interaction.followup.send("Removed the autochannels")
 
     @app_commands.command(
@@ -151,7 +151,7 @@ class Autochannel(commands.GroupCog):
         await self._setup_autochannel(guild, overwrites)
         _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_autochannel_remove)
         await interaction.followup.send(f"The channels are set up!\n use {c_mention} before adding again to avoid issues.")
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def _setup_autochannel(self, guild:discord.Guild, overwrites:discord.PermissionOverwrite) -> None:
         category_channel = await self._get_autochannel_category(guild, overwrites, config.Autochannel.AUTOCHANNEL_NAME)
@@ -168,7 +168,7 @@ class Autochannel(commands.GroupCog):
     ) -> discord.TextChannel:
         guild_id = str(guild.id)
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         try:
             text_channel_id = self.data[guild_id][text_channel_name]["Text"]
             text_channel = discord.utils.get(guild.channels, id=text_channel_id)
@@ -196,7 +196,7 @@ class Autochannel(commands.GroupCog):
     ) -> discord.VoiceChannel:
         guild_id = str(guild.id)
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         try:
             voice_channel_id = self.data[guild_id][voice_channel_name]["Voice"]
             voice_channel = discord.utils.get(guild.channels, id=voice_channel_id)
@@ -227,7 +227,7 @@ class Autochannel(commands.GroupCog):
         """
         guild_id = str(guild.id)
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         try:
             ac_id = self.data[guild_id][category_name]["id"]
             category_channel = discord.utils.get(guild.channels, id=ac_id)
@@ -257,7 +257,7 @@ class Autochannel(commands.GroupCog):
             await self._rename_user_autochannels(member, guild)
         if before.channel:
             return await self._remove_user_autochannels(member, before)
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def _remove_user_autochannels(self, member: discord.Member, before: discord.VoiceState) -> None:
         channel = before.channel

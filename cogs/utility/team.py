@@ -36,34 +36,35 @@ class Team(commands.Cog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         if config.Database.PERIODIC_CLEANUP:
             self.cleanup.start()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     # FIXME: doesnt delete channels
     # TODO: test if fixed/test
+    # TODO: rewrite, look at AC channel
     @tasks.loop(seconds=3600)
     async def cleanup(self) -> None:
         self.logger.info("Cleaning Teams channels")
@@ -110,7 +111,7 @@ class Team(commands.Cog):
                     await text_channel.delete()
                 await category_channel.delete()
                 del self.data[guild_id]["Category"]["id"]
-                await self.set_data(self.data)
+                self.set_data(self.data)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
@@ -137,7 +138,7 @@ class Team(commands.Cog):
                     await text_channel.delete()
                 await category_channel.delete()
                 del self.data[guild_id]["Category"]["id"]
-                await self.set_data(self.data)
+                self.set_data(self.data)
 
     async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  AsyncGenerator[discord.VoiceChannel | None, None]:
         try:
@@ -173,7 +174,7 @@ class Team(commands.Cog):
         guild = user.guild
         guild_id = str(guild.id)
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         return await self.vote_handler(reaction, user, guild, guild_id)
 
     async def vote_handler(self, reaction:discord.Reaction, user:discord.Member, guild:discord.Guild, guild_id:str) -> None:
@@ -236,7 +237,7 @@ class Team(commands.Cog):
 
     async def send_vote_message(self, interaction:discord.Interaction, vote_text_channel:discord.TextChannel, teams:dict) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         guild = interaction.guild
         guild_id = str(guild.id)
         cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_team)
@@ -256,11 +257,11 @@ class Team(commands.Cog):
         index = str(len(d_teams.keys()))
         d_teams[index] = teams
         # self.logger.debug(f"teams:{teams}, index:{index}, dteams{d_teams}")
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def get_votes_channel(self, category_channel:discord.CategoryChannel) -> discord.TextChannel:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         guild_id = str(category_channel.guild.id)
         try:
             vote_ch_id = self.data[guild_id]["Category"]["Votes_channel"]["id"]
@@ -268,12 +269,12 @@ class Team(commands.Cog):
         except KeyError:
             vote_text_channel = await category_channel.create_text_channel(name="Team splits")
             self.data[guild_id]["Category"]["Votes_channel"] = {"id": vote_text_channel.id}
-            await self.set_data(self.data)
+            self.set_data(self.data)
         return vote_text_channel
 
     async def get_teams_category(self, interaction:discord.Interaction) -> discord.CategoryChannel|None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         guild = interaction.guild
         guild_id = str(guild.id)
         category_channel = None
@@ -292,13 +293,13 @@ class Team(commands.Cog):
         if category_channel is None:
             del self.data[str(guild.id)]["Category"]["id"]
             category_channel = await self.get_teams_category(interaction=interaction)
-        await self.set_data(self.data)
+        self.set_data(self.data)
         return category_channel
 
     async def team_move(self, teams:dict[str,list[discord.Member]], guild:discord.Guild) -> None:
         for team, member_ids in teams.items():
             if not self.data:
-                self.data = await self.get_data()
+                self.data = self.get_data()
             try:
                 channels_list = self.data[str(guild.id)]["Category"]["Channels"]
             except KeyError:
