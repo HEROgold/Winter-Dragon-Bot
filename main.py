@@ -32,15 +32,12 @@ discord_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name
 discord_logger.addHandler(discord_handler)    
 # discord_bot_logger.addHandler(logging.StreamHandler())
 
-# TODO: replace default with None(), since default only misses 3.
-Intents = discord.Intents.default()
-# Intents = discord.Intents.all()
+Intents = discord.Intents.none()
 Intents.members = True
 Intents.guilds = True
 Intents.presences = True
-# Intents.guild_messages = True
-# Intents.dm_messages = True
-Intents.messages = True
+Intents.guild_messages = True
+Intents.dm_messages = True
 Intents.moderation = True
 Intents.message_content = True
 Intents.auto_moderation_configuration = True
@@ -50,13 +47,6 @@ client = discord.Client(intents=Intents)
 bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 tree = bot.tree
 
-# FIXME: find a way to get/fetch guild OBJECT without await and before bot is starting/ready
-# support_guild = asyncio.run(bot.fetch_guild(config.Main.SUPPORT_GUILD_ID))
-# support_guild = await bot.fetch_guild(config.Main.SUPPORT_GUILD_ID)
-support_guild = discord.utils.get(bot.guilds, id=config.Main.SUPPORT_GUILD_ID)
-
-
-bot_logger.debug(f"Support guild id: {support_guild}")
 
 if config.Main.CUSTOM_HELP:
     bot.remove_command("help")
@@ -116,8 +106,7 @@ async def mass_load() -> None:
 
 @tree.command(
     name = "shutdown",
-    description = "(For bot developer only)",
-    guild = support_guild
+    description = "(For bot developer only)"
     )
 async def slash_shutdown(interaction:discord.Interaction) -> None:
     if not await bot.is_owner(interaction.user):
