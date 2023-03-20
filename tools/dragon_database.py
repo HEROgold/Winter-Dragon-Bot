@@ -1,9 +1,7 @@
 import asyncio
-# import pickle
 import pickle
 import logging
 
-# import pymongo
 from pymongo import MongoClient
 from pymongo import collection as mcol
 from pymongo import database as mdb
