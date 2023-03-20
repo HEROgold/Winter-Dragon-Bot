@@ -122,7 +122,7 @@ class NeverHaveIEver(commands.GroupCog):
         await self.set_data(self.data)
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
-    def get_question_id(self) -> None:
+    def get_question_id(self) -> int:
         return len(self.data["questions"].keys())
 
 async def setup(bot:commands.Bot) -> None:

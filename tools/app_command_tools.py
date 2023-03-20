@@ -1,5 +1,5 @@
 import logging
-from typing import Self
+from typing import Optional, Self
 
 import discord  # type: ignore
 from discord import app_commands
@@ -15,18 +15,20 @@ class Converter:
     bot: commands.Bot
     tree: app_commands.CommandTree
     logger: logging.Logger
-    cache: dict = None
+    cache: Optional[dict] = None
 
     def __init__(self, bot: commands.Bot) -> Self:
         self.bot = bot
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
 
-    def is_group(self, app_command:app_commands.AppCommand) -> None:
+    def is_group(self, app_command:app_commands.AppCommand) -> bool:
         self.logger.debug(f"Checking is_group: {app_command.name}")
         return any(type(i) == app_commands.AppCommandGroup for i in app_command.options)
 
-    def is_subcommand(self, app_command:app_commands.AppCommand, command:app_commands.Command) -> None:
+    def is_subcommand(
+            self, app_command:app_commands.AppCommand, command:app_commands.Command
+        ) -> bool:
         for option in app_command.options:
             if (
                 type(option) == app_commands.AppCommandGroup
@@ -36,7 +38,9 @@ class Converter:
                 return True
         return False
 
-    async def get_app_sub_command(self, sub_command:app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None) -> tuple[app_commands.AppCommand, str]:
+    async def get_app_sub_command(
+            self, sub_command:app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None
+        ) -> tuple[app_commands.AppCommand, str] | None:
         """Returns the full app_command and a string that can be used to mention the subcommand"""
         if not sub_command:
             raise CommandNotFound

@@ -136,5 +136,5 @@ class Messages(commands.GroupCog):
                 del self.data[guild_id][channel_id]
         await self.set_data(self.data)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Messages(bot))

@@ -4,7 +4,7 @@ import math
 import os
 import pickle
 import random
-from collections.abc import Generator
+from typing import AsyncGenerator
 
 import discord
 from discord import app_commands
@@ -139,19 +139,19 @@ class Team(commands.Cog):
                 del self.data[guild_id]["Category"]["id"]
                 await self.set_data(self.data)
 
-
-    async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  Generator[discord.VoiceChannel]:
+    async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  AsyncGenerator[discord.VoiceChannel | None, None]:
         try:
             for channel_id in channels_list:
                 yield discord.utils.get(guild.voice_channels, id=channel_id)
         except KeyError:
             yield None
+        return
 
-    async def DevideTeams(self, TeamCount:int, members:list[discord.Member]) -> dict[int,list[discord.Member]]:
+    async def DevideTeams(self, team_count:int, members:list[discord.Member]) -> dict[int,list[discord.Member]]:
         random.shuffle(members)
         teams = {}
-        divide, modulo = divmod(len(members), TeamCount)
-        for i in range(TeamCount):
+        divide, modulo = divmod(len(members), team_count)
+        for i in range(team_count):
             teams[str(i)] = {}
             for x in range(math.ceil(divide)):
                 teams[str(i)][str(x)] = members.pop()
@@ -224,7 +224,7 @@ class Team(commands.Cog):
             await interaction.response.send_message(f"Not enough members in voice channel to fill {team_count} teams. Only found {len(members)}", ephemeral=True)
             return
         await self.get_teams_category(interaction=interaction)
-        teams = await self.DevideTeams(TeamCount=team_count, members=members)
+        teams = await self.DevideTeams(team_count=team_count, members=members)
         vote_channel = await self.create_vote(interaction, teams)
         await interaction.response.send_message(f"Created vote to move members. Go to {vote_channel.mention} to vote.", ephemeral=True)
 
