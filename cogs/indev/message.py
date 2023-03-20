@@ -35,29 +35,29 @@ class Messages(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @app_commands.command(
         name = "get",
@@ -92,7 +92,7 @@ class Messages(commands.GroupCog):
         if not message.guild or message.clean_content == "":
             return
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         self.logger.debug(f"Collecting message: member='{message.author}', id='{message.id}' content='{message.content}'")
         guild = message.guild
         guild_id = str(guild.id)
@@ -107,11 +107,11 @@ class Messages(commands.GroupCog):
                     }
                 }
             }
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def get_message(self, interaction:discord.Interaction, guild:discord.Guild=None) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         guild_id = str(guild.id)
         if guild is None:
             guild = interaction.guild
@@ -134,7 +134,7 @@ class Messages(commands.GroupCog):
             if not self.data[guild_id][channel_id]:
                 # Clean-up data if channel has no messages.
                 del self.data[guild_id][channel_id]
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
-async def setup(bot:commands.Bot):
+async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Messages(bot))

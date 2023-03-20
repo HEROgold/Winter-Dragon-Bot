@@ -34,48 +34,50 @@ class Welcome(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         enabled = self.data[str(member.guild.id)]["enabled"]
         if not enabled:
             return
         channel = member.guild.system_channel
-        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.bot.get_command("help"))
+        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.get_command("help"))
         default_msg = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
         custom_msg = self.data[str(member.guild.id)]["message"]
         if channel is not None and config.Welcome.DM == False:
+            self.logger.warning("sending welcome to guilds system_channel")
             if custom_msg:
                 await channel.send(custom_msg)
             else:
                 await channel.send(default_msg)
         elif channel is not None and config.Welcome.DM == True and member.bot == False:
-            dm = await member.create_dm()
+            self.logger.warning("sending welcome to user's dm")
+            dm = member.dm_channel or await member.create_dm()
             if custom_msg:
                 await dm.send(custom_msg)
             else:
@@ -118,7 +120,7 @@ class Welcome(commands.GroupCog):
                 }
         }
         await interaction.response.send_message(f"Changed welcome message to\n{message}.", ephemeral=True)
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
 async def setup(bot:commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name

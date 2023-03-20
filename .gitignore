@@ -135,8 +135,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-.dmypy.json
-dmypy.json
+.dmypy
+dmypy
 
 # Pyre type checker
 .pyre/
@@ -155,5 +155,5 @@ cython_debug/
 #.idea/
 config.py
 Reminders.txt
-# .vscode
+.vscode
 /logs

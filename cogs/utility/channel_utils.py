@@ -18,6 +18,7 @@ class ChannelUtils(commands.GroupCog):
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
+        self.act = app_command_tools.Converter(bot=self.bot)
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
             self.setup_db_file()
@@ -32,28 +33,28 @@ class ChannelUtils(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
-        self.data = await self.get_data()
+        self.data = self.get_data()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     categories = app_commands.Group(name="categories", description="Manage your categories")
 
@@ -64,10 +65,10 @@ class ChannelUtils(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     async def slash_cat_delete(self, interaction:discord.Interaction, category:discord.CategoryChannel) -> None:
         await interaction.response.defer(ephemeral=True)
-        cmd = await app_command_tools.Converter(self.bot).get_app_command(self.slash_cat_delete)
+        _, cmd_mention = await self.act.get_app_sub_command(self.slash_cat_delete)
         for channel in category.channels:
-            await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
-        await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
+            await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
+        await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
         await interaction.followup.send("Channel's removed", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:

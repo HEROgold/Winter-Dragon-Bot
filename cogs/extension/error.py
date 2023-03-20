@@ -15,6 +15,7 @@ class Error(commands.Cog):
         self.bot:commands.Bot = bot
         self.help_msg = ""
         self.logger = logging.getLogger(f"{CM.BOT_NAME}.error")
+        self.act = app_command_tools.Converter(bot=self.bot)
 
     # -> Option 1 --- Change on_error to self.on_error on load
     def cog_load(self) -> None: # type: ignore
@@ -27,10 +28,13 @@ class Error(commands.Cog):
         tree.on_error = tree.__class__.on_error
 
     async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError) -> None:
-        if interaction.command.name == "shutdown":
+        if not interaction:
+            await self.error_check(interaction, error)
             return
         if type(error) != app_commands.errors.CommandNotFound:
             self.logger.debug(f"Error from interaction: {interaction.command.name}")
+            if interaction.command.name == "shutdown":
+                return
         await self.error_check(interaction, error)
 
     @commands.Cog.listener()
@@ -48,16 +52,17 @@ class Error(commands.Cog):
         return dm
 
     async def app_command_error_handler(self, interaction:discord.Interaction) -> discord.DMChannel:
-        act = app_command_tools.Converter(bot=self.bot)
         try:
-            app_command, custom_mention = await act.get_app_sub_command(interaction.command)
+            app_command, custom_mention = await self.act.get_app_sub_command(interaction.command)
             self.help_msg = f"{custom_mention or app_command.mention}"
         except AttributeError:
-            await self.app_sub_command_handler(act)
+            await self.app_sub_command_handler()
+        except app_command_tools.CommandNotFound:
+            pass
         return interaction.user.dm_channel or await interaction.user.create_dm()
 
-    async def app_sub_command_handler(self, act:app_command_tools.Converter) -> None:
-        help_command = await act.get_app_command(self.bot.tree.get_command("help"))
+    async def app_sub_command_handler(self) -> None:
+        help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
         self.logger.debug(f"{help_command} {help_command.options}")
         for sub in help_command.options:
             self.logger.debug(f"{sub}")
@@ -81,10 +86,11 @@ class Error(commands.Cog):
         dm = await self.get_dm(x)
         code = datetime.datetime.now(datetime.timezone.utc).timestamp()
         if CE.ALWAYS_LOG_ERRORS == True:
-            self.logger.exception(error)
+            self.logger.exception(f"{error}")
         if CE.IGNORE_ERRORS == True:
             return
-        invite_command = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.tree.get_command("invite"))
+        invite_command = await self.act.get_app_command(self.bot.tree.get_command("invite"))
+        help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
         server_invite = f"</{invite_command} server:{invite_command.id}>"
         match type(error):
             case commands.errors.MissingRequiredArgument:
@@ -110,7 +116,7 @@ class Error(commands.Cog):
             case app_commands.errors.MissingAnyRole | commands.errors.MissingAnyRole:
                 await dm.send("You are missing the required Role")
             case commands.errors.CommandNotFound | app_commands.errors.CommandNotFound:
-                await dm.send("Command not found, try `help` to find all available commands")
+                await dm.send(f"Command not found, try {help_command.mention} to find all available commands")
             case discord.errors.NotFound:
                 self.logger.error(f"NotfoundError: CODE: {code}")
             # case commands.errors.MessageNotFound:

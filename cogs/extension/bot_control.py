@@ -1,5 +1,7 @@
+import datetime
 import logging
 import random
+import time
 
 import discord
 from discord import app_commands
@@ -107,10 +109,10 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message("Both status and activity need to be random or not chosen.", ephemeral=True)
             return
         else:
-            StatusAttr = getattr(discord.Status, status, discord.Status.online)
-            ActivityType = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
-            ActivityObj = discord.Activity(type=ActivityType, name=msg)
-            await self.bot.change_presence(status=StatusAttr, activity=ActivityObj)
+            status_attr = getattr(discord.Status, status, discord.Status.online)
+            activity_type = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
+            activity_obj = discord.Activity(type=activity_type, name=msg)
+            await self.bot.change_presence(status=status_attr, activity=activity_obj)
             await interaction.response.send_message("Updated my activity!", ephemeral=True)
             self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
             self.logger.info(f"Turned off periodic activity change by {interaction.user}")
@@ -144,6 +146,40 @@ class BotC(commands.GroupCog):
         for guild in self.bot.guilds:
             await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
         await interaction.response.send_message("Message send to all update channels on all servers!", ephemeral=True)
+
+    @app_commands.command(
+        name = "ping",
+        description = "show latency"
+    )
+    async def slash_ping(self, interaction:discord.Interaction) -> None:
+        if not await self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
+        latency = round(self.bot.latency * 1000)
+        start_time = time.time()
+        await interaction.response.defer()
+        measured_time = time.time() - start_time
+        final = round(measured_time * 1000)
+
+        if latency < 250:
+            color = 0x11ff00
+        elif latency < 450:
+            color = 0xddff00
+        elif latency < 600:
+            color = 0xff8800
+        elif latency < 800:
+            color = 0xff4400
+        else:
+            color = 0xff0000
+
+        embed = discord.Embed(
+            title=":ping_pong: Pong!",
+            color=color,
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+        )
+        embed.add_field(name="Websocket", value=f"```json\n{latency} ms```", inline=False)
+        embed.add_field(name="Response", value=f"```json\n{final} ms```", inline=False)
+        await interaction.followup.send(embed=embed)
+
 
 async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(BotC(bot))

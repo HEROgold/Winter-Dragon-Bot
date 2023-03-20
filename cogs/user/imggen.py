@@ -24,9 +24,11 @@ class Image(commands.GroupCog):
     def cog_unload(self) -> None: # type: ignore
         self.image_watcher.cancel()
 
-    @tasks.loop(seconds=180)
+    @tasks.loop(seconds=10)
     async def image_watcher(self) -> None:
         for root, subdirs, files in os.walk(self.CrAIyonDataBase):
+            if not files:
+                continue
             self.logger.debug(f"Scanning files: {root}, {subdirs}, {files}")
             try:
                 member = await self.bot.fetch_user(int(root[19:]))
@@ -45,14 +47,14 @@ class Image(commands.GroupCog):
 
     def generate_images(self, interaction:discord.Interaction, dm:discord.DMChannel, query:str) -> None:
         user_dir = f"{self.CrAIyonDataBase}/{interaction.user.id}"
-        os.makedirs(user_dir, exist_ok=True)
         generator = Craiyon() # Instantiates the api wrapper
         result = generator.generate(query) # Generates 9 images by default and cannot change that
+        os.makedirs(user_dir, exist_ok=True)
         result.save_images(user_dir)
 
     @app_commands.command(name = "generate",
                     description = "Request an AI to make an image, and when its done get it send to you")
-    @app_commands.checks.cooldown(1, 360)
+    @app_commands.checks.cooldown(3, 360)
     async def slash_imggen(self, interaction:discord.Interaction, *, query:str) -> None:
         dm = await interaction.user.create_dm()
         await interaction.response.send_message("Creating images, please be patient.", ephemeral=True)

@@ -27,5 +27,6 @@ class Sync(commands.Cog):
         local_list.sort()
         await interaction.response.send_message(f"Sync complete\nGlobaly synced: {global_list}\nLocally synced: {local_list} to {guild}", ephemeral=True)
 
+
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Sync(bot))

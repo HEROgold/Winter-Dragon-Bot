@@ -13,6 +13,7 @@ import config
 
 # Change values/settings in config.py.
 # TODO: Push owner only commands in specific guild.
+# TODO: Use setuphook to load initial cog
 
 LOG_LEVEL = logging.DEBUG
 
@@ -31,6 +32,7 @@ discord_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name
 discord_logger.addHandler(discord_handler)    
 # discord_bot_logger.addHandler(logging.StreamHandler())
 
+# TODO: replace default with None(), since default only misses 3.
 Intents = discord.Intents.default()
 # Intents = discord.Intents.all()
 Intents.members = True
@@ -38,8 +40,8 @@ Intents.guilds = True
 Intents.presences = True
 # Intents.guild_messages = True
 # Intents.dm_messages = True
-Intents.moderation = True
 Intents.messages = True
+Intents.moderation = True
 Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
@@ -72,13 +74,19 @@ async def main() -> None:
         await bot.start(config.Main.TOKEN)
 
 @register
-def terminate() -> None:
+def terminate() -> None: 
+    # sourcery skip: raise-from-previous-error
     # Client.close unloads cogs.
-    try:
+    try: # type: ignore
         asyncio.run(client.close())
-    except Exception as e:
-        bot_logger.warning(f"Likely shutdown command: {e}")
+    except RuntimeError:
+        bot_logger.debug("shutdown by command.")
+        raise KeyboardInterrupt
     bot_logger.info("Logged off")
+    save_logs()
+    # sys.exit()
+
+def save_logs() -> None:
     if not os.path.exists(config.Main.LOG_PATH):
         os.mkdir(config.Main.LOG_PATH)
     log_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -101,11 +109,8 @@ async def get_cogs() -> list[str]:
 async def mass_load() -> None:
     cogs = await get_cogs()
     for cog in cogs:
-        try:
-            await bot.load_extension(cog)
-            bot_logger.info(f"Loaded {cog}")
-        except Exception:
-            bot_logger.exception(f"Error while loading {cog}")
+        await bot.load_extension(cog)
+        bot_logger.info(f"Loaded {cog}")
     if not (os.listdir("./cogs")):
         bot_logger.warning("No Cogs Directory To Load!")
 

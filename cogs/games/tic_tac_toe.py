@@ -1,7 +1,9 @@
-import json
+import itertools
 import logging
 import os
+import pickle
 import random
+from typing import List
 
 import discord
 from discord import app_commands
@@ -17,60 +19,54 @@ from tools import dragon_database
 class TicTacToe(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"winter_dragon.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
-        self.WINNING_MOVES = [
-            # Left > Right
-            [1,2,3],
-            [4,5,6],
-            [7,8,9],
-            # Up > Down
-            [1,4,7],
-            [2,5,8],
-            [3,6,9],
-            # Diagonals
-            [1,5,9],
-            [3,5,7]
-            ]
         if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.json"
-            self.setup_json()
+            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
+            self.setup_db_file()
 
-    def setup_json(self) -> None:
+    def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "w") as f:
+            with open(self.DBLocation, "wb") as f:
                 data = self.data
-                json.dump(data, f)
+                pickle.dump(data, f)
                 f.close
-                self.logger.info(f"{self.DATABASE_NAME} Json Created.")
+                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
         else:
-            self.logger.info(f"{self.DATABASE_NAME} Json Loaded.")
+            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
-        else:
-            with open(self.DBLocation, "r") as f:
-                data = json.load(f)
+            data = db.get_data(self.DATABASE_NAME)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
-            with open(self.DBLocation, "w") as f:
-                json.dump(data, f)
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
+        if not self.data:
+            self.data = {
+                "DUMMY": {
+                    "status": "waiting",
+                    "member1": {"id": 0},
+                    "member2": {"id": 0},
+                    }
+                }
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def update_view(self, view:discord.ui.View, *items) -> discord.ui.View:
         view.clear_items()
@@ -78,96 +74,78 @@ class TicTacToe(commands.GroupCog):
             view.add_item(item)
         return view
 
-    @app_commands.checks.cooldown(2, 60)
+    @app_commands.checks.cooldown(2, 120)
     @app_commands.command(
         name = "stats",
         description="view tic-tac-toe stats"
     )
     async def slash_leader_board(self, interaction:discord.Interaction) -> None:
         if not self.data:
-            self.data = await self.get_data()
-        gs_temp = None
+            self.data = self.get_data()
+        game_restults = None
         for game_data in self.data.values():
             status:str = game_data["status"]
-            if not status.startswith("finished"):
-                continue
-            gs_temp = {"total":0, "abandoned":0, "wins":0, "losses":0, "draws":0}
+            game_restults = {"total":0, "abandoned":0, "\u200b":"\u200b", "wins":0, "losses":0, "draws":0}
             user_id = str(interaction.user.id)
-            if status == "finished-abandoned":
-                gs_temp["abandoned"] +=1
+
+            # Determine abandoned/ongoing and draws
+            if status in {"running", "waiting"}:
+                game_restults["abandoned"] +=1
             elif status == "finished-draw":
-                gs_temp["draws"] += 1
+                game_restults["draws"] += 1
+
+            # Determine wins and losses
             if user_id == game_data["member1"]["id"]:
                 if status == "finished-player1":
-                    gs_temp["wins"] += 1
+                    game_restults["wins"] += 1
                 elif status == "finished-player2":
-                    gs_temp["losses"] += 1
+                    game_restults["losses"] += 1
             if user_id == game_data["member2"]["id"]:
                 if status == "finished-player1":
-                    gs_temp["losses"] += 1
+                    game_restults["losses"] += 1
                 elif status == "finished-player2":
-                    gs_temp["wins"] += 1
-            gs_temp["total"] += 1
+                    game_restults["wins"] += 1
 
-        if not gs_temp:
+            game_restults["total"] += 1
+
+        if not game_restults:
             await interaction.response.send_message("No gamestats to display.", ephemeral=True)
             return
 
         embed=discord.Embed(title="Stats", description="Your Tic Tac Toe Stats", color=random.choice(rainbow.RAINBOW))
-        for name, value in gs_temp.items():
+        for name, value in game_restults.items():
             embed.add_field(name=name, value=value, inline=True)
         await interaction.response.send_message(embed=embed)
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="new",
-        description="Start a tic tac toe game, which player can join"
+        description="Start a tic tac toe game/lobby, which players can join"
     )
-    async def slash_tic_tac_toe(self, interaction:discord.Interaction) -> None:
-        if not self.data:
-            self.data = await self.get_data()
-        if not self.data:
-            self.data = {
-                "DUMMY": {
-                    "status": "waiting",
-                    "member1": {"id": 0, "moves": []},
-                    "member2": {"id": 0, "moves": []},
-                        "gamestate": {
-                            "user_turn": 0,
-                            "empty_moves": [1, 2, 3, 4, 5, 6, 7, 8, 9],
-                            "game_msg": {
-                                "board": "`DUMMY`",
-                                "turn_msg": "Game Waiting"
-                                }
-                        }
-                    }
-                }
+    async def slash_tic_tac_toe(self, interaction: discord.Interaction) -> None:
         button1, button2 = await self.button_handler()
         view = View()
         view = await self.update_view(view, button1, button2)
         await interaction.response.send_message("Lobby created!\nJoin here to start playing!", view=view)
         resp_msg = await interaction.original_response()
-        self.data[str(resp_msg.id)] = {"status":"waiting", "member1":{"id":0, "moves":[]}, "member2":{"id":0, "moves":[]}}
-        await self.lobby_checker(interaction)
-        await self.set_data(self.data)
+        self.data[str(resp_msg.id)] = {"status":"waiting", "member1":{"id":0}, "member2":{"id":0}}
+        self.set_data(self.data)
+
+    @app_commands.checks.cooldown(1, 30)
+    @app_commands.command(
+        name="challenge",
+        description="Start a tic tac toe game, challenging a specific member/user"
+    )
+    async def slash_challenge(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        if member.bot is True:
+            await interaction.response.send_message("Bot's cannot play.")
+        await interaction.response.send_message(f"{interaction.user.mention} challenged {member.mention} in tic tac toe!")
+        resp_msg = await interaction.original_response()
+        game_data = {"status":"waiting", "member1":{"id":interaction.user.id}, "member2":{"id":member.id}}
+        self.data[str(resp_msg.id)] = game_data
+        await self.start_game(interaction=interaction, game_data=game_data)
 
 # LOBBY start
-
-    async def lobby_checker(self, interaction:discord.Interaction) -> None:
-        for game_id, game_data in self.data.items():
-            if game_id == "DUMMY":
-                continue
-            if game_data["status"] in ["waiting", "finished"]:
-                continue
-            member1 = game_data["member1"]
-            member2 = game_data["member2"]
-            if member1["id"] != 0:
-                self.logger.debug(f"Member1 is ready. game_id=`{game_id}`")
-            elif member2["id"] != 0:
-                self.logger.debug(f"Member2 is ready. game_id=`{game_id}`")
-
-# LOBBY end
-# BOTTON start
 
     async def button_handler(self, base_button_1:discord.ui.Button=None, base_button_2:discord.ui.Button=None) -> tuple[discord.ui.Button, discord.ui.Button]:
         if base_button_1 is None:
@@ -270,221 +248,162 @@ class TicTacToe(commands.GroupCog):
             view = await self.update_view(view, button1, button2)
             await interaction.edit_original_response(content=lobby_msg, view=view)
 
-# BUTTON end
+# LOBBY end
+
 # GAME start
 
-    async def start_game(self, interaction:discord.Interaction, game_data:str) -> None:
-        await interaction.edit_original_response(content="Game is starting soon!", view=None)
-        game_data["status"] = "setup"
-        await self.game_handler(interaction, game_data)
-        # Start a match between 2 players, only allow those 2 to react.
+    async def start_game(self, interaction:discord.Interaction, game_data:dict=None) -> None:
+        game_data["status"] = "running"
+        all_members = self.bot.get_all_members()
+        p1 = discord.utils.get(all_members, id=game_data["member1"]["id"])
+        p2 = discord.utils.get(all_members, id=game_data["member2"]["id"])
+        self.logger.debug(f"Starting game between {p1.mention, p2.mention}")
+        await interaction.edit_original_response(
+            content=f"Game has started!, It is {p1.mention}'s Turn",
+            view=TicTacToeGame(
+                player_one=p1,
+                player_two=p2,
+                game_data=game_data
+            )
+        )
+        self.set_data(self.data)
 
-    async def place_move(self, interaction:discord.Interaction, spot:int) -> None:
-        self.logger.debug(f"{interaction.user.id} chose button {spot}")
-        await interaction.response.defer()
-        original_interaction = await interaction.original_response()
-        # game_data = self.data[str(original_interaction.id)]
-        for game_id, game_data in self.data.items():
-            # self.logger.debug(f"Placing move check for: game_id=`{game_id}")
+# Modified code from https://github.com/Rapptz/discord.py/blob/master/examples/views/tic_tac_toe.py
+# To avoid other players intervening
 
-            # if interaction.user.id in [game_data["member1"]["id"], game_data["member2"]["id"]] and game_data["status"] == "running":
-            if str(game_id) == str(original_interaction.id):
-                break
+class TicTacToeButton(discord.ui.Button['TicTacToe']):
+    def __init__(self, x: int, y: int) -> None:
+        # A label is required, but we don't need one so a zero-width space is used, '\u200b'
+        # The row parameter tells the View which row to place the button under.
+        # A View can only contain up to 5 rows -- each row can only have 5 buttons.
+        # Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
+        super().__init__(style=discord.ButtonStyle.secondary, label='\u200b', row=y)
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.x = x
+        self.y = y
 
-        gamestate = game_data["gamestate"]
-        user_turn = gamestate["user_turn"]
-        member1 = discord.utils.get(interaction.guild.members, id=game_data["member1"]["id"])
-        member2 = discord.utils.get(interaction.guild.members, id=game_data["member2"]["id"])
-        player1_moves = list(game_data["member1"]["moves"])
-        player2_moves = list(game_data["member2"]["moves"])
-        empty:list = gamestate["empty_moves"]
-        if (
-            game_data["status"] == "running" and (
-                spot in player1_moves and spot not in player2_moves and spot in empty or
-                spot not in player1_moves and spot in player2_moves and spot in empty
-                )
-            ):
-            self.logger.debug("Move already used!")
+    # This function is called whenever this button is pressed
+    async def callback(self, interaction: discord.Interaction) -> None:
+        view: TicTacToeGame = self.view
+        if interaction.user.id not in [view.player_x.id, view.player_o.id]:
+            await interaction.response.send_message("You may not play in this game", ephemeral=True)
             return
-        elif user_turn != interaction.user.id:
-            self.logger.debug(f"{interaction.user.id} tried placing on {user_turn}`s turn")
+        elif interaction.user.id != view.current_player:
+            await interaction.response.send_message("It's not your turn", ephemeral=True)
             return
-        elif user_turn == member1.id:
-            game_data["member1"]["moves"].append(spot)
-            game_data["gamestate"]["user_turn"] = member2.id
-        elif user_turn == member2.id:
-            game_data["member2"]["moves"].append(spot)
-            game_data["gamestate"]["user_turn"] = member1.id
-        else:
+        assert self.view is not None
+        state = view.board[self.y][self.x]
+        if state in (view.player_x.id, view.player_o.id):
             return
-        
-        empty.remove(spot)
-        await self.game_handler(interaction, game_data)
-        self.logger.debug(f"Placing move check > end. empty=`{empty}`")
 
-    async def game_handler(self, interaction:discord.Interaction, game_data:dict, view:View=View()) -> None:
-        player_1 = game_data["member1"]
-        player_2 = game_data["member2"]
-        member1:discord.Member = discord.utils.get(interaction.guild.members, id=player_1["id"])
-        # member2:discord.Member = discord.utils.get(interaction.guild.members, id=player_2["id"])
-        try:
-            gsam = game_data["gamestate"]
-        except KeyError:
-            gsam = None
-        if not gsam:
-            game_data["gamestate"] = {
-                "user_turn":member1.id,
-                "empty_moves":[1,2,3,4,5,6,7,8,9]
-            }
+        if view.current_player == view.player_x.id:
+            self.style = discord.ButtonStyle.danger
+            self.label = 'X'
+            view.board[self.y][self.x] = view.player_x.id
+            view.current_player = view.player_o.id
+            content = f"It is now {view.player_o.mention or 'O'}'s turn"
+        elif view.current_player == view.player_o.id:
+            self.style = discord.ButtonStyle.success
+            self.label = 'O'
+            view.board[self.y][self.x] = view.player_o.id
+            view.current_player = view.player_x.id
+            content = f"It is now {view.player_x.mention or 'X'}'s turn"
 
-        gamestate = game_data["gamestate"]
-        user_turn = gamestate["user_turn"]
+        self.disabled = True
+        winner = view.check_board_winner()
 
-        p1_moves = game_data["member1"]["moves"]
-        p2_moves = game_data["member2"]["moves"]
+        if winner is not None:
+            if winner == view.player_x.id:
+                content = f'{view.player_x.mention or "X"} won!'
+            elif winner == view.player_o.id:
+                content = f'{view.player_o.mention or "O"} won!'
+            else:
+                content = "It's a tie!"
 
-        can_act:discord.Member = discord.utils.get(interaction.guild.members, id=user_turn)
-        if game_data["status"] == "running":
-            s1 = ["x" if 1 in p1_moves else "o" if 1 in p2_moves else "_"][0]
-            s2 = ["x" if 2 in p1_moves else "o" if 2 in p2_moves else "_"][0]
-            s3 = ["x" if 3 in p1_moves else "o" if 3 in p2_moves else "_"][0]
-            s4 = ["x" if 4 in p1_moves else "o" if 4 in p2_moves else "_"][0]
-            s5 = ["x" if 5 in p1_moves else "o" if 5 in p2_moves else "_"][0]
-            s6 = ["x" if 6 in p1_moves else "o" if 6 in p2_moves else "_"][0]
-            s7 = ["x" if 7 in p1_moves else "o" if 7 in p2_moves else "_"][0]
-            s8 = ["x" if 8 in p1_moves else "o" if 8 in p2_moves else "_"][0]
-            s9 = ["x" if 9 in p1_moves else "o" if 9 in p2_moves else "_"][0]
-        else:
-            s1, s2, s3, s4, s5, s6, s7, s8, s9 = "_________"
-            game_data["status"] = "running"
+            for child in view.children:
+                child.disabled = True
 
-        board_as_str = f"`|  {s1}  |  {s2}  |  {s3}  |\n|_____+_____+_____|\n|  {s4}  |  {s5}  |  {s6}  |\n|_____+_____+_____|\n|  {s7}  |  {s8}  |  {s9}  |`"
-        game_data["gamestate"]["game_msg"] = {
-            "board":board_as_str,
-            "turn_msg":f"Game Started\n{can_act.mention}'s Turn\n"
-        }
-        game_msg = f'{gamestate["game_msg"]["turn_msg"]}{gamestate["game_msg"]["board"]}'
+            view.stop()
 
-        async def place_move_1(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 1)
-        async def place_move_2(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 2)
-        async def place_move_3(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 3)
-        async def place_move_4(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 4)
-        async def place_move_5(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 5)
-        async def place_move_6(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 6)
-        async def place_move_7(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 7)
-        async def place_move_8(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 8)
-        async def place_move_9(interaction:discord.Interaction) -> None:
-            await self.place_move(interaction, 9)
+        await interaction.response.edit_message(content=content, view=view)
 
-        async def exit_func(interaction:discord.Interaction) -> None:
-            status = game_data["status"]
-            if status not in ["finished-draw", "finished-player2", "finished-player1"]:
-                game_data["status"] = "finished-abandoned"
-                end_msg = f"Abandoned Match by {interaction.user.mention}"
-                self.logger.debug(f"{interaction.user.id} exited match")
-            elif status == "finished-player2":
-                end_msg = f"{interaction.user.mention}:  O  Won!"
-                self.logger.debug(f"{interaction.user.id} won match")
-            elif status == "finished-player1":
-                end_msg = f"{interaction.user.mention}:  X  Won!"
-                self.logger.debug(f"{interaction.user.id} won match")
-            board_msg = game_data['gamestate']['game_msg']['board']
-            await interaction.message.edit(content=f"Game Finished\n{board_msg}\n{end_msg}", view=None)
 
-        if 1 in p1_moves or 1 in p2_moves:
-            btn1 = Button(label="1",style=discord.ButtonStyle.gray, row=1)
-            btn1.disabled = True
-        else:
-            btn1 = Button(label="1",style=discord.ButtonStyle.primary, row=1)
-        if 2 in p1_moves or 2 in p2_moves:
-            btn2 = Button(label="2",style=discord.ButtonStyle.gray, row=1)
-            btn2.disabled = True
-        else:
-            btn2 = Button(label="2",style=discord.ButtonStyle.primary, row=1)
-        if 3 in p1_moves or 3 in p2_moves:
-            btn3 = Button(label="3",style=discord.ButtonStyle.gray, row=1)
-            btn3.disabled = True
-        else:
-            btn3 = Button(label="3",style=discord.ButtonStyle.primary, row=1)
-        if 4 in p1_moves or 4 in p2_moves:
-            btn4 = Button(label="4",style=discord.ButtonStyle.gray, row=2)
-            btn4.disabled = True
-        else:
-            btn4 = Button(label="4",style=discord.ButtonStyle.primary, row=2)
-        if 5 in p1_moves or 5 in p2_moves:
-            btn5 = Button(label="5",style=discord.ButtonStyle.gray, row=2)
-            btn5.disabled = True
-        else:
-            btn5 = Button(label="5",style=discord.ButtonStyle.primary, row=2)
-        if 6 in p1_moves or 6 in p2_moves:
-            btn6 = Button(label="6",style=discord.ButtonStyle.gray, row=2)
-            btn6.disabled = True
-        else:
-            btn6 = Button(label="6",style=discord.ButtonStyle.primary, row=2)
-        if 7 in p1_moves or 7 in p2_moves:
-            btn7 = Button(label="7",style=discord.ButtonStyle.gray, row=3)
-            btn7.disabled = True
-        else:
-            btn7 = Button(label="7",style=discord.ButtonStyle.primary, row=3)
-        if 8 in p1_moves or 8 in p2_moves:
-            btn8 = Button(label="8",style=discord.ButtonStyle.gray, row=3)
-            btn8.disabled = True
-        else:
-            btn8 = Button(label="8",style=discord.ButtonStyle.primary, row=3)
-        if 9 in p1_moves or 9 in p2_moves:
-            btn9 = Button(label="9",style=discord.ButtonStyle.gray, row=3)
-            btn9.disabled = True
-        else:
-            btn9 = Button(label="9",style=discord.ButtonStyle.primary, row=3)
-        exit_btn = Button(label="Exit", style=discord.ButtonStyle.danger, row=4)
+# This is our actual board View
+class TicTacToeGame(discord.ui.View):
+    player_x: discord.Member
+    player_o: discord.Member
+    Tie = 2
+    children: List[TicTacToeButton] # type: ignore
 
-        btn1.callback = place_move_1
-        btn2.callback = place_move_2
-        btn3.callback = place_move_3
-        btn4.callback = place_move_4
-        btn5.callback = place_move_5
-        btn6.callback = place_move_6
-        btn7.callback = place_move_7
-        btn8.callback = place_move_8
-        btn9.callback = place_move_9
-        exit_btn.callback = exit_func
+    def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: dict) -> None:
+        super().__init__()
+        self.player_x = player_one
+        self.player_o = player_two
+        self.current_player = self.player_x.id
+        self.game_data = game_data
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.board = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]
 
-        view.clear_items()
-        for i in [btn1, btn2, btn3, btn4, btn5, btn6, btn7, btn8, btn9, exit_btn]:
-            view.add_item(i)
+        # Our board is made up of 3 by 3 TicTacToeButtons
+        # The TicTacToeButton maintains the callbacks and helps steer
+        # the actual game.
+        for x, y in itertools.product(range(3), range(3)):
+            self.add_item(TicTacToeButton(x, y))
 
-        await interaction.edit_original_response(content=game_msg, view=view)
-        playermoves_1:list = player_1["moves"]
-        playermoves_2:list = player_2["moves"]
-        playermoves_1.sort()
-        playermoves_2.sort()
+    # This method checks for the board winner -- it is used by the TicTacToeButton
+    def check_board_winner(self) -> int | None:
+        for across in self.board:
+            value = sum(across)
+            if value == (self.player_x.id*3):
+                self.logger.debug(f"player {self.player_x} won straight on {across}")
+                self.game_data["status"] = "finished-player1"
+                return self.player_x.id
+            elif value == (self.player_o.id*3):
+                self.logger.debug(f"player {self.player_o} won straight on {across}")
+                self.game_data["status"] = "finished-player2"
+                return self.player_o.id
 
-        if await self.win_checker(playermoves_1) == True :
-            game_data["status"] = "finished-player1"
-            await exit_func(interaction)
-        elif await self.win_checker(playermoves_2) == True:
-            game_data["status"] = "finished-player2"
-            await exit_func(interaction)
-        elif gamestate["empty_moves"] == []:
-            game_data["status"] = "finished-draw"
+        # Check vertical
+        for line in range(3):
+            value = self.board[0][line] + self.board[1][line] + self.board[2][line]
+            if value == (self.player_x.id*3):
+                self.logger.debug(f"player {self.player_x} won vertical on column {line}")
+                self.game_data["status"] = "finished-player1"
+                return self.player_x.id
+            elif value == (self.player_o.id*3):
+                self.logger.debug(f"player {self.player_o} won vertical on column {line}")
+                self.game_data["status"] = "finished-player2"
+                return self.player_o.id
 
-        # self.logger.debug(f"GameUpdate: game_data=`{game_data}")
-        await self.set_data(self.data)
+        # Check diagonals
+        diag = self.board[0][2] + self.board[1][1] + self.board[2][0]
+        if diag == (self.player_x.id*3):
+            self.logger.debug(f"player {self.player_x} won diagonally /")
+            self.game_data["status"] = "finished-player1"
+            return self.player_x.id
+        elif diag == (self.player_o.id*3):
+            self.logger.debug(f"player {self.player_o} won diagonally /")
+            self.game_data["status"] = "finished-player2"
+            return self.player_o.id
+        diag = self.board[0][0] + self.board[1][1] + self.board[2][2]
+        if diag == (self.player_x.id*3):
+            self.logger.debug(f"player {self.player_x} won diagonally \\")
+            self.game_data["status"] = "finished-player1"
+            return self.player_x.id
+        elif diag == (self.player_o.id*3):
+            self.logger.debug(f"player {self.player_o} won diagonally \\")
+            self.game_data["status"] = "finished-player2"
+            return self.player_o.id
 
-    async def win_checker(self, playermoves:list) -> bool:
-        for i in range(len(playermoves)):
-            self.logger.debug(f"win_check: i=`{i}` moves=`{playermoves[i:i+3]}` return=`{playermoves in self.WINNING_MOVES}`")
-            if playermoves[i:i+3] in self.WINNING_MOVES:
-                return True
-        return False
+        if any(i == 0 for row in self.board for i in row):
+            return None
+        self.game_data["status"] = "finished-draw"
+        return self.Tie
+
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(TicTacToe(bot))
+    await bot.add_cog(TicTacToe(bot)) # type: ignore

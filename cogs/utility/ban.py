@@ -30,30 +30,30 @@ class Ban(commands.Cog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_load(self) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         self.unban_check.start()
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     @tasks.loop(seconds=3600)
     async def unban_check(self) -> None:
@@ -76,7 +76,7 @@ class Ban(commands.Cog):
 
     async def unban_member(self, member:discord.Member, guild:discord.Guild) -> None:
         if not self.data:
-            self.data = await self.get_data()
+            self.data = self.get_data()
         banned_role = discord.utils.get(guild.roles, name="Banned")
         await member.remove_roles(banned_role, reason=f"Unbanning {member.name}")
         for role_id in self.data[str(member.id)]["Roles"]:
@@ -108,10 +108,8 @@ class Ban(commands.Cog):
         if (seconds and minutes and hours and days) == 0:
             seconds = config.Ban.DEFAULT_BANTIME
         if not self.data:
-            self.data = await self.get_data()
-        # member = discord.utils.get(interaction.guild.members, id=int(member_id))
+            self.data = self.get_data()
         member_id = str(member.id)
-        # member_id = str(member.id)
         if member_id in self.data:
             epoch_unban = int(self.data[member_id]["Epoch_unban"])
             await interaction.response.send_message(f"{member.mention} is already banned. Unbanning in <t:{epoch_unban}:R>", ephemeral=True)
@@ -134,31 +132,10 @@ class Ban(commands.Cog):
         await member.remove_roles(reason=reason_msg)
         await member.add_roles(banned_role)
 
-    @slash_ban.autocomplete("seconds")
-    async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        times = ["5", "10", "30", "60"]
-        return [
-            app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
-        ]
-
-    @slash_ban.autocomplete("minutes")
-    async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        times = ["5", "10", "30", "60"]
-        return [
-            app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
-        ]
-
-    @slash_ban.autocomplete("hours")
-    async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        times = ["5", "10", "30", "60"]
-        return [
-            app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
-        ]
-
     @slash_ban.autocomplete("days")
+    @slash_ban.autocomplete("hours")
+    @slash_ban.autocomplete("minutes")
+    @slash_ban.autocomplete("seconds")
     async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         times = ["5", "10", "30", "60"]
         return [

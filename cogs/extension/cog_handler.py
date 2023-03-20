@@ -83,9 +83,9 @@ class AutoCogReloader(commands.Cog):
             except commands.errors.ExtensionNotLoaded:
                 self.logger.warning(f"Cannot reload {file_data}, it's not loaded")
             del self.data["edited"][file_data]
-        else:
-            self.data["timestamp"] = datetime.datetime.now().timestamp()
+        self.data["timestamp"] = datetime.datetime.now().timestamp()
 
+@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class CogsC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
@@ -106,25 +106,25 @@ class CogsC(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    async def get_data(self) -> dict:
+    def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            data = await db.get_data(self.DATABASE_NAME)
+            data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
                 data = pickle.load(f)
         return data
 
-    async def set_data(self, data) -> None:
+    def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
-            await db.set_data(self.DATABASE_NAME, data=data)
+            db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
     async def cog_unload(self) -> None:
-        await self.set_data(self.data)
+        self.set_data(self.data)
 
     async def get_cogs(self) -> list[str]:
         extensions = []
@@ -191,14 +191,6 @@ class CogsC(commands.GroupCog):
                 self.logger.exception(f"unable to unload {extension}, {e}")
                 await interaction.response.send_message(f"error reloading {extension}", ephemeral=True)
 
-    @slash_restart.autocomplete("extension")
-    async def restart_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        return [
-            app_commands.Choice(name=extension, value=extension)
-            for extension in self.bot.extensions
-            if current.lower() in extension.lower()
-        ]
-
     @app_commands.command(
         name = "unload",
         description = "Unload a specified cog (For bot developer only)"
@@ -217,8 +209,9 @@ class CogsC(commands.GroupCog):
             self.logger.exception(f"unable to unload {extension}, {e}")
         await interaction.response.send_message(f"Unloaded {extension}", ephemeral=True)
 
+    @slash_restart.autocomplete("extension")
     @slash_unload.autocomplete("extension")
-    async def unload_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=extension, value=extension)
             for extension in self.bot.extensions
