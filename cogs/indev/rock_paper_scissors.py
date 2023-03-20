@@ -13,12 +13,13 @@ from tools import dragon_database
 
 class RPSView(discord.ui.View):
     """View created for rock paper scissors. Contains 3 buttons."""
-
-    rock = Button(label="Rock", style=discord.ButtonStyle.blurple)
-    paper = Button(label="Paper", style=discord.ButtonStyle.blurple)
-    scissor = Button(label="Scissors", style=discord.ButtonStyle.blurple)
+    # TODO: add callbacks
+    rock: Button(label="Rock", style=discord.ButtonStyle.blurple)
+    paper: Button(label="Paper", style=discord.ButtonStyle.blurple)
+    scissor: Button(label="Scissors", style=discord.ButtonStyle.blurple)
 
     def __init__(self) -> None:
+        super().__init__()
         self.add_item(self.rock)
         self.add_item(self.paper)
         self.add_item(self.scissor)
@@ -80,8 +81,9 @@ class RockPaperScissors(commands.GroupCog):
         if oponent:
             e_dm = oponent.dm_channel or await oponent.create_dm()
             await e_dm.send(f"{interaction.user.mention} dueled you in Rock, Paper, Scissors, what's your choice?", view=RPSView())
+            await interaction.response.send_message("Duel send", ephemeral=True, delete_after=5)
             return
-        await interaction.channel.send(f"{interaction.user.mention} started Rock, Paper, Scissors, what's your choice?", view=RPSView())
+        await interaction.response.send_message(f"{interaction.user.mention} started Rock, Paper, Scissors, what's your choice?", view=RPSView())
         # await self.set_data(self.data)
 
     @slash_rock_paper_scissors.autocomplete("choice")

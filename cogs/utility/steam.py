@@ -3,6 +3,7 @@ import os
 import pickle
 import random
 import re
+from typing import Optional
 
 import discord
 import requests
@@ -16,8 +17,8 @@ from tools import app_command_tools, dragon_database
 
 
 class Steam(commands.GroupCog):
-    data : dict = None
-    user_list: list = None
+    data: Optional[dict] = None
+    user_list: Optional[list] = None
 
     def __init__(self, bot:commands.Bot) -> None:
         self.htmlFile = '.\\Database/SteamPage.html'
@@ -171,8 +172,9 @@ class Steam(commands.GroupCog):
             return None
         sales_html = await self.sale_from_html(html)
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
-        _, sub_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_remove)
-        embed.set_footer(text=f"You can disable this by using {sub_mention}")
+        # _, sub_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_remove)
+        embed.set_footer(text="You can disable this by using `/steam remove`")
+        # TODO: find way to use sub mentions in embed with {sub_mention}
         embed = await self.populate_embed(sales_html, embed)
         self.logger.debug(f"Got embed with sales, {embed}, to send to {self.user_list}")
         for user_id in self.user_list:
@@ -213,7 +215,7 @@ class Steam(commands.GroupCog):
                     self.logger.exception(e)
                 run_game_id = f"steam://rungameid/{game_id}"
                 embed.add_field(name=game_title, value=f"{game_url}\nInstall here: {run_game_id}", inline=False)
-                self.logger.debug(f"Pupulate embed with:\nSale: {i}\nGameId: {game_id}")
+                self.logger.debug(f"Populate embed with:\nSale: {i}\nGameId: {game_id}")
         self.logger.debug("Returning filled embed")
         return embed
 
@@ -249,4 +251,3 @@ class Steam(commands.GroupCog):
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Steam(bot))
-

@@ -18,6 +18,7 @@ class ChannelUtils(commands.GroupCog):
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
+        self.act = app_command_tools.Converter(bot=self.bot)
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
             self.setup_db_file()
@@ -64,10 +65,10 @@ class ChannelUtils(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     async def slash_cat_delete(self, interaction:discord.Interaction, category:discord.CategoryChannel) -> None:
         await interaction.response.defer(ephemeral=True)
-        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_cat_delete)
+        _, cmd_mention = await self.act.get_app_sub_command(self.slash_cat_delete)
         for channel in category.channels:
-            await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
-        await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd.mention}")
+            await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
+        await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
         await interaction.followup.send("Channel's removed", ephemeral=True)
 
 async def setup(bot:commands.Bot) -> None:

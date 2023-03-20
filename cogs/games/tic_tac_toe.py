@@ -16,7 +16,7 @@ from tools import dragon_database
 
 
 @app_commands.guild_only()
-class TestTicTacToe(commands.GroupCog):
+class TicTacToe(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
@@ -266,11 +266,12 @@ class TestTicTacToe(commands.GroupCog):
                 game_data=game_data
             )
         )
+        await self.set_data(self.data)
 
 # Modified code from https://github.com/Rapptz/discord.py/blob/master/examples/views/tic_tac_toe.py
 # To avoid other players intervening
 
-class TicTacToeButton(discord.ui.Button['TestTicTacToe']):
+class TicTacToeButton(discord.ui.Button['TicTacToe']):
     def __init__(self, x: int, y: int) -> None:
         # A label is required, but we don't need one so a zero-width space is used, '\u200b'
         # The row parameter tells the View which row to place the button under.
@@ -405,4 +406,4 @@ class TicTacToeGame(discord.ui.View):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(TestTicTacToe(bot)) # type: ignore
+    await bot.add_cog(TicTacToe(bot)) # type: ignore

@@ -83,8 +83,7 @@ class AutoCogReloader(commands.Cog):
             except commands.errors.ExtensionNotLoaded:
                 self.logger.warning(f"Cannot reload {file_data}, it's not loaded")
             del self.data["edited"][file_data]
-        else:
-            self.data["timestamp"] = datetime.datetime.now().timestamp()
+        self.data["timestamp"] = datetime.datetime.now().timestamp()
 
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class CogsC(commands.GroupCog):
@@ -192,14 +191,6 @@ class CogsC(commands.GroupCog):
                 self.logger.exception(f"unable to unload {extension}, {e}")
                 await interaction.response.send_message(f"error reloading {extension}", ephemeral=True)
 
-    @slash_restart.autocomplete("extension")
-    async def restart_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        return [
-            app_commands.Choice(name=extension, value=extension)
-            for extension in self.bot.extensions
-            if current.lower() in extension.lower()
-        ]
-
     @app_commands.command(
         name = "unload",
         description = "Unload a specified cog (For bot developer only)"
@@ -218,8 +209,9 @@ class CogsC(commands.GroupCog):
             self.logger.exception(f"unable to unload {extension}, {e}")
         await interaction.response.send_message(f"Unloaded {extension}", ephemeral=True)
 
+    @slash_restart.autocomplete("extension")
     @slash_unload.autocomplete("extension")
-    async def unload_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=extension, value=extension)
             for extension in self.bot.extensions
