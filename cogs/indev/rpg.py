@@ -14,8 +14,6 @@ import rainbow
 from tools import dragon_database
 
 
-# TODO: Completely rewrite
-
 class Item:
     item_name: str
     price: int
