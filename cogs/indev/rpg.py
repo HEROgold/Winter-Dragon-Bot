@@ -438,7 +438,7 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
         except Exception as e:
             self.logger.exception(e)
             try:
-                test_player = Player(interaction.user.id)
+                test_player = Player(12345)
             except Exception as e:
                 self.logger.exception(e)
             tests["fetch_data"] = False
