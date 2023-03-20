@@ -114,8 +114,8 @@ class Poll(commands.GroupCog):
         name="create",
         description="Create a poll"
     )
-    async def slash_poll_create(
-        self,
+    async def slash_poll_create( 
+        self, # NOSONAR
         interaction:discord.Interaction,
         message:str,
         minutes:int,
