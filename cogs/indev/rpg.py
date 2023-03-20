@@ -162,6 +162,15 @@ class Enemy:
     armor: int = 0
     inventory: Optional[List[Item]]
 
+    def __init__(
+            self,
+            **kwargs
+        ) -> None:
+        for key, value in kwargs.items():
+            # Use setattr, to allow ANY types like damage, health, armor etc.
+            setattr(self, key, value)
+
+
 class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
@@ -429,11 +438,12 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
             "bal_change": None,
             "add_xp": None,
             "add_items": None,
+            "rem_items": None,
             "bal_convertion": None,
             "saving": None
         }
         try:
-            test_player = self.get_player_obj_data(interaction.user.id)
+            test_player = self.get_player_obj_data(12345)
             tests["fetch_data"] = True
         except Exception as e:
             self.logger.exception(e)
