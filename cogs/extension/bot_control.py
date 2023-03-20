@@ -109,10 +109,10 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message("Both status and activity need to be random or not chosen.", ephemeral=True)
             return
         else:
-            StatusAttr = getattr(discord.Status, status, discord.Status.online)
-            ActivityType = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
-            ActivityObj = discord.Activity(type=ActivityType, name=msg)
-            await self.bot.change_presence(status=StatusAttr, activity=ActivityObj)
+            status_attr = getattr(discord.Status, status, discord.Status.online)
+            activity_type = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
+            activity_obj = discord.Activity(type=activity_type, name=msg)
+            await self.bot.change_presence(status=status_attr, activity=activity_obj)
             await interaction.response.send_message("Updated my activity!", ephemeral=True)
             self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
             self.logger.info(f"Turned off periodic activity change by {interaction.user}")
