@@ -455,6 +455,12 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
             self.logger.exception(e)
             tests["add_xp"] = False
         try:
+            self._remove_item(test_player)
+            tests["rem_items"] = True
+        except Exception as e:
+            self.logger.exception(e)
+            tests["rem_items"] = False
+        try:
             self._test_add_items(test_player)
             tests["add_items"] = True
         except Exception as e:
@@ -492,6 +498,11 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
         for item in self.get_random_from_pool(
                 [item.value for item in pool], random.randint(2, 10)):
             test_player.inventory.append(item)
+
+    def _remove_item(self, test_player: Player) -> None:
+        for item in test_player.inventory:
+            del item
+
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Rpg(bot))
