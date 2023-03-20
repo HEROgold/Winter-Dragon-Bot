@@ -109,9 +109,7 @@ class Ban(commands.Cog):
             seconds = config.Ban.DEFAULT_BANTIME
         if not self.data:
             self.data = await self.get_data()
-        # member = discord.utils.get(interaction.guild.members, id=int(member_id))
         member_id = str(member.id)
-        # member_id = str(member.id)
         if member_id in self.data:
             epoch_unban = int(self.data[member_id]["Epoch_unban"])
             await interaction.response.send_message(f"{member.mention} is already banned. Unbanning in <t:{epoch_unban}:R>", ephemeral=True)
@@ -134,31 +132,10 @@ class Ban(commands.Cog):
         await member.remove_roles(reason=reason_msg)
         await member.add_roles(banned_role)
 
-    @slash_ban.autocomplete("seconds")
-    async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        times = ["5", "10", "30", "60"]
-        return [
-            app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
-        ]
-
-    @slash_ban.autocomplete("minutes")
-    async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        times = ["5", "10", "30", "60"]
-        return [
-            app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
-        ]
-
-    @slash_ban.autocomplete("hours")
-    async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
-        times = ["5", "10", "30", "60"]
-        return [
-            app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
-        ]
-
     @slash_ban.autocomplete("days")
+    @slash_ban.autocomplete("hours")
+    @slash_ban.autocomplete("minutes")
+    @slash_ban.autocomplete("seconds")
     async def ban_autocompletion_time(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
         times = ["5", "10", "30", "60"]
         return [
