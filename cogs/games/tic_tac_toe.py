@@ -14,6 +14,7 @@ import config
 import rainbow
 from tools import dragon_database_Mongo
 
+# TODO: Add ai if bot is challenged?
 
 @app_commands.guild_only()
 class TicTacToe(commands.GroupCog):
