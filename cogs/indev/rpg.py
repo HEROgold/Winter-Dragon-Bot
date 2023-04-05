@@ -434,7 +434,7 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
 
     async def _run_tests(self, interaction: discord.Interaction) -> tuple[Player, dict]:
         tests = {
-            "fetch_data": None,
+            "get_data": None,
             "bal_change": None,
             "add_xp": None,
             "add_items": None,
@@ -444,14 +444,14 @@ class Rpg(commands.GroupCog, group_name="rpg", group_description="Desc"):
         }
         try:
             test_player = self.get_player_obj_data(12345)
-            tests["fetch_data"] = True
+            tests["get_data"] = True
         except Exception as e:
             self.logger.exception(e)
             try:
                 test_player = Player(12345)
             except Exception as e:
                 self.logger.exception(e)
-            tests["fetch_data"] = False
+            tests["get_data"] = False
         try:
             self._test_add_balance(test_player)
             tests["bal_change"] = True
