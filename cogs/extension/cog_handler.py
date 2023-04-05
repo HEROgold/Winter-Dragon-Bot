@@ -162,7 +162,6 @@ class CogsC(commands.GroupCog):
         description = "Unload a specified cog (For bot developer only)"
         )
     async def slash_unload(self, interaction:discord.Interaction, extension:str) -> None:
-        # sourcery skip: use-contextlib-suppress
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         try:

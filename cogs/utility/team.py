@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import math
 import os
@@ -117,13 +116,17 @@ class Team(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
+        # return early if no guild is found.
         try:
             guild_id = str(member.guild.id)
             _ = self.data[guild_id]
         except (KeyError, AttributeError):
             return
-        with contextlib.suppress(KeyError):
+        # ignore empty channels list
+        try:
             channels_list = list(self.data[guild_id]["Category"]["Channels"])
+        except KeyError:
+            pass
         if before.channel.id not in channels_list:
             return
         channel = before.channel

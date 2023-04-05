@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import os
 import pickle
@@ -119,9 +118,11 @@ class Stats(commands.GroupCog):
         channels = list(category.values())[0]
         self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
         for channel_id in channels.values():
-            with contextlib.suppress(AttributeError):
+            try:
                 channel = discord.utils.get(guild.channels, id=int(channel_id))
                 await channel.delete(reason=reason)
+            except AttributeError:
+                pass
         del self.data[guild_id]
         self.set_data(self.data)
 

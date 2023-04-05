@@ -1,4 +1,3 @@
-# sourcery skip: use-contextlib-suppress
 import logging
 from typing import Optional
 
