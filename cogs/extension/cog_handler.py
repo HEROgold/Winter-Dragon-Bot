@@ -151,9 +151,10 @@ class CogsC(commands.GroupCog):
                 await self.bot.reload_extension(extension)
                 self.logger.info(f"Reloaded {extension}")
                 await interaction.response.send_message(f"Reloaded {extension}", ephemeral=True)
+            except commands.ExtensionNotLoaded:
+                await interaction.response.send_message(f"Cannot load {extension} is not loaded",)
             except Exception as e:
-                self.logger.critical("REMOVE `except Exception`!")
-                self.logger.exception(f"unable to unload {extension}, {e}")
+                self.logger.exception(f"unable to re-load {extension}, {e}")
                 await interaction.response.send_message(f"error reloading {extension}", ephemeral=True)
 
     @app_commands.command(
