@@ -91,12 +91,11 @@ class Help(commands.Cog):
                 embed.add_field(name="Description", value=command.description, inline=False)
                 embed.add_field(name="Exapmle use", value=command.mention, inline=False)
             return embed
-        if command == app_commands.AppCommand:
-            if command.name == help_input:
-                self.logger.debug(command.name, command.brief, command.description, command.usage)
-                embed.add_field(name="Brief", value=command.brief, inline=False)
-                embed.add_field(name="Description", value=command.description, inline=False)
-                embed.add_field(name="Usage", value=command.usage, inline=False)
+        if command == app_commands.AppCommand and command.name == help_input:
+            self.logger.debug(command.name, command.brief, command.description, command.usage)
+            embed.add_field(name="Brief", value=command.brief, inline=False)
+            embed.add_field(name="Description", value=command.description, inline=False)
+            embed.add_field(name="Usage", value=command.usage, inline=False)
         return embed
 
     async def UpdateView(self, view:discord.ui.View, *items) -> discord.ui.View:
