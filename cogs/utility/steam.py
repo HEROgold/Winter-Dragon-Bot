@@ -10,15 +10,16 @@ import requests
 from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import commands, tasks
+import sqlalchemy
 
 import config
 import rainbow
-from tools import app_command_tools, dragon_database_Mongo
+from tools import app_command_tools, dragon_database_Mongo, dragon_database_Sql
 
 
 class Steam(commands.GroupCog):
     data: Optional[dict] = None
-    user_list: Optional[list[int]] = None
+    subscribed_users: Optional[list[int]] = None
 
     def __init__(self, bot:commands.Bot) -> None:
         self.htmlFile = '.\\Database/SteamPage.html'
@@ -26,6 +27,8 @@ class Steam(commands.GroupCog):
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.DATABASE_NAME = self.__class__.__name__
         self.setup_html_file()
+        self.db = dragon_database_Sql.Database()
+        self.setup_table()
         self.act = app_command_tools.Converter(bot=self.bot)
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
@@ -49,6 +52,18 @@ class Steam(commands.GroupCog):
         else:
             self.logger.info("Steam local Html exists")
 
+    def setup_table(self) -> None:
+        self.logger.debug("Creating Table")
+        with self.db.engine.connect() as connection:
+            connection.execute
+            connection.execute(sqlalchemy.text(f"""
+            CREATE TABLE IF NOT EXISTS {self.DATABASE_NAME} (
+                    user_id INT(32) NOT NULL,
+                    PRIMARY KEY (user_id)
+            )
+            ;
+            """))
+
     def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database_Mongo.Database()
@@ -71,13 +86,22 @@ class Steam(commands.GroupCog):
             self.data = self.get_data()
         if not self.data:
             self.data = {"user_id":[]}
-        self.user_list = self.data["user_id"]
+        self.subscribed_users = self.data["user_id"]
         self.logger.debug(f"{self.data}")
         self.update.start()
+        
+        with self.db.engine.connect() as connection:
+            result = connection.execute(sqlalchemy.text(f"""
+                SELECT * FROM {self.DATABASE_NAME}
+            """))
+            t_data = result.all()
+            row = t_data[0]
+            self.t_subscribed_users = list(row)
+            self.logger.debug(f"{t_data=}, {self.t_subscribed_users=}")
 
     async def cog_unload(self) -> None:
         self.logger.debug(f"{self.data}")
-        self.set_data({"user_id": self.user_list})
+        self.set_data({"user_id": self.subscribed_users})
 
     def get_html(self, url: str = config.Steam.URL) -> str:
         requests.get(url)
@@ -94,11 +118,11 @@ class Steam(commands.GroupCog):
             url = steam_item["href"]
             title = steam_item.find("span", {"class": "title"})
             sale_amount = i.find("span")
+            # self.logger.debug(f"{title, url, sale_amount}")
             try:
                 sales.append([title.text, sale_amount.text, url])
-            except Exception as e:
-                self.logger.critical("REMOVE `except Exception`!")
-                self.logger.exception(f"Could not append: {e}")
+            except AttributeError:
+                # self.logger.exception(f"Skipping adding sale, Could not append: {e}")
                 continue
         self.logger.debug(f"Returning sales {sales}")
         return sales
@@ -194,12 +218,12 @@ class Steam(commands.GroupCog):
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
         new_sales = self.get_new_freebies(file_sales, html_sales)
         embed = await self.populate_embed(new_sales, embed)
-        self.logger.debug(f"Got embed with sales, {embed}, to send to {self.user_list}")
+        self.logger.debug(f"Got embed with sales, {embed}, to send to {self.subscribed_users}")
 
         _, sub_mention = await self.act.get_app_sub_command(self.slash_remove)
         disable_message = f"You can disable this by using {sub_mention}"
-        for user_id in self.user_list: # type: ignore
-            try:
+        for user_id in self.subscribed_users: # type: ignore
+            try:    
                 user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
             except discord.errors.NotFound:
                 self.logger.warning(f"Not showing {user_id} sales, discord.errors.NotFound")
@@ -214,7 +238,6 @@ class Steam(commands.GroupCog):
             f.close()
 
     @app_commands.command(name = "show", description = "Get a list of steam games that are on sale for the given percentage or higher")
-    @app_commands.checks.cooldown(1, 300)
     async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
         html = self.get_html()
         html_sales = self.sales_from_html(html)
@@ -228,23 +251,36 @@ class Steam(commands.GroupCog):
         else:
             await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
 
+    # TODO: Remove mongo, add mysql.
+    # Test / figure out why DELETE FROM won't delete
     @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
-        if interaction.user.id not in self.user_list:
-            self.user_list.append(interaction.user.id)
-            await interaction.response.send_message("I will notify you of new steam games!", ephemeral=True)
-            self.set_data({"user_id": self.user_list})
-        else:
+        if interaction.user.id not in self.subscribed_users:
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
+            return
+        self.subscribed_users.append(interaction.user.id)
+        # with self.db.engine.connect() as connection:
+            # connection.execute(sqlalchemy.text(f"""
+            # REPLACE INTO {self.DATABASE_NAME} VALUES ({interaction.user.id})
+            # """))
+            # connection.commit()
+        _, sub_mention = await self.act.get_app_sub_command(self.slash_show)
+        await interaction.response.send_message(f"I will notify you of new steam games!\nUse {sub_mention} to view current sales.", ephemeral=True)
+        self.set_data({"user_id": self.subscribed_users})
 
     @app_commands.command(name = "remove", description = "No longer get notified of free steam games")
     async def slash_remove(self, interaction:discord.Interaction) -> None:
-        if interaction.user.id in self.user_list:
-            self.user_list.remove(interaction.user.id)
-            await interaction.response.send_message("I not notify you of new steam games anymore.", ephemeral=True)
-        else:
+        if interaction.user.id not in self.subscribed_users:
             await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
-        self.set_data({"user_id": self.user_list})
+            return
+        self.subscribed_users.remove(interaction.user.id)
+        # with self.db.engine.connect() as connection:
+            # connection.execute(sqlalchemy.text(f"""
+            # DELETE FROM {self.DATABASE_NAME} WHERE (user_id={interaction.user.id})
+            # """))
+            # connection.commit()
+        await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
+        self.set_data({"user_id": self.subscribed_users})
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Steam(bot))
