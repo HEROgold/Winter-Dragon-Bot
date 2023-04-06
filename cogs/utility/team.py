@@ -1,22 +1,23 @@
-import contextlib
 import logging
 import math
 import os
 import pickle
 import random
-from typing import AsyncGenerator
+import re
+from typing import AsyncGenerator, Optional
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
+import rainbow
 from tools import app_command_tools, dragon_database_Mongo
 
 # TODO: needs testing
 
 @app_commands.guild_only()
-class Team(commands.Cog):
+class Team(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
@@ -115,13 +116,17 @@ class Team(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
+        # return early if no guild is found.
         try:
             guild_id = str(member.guild.id)
             _ = self.data[guild_id]
         except (KeyError, AttributeError):
             return
-        with contextlib.suppress(KeyError):
+        # ignore empty channels list
+        try:
             channels_list = list(self.data[guild_id]["Category"]["Channels"])
+        except KeyError:
+            pass
         if before.channel.id not in channels_list:
             return
         channel = before.channel
@@ -140,7 +145,7 @@ class Team(commands.Cog):
                 del self.data[guild_id]["Category"]["id"]
                 self.set_data(self.data)
 
-    async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  AsyncGenerator[discord.VoiceChannel | None, None]:
+    async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  AsyncGenerator[Optional[discord.VoiceChannel], None]:
         try:
             for channel_id in channels_list:
                 yield discord.utils.get(guild.voice_channels, id=channel_id)
@@ -148,7 +153,7 @@ class Team(commands.Cog):
             yield None
         return
 
-    async def DevideTeams(self, team_count:int, members:list[discord.Member]) -> dict[int,list[discord.Member]]:
+    async def DevideTeams(self, team_count:int, members:list[discord.Member]) -> dict[int,list[str]]:
         random.shuffle(members)
         teams = {}
         divide, modulo = divmod(len(members), team_count)
@@ -162,7 +167,7 @@ class Team(commands.Cog):
         for k,v in teams.items():
             user_id = [j.id for j in v.values()]
             teams[str(k)] = user_id
-        self.logger.info(f"creating teams: {teams}")
+        self.logger.debug(f"creating teams: {teams}")
         return teams
 
     @commands.Cog.listener()
@@ -211,10 +216,14 @@ class Team(commands.Cog):
                 del d_teams[team_key]
 
     @app_commands.command(
-            name="teams",
-            description="Randomly split all users in voice chat, in teams"
+            name="voice",
+            description="Randomly split all users from your voice chat, in teams"
             )
-    async def slash_team(self, interaction:discord.Interaction, team_count:int=2) -> None:
+    async def slash_team_voice(
+        self,
+        interaction: discord.Interaction,
+        team_count: int=2
+    ) -> None:
         # await interaction.response.send_message("Creating channels.", ephemeral=True, delete_after=5)
         try:
             members = interaction.user.voice.channel.members
@@ -229,6 +238,49 @@ class Team(commands.Cog):
         vote_channel = await self.create_vote(interaction, teams)
         await interaction.response.send_message(f"Created vote to move members. Go to {vote_channel.mention} to vote.", ephemeral=True)
 
+    @app_commands.command(
+            name="chat",
+            description="get a random list of teams, based on members given."
+    )
+    async def slash_team_chat(
+        self,
+        interaction: discord.Interaction,
+        members: str,
+        team_count: int=2
+    ) -> None:
+        members = members.split()
+        for member in members:
+            reg_result = re.findall(r"<@*&*\d+>", member)[0]
+            self.logger.debug(f"Getting mention, {member, reg_result}")
+            if member != reg_result:
+                break
+        else:
+            if len(members) < team_count:
+                await interaction.response.send_message(f"Not enough members to fill {team_count} teams. Only got {len(members)}", ephemeral=True)
+                return
+            xref_members = [
+                member for member in interaction.guild.members
+                for chat_member in members
+                if chat_member == member.mention
+            ]
+            self.logger.debug(f"{xref_members=}")
+            await self.get_teams_category(interaction=interaction)
+            teams = await self.DevideTeams(team_count=team_count, members=xref_members)
+            embed = discord.Embed(
+                title="Teams",
+                color=random.choice(rainbow.RAINBOW),
+            )
+            for team, team_members in teams.items():
+                members = [discord.utils.get(interaction.guild.members, id=j).mention for j in team_members]
+                embed.add_field(name=team, value=members)
+            await interaction.response.send_message(embed=embed)
+            return
+        # when loop doesn't complete completely, continue from here
+        await interaction.response.send_message(
+            f"{member} was not a mentioned user. Please mention members like so:\n<@!{self.bot.user.id}>, <@!216308400336797706>",
+            ephemeral=True
+        )
+
     async def create_vote(self, interaction:discord.Interaction, teams:dict) -> discord.TextChannel|None:
         category_channel = await self.get_teams_category(interaction=interaction)
         vote_text_channel = await self.get_votes_channel(category_channel)
@@ -240,11 +292,11 @@ class Team(commands.Cog):
             self.data = self.get_data()
         guild = interaction.guild
         guild_id = str(guild.id)
-        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_team)
+        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_team_voice)
         vote_txt = f"{interaction.user.mention} used {cmd.mention}\nThe following users need to vote:"
-        for k, i in teams.items():
-            vote_txt += f"\nTeam {int(k) + 1}"
-            members = [discord.utils.get(guild.members, id=j) for j in i]
+        for team, team_members in teams.items():
+            vote_txt += f"\nTeam {int(team) + 1}"
+            members = [discord.utils.get(guild.members, id=j) for j in team_members]
             for member in members:
                 vote_txt += f"\n{member.mention}"
         vote_msg = await vote_text_channel.send(vote_txt)

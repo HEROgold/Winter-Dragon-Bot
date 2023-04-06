@@ -1,6 +1,7 @@
 import logging
 import random
 from math import ceil
+from typing import overload
 
 import discord
 from discord.ext import commands
@@ -16,54 +17,85 @@ class Help(commands.Cog):
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
 
+    @overload
     async def CreateHelpEmbed(
         self,
-        help_input: str | int,
+        help_input: str,
         commands_list: list[app_commands.AppCommand] | list[commands.Command],
     ) -> discord.Embed | discord.ui.View:
+        ...
+
+    @overload
+    async def CreateHelpEmbed(
+        self,
+        help_input: int,
+        commands_list: list[app_commands.AppCommand] | list[commands.Command],
+    ) -> discord.Embed | discord.ui.View:
+        ...
+
+    async def CreateHelpEmbed(
+        self,
+        help_input: int | str,
+        commands_list: list[app_commands.AppCommand] | list[commands.Command],
+    ) -> discord.Embed | discord.ui.View:
+        
         if type(help_input) ==  str:
             embed = discord.Embed(title=f"Command {help_input}", color=random.choice(rainbow.RAINBOW))
             for command in commands_list:
                 embed = self.PopulateCommandEmbed(help_input, embed, command)
             return embed, None
-    
-        page_number = help_input
-        embed = discord.Embed(
-            title=f"Help page {page_number}",
-            description="Description and explanation of all commands",
-            color=random.choice(rainbow.RAINBOW),)
-        min_per_page = help_input * config.Help.PAGE_MAX - config.Help.PAGE_MAX
-    
-        max_per_page = min_per_page + config.Help.PAGE_MAX
-        for i, command in enumerate(commands_list):
-            if i > min_per_page and i <= max_per_page:
-                embed.add_field(name=command.name, value=command.description, inline=True)
-            elif i <= max_per_page:
-                last_page = ceil((i + 1) / config.Help.PAGE_MAX)
-                embed.set_footer(text=f"No more commands to display. Last page is: Help {last_page}")
-            else:
-                embed.set_footer(text=f"More commands on other pages. Try: Help {page_number+1}")
-                continue
-        view = await self.ButtonHandler(help_input, commands_list, View())
-        return embed, view
+        elif type(help_input) == int:
+            page_number = help_input
+            embed = discord.Embed(
+                title=f"Help page {page_number}",
+                description="Description and explanation of all commands",
+                color=random.choice(rainbow.RAINBOW),)
 
-    def PopulateCommandEmbed(self, help_input:str, embed:discord.Embed, command:commands.Command|app_commands.AppCommand) -> discord.Embed:
-        # self.logger.debug(f"Target command: {HelpInput}")
-        if isinstance(command, commands.Command):
-            command:commands.Command
-            # self.logger.debug(f"from commands.Command (text): {command.name}")
-            if command.name == help_input:
-                self.logger.debug(command.name, command.brief, command.description, command.usage)
-                embed.add_field(name="Brief", value=command.brief, inline=False)
-                embed.add_field(name="Description", value=command.description, inline=False)
-                embed.add_field(name="Usage", value=command.usage, inline=False)
-        else:
-            command:app_commands.AppCommand
-            # self.logger.debug(f"from app_commands.AppCommand (slash): {command.name}")
+            min_per_page = help_input * config.Help.PAGE_MAX - config.Help.PAGE_MAX
+            max_per_page = min_per_page + config.Help.PAGE_MAX
+
+            for i, command in enumerate(commands_list):
+                if i > min_per_page and i <= max_per_page:
+                    embed.add_field(name=command.name, value=command.description, inline=True)
+                elif i <= max_per_page:
+                    last_page = ceil((i + 1) / config.Help.PAGE_MAX)
+                    embed.set_footer(text=f"No more commands to display. Last page is: Help {last_page}")
+                else:
+                    embed.set_footer(text=f"More commands on other pages. Try: Help {page_number+1}")
+                    continue
+            view = await self.ButtonHandler(help_input, commands_list, View())
+            return embed, view
+
+
+    @overload
+    def PopulateCommandEmbed(
+        self, help_input: str, embed: discord.Embed, command: commands.Command
+    ) -> discord.Embed:
+        ...
+
+    @overload
+    def PopulateCommandEmbed(
+        self, help_input: str, embed: discord.Embed, command: app_commands.AppCommand
+    ) -> discord.Embed:
+        ...
+
+    def PopulateCommandEmbed(
+        self,
+        help_input: str,
+        embed: discord.Embed,
+        command: app_commands.AppCommand | commands.Command
+    ) -> discord.Embed:
+        if command == commands.Command:
             if command.name == help_input:
                 self.logger.debug(f"{command.name}, {command.description}")
                 embed.add_field(name="Description", value=command.description, inline=False)
                 embed.add_field(name="Exapmle use", value=command.mention, inline=False)
+            return embed
+        if command == app_commands.AppCommand and command.name == help_input:
+            self.logger.debug(command.name, command.brief, command.description, command.usage)
+            embed.add_field(name="Brief", value=command.brief, inline=False)
+            embed.add_field(name="Description", value=command.description, inline=False)
+            embed.add_field(name="Usage", value=command.usage, inline=False)
         return embed
 
     async def UpdateView(self, view:discord.ui.View, *items) -> discord.ui.View:
@@ -78,7 +110,7 @@ class Help(commands.Cog):
         self, interaction: discord.Interaction, page: int = None, command: str = None
     ) -> None:
         if page and page <= 0:
-            await interaction.response.send_message("Page has to be 1 or bigger")
+            await interaction.response.send_message("Page has to be 1 or bigger", ephemeral=True)
             return
         if not (bool(page) ^ bool(command)):
             await interaction.response.send_message(
@@ -88,13 +120,12 @@ class Help(commands.Cog):
             return
     
         query = page or command
-    
-        commands = await self.bot.tree.fetch_commands()
+        commands = self.bot.tree.get_commands() or await self.bot.tree.fetch_commands()
         embed, view = await self.CreateHelpEmbed(help_input=query, commands_list=commands)
         if view is None:
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @slash_help.autocomplete("command")
     async def autocomplete_help(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:

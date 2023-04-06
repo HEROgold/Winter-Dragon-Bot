@@ -31,7 +31,7 @@ class Image(commands.GroupCog):
                 continue
             self.logger.debug(f"Scanning files: {root}, {subdirs}, {files}")
             try:
-                member = await self.bot.fetch_user(int(root[19:]))
+                member = self.bot.get_user(int(root[19:])) or await self.bot.fetch_user(int(root[19:]))
             except ValueError:
                 continue
             dm = await member.create_dm()

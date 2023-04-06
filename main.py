@@ -99,8 +99,11 @@ async def get_cogs() -> list[str]:
 async def mass_load() -> None:
     cogs = await get_cogs()
     for cog in cogs:
-        await bot.load_extension(cog)
-        bot_logger.info(f"Loaded {cog}")
+        try:
+            await bot.load_extension(cog)
+            bot_logger.info(f"Loaded {cog}")
+        except Exception as e:
+            bot_logger.exception(e)
     if not (os.listdir("./cogs")):
         bot_logger.warning("No Cogs Directory To Load!")
 

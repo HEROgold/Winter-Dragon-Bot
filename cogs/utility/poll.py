@@ -82,6 +82,7 @@ class Poll(commands.GroupCog):
             await dm.send("You cannot vote anymore, The vote time has ran out.")
 
     # FIXME: Doesn't edit messages
+    # TODO: more testing
     @tasks.loop(seconds=60)
     async def anounce_winners(self) -> None:
         for guild_id, guild_data in self.data.items(): #type: ignore
@@ -95,8 +96,9 @@ class Poll(commands.GroupCog):
                     continue
                 # self.logger.debug("Announcing Winner")
                 # Get message then edit message with the same embed and add the winning option as text.
-                channel = await self.bot.fetch_channel(int(guild_data["poll_channel"]))
-                msg = await channel.fetch_message(msg_id)
+                channel = self.bot.get_channel(int(guild_data["poll_channel"])) or await self.bot.fetch_channel(int(guild_data["poll_channel"]))
+                msg = channel.get_partial_message(msg_id) or await channel.fetch_message(msg_id)
+                self.logger.debug(f"{channel}")
                 self.logger.debug(f"{msg}")
                 embed = msg.embeds[0]
                 self.logger.debug(f"{embed}")
@@ -183,7 +185,7 @@ class Poll(commands.GroupCog):
             self.data[guild_id] = {}
         try:
             poll_channel_id:int = self.data[guild_id]["poll_channel"]
-            poll_channel = await self.bot.fetch_channel(poll_channel_id)
+            poll_channel = self.bot.get_channel(poll_channel_id) or await self.bot.fetch_channel(poll_channel_id)
         except (KeyError, discord.errors.NotFound):
             poll_channel_id = None
             poll_channel = None

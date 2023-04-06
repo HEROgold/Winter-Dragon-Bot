@@ -1,4 +1,3 @@
-import contextlib
 import logging
 import os
 import pickle
@@ -119,9 +118,11 @@ class Stats(commands.GroupCog):
         channels = list(category.values())[0]
         self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
         for channel_id in channels.values():
-            with contextlib.suppress(AttributeError):
+            try:
                 channel = discord.utils.get(guild.channels, id=int(channel_id))
                 await channel.delete(reason=reason)
+            except AttributeError:
+                pass
         del self.data[guild_id]
         self.set_data(self.data)
 
@@ -196,6 +197,7 @@ class Stats(commands.GroupCog):
         online_channel = guild.get_channel(online_channel_id) or await guild.fetch_channel(online_channel_id)
         return peak_channel, guild_channel, bot_channel, user_channel, online_channel
 
+
     @app_commands.command(name="show", description="Get some information about the server!")
     async def slash_stats_show(self, interaction:discord.Interaction) -> None:
         guild = interaction.guild
@@ -257,6 +259,9 @@ class Stats(commands.GroupCog):
             self.data = self.get_data()
         for guild_id in self.data.keys():
             guild = discord.utils.get(self.bot.guilds, id=guild_id)
+            if not guild:
+                self.logger.debug(f"skipping reset of {guild_id}")
+                continue
             await self.remove_stats_channels(guild=guild, reason="Resetting all stats channels")
             await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
             self.logger.info(f"Reset stats for: {guild}")
