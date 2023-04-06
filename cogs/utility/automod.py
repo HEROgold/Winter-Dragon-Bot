@@ -34,8 +34,6 @@ class LogCategories(Enum):
 class DragonLog(commands.GroupCog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        # {"DUMMY_GUILD_ID":{"DUMMY_CATEGORY_ID":{"DUMMY_CHANNEL_NAME": 0}}}
-        self.data = None
         self.DATABASE_NAME = self.__class__.__name__
         self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
@@ -572,6 +570,7 @@ class DragonLog(commands.GroupCog):
         except KeyError:
             disabled = []
         guild_data = self.data[str(guild.id)]
+        guild_data: dict
         for category_id, channels in guild_data.items():
             try:
                 category_id = int(category_id)
