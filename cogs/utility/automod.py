@@ -32,8 +32,10 @@ class LogCategories(Enum):
 
 # TODO: added role, updated role, deleted role,
 class DragonLog(commands.GroupCog):
+    data: dict
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
+        self.data = {}
         self.DATABASE_NAME = self.__class__.__name__
         self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
