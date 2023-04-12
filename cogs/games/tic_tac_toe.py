@@ -89,7 +89,10 @@ class TicTacToe(commands.GroupCog):
             await interaction.response.send_message("No games found to display.", ephemeral=True)
             return
 
-        embed = self.create_stats_embed(game_results)
+        embed = discord.Embed(title="Stats", description="Your Tic Tac Toe Stats", color=random.choice(rainbow.RAINBOW))
+        for name, value in game_results.items():
+            embed.add_field(name=name, value=value, inline=True)
+
         await interaction.response.send_message(embed=embed)
 
     def calculate_game_results(self, interaction_user_id: int) -> dict[str, int] | None:
@@ -116,13 +119,6 @@ class TicTacToe(commands.GroupCog):
             game_results["total"] += 1
         # test and return None if gamresults != the starting value
         return game_results if game_results != BASE_GAME_RESULTS else None
-
-
-    def create_stats_embed(self, game_results: dict[str, int]) -> discord.Embed:
-        embed = discord.Embed(title="Stats", description="Your Tic Tac Toe Stats", color=random.choice(rainbow.RAINBOW))
-        for name, value in game_results.items():
-            embed.add_field(name=name, value=value, inline=True)
-        return embed
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
