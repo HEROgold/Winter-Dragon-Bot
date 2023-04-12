@@ -77,46 +77,52 @@ class TicTacToe(commands.GroupCog):
 
     @app_commands.checks.cooldown(2, 120)
     @app_commands.command(
-        name = "stats",
+        name="stats",
         description="view tic-tac-toe stats"
     )
-    async def slash_leader_board(self, interaction:discord.Interaction) -> None:
+    async def slash_leader_board(self, interaction: discord.Interaction) -> None:
         if not self.data:
             self.data = self.get_data()
-        game_restults = None
+
+        game_results = self.calculate_game_results(interaction.user.id)
+        if game_results is None:
+            await interaction.response.send_message("No games found to display.", ephemeral=True)
+            return
+
+        embed = self.create_stats_embed(game_results)
+        await interaction.response.send_message(embed=embed)
+
+    def calculate_game_results(self, interaction_user_id: int) -> dict[str, int] | None:
+        BASE_GAME_RESULTS = {"total": 0, "abandoned": 0, "wins": 0, "losses": 0, "draws": 0}
+        game_results = BASE_GAME_RESULTS.copy()
+
         for game_data in self.data.values():
-            status:str = game_data["status"]
-            game_restults = {"total":0, "abandoned":0, "\u200b":"\u200b", "wins":0, "losses":0, "draws":0}
-            user_id = str(interaction.user.id)
+            status: str = game_data["status"]
 
             # Determine abandoned/ongoing and draws
             if status in {"running", "waiting"}:
-                game_restults["abandoned"] +=1
+                game_results["abandoned"] += 1
             elif status == "finished-draw":
-                game_restults["draws"] += 1
+                game_results["draws"] += 1
+            else:
+                # Determine wins and losses
+                for i, game_user_id in enumerate(game_data["member1"]["id"], game_data["member2"]["id"]):
+                    if game_user_id == interaction_user_id and status == f"finished-player{i+1}":
+                        game_results["wins"] += 1
+                        break
+                else:
+                    game_results["losses"] += 1
 
-            # Determine wins and losses
-            if user_id == game_data["member1"]["id"]:
-                if status == "finished-player1":
-                    game_restults["wins"] += 1
-                elif status == "finished-player2":
-                    game_restults["losses"] += 1
-            if user_id == game_data["member2"]["id"]:
-                if status == "finished-player1":
-                    game_restults["losses"] += 1
-                elif status == "finished-player2":
-                    game_restults["wins"] += 1
+            game_results["total"] += 1
+        # test and return None if gamresults != the starting value
+        return game_results if game_results != BASE_GAME_RESULTS else None
 
-            game_restults["total"] += 1
 
-        if not game_restults:
-            await interaction.response.send_message("No gamestats to display.", ephemeral=True)
-            return
-
-        embed=discord.Embed(title="Stats", description="Your Tic Tac Toe Stats", color=random.choice(rainbow.RAINBOW))
-        for name, value in game_restults.items():
+    def create_stats_embed(self, game_results: dict[str, int]) -> discord.Embed:
+        embed = discord.Embed(title="Stats", description="Your Tic Tac Toe Stats", color=random.choice(rainbow.RAINBOW))
+        for name, value in game_results.items():
             embed.add_field(name=name, value=value, inline=True)
-        await interaction.response.send_message(embed=embed)
+        return embed
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
