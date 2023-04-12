@@ -6,12 +6,10 @@ import pickle
 import discord
 from discord import app_commands
 from discord.ext import commands
-import sqlalchemy
 
 import config
-from tools import app_command_tools, dragon_database_Sql
-
-# TODO: https://docs.sqlalchemy.org/en/20/orm/quickstart.html
+from tools import app_command_tools, dragon_database
+# TODO: test all commands if they work.
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(administrator=True)
@@ -20,8 +18,6 @@ class Welcome(commands.GroupCog):
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.DATABASE_NAME = self.__class__.__name__
-        self.db = dragon_database_Sql.Database()
-        self.setup_table()
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
             self.setup_db_file()
@@ -36,28 +32,32 @@ class Welcome(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    def setup_table(self) -> None:
-        self.logger.debug("Creating Table")
-        with self.db.engine.connect() as connection:
-            connection.execute
-            connection.execute(sqlalchemy.text(f"""
-            CREATE TABLE IF NOT EXISTS {self.DATABASE_NAME} (
-                    guild_id INT(32) NOT NULL,
-                    enabled BOOLEAN DEFAULT 0,
-                    message CHAR(255),
-                    PRIMARY KEY (guild_id)
-            )
-            ;
-            """))
+    def get_data(self) -> dict:
+        if config.Main.USE_DATABASE:
+            db = dragon_database.Database()
+            data = db.get_data(self.DATABASE_NAME)
+        elif os.path.getsize(self.DBLocation) > 0:
+            with open(self.DBLocation, "rb") as f:
+                data = pickle.load(f)
+        return data
+
+    def set_data(self, data) -> None:
+        if config.Main.USE_DATABASE:
+            db = dragon_database.Database()
+            db.set_data(self.DATABASE_NAME, data=data)
+        else:
+            with open(self.DBLocation, "wb") as f:
+                pickle.dump(data, f)
+
+    async def cog_load(self) -> None:
+        self.data = self.get_data()
+
+    async def cog_unload(self) -> None:
+        self.set_data(self.data)
 
     @commands.Cog.listener()
     async def on_member_join(self, member:discord.Member) -> None:
-        with self.db.engine.connect() as connection:
-            enabled, message = connection.execute(sqlalchemy.text(f"""
-            SELECT (enabled, message) FROM {self.DATABASE_NAME} WHERE (guild_id={member.guild.id})
-            """))
-        if not enabled:
-            return
+        message = self.data["message"]
         channel = member.guild.system_channel
         cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.get_command("help"))
         default_message = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
@@ -81,26 +81,25 @@ class Welcome(commands.GroupCog):
         name="enable",
         description="Enable welcome message",
     )
-    async def slash_enable(self, interaction:discord.Interaction, message:str) -> None:
-        with self.db.engine.connect() as connection:
-            connection.execute(sqlalchemy.text(f"""
-                REPLACE INTO {self.DATABASE_NAME} VALUES ({interaction.guild.id}, 0, 'Disabled.')
-            """))
-            connection.commit()
+    async def slash_enable(self, interaction: discord.Interaction, message:str) -> None:
+        self.data["enabled"] = True
         await interaction.response.send_message("Enabled welcome message.", ephemeral=True)
 
     @app_commands.command(
         name="disable",
         description="Disable welcome message"
     )
-    async def slash_disable(self, interaction:discord.Interaction) -> None:
-        with self.db.engine.connect() as connection:
-            connection.execute(sqlalchemy.text(f"""
-                DELETE FROM {self.DATABASE_NAME} WHERE (guild_id={interaction.guild.id})
-            """))
-            connection.commit()
+    async def slash_disable(self, interaction: discord.Interaction) -> None:
+        self.data["enabled"] = False
         await interaction.response.send_message("Disabled welcome message.", ephemeral=True)
 
+    @app_commands.command(
+        name="message",
+        description="Change the welcome message",
+    )
+    async def slash_set_msg(self, interaction: discord.Interaction, message: str) -> None:
+        self.data["message"] = message
+        await interaction.response.send_message(f"changed message to {message}")
+
 async def setup(bot:commands.Bot) -> None:
-    # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Welcome(bot))
