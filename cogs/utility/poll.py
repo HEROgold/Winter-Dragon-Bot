@@ -117,22 +117,22 @@ class Poll(commands.GroupCog):
         description="Create a poll"
     )
     async def slash_poll_create( 
-        self, # NOSONAR
-        interaction:discord.Interaction,
-        message:str,
-        minutes:int,
-        choice1:str,
-        hours:int=0,
-        days:int=0,
-        choice2:str=None,
-        choice3:str=None,
-        choice4:str=None,
-        choice5:str=None,
-        choice6:str=None,
-        choice7:str=None,
-        choice8:str=None,
-        choice9:str=None,
-        choice10:str=None,
+            self, # NOSONAR
+            interaction:discord.Interaction,
+            message:str,
+            minutes:int,
+            choice1:str,
+            hours:int=0,
+            days:int=0,
+            choice2:str=None,
+            choice3:str=None,
+            choice4:str=None,
+            choice5:str=None,
+            choice6:str=None,
+            choice7:str=None,
+            choice8:str=None,
+            choice9:str=None,
+            choice10:str=None,
         ) -> None:
         options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
         guild_id = str(interaction.guild.id)
@@ -144,13 +144,14 @@ class Poll(commands.GroupCog):
             return
         emb = discord.Embed(title="Poll", description=f"{message}\n\n", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
+        emb.set_author(name=interaction.user, icon_url=interaction.user.avatar.url)
         # create dynamic emoji from 1 to 10 > change name for 10 to keycap_ten
         for i, option in enumerate(options):
             if option is None:
                 continue
             j = i+1
             emb.add_field(name=f":{'keycap_ten' if j == 10 else num2words.num2words(j)}:", value=option, inline=True)
-        timeout_epoch = self.relative_epoch(minutes, hours, days)
+        timeout_epoch = self.get_relative_epoch(minutes, hours, days)
         emb.add_field(name="Time Left", value=f"<t:{timeout_epoch}:R>", inline=False)
         emb.set_footer(text="You may only vote once, and cannot change this.")
         await interaction.response.send_message("Poll created", ephemeral=True, delete_after=10)
@@ -168,7 +169,7 @@ class Poll(commands.GroupCog):
         }
         self.set_data(self.data)
 
-    def relative_epoch(self, minutes, hours, days) -> int:
+    def get_relative_epoch(self, minutes, hours, days) -> int:
         return int(
             (
                 datetime.datetime.now(datetime.timezone.utc)
