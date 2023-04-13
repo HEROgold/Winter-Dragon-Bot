@@ -13,7 +13,7 @@ import config
 
 # Change values/settings in config.py.
 # TODO: Push owner only commands in specific guild.
-# TODO: Use setuphook to load initial cog
+# TODO: write dpy/pytests
 
 LOG_LEVEL = logging.DEBUG
 
