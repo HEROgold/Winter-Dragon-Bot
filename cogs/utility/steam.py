@@ -197,7 +197,7 @@ class Steam(commands.GroupCog):
         self.logger.debug(f"Got embed with sales, {embed}, to send to {self.subscribed_users}")
 
         _, sub_mention = await self.act.get_app_sub_command(self.slash_remove)
-        disable_message = f"You can disable this by using {sub_mention}"
+        disable_message = f"You can disable this message by using {sub_mention}"
         for user_id in self.subscribed_users: # type: ignore
             try:    
                 user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
