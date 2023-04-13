@@ -30,7 +30,6 @@ class LogCategories(Enum):
     DELETEDROLE:str = "DELETEDROLES"
 
 
-# TODO: added role, updated role, deleted role,
 class DragonLog(commands.GroupCog):
     data: dict
     def __init__(self, bot:commands.Bot) -> None:
@@ -243,6 +242,7 @@ class DragonLog(commands.GroupCog):
             pass
 
     # TODO: print invite code, bug? entry.target is not invite
+    # on_invite_create as event does seem to work.
     async def on_invite_create(self, entry:discord.AuditLogEntry) -> None:
         self.check_disabled(entry.guild, LogCategories.CREATEDINVITES)
         invite:discord.Invite = entry.target
@@ -593,6 +593,7 @@ class DragonLog(commands.GroupCog):
 
 # TODO: autocomplete doesnt work with enum.value.lower
 
+    # Split enabled and disabled into 2 functions.
     # def get_enabled_disabled(self, guild_id) -> tuple[list, list]:
     #     try:
     #         enabled = self.data[guild_id]["enabled"]
@@ -671,19 +672,3 @@ class DragonLog(commands.GroupCog):
 
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(DragonLog(bot))
-
-
-# FIXME: 207
-# 2023-03-03 16:59:49,172:ERROR:discord.client: Ignoring exception in on_audit_log_entry_create
-# Traceback (most recent call last):
-#   File "C:\Users\marti\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\discord\client.py", line 441, in _run_event
-#     await coro(*args, **kwargs)
-#   File "C:\Users\marti\Documents\GitHub\Winter-Dragon-Bot\cogs\utility\automod.py", line 167, in on_audit_log_entry_create
-#     await self.on_guild_channel_update(entry)
-#   File "C:\Users\marti\Documents\GitHub\Winter-Dragon-Bot\cogs\utility\automod.py", line 207, in on_guild_channel_update
-#     if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
-#                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-#   File "C:\Users\marti\Documents\GitHub\Winter-Dragon-Bot\cogs\utility\automod.py", line 207, in <listcomp>
-#     if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
-#                                                     ^^^^^^^^^^^^^^^^^^^^^
-# AttributeError: 'AuditLogDiff' object has no attribute 'overwrites'

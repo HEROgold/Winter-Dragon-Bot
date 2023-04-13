@@ -14,7 +14,6 @@ import config
 import rainbow
 from tools import app_command_tools, dragon_database
 
-# TODO: needs testing
 
 @app_commands.guild_only()
 class Team(commands.GroupCog):
