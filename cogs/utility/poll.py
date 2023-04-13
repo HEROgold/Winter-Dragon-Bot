@@ -24,6 +24,7 @@ class Poll(commands.GroupCog):
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
             self.setup_db_file()
 
+
     def setup_db_file(self) -> None:
         if not os.path.exists(self.DBLocation):
             with open(self.DBLocation, "wb") as f:
@@ -34,6 +35,7 @@ class Poll(commands.GroupCog):
         else:
             self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
+
     def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
@@ -43,6 +45,7 @@ class Poll(commands.GroupCog):
                 data = pickle.load(f)
         return data
 
+
     def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
             db = dragon_database.Database()
@@ -51,12 +54,15 @@ class Poll(commands.GroupCog):
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
 
+
     async def cog_load(self) -> None:
         self.data = self.get_data()
         self.anounce_winners.start()
 
+
     async def cog_unload(self) -> None:
         self.set_data(self.data)
+
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
@@ -80,6 +86,7 @@ class Poll(commands.GroupCog):
         else:
             await reaction.remove(user)
             await dm.send("You cannot vote anymore, The vote time has ran out.")
+
 
     # FIXME: Doesn't edit messages
     # TODO: more testing
@@ -134,40 +141,50 @@ class Poll(commands.GroupCog):
             choice9:str=None,
             choice10:str=None,
         ) -> None:
-        options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
         guild_id = str(interaction.guild.id)
         poll_channel_id, poll_channel = await self.get_poll_channels(guild_id)
+        
         if not poll_channel_id:
             act = app_command_tools.Converter(bot=self.bot)
             _, custom_mention = await act.get_app_sub_command(self.slash_poll_set_channel)
             await interaction.response.send_message(f"No channel found to send poll. use {custom_mention} to set one", ephemeral=True) # </poll channel:ID>
             return
+
         emb = discord.Embed(title="Poll", description=f"{message}\n\n", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
         emb.set_author(name=interaction.user, icon_url=interaction.user.avatar.url)
+        emb.set_footer(text="You may only vote once, and cannot change this.")
+
         # create dynamic emoji from 1 to 10 > change name for 10 to keycap_ten
+        options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
         for i, option in enumerate(options):
             if option is None:
                 continue
             j = i+1
             emb.add_field(name=f":{'keycap_ten' if j == 10 else num2words.num2words(j)}:", value=option, inline=True)
+
+        # Add epoch relative time left after adding options. Discord <t:0000:R> doesn't work on footer.
         timeout_epoch = self.get_relative_epoch(minutes, hours, days)
         emb.add_field(name="Time Left", value=f"<t:{timeout_epoch}:R>", inline=False)
-        emb.set_footer(text="You may only vote once, and cannot change this.")
+
         await interaction.response.send_message("Poll created", ephemeral=True, delete_after=10)
         msg = await poll_channel.send(embed=emb)
+
         ALLOWED_EMOJIS = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟",]
         for i, option in enumerate(options):
             if option is None:
                 continue
             await msg.add_reaction(ALLOWED_EMOJIS[i])
+
         self.data[guild_id]["polls"][str(msg.id)] = {
             "Time": timeout_epoch,
             "Question": message,
             "Votes": {str(ALLOWED_EMOJIS[i]):{"msg":option,"count":0} for i, option in enumerate(options)},
             "Users": [],
         }
+
         self.set_data(self.data)
+
 
     def get_relative_epoch(self, minutes, hours, days) -> int:
         return int(
@@ -178,6 +195,7 @@ class Poll(commands.GroupCog):
                 )
             ).timestamp()
         )
+
 
     async def get_poll_channels(self, guild_id:str) -> tuple[int, discord.TextChannel]:
         try:
@@ -195,6 +213,7 @@ class Poll(commands.GroupCog):
         except KeyError:
             self.data[guild_id]["polls"] = {}
         return poll_channel_id, poll_channel
+
 
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.command(
@@ -219,6 +238,7 @@ class Poll(commands.GroupCog):
         minutes += hours * 60
         seconds += minutes * 60
         return seconds
+
 
 async def setup(bot:commands.Bot) -> None:
 	await bot.add_cog(Poll(bot))
