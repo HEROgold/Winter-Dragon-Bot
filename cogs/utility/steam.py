@@ -229,7 +229,7 @@ class Steam(commands.GroupCog):
 
     @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
-        if interaction.user.id not in self.subscribed_users:
+        if interaction.user.id in self.subscribed_users:
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
             return
         self.subscribed_users.append(interaction.user.id)
