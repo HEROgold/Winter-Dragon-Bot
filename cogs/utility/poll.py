@@ -153,7 +153,7 @@ class Poll(commands.GroupCog):
         emb = discord.Embed(title="Poll", description=f"{message}\n\n", color=random.choice(rainbow.RAINBOW))
         emb.timestamp = datetime.datetime.now()
         emb.set_author(name=interaction.user, icon_url=interaction.user.avatar.url)
-        emb.set_footer(text="You may only vote once, and cannot change this.")
+        emb.set_footer(text="You may only vote once, and cannot change.")
 
         # create dynamic emoji from 1 to 10 > change name for 10 to keycap_ten
         options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
