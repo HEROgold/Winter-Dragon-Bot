@@ -29,19 +29,19 @@ class Error(commands.Cog):
 
     async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError) -> None:
         if not interaction:
-            await self.error_check(interaction, error)
+            await self.handle_error(interaction, error)
             return
         if type(error) != app_commands.errors.CommandNotFound:
             self.logger.debug(f"Error from interaction: {interaction.command.name}")
             if interaction.command.name == "shutdown":
                 return
-        await self.error_check(interaction, error)
+        await self.handle_error(interaction, error)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx:commands.Context, error:commands.CommandError) -> None:
         if type(error) != commands.errors.CommandNotFound:
             self.logger.debug(f"Error from ctx: {ctx.command.name}")
-        await self.error_check(ctx, error)
+        await self.handle_error(ctx, error)
 
     async def get_dm(self, i:discord.Interaction|commands.Context) -> discord.DMChannel:
         if type(i) == commands.Context:
@@ -80,7 +80,7 @@ class Error(commands.Cog):
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
 
-    async def error_check(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError) -> None:
+    async def handle_error(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError) -> None:
         # sourcery skip: low-code-quality
         self.logger.debug(f"ErrorType: {type(error)}, error: {error.args}")
         dm = await self.get_dm(x)
@@ -180,7 +180,7 @@ class Error(commands.Cog):
                         await dm.send("Only the bot owner(s) may use this command!")
                     else:
                         self.logger.error(f"Error executing command, CODE: {code}")
-                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\nTry {self.help_msg}, Or Use {server_invite} to join the official bot server")
+                        await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\nUse {server_invite} to join the official bot server, and submit the error code in the forums channel.")
             case _:
                 self.logger.error(f"Unexpected error, CODE: {code}")
                 await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\nuse {server_invite} to join the official bot server")
