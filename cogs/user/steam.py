@@ -135,9 +135,17 @@ class Steam(commands.GroupCog):
         Returns:
             discord.Embed
         """
+        if sales is None:
+            return
+
         regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
-        sort_key: Callable[[str]] = lambda x: x[1]
-        sales.sort(key=sort_key)
+
+        try:
+            sort_key: Callable[[str]] = lambda x: x[1]
+            sales.sort(key=sort_key)
+        except AttributeError:
+            pass
+
         for i in sales:
             game_title = i[0]
             game_sale = i[1]
@@ -175,7 +183,7 @@ class Steam(commands.GroupCog):
             return None
         return new_sales
 
-    @tasks.loop(seconds=21600) # 6 hours > 21600
+    @tasks.loop(seconds=3600) # 6 hours > 21600, default.
     async def update(self) -> None:
         """
         Check if the sales from Html request and Html file are the same
@@ -183,6 +191,7 @@ class Steam(commands.GroupCog):
         When they are not, replaces old .html with the latest one
         and creates a discord Embed object to send and notify users.
         """
+        self.logger.debug("Checking for sales...")
         html = self.get_html()
         html_sales = self.sales_from_html(html)
         with open(self.htmlFile, "r", encoding="utf8") as f:
@@ -196,9 +205,15 @@ class Steam(commands.GroupCog):
         embed = await self.populate_embed(new_sales, embed)
         self.logger.debug(f"Got embed with sales, {embed}, to send to {self.subscribed_users}")
 
-        _, sub_mention = await self.act.get_app_sub_command(self.slash_remove)
-        disable_message = f"You can disable this message by using {sub_mention}"
+        _, sub_mention_remove = await self.act.get_app_sub_command(self.slash_remove)
+        # _, sub_mention_show = await self.act.get_app_sub_command(self.slash_show)
+        # TODO, create mention that includes sale=100 paramater
+        # with_params = await self.act.with_paramaters(self.slash_show, percent=100)
+        # with_param_msg = f"TEST {with_params}"
+        disable_message = f"You can disable this message by using {sub_mention_remove}"
+        # all_sale_message = f"You can see all free sales by using {sub_mention_show}"
         for user_id in self.subscribed_users: # type: ignore
+            self.logger.debug(f"Showing new sales to {user_id}")
             try:    
                 user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
             except discord.errors.NotFound:
@@ -207,14 +222,20 @@ class Steam(commands.GroupCog):
             dm = user.dm_channel or await user.create_dm()
             self.logger.debug(f"Showing {user}, {embed}")
             if len(embed.fields) > 0:
-                await dm.send(content=disable_message, embed=embed)
+                await dm.send(content=f"{disable_message}", embed=embed) # \n{all_sale_message}
         self.logger.debug(f"Updating {self.htmlFile}")
         with open(self.htmlFile, "w", encoding="utf-8") as f:
             f.write(html)
             f.close()
 
+    @update.before_loop # type: ignore
+    async def before_update(self) -> None:
+        self.logger.debug("Waiting untill bot is online")
+        await self.bot.wait_until_ready()
+
     @app_commands.command(name = "show", description = "Get a list of steam games that are on sale for the given percentage or higher")
     async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
+        await interaction.response.defer()
         html = self.get_html()
         html_sales = self.sales_from_html(html)
         target_sales = self.find_percentage_sales(html_sales, percent)
@@ -222,10 +243,17 @@ class Steam(commands.GroupCog):
     
         embed=discord.Embed(title="Steam Games", description=f"Steam Games with sales {percent} or higher", color=0x094d7f)
         embed = await self.populate_embed(target_sales, embed)
+        
+        # TODO, create mention that includes sale=100 paramater
+        # Doesn't seem to work.
+        # with_params = await self.act.with_paramaters(self.slash_show, percent=100)
+        # with_param_msg = f"TEST {with_params}"
         if len(embed.fields) > 0:
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            # await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
+            # await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
+            await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
 
     @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
