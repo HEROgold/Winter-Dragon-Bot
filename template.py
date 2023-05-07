@@ -61,7 +61,7 @@ class Temp(commands.GroupCog):
     @app_commands.command(name="TEMP", description="TEMP")
     async def slash_TEMP(self, interaction: discord.Interaction) -> None:
         """TEMP"""
-        pass
+        raise NotImplementedError("Empty command")
 
     @slash_TEMP.autocomplete("")
     async def COMMAND_autocoplete_VARIABLE(
