@@ -63,20 +63,34 @@ async def main() -> None:
         await bot.load_extension("jishaku")
         await bot.start(config.Main.TOKEN)
 
-@register
-def terminate() -> None: 
-    # sourcery skip: raise-from-previous-error
-    # Client.close unloads cogs.
-    try: # type: ignore
-        asyncio.run(client.close())
-    except RuntimeError:
-        bot_logger.debug("shutdown by command.")
-        raise KeyboardInterrupt
-    bot_logger.info("Logged off")
-    save_logs()
-    # sys.exit()
+
+def logs_size_limit_check(size_in_kb: int) -> bool:
+    total_size = sum(
+        os.path.getsize(os.path.join(root, file))
+        for root, _, files in os.walk(config.Main.LOG_PATH)
+        for file in files
+    )
+    bot_logger.debug(f"{total_size=} {size_in_kb=}")
+    return total_size > size_in_kb
+    # if returns true, def function to remove the oldest logs
+
+def delete_oldest_logs() -> None:    # sourcery skip: remove-unreachable-code
+    """FIXME, actually make this work. Psuedocode below."""
+    oldest_file = sorted(
+        (
+            os.path.getsize(os.path.join(root, file))
+            for root, _, files in os.walk(config.Main.LOG_PATH)
+            for file in files
+        ),
+        key=os.path.getctime,
+    )
+    bot_logger.info(f"deleting old log for space: {oldest_file}")
+    # os.remove(oldest_file)
 
 def save_logs() -> None:
+    bot_logger.info(f"{logs_size_limit_check(config.Main.LOG_SIZE_KB_LIMIT)=}")
+    while logs_size_limit_check(config.Main.LOG_SIZE_KB_LIMIT):
+        delete_oldest_logs()
     if not os.path.exists(config.Main.LOG_PATH):
         os.mkdir(config.Main.LOG_PATH)
     log_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -114,9 +128,24 @@ async def mass_load() -> None:
 async def slash_shutdown(interaction:discord.Interaction) -> None:
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
-    await interaction.response.send_message("Shutting down...",ephemeral=True)
-    terminate()
+    await interaction.response.send_message("Shutting down.", ephemeral=True)
+    bot_logger.debug("shutdown by command.")
+    save_logs()
+    await bot.close()
     await client.close()
+    sys.exit()
+
+@register
+def terminate() -> None: 
+    bot_logger.info("Logging off")
+    save_logs()
+    try:
+        asyncio.run(bot.close())
+        asyncio.run(client.close())
+    except RuntimeError:
+        pass
+    except Exception:
+        pass
     sys.exit()
 
 #run the bot!
