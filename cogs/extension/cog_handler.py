@@ -108,8 +108,8 @@ class CogsC(commands.GroupCog):
         for cog in cogs:
             try:
                 await self.bot.reload_extension(cog)
-            except commands.errors.ExtensionNotLoaded:
-                self.logger.exception(f"Cog not loaded {cog}")
+            except commands.errors.ExtensionNotLoaded as e:
+                self.logger.exception(f"Cog not loaded {cog}, {e}")
             self.logger.info(f"Reloaded {cog}")
             reload_message += f"Reloaded {cog}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
@@ -194,8 +194,15 @@ class CogsC(commands.GroupCog):
             await self.bot.load_extension(extension)
             self.logger.info(f"Loaded {extension}")
             await interaction.response.send_message(f"Loaded {extension}", ephemeral=True)
+        except commands.errors.NoEntryPointError as e:
+            await interaction.response.send_message(f"Could not oad {extension}, it has no setup function.", ephemeral=True)
+            self.logger.warning(e)
+        except commands.errors.ExtensionAlreadyLoaded as e:
+            await interaction.response.send_message(f"Could not load {extension}, it is already loaded", ephemeral=True)
+            self.logger.warning(e)
+        except ModuleNotFoundError | commands.errors.ExtensionFailed as e:
+            await self.logger.critical(e)
         except Exception as e:
-            self.logger.critical("REMOVE `except Exception`!")
             self.logger.exception(f"unable to unload {extension}, {e}")
             await interaction.response.send_message(f"Unable to load {extension}", ephemeral=True)
 
