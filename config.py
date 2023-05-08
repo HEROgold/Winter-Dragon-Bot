@@ -1,84 +1,84 @@
-class main:
-    prefix:str = "$" # default prefix, bot can also just be mentioned.
-    show_logged_in:bool = True
-    log_messages:bool = False # Seems to not work, even with Discord.Intents.message turned ON
-    token:str = "123456789" # your discord bot token!
-    enable_custom_help:bool = True # Enable custom help command! (Preferred)
-    use_database:bool = True # Use MongoDatabase instead of json files
-    database_name:str = "winter_dragon" # Name of the MongoDatabase
+class Tokens:
+    DICSORD_TOKEN: str = "" # your discord bot token!
+    OPEN_API_KEY: str = "" # OpenAI API Key
 
-class database:
-    IP_PORT:str = "localhost:27017"
-    USER_PASS:str = "user:pass"
-    AUTH_METHOD:str = "SCRAM-SHA-256"
+class Main:
+    PREFIX: str = "$" # default prefix, bot can also just be mentioned.
+    SHOW_LOGGED_IN: bool = True # Show message when logged in.
+    LOG_MESSAGES: bool = False # Seems to not work, even with Discord.Intents.message turned ON
+    CUSTOM_HELP: bool = True # Enable custom help command! (Preferred)
+    USE_DATABASE: bool = True # Use MongoDatabase instead of files
+    BOT_NAME: str = "winter_dragon" # Name of the MongoDatabase
+    SUPPORT_GUILD_ID: int = 765965358754037801 # Guild id of the bot's support guild
+    LOG_PATH = "./logs" # Path where logs are saved.
+    LOG_SIZE_KB_LIMIT = 3 * 1000 * 1000 # Size in Bytes of how much to keep. removes oldest logs first when hitting the limit.
 
-class activity:
-    # Change the variable in cogs\extension\activity.py for more options
-    random_activity:bool = True # Allow random activity on startup
-    periodic_change:bool = True # Rotate through random activities/Status when true
-    periodic_time:int = 180 # Time to swtich between activities and Status (Keep the time reasonable to not get ratelimit blocked)
+class Gameservers:
+    BACKGROUND = True # Start new processes in background of computer (no popup windows)
+    ALLOWED = [
+        991078261293473823, # Pink
+        144923529878437889, # Kindom
+        292992698649149441, # Noob
+        584697095848460301, # Topo
+        216308400336797706, # Hero
+        643473774255144981, # Hero 2
+        292662731675402243 # Pink 2
+    ] # list of user id's allowed to use gameserver commands
 
-class autochannel:
-    clean_timer:int = 60*60 # Time in seconds how often to clean autochannels Set to 0 to clean once on startup.
+class Database:
+    PERIODIC_CLEANUP: bool = True # allow periodic cleanups of the database (mongodb or the file's)
+    IP_PORT: str = "localhost:27017"
+    USER_PASS: str = "user:pass"
+    AUTH_METHOD: str = "SCRAM-SHA-256"
 
-class message:
-    limit = 100 # Limit of messages to gather when command is used.
-class help:
-    max_per_page:int = 15 # Set max amount of commands shown per help page. Discord has a maximum of 25 fields per embed.
+class Activity:
+    RANDOM_ACTIVITY: bool = True # Allow random activity on startup
+    PERIODIC_CHANGE: bool = True # Rotate through random activities/Status when true
+    PERIODIC_TIME: int = 180 # Time to swtich between activities and Status (Keep the time reasonable to not get ratelimit blocked)
 
-class rpg:
-    fix:bool = True
+class Autochannel:
+    AUTOCHANNEL_NAME = "AC Channel"
 
-class steam:
-    url:str = "https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1"
+class Message:
+    LIMIT = 100 # Limit of messages to gather when command is used.
 
-class translate:
-    api_key:str = "OpenAI api key" # OpenAI api key
-    dm_instead:bool = True # Send translated message in a DM instead of normal channel (Preferred)
-    limit:int = 500 # Limit the amount of characters/tokens used for the translation
+class Help:
+    PAGE_MAX: int = 15 # Set max amount of commands shown per help page. Discord has a maximum of 25 fields per embed.
 
-class team:
-    dm_insteadp:bool = True # Send a DM to the user when sending notifications
+class Steam:
+    URL: str = "https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1&supportedlang=english"
 
-class ban:
-    default_bantime:int = 28800 # This is in seconds. 60 is a minute, 3600 is an hour etc.
-    rolename:str = "Banned"
+class Translate:
+    DM_INSTEAD: bool = True # Send translated message in a DM instead of normal channel (Preferred)
+    LIMIT: int = 500 # Limit the amount of characters/tokens used for the translation
 
-class error: # Wether or not to log and message when error is hit.
-    ignore_errors:bool = False # Makes the bot ignore unhandled errors.
-    always_log_errors:bool = True # Always send log messages in log file
-    MissingRequiredArgument:bool = True
-    BotMissingPermissions:bool = True
-    CommandNotFound:bool = True
-    MissingPermissions:bool = True
-    TooManyArguments:bool = True
-    PrivateMessageOnly:bool = True
-    NoPrivateMessage:bool = True
-    HTTPException:bool = True
-    CooldownError:bool = True
-    CheckFailure:bool = True
-    DisabledCommand:bool = True
-    UserMissingRole:bool = True
-    UserMissingRole:bool = True
-    CommandInvokeError:bool = True
-    NotOwner:bool = True
+class Team:
+    DM_INSTEAD: bool = True # Send a DM to the user when sending notifications
 
-class purge:
-    limit:int = 1000 # Limit amount of total messaged to be purged.
-    ratelimit_amount:int = 1 # Amount of times command can be used
-    ratelimit_seconds:int = 60 # Seconds of time before ratelimit_amount is reset.
-    use_history_instead:bool = False # use message history instead of purge. WARNING: This might cause ratelimits!
+class Ban:
+    DEFAULT_BANTIME: int = 28800 # This is in seconds. 60 is a minute, 3600 is an hour etc.
+    ROLENAME: str = "Banned"
 
-class reminder:
-    min_duration:bool = 1 # Minutes, Default and min 1
-    max_duration:bool = 365 # Days, Default and max 365
+class Error: # Wether or not to log and message when error is hit.
+    IGNORE_ERRORS: bool = False # Makes the bot ignore unhandled errors.
+    ALWAYS_LOG_ERRORS: bool = True # Always send log messages in log file
 
-class welcome:
-    dm_user:bool = True
+class Purge:
+    LIMIT: int = 100 # Limit amount of total messaged to be purged.
+    RATELIMIT_AMOUNT: int = 1 # Amount of times command can be used
+    RATELIMIT_SECONDS: int = 60 # Seconds of time before ratelimit_amount is reset.
+    USE_HISTORY: bool = False # use message history to followup after purge WARNING: This might cause ratelimits!
 
-class announcement:
-    mention_all:bool = True
+class Reminder:
+    MIN_DURATION: int = 1 # Minutes, Default and min 1
+    MAX_DURATION: int = 365 # Days, Default and max 365
 
-class urban:
-    allow_random:bool = True
-    max_length:int = 5 # Maximum 10
+class Welcome:
+    DM: bool = True # DM the user instead of putting it in the public chat
+
+class Announcement:
+    MENTION_ALL: bool = True
+
+class Urban:
+    ALLOW_RANDOM: bool = True
+    MAX_LENGHT: int = 5 # Maximum 10
