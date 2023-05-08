@@ -27,23 +27,26 @@ class Error(commands.Cog):
         tree = self.bot.tree
         tree.on_error = tree.__class__.on_error
 
-    async def on_app_command_error(self, interaction:discord.Interaction, error:app_commands.AppCommandError) -> None:
+    async def on_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
         if not interaction:
             await self.handle_error(interaction, error)
             return
+        # Issue with typing /command and spamming dm about cmd not found.
+        # Leave handle_error inside if
         if type(error) != app_commands.errors.CommandNotFound:
             self.logger.debug(f"Error from interaction: {interaction.command.name}")
             if interaction.command.name == "shutdown":
+                self.logger.exception(error)
                 return
-        await self.handle_error(interaction, error)
+            await self.handle_error(interaction, error)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx:commands.Context, error:commands.CommandError) -> None:
+    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         if type(error) != commands.errors.CommandNotFound:
             self.logger.debug(f"Error from ctx: {ctx.command.name}")
         await self.handle_error(ctx, error)
 
-    async def get_dm(self, i:discord.Interaction|commands.Context) -> discord.DMChannel:
+    async def get_dm(self, i: discord.Interaction|commands.Context) -> discord.DMChannel:
         if type(i) == commands.Context:
             dm = await self.ctx_error_handler(i)
         else:
@@ -51,7 +54,7 @@ class Error(commands.Cog):
         self.logger.debug(f"Returning dm channel {dm.recipient}, with message {self.help_msg}")
         return dm
 
-    async def app_command_error_handler(self, interaction:discord.Interaction) -> discord.DMChannel:
+    async def app_command_error_handler(self, interaction: discord.Interaction) -> discord.DMChannel:
         try:
             app_command, custom_mention = await self.act.get_app_sub_command(interaction.command)
             self.help_msg = f"{custom_mention or app_command.mention}"
@@ -80,7 +83,7 @@ class Error(commands.Cog):
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
 
-    async def handle_error(self, x:commands.Context|discord.Interaction, error:app_commands.AppCommandError|commands.CommandError) -> None:
+    async def handle_error(self, x: commands.Context|discord.Interaction, error: app_commands.AppCommandError|commands.CommandError) -> None:
         # sourcery skip: low-code-quality
         self.logger.debug(f"ErrorType: {type(error)}, error: {error.args}")
         dm = await self.get_dm(x)
@@ -177,7 +180,9 @@ class Error(commands.Cog):
                 self.logger.error(f"Args: {error.args}")
                 for arg in error.args:
                     if "NotOwner" in arg:
-                        await dm.send("Only the bot owner(s) may use this command!")
+                        await dm.send("You may not use this command!")
+                    # if "NotFound" in arg:
+                    #     self.logger.warning(error)
                     else:
                         self.logger.error(f"Error executing command, CODE: {code}")
                         await dm.send(f"Error executing command, please contact the bot creator with the following code `{code}`.\nUse {server_invite} to join the official bot server, and submit the error code in the forums channel.")
