@@ -10,7 +10,7 @@ import config
 class Translate(commands.Cog):
     def __init__(self, bot:commands.Bot) -> None:
         self.bot = bot
-        openai.api_key = config.Translate.API_KEY
+        openai.api_key = config.Tokens.OPEN_API_KEY
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, member:discord.Member|discord.User) -> None:
