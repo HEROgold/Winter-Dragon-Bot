@@ -39,10 +39,11 @@ class Image(commands.GroupCog):
             embed = discord.Embed(title="AI Generated Image's", color=random.choice(rainbow.RAINBOW))
             embed.set_footer(text="These results come from an API, the results are from www.craiyon.com")
             dc_files = []
-            dc_files.extend(discord.File(os.path.join(root, file)) for file in files)
-            await dm.send(embed=embed, files=dc_files)
             for file in files:
-                os.remove(os.path.join(root, file))
+                img_path = os.path.join(root, file)
+                dc_files.extend(discord.File(img_path))
+                os.remove(img_path)
+            await dm.send(embed=embed, files=dc_files)
             os.rmdir(root)
 
     def generate_images(self, interaction:discord.Interaction, dm:discord.DMChannel, query:str) -> None:
