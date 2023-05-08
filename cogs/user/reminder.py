@@ -8,7 +8,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-from tools import dragon_database_Mongo
+from tools import dragon_database
 
 
 class Reminder(commands.Cog):
@@ -33,7 +33,7 @@ class Reminder(commands.Cog):
 
     def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
-            db = dragon_database_Mongo.Database()
+            db = dragon_database.Database()
             data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
@@ -42,7 +42,7 @@ class Reminder(commands.Cog):
 
     def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
-            db = dragon_database_Mongo.Database()
+            db = dragon_database.Database()
             db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:

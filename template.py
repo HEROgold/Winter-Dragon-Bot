@@ -5,10 +5,9 @@ import pickle
 import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands
-import sqlalchemy
 
 import config
-from tools import dragon_database_Mongo, dragon_database_Sql
+from tools import dragon_database
 
 
 class Temp(commands.GroupCog):
@@ -19,7 +18,6 @@ class Temp(commands.GroupCog):
         )
         self.data = None
         self.DATABASE_NAME = self.__class__.__name__
-        self.db = dragon_database_Sql.Database()
         if not config.Main.USE_DATABASE:
             self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
             self.setup_db_file()
@@ -36,7 +34,7 @@ class Temp(commands.GroupCog):
 
     def get_data(self) -> dict:
         if config.Main.USE_DATABASE:
-            db = dragon_database_Mongo.Database()
+            db = dragon_database.Database()
             data = db.get_data(self.DATABASE_NAME)
         elif os.path.getsize(self.DBLocation) > 0:
             with open(self.DBLocation, "rb") as f:
@@ -45,22 +43,11 @@ class Temp(commands.GroupCog):
 
     def set_data(self, data) -> None:
         if config.Main.USE_DATABASE:
-            db = dragon_database_Mongo.Database()
+            db = dragon_database.Database()
             db.set_data(self.DATABASE_NAME, data=data)
         else:
             with open(self.DBLocation, "wb") as f:
                 pickle.dump(data, f)
-
-    def setup_table(self) -> None:
-        self.logger.debug("Creating Table")
-        with self.db.engine.connect() as connection:
-            connection.execute(sqlalchemy.text(f"""
-            CREATE TABLE IF NOT EXISTS {self.DATABASE_NAME} (
-                    ID INT(32) NOT NULL,
-                    PRIMARY KEY (ID)
-            )
-            ;
-            """))
 
     async def cog_load(self) -> None:
         self.data = self.get_data()
@@ -74,7 +61,7 @@ class Temp(commands.GroupCog):
     @app_commands.command(name="TEMP", description="TEMP")
     async def slash_TEMP(self, interaction: discord.Interaction) -> None:
         """TEMP"""
-        pass
+        raise NotImplementedError("Empty command")
 
     @slash_TEMP.autocomplete("")
     async def COMMAND_autocoplete_VARIABLE(

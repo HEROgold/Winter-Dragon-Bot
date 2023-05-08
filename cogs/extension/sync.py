@@ -13,7 +13,7 @@ class Sync(commands.Cog):
 
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
     @app_commands.command(name="sync", description="Sync all commands on all servers (Bot dev only)")
-    async def slash_sync_all(self, interaction:discord.Interaction) -> None:
+    async def slash_sync(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         global_sync = await self.bot.tree.sync()
