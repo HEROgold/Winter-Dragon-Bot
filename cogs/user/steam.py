@@ -203,26 +203,27 @@ class Steam(commands.GroupCog):
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
         new_sales = self.get_new_freebies(file_sales, html_sales)
         embed = await self.populate_embed(new_sales, embed)
+        if embed is None:
+            self.logger.warning("Got no populated embed, skipping sale sending.")
+            return
+
         self.logger.debug(f"Got embed with sales, {embed}, to send to {self.subscribed_users}")
 
         _, sub_mention_remove = await self.act.get_app_sub_command(self.slash_remove)
-        # _, sub_mention_show = await self.act.get_app_sub_command(self.slash_show)
-        # TODO, create mention that includes sale=100 paramater
-        # with_params = await self.act.with_paramaters(self.slash_show, percent=100)
-        # with_param_msg = f"TEST {with_params}"
+        _, sub_mention_show = await self.act.get_app_sub_command(self.slash_show)
         disable_message = f"You can disable this message by using {sub_mention_remove}"
-        # all_sale_message = f"You can see all free sales by using {sub_mention_show}"
+        all_sale_message = f"You can see other sales by using {sub_mention_show}"
         for user_id in self.subscribed_users: # type: ignore
-            self.logger.debug(f"Showing new sales to {user_id}")
+            self.logger.debug(f"Trying to show new sales to {user_id}")
             try:    
                 user = self.bot.get_user(user_id) or await self.bot.fetch_user(user_id)
             except discord.errors.NotFound:
                 self.logger.warning(f"Not showing {user_id} sales, discord.errors.NotFound")
                 continue
             dm = user.dm_channel or await user.create_dm()
-            self.logger.debug(f"Showing {user}, {embed}")
             if len(embed.fields) > 0:
-                await dm.send(content=f"{disable_message}", embed=embed) # \n{all_sale_message}
+                self.logger.debug(f"Showing {user}, {embed}")
+                await dm.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
         self.logger.debug(f"Updating {self.htmlFile}")
         with open(self.htmlFile, "w", encoding="utf-8") as f:
             f.write(html)
