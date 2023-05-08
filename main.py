@@ -61,7 +61,7 @@ async def main() -> None:
     async with bot:
         await mass_load()
         await bot.load_extension("jishaku")
-        await bot.start(config.Main.TOKEN)
+        await bot.start(config.Tokens.DICSORD_TOKEN)
 
 
 def logs_size_limit_check(size_in_kb: int) -> bool:
@@ -74,21 +74,28 @@ def logs_size_limit_check(size_in_kb: int) -> bool:
     return total_size > size_in_kb
     # if returns true, def function to remove the oldest logs
 
-def delete_oldest_logs() -> None:    # sourcery skip: remove-unreachable-code
-    """FIXME, actually make this work. Psuedocode below."""
-    oldest_file = sorted(
+def delete_oldest_logs() -> None:
+    # TODO: 
+    # refactor code, store sizes in dict, then remove oldest X needed
+    # to stay under set limit.
+    oldest_files = sorted(
         (
-            os.path.getsize(os.path.join(root, file))
+            os.path.join(root, file)
             for root, _, files in os.walk(config.Main.LOG_PATH)
             for file in files
         ),
         key=os.path.getctime,
     )
-    bot_logger.info(f"deleting old log for space: {oldest_file}")
-    # os.remove(oldest_file)
+    bot_logger.info(f"deleting old log for space: {oldest_files}")
+    os.remove(oldest_files[0])
+    # TODO: remove empty directories
+    # https://stackoverflow.com/questions/10989005/do-i-understand-os-walk-right
+    # for root, dirs, files in os.walk(config.Main.LOG_PATH):
+    #     for dir in dirs:
+    #         for file in files:
+    #             os.path.join(root, dirs, file)
 
 def save_logs() -> None:
-    bot_logger.info(f"{logs_size_limit_check(config.Main.LOG_SIZE_KB_LIMIT)=}")
     while logs_size_limit_check(config.Main.LOG_SIZE_KB_LIMIT):
         delete_oldest_logs()
     if not os.path.exists(config.Main.LOG_PATH):
