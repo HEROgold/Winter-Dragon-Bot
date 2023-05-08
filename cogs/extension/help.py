@@ -38,8 +38,9 @@ class Help(commands.Cog):
         help_input: int | str,
         commands_list: list[app_commands.AppCommand] | list[commands.Command],
     ) -> discord.Embed | discord.ui.View:
-        
         if type(help_input) ==  str:
+            # TODO: Prefilled command?
+            # /cogs-c load extension: cogs.indev.tickets
             embed = discord.Embed(title=f"Command {help_input}", color=random.choice(rainbow.RAINBOW))
             for command in commands_list:
                 embed = self.PopulateCommandEmbed(help_input, embed, command)
@@ -107,7 +108,9 @@ class Help(commands.Cog):
     @app_commands.command(name="help", description="Get information about commands!")
     @app_commands.checks.cooldown(1, 5)
     async def slash_help(
-        self, interaction: discord.Interaction, page: int = None, command: str = None
+        self,
+        interaction: discord.Interaction,
+        page: int = None, command: str = None
     ) -> None:
         if page and page <= 0:
             await interaction.response.send_message("Page has to be 1 or bigger", ephemeral=True)
@@ -137,9 +140,11 @@ class Help(commands.Cog):
             if current.lower() in commands.lower()
         ]
 
-    @commands.command(description = "Use this command to get information about all available commands.",
-                    brief = "Sends this help page!",
-                    usage = "help [page or command]:\nExample:`help 1`, `help invite`")
+    @commands.command(
+            description = "Use this command to get information about all available commands.",
+            brief = "Sends this help page!",
+            usage = "help [page or command]:\nExample:`help 1`, `help invite`"
+            )
     @commands.cooldown(1, 2, commands.BucketType.member)
     async def help(self, ctx:commands.Context, help_input) -> None:
         commands_list = self.bot.commands
@@ -211,5 +216,73 @@ class Help(commands.Cog):
         self.logger.debug(f"Returning view: {view}")
         return view
 
+
+# TODO: get code underneath to work.
+# Then inplement in own help cmd.
+class HelpView(discord.ui.View):
+    def __init__(
+            self,
+            parent_embed: discord.Embed,
+            group_list: list[app_commands.commands.Group],
+            **kwargs
+        ) -> None:
+        self.embed = parent_embed
+        super().__init__(**kwargs)
+        self.add_item(Dropdown(group_list))
+
+    @discord.ui.button(label="Back", emoji="⬅️", style=discord.ButtonStyle.secondary, row=1)
+    async def backbutton(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await interaction.response.edit_message(embed=self.embed)
+
+class CopiedDropdownHelp(commands.Cog):
+    def __init__(self, bot:commands.Bot) -> None:
+        self.bot = bot
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+
+    # @app_commands.describe(group = "The specific group you want help on.")
+    @app_commands.command(name="helpcopied", description="Gives a brief description of all features.")
+    async def slash_help(
+        self,
+        interaction: discord.Interaction
+    ) -> None:
+        embed = discord.Embed(
+            title="Help Desk",
+            description="Select the specific feature from the dropdown for additional details",
+            color=discord.Colour.brand_green()
+        )
+        group_list = []
+        for command in app_commands.CommandTree.walk_commands(self.bot.tree):
+            if isinstance(command, app_commands.commands.Group):
+                group_list.append(command)
+                embed.add_field(
+                    name=command.description,
+                    value=f"`/{command.name}`"
+                )
+        await interaction.response.send_message(embed=embed, view=HelpView(embed, group_list), ephemeral=True)
+
+
+class Dropdown(discord.ui.Select):
+    def __init__(self, group_list: list[app_commands.commands.Group]) -> None:
+        self.groupList = group_list
+        options = [discord.SelectOption(
+            label=group.description, description=f"/{group.name}") for group in group_list]
+        super().__init__(placeholder="Select which feature to get help for...", options=options)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        group_name = self.values[0]
+        command_list_embed = discord.Embed(
+            title=f"{group_name}",
+            color=discord.Colour.brand_green()
+        )
+        for group in self.groupList:
+            if group.description == group_name:
+                for command in group.commands:
+                    if command == app_commands.commands.Command:
+                        command_list_embed.add_field(name=f"/{group.name} {command.name}", value=command.description, inline=False)
+                break
+        await interaction.response.edit_message(embed=command_list_embed)
+
+
 async def setup(bot:commands.Bot) -> None:
     await bot.add_cog(Help(bot))
+    # await bot.add_cog(CopiedDropdownHelp(bot))
