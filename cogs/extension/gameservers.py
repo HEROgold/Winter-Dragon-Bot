@@ -31,10 +31,11 @@ from rainbow import RAINBOW
 # Conan doesn't run in background
 
 
+# TODO: Change so it can work outside the docker container
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class GameServers(commands.GroupCog):
     running_PIDS = {}
-    
+
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -284,4 +285,5 @@ class GameServers(commands.GroupCog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(GameServers(bot))  # type: ignore
+    # await bot.add_cog(GameServers(bot))  # type: ignore
+    pass

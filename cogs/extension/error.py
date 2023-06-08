@@ -79,6 +79,7 @@ class Error(commands.Cog):
         for sub in help_command.options:
             self.logger.debug(f"{sub}")
             # TODO: pre fill with the command argument > test
+            # Maybe not possible for the bot
             if type(sub) == app_commands.Argument and sub.name == "command":
                 self.help_msg = f"</{help_command.name} command:{help_command.id}>"
                 return
