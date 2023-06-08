@@ -14,7 +14,7 @@ from tools import app_command_tools
 from tools.database_tables import Team as Teamdb
 from tools.database_tables import User, engine, Session
 
-
+# TODO: rewrite for sql
 # psuedo code to help remember structure in future.
 # not sure if User() works inside Teamdb()
 # See user lobby association table
