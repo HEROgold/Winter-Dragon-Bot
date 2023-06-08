@@ -92,7 +92,7 @@ class Help(commands.Cog):
             if command.name == help_input:
                 self.logger.debug(f"{command.name}, {command.description}")
                 embed.add_field(name="Description", value=command.description, inline=False)
-                embed.add_field(name="Exapmle use", value=command.mention, inline=False)
+                embed.add_field(name="Example use", value=command.mention, inline=False)
             return embed
         if command == app_commands.AppCommand and command.name == help_input:
             self.logger.debug(command.name, command.brief, command.description, command.usage)
