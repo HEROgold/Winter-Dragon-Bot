@@ -294,7 +294,7 @@ class Autochannel(commands.GroupCog):
         category_channel = await self._get_autochannel_category(guild, overwrites, str(member.id))
         voice_channel = await self._get_autochannel_voice(guild, category_channel, str(member.id))
         text_channel = await self._get_autochannel_text(guild, category_channel, str(member.id))
-        if any(category_channel, text_channel, voice_channel):
+        if any([category_channel, text_channel, voice_channel]):
             return
         if channel_id != voice_channel.id:
             return
