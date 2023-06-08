@@ -32,6 +32,7 @@ from rainbow import RAINBOW
 
 
 # TODO: Change so it can work outside the docker container
+# https://stackoverflow.com/questions/39468841/is-it-possible-to-start-a-stopped-container-from-another-container
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class GameServers(commands.GroupCog):
     running_PIDS = {}
