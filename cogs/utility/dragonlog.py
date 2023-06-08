@@ -335,7 +335,6 @@ class DragonLog(commands.GroupCog):
             self.logger.debug(f"else: {message}")
 
 
-    # TODO: Needs to look cleaner, also doesn't always get type. IE on invite remove
     async def generic_change(self, entry: discord.AuditLogEntry) -> None:
         try:
             e_type = entry.target.type.__name__
