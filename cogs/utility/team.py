@@ -1,7 +1,5 @@
 import logging
 import math
-import os
-import pickle
 import random
 import re
 from typing import AsyncGenerator, Optional
@@ -12,59 +10,29 @@ from discord.ext import commands, tasks
 
 import config
 import rainbow
-from tools import app_command_tools, dragon_database
+from tools import app_command_tools
+from tools.database_tables import Team as Teamdb
+from tools.database_tables import User, engine, Session
+
+
+# psuedo code to help remember structure in future.
+# not sure if User() works inside Teamdb()
+# See user lobby association table
+users = [User]
+
+team = Teamdb(
+    id = None
+    )
 
 
 @app_commands.guild_only()
 class Team(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
 
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "wb") as f:
-                data = self.data
-                pickle.dump(data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = db.get_data(self.DATABASE_NAME)
-        elif os.path.getsize(self.DBLocation) > 0:
-            with open(self.DBLocation, "rb") as f:
-                data = pickle.load(f)
-        return data
-
-    def set_data(self, data) -> None:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(data, f)
-
-    async def cog_load(self) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        if config.Database.PERIODIC_CLEANUP:
-            self.cleanup.start()
-
-    async def cog_unload(self) -> None:
-        self.set_data(self.data)
-
-    # FIXME: doesnt delete channels
-    # TODO: test if fixed/test
-    # TODO: rewrite, look at AC channel
+    # TODO: rewrite, look at AC channel, sql
     @tasks.loop(seconds=3600)
     async def cleanup(self) -> None:
         self.logger.info("Cleaning Teams channels")
@@ -73,7 +41,6 @@ class Team(commands.GroupCog):
         for guild_id in list(self.data):
             try:
                 _ = self.data[guild_id]
-    
             except (KeyError, AttributeError):
                 return
             try:
@@ -97,13 +64,13 @@ class Team(commands.GroupCog):
                 self.logger.debug(f"Cleanup: Is voice {channel}")
                 if len(channel.members) > 0:
                     continue
-    
+
                 voice_channel = discord.utils.get(guild.voice_channels, id=channel.id)
                 await voice_channel.delete()
                 channels_list.remove(voice_channel.id)
                 if channels_list:
                     continue
-    
+
                 del self.data[guild_id]["Category"]["Channels"]
                 category_id: int = self.data[guild_id]["Category"]["id"]
                 category_channel = discord.utils.get(guild.categories, id=category_id)
@@ -113,8 +80,10 @@ class Team(commands.GroupCog):
                 del self.data[guild_id]["Category"]["id"]
                 self.set_data(self.data)
 
+
     @commands.Cog.listener()
     async def on_voice_state_update(self, member:discord.Member, before:discord.VoiceState, after:discord.VoiceState) -> None:
+        self.logger.debug(f"{member} moved from {before} to {after}")
         # return early if no guild is found.
         try:
             guild_id = str(member.guild.id)
@@ -144,6 +113,7 @@ class Team(commands.GroupCog):
                 del self.data[guild_id]["Category"]["id"]
                 self.set_data(self.data)
 
+
     async def get_teams_channels(self, channels_list:list[int], guild:discord.Guild) ->  AsyncGenerator[Optional[discord.VoiceChannel], None]:
         try:
             for channel_id in channels_list:
@@ -152,7 +122,8 @@ class Team(commands.GroupCog):
             yield None
         return
 
-    async def DevideTeams(self, team_count:int, members:list[discord.Member]) -> dict[int,list[str]]:
+
+    async def DevideTeams(self, team_count: int, members: list[discord.Member]) -> dict[int,list[str]]:
         random.shuffle(members)
         teams = {}
         divide, modulo = divmod(len(members), team_count)
@@ -169,6 +140,7 @@ class Team(commands.GroupCog):
         self.logger.debug(f"creating teams: {teams}")
         return teams
 
+
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
         self.logger.debug(f"{user} reacted with {reaction}")
@@ -180,6 +152,7 @@ class Team(commands.GroupCog):
         if not self.data:
             self.data = self.get_data()
         return await self.vote_handler(reaction, user, guild, guild_id)
+
 
     async def vote_handler(self, reaction:discord.Reaction, user:discord.Member, guild:discord.Guild, guild_id:str) -> None:
         try:
@@ -214,6 +187,7 @@ class Team(commands.GroupCog):
                 await self.team_move(team_group, guild)
                 del d_teams[team_key]
 
+
     @app_commands.command(
             name="voice",
             description="Randomly split all users from your voice chat, in teams"
@@ -236,6 +210,7 @@ class Team(commands.GroupCog):
         teams = await self.DevideTeams(team_count=team_count, members=members)
         vote_channel = await self.create_vote(interaction, teams)
         await interaction.response.send_message(f"Created vote to move members. Go to {vote_channel.mention} to vote.", ephemeral=True)
+
 
     @app_commands.command(
             name="chat",
@@ -280,11 +255,13 @@ class Team(commands.GroupCog):
             ephemeral=True
         )
 
+
     async def create_vote(self, interaction:discord.Interaction, teams:dict) -> discord.TextChannel|None:
         category_channel = await self.get_teams_category(interaction=interaction)
         vote_text_channel = await self.get_votes_channel(category_channel)
         await self.send_vote_message(interaction, vote_text_channel, teams)
         return vote_text_channel
+
 
     async def send_vote_message(self, interaction:discord.Interaction, vote_text_channel:discord.TextChannel, teams:dict) -> None:
         if not self.data:
@@ -310,6 +287,7 @@ class Team(commands.GroupCog):
         # self.logger.debug(f"teams:{teams}, index:{index}, dteams{d_teams}")
         self.set_data(self.data)
 
+
     async def get_votes_channel(self, category_channel:discord.CategoryChannel) -> discord.TextChannel:
         if not self.data:
             self.data = self.get_data()
@@ -322,6 +300,7 @@ class Team(commands.GroupCog):
             self.data[guild_id]["Category"]["Votes_channel"] = {"id": vote_text_channel.id}
             self.set_data(self.data)
         return vote_text_channel
+
 
     async def get_teams_category(self, interaction:discord.Interaction) -> discord.CategoryChannel|None:
         if not self.data:
@@ -347,6 +326,7 @@ class Team(commands.GroupCog):
         self.set_data(self.data)
         return category_channel
 
+
     async def team_move(self, teams:dict[str,list[discord.Member]], guild:discord.Guild) -> None:
         for team, member_ids in teams.items():
             if not self.data:
@@ -366,5 +346,6 @@ class Team(commands.GroupCog):
                 member = discord.utils.get(guild.members, id=member_id)
                 await member.move_to(team_voice)
 
-async def setup(bot:commands.Bot) -> None:
+
+async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(Team(bot))

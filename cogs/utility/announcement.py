@@ -10,7 +10,7 @@ import rainbow
 
 
 class Announce(commands.Cog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @app_commands.command(
@@ -29,5 +29,5 @@ class Announce(commands.Cog):
             await mass_ping.delete()
 
 
-async def setup(bot:commands.Bot) -> None:
+async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(Announce(bot))

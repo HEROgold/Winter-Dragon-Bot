@@ -7,12 +7,11 @@ from discord.ext import commands
 
 import config
 
+
 class Invite(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
 
     @app_commands.command(
         name="bot",
@@ -32,6 +31,6 @@ class Invite(commands.GroupCog):
         invite = await channel.create_invite(max_uses=1, max_age=60, reason=f"Support command used by {interaction.user.mention}")
         await interaction.response.send_message(invite.url, ephemeral=True)
 
-async def setup(bot:commands.Bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Invite(bot))

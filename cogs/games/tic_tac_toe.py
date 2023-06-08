@@ -1,79 +1,45 @@
 import itertools
 import logging
 import os
-import pickle
-import random
-from typing import List
+from typing import Callable, List
 
 import discord
+import matplotlib.pyplot as plt
+import sqlalchemy
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, View
 
 import config
-import rainbow
-from tools import dragon_database
+from tools.database_tables import AssociationUserLobby as AUL
+from tools.database_tables import Lobby, ResultDuels, Session, engine
 
 # TODO: Add ai if bot is challenged?
 
 @app_commands.guild_only()
 class TicTacToe(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    PLAYER1 = "Player 1"
+    PLAYER1_JOINED = "Player 1 Join"
+    PLAYER1_LEFT = "Player 1 Leave"
+
+    PLAYER2 = "Player 2"
+    PLAYER2_JOINED = "Player 2 Join"
+    PLAYER2_LEFT = "Player 2 Leave"
+
+    PIECHART_PATH = "./database/piechart/ttt"
+
+
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
 
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "wb") as f:
-                data = self.data
-                pickle.dump(data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
-    def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = db.get_data(self.DATABASE_NAME)
-        elif os.path.getsize(self.DBLocation) > 0:
-            with open(self.DBLocation, "rb") as f:
-                data = pickle.load(f)
-        return data
-
-    def set_data(self, data) -> None:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(data, f)
-
-    async def cog_load(self) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        if not self.data:
-            self.data = {
-                "DUMMY": {
-                    "status": "waiting",
-                    "member1": {"id": 0},
-                    "member2": {"id": 0},
-                    }
-                }
-
-    async def cog_unload(self) -> None:
-        self.set_data(self.data)
-
-    async def update_view(self, view:discord.ui.View, *items) -> discord.ui.View:
+    async def update_view(self, view: discord.ui.View, *items) -> discord.ui.View:
         view.clear_items()
         for item in items:
             view.add_item(item)
         return view
+
 
     @app_commands.checks.cooldown(2, 120)
     @app_commands.command(
@@ -81,58 +47,101 @@ class TicTacToe(commands.GroupCog):
         description="view tic-tac-toe stats"
     )
     async def slash_leader_board(self, interaction: discord.Interaction) -> None:
-        if not self.data:
-            self.data = self.get_data()
-
-        game_results = self.calculate_game_results(interaction.user.id)
+        game_results = self.calculate_game_results(
+            interaction.user.id,
+            self.get_sql_leader_board(interaction.user.id)
+        )
         if game_results is None:
             await interaction.response.send_message("No games found to display.", ephemeral=True)
             return
 
-        embed = discord.Embed(title="Stats", description="Your Tic Tac Toe Stats", color=random.choice(rainbow.RAINBOW))
-        for name, value in game_results.items():
-            embed.add_field(name=name, value=value, inline=True)
+        self.create_pie_chart(game_results, interaction)
+        chart = discord.File(f"{self.PIECHART_PATH}/{interaction.user.id}.png")
+        await interaction.response.send_message(file=chart)
+        chart.close()
+        os.remove(f"{self.PIECHART_PATH}/{interaction.user.id}.png")
 
-        await interaction.response.send_message(embed=embed)
+    def make_autopct(self, values) -> Callable[..., str]:
+        def my_autopct(pct) -> str:
+            total = sum(values)
+            val = int(round(pct*total/100.0))
+            return "{v:d}  ({p:.2f}%)".format(p=pct,v=val)
+        return my_autopct
 
-    def calculate_game_results(self, interaction_user_id: int) -> dict[str, int] | None:
-        BASE_GAME_RESULTS = {"total": 0, "abandoned": 0, "wins": 0, "losses": 0, "draws": 0}
+    def create_pie_chart(self, game_results: dict[str, int], interaction: discord.Interaction) -> None:
+        plt.figure(interaction.user.id)
+        os.makedirs(self.PIECHART_PATH, exist_ok=True)
+
+        for k, v in list(game_results.items()):
+            if v == 0:
+                game_results.pop(k)
+        labels = game_results.keys()
+        values = game_results.values()
+
+        plt.suptitle(f"Total games: {sum(values)}")
+        plt.pie(values, labels=labels, autopct=self.make_autopct(values))
+        plt.savefig(f"{self.PIECHART_PATH}/{interaction.user.id}.png")
+        plt.close(interaction.user.id)
+
+
+    def get_sql_leader_board(self, interaction_user_id: int) -> list[ResultDuels]:
+        with Session(engine) as session:
+            result = session.query(ResultDuels).where(
+                ResultDuels.game == "ttt",
+                sqlalchemy.or_(
+                    ResultDuels.player_1 == interaction_user_id,
+                    ResultDuels.player_2 == interaction_user_id
+            ))
+            self.logger.debug(f"{result.all()=}")
+            session.commit()
+        return result.all()
+
+
+    def calculate_game_results(
+        self,
+        interaction_user_id: int,
+        results: list[ResultDuels] = None
+    ) -> dict[str, int] | None:
+        self.logger.debug(f"Calculating stats for {interaction_user_id}")
+        # BASE_GAME_RESULTS = {"total": 0, "abandoned": 0, "wins": 0, "losses": 0, "draws": 0}
+        BASE_GAME_RESULTS = {"wins": 0, "losses": 0, "draws": 0}
         game_results = BASE_GAME_RESULTS.copy()
-
-        for game_data in self.data.values():
-            status: str = game_data["status"]
-
-            # Determine abandoned/ongoing and draws
-            if status in {"running", "waiting"}:
-                game_results["abandoned"] += 1
-            elif status == "finished-draw":
+        for result in results:
+            # game_results["total"] += 1
+            if result.winner == interaction_user_id:
+                game_results["wins"] += 1
+            elif result.loser == interaction_user_id:
+                game_results["losses"] += 1
+            elif result.winner == 0 and result.loser == 0:
                 game_results["draws"] += 1
-            else:
-                # Determine wins and losses
-                for i, game_user_id in enumerate(game_data["member1"]["id"], game_data["member2"]["id"]):
-                    if game_user_id == interaction_user_id and status == f"finished-player{i+1}":
-                        game_results["wins"] += 1
-                        break
-                else:
-                    game_results["losses"] += 1
+            # else:
+                # game_results["abandoned"] += 1
 
-            game_results["total"] += 1
-        # test and return None if gamresults != the starting value
+        self.logger.debug(f"{game_results=}, {results=}")
         return game_results if game_results != BASE_GAME_RESULTS else None
+
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="new",
         description="Start a tic tac toe game/lobby, which players can join"
     )
-    async def slash_tic_tac_toe(self, interaction: discord.Interaction) -> None:
+    async def slash_new(self, interaction: discord.Interaction) -> None:
         button1, button2 = await self.button_handler()
         view = View()
         view = await self.update_view(view, button1, button2)
+
         await interaction.response.send_message("Lobby created!\nJoin here to start playing!", view=view)
-        resp_msg = await interaction.original_response()
-        self.data[str(resp_msg.id)] = {"status":"waiting", "member1":{"id":0}, "member2":{"id":0}}
-        self.set_data(self.data)
+        response_message = await interaction.original_response()
+
+        with Session(engine) as session:
+            session.add(Lobby(
+                id = response_message.id,
+                game = "ttt",
+                status = "waiting"
+            ))
+            session.commit()
+
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
@@ -143,29 +152,38 @@ class TicTacToe(commands.GroupCog):
         if member.bot is True:
             await interaction.response.send_message("Bot's cannot play.")
         await interaction.response.send_message(f"{interaction.user.mention} challenged {member.mention} in tic tac toe!")
-        resp_msg = await interaction.original_response()
-        game_data = {"status":"waiting", "member1":{"id":interaction.user.id}, "member2":{"id":member.id}}
-        self.data[str(resp_msg.id)] = game_data
+        # resp_msg = await interaction.original_response()
+        game_data = {"status":"waiting", "member1":{"id": interaction.user.id}, "member2":{"id": member.id}}
+        # self.data[str(resp_msg.id)] = game_data
         await self.start_game(interaction=interaction, game_data=game_data)
 
 # LOBBY start
 
-    async def button_handler(self, base_button_1:discord.ui.Button=None, base_button_2:discord.ui.Button=None) -> tuple[discord.ui.Button, discord.ui.Button]:
+    async def button_handler(
+        self,
+        base_button_1: discord.ui.Button = None,
+        base_button_2: discord.ui.Button = None
+    ) -> tuple[discord.ui.Button, discord.ui.Button]:
         if base_button_1 is None:
             base_button_1 = Button(
-                label="Player 1",
-                style=discord.ButtonStyle.primary
+                label = self.PLAYER1,
+                style = discord.ButtonStyle.primary
             )
         if base_button_2 is None:
             base_button_2 = Button(
-                label="Player 2",
-                style=discord.ButtonStyle.primary
+                label = self.PLAYER2,
+                style = discord.ButtonStyle.primary
             )
 
         button_1, button_2 = await self.button_join_or_leave(base_button_1, base_button_2)
         return button_1, button_2
 
-    async def button_join_or_leave(self, player_1_btn:discord.ui.Button=None, player_2_btn:discord.ui.Button=None) -> tuple[discord.ui.Button, discord.ui.Button]:
+
+    async def button_join_or_leave(
+        self,
+        player_1_btn: discord.ui.Button = None,
+        player_2_btn: discord.ui.Button = None
+    ) -> tuple[discord.ui.Button, discord.ui.Button]:
         """Change button label based on join or leave condition
 
         Args:
@@ -176,86 +194,160 @@ class TicTacToe(commands.GroupCog):
             tuple[discord.ui.Button, discord.ui.Button]: 2 buttons
         """
         if player_1_btn:
-            if player_1_btn.label == "Player 1 Join":
-                player_1_btn.label = "Player 1 Leave"
+            if player_1_btn.label == self.PLAYER1_JOINED:
+                player_1_btn.label = self.PLAYER1_LEFT
                 player_1_btn.style = discord.ButtonStyle.red
                 player_1_btn.callback = self._leave_game_button_
-            elif player_1_btn.label in ["Player 1 Leave", "Player 1"]:
-                player_1_btn.label = "Player 1 Join"
+            elif player_1_btn.label in [self.PLAYER1_LEFT, self.PLAYER1]:
+                player_1_btn.label = self.PLAYER1_JOINED
                 player_1_btn.style = discord.ButtonStyle.green
-                player_1_btn.callback = self._join_game_button_
+                player_1_btn.callback = self._join_game_button
 
         if player_2_btn:
-            if player_2_btn.label == "Player 2 Join":
-                player_2_btn.label = "Player 2 Leave"
+            if player_2_btn.label == self.PLAYER2_JOINED:
+                player_2_btn.label = self.PLAYER2_LEFT
                 player_2_btn.style = discord.ButtonStyle.red
                 player_2_btn.callback = self._leave_game_button_
-            elif player_2_btn.label in ["Player 2 Leave", "Player 2"]:
-                player_2_btn.label = "Player 2 Join"
+            elif player_2_btn.label in [self.PLAYER2_LEFT, self.PLAYER2]:
+                player_2_btn.label = self.PLAYER2_JOINED
                 player_2_btn.style = discord.ButtonStyle.green
-                player_2_btn.callback = self._join_game_button_
+                player_2_btn.callback = self._join_game_button
 
         return player_1_btn, player_2_btn
 
-    async def _join_game_button_(self, interaction:discord.Interaction) -> None:
-        await interaction.response.defer()
-        original_interaction = await interaction.original_response()
-        for game_id, game_data in self.data.items():
-            if game_id != str(original_interaction.id):
-                continue
-            btn1 = Button(label="Player 1", style=discord.ButtonStyle.primary)
-            btn2 = Button(label="Player 2", style=discord.ButtonStyle.primary)
-            lobby_msg = interaction.message.content
-            if game_data["member1"]["id"] == 0:
-                game_data["member1"]["id"] = interaction.user.id
-                btn1.label = "Player 1 Join"
-                lobby_msg = f"{lobby_msg}\nPlayer 1: {interaction.user.mention}"
-            elif game_data["member2"]["id"] == 0 and game_data["member1"]["id"] != interaction.user.id:
-                game_data["member2"]["id"] = interaction.user.id
-                btn1.label = "Player 1 Join"
-                btn2.label = "Player 2 Join"
-                lobby_msg = f"{lobby_msg}\nPlayer 2: {interaction.user.mention}"
-            else:
-                continue
-            self.logger.debug(f"User joined a game: user=`{interaction.user}, game=`{game_data}")
-            button1, button2 = await self.button_handler(btn1, btn2)
-            view = View()
-            view = await self.update_view(view, button1, button2)
-            await interaction.edit_original_response(content=lobby_msg, view=view)
-            if game_data["member1"]["id"] != 0 and game_data["member2"]["id"] != 0 :
-                await self.start_game(interaction=interaction, game_data=game_data)
 
-    async def _leave_game_button_(self, interaction:discord.Interaction) -> None:
-        await interaction.response.defer()
-        original_interaction = await interaction.original_response()
-        for game_id, game_data in self.data.items():
-            if game_id != str(original_interaction.id):
-                continue
-            btn1 = Button(label="Player 1", style=discord.ButtonStyle.primary)
-            btn2 = Button(label="Player 2", style=discord.ButtonStyle.primary)
+    async def _join_game_button(self, interaction: discord.Interaction) -> None:
+        try:
+            # sourcery skip: remove-redundant-if
+            await interaction.response.defer()
+            original_interaction = await interaction.original_response()
             lobby_msg = interaction.message.content
-            if game_data["member2"]["id"] == interaction.user.id:
-                game_data["member2"]["id"] = 0
-                btn1.label = "Player 1 Join"
-                btn2.label = "Player 2 Leave"
-                lobby_msg = lobby_msg.replace(f"\nPlayer 2: {interaction.user.mention}", "")
-            elif game_data["member1"]["id"] == interaction.user.id:
-                game_data["member1"]["id"] = 0
-                btn1.label = "Player 1 Leave"
-                lobby_msg = lobby_msg.replace(f"\nPlayer 1: {interaction.user.mention}", "")
-            else:
-                continue
-            self.logger.debug(f"User left a game: user=`{interaction.user}, game=`{game_data}")
+            # user = session.query(User).where(User.lobby_id == lobby.id).first()
+            # Create new user when using fetch
+            # user: User = database_tables.User.fetch_user(interaction.user.id)
+
+            btn1 = Button(label = self.PLAYER1, style = discord.ButtonStyle.primary)
+            btn2 = Button(label = self.PLAYER2, style = discord.ButtonStyle.primary)
+
+            lobby_msg, _ = await self.join_association_handler(interaction, original_interaction, lobby_msg, btn1, btn2)
+            self.logger.debug(f"{lobby_msg=}")
+
+            if lobby_msg is None:
+                return
+
             button1, button2 = await self.button_handler(btn1, btn2)
             view = View()
             view = await self.update_view(view, button1, button2)
             await interaction.edit_original_response(content=lobby_msg, view=view)
+        except Exception as e:
+            self.logger.exception(e)
+
+    # FIXME: bugfix, lobby reset bug
+    async def join_association_handler(
+        self,
+        interaction: discord.Interaction,
+        original_interaction: discord.Interaction,
+        lobby_msg: str,
+        btn1: discord.Button,
+        btn2: discord.Button
+    ) -> tuple[str, AUL]:
+        with Session(engine) as session:
+            lobby = session.query(Lobby).where(Lobby.id == original_interaction.id).first()
+            results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
+            associations = results.all()
+            self.logger.debug(f"User joined a game: user=`{interaction.user}, lobby=`{lobby.id}")
+            self.logger.debug(f"{associations=}, {lobby=}")
+
+            if not associations:
+                self.logger.debug(f"adding first player {interaction.user} to lobby {lobby.id=}")
+                btn1.label = self.PLAYER1_JOINED
+                lobby_msg = f"{lobby_msg}\n{self.PLAYER1}: {interaction.user.mention}"
+                session.add(AUL(
+                    lobby_id = lobby.id,
+                    user_id = interaction.user.id
+                ))
+                session.commit()
+            elif len(associations) == 1:
+                self.logger.debug(f"adding extra player {interaction.user} to lobby {lobby.id=}, {associations=}")
+                btn1.label = self.PLAYER1_JOINED
+                btn2.label = self.PLAYER2_JOINED
+                lobby_msg = f"{lobby_msg}\n{self.PLAYER2}: {interaction.user.mention}"
+                session.add(AUL(
+                    lobby_id = lobby.id,
+                    user_id = interaction.user.id
+                ))
+                session.commit()
+
+            results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
+            associations = results.all()
+
+            if len(associations) == 2:
+                player_1 = associations[0]
+                player_2 = associations[1]
+                self.logger.debug(f"2 players in {lobby.id=}, {associations=}")
+                game_data = {"status": lobby.status, "member1": {"id": player_1.user_id}, "member2": {"id": player_2.user_id}}
+                for i in associations:
+                    session.delete(i)
+                session.delete(lobby)
+                self.logger.debug(f"{game_data=}")
+                lobby.status = "running"
+                await self.start_game(interaction=interaction, game_data=game_data)
+                session.commit()
+                lobby_msg = None
+                associations = None
+
+        self.logger.debug(f"{lobby=},\n {lobby_msg=},\n {associations=} <debug")
+        return lobby_msg, associations
+
+
+    async def leave_association_handler(
+            self,
+            interaction: discord.Interaction,
+            original_interaction: discord.Interaction
+        ) -> None:
+        with Session(engine) as session:
+            session.delete(session.query(AUL).where(AUL.lobby_id == original_interaction.id, AUL.user_id == interaction.user.id).first())
+            session.commit()
+
+
+    async def _leave_game_button_(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        original_interaction = await interaction.original_response()
+        with Session(engine) as session:
+            results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
+            associations = results.all()
+
+        self.logger.debug(f"User left a game: {interaction.user=}, {associations=}")
+
+        btn1 = Button(label=self.PLAYER1, style=discord.ButtonStyle.primary)
+        btn2 = Button(label=self.PLAYER2, style=discord.ButtonStyle.primary)
+        lobby_msg = interaction.message.content
+
+        if len(associations) == 2:
+        # if game_data["member2"]["id"] == interaction.user.id:
+            await self.leave_association_handler(interaction, original_interaction)
+            # game_data["member2"]["id"] = 0
+            btn1.label = self.PLAYER1_JOINED
+            btn2.label = self.PLAYER2_LEFT
+            lobby_msg = lobby_msg.replace(f"\n{self.PLAYER2}: {interaction.user.mention}", "")
+        elif len(associations) == 1:
+        # elif game_data["member1"]["id"] == interaction.user.id:
+            await self.leave_association_handler(interaction, original_interaction)
+            # game_data["member1"]["id"] = 0
+            btn1.label = self.PLAYER1_LEFT
+            lobby_msg = lobby_msg.replace(f"\n{self.PLAYER1}: {interaction.user.mention}", "")
+
+        button1, button2 = await self.button_handler(btn1, btn2)
+        view = View()
+        view = await self.update_view(view, button1, button2)
+        await interaction.edit_original_response(content=lobby_msg, view=view)
 
 # LOBBY end
 
+# TODO: Add result to DB on win/loss.
 # GAME start
 
-    async def start_game(self, interaction:discord.Interaction, game_data:dict=None) -> None:
+    async def start_game(self, interaction: discord.Interaction, game_data: dict = None) -> None:
         game_data["status"] = "running"
         all_members = self.bot.get_all_members()
         p1 = discord.utils.get(all_members, id=game_data["member1"]["id"])
@@ -264,15 +356,16 @@ class TicTacToe(commands.GroupCog):
         await interaction.edit_original_response(
             content=f"Game has started!, It is {p1.mention}'s Turn",
             view=TicTacToeGame(
-                player_one=p1,
-                player_two=p2,
-                game_data=game_data
+                player_one = p1,
+                player_two = p2,
+                game_data = game_data
             )
         )
-        self.set_data(self.data)
+
 
 # Modified code from https://github.com/Rapptz/discord.py/blob/master/examples/views/tic_tac_toe.py
 # To avoid other players intervening
+
 
 class TicTacToeButton(discord.ui.Button['TicTacToe']):
     def __init__(self, x: int, y: int) -> None:
@@ -314,6 +407,7 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
         self.disabled = True
         winner = view.check_board_winner()
+        self.logger.debug(f"{winner=}")
 
         if winner is not None:
             if winner == view.player_x.id:
@@ -359,52 +453,127 @@ class TicTacToeGame(discord.ui.View):
 
     # This method checks for the board winner -- it is used by the TicTacToeButton
     def check_board_winner(self) -> int | None:
+        row = None
+        game_result = None
+
+        # Check horizontal
         for across in self.board:
             value = sum(across)
             if value == (self.player_x.id*3):
-                self.logger.debug(f"player {self.player_x} won straight on {across}")
+                self.logger.debug(f"player X: {self.player_x} won straight on {across}")
+                row = ResultDuels(
+                    player_1 = self.player_x.id,
+                    player_2 = self.player_o.id,
+                    winner = self.player_x.id,
+                    loser = self.player_o.id
+                )
                 self.game_data["status"] = "finished-player1"
-                return self.player_x.id
+                game_result = self.player_x.id
             elif value == (self.player_o.id*3):
-                self.logger.debug(f"player {self.player_o} won straight on {across}")
+                self.logger.debug(f"player O: {self.player_o} won straight on {across}")
+                row = ResultDuels(
+                    player_1 = self.player_o.id,
+                    player_2 = self.player_x.id,
+                    winner = self.player_o.id,
+                    loser = self.player_x.id
+                )
                 self.game_data["status"] = "finished-player2"
-                return self.player_o.id
+                game_result = self.player_o.id
 
         # Check vertical
         for line in range(3):
             value = self.board[0][line] + self.board[1][line] + self.board[2][line]
             if value == (self.player_x.id*3):
-                self.logger.debug(f"player {self.player_x} won vertical on column {line}")
+                self.logger.debug(f"player X: {self.player_x} won vertical on column {line}")
+                row = ResultDuels(
+                    player_1 = self.player_x.id,
+                    player_2 = self.player_o.id,
+                    winner = self.player_x.id,
+                    loser = self.player_o.id
+                )
                 self.game_data["status"] = "finished-player1"
-                return self.player_x.id
+                game_result = self.player_x.id
             elif value == (self.player_o.id*3):
-                self.logger.debug(f"player {self.player_o} won vertical on column {line}")
+                self.logger.debug(f"player O: {self.player_o} won vertical on column {line}")
+                row = ResultDuels(
+                    player_1 = self.player_o.id,
+                    player_2 = self.player_x.id,
+                    winner = self.player_o.id,
+                    loser = self.player_x.id
+                )
                 self.game_data["status"] = "finished-player2"
-                return self.player_o.id
+                game_result = self.player_o.id
 
         # Check diagonals
-        diag = self.board[0][2] + self.board[1][1] + self.board[2][0]
+        diag = self.board[0][2] + self.board[1][1] + self.board[2][0] # /
         if diag == (self.player_x.id*3):
-            self.logger.debug(f"player {self.player_x} won diagonally /")
+            self.logger.debug(f"player X: {self.player_x} won diagonally /")
+            row = ResultDuels(
+                player_1 = self.player_x.id,
+                player_2 = self.player_o.id,
+                winner = self.player_x.id,
+                loser = self.player_o.id
+            )
             self.game_data["status"] = "finished-player1"
-            return self.player_x.id
+            game_result = self.player_x.id
         elif diag == (self.player_o.id*3):
-            self.logger.debug(f"player {self.player_o} won diagonally /")
+            self.logger.debug(f"player O: {self.player_o} won diagonally /")
+            row = ResultDuels(
+                player_1 = self.player_o.id,
+                player_2 = self.player_x.id,
+                winner = self.player_o.id,
+                loser = self.player_x.id
+            )
             self.game_data["status"] = "finished-player2"
-            return self.player_o.id
-        diag = self.board[0][0] + self.board[1][1] + self.board[2][2]
-        if diag == (self.player_x.id*3):
-            self.logger.debug(f"player {self.player_x} won diagonally \\")
-            self.game_data["status"] = "finished-player1"
-            return self.player_x.id
-        elif diag == (self.player_o.id*3):
-            self.logger.debug(f"player {self.player_o} won diagonally \\")
-            self.game_data["status"] = "finished-player2"
-            return self.player_o.id
+            game_result = self.player_o.id
 
+        diag = self.board[0][0] + self.board[1][1] + self.board[2][2] # \
+        if diag == (self.player_x.id*3):
+            self.logger.debug(f"player X: {self.player_x} won diagonally \\ ")
+            row = ResultDuels(
+                player_1 = self.player_x.id,
+                player_2 = self.player_o.id,
+                winner = self.player_x.id,
+                loser = self.player_o.id
+            )
+            self.game_data["status"] = "finished-player1"
+            game_result = self.player_x.id
+        elif diag == (self.player_o.id*3):
+            self.logger.debug(f"player O: {self.player_o} won diagonally \\ ")
+            row = ResultDuels(
+                player_1 = self.player_o.id,
+                player_2 = self.player_x.id,
+                winner = self.player_o.id,
+                loser = self.player_x.id
+            )
+            self.game_data["status"] = "finished-player2"
+            game_result = self.player_o.id
+
+        self.logger.debug(f"{game_result=}, {row=}")
+        if game_result is not None:
+            with Session(engine) as session:
+                self.logger.debug(f"There is a winner: {game_result=}")
+                row.game = "ttt"
+                session.add(row)
+                session.commit()
+                self.logger.debug("Returning winner")
+            return game_result
+
+        # if any cell is empty, and no winner is determined, return None
         if any(i == 0 for row in self.board for i in row):
             return None
+
         self.game_data["status"] = "finished-draw"
+        with Session(engine) as session:
+            self.logger.debug("Adding tie to DB")
+            session.add(ResultDuels(
+                game = "ttt",
+                player_1 = self.player_o.id,
+                player_2 = self.player_x.id,
+                winner = 0,
+                loser = 0
+            ))
+            session.commit()
         return self.Tie
 
 

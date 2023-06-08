@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import pickle
 
 import discord
 from discord import NotFound, app_commands
@@ -11,7 +10,7 @@ import config
 
 
 class AutoCogReloader(commands.Cog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.data = {
@@ -19,25 +18,13 @@ class AutoCogReloader(commands.Cog):
             "files": {},
             "edited" : {}
             }
-        self.DATABASE_NAME = self.__class__.__name__
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
 
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "wb") as f:
-                data = self.data
-                pickle.dump(data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     async def cog_load(self) -> None:
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
             self.auto_reload.start()
+
 
     def get_cog_data(self) -> None:
         for root, _, files in os.walk("cogs"):
@@ -58,6 +45,7 @@ class AutoCogReloader(commands.Cog):
                             "edit_time": edit_timestamp
                         }
 
+
     def check_edits(self) -> None:
         files = self.data["files"]
         self.get_cog_data()
@@ -70,6 +58,7 @@ class AutoCogReloader(commands.Cog):
                 self.logger.info(f"{file} has been edited!")
                 self.data["edited"][file] = self.data["files"][file]
         # self.logger.debug(f"{self.data}")
+
 
     @tasks.loop(seconds=5)
     async def auto_reload(self) -> None:  # sourcery skip: useless-else-on-loop
@@ -84,6 +73,8 @@ class AutoCogReloader(commands.Cog):
             del self.data["edited"][file_data]
         self.data["timestamp"] = datetime.datetime.now().timestamp()
 
+
+
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class CogsC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -91,15 +82,17 @@ class CogsC(commands.GroupCog):
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.DATABASE_NAME = self.__class__.__name__
 
+
     async def get_cogs(self) -> list[str]:
         extensions = []
         for root, _, files in os.walk("cogs"):
             extensions.extend(
-                os.path.join(root, file[:-3]).replace("\\", ".")
+                os.path.join(root, file[:-3]).replace("/", ".")
                 for file in files
                 if file.endswith(".py")
             )
         return extensions
+
 
     async def mass_reload(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -114,6 +107,7 @@ class CogsC(commands.GroupCog):
             reload_message += f"Reloaded {cog}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
 
+
     @app_commands.command(
             name="crash",
             description="Raise a random Exception (Bot Dev only)",
@@ -121,8 +115,9 @@ class CogsC(commands.GroupCog):
     async def slash_crash(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        await interaction.response.send_message("Crashing wiht discord.app_commands.errors.CommandInvokeError")
+        await interaction.response.send_message("Crashing with discord.app_commands.errors.CommandInvokeError")
         raise commands.CommandInvokeError("Test Exception")
+
 
     @app_commands.command(
         name = "show",
@@ -134,6 +129,7 @@ class CogsC(commands.GroupCog):
         cogs = await self.get_cogs()
         self.logger.debug(f"Showing {cogs} to {interaction.user}")
         await interaction.response.send_message(f"{cogs}", ephemeral=True)
+
 
     @app_commands.command(
         name = "reload",
@@ -157,6 +153,7 @@ class CogsC(commands.GroupCog):
                 self.logger.exception(f"unable to re-load {extension}, {e}")
                 await interaction.response.send_message(f"error reloading {extension}", ephemeral=True)
 
+
     @app_commands.command(
         name = "unload",
         description = "Unload a specified cog (For bot developer only)"
@@ -174,6 +171,7 @@ class CogsC(commands.GroupCog):
             self.logger.exception(f"unable to unload {extension}, {e}")
         await interaction.response.send_message(f"Unloaded {extension}", ephemeral=True)
 
+
     @slash_restart.autocomplete("extension")
     @slash_unload.autocomplete("extension")
     async def autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -182,6 +180,7 @@ class CogsC(commands.GroupCog):
             for extension in self.bot.extensions
             if current.lower() in extension.lower()
         ]
+
 
     @app_commands.command(
         name = "load",
@@ -200,11 +199,13 @@ class CogsC(commands.GroupCog):
         except commands.errors.ExtensionAlreadyLoaded as e:
             await interaction.response.send_message(f"Could not load {extension}, it is already loaded", ephemeral=True)
             self.logger.warning(e)
-        except ModuleNotFoundError | commands.errors.ExtensionFailed as e:
-            await self.logger.critical(e)
+        except commands.errors.ExtensionFailed as e:
+            await interaction.response.send_message(f"Could not load {extension}, {e}", ephemeral=True)
+            self.logger.exception(e)
         except Exception as e:
             self.logger.exception(f"unable to unload {extension}, {e}")
             await interaction.response.send_message(f"Unable to load {extension}", ephemeral=True)
+
 
     @slash_load.autocomplete("extension")
     async def load_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -214,6 +215,7 @@ class CogsC(commands.GroupCog):
             for extension in cogs
             if current.lower() in extension.lower()
         ]
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(AutoCogReloader(bot))

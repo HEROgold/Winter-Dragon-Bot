@@ -8,16 +8,18 @@ from discord.ext import commands
 
 import config
 
+
 class Urban(commands.GroupCog):
     def __init__(self, bot) -> None:
-        self.bot:commands.Bot = bot
+        self.bot: commands.Bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+
 
     @app_commands.command(
         name="random",
         description="get random definitions"
     )
-    async def slash_urban_random(self, interaction:discord.Interaction) -> None:
+    async def slash_urban_random(self, interaction: discord.Interaction) -> None:
         if config.Urban.ALLOW_RANDOM == True:
             UD_RANDOM_URL = 'http://api.urbandictionary.com/v0/random'
             response = requests.get(UD_RANDOM_URL)
@@ -28,7 +30,7 @@ class Urban(commands.GroupCog):
             emb.set_footer(text="Results are from an API!")
             emb.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar)
             for i, r in enumerate(random_list, start=1):
-                if i <= config.Urban.MAX_LENGHT:
+                if i <= config.Urban.MAX_LENGTH:
                     word = r["word"]
                     definition = r["definition"]
                     urban_url = r["permalink"]
@@ -38,11 +40,12 @@ class Urban(commands.GroupCog):
         else:
             await interaction.response.send_message("Random definitions are disabled", ephemeral=True)
 
+
     @app_commands.command(
         name="search",
         description="Look into urban dictionary for a meaning and its definition."
         )
-    async def slash_urban(self, interaction:discord.Interaction, query:str) -> None:
+    async def slash_urban(self, interaction: discord.Interaction, query: str) -> None:
         UD_DEFINE_URL = 'http://api.urbandictionary.com/v0/define?term='
         response = requests.get(UD_DEFINE_URL + urllib.parse.quote(query))
         json = response.json()
@@ -68,5 +71,6 @@ class Urban(commands.GroupCog):
         else:
             await interaction.response.send_message("No results found.")
 
-async def setup(bot:commands.Bot) -> None:
+
+async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(Urban(bot))

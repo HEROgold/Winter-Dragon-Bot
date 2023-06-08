@@ -11,11 +11,13 @@ from discord import app_commands
 import config
 import rainbow
 
+
 # TODO: Rewrite/cleanup
 class Help(commands.Cog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+
 
     @overload
     async def CreateHelpEmbed(
@@ -99,11 +101,13 @@ class Help(commands.Cog):
             embed.add_field(name="Usage", value=command.usage, inline=False)
         return embed
 
+
     async def UpdateView(self, view:discord.ui.View, *items) -> discord.ui.View:
         view.clear_items()
         for item in items:
             view.add_item(item)
         return view
+
 
     @app_commands.command(name="help", description="Get information about commands!")
     @app_commands.checks.cooldown(1, 5)
@@ -140,12 +144,13 @@ class Help(commands.Cog):
             if current.lower() in commands.lower()
         ]
 
+
+    @commands.cooldown(1, 2, commands.BucketType.member)
     @commands.command(
             description = "Use this command to get information about all available commands.",
             brief = "Sends this help page!",
             usage = "help [page or command]:\nExample:`help 1`, `help invite`"
             )
-    @commands.cooldown(1, 2, commands.BucketType.member)
     async def help(self, ctx:commands.Context, help_input) -> None:
         commands_list = self.bot.commands
         if help_input is None:
@@ -156,6 +161,7 @@ class Help(commands.Cog):
             return
         embed, view = await self.CreateHelpEmbed(help_input=help_input, commands_list=commands_list)
         await ctx.send(embed=embed, view=view)
+
 
     async def ButtonHandler(self, help_input:int, commands_list:list[app_commands.Command]|list[commands.Command], view:discord.ui.View) -> discord.ui.View:
         """Function to handle views, can update or create view.
@@ -221,11 +227,11 @@ class Help(commands.Cog):
 # Then inplement in own help cmd.
 class HelpView(discord.ui.View):
     def __init__(
-            self,
-            parent_embed: discord.Embed,
-            group_list: list[app_commands.commands.Group],
-            **kwargs
-        ) -> None:
+        self,
+        parent_embed: discord.Embed,
+        group_list: list[app_commands.commands.Group],
+        **kwargs
+    ) -> None:
         self.embed = parent_embed
         super().__init__(**kwargs)
         self.add_item(Dropdown(group_list))
@@ -235,7 +241,7 @@ class HelpView(discord.ui.View):
         await interaction.response.edit_message(embed=self.embed)
 
 class CopiedDropdownHelp(commands.Cog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
 
@@ -266,7 +272,7 @@ class Dropdown(discord.ui.Select):
         self.groupList = group_list
         options = [discord.SelectOption(
             label=group.description, description=f"/{group.name}") for group in group_list]
-        super().__init__(placeholder="Select which feature to get help for...", options=options)
+        super().__init__(placeholder="Select which feature to get help for.", options=options)
 
     async def callback(self, interaction: discord.Interaction) -> None:
         group_name = self.values[0]
@@ -283,6 +289,6 @@ class Dropdown(discord.ui.Select):
         await interaction.response.edit_message(embed=command_list_embed)
 
 
-async def setup(bot:commands.Bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Help(bot))
     # await bot.add_cog(CopiedDropdownHelp(bot))

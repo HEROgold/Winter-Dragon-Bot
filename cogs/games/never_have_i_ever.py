@@ -1,6 +1,4 @@
 import logging
-import os
-import pickle
 import random
 
 import discord
@@ -9,71 +7,43 @@ from discord.ext import commands
 
 import config
 import rainbow
-from tools import dragon_database
+from tools.database_tables import NhieQuestion, Suggestion, engine, Session
+
+NHIE = "nhie"
 
 
 class NeverHaveIEver(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
         self.set_default_data()
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
-
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation): 
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(self.data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     def set_default_data(self) -> None:
-        self.data = {"game_id": 0, "questions": {}}
-        for question_id, _ in enumerate(nhie_base_questions):
-            self.data["questions"][str(question_id)] = nhie_base_questions[question_id]
+        with Session(engine) as session:
+            questions = session.query(NhieQuestion).all()
+            if len(questions) > 0:
+                self.logger.debug("Questions already present in table.")
+                self.logger.debug(f"{questions}")
+                return
+            for question_id, _ in enumerate(nhie_base_questions):
+                self.logger.debug(f"adding question to database {question_id=}, value={nhie_base_questions[question_id]}")
+                session.add(NhieQuestion(id=question_id, value=f"{nhie_base_questions[question_id]}"))
+            session.commit()
 
-    def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = db.get_data(self.DATABASE_NAME)
-        elif os.path.getsize(self.DBLocation) > 0:
-            with open(self.DBLocation, "rb") as f:
-                data = pickle.load(f)
-        return data
+    def get_questions(self) -> tuple[int, str]:
+        with Session(engine) as session:
+            questions = session.query(NhieQuestion).all()
+            game_id = 0
+        return game_id, questions
 
-    def set_data(self, data) -> None:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(data, f)
-
-    async def cog_load(self) -> None:
-        if not self.data:
-            self.data = self.get_data()
-
-    async def cog_unload(self) -> None:
-        self.set_data(self.data)
 
     @app_commands.command(
         name="show",
         description = "Use this to get a never have i ever question, that you can reply to"
     )
     @app_commands.checks.cooldown(1, 10)
-    async def slash_nhie(self, interaction:discord.Interaction) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        game_id = self.data["game_id"]
-        game_id += 1
-        self.data["game_id"] = game_id
-        d:dict = self.data["questions"]
-        questions = list(d.values())
+    async def slash_nhie(self, interaction: discord.Interaction) -> None:
+        game_id, questions = self.get_questions()
         question = random.choice(questions)
         emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
@@ -83,50 +53,47 @@ class NeverHaveIEver(commands.GroupCog):
         await send_msg.add_reaction("✅")
         await send_msg.add_reaction("⛔")
         await interaction.response.send_message("Question send", ephemeral=True, delete_after=2)
-        self.set_data(self.data)
+
 
     @app_commands.command(
         name = "add",
         description="Lets you add a Never Have I Ever question"
         )
-    async def slash_nhieadd(self, interaction:discord.Interaction, nhie_question:str) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        if "add" not in self.data:
-            self.data["add"] = {}
-        if "add" in self.data:
-            self.data["add"][nhie_question] = False
-        self.set_data(self.data)
+    async def slash_nhie_add(self, interaction: discord.Interaction, nhie_question: str) -> None:
+        with Session(engine) as session:
+            session.add(Suggestion(
+                id = None,
+                type = NHIE,
+                content = nhie_question
+            ))
+            session.commit()
         await interaction.response.send_message(f"The question ```{nhie_question}``` is added, it will be verified later.", ephemeral=True)
+
 
     @app_commands.command(
         name = "add_verified",
         description = "Add all questions stored in the NHIE database file, to the questions data section."
         )
     @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
-    async def slash_nvie_add_verified(self, interaction:discord.Interaction) -> None:
+    async def slash_nhie_add_verified(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        if not self.data:
-            self.data = self.get_data()
-        # TODO: Test
-        try:
-            d = self.data["add"]
-        except KeyError:
-            await interaction.response.send_message("No questions to add", ephemeral=True)
-            return
-        for k1, v1 in list(d.items()):
-            if v1 == True:
-                question_id = self.get_question_id()
-                self.data["questions"][question_id] = d.pop(k1)
-        self.set_data(self.data)
+        with Session(engine) as session:
+            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)
+            questions = result.all()
+            if not questions:
+                await interaction.response.send_message("No questions to add", ephemeral=True)
+                return
+
+            for question in questions:
+                session.add(NhieQuestion(value = question.content))
+            session.commit()
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
-    def get_question_id(self) -> int:
-        return len(self.data["questions"].keys())
 
-async def setup(bot:commands.Bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(NeverHaveIEver(bot))
+
 
 nhie_base_questions = [
 "Never have I ever gone skinny dipping.",
