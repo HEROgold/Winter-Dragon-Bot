@@ -1,3 +1,4 @@
+import logging
 
 import discord
 import flag
@@ -8,12 +9,14 @@ import config
 
 
 class Translate(commands.Cog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         openai.api_key = config.Tokens.OPEN_API_KEY
+        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction:discord.Reaction, member:discord.Member|discord.User) -> None:
+    async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member | discord.User) -> None:
         if member.bot == True:
             return
         landcode:str = flag.dflagize(reaction.emoji)[1:-1]
@@ -21,6 +24,7 @@ class Translate(commands.Cog):
             return
         dm = await member.create_dm()
         clean_content = reaction.message.clean_content
+        self.logger.debug(f"translating message for {member}: {reaction.message}")
         if len(clean_content) >= config.Translate.LIMIT:
             emb = discord.Embed(title="Cannot Translate", description="The message is too long to translate")
         else:
@@ -41,5 +45,6 @@ class Translate(commands.Cog):
         else:
             await reaction.message.channel.send(embed=emb)
 
-async def setup(bot:commands.Bot) -> None:
+
+async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(Translate(bot))

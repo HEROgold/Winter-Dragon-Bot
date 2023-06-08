@@ -1,7 +1,5 @@
 import datetime
 import logging
-import os
-import pickle
 import random
 
 import discord
@@ -11,74 +9,31 @@ from discord.ext import commands, tasks
 
 import config
 import rainbow
-from tools import app_command_tools, dragon_database
+from tools import app_command_tools
+from tools.database_tables import Poll as PollDb
+from tools.database_tables import Session, engine
 
 
 class Poll(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
-
-
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "wb") as f:
-                data = self.data
-                pickle.dump(data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
-
-
-    def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = db.get_data(self.DATABASE_NAME)
-        elif os.path.getsize(self.DBLocation) > 0:
-            with open(self.DBLocation, "rb") as f:
-                data = pickle.load(f)
-        return data
-
-
-    def set_data(self, data) -> None:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(data, f)
-
-
-    async def cog_load(self) -> None:
-        self.data = self.get_data()
-        self.anounce_winners.start()
-
-
-    async def cog_unload(self) -> None:
-        self.set_data(self.data)
 
 
     @commands.Cog.listener()
-    async def on_reaction_add(self, reaction:discord.Reaction, user:discord.Member) -> None:
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member) -> None:
         if user.bot == True:
             return
-        guild_id = str(reaction.message.guild.id)
-        if guild_id not in self.data:
-            return
-        pol = self.data[guild_id]["polls"][str(reaction.message.id)]
-        voted_users:list = pol["Users"]
-        vote_epoch_end:int = pol["Time"]
+        with Session(engine) as session:
+            poll = session.query(PollDb).where(PollDb.message_id == reaction.message.id).first()
+
+        voted_users: list = poll["Users"]
+        vote_epoch_end: int = poll["Time"]
         dm = user.dm_channel or await user.create_dm()
         if user.id not in voted_users and datetime.datetime.now(datetime.timezone.utc).timestamp() <= vote_epoch_end:
             voted_users.append(user.id)
             await reaction.remove(user)
-            pol["Votes"][reaction.emoji]["count"] += 1
+            poll["Votes"][reaction.emoji]["count"] += 1
             self.set_data(self.data)
         elif datetime.datetime.now().timestamp() <= vote_epoch_end:
             await reaction.remove(user)
@@ -87,9 +42,7 @@ class Poll(commands.GroupCog):
             await reaction.remove(user)
             await dm.send("You cannot vote anymore, The vote time has ran out.")
 
-
-    # FIXME: Doesn't edit messages
-    # TODO: more testing
+    # Rewrite with sql
     @tasks.loop(seconds=60)
     async def anounce_winners(self) -> None:
         for guild_id, guild_data in self.data.items(): #type: ignore
@@ -124,23 +77,32 @@ class Poll(commands.GroupCog):
         description="Create a poll"
     )
     async def slash_poll_create( 
-            self, # NOSONAR
-            interaction:discord.Interaction,
-            message:str,
-            minutes:int,
-            choice1:str,
-            hours:int=0,
-            days:int=0,
-            choice2:str=None,
-            choice3:str=None,
-            choice4:str=None,
-            choice5:str=None,
-            choice6:str=None,
-            choice7:str=None,
-            choice8:str=None,
-            choice9:str=None,
-            choice10:str=None,
-        ) -> None:
+        self, # NOSONAR
+        interaction: discord.Interaction,
+        message: str,
+        minutes: int = 0,
+        hours: int = 0,
+        days: int = 0,
+        choice1: str = None,
+        choice2: str = None,
+        choice3: str = None,
+        choice4: str = None,
+        choice5: str = None,
+        choice6: str = None,
+        choice7: str = None,
+        choice8: str = None,
+        choice9: str = None,
+        choice10: str = None,
+    ) -> None:
+        if sum(minutes, hours, days) == 0:
+            await interaction.response.send_message("No time given", ephemeral=True)
+            return
+
+        options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
+        if all(options is None):
+            await interaction.response.send_message("No options given for the poll", ephemeral=True)
+            return
+
         guild_id = str(interaction.guild.id)
         poll_channel_id, poll_channel = await self.get_poll_channels(guild_id)
         
@@ -155,8 +117,7 @@ class Poll(commands.GroupCog):
         emb.set_author(name=interaction.user, icon_url=interaction.user.avatar.url)
         emb.set_footer(text="You may only vote once, and cannot change.")
 
-        # create dynamic emoji from 1 to 10 > change name for 10 to keycap_ten
-        options = [choice1, choice2, choice3, choice4, choice5, choice6, choice7, choice8, choice9, choice10]
+        # create dynamic emoji from 1 to 10 > change name for 10 to :keycap_ten:
         for i, option in enumerate(options):
             if option is None:
                 continue
@@ -189,11 +150,9 @@ class Poll(commands.GroupCog):
     def get_relative_epoch(self, minutes, hours, days) -> int:
         return int(
             (
-                datetime.datetime.now(datetime.timezone.utc)
-                + datetime.timedelta(
+                datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
                     seconds=self.get_seconds(minutes=minutes, hours=hours, days=days)
-                )
-            ).timestamp()
+                )).timestamp()
         )
 
 
@@ -240,5 +199,5 @@ class Poll(commands.GroupCog):
         return seconds
 
 
-async def setup(bot:commands.Bot) -> None:
+async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(Poll(bot))

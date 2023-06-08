@@ -16,6 +16,7 @@ class Converter:
     tree: app_commands.CommandTree
     logger: logging.Logger
     cache: Optional[dict] = None
+    paramater_args = None
 
     def __init__(self, bot: commands.Bot) -> Self:
         self.bot = bot
@@ -27,8 +28,10 @@ class Converter:
         return any(type(i) == app_commands.AppCommandGroup for i in app_command.options)
 
     def is_subcommand(
-            self, app_command:app_commands.AppCommand, command:app_commands.Command
-        ) -> bool:
+        self,
+        app_command:app_commands.AppCommand,
+        command:app_commands.Command
+    ) -> bool:
         for option in app_command.options:
             if (
                 type(option) == app_commands.AppCommandGroup
@@ -39,9 +42,12 @@ class Converter:
         return False
 
     async def get_app_sub_command(
-            self, sub_command:app_commands.Command, guild:discord.Guild=None, app_command:app_commands.AppCommand=None
-        ) -> tuple[app_commands.AppCommand, str] | None:
-        """Returns the full app_command and a string that can be used to mention the subcommand"""
+            self,
+            sub_command: app_commands.Command,
+            guild: discord.Guild = None,
+            app_command: app_commands.AppCommand = None
+    ) -> tuple[app_commands.AppCommand, str] | None:
+        """Returns a AppCommand and a string that can be used to mention the subcommand"""
         if not sub_command:
             raise CommandNotFound
         if not app_command:
@@ -56,8 +62,12 @@ class Converter:
         self.logger.debug(f"Returning {app_command} {sub_command}")
         return app_command, custom_mention
 
-    async def get_app_command(self, command:app_commands.AppCommand|app_commands.Command, guild:discord.Guild=None) -> app_commands.AppCommand:
-        """Gets the app_command from a command"""
+    async def get_app_command(
+            self,
+            command: app_commands.AppCommand | app_commands.Command,
+            guild: discord.Guild = None
+    ) -> app_commands.AppCommand:
+        """Gets the AppCommand from a Command"""
         if type(command) == app_commands.AppCommand:
             self.logger.debug(f"Quick return for {command.name}, already an AppCommand")
             return command
@@ -80,6 +90,26 @@ class Converter:
             return None
         self.logger.debug(f"Returning {app_command}")
         return app_command
+
+    # TODO, return pre-filled arguments for a given
+    # Needs to work both with and without sub commands.
+    # Doesnt seem to be working
+    # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
+    async def with_paramaters(
+            self,
+            command: commands.Command,
+            **kwargs
+    ) -> str:
+        app_command, custom_mention = await self.get_app_sub_command(command)
+        args = " ".join(f"{k}:{v}" for k, v in kwargs.items())
+        _test = f"{custom_mention[:-1]} {args}>"
+        try:
+            self.logger.debug(command.clean_params)
+        except AttributeError:
+            pass
+        self.logger.debug(app_command.to_dict())
+        return _test
+
 
     async def _cache_handler(self, guild: discord.Guild) -> None:
         if not self.cache:

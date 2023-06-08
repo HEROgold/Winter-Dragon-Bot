@@ -18,8 +18,8 @@ To use MongoDB make sure in config.py the following settings are applied
 
 * in class Main:
   `use_database:bool = True`
-  `database_name:str = "YourDatabaseName"`
-* in class Database:
+  `database_name:str = "YourdatabaseName"`
+* in class database:
   `IP_PORT:str = "localhost:27017"`
   `USER_PASS:str = "User:Password"`
   `AUTH_METHOD:str = "SCRAM-SHA-256"`

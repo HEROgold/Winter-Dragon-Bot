@@ -1,0 +1,46 @@
+version: '3'
+services:
+  db:
+    build: ./database
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password-which-!s-N0tSec8re_aTAlL
+      POSTGRES_DB: mydatabase
+    volumes:
+      - ./database/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4086M
+        reservations:
+          cpus: "2"
+          memory: 512M
+    restart: always # unless-stopped
+  bot:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - db
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2048M
+        reservations:
+          cpus: "1"
+          memory: 128M
+    restart: always # unless-stopped

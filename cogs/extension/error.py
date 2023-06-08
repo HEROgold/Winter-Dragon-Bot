@@ -10,24 +10,29 @@ from config import Main as CM
 from tools import app_command_tools
 
 
+# FIXME: Doesn't work when a listener() raises an error.
 class Error(commands.Cog):
     def __init__(self, bot) -> None:
-        self.bot:commands.Bot = bot
+        self.bot: commands.Bot = bot
         self.help_msg = ""
         self.logger = logging.getLogger(f"{CM.BOT_NAME}.error")
         self.act = app_command_tools.Converter(bot=self.bot)
 
-    # -> Option 1 --- Change on_error to self.on_error on load
+    # -> --- Change on_error to self.on_error on load
     def cog_load(self) -> None: # type: ignore
         tree = self.bot.tree
         tree.on_error = self.on_app_command_error
 
-    # -> Option 1 --- Change back to default on_error on unload
+    # -> --- Change back to default on_error on unload
     def cog_unload(self) -> None: # type: ignore
         tree = self.bot.tree
         tree.on_error = tree.__class__.on_error
 
-    async def on_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError) -> None:
+    async def on_app_command_error(
+        self,
+        interaction: discord.Interaction,
+        error: app_commands.AppCommandError
+    ) -> None:
         if not interaction:
             await self.handle_error(interaction, error)
             return
@@ -40,19 +45,22 @@ class Error(commands.Cog):
                 return
             await self.handle_error(interaction, error)
 
+
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         if type(error) != commands.errors.CommandNotFound:
             self.logger.debug(f"Error from ctx: {ctx.command.name}")
         await self.handle_error(ctx, error)
 
-    async def get_dm(self, i: discord.Interaction|commands.Context) -> discord.DMChannel:
+
+    async def get_dm(self, i: discord.Interaction | commands.Context) -> discord.DMChannel:
         if type(i) == commands.Context:
             dm = await self.ctx_error_handler(i)
         else:
             dm = await self.app_command_error_handler(i)
         self.logger.debug(f"Returning dm channel {dm.recipient}, with message {self.help_msg}")
         return dm
+
 
     async def app_command_error_handler(self, interaction: discord.Interaction) -> discord.DMChannel:
         try:
@@ -63,6 +71,7 @@ class Error(commands.Cog):
         except app_command_tools.CommandNotFound:
             pass
         return interaction.user.dm_channel or await interaction.user.create_dm()
+
 
     async def app_sub_command_handler(self) -> None:
         help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
@@ -75,7 +84,8 @@ class Error(commands.Cog):
                 return
         return
 
-    async def ctx_error_handler(self, ctx:commands.Context) -> discord.DMChannel:
+
+    async def ctx_error_handler(self, ctx: commands.Context) -> discord.DMChannel:
         try:
             await ctx.message.delete()
         except discord.Forbidden:
@@ -83,7 +93,12 @@ class Error(commands.Cog):
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
 
-    async def handle_error(self, x: commands.Context|discord.Interaction, error: app_commands.AppCommandError|commands.CommandError) -> None:
+
+    async def handle_error(
+        self,
+        x: commands.Context | discord.Interaction,
+        error: app_commands.AppCommandError | commands.CommandError
+    ) -> None:
         # sourcery skip: low-code-quality
         self.logger.debug(f"ErrorType: {type(error)}, error: {error.args}")
         dm = await self.get_dm(x)
@@ -181,6 +196,9 @@ class Error(commands.Cog):
                 for arg in error.args:
                     if "NotOwner" in arg:
                         await dm.send("You may not use this command!")
+                    elif "Unknown interaction" in arg:
+                        self.logger.warning(error)
+                        # await dm.send()
                     # if "NotFound" in arg:
                     #     self.logger.warning(error)
                     else:
@@ -190,6 +208,7 @@ class Error(commands.Cog):
                 self.logger.error(f"Unexpected error, CODE: {code}")
                 await dm.send(f"Unexpected error, try {self.help_msg} for more help, or contact the bot creator with the following code `{code}`.\nuse {server_invite} to join the official bot server")
 
-async def setup(bot:commands.Bot) -> None:
+
+async def setup(bot: commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(Error(bot))

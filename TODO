@@ -1,0 +1,4 @@
+Remove
+    all self.data
+    set_data
+    get_data

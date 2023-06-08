@@ -9,10 +9,11 @@ from discord.ext import commands, tasks
 
 import config
 
+
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class BotC(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
-        self.bot:commands.Bot = bot
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.STATUS = [
             "dnd",
@@ -22,7 +23,7 @@ class BotC(commands.GroupCog):
             "online",
             "random"
         ]
-        self.STATUSTYPE = [
+        self.STATUS_TYPE = [
             discord.Status.dnd,
             discord.Status.do_not_disturb,
             discord.Status.idle,
@@ -39,7 +40,7 @@ class BotC(commands.GroupCog):
             "watching",
             "random"
         ]
-        self.ACTIVITYTYPE = [
+        self.ACTIVITY_TYPE = [
             discord.ActivityType.competing,
             discord.ActivityType.custom,
             discord.ActivityType.listening,
@@ -47,7 +48,7 @@ class BotC(commands.GroupCog):
             discord.ActivityType.streaming,
             discord.ActivityType.watching,
         ]
-        self.STATUSMSG = [
+        self.STATUS_MSG = [
             "Licking a wedding cake",
             "Eating a wedding cake",
             "Comparing wedding cakes",
@@ -60,6 +61,7 @@ class BotC(commands.GroupCog):
             "Touching a wedding cake",
             "Magically spawning a wedding cake"
         ]
+
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
@@ -79,15 +81,17 @@ class BotC(commands.GroupCog):
             self.activity_switch.stop()
             return
 
+
     def get_random_activity(self) -> tuple[discord.Status, discord.Activity] | None:
         status = None
         activity_type = None
         while status in [discord.Status.invisible, discord.Status.offline, None]:
-            status:discord.Status = random.choice(self.STATUSTYPE)
+            status:discord.Status = random.choice(self.STATUS_TYPE)
         while activity_type in [discord.ActivityType.custom, None]:
-            activity_type:discord.ActivityType = random.choice(self.ACTIVITYTYPE)
-        activity:discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUSMSG))
+            activity_type:discord.ActivityType = random.choice(self.ACTIVITY_TYPE)
+        activity:discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUS_MSG))
         return status, activity
+
 
     @app_commands.command(name="activity", description="change bot activity")
     async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str="") -> None:
@@ -128,12 +132,18 @@ class BotC(commands.GroupCog):
         ]
 
     @slash_bot_activity.autocomplete("activity")
-    async def activity_autocomplete_activitytype(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def activity_autocomplete_activity(
+        self,
+        interaction:
+        discord.Interaction,
+        current: str
+    ) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=activity, value=activity)
             for activity in self.ACTIVITIES
             if current.lower() in activity.lower()
         ]
+
 
     @app_commands.command(
         name = "announce",
@@ -147,39 +157,67 @@ class BotC(commands.GroupCog):
             await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
         await interaction.response.send_message("Message send to all update channels on all servers!", ephemeral=True)
 
+
     @app_commands.command(
         name = "ping",
         description = "show latency"
     )
-    async def slash_ping(self, interaction:discord.Interaction) -> None:
+    async def slash_ping(self, interaction: discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
+
         latency = round(self.bot.latency * 1000)
+
         start_time = time.time()
         await interaction.response.defer()
         measured_time = time.time() - start_time
-        final = round(measured_time * 1000)
+        response = round(measured_time * 1000)
 
-        if latency < 250:
-            color = 0x11ff00
-        elif latency < 450:
-            color = 0xddff00
-        elif latency < 600:
-            color = 0xff8800
-        elif latency < 800:
-            color = 0xff4400
-        else:
-            color = 0xff0000
+        from tools.database_tables import User
+        start_time = time.time()
+        User().fetch_user(id=interaction.user.id)
+        measured_time = time.time() - start_time
+        database = round(measured_time * 1000)
 
+        results = list(map(self.get_latency_colors, [latency, response, database]))
+
+        colors = [i[1] for i in results]
+        colors.sort(reverse=True)
+        color = colors[0]
+        colored_websocket, _ = results[0]
+        colored_api_response, _ = results[1]
+        colored_database, _ = results[2]
+
+        end_tag = "```"
         embed = discord.Embed(
             title=":ping_pong: Pong!",
             color=color,
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
-        embed.add_field(name="Websocket", value=f"```json\n{latency} ms```", inline=False)
-        embed.add_field(name="Response", value=f"```json\n{final} ms```", inline=False)
+        embed.add_field(name="Websocket", value=f"{colored_websocket}{latency} ms {end_tag}", inline=False)
+        embed.add_field(name="Response", value=f"{colored_api_response}{response} ms {end_tag}", inline=False)
+        embed.add_field(name="Database", value=f"{colored_database}{database} ms {end_tag}", inline=False)
         await interaction.followup.send(embed=embed)
 
 
-async def setup(bot:commands.Bot) -> None:
+    def get_latency_colors(self, latency) -> tuple[str, int]:
+        if latency < 250:
+            ansi_start = "```ansi\n[2;32m"
+            color = 0x11ff00
+        elif latency < 450:
+            ansi_start = "```ansi\n[2;33m"
+            color = 0xddff00
+        elif latency < 600:
+            ansi_start = "```ansi\n[2;33m"
+            color = 0xff8800
+        elif latency < 800:
+            ansi_start = "```ansi\n[2;31m"
+            color = 0xff4400
+        else:
+            ansi_start = "```ansi\n[2;31m"
+            color = 0xff0000
+        return ansi_start, color
+
+
+async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(BotC(bot))

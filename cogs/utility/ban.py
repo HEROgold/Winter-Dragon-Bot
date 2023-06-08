@@ -1,59 +1,19 @@
 import datetime
-import pickle
 import logging
-import os
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-from tools import dragon_database
+# from tools.database_tables Session, engine
 
-class Ban(commands.Cog):
-    def __init__(self, bot:commands.Bot) -> None:
+
+class TempBan(commands.Cog):
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
 
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "wb") as f:
-                data = self.data
-                pickle.dump(data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
-
-    def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = db.get_data(self.DATABASE_NAME)
-        elif os.path.getsize(self.DBLocation) > 0:
-            with open(self.DBLocation, "rb") as f:
-                data = pickle.load(f)
-        return data
-
-    def set_data(self, data) -> None:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(data, f)
-
-    async def cog_load(self) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        self.unban_check.start()
-
-    async def cog_unload(self) -> None:
-        self.set_data(self.data)
 
     @tasks.loop(seconds=3600)
     async def unban_check(self) -> None:
@@ -74,6 +34,7 @@ class Ban(commands.Cog):
             del self.data[str(id)]
         await self.set_data(data=self.data)
 
+
     async def unban_member(self, member:discord.Member, guild:discord.Guild) -> None:
         if not self.data:
             self.data = self.get_data()
@@ -83,14 +44,17 @@ class Ban(commands.Cog):
             role = discord.utils.get(guild.roles, id=role_id)
             await member.add_roles(role)
 
+
     def get_seconds(self, seconds, minutes, hours, days) -> int:
         hours += days*24
         minutes += hours*60
         seconds += minutes*60
         return seconds
 
+
     async def create_banned_role(self, guild:discord.Guild) -> discord.Role:
         return await guild.create_role(name="Banned", permissions=discord.Permissions.none())
+
 
     @app_commands.command(name="temp_ban", description="Ban members temporarily")
     @app_commands.guild_only()
@@ -132,6 +96,7 @@ class Ban(commands.Cog):
         await member.remove_roles(reason=reason_msg)
         await member.add_roles(banned_role)
 
+
     @slash_ban.autocomplete("days")
     @slash_ban.autocomplete("hours")
     @slash_ban.autocomplete("minutes")
@@ -143,5 +108,8 @@ class Ban(commands.Cog):
             for time in times if current.lower() in time.lower()
         ]
 
-async def setup(bot:commands.Bot) -> None:
-    await bot.add_cog(Ban(bot))
+
+async def setup(bot: commands.Bot) -> None:
+    pass
+    # await bot.add_cog(TempBan(bot))
+    # Removed since normal ban exist.

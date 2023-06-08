@@ -1,6 +1,4 @@
 import logging
-import os
-import pickle
 import random
 
 import discord
@@ -9,122 +7,92 @@ from discord.ext import commands
 
 import config
 import rainbow
-from tools import dragon_database
+from tools.database_tables import WyrQuestion, Suggestion, engine, Session
+
+WYR = "wyr"
 
 
 class WouldYouRather(commands.GroupCog):
-    def __init__(self, bot:commands.Bot) -> None:
+    def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.data = None
-        self.DATABASE_NAME = self.__class__.__name__
         self.set_default_data()
-        if not config.Main.USE_DATABASE:
-            self.DBLocation = f"./Database/{self.DATABASE_NAME}.pkl"
-            self.setup_db_file()
-
-    def setup_db_file(self) -> None:
-        if not os.path.exists(self.DBLocation):
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(self.data, f)
-                f.close
-                self.logger.info(f"{self.DATABASE_NAME}.pkl Created.")
-        else:
-            self.logger.info(f"{self.DATABASE_NAME}.pkl File Exists.")
 
     def set_default_data(self) -> None:
-        self.data = {"game_id": 0, "questions": {}}
-        for question_id, _ in enumerate(wyr_base_questions):
-            self.data["questions"][str(question_id)] = wyr_base_questions[question_id]
+        with Session(engine) as session:
+            questions = session.query(WyrQuestion).all()
+            if len(questions) > 0:
+                self.logger.debug("Questions already present in table.")
+                self.logger.debug(f"{questions}")
+                return
+            for question_id, _ in enumerate(wyr_base_questions):
+                self.logger.debug(f"adding question to database {question_id=}, value={wyr_base_questions[question_id]}")
+                session.add(WyrQuestion(id=question_id, value=f"{wyr_base_questions[question_id]}"))
+            session.commit()
 
-    def get_data(self) -> dict:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            data = db.get_data(self.DATABASE_NAME)
-        elif os.path.getsize(self.DBLocation) > 0:
-            with open(self.DBLocation, "rb") as f:
-                data = pickle.load(f)
-        return data
+    def get_questions(self) -> tuple[int, str]:
+        with Session(engine) as session:
+            questions = session.query(WyrQuestion).all()
+            game_id = 0
+        return game_id, questions
 
-    def set_data(self, data) -> None:
-        if config.Main.USE_DATABASE:
-            db = dragon_database.Database()
-            db.set_data(self.DATABASE_NAME, data=data)
-        else:
-            with open(self.DBLocation, "wb") as f:
-                pickle.dump(data, f)
-
-    async def cog_load(self) -> None:
-        if not self.data:
-            self.data = self.get_data()
-
-    async def cog_unload(self) -> None:
-        self.set_data(self.data)
 
     @app_commands.command(
         name="show",
-        description="Sends a would you rather question to the channel users can reply to!",
-        )
-    async def slash_Wyr(self, interaction:discord.Interaction) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        question_id = self.data["game_id"]
-        question_id += 1
-        self.data["game_id"] = question_id
-        d = self.data["questions"]
-        questions = list(d.keys())
+        description = "Use this to get a never have i ever question, that you can reply to"
+    )
+    @app_commands.checks.cooldown(1, 10)
+    async def slash_wyr(self, interaction: discord.Interaction) -> None:
+        game_id, questions = self.get_questions()
         question = random.choice(questions)
-        emb = discord.Embed(title=f"Would You Rather Question #{question_id}", description=question, color=random.choice(rainbow.RAINBOW))
-        emb.add_field(name="1st option", value="🟦")
-        emb.add_field(name="2nd option", value="🟥")
+        emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
+        emb.add_field(name="I Have", value="✅")
+        emb.add_field(name="Never", value="⛔")
+        # TODO: Add emoji's directly using the interaction. > look at poll 162
         send_msg = await interaction.channel.send(embed=emb)
-        await send_msg.add_reaction("🟦")
-        await send_msg.add_reaction("🟥")
+        await send_msg.add_reaction("✅")
+        await send_msg.add_reaction("⛔")
         await interaction.response.send_message("Question send", ephemeral=True, delete_after=2)
-        self.set_data(self.data)
+
 
     @app_commands.command(
-        name="add",
-        description="Lets you add a would you rather question to the list of questions!"
+        name = "add",
+        description="Lets you add a Never Have I Ever question"
         )
-    async def slash_wyradd(self, interaction:discord.Interaction, wyr_question:str) -> None:
-        if not self.data:
-            self.data = self.get_data()
-        if "add" not in self.data:
-            self.data["add"] = {}
-        if "add" in self.data:
-            self.data["add"][wyr_question] = False
-        self.set_data(self.data)
-        await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified soon.", ephemeral=True)
+    async def slash_wyr_add(self, interaction: discord.Interaction, wyr_question: str) -> None:
+        with Session(engine) as session:
+            session.add(Suggestion(
+                id = None,
+                type = WYR,
+                content = wyr_question
+            ))
+            session.commit()
+        await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified later.", ephemeral=True)
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+
     @app_commands.command(
-        name="add_verified",
+        name = "add_verified",
         description = "Add all questions stored in the WYR database file, to the questions data section."
         )
-    async def wyr_add_verified(self, interaction:discord.Interaction) -> None:
+    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    async def slash_add_verified(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        if not self.data:
-            self.data = self.get_data()
-        # TODO: Test
-        try:
-            d = self.data["add"]
-        except KeyError:
-            await interaction.response.send_message("No questions to add", ephemeral=True)
-            return
-        for k1, v1 in list(d.items()):
-            if v1 == True:
-                question_id = self.get_question_id()
-                self.data["questions"][question_id] = d.pop(k1)
-        self.set_data(self.data)
+        with Session(engine) as session:
+            result = session.query(Suggestion).where(Suggestion.type == WYR, Suggestion.is_verified == True)
+            questions = result.all()
+            if not questions:
+                await interaction.response.send_message("No questions to add", ephemeral=True)
+                return
+
+            for question in questions:
+                session.add(WyrQuestion(value = question.content))
+            session.commit()
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
-    def get_question_id(self) -> int:
-        return len(self.data["questions"].keys())
 
-async def setup(bot:commands.Bot) -> None:
-	await bot.add_cog(WouldYouRather(bot))
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(WouldYouRather(bot))
 
 
 wyr_base_questions = [
