@@ -445,10 +445,9 @@ class DragonLog(commands.GroupCog):
                 except AttributeError as e:
                     self.logger.debug(f"{dc_channel=}")
                     self.logger.exception(e)
-            # FIXME: sqlite3.OperationalError: no such column: messages.id
-            # session.commit()
+            session.commit()
 
-        await interaction.followup.send("Removed and DragonLogChannels")
+        await interaction.followup.send("Removed DragonLogChannels")
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
 
