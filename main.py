@@ -84,7 +84,7 @@ def delete_oldest_logs() -> None:
     # Some regex magic https://regex101.com/r/he2KNZ/1
     # './logs\\2023-05-08-00-10-27\\bot.log' matches into
     # /logs\\2023-05-08-00-10-27\\
-    regex = r"(\./logs)(/|\d|-)+"
+    regex = r"(\./logs)(/|\d|-)+" # NOSONAR
     folder_path = re.match(regex, oldest_files[0])[0]
     bot_logger.info(f"deleting old logs for space: {folder_path=}")
     for file in os.listdir(folder_path):
