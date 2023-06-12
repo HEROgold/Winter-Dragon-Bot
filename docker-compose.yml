@@ -1,6 +1,7 @@
 version: '3'
 services:
   db:
+    container_name: postgresql
     build: ./database
     environment:
       POSTGRES_USER: postgres
@@ -18,13 +19,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
-          memory: 4086M
-        reservations:
           cpus: "2"
-          memory: 512M
+          memory: 2048M
+        reservations:
+          cpus: "1"
+          memory: 128M
     restart: always # unless-stopped
   bot:
+    container_name: discord-bot
     build: .
     volumes:
       - .:/app
@@ -44,3 +46,41 @@ services:
           cpus: "1"
           memory: 128M
     restart: always # unless-stopped
+  # List of servers, able to be run by the bot using a shared watchdog directory
+  # TODO: Only run start server when file is seen in the watchdog file
+  conan:
+    container_name: conan-exiles
+    build: ./servers/docker-conanexiles
+    profiles: ["servers"]
+    restart: unless-stopped
+    volumes:
+      - ./servers/watchdog:/servers/watchdog
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2048M
+        reservations:
+          cpus: "1"
+          memory: 128M
+  scp-sl:
+    container_name: scp-sl
+    image: t3l3tubie/scpsl:latest
+    profiles: ["servers"]
+    restart: unless-stopped
+    ports:
+      - "7777-7784:7777-7784/udp"
+      - "7777-7784:7777-7784"
+    volumes:
+      - ./servers/watchdog:/servers/watchdog
+      - /etc/localtime:/etc/localtime:ro
+      - ${MOUNT_POINT}/scpsl/steamcmd:/home/steam/steamcmd
+      - ${MOUNT_POINT}/scpsl/scp_server:/home/steam/scp_server
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2048M
+        reservations:
+          cpus: "1"
+          memory: 128M
