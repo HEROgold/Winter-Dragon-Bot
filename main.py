@@ -7,6 +7,7 @@ import signal
 import sys
 from atexit import register
 from datetime import datetime
+# from logging.handlers import TimedRotatingFileHandler
 
 import discord
 from discord.ext import commands
@@ -18,6 +19,7 @@ discord_logger = logging.getLogger('discord')
 
 bot_logger.setLevel(config.Main.LOG_LEVEL)
 bot_handler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
+# bot_handler = TimedRotatingFileHandler(filename='bot.log', encoding='utf-8', when="MIDNIGHT", backupCount=7)
 bot_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 bot_logger.addHandler(bot_handler)
 bot_logger.addHandler(logging.StreamHandler())
