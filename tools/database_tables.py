@@ -3,7 +3,6 @@ import logging
 from typing import List, Optional, Self
 
 import sqlalchemy
-# from sqlalchemy import Sequence as SequenceDb # Multiple data in one cell?
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, BigInteger
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -252,11 +251,43 @@ class Server(Base):
     run_path: Mapped[str] = mapped_column(String(255))
 
 
+class LookingForGroup(Base):
+    __tablename__ = "looking_for_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
+
+
+all_tables = [
+    Guild,
+    Channel,
+    User,
+    Message,
+    Reminder,
+    Welcome,
+    NhieQuestion,
+    WyrQuestion,
+    Game,
+    Lobby,
+    AssociationUserLobby,
+    ResultMassiveMultiplayer,
+    ResultDuels,
+    Steam,
+    Suggestion,
+    Poll,
+    Team,
+    AssociationUserTeam,
+    Server,
+    LookingForGroup
+    ]
+
+
 try:
     with Session(engine) as session:
-        session.query(User).all()
-        session.query(NhieQuestion).all()
+        for i in all_tables:
+            session.query(i).all()
 except Exception as e:
-    logger.exception(f"Error getting User table: {e}")
-    """Should only run once, to create each table"""
+    logger.exception(f"Error getting all tables: {e}")
+    """Should only run max once per startup, creating missing tables"""
     Base().metadata.create_all(engine)
