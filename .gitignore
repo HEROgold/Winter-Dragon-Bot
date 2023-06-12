@@ -160,3 +160,4 @@ Reminders.txt
 /logs
 *.lnk
 servers/docker-scpsl/
+servers/docker-conanexiles/
