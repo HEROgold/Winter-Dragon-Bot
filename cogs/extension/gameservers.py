@@ -141,6 +141,7 @@ class GameServers(commands.GroupCog):
             await interaction.response.send_message(f"Server {server} is not running", ephemeral=True)
         else:
             await interaction.response.send_message(f"Stopping {server}.")
+            await interaction.response.send_message(f"Stopping {server}.")
             return await self.SERVER_LIST[server](interaction, server_name=server, stop=True)
 
 
