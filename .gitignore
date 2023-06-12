@@ -159,3 +159,4 @@ Reminders.txt
 .vscode
 /logs
 *.lnk
+servers/docker-scpsl/
