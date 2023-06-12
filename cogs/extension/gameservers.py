@@ -31,10 +31,12 @@ from rainbow import RAINBOW
 # Conan doesn't run in background
 
 
+# TODO: Change so it can work outside the docker container
+# https://stackoverflow.com/questions/39468841/is-it-possible-to-start-a-stopped-container-from-another-container
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class GameServers(commands.GroupCog):
     running_PIDS = {}
-    
+
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -138,6 +140,7 @@ class GameServers(commands.GroupCog):
         if server not in self.running_PIDS:
             await interaction.response.send_message(f"Server {server} is not running", ephemeral=True)
         else:
+            await interaction.response.send_message(f"Stopping {server}.")
             await interaction.response.send_message(f"Stopping {server}.")
             return await self.SERVER_LIST[server](interaction, server_name=server, stop=True)
 
@@ -284,4 +287,5 @@ class GameServers(commands.GroupCog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(GameServers(bot))  # type: ignore
+    # await bot.add_cog(GameServers(bot))  # type: ignore
+    pass

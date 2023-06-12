@@ -28,6 +28,7 @@ MANIFEST
 
 # Custom
 database/postgres
+database/crAIyon
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -157,3 +158,6 @@ config.py
 Reminders.txt
 .vscode
 /logs
+*.lnk
+servers/docker-scpsl/
+servers/docker-conanexiles/

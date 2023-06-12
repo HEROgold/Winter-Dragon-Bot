@@ -6,9 +6,6 @@ from discord.ext import commands, tasks
 
 import config
 
-    # TODO: Make Hybrid command
-    # @commands.hybrid_command(name="sync", description="Sync all commands on all servers (Bot dev only)")
-
 
 class Sync(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -19,14 +16,48 @@ class Sync(commands.Cog):
         self.update.start()
 
 
-    # Find out if bot is synced or not.
-    # TODO: look only for sync command.
+    # TODO: Extensive testing for edge cases
     @tasks.loop(count = 1)
     async def update(self) -> None:
-        for command in await self.bot.tree.fetch_commands():
-            self.logger.debug(f"Synced?: {command.name=}")
-        for command in self.bot.tree.walk_commands():
-            self.logger.debug(f"Local: {command.qualified_name=}") # , {command.commands=}
+        # sourcery skip: useless-else-on-loop
+        app_commands = await self.bot.tree.fetch_commands()
+        commands = list(self.bot.tree.walk_commands())
+        synced = [
+            cmd.name for cmd in commands
+            for app_cmd in app_commands
+            if app_cmd.name == cmd.name
+            # or cmd.parent.name == app_cmd.name
+        ]
+        self.logger.debug(f"{synced=}")
+        self.logger.debug(f"{[i.name for i in app_commands]=}")
+
+        if not commands:
+            self.logger.critical("No commands found")
+            return
+        if len(app_commands) == 0 or not synced:
+            self.logger.warning("No synced commands found, automatically syncing")
+            await self.bot.tree.sync()
+            return
+
+        # goal: for each app_command thats found, but not in commands, == de-synced
+        # goal: for each command not in app_commands == de-synced
+        for app_command in app_commands:
+            self.logger.debug(f"checking {app_command.name}")
+            for command in commands:
+                if command.parent is not None:
+                    continue
+                if command.name == app_command.name:
+                    self.logger.debug(f"cmd.name in app_cmd: {app_command.name}, {command.name}")
+                    break
+                self.logger.debug(f"cmd.name not in app_cmd: {app_command.name}, {command.name}")
+            else:
+                break
+            continue
+        else:
+            return
+        self.logger.warning("De-sync found, re-syncing")
+        await self.bot.tree.sync()
+
 
     @update.before_loop # type: ignore
     async def before_update(self) -> None:
@@ -49,6 +80,23 @@ class Sync(commands.Cog):
         global_list.sort()
         local_list.sort()
         await interaction.response.send_message(f"Sync complete\nGlobally synced: {global_list}\nLocally synced: {local_list} to {guild}", ephemeral=True)
+
+
+    @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")
+    async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
+        if not await self.bot.is_owner(ctx.author):
+            raise commands.NotOwner
+        global_sync = await self.bot.tree.sync()
+        guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+        local_sync = await self.bot.tree.sync(guild=guild)
+        self.logger.warning(f"{ctx.author} Synced slash commands!")
+        self.logger.debug(f"Synced commands: global_commands={global_sync} guild_commands={local_sync}")
+        global_list = [command.name for command in global_sync]
+        local_list = [command.name for command in local_sync]
+        global_list.sort()
+        local_list.sort()
+        await ctx.send(f"Sync complete\nGlobally synced: {global_list}\nLocally synced: {local_list} to {guild}")
+
 
 
 async def setup(bot: commands.Bot) -> None:

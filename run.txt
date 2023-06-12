@@ -1,0 +1,4 @@
+# Without game servers enabled
+docker compose  up
+# With game servers enabled
+docker compose --profile servers up

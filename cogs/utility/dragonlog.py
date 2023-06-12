@@ -118,7 +118,7 @@ class DragonLog(commands.GroupCog):
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
         action = entry.action
-        self.logger.debug(f"Action: {action}, Target:{entry.target} Dict: {entry.__dict__}")
+        self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
         actions = {
                 enum.channel_create: self.on_guild_channel_create(entry),
@@ -186,7 +186,6 @@ class DragonLog(commands.GroupCog):
     async def on_invite_create(self, entry: discord.AuditLogEntry) -> None:
         invite = entry.target
         self.logger.debug(f"On invite create: {invite.guild=}, {invite=}")
-        embed = None
         embed = discord.Embed(
             title="Created Invite",
             description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
@@ -335,7 +334,6 @@ class DragonLog(commands.GroupCog):
             self.logger.debug(f"else: {message}")
 
 
-    # TODO: Needs to look cleaner, also doesn't always get type. IE on invite remove
     async def generic_change(self, entry: discord.AuditLogEntry) -> None:
         try:
             e_type = entry.target.type.__name__
@@ -445,10 +443,9 @@ class DragonLog(commands.GroupCog):
                 except AttributeError as e:
                     self.logger.debug(f"{dc_channel=}")
                     self.logger.exception(e)
-            # FIXME: sqlite3.OperationalError: no such column: messages.id
-            # session.commit()
+            session.commit()
 
-        await interaction.followup.send("Removed and DragonLogChannels")
+        await interaction.followup.send("Removed DragonLogChannels")
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
 
