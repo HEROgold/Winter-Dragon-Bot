@@ -14,6 +14,7 @@ from discord.ext import commands
 
 import config
 
+from datetime import timezone
 bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
 discord_logger = logging.getLogger('discord')
 
@@ -27,7 +28,7 @@ bot_logger.addHandler(logging.StreamHandler())
 discord_logger.setLevel(config.Main.LOG_LEVEL)
 discord_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 discord_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-discord_logger.addHandler(discord_handler)    
+discord_logger.addHandler(discord_handler)
 # discord_bot_logger.addHandler(logging.StreamHandler())
 
 Intents = discord.Intents.none()
@@ -44,6 +45,7 @@ Intents.auto_moderation_execution = True
 client = discord.Client(intents=Intents)
 # bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
+launch_time = datetime.now(timezone.utc)
 tree = bot.tree
 
 
@@ -104,6 +106,7 @@ def save_logs() -> None:
     if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
         os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
     bot_logger.info("Saving log files")
+    bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - launch_time}")
     logging.shutdown()
     for file in os.listdir("./"):
         if file.endswith(".log"):
