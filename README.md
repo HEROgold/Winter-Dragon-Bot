@@ -14,32 +14,19 @@ This project uses lots of modules that need to be downloaded, these can be insta
 
  `pip install -r .\requirements.txt`
 
-To use MongoDB make sure in config.py the following settings are applied
-
-* in class Main:
-  `use_database:bool = True`
-  `database_name:str = "YourdatabaseName"`
-* in class database:
-  `IP_PORT:str = "localhost:27017"`
-  `USER_PASS:str = "User:Password"`
-  `AUTH_METHOD:str = "SCRAM-SHA-256"`
-
-If you dont use MongoDB, you can use files by changing config.py to match the following:
-
-* In class main:
-  ``USE_DATABASE:bool = True``
+This project runs using docker. With 2 main containers, one for python 3.11 and the other container is running PostgreSQL as the bot's database.
 
 ## Features:
 
-The use of MongoDB as a database solution,
-
-A option for when MongoDB isn't used
+PostgreSQL
 
 Lots of slash commands with lots of features
 
 customizability using a config file
 
-2 seperate log files for the bot and discord.
+dynamic seperate log files for the bot, discord, SQL (and potentially more).
+
+Dynamic log saving, automatic removal of old logs to save disk space.
 
 Lots of error handling
 
