@@ -36,7 +36,7 @@ class Sync(commands.Cog):
             return
         if len(app_commands) == 0 or not synced:
             self.logger.warning("No synced commands found, automatically syncing")
-            await self.bot.tree.sync()
+            # await self.bot.tree.sync()
             return
 
         # goal: for each app_command thats found, but not in commands, == de-synced
@@ -49,8 +49,8 @@ class Sync(commands.Cog):
                 if command.name == app_command.name:
                     self.logger.debug(f"cmd.name in app_cmd: {app_command.name}, {command.name}")
                     break
-                self.logger.debug(f"cmd.name not in app_cmd: {app_command.name}, {command.name}")
             else:
+                self.logger.debug(f"cmd.name not in app_cmd: {app_command.name}, {command.name}")
                 break
             continue
         else:
