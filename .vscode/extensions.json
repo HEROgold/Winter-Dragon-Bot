@@ -4,7 +4,7 @@
 
 	// List of extensions which should be recommended for users of this workspace.
 	"recommendations": [
-		"ms-ossdata.vscode-postgresql",
+		"cweijan.vscode-postgresql-client2",
 		"eamodio.gitlens",
 		"donjayamanne.githistory",
 		"mhutchie.git-graph",
