@@ -168,7 +168,6 @@ def terminate() -> None:
     sys.exit()
 
 
-#run the bot!
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
