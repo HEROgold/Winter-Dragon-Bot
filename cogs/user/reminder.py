@@ -37,9 +37,10 @@ class Reminder(commands.Cog):
                 self.logger.debug(f"sending reminder {i.content=} to {i.user_id=}")
                 member = discord.utils.get(self.bot.users, id=i.user_id)
                 dm = await member.create_dm()
-                await dm.send(f"I'm here to remind you about\n{i.content}")
+                await dm.send(f"I'm here to remind you about\n`{i.content}`")
                 session.delete(i)
             session.commit()
+
 
     @send_reminder.before_loop # type: ignore
     async def before_send_reminder(self) -> None:
