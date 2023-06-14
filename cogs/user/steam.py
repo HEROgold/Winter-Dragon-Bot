@@ -4,20 +4,17 @@ import random
 import re
 from typing import Callable, Optional
 
-
 import discord
 import requests
 from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import commands, tasks
 
-
 import config
 import rainbow
 from tools import app_command_tools
 from tools.database_tables import Steam as SteamDb
 from tools.database_tables import Session, engine, User
-
 
 
 class Steam(commands.GroupCog):
@@ -93,15 +90,12 @@ class Steam(commands.GroupCog):
         return requested_sales
 
 
-
     async def populate_embed(self, sales: list, embed: discord.Embed) -> discord.Embed:
         """Fills an embed with sales, and then returns the populated embed
-
 
         Args:
             sales (list): List of found sales
             embed (discord.Embed): discord.Embed
-
 
         Returns:
             discord.Embed
@@ -109,16 +103,13 @@ class Steam(commands.GroupCog):
         if sales is None:
             return
 
-
         regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
-
 
         try:
             sort_key: Callable[[str]] = lambda x: x[1]
             sales.sort(key=sort_key)
         except AttributeError:
             pass
-
 
         for i in sales:
             game_title = i[0]
@@ -137,7 +128,6 @@ class Steam(commands.GroupCog):
             self.logger.debug(f"Populate embed with:\nSale: {i}\nGameId: {game_id}")
         self.logger.debug("Returning filled embed")
         return embed
-
 
 
     def get_new_freebies(self, old: list[list], new: list[list]) -> Optional[list]:
@@ -162,7 +152,6 @@ class Steam(commands.GroupCog):
             self.logger.info("No new sale from_html")
             return None
         return new_sales
-
 
 
     @tasks.loop(seconds=3600) # 6 hours > 21600, default.
@@ -276,7 +265,6 @@ class Steam(commands.GroupCog):
             session.delete(user)
             session.commit()
         await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
-
 
 
 async def setup(bot: commands.Bot) -> None:

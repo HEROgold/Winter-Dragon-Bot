@@ -6,29 +6,15 @@ import shutil
 import signal
 import sys
 from atexit import register
-from datetime import datetime
-# from logging.handlers import TimedRotatingFileHandler
+from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
 
 import config
 
-bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
-discord_logger = logging.getLogger('discord')
+# from logging.handlers import TimedRotatingFileHandler
 
-bot_logger.setLevel(config.Main.LOG_LEVEL)
-bot_handler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
-# bot_handler = TimedRotatingFileHandler(filename='bot.log', encoding='utf-8', when="MIDNIGHT", backupCount=7)
-bot_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-bot_logger.addHandler(bot_handler)
-bot_logger.addHandler(logging.StreamHandler())
-
-discord_logger.setLevel(config.Main.LOG_LEVEL)
-discord_handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-discord_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-discord_logger.addHandler(discord_handler)    
-# discord_bot_logger.addHandler(logging.StreamHandler())
 
 Intents = discord.Intents.none()
 Intents.members = True
@@ -44,7 +30,17 @@ Intents.auto_moderation_execution = True
 client = discord.Client(intents=Intents)
 # bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
+launch_time = datetime.now(timezone.utc)
 tree = bot.tree
+
+
+def setup_logging(logger: logging.Logger, filename: str) -> None:
+    logger.setLevel(config.Main.LOG_LEVEL)
+    bot_handler = logging.FileHandler(
+        filename=filename, encoding='utf-8', mode='w'
+    )
+    bot_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    logger.addHandler(bot_handler)
 
 
 if config.Main.CUSTOM_HELP:
@@ -75,7 +71,7 @@ def logs_size_limit_check(size_in_kb: int) -> bool:
     return total_size > size_in_kb
 
 
-def delete_oldest_logs() -> None:
+def delete_oldest_saved_logs() -> None:
     oldest_files = sorted(
         (
             os.path.join(root, file)
@@ -97,18 +93,26 @@ def delete_oldest_logs() -> None:
 
 def save_logs() -> None:
     while logs_size_limit_check(config.Main.LOG_SIZE_KB_LIMIT):
-        delete_oldest_logs()
+        delete_oldest_saved_logs()
     if not os.path.exists(config.Main.LOG_PATH):
         os.mkdir(config.Main.LOG_PATH)
     log_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
         os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
     bot_logger.info("Saving log files")
+    bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - launch_time}")
     logging.shutdown()
     for file in os.listdir("./"):
         if file.endswith(".log"):
             print(file)
             shutil.copy(src=f"./{file}", dst=f"{config.Main.LOG_PATH}/{log_time}/{file}")
+
+
+def delete_toplevel_logs() -> None:
+    for file in os.listdir("./"):
+        if file.endswith(".log"):
+            print(f"Removing {file}")
+            os.remove(file)
 
 
 async def get_cogs() -> list[str]:
@@ -168,4 +172,15 @@ def terminate() -> None:
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
+    
+    delete_toplevel_logs()
+    
+    # bot_handler = TimedRotatingFileHandler(filename='bot.log', encoding='utf-8', when="MIDNIGHT", backupCount=7)
+    bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
+    bot_logger.addHandler(logging.StreamHandler())
+    discord_logger = logging.getLogger('discord')
+    setup_logging(bot_logger, 'bot.log')
+    setup_logging(discord_logger, 'discord.log')
+    # discord_bot_logger.addHandler(logging.StreamHandler())
+
     asyncio.run(main())
