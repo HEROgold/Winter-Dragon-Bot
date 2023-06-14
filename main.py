@@ -173,14 +173,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
     
-    delete_toplevel_logs()
+    if not config.Main.KEEP_LATEST_LOGS:
+        delete_toplevel_logs()
     
-    # bot_handler = TimedRotatingFileHandler(filename='bot.log', encoding='utf-8', when="MIDNIGHT", backupCount=7)
     bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
     bot_logger.addHandler(logging.StreamHandler())
     discord_logger = logging.getLogger('discord')
     setup_logging(bot_logger, 'bot.log')
     setup_logging(discord_logger, 'discord.log')
-    # discord_bot_logger.addHandler(logging.StreamHandler())
 
     asyncio.run(main())
