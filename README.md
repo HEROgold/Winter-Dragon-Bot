@@ -10,11 +10,11 @@ causing a more robust, error-free and secure project!
 
 ## How to install:
 
-This project uses lots of modules that need to be downloaded, these can be installed using
-
- `pip install -r .\requirements.txt`
+This project uses a few modules that need to be downloaded, all of which are managed automatically inside the docker environment.
 
 This project runs using docker. With 2 main containers, one for python 3.11 and the other container is running PostgreSQL as the bot's database.
+
+Using `docker-compose build`, and `docker-compose up` should suffice to start and run the bot.
 
 ## Features:
 
