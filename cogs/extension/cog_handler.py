@@ -18,7 +18,7 @@ class AutoCogReloader(commands.Cog):
             "timestamp": datetime.datetime.now().timestamp(),
             "files": {},
             "edited" : {}
-            }
+        }
 
 
     async def cog_load(self) -> None:
