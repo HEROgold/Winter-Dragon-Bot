@@ -175,7 +175,7 @@ class BotC(commands.GroupCog):
 
         from tools.database_tables import User
         start_time = time.time()
-        User().fetch_user(id=interaction.user.id)
+        User.fetch_user(id=interaction.user.id)
         measured_time = time.time() - start_time
         database = round(measured_time * 1000)
 
