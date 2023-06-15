@@ -24,9 +24,9 @@ class DatabaseSetup(commands.Cog):
         with Session(engine) as session:
             db_msg = session.query(Message).where(Message.id == message.id).first()
             if db_msg is not None:
-                self.logger.debug(f"Deleting {message=} to Messages table, message was deleted from discord.")
+                self.logger.debug(f"Deleting from Messages table, message was deleted from discord. {message=}")
                 session.delete(db_msg)
-            # session.commit()
+            session.commit()
 
 
     @commands.Cog.listener()
