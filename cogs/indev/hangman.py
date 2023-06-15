@@ -165,6 +165,8 @@ class HangmanButton(discord.ui.Button):
             self.logger.exception(e)
 
 
+# TODO: Cleanup code
+
 class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
     letter = discord.ui.TextInput(label="Letter", min_length=1, max_length=1)
 
