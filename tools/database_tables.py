@@ -46,6 +46,7 @@ MESSAGES_ID = "messages.id"
 GAMES_ID = "games.id"
 LOBBIES_ID = "lobbies.id"
 TEAMS_ID = "teams.id"
+HANGMAN_ID = "hangman.id"
 
 
 class Base(DeclarativeBase):
@@ -82,8 +83,8 @@ class User(Base):
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
 
-
-    def fetch_user(self, id) -> Self:
+    @staticmethod
+    def fetch_user(id) -> Self:
         """Find existing or create new user, and return it
 
         Args:
@@ -175,9 +176,8 @@ class AssociationUserLobby(Base):
 class ResultMassiveMultiplayer(Base):
     __tablename__ = "results_mp"
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
-    lobby_id: Mapped["Lobby"] = mapped_column(ForeignKey(GAMES_ID))
     user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
     placement: Mapped[Optional[int]] = mapped_column()
 
@@ -251,6 +251,23 @@ class Server(Base):
     run_path: Mapped[str] = mapped_column(String(255))
 
 
+class Hangman(Base):
+    __tablename__ = "hangman"
+
+    id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID), primary_key=True, unique=True)
+    word: Mapped[str] = mapped_column(String(24))
+    letters: Mapped[str] = mapped_column(String(24), nullable=True)
+
+
+class AssociationUserHangman(Base):
+    __tablename__ = "association_users_hangman"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    hangman_id: Mapped["Hangman"] = mapped_column(ForeignKey(HANGMAN_ID))
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    score: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class LookingForGroup(Base):
     __tablename__ = "looking_for_groups"
 
@@ -279,7 +296,9 @@ all_tables = [
     Team,
     AssociationUserTeam,
     Server,
-    LookingForGroup
+    LookingForGroup,
+    Hangman,
+    AssociationUserHangman
     ]
 
 
