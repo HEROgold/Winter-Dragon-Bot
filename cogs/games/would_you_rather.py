@@ -30,7 +30,7 @@ class WouldYouRather(commands.GroupCog):
                 session.add(WyrQuestion(id=question_id, value=f"{wyr_base_questions[question_id]}"))
             session.commit()
 
-    def get_questions(self) -> tuple[int, str]:
+    def get_questions(self) -> tuple[int, list[WyrQuestion]]:
         with Session(engine) as session:
             questions = session.query(WyrQuestion).all()
             game_id = 0
@@ -39,25 +39,25 @@ class WouldYouRather(commands.GroupCog):
 
     @app_commands.command(
         name="show",
-        description = "Use this to get a never have i ever question, that you can reply to"
+        description = "Use this to get a Would you rather, that you can reply to"
     )
     @app_commands.checks.cooldown(1, 10)
     async def slash_wyr(self, interaction: discord.Interaction) -> None:
         game_id, questions = self.get_questions()
         question = random.choice(questions)
-        emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
-        emb.add_field(name="I Have", value="✅")
-        emb.add_field(name="Never", value="⛔")
+        emb = discord.Embed(title=f"Would You Rather #{game_id}", description=question.value, color=random.choice(rainbow.RAINBOW))
+        emb.add_field(name="Option 1", value="1️⃣")
+        emb.add_field(name="Option 2", value="2️⃣")
         # TODO: Add emoji's directly using the interaction. > look at poll 162
         send_msg = await interaction.channel.send(embed=emb)
-        await send_msg.add_reaction("✅")
-        await send_msg.add_reaction("⛔")
+        await send_msg.add_reaction("1️⃣")
+        await send_msg.add_reaction("2️⃣")
         await interaction.response.send_message("Question send", ephemeral=True, delete_after=2)
 
 
     @app_commands.command(
         name = "add",
-        description="Lets you add a Never Have I Ever question"
+        description="Lets you add a Would you rather question"
         )
     async def slash_wyr_add(self, interaction: discord.Interaction, wyr_question: str) -> None:
         with Session(engine) as session:
@@ -99,7 +99,7 @@ wyr_base_questions = [
     "Would you rather eat a bug or a fly?",
     "Would you rather lick the floor or a broom?",
     "Would you rather eat ice cream or cake?",
-    "Would you rather clean a toliet or a babys diaper",
+    "Would you rather clean a toilet or a baby's diaper",
     "Would you rather lick your keyboard or mouse?",
     "Would you rather wash your hair with mash potatoes or cranberry sauce?",
     "Would you rather team up with Wonder Woman or Captain Marvel?",
@@ -210,4 +210,5 @@ wyr_base_questions = [
     "Would you rather have no hair or be completely hairy?",
     "Would you rather wake up in the morning looking like a giraffe or a kangaroo?",
     "Would you rather have a booger hanging from your nose for the rest of your life or earwax planted on your earlobes?",
-    "Would you rather have a sumo wrestler on top of you or yourself on top of him?"];
+    "Would you rather have a sumo wrestler on top of you or yourself on top of him?"
+]
