@@ -165,11 +165,14 @@ class HangmanButton(discord.ui.Button):
             self.logger.exception(e)
 
 
+# TODO: Cleanup code
+
 class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
     letter = discord.ui.TextInput(label="Letter", min_length=1, max_length=1)
 
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
+        # sourcery skip: low-code-quality
         logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         logger.debug(f"Submitting {self.letter.value=}")
 

@@ -1,5 +1,6 @@
+from asyncio import iscoroutinefunction
 import logging
-from typing import Optional, Self
+from typing import Any, Optional, Self
 
 import discord  # type: ignore
 from discord import app_commands
@@ -8,15 +9,47 @@ from discord.ext import commands
 import config
 
 
+def memoize(func):
+    logger = logging.getLogger(f"{config.Main.BOT_NAME}.memoize")
+    """
+    (c) 2021 Nathan Henrie, MIT License
+    https://n8henrie.com/2021/11/decorator-to-memoize-sync-or-async-functions-in-python/
+    """
+    cache = {}
+
+    async def memoized_async_func(*args, **kwargs) -> Any:
+        key = (args, frozenset(sorted(kwargs.items())))
+        if key in cache:
+            logger.debug(f"returning cached async function {cache[key]=}")
+            return cache[key]
+        result = await func(*args, **kwargs)
+        cache[key] = result
+        logger.debug(f"caching async function {cache[key]=}")
+        return result
+
+    def memoized_sync_func(*args, **kwargs) -> Any:
+        key = (args, frozenset(sorted(kwargs.items())))
+        if key in cache:
+            logger.debug(f"returning cached function {cache[key]=}")
+            return cache[key]
+        result = func(*args, **kwargs)
+        cache[key] = result
+        logger.debug(f"caching function {cache[key]=}")
+        return result
+
+    return memoized_async_func if iscoroutinefunction(func) else memoized_sync_func
+
+
 class CommandNotFound(Exception):
     pass
+
 
 class Converter:
     bot: commands.Bot
     tree: app_commands.CommandTree
     logger: logging.Logger
     cache: Optional[dict] = None
-    paramater_args = None
+    parameter_args = None
 
     def __init__(self, bot: commands.Bot) -> Self:
         self.bot = bot
@@ -41,6 +74,8 @@ class Converter:
                 return True
         return False
 
+
+    @memoize
     async def get_app_sub_command(
             self,
             sub_command: app_commands.Command,
@@ -50,7 +85,7 @@ class Converter:
         """Returns a AppCommand and a string that can be used to mention the subcommand"""
         if not sub_command:
             raise CommandNotFound
-        if not app_command:
+        if not app_command or app_command is None:
             app_command = await self.get_app_command(sub_command.parent, guild)
         if self.is_group(app_command):
             self.logger.debug(f"{app_command.name} is a group")
@@ -59,9 +94,11 @@ class Converter:
         else:
             self.logger.debug(f"Subcommand {sub_command.name} not found")
             return None
-        self.logger.debug(f"Returning {app_command} {sub_command}")
+        self.logger.debug(f"Returning {app_command=} {sub_command=}")
         return app_command, custom_mention
 
+
+    @memoize
     async def get_app_command(
             self,
             command: app_commands.AppCommand | app_commands.Command,
@@ -74,7 +111,8 @@ class Converter:
         if not command:
             raise CommandNotFound
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
-        app_commands_list = await self._get_commands(guild)
+        # app_commands_list = await self._get_commands(guild)
+        app_commands_list = await self.tree.fetch_commands(guild=guild)
         self.logger.debug(f"cmd list: {app_commands_list}")
         for app_command in app_commands_list:
             # self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
@@ -90,6 +128,7 @@ class Converter:
             return None
         self.logger.debug(f"Returning {app_command}")
         return app_command
+
 
     # TODO, return pre-filled arguments for a given
     # Needs to work both with and without sub commands.
@@ -110,30 +149,3 @@ class Converter:
         self.logger.debug(app_command.to_dict())
         return _test
 
-
-    async def _cache_handler(self, guild: discord.Guild) -> None:
-        if not self.cache:
-            self.logger.debug("Creating cache")
-            self.cache = {}
-        if not guild:
-            self.logger.debug("getting global commands list")
-            try:
-                self.cache["global"]
-                self.logger.debug("Got global commands list")
-            except KeyError:
-                self.logger.debug("Creating global commands list")
-                self.cache = {"global": await self.tree.fetch_commands()}
-        else:
-            self.logger.debug(f"getting {guild} commands list")
-            try:
-                self.cache[str(guild.id)]
-                self.logger.debug(f"Got {guild} commands list")
-            except KeyError:
-                self.logger.debug(f"Creating {guild} commands list")
-                self.cache = {str(guild.id): await self.tree.fetch_commands(guild=guild)}
-        self.logger.debug(f"Updated cache to: {self.cache}")
-
-    async def _get_commands(self, guild: discord.Guild) -> list[app_commands.AppCommand]:
-        await self._cache_handler(guild)
-        self.logger.debug(f'fetched cache: {self.cache[str(guild.id)] if guild else self.cache["global"]}')
-        return self.cache[str(guild.id)] if guild else self.cache["global"]
