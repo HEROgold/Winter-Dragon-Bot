@@ -78,13 +78,11 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
-    # lobby_id: Mapped[Optional[int]] = mapped_column(ForeignKey(LOBBIES_ID))
-    # lobby: Mapped[Optional["Lobby"]] = relationship(back_populates="players") # Missing user.id column for linking in Lobby
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
 
     @staticmethod
-    def fetch_user(id) -> Self:
+    def fetch_user(id: int) -> Self:
         """Find existing or create new user, and return it
 
         Args:
