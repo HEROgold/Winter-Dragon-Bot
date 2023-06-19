@@ -37,14 +37,14 @@ class AutoCogReloader(commands.Cog):
                     continue
                 # self.logger.debug(f"Getting data from {file}")
                 file_path = os.path.join(root, file)
-                cog_path = os.path.join(root, file[:-3]).replace("\\", ".")
+                cog_path = os.path.join(root, file[:-3]).replace("/", ".")
                 with open(file_path, "r") as f:
                     edit_timestamp = os.path.getmtime(file_path)
                     self.data["files"][file] = {
-                            "filepath": f.name,
-                            "cog_path": cog_path,
-                            "edit_time": edit_timestamp
-                        }
+                        "filepath": f.name,
+                        "cog_path": cog_path,
+                        "edit_time": edit_timestamp
+                    }
 
 
     def check_edits(self) -> None:
