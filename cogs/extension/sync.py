@@ -47,16 +47,16 @@ class Sync(commands.Cog):
                 if command.parent is not None:
                     continue
                 if command.name == app_command.name:
-                    self.logger.debug(f"cmd.name in app_cmd: {app_command.name}, {command.name}")
+                    self.logger.debug(f"cmd.name in app_cmd: {app_command.name=}, {command.name=}")
                     break
             else:
-                self.logger.debug(f"cmd.name not in app_cmd: {app_command.name}, {command.name}")
+                self.logger.debug(f"cmd.name not in app_cmd: {app_command.name=}, {command.name=}")
                 break
             continue
         else:
             return
         self.logger.warning("De-sync found, re-syncing")
-        await self.bot.tree.sync()
+        # await self.bot.tree.sync()
 
 
     @update.before_loop # type: ignore
