@@ -23,7 +23,7 @@ class NeverHaveIEver(commands.GroupCog):
             questions = session.query(NhieQuestion).all()
             if len(questions) > 0:
                 self.logger.debug("Questions already present in table.")
-                self.logger.debug(f"{questions}")
+                # self.logger.debug(f"{questions=}")
                 return
             for question_id, _ in enumerate(nhie_base_questions):
                 self.logger.debug(f"adding question to database {question_id=}, value={nhie_base_questions[question_id]}")
