@@ -12,6 +12,7 @@ import config
 import rainbow
 
 
+# FIXME: Find out what doesn't work
 class Image(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.CrAIyonDataBase = "./database/crAIyon/"
@@ -54,15 +55,15 @@ class Image(commands.GroupCog):
         result.save_images(user_dir)
 
 
-    @app_commands.command(name = "generate",
-                    description = "Request an AI to make an image, and when its done get it send to you")
     @app_commands.checks.cooldown(3, 360)
-    async def slash_imggen(self, interaction:discord.Interaction, *, query:str) -> None:
+    @app_commands.command(name = "generate",description = "Request an AI to make an image, and when its done get it send to you")
+    async def slash_image_generate(self, interaction:discord.Interaction, *, query:str) -> None:
         dm = await interaction.user.create_dm()
         await interaction.response.send_message("Creating images, please be patient.", ephemeral=True)
         self.logger.debug(f"Requesting images for {interaction.user} with query {query}")
         loop = asyncio.get_event_loop()
         asyncio.ensure_future(loop.run_in_executor(None, self.generate_images, interaction, dm, query))
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Image(bot))

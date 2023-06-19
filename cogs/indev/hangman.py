@@ -172,6 +172,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
 
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
+        # sourcery skip: low-code-quality
         logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         logger.debug(f"Submitting {self.letter.value=}")
 
