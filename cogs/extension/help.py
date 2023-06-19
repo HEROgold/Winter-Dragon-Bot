@@ -41,8 +41,6 @@ class Help(commands.Cog):
         commands_list: list[app_commands.AppCommand] | list[commands.Command],
     ) -> discord.Embed | discord.ui.View:
         if type(help_input) ==  str:
-            # TODO: Prefilled command?
-            # /cogs-c load extension: cogs.indev.tickets
             embed = discord.Embed(title=f"Command {help_input}", color=random.choice(rainbow.RAINBOW))
             for command in commands_list:
                 embed = self.PopulateCommandEmbed(help_input, embed, command)

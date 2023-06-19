@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 import config
 
 
-# FIXME: auto reloader throws errors inside docker, it's not loaded
 class AutoCogReloader(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
