@@ -142,7 +142,7 @@ class Steam(commands.GroupCog):
         Returns:
             new_sales (List): List of new sales
         """
-        self.logger.debug(f"Checking for new item(s): \na={old}\nb={new}")
+        self.logger.debug(f"Checking for new item(s): {old=}, {new=}")
         new_sales = [
             sale
             for sale in new
