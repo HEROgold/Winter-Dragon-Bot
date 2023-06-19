@@ -130,7 +130,7 @@ class Converter:
         return app_command
 
 
-    # TODO, return pre-filled arguments for a given
+    # TODO, return pre-filled arguments for a given command
     # Doesn't work with discord's api (yet?)
     # Needs to work both with and without sub commands.
     # Doesnt seem to be working
