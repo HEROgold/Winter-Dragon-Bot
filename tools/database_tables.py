@@ -276,35 +276,12 @@ class LookingForGroup(Base):
     game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
 
 
-all_tables = [
-    Guild,
-    Channel,
-    User,
-    Message,
-    Reminder,
-    Welcome,
-    NhieQuestion,
-    WyrQuestion,
-    Game,
-    Lobby,
-    AssociationUserLobby,
-    ResultMassiveMultiplayer,
-    ResultDuels,
-    Steam,
-    Suggestion,
-    Poll,
-    Team,
-    AssociationUserTeam,
-    Server,
-    LookingForGroup,
-    Hangman,
-    AssociationUserHangman
-    ]
-
+all_tables = Base.__subclasses__()
 
 try:
     with Session(engine) as session:
         for i in all_tables:
+            logger.debug(f"Checking for existing database table: {i}")
             session.query(i).all()
 except Exception as e:
     logger.exception(f"Error getting all tables: {e}")
