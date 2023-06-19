@@ -14,6 +14,7 @@ from tools.database_tables import Poll as PollDb
 from tools.database_tables import Session, engine
 
 
+# TODO: rewrite for sql
 class Poll(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
