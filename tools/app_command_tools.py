@@ -131,10 +131,11 @@ class Converter:
 
 
     # TODO, return pre-filled arguments for a given
+    # Doesn't work with discord's api (yet?)
     # Needs to work both with and without sub commands.
     # Doesnt seem to be working
     # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
-    async def with_paramaters(
+    async def with_parameters(
             self,
             command: commands.Command,
             **kwargs
