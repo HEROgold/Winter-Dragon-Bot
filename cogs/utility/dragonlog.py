@@ -121,17 +121,17 @@ class DragonLog(commands.GroupCog):
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
         actions = {
-                enum.channel_create: self.on_guild_channel_create(entry),
-                enum.channel_delete: self.on_guild_channel_delete(entry),
-                enum.channel_update: self.on_guild_channel_update(entry),
-                enum.role_create: self.on_role_create(entry),
-                enum.role_update: self.on_role_update(entry),
-                enum.role_delete: self.on_role_delete(entry),
-                enum.invite_create: self.on_invite_create(entry),
-                enum.invite_delete: self.on_invite_delete(entry),
-                enum.member_move: self.on_member_move(entry),
-                enum.member_update: self.on_member_update(entry, False),
-                enum.member_role_update: self.on_member_update(entry, True),
+                enum.channel_create: await self.on_guild_channel_create(entry),
+                enum.channel_delete: await self.on_guild_channel_delete(entry),
+                enum.channel_update: await self.on_guild_channel_update(entry),
+                enum.role_create: await self.on_role_create(entry),
+                enum.role_update: await self.on_role_update(entry),
+                enum.role_delete: await self.on_role_delete(entry),
+                enum.invite_create: await self.on_invite_create(entry),
+                enum.invite_delete: await self.on_invite_delete(entry),
+                enum.member_move: await self.on_member_move(entry),
+                enum.member_update: await self.on_member_update(entry, False),
+                enum.member_role_update: await self.on_member_update(entry, True),
             }
         if action not in enum:
             await self.generic_change(entry)
