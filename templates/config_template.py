@@ -1,3 +1,6 @@
+import logging
+
+
 class Tokens:
     DISCORD_TOKEN: str = "KEY" # your discord bot token!
     OPEN_API_KEY: str = "KEY" # OpenAI API Key
@@ -10,9 +13,10 @@ class Main:
     CUSTOM_HELP: bool = True # Enable custom help command! (Preferred)
     USE_DATABASE: bool = True # Use Sql instead of files
     SUPPORT_GUILD_ID: int = 765965358754037801 # Guild id of the bot's support guild
-    LOG_LEVEL: str|int = "DEBUG" # CRITICAL = 50, FATAL = CRITICAL, ERROR = 40, WARNING = 30, WARN = WARNING, INFO = 20, DEBUG = 10, NOTSET = 0
+    LOG_LEVEL: logging = "DEBUG" # CRITICAL = 50, FATAL = CRITICAL, ERROR = 40, WARNING = 30, WARN = WARNING, INFO = 20, DEBUG = 10, NOTSET = 0
     LOG_PATH: str = "./logs" # Path where logs are saved.
     LOG_SIZE_KB_LIMIT: int = 3 * 1000 * 1000 # Size in Bytes of how much to keep. removes oldest logs first when hitting the limit.
+    KEEP_LATEST_LOGS: bool = False
 
 class Gameservers:
     BACKGROUND = True # Start new processes in background of computer (no popup windows)
