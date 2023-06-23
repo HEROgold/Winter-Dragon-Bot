@@ -103,6 +103,8 @@ class Steam(commands.GroupCog):
         if sales is None:
             return
 
+        # Switch to following regex?
+        # r"^https:\/\/store\.steampowered\.com\/app\/(\d+)\/?.*$"gm
         regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
 
         try:
