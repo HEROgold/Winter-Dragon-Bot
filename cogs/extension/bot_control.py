@@ -227,7 +227,6 @@ class BotC(commands.GroupCog):
         description="Show bot's Performance (Bot developer only)"
     )
     async def slash_performance(self, interaction: discord.Interaction) -> None:
-        # sourcery skip: remove-redundant-fstring
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         """Performance"""
@@ -237,11 +236,11 @@ class BotC(commands.GroupCog):
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
         embed.add_field(name="Bytes sent", value=f"```{psutil.net_io_counters().bytes_sent}```", inline=False)
-        embed.add_field(name="Bytes received", value=f"```psutil.net_io_counters().bytes_recv```", inline=False)
-        embed.add_field(name="Bytes packets sent", value=f"```psutil.net_io_counters().packets_sent```", inline=False)
-        embed.add_field(name="Bytes packets received", value=f"```psutil.net_io_counters().packets_recv```", inline=False)
-        embed.add_field(name="CPU usage", value=f"```psutil.cpu_percent()```", inline=False)
-        embed.add_field(name="RAM usage", value=f"```psutil.virtual_memory().percent```", inline=False)
+        embed.add_field(name="Bytes received", value=f"```{psutil.net_io_counters().bytes_recv}```", inline=False)
+        embed.add_field(name="Bytes packets sent", value=f"```{psutil.net_io_counters().packets_sent}```", inline=False)
+        embed.add_field(name="Bytes packets received", value=f"```{psutil.net_io_counters().packets_recv}```", inline=False)
+        embed.add_field(name="CPU usage", value=f"```{psutil.cpu_percent()}%```", inline=False)
+        embed.add_field(name="RAM usage", value=f"```{psutil.virtual_memory().percent}%```", inline=False)
         await interaction.response.send_message(embed=embed)
 
 
