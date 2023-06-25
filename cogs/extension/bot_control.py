@@ -6,8 +6,10 @@ import time
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
+import psutil
 
 import config
+from rainbow import RAINBOW
 
 
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
@@ -217,6 +219,28 @@ class BotC(commands.GroupCog):
             ansi_start = "```ansi\n[2;31m"
             color = 0xff0000
         return ansi_start, color
+
+
+    @app_commands.command(
+        name="performance",
+        description="Show bot's Performance (Bot developer only)"
+    )
+    async def slash_performance(self, interaction: discord.Interaction) -> None:
+        if not self.bot.is_owner(interaction.user):
+            raise commands.NotOwner
+        """Performance"""
+        embed = discord.Embed(
+            title=":ping_pong: Pong!",
+            color=random.choice(RAINBOW),
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+        )
+        embed.add_field(name="Bytes sent", value=psutil.net_io_counters().bytes_sent, inline=False)
+        embed.add_field(name="Bytes received", value=psutil.net_io_counters().bytes_recv, inline=False)
+        embed.add_field(name="Bytes packets sent", value=psutil.net_io_counters().packets_sent, inline=False)
+        embed.add_field(name="Bytes packets received", value=psutil.net_io_counters().packets_recv, inline=False)
+        embed.add_field(name="CPU usage", value=psutil.cpu_percent(), inline=False)
+        embed.add_field(name="RAM usage", value=psutil.virtual_memory().percent, inline=False)
+        await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:
