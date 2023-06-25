@@ -165,6 +165,8 @@ class BotC(commands.GroupCog):
         description = "show latency"
     )
     async def slash_ping(self, interaction: discord.Interaction) -> None:
+        # Credits go to https://discord.com/channels/336642139381301249/1080409171050115092
+        # Modified their code to fit my needs
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
 
@@ -235,12 +237,12 @@ class BotC(commands.GroupCog):
             color=random.choice(RAINBOW),
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
-        embed.add_field(name="Bytes sent", value=f"```{psutil.net_io_counters().bytes_sent}```", inline=False)
-        embed.add_field(name="Bytes received", value=f"```{psutil.net_io_counters().bytes_recv}```", inline=False)
-        embed.add_field(name="Bytes packets sent", value=f"```{psutil.net_io_counters().packets_sent}```", inline=False)
-        embed.add_field(name="Bytes packets received", value=f"```{psutil.net_io_counters().packets_recv}```", inline=False)
-        embed.add_field(name="CPU usage", value=f"```{psutil.cpu_percent()}%```", inline=False)
-        embed.add_field(name="RAM usage", value=f"```{psutil.virtual_memory().percent}%```", inline=False)
+        embed.add_field(name="Bytes sent", value=f"```\n{psutil.net_io_counters().bytes_sent}\n```", inline=False)
+        embed.add_field(name="Bytes received", value=f"```\n{psutil.net_io_counters().bytes_recv}\n```", inline=False)
+        embed.add_field(name="Bytes packets sent", value=f"```\n{psutil.net_io_counters().packets_sent}\n```", inline=False)
+        embed.add_field(name="Bytes packets received", value=f"```\n{psutil.net_io_counters().packets_recv}\n```", inline=False)
+        embed.add_field(name="CPU usage", value=f"```\n{psutil.cpu_percent()}%\n```", inline=False)
+        embed.add_field(name="RAM usage", value=f"```\n{psutil.virtual_memory().percent}%\n```", inline=False)
         await interaction.response.send_message(embed=embed)
 
 
