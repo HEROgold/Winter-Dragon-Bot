@@ -9,7 +9,7 @@ from atexit import register
 from datetime import datetime, timezone
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import config
 
@@ -36,11 +36,9 @@ tree = bot.tree
 
 def setup_logging(logger: logging.Logger, filename: str) -> None:
     logger.setLevel(config.Main.LOG_LEVEL)
-    bot_handler = logging.FileHandler(
-        filename=filename, encoding='utf-8', mode='w'
-    )
-    bot_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    logger.addHandler(bot_handler)
+    handler = logging.FileHandler(filename=filename, encoding='utf-8', mode='w')
+    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    logger.addHandler(handler)
 
 
 if config.Main.CUSTOM_HELP:
@@ -59,6 +57,7 @@ async def main() -> None:
         await mass_load()
         # await bot.load_extension("jishaku")
         await bot.start(config.Tokens.DISCORD_TOKEN)
+        daily_save_logs.start()
 
 
 def logs_size_limit_check(size_in_kb: int) -> bool:
@@ -113,6 +112,11 @@ def delete_toplevel_logs() -> None:
         if file.endswith(".log"):
             print(f"Removing {file}")
             os.remove(file)
+
+
+@tasks.loop(hours = 24)
+async def daily_save_logs() -> None:
+    save_logs()
 
 
 async def get_cogs() -> list[str]:
