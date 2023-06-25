@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import logging
 import random
 import time
@@ -9,7 +10,6 @@ from discord.ext import commands, tasks
 import psutil
 
 import config
-from rainbow import RAINBOW
 
 
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
@@ -165,6 +165,8 @@ class BotC(commands.GroupCog):
         description = "show latency"
     )
     async def slash_ping(self, interaction: discord.Interaction) -> None:
+        # Credits go to https://discord.com/channels/336642139381301249/1080409171050115092
+        # Modified their code to fit my needs
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
 
@@ -202,25 +204,6 @@ class BotC(commands.GroupCog):
         await interaction.followup.send(embed=embed)
 
 
-    def get_latency_colors(self, latency) -> tuple[str, int]:
-        if latency < 250:
-            ansi_start = "```ansi\n[2;32m"
-            color = 0x11ff00
-        elif latency < 450:
-            ansi_start = "```ansi\n[2;33m"
-            color = 0xddff00
-        elif latency < 600:
-            ansi_start = "```ansi\n[2;33m"
-            color = 0xff8800
-        elif latency < 800:
-            ansi_start = "```ansi\n[2;31m"
-            color = 0xff4400
-        else:
-            ansi_start = "```ansi\n[2;31m"
-            color = 0xff0000
-        return ansi_start, color
-
-
     # TODO: Make and show a graph with 1 hour timeline.
     @app_commands.command(
         name="performance",
@@ -229,20 +212,104 @@ class BotC(commands.GroupCog):
     async def slash_performance(self, interaction: discord.Interaction) -> None:
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        """Performance"""
+        
+        cpu_percent = psutil.cpu_percent()
+        ram_percent = psutil.virtual_memory().percent
+        percent_colors = list(map(self.get_latency_colors, [cpu_percent, ram_percent]))
+        cpu_color, _ = percent_colors[0]
+        ram_color, _ = percent_colors[1]
+
+        bytes_sent = psutil.net_io_counters().bytes_sent
+        bytes_received = psutil.net_io_counters().bytes_recv
+        bytes_colors = list(map(self.get_bytes_colors, [bytes_sent, bytes_received]))
+        bytes_sent_color, _ = bytes_colors[0]
+        bytes_received_color, _ = bytes_colors[1]
+
+        packets_sent = psutil.net_io_counters().packets_sent
+        packets_received = psutil.net_io_counters().packets_recv
+        packets_colors = list(map(self.get_packets_colors, [packets_sent, packets_received]))
+        packets_sent_color, _ = packets_colors[0]
+        packets_received_color, _ = packets_colors[1]
+
+        colors = [i[1] for i in list(itertools.chain(percent_colors, bytes_colors, packets_colors))]
+        colors.sort(reverse=True)
+
         embed = discord.Embed(
             title="Performance",
-            color=random.choice(RAINBOW),
+            color=colors[0],
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
-        embed.add_field(name="Bytes sent", value=f"```{psutil.net_io_counters().bytes_sent}```", inline=False)
-        embed.add_field(name="Bytes received", value=f"```{psutil.net_io_counters().bytes_recv}```", inline=False)
-        embed.add_field(name="Bytes packets sent", value=f"```{psutil.net_io_counters().packets_sent}```", inline=False)
-        embed.add_field(name="Bytes packets received", value=f"```{psutil.net_io_counters().packets_recv}```", inline=False)
-        embed.add_field(name="CPU usage", value=f"```{psutil.cpu_percent()}%```", inline=False)
-        embed.add_field(name="RAM usage", value=f"```{psutil.virtual_memory().percent}%```", inline=False)
+        end_tag = "```"
+        embed.add_field(
+            name="Bytes sent",
+            value=f"{bytes_sent_color} {bytes_sent} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="Bytes received",
+            value=f"{bytes_received_color} {bytes_received} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="Packets sent",
+            value=f"{packets_sent_color} {packets_sent} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="Packets received",
+            value=f"{packets_received_color} {packets_received} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="CPU usage",
+            value=f"{cpu_color} {cpu_percent}%{end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="RAM usage",
+            value=f"{ram_color} {ram_percent}%{end_tag}",
+            inline=False
+        )
+
         await interaction.response.send_message(embed=embed)
 
 
+    def get_colors(
+            self,
+            value: int,
+            max_amount: int
+        ) -> tuple[str, int]:
+        """Get colors based on given max value, with predefined percentages"""
+        if value < (max_amount * 0.4):
+            ansi_start = "```ansi\n\033[2;32m"
+            color = 0x11ff00
+        elif value < (max_amount * 0.45):
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xddff00
+        elif value < (max_amount * 0.6):
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xff8800
+        elif value < (max_amount * 0.8):
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff4400
+        else:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff0000
+        return ansi_start, color
+
+    def get_latency_colors(self, latency) -> tuple[str, int]:
+        return self.get_colors(latency, 1000)
+
+    def get_percentage_colors(self, percentage) -> tuple[str, int]:
+        return self.get_colors(percentage, 100)
+
+    def get_bytes_colors(self, bytes_count) -> tuple[str, int]:
+        return self.get_colors(bytes_count, 10_000_000_000)
+
+    def get_packets_colors(self, packets_count) -> tuple[str, int]:
+        return self.get_colors(packets_count, 1_000_000_000)
+
+
 async def setup(bot: commands.Bot) -> None:
+    # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(BotC(bot))
