@@ -204,25 +204,6 @@ class BotC(commands.GroupCog):
         await interaction.followup.send(embed=embed)
 
 
-    def get_latency_colors(self, latency) -> tuple[str, int]:
-        if latency < 250:
-            ansi_start = "```ansi\n[2;32m"
-            color = 0x11ff00
-        elif latency < 450:
-            ansi_start = "```ansi\n[2;33m"
-            color = 0xddff00
-        elif latency < 600:
-            ansi_start = "```ansi\n[2;33m"
-            color = 0xff8800
-        elif latency < 800:
-            ansi_start = "```ansi\n[2;31m"
-            color = 0xff4400
-        else:
-            ansi_start = "```ansi\n[2;31m"
-            color = 0xff0000
-        return ansi_start, color
-
-
     # TODO: Make and show a graph with 1 hour timeline.
     @app_commands.command(
         name="performance",
@@ -231,19 +212,140 @@ class BotC(commands.GroupCog):
     async def slash_performance(self, interaction: discord.Interaction) -> None:
         if not self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        """Performance"""
+        
+        cpu_percent = psutil.cpu_percent()
+        ram_percent = psutil.virtual_memory().percent
+        percent_colors = list(map(self.get_latency_colors, [cpu_percent, ram_percent]))
+        cpu_color, _ = percent_colors[0]
+        ram_color, _ = percent_colors[1]
+
+        bytes_sent = psutil.net_io_counters().bytes_sent
+        bytes_received = psutil.net_io_counters().bytes_recv
+        bytes_colors = list(map(self.get_bytes_colors, [bytes_sent, bytes_received]))
+        bytes_sent_color, _ = bytes_colors[0]
+        bytes_received_color, _ = bytes_colors[1]
+
+        packets_sent = psutil.net_io_counters().packets_sent
+        packets_received = psutil.net_io_counters().packets_recv
+        packets_colors = list(map(self.get_packets_colors, [packets_sent, packets_received]))
+        packets_sent_color, _ = packets_colors[0]
+        packets_received_color, _ = packets_colors[1]
+
         embed = discord.Embed(
             title="Performance",
             color=random.choice(RAINBOW),
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
-        embed.add_field(name="Bytes sent", value=f"```\n{psutil.net_io_counters().bytes_sent}\n```", inline=False)
-        embed.add_field(name="Bytes received", value=f"```\n{psutil.net_io_counters().bytes_recv}\n```", inline=False)
-        embed.add_field(name="Bytes packets sent", value=f"```\n{psutil.net_io_counters().packets_sent}\n```", inline=False)
-        embed.add_field(name="Bytes packets received", value=f"```\n{psutil.net_io_counters().packets_recv}\n```", inline=False)
-        embed.add_field(name="CPU usage", value=f"```\n{psutil.cpu_percent()}%\n```", inline=False)
-        embed.add_field(name="RAM usage", value=f"```\n{psutil.virtual_memory().percent}%\n```", inline=False)
+        end_tag = "```"
+        embed.add_field(
+            name="Bytes sent",
+            value=f"{bytes_sent_color} {bytes_sent} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="Bytes received",
+            value=f"{bytes_received_color} {bytes_received} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="Packets sent",
+            value=f"{packets_sent_color} {packets_sent} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="Packets received",
+            value=f"{packets_received_color} {packets_received} {end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="CPU usage",
+            value=f"{cpu_color} {cpu_percent}%{end_tag}",
+            inline=False
+        )
+        embed.add_field(
+            name="RAM usage",
+            value=f"{ram_color} {ram_percent}%{end_tag}",
+            inline=False
+        )
+
         await interaction.response.send_message(embed=embed)
+
+
+    def get_latency_colors(self, latency) -> tuple[str, int]:
+        if latency < 250:
+            ansi_start = "```ansi\n\033[2;32m"
+            color = 0x11ff00
+        elif latency < 450:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xddff00
+        elif latency < 600:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xff8800
+        elif latency < 800:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff4400
+        else:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff0000
+        return ansi_start, color
+
+
+    def get_percentage_colors(self, percentage) -> tuple[str, int]:
+        if percentage < 25:
+            ansi_start = "```ansi\n\033[2;32m"
+            color = 0x11ff00
+        elif percentage < 45:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xddff00
+        elif percentage < 60:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xff8800
+        elif percentage < 80:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff4400
+        else:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff0000
+        return ansi_start, color
+
+
+    def get_bytes_colors(self, bytes_count) -> tuple[str, int]:
+        if bytes_count < 4000000000:
+            ansi_start = "```ansi\n\033[2;32m"
+            color = 0x11ff00
+        elif bytes_count < 4500000000:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xddff00
+        elif bytes_count < 6000000000:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xff8800
+        elif bytes_count < 8000000000:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff4400
+        else:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff0000
+        return ansi_start, color
+
+
+    def get_packets_colors(self, packets_count) -> tuple[str, int]:
+        if packets_count < 400000000:
+            ansi_start = "```ansi\n\033[2;32m"
+            color = 0x11ff00
+        elif packets_count < 450000000:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xddff00
+        elif packets_count < 600000000:
+            ansi_start = "```ansi\n\033[2;33m"
+            color = 0xff8800
+        elif packets_count < 800000000:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff4400
+        else:
+            ansi_start = "```ansi\n\033[2;31m"
+            color = 0xff0000
+        return ansi_start, color
+
 
 
 async def setup(bot: commands.Bot) -> None:
