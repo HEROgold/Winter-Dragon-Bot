@@ -48,6 +48,7 @@ services:
     restart: always # unless-stopped
   # List of servers, able to be run by the bot using a shared watchdog directory
   # TODO: Only run start server when file is seen in the watchdog file
+  # TODO: Remove these docker containers, find another solution for [optional] servers
   conan:
     container_name: conan-exiles
     build: ./servers/docker-conanexiles
