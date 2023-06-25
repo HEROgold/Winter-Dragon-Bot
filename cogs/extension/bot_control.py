@@ -1,4 +1,5 @@
 import datetime
+import itertools
 import logging
 import random
 import time
@@ -9,7 +10,6 @@ from discord.ext import commands, tasks
 import psutil
 
 import config
-from rainbow import RAINBOW
 
 
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
@@ -231,9 +231,12 @@ class BotC(commands.GroupCog):
         packets_sent_color, _ = packets_colors[0]
         packets_received_color, _ = packets_colors[1]
 
+        colors = [i[1] for i in list(itertools.chain(percent_colors, bytes_colors, packets_colors))]
+        colors.sort(reverse=True)
+
         embed = discord.Embed(
             title="Performance",
-            color=random.choice(RAINBOW),
+            color=colors[0],
             timestamp=datetime.datetime.now(datetime.timezone.utc),
         )
         end_tag = "```"
@@ -271,17 +274,22 @@ class BotC(commands.GroupCog):
         await interaction.response.send_message(embed=embed)
 
 
-    def get_latency_colors(self, latency) -> tuple[str, int]:
-        if latency < 250:
+    def get_colors(
+            self,
+            value: int,
+            max_amount: int
+        ) -> tuple[str, int]:
+        """Get colors based on given max value, with predefined percentages"""
+        if value < (max_amount * 0.4):
             ansi_start = "```ansi\n\033[2;32m"
             color = 0x11ff00
-        elif latency < 450:
+        elif value < (max_amount * 0.45):
             ansi_start = "```ansi\n\033[2;33m"
             color = 0xddff00
-        elif latency < 600:
+        elif value < (max_amount * 0.6):
             ansi_start = "```ansi\n\033[2;33m"
             color = 0xff8800
-        elif latency < 800:
+        elif value < (max_amount * 0.8):
             ansi_start = "```ansi\n\033[2;31m"
             color = 0xff4400
         else:
@@ -289,64 +297,19 @@ class BotC(commands.GroupCog):
             color = 0xff0000
         return ansi_start, color
 
+    def get_latency_colors(self, latency) -> tuple[str, int]:
+        return self.get_colors(latency, 1000)
 
     def get_percentage_colors(self, percentage) -> tuple[str, int]:
-        if percentage < 25:
-            ansi_start = "```ansi\n\033[2;32m"
-            color = 0x11ff00
-        elif percentage < 45:
-            ansi_start = "```ansi\n\033[2;33m"
-            color = 0xddff00
-        elif percentage < 60:
-            ansi_start = "```ansi\n\033[2;33m"
-            color = 0xff8800
-        elif percentage < 80:
-            ansi_start = "```ansi\n\033[2;31m"
-            color = 0xff4400
-        else:
-            ansi_start = "```ansi\n\033[2;31m"
-            color = 0xff0000
-        return ansi_start, color
-
+        return self.get_colors(percentage, 100)
 
     def get_bytes_colors(self, bytes_count) -> tuple[str, int]:
-        if bytes_count < 4000000000:
-            ansi_start = "```ansi\n\033[2;32m"
-            color = 0x11ff00
-        elif bytes_count < 4500000000:
-            ansi_start = "```ansi\n\033[2;33m"
-            color = 0xddff00
-        elif bytes_count < 6000000000:
-            ansi_start = "```ansi\n\033[2;33m"
-            color = 0xff8800
-        elif bytes_count < 8000000000:
-            ansi_start = "```ansi\n\033[2;31m"
-            color = 0xff4400
-        else:
-            ansi_start = "```ansi\n\033[2;31m"
-            color = 0xff0000
-        return ansi_start, color
-
+        return self.get_colors(bytes_count, 10_000_000_000)
 
     def get_packets_colors(self, packets_count) -> tuple[str, int]:
-        if packets_count < 400000000:
-            ansi_start = "```ansi\n\033[2;32m"
-            color = 0x11ff00
-        elif packets_count < 450000000:
-            ansi_start = "```ansi\n\033[2;33m"
-            color = 0xddff00
-        elif packets_count < 600000000:
-            ansi_start = "```ansi\n\033[2;33m"
-            color = 0xff8800
-        elif packets_count < 800000000:
-            ansi_start = "```ansi\n\033[2;31m"
-            color = 0xff4400
-        else:
-            ansi_start = "```ansi\n\033[2;31m"
-            color = 0xff0000
-        return ansi_start, color
-
+        return self.get_colors(packets_count, 1_000_000_000)
 
 
 async def setup(bot: commands.Bot) -> None:
+    # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(BotC(bot))
