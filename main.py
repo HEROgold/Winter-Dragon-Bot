@@ -13,7 +13,6 @@ from discord.ext import commands, tasks
 
 import config
 
-# from logging.handlers import TimedRotatingFileHandler
 
 
 Intents = discord.Intents.none()
@@ -28,7 +27,6 @@ Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
 
 client = discord.Client(intents=Intents)
-# bot = commands.Bot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 launch_time = datetime.now(timezone.utc)
 tree = bot.tree
