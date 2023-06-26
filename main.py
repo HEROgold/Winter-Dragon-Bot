@@ -165,10 +165,8 @@ def terminate() -> None:
     try:
         asyncio.run(bot.close())
         asyncio.run(client.close())
-    except RuntimeError:
-        pass
-    except Exception:
-        pass
+        delete_toplevel_logs()
+    except Exception: pass
     sys.exit()
 
 
