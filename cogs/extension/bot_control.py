@@ -204,6 +204,45 @@ class BotC(commands.GroupCog):
         await interaction.followup.send(embed=embed)
 
 
+    # Potentially cleaner code \/ compared to code below that
+    # Add a color check and use most red
+    # add field names
+    @app_commands.command(
+        name="test",
+        description="Show bot's Performance (Bot developer only)"
+    )
+    async def a(self, interaction: discord.Interaction) -> None:
+        embed = discord.Embed(
+            title="Performance",
+            color=0,
+            timestamp=datetime.datetime.now(datetime.timezone.utc),
+        )
+        end_tag = "```"
+
+        for i, value in enumerate([
+            psutil.cpu_percent(),
+            psutil.virtual_memory().percent,
+            psutil.net_io_counters().bytes_sent,
+            psutil.net_io_counters().bytes_recv,
+            psutil.net_io_counters().packets_sent,
+            psutil.net_io_counters().packets_recv
+        ]):
+            self.logger.debug(f"{i=}, {value=}")
+            if i < 2:
+                color, _ = self.get_colors(value, max_amount=100)
+            elif i < 4:
+                color, _ = self.get_colors(value, max_amount=10_000_000_000)
+            elif i < 6:
+                color, _ = self.get_colors(value, max_amount=1_000_000_000)
+            
+            embed.add_field(
+                name="Bytes sent",
+                value=f"{color} {value} {end_tag}",
+                inline=False
+            )
+        await interaction.response.send_message(embed=embed)
+
+
     # TODO: Make and show a graph with 1 hour timeline.
     @app_commands.command(
         name="performance",
@@ -215,7 +254,7 @@ class BotC(commands.GroupCog):
         
         cpu_percent = psutil.cpu_percent()
         ram_percent = psutil.virtual_memory().percent
-        percent_colors = list(map(self.get_latency_colors, [cpu_percent, ram_percent]))
+        percent_colors = list(map(self.get_percentage_colors, [cpu_percent, ram_percent]))
         cpu_color, _ = percent_colors[0]
         ram_color, _ = percent_colors[1]
 
@@ -311,5 +350,4 @@ class BotC(commands.GroupCog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    # sourcery skip: instance-method-first-arg-name
 	await bot.add_cog(BotC(bot))
