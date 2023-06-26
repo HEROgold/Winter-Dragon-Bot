@@ -149,13 +149,10 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
         raise commands.NotOwner
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-    except Exception:
-        pass
-    bot_logger.info("shutdown by command.")
-    save_logs()
-    await bot.close()
-    await client.close()
-    try:
+        bot_logger.info("shutdown by command.")
+        save_logs()
+        await bot.close()
+        await client.close()
         delete_toplevel_logs()
     except Exception: pass
     sys.exit()
