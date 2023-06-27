@@ -18,6 +18,12 @@ class Main:
     LOG_SIZE_KB_LIMIT: int = 9 * 1000 * 1000 # Size in Bytes of how much to keep. removes oldest logs first when hitting the limit.
     KEEP_LATEST_LOGS: bool = False
 
+class Database:
+    # Set type of database, supported databases are:
+    # postgres, sqlite
+    db: str = "postgres" 
+    username: str = "" # Username to be used when connecting (if selected db requires it)
+    password: str = "" # Password to be used when connecting (if selected db requires it)
 
 class Gameservers:
     BACKGROUND = True # Start new processes in background of computer (no popup windows)
