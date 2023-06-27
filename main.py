@@ -11,7 +11,12 @@ from datetime import datetime, timezone
 import discord
 from discord.ext import commands, tasks
 
-import config
+try:
+    import config
+except ModuleNotFoundError:
+    shutil.copy("./templates/config_template.py", "./config.py")
+    import config
+
 
 
 
