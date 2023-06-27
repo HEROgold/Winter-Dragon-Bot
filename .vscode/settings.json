@@ -46,6 +46,7 @@
         "psycopg",
         "pymongo",
         "pyplot",
+        "RATELIMIT",
         "rungameid",
         "savefig",
         "Sharded",
