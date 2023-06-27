@@ -11,7 +11,12 @@ from datetime import datetime, timezone
 import discord
 from discord.ext import commands, tasks
 
-import config
+try:
+    import config
+except ModuleNotFoundError:
+    shutil.copy("./templates/config_template.py", "./config.py")
+    import config
+
 
 
 
@@ -106,6 +111,8 @@ def save_logs() -> None:
 
 
 def delete_toplevel_logs() -> None:
+    if config.Main.KEEP_LATEST_LOGS:
+        return
     for file in os.listdir("./"):
         if file.endswith(".log"):
             print(f"Removing {file}")
@@ -147,12 +154,12 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
         raise commands.NotOwner
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-    except Exception:
-        pass
-    bot_logger.info("shutdown by command.")
-    save_logs()
-    await bot.close()
-    await client.close()
+        bot_logger.info("shutdown by command.")
+        save_logs()
+        await bot.close()
+        await client.close()
+        delete_toplevel_logs()
+    except Exception: pass
     sys.exit()
 
 
@@ -163,10 +170,8 @@ def terminate() -> None:
     try:
         asyncio.run(bot.close())
         asyncio.run(client.close())
-    except RuntimeError:
-        pass
-    except Exception:
-        pass
+        delete_toplevel_logs()
+    except Exception: pass
     sys.exit()
 
 
@@ -174,8 +179,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
     
-    if not config.Main.KEEP_LATEST_LOGS:
-        delete_toplevel_logs()
+    delete_toplevel_logs()
     
     bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
     bot_logger.addHandler(logging.StreamHandler())
