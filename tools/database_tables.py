@@ -31,11 +31,19 @@ logger.addHandler(handler)
 logger.addHandler(logging.StreamHandler())
 
 
-username = "postgres" # Defined in docker-compose.yml
-password = "password-which-!s-N0tSec8re_aTAlL" # Defined in docker-compose.yml
 db_name = "db" # Defined in docker-compose.yml
-logger.info(f"Connecting to {db_name=}, as {username=}, {password=}")
-engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"postgresql://{username}:{password}@{db_name}:5432", echo=True)
+match config.Database.db:
+    case "postgres":
+        username = config.Database.username
+        password = config.Database.password
+        logger.info(f"Connecting to postgres {db_name=}, as {username=}")
+        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"postgresql://{username}:{password}@{db_name}:5432", echo=True)
+    case "sqlite":
+        logger.info(f"Connecting to sqlite {db_name=}")
+        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"sqlite:///database/{db_name}", echo=True)
+    case _:
+        logger.critical("No database selected to use!")
+        raise AttributeError("No database selected")
 
 
 # DB reference constants
