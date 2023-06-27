@@ -15,6 +15,14 @@ from rainbow import RAINBOW
 # from tools.database_tables import Server, Session, engine
 
 
+
+# !!!!!!!!!!!!!!!!!!!!!!!!
+# !!! CONSIDER REMOVAL !!!
+# !!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
 # TODO:
 # Track inactivity and shutdown after 15 minutes. Mention servers statuses in channel.
 # automatically shutdown (most if not all) when empty for ~15mins
