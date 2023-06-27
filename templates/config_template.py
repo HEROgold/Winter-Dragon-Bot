@@ -2,31 +2,26 @@ import logging
 
 
 class Tokens:
-    DISCORD_TOKEN: str = "KEY" # your discord bot token!
-    OPEN_API_KEY: str = "KEY" # OpenAI API Key
+    DISCORD_TOKEN: str = "" # your discord bot token!
+    OPEN_API_KEY: str = "" # OpenAI API Key
 
 class Main:
-    BOT_NAME: str = "NAME" # Name of the bot and database
+    BOT_NAME: str = "" # Name of the bot and database
     PREFIX: str = "$" # default prefix, bot can also just be mentioned.
     SHOW_LOGGED_IN: bool = True # Show message when logged in.
     LOG_MESSAGES: bool = False # Seems to not work, even with Discord.Intents.message turned ON
     CUSTOM_HELP: bool = True # Enable custom help command! (Preferred)
-    USE_DATABASE: bool = True # Use Sql instead of files
-    SUPPORT_GUILD_ID: int = 765965358754037801 # Guild id of the bot's support guild
-    LOG_LEVEL: logging = "DEBUG" # CRITICAL = 50, FATAL = CRITICAL, ERROR = 40, WARNING = 30, WARN = WARNING, INFO = 20, DEBUG = 10, NOTSET = 0
+    # USE_DATABASE: bool = True # Use Sql instead of files # TODO: Remove
+    SUPPORT_GUILD_ID: int = 0 # Guild id of the bot's support guild
+    LOG_LEVEL: logging = "DEBUG"
     LOG_PATH: str = "./logs" # Path where logs are saved.
-    LOG_SIZE_KB_LIMIT: int = 3 * 1000 * 1000 # Size in Bytes of how much to keep. removes oldest logs first when hitting the limit.
+    LOG_SIZE_KB_LIMIT: int = 9 * 1000 * 1000 # Size in Bytes of how much to keep. removes oldest logs first when hitting the limit.
     KEEP_LATEST_LOGS: bool = False
+
 
 class Gameservers:
     BACKGROUND = True # Start new processes in background of computer (no popup windows)
     ALLOWED = [] # list of user id's allowed to use gameserver commands
-
-class Database:
-    PERIODIC_CLEANUP: bool = True # allow periodic cleanups of the database (mongodb or the file's)
-    IP_PORT: str = "IP:PORT"
-    USER_PASS: str = "USERNAME:PASSWORD"
-    AUTH_METHOD: str = "SCRAM-SHA-256"
 
 class Activity:
     RANDOM_ACTIVITY: bool = True # Allow random activity on startup
@@ -53,9 +48,6 @@ class Translate:
 class Team:
     DM_INSTEAD: bool = True # Send a DM to the user when sending notifications
 
-class Ban:
-    DEFAULT_BANTIME: int = 28800 # This is in seconds. 60 is a minute, 3600 is an hour etc.
-    ROLENAME: str = "TempBanned"
 
 class Error: # Wether or not to log and message when error is hit.
     ALWAYS_LOG_ERRORS: bool = True # Always send log messages in log file
@@ -64,8 +56,8 @@ class Error: # Wether or not to log and message when error is hit.
 class Purge:
     LIMIT: int = 100 # Limit amount of total messaged to be purged.
     RATELIMIT_AMOUNT: int = 1 # Amount of times command can be used
-    RATELIMIT_SECONDS: int = 60 # Seconds of time before ratelimit_amount is reset.
-    USE_HISTORY: bool = False # use message history to followup after purge WARNING: This might cause ratelimits!
+    RATELIMIT_SECONDS: int = 60 # Seconds of time before rate limit_amount is reset.
+    USE_HISTORY: bool = False # use message history to followup after purge WARNING: This might cause rate limits!
 
 class Reminder:
     MIN_DURATION: int = 1 # Minutes, Default and min 1
