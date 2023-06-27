@@ -39,9 +39,7 @@ class DatabaseSetup(commands.Cog):
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
                 session.add(User(id = user.id))
-            if session.query(Guild).where(Guild.id == guild.id).first() is None:
-                self.logger.info(f"Adding new {guild=} to Guild table")
-                session.add(Guild(id = guild.id))
+
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")
                 session.add(Channel(
@@ -50,6 +48,7 @@ class DatabaseSetup(commands.Cog):
                     type = f"{channel.type}",
                     guild_id = guild.id,
                 ))
+
             if session.query(Message).where(Message.id == message.id).first() is None:
                 self.logger.debug(f"Adding new {message=} to Messages table")
                 session.add(Message(
@@ -59,6 +58,14 @@ class DatabaseSetup(commands.Cog):
                     channel_id = channel.id,
                     guild_id = guild.id
                 ))
+
+            if not guild or guild is None:
+                session.commit()
+                return
+
+            if session.query(Guild).where(Guild.id == guild.id).first() is None:
+                self.logger.info(f"Adding new {guild=} to Guild table")
+                session.add(Guild(id = guild.id))
             session.commit()
 
 
