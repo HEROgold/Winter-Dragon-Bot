@@ -139,10 +139,10 @@ async def mass_load() -> None:
     if not (os.listdir("./extensions")):
         bot_logger.critical("No extensions Directory To Load!")
         return
-    for cog in await get_extensions():
+    for extension in await get_extensions():
         try:
-            await bot.load_extension(cog)
-            bot_logger.info(f"Loaded {cog}")
+            await bot.load_extension(extension)
+            bot_logger.info(f"Loaded {extension}")
         except Exception as e:
             bot_logger.exception(e)
 
