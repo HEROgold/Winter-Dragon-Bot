@@ -148,6 +148,11 @@ async def mass_load() -> None:
             bot_logger.exception(e)
 
 
+@tree.command(name="uptime", description="Show bot's current uptime")
+async def slash_uptime(interaction: discord.Interaction) -> None:
+    await interaction.send(f"Bot uptime: {datetime.now(timezone.utc) - launch_time}")
+
+
 @tree.command(name = "shutdown", description = "(For bot developer only), since it runs it docker. It restarts!")
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     if not await bot.is_owner(interaction.user):
