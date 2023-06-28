@@ -75,6 +75,7 @@ class AutoCogReloader(commands.Cog):
 
 
 
+
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class CogsC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
