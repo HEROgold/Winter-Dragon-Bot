@@ -124,9 +124,9 @@ async def daily_save_logs() -> None:
     save_logs()
 
 
-async def get_cogs() -> list[str]:
+async def get_extensions() -> list[str]:
     extensions = []
-    for root, _, files in os.walk("cogs"):
+    for root, _, files in os.walk("extensions"):
         extensions.extend(
             os.path.join(root, file[:-3]).replace("/", ".")
             for file in files
@@ -136,11 +136,10 @@ async def get_cogs() -> list[str]:
 
 
 async def mass_load() -> None:
-    if not (os.listdir("./cogs")):
-        bot_logger.critical("No Cogs Directory To Load!")
+    if not (os.listdir("./extensions")):
+        bot_logger.critical("No extensions Directory To Load!")
         return
-    cogs = await get_cogs()
-    for cog in cogs:
+    for cog in await get_extensions():
         try:
             await bot.load_extension(cog)
             bot_logger.info(f"Loaded {cog}")
