@@ -27,7 +27,7 @@ class AutoCogReloader(commands.Cog):
 
 
     def get_cog_data(self) -> None:
-        for root, _, files in os.walk("cogs"):
+        for root, _, files in os.walk("extensions"):
             for file in files:
                 if not file.endswith(".py"):
                     continue
@@ -83,9 +83,9 @@ class CogsC(commands.GroupCog):
         self.DATABASE_NAME = self.__class__.__name__
 
 
-    async def get_cogs(self) -> list[str]:
+    async def get_extensions(self) -> list[str]:
         extensions = []
-        for root, _, files in os.walk("cogs"):
+        for root, _, files in os.walk("extensions"):
             extensions.extend(
                 os.path.join(root, file[:-3]).replace("/", ".")
                 for file in files
@@ -97,8 +97,7 @@ class CogsC(commands.GroupCog):
     async def mass_reload(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         reload_message = ""
-        cogs = await self.get_cogs()
-        for cog in cogs:
+        for cog in self.get_extensions():
             try:
                 await self.bot.reload_extension(cog)
             except commands.errors.ExtensionNotLoaded as e:
@@ -121,26 +120,26 @@ class CogsC(commands.GroupCog):
 
     @app_commands.command(
         name = "show",
-        description = "Show loaded cogs (For bot developer only)"
+        description = "Show loaded extensions (For bot developer only)"
         )
     async def slash_show(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        cogs = await self.get_cogs()
-        self.logger.debug(f"Showing {cogs} to {interaction.user}")
-        await interaction.response.send_message(f"{cogs}", ephemeral=True)
+        extensions = await self.get_extensions()
+        self.logger.debug(f"Showing {extensions} to {interaction.user}")
+        await interaction.response.send_message(f"{extensions}", ephemeral=True)
 
 
     @app_commands.command(
         name = "reload",
-        description = "Reload a specified or all available cogs (For bot developer only)"
+        description = "Reload a specified or all available extensions (For bot developer only)"
         )
     async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         self.logger.info(f"{interaction.user} used /reload")
         if extension is None:
-            self.logger.warning("Reloaded all cogs")
+            self.logger.warning("Reloaded all extensions")
             await self.mass_reload(interaction)
         else:
             try:
@@ -184,7 +183,7 @@ class CogsC(commands.GroupCog):
 
     @app_commands.command(
         name = "load",
-        description = "Load a specified or all available cogs (For bot developer only)"
+        description = "Load a specified or all available extensions (For bot developer only)"
         )
     async def slash_load(self, interaction:discord.Interaction, extension:str) -> None:
         if not await self.bot.is_owner(interaction.user):
@@ -209,10 +208,10 @@ class CogsC(commands.GroupCog):
 
     @slash_load.autocomplete("extension")
     async def load_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        cogs = await self.get_cogs()
+        extensions = await self.get_extensions()
         return [
             app_commands.Choice(name=extension, value=extension)
-            for extension in cogs
+            for extension in extensions
             if current.lower() in extension.lower()
         ]
 

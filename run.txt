@@ -1,4 +1,10 @@
-# Without game servers enabled
+# You have to start the bot TWICE (once for config setup, after that only once to run it)
+# Don't forget to edit config file!
+# Once bot is running in discord sync commands using: <prefix or mention> sync_ctx
+
+docker compose build
 docker compose  up
-# With game servers enabled
-docker compose --profile servers up
+
+# OR
+
+python3 main.py
