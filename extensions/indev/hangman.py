@@ -268,7 +268,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
             hangman_players = session.query(AUH).where(AUH.hangman_id == interaction.message.id).all()
             logger.debug(f"{hangman_players=}")
             try:
-                sort_key: Callable[[str]] = lambda x: x.score # type: ignore
+                sort_key: Callable[[AUH]] = lambda x: x.score
                 hangman_players.sort(key=sort_key)
             except AttributeError as e:
                 logger.exception(f"{e}")
