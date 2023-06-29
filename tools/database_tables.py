@@ -28,7 +28,7 @@ else:
 handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-logger.addHandler(logging.StreamHandler())
+# logger.addHandler(logging.StreamHandler())
 
 
 db_name = "db" # Defined in docker-compose.yml
@@ -280,6 +280,15 @@ class LookingForGroup(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
     game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
+
+
+class Presence(Base):
+    __tablename__ = "presence"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    status: Mapped[str] = mapped_column(String(15))
+    date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
 all_tables = Base.__subclasses__()

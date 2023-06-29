@@ -77,10 +77,10 @@ class Converter:
 
     @memoize
     async def get_app_sub_command(
-            self,
-            sub_command: app_commands.Command,
-            guild: discord.Guild = None,
-            app_command: app_commands.AppCommand = None
+        self,
+        sub_command: app_commands.Command,
+        guild: discord.Guild = None,
+        app_command: app_commands.AppCommand = None
     ) -> tuple[app_commands.AppCommand, str] | None:
         """Returns a AppCommand and a string that can be used to mention the subcommand"""
         if not sub_command:
@@ -100,9 +100,9 @@ class Converter:
 
     @memoize
     async def get_app_command(
-            self,
-            command: app_commands.AppCommand | app_commands.Command,
-            guild: discord.Guild = None
+        self,
+        command: app_commands.AppCommand | app_commands.Command,
+        guild: discord.Guild = None
     ) -> app_commands.AppCommand:
         """Gets the AppCommand from a Command"""
         if type(command) == app_commands.AppCommand:
@@ -136,9 +136,9 @@ class Converter:
     # Doesnt seem to be working
     # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
     async def with_parameters(
-            self,
-            command: commands.Command,
-            **kwargs
+        self,
+        command: commands.Command,
+        **kwargs
     ) -> str:
         app_command, custom_mention = await self.get_app_sub_command(command)
         args = " ".join(f"{k}:{v}" for k, v in kwargs.items())

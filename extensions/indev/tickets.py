@@ -19,6 +19,7 @@ date_format = "%m/%d/%Y at %H:%M:%S"
 
 # TODO:
 # rewrite own
+# use dropdown menus
 
 
 class TicketView(discord.ui.View):
