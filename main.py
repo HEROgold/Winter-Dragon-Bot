@@ -184,13 +184,24 @@ if __name__ == "__main__":
     setup_logging(bot_logger, 'bot.log')
     setup_logging(discord_logger, 'discord.log')
 
-    if os.name != "posix":
-        asyncio.run(main())
-    else:
-        import uvloop
-        if sys.version_info >= (3, 11):
-            with asyncio.Runner(loop_factory=uvloop.new_event_loop) as runner:
-                runner.run(main())
-        else:
-            uvloop.install()
-            asyncio.run(main())
+    asyncio.run(main())
+    # if os.name != "posix":
+    # else:
+    #     import uvloop
+    #     if sys.version_info >= (3, 11):
+    #         with asyncio.Runner(loop_factory=uvloop.new_event_loop) as runner:
+    #             runner.run(main())
+    #     else:
+    #         uvloop.install()
+    #         asyncio.run(main())
+
+
+# FIXME:
+# Exception in callback Loop._read_from_self
+# handle: <Handle Loop._read_from_self>
+# Traceback (most recent call last):
+#   File "uvloop/cbhandles.pyx", line 66, in uvloop.loop.Handle._run
+#   File "uvloop/loop.pyx", line 397, in uvloop.loop.Loop._read_from_self
+#   File "uvloop/loop.pyx", line 402, in uvloop.loop.Loop._invoke_signals
+#   File "uvloop/loop.pyx", line 377, in uvloop.loop.Loop._ceval_process_signals
+# TypeError: terminate() takes 0 positional arguments but 2 were given
