@@ -31,7 +31,7 @@ Intents.auto_moderation_execution = True
 
 client = discord.Client(intents=Intents)
 bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
-launch_time = datetime.now(timezone.utc)
+bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
 
 
@@ -143,11 +143,6 @@ async def mass_load() -> None:
             bot_logger.info(f"Loaded {extension}")
         except Exception as e:
             bot_logger.exception(e)
-
-
-@tree.command(name="uptime", description="Show bot's current uptime")
-async def slash_uptime(interaction: discord.Interaction) -> None:
-    await interaction.response.send_message(f"Bot uptime: {datetime.now(timezone.utc) - launch_time}")
 
 
 @tree.command(name = "shutdown", description = "(For bot developer only), since it runs it docker. It restarts!")
