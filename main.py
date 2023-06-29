@@ -175,13 +175,22 @@ def terminate() -> None:
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
-    
+
     delete_toplevel_logs()
-    
+
     bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
     bot_logger.addHandler(logging.StreamHandler())
     discord_logger = logging.getLogger('discord')
     setup_logging(bot_logger, 'bot.log')
     setup_logging(discord_logger, 'discord.log')
 
-    asyncio.run(main())
+    if os.name != "posix":
+        asyncio.run(main())
+    else:
+        import uvloop
+        if sys.version_info >= (3, 11):
+            with asyncio.Runner(loop_factory=uvloop.new_event_loop) as runner:
+                runner.run(main())
+        else:
+            uvloop.install()
+            asyncio.run(main())
