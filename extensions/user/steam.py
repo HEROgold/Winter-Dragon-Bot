@@ -108,7 +108,7 @@ class Steam(commands.GroupCog):
         regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
 
         try:
-            sort_key: Callable[[str]] = lambda x: x[1]
+            sort_key: Callable[[list[str]]] = lambda x: x[1]
             sales.sort(key=sort_key)
         except AttributeError:
             pass
