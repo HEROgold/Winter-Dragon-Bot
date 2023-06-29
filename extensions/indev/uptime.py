@@ -26,7 +26,7 @@ class Uptime(commands.GroupCog):
             member = interaction.user
             db_presences = session.query(Presence).where(Presence.user_id == member.id).order_by(Presence.date_time.desc()).all()
             now = datetime.datetime.now(datetime.timezone.utc)
-            last_time = datetime.datetime.fromtimestamp(0)
+            last_time = datetime.datetime.utcfromtimestamp(0)
             for presence in db_presences:
                 time_difference = (now - last_time)
                 self.logger.debug(f"{time_difference=}, {last_time=}")
