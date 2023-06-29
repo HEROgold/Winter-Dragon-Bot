@@ -60,7 +60,7 @@ class DatabaseSetup(commands.Cog):
                     content = message.clean_content,
                     user_id = user.id,
                     channel_id = channel.id,
-                    guild_id = guild.id
+                    guild_id = guild.id or None
                 ))
 
             if not guild or guild is None:
