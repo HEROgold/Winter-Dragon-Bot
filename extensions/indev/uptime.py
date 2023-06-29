@@ -26,14 +26,20 @@ class Uptime(commands.GroupCog):
             member = interaction.user
             db_presences = session.query(Presence).where(Presence.user_id == member.id).order_by(Presence.date_time.desc()).all()
             now = datetime.datetime.now(datetime.timezone.utc)
-            last_time = datetime.datetime.utcfromtimestamp(0)
+            last_time = None
             for presence in db_presences:
-                time_difference = (now - last_time)
-                self.logger.debug(f"{time_difference=}, {last_time=}")
-                last_time = presence.date_time
+                presence_date_time = presence.date_time.astimezone(datetime.timezone.utc)
+                if last_time is not None:
+                    time_difference = (now - last_time)
+                    self.logger.debug(f"{time_difference=}, {last_time=}")
+                if presence.status in ["online", "dnd", "do-not-disturb", "idle"]:
+                    # TODO: create a chart, maybe.
+                    pass
+                elif presence.status in ["offline", "invisible"]:
+                    pass
+                last_time = presence_date_time
             session.commit()
 
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Uptime(bot))
-
