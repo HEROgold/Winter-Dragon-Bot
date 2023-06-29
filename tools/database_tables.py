@@ -28,7 +28,7 @@ else:
 handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-# logger.addHandler(logging.StreamHandler())
+logger.addHandler(logging.StreamHandler())
 
 
 db_name = "db" # Defined in docker-compose.yml
@@ -115,9 +115,9 @@ class Message(Base):
     content: Mapped[str] = mapped_column(String(2000))
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     user: Mapped["User"] = relationship(back_populates="messages", foreign_keys=[user_id])
-    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID), nullable=True)
     channel: Mapped["Channel"] = relationship(back_populates="messages", foreign_keys=[channel_id])
-    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID)) # actually should reference to the guild from channel.guild
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True) # actually should reference to the guild from channel.guild
     guild: Mapped["Guild"] = relationship(foreign_keys=[guild_id]) # back_populates="messages"
 
 

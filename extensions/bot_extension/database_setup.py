@@ -60,7 +60,7 @@ class DatabaseSetup(commands.Cog):
                     content = message.clean_content,
                     user_id = user.id,
                     channel_id = channel.id,
-                    guild_id = guild.id
+                    guild_id = guild.id or None
                 ))
 
             if not guild or guild is None:
@@ -79,6 +79,7 @@ class DatabaseSetup(commands.Cog):
             for user in self.bot.users:
                 if session.query(User).where(User.id == user.id).first() is None:
                     self.logger.info(f"Adding new {user=} to Users table")
+                    session.add(User(id = user.id))
             for guild in self.bot.guilds:
                 if session.query(Guild).where(Guild.id == guild.id).first() is None:
                     self.logger.info(f"Adding new {guild=} to Guild table")
