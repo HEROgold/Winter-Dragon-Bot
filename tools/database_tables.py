@@ -28,7 +28,7 @@ else:
 handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-# logger.addHandler(logging.StreamHandler())
+logger.addHandler(logging.StreamHandler())
 
 
 db_name = "db" # Defined in docker-compose.yml
