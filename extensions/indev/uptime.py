@@ -20,7 +20,7 @@ class Uptime(commands.GroupCog):
         await interaction.response.send_message(f"Bot uptime: {datetime.datetime.now(datetime.timezone.utc) - self.bot.launch_time}")
 
 
-    @app_commands.command(name="user", description="Show a users's current uptime/online time")
+    @app_commands.command(name="user", description="Show a users's current uptime/online time (In development)")
     async def slash_uptime_user(self, interaction: discord.Interaction) -> None:
         with Session(engine) as session:
             member = interaction.user
@@ -39,6 +39,7 @@ class Uptime(commands.GroupCog):
                     pass
                 last_time = presence_date_time
             session.commit()
+            await interaction.response.send_message(f"{last_time=}", ephemeral=True)
 
 
 async def setup(bot: commands.Bot) -> None:
