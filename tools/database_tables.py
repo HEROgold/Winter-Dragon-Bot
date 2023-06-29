@@ -28,7 +28,7 @@ else:
 handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-logger.addHandler(logging.StreamHandler())
+# logger.addHandler(logging.StreamHandler())
 
 
 db_name = "db" # Defined in docker-compose.yml
@@ -37,10 +37,10 @@ match config.Database.db:
         username = config.Database.username
         password = config.Database.password
         logger.info(f"Connecting to postgres {db_name=}, as {username=}")
-        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"postgresql://{username}:{password}@{db_name}:5432", echo=True)
+        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"postgresql://{username}:{password}@{db_name}:5432", echo=False)
     case "sqlite":
         logger.info(f"Connecting to sqlite {db_name=}")
-        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"sqlite:///database/{db_name}", echo=True)
+        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"sqlite:///database/{db_name}", echo=False)
     case _:
         logger.critical("No database selected to use!")
         raise AttributeError("No database selected")
