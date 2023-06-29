@@ -96,7 +96,7 @@ class DatabaseSetup(commands.Cog):
         with Session(engine) as session:
             db_presences = session.query(Presence).where(Presence.user_id == member.id).all()
             for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=365)) >= datetime.datetime.now(datetime.timezone.utc):
+                if (presence.date_time + datetime.timedelta(days=1)) >= datetime.datetime.now(datetime.timezone.utc):
                     self.logger.debug(f"Removing year old presence {presence.id=}")
                     session.delete(presence)
                 else:
