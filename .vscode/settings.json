@@ -54,6 +54,7 @@
         "steampowered",
         "suptitle",
         "UPDATEDCHANNELS",
-        "UPDATEDROLES"
+        "UPDATEDROLES",
+        "uvloop"
     ]
 }
