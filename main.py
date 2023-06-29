@@ -100,7 +100,7 @@ def save_logs() -> None:
     if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
         os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
     bot_logger.info("Saving log files")
-    bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - launch_time}")
+    bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - bot.launch_time}")
     logging.shutdown()
     for file in os.listdir("./"):
         if file.endswith(".log"):
