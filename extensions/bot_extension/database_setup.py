@@ -6,11 +6,13 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-from tools.database_tables import Channel, Guild, Message, User, Session, engine, Presence
+from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
 
 
 @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
 class DatabaseSetup(commands.Cog):
+    bot: commands.Bot
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
@@ -29,31 +31,6 @@ class DatabaseSetup(commands.Cog):
                 session.delete(db_msg)
             session.commit()
 
-
-    async def remove_old_presences(self, member: discord.Member) -> None:
-        with Session(engine) as session:
-            db_presences = session.query(Presence).where(Presence.user_id == member.id).all()
-            for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=365)) >= datetime.datetime.now(datetime.timezone.utc):
-                    self.logger.debug(f"Removing year old presence {presence.id=}")
-                    session.delete(presence)
-                else:
-                    self.logger.debug(f"Presence data not older then a year {presence.id=}")
-            session.commit()
-
-
-    @commands.Cog.listener()
-    async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
-        member = before or after
-        status = member.status.name
-        date_time = datetime.datetime.now(datetime.timezone.utc)
-        with Session(engine) as session:
-            session.add(Presence(
-                user_id = member.id,
-                status = status,
-                date_time = date_time
-            ))
-            session.commit()
 
 
     @commands.Cog.listener()
@@ -113,6 +90,31 @@ class DatabaseSetup(commands.Cog):
     async def before_update(self) -> None:
         self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
+
+    async def remove_old_presences(self, member: discord.Member) -> None:
+        with Session(engine) as session:
+            db_presences = session.query(Presence).where(Presence.user_id == member.id).all()
+            for presence in db_presences:
+                if (presence.date_time + datetime.timedelta(days=365)) >= datetime.datetime.now(datetime.timezone.utc):
+                    self.logger.debug(f"Removing year old presence {presence.id=}")
+                    session.delete(presence)
+                else:
+                    self.logger.debug(f"Presence data not older then a year {presence.id=}")
+            session.commit()
+
+
+    @commands.Cog.listener()
+    async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
+        member = before or after
+        status = member.status.name
+        date_time = datetime.datetime.now(datetime.timezone.utc)
+        with Session(engine) as session:
+            session.add(Presence(
+                user_id = member.id,
+                status = status,
+                date_time = date_time
+            ))
+            session.commit()
 
 
 async def setup(bot: commands.Bot) -> None:
