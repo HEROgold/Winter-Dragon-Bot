@@ -18,8 +18,6 @@ except ModuleNotFoundError:
     import config
 
 
-
-
 Intents = discord.Intents.none()
 Intents.members = True
 Intents.guilds = True
