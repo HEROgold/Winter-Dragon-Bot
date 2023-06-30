@@ -77,6 +77,10 @@ class Steam(commands.GroupCog):
         return False
 
 
+    def is_dlc(self, to_check: str) -> bool:
+        return False
+
+
     def find_percentage_sales(self, sales: list, percentage: int) -> list:
         requested_sales = []
         for perc in range(percentage, 101):
