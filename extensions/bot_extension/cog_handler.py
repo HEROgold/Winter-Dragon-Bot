@@ -179,6 +179,9 @@ class CogsC(commands.GroupCog):
             app_commands.Choice(name=extension, value=extension)
             for extension in self.bot.extensions
             if current.lower() in extension.lower()
+        ] or [
+            app_commands.Choice(name=extension, value=extension)
+            for extension in self.bot.extensions
         ]
 
 
@@ -214,6 +217,9 @@ class CogsC(commands.GroupCog):
             app_commands.Choice(name=extension, value=extension)
             for extension in extensions
             if current.lower() in extension.lower()
+        ] or [
+            app_commands.Choice(name=extension, value=extension)
+            for extension in extensions
         ]
 
 

@@ -131,6 +131,9 @@ class BotC(commands.GroupCog):
             app_commands.Choice(name=stat, value=stat)
             for stat in self.STATUS
             if current.lower() in stat.lower()
+        ] or [
+            app_commands.Choice(name=stat, value=stat)
+            for stat in self.STATUS
         ]
 
     @slash_bot_activity.autocomplete("activity")
@@ -144,6 +147,9 @@ class BotC(commands.GroupCog):
             app_commands.Choice(name=activity, value=activity)
             for activity in self.ACTIVITIES
             if current.lower() in activity.lower()
+        ] or [
+            app_commands.Choice(name=activity, value=activity)
+            for activity in self.ACTIVITIES
         ]
 
 
