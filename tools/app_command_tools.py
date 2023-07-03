@@ -10,11 +10,11 @@ import config
 
 
 def memoize(func):
-    logger = logging.getLogger(f"{config.Main.BOT_NAME}.memoize")
     """
     (c) 2021 Nathan Henrie, MIT License
     https://n8henrie.com/2021/11/decorator-to-memoize-sync-or-async-functions-in-python/
     """
+    logger = logging.getLogger(f"{config.Main.BOT_NAME}.memoize")
     cache = {}
 
     async def memoized_async_func(*args, **kwargs) -> Any:
