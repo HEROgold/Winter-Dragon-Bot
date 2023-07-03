@@ -1,5 +1,6 @@
 import datetime
 import logging
+from logging.handlers import RotatingFileHandler
 from typing import List, Optional, Self
 
 import sqlalchemy
@@ -25,7 +26,8 @@ else:
     logger.setLevel("DEBUG")
 
 
-handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
+# handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
+handler = RotatingFileHandler(filename='sqlalchemy.log', backupCount=7, encoding="utf-8")
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 # logger.addHandler(logging.StreamHandler())

@@ -7,9 +7,12 @@ import signal
 import sys
 from atexit import register
 from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 
 import discord
 from discord.ext import commands, tasks
+
+from tools.database_tables import logger as sql_logger
 
 try:
     import config
@@ -37,7 +40,8 @@ tree = bot.tree
 
 def setup_logging(logger: logging.Logger, filename: str) -> None:
     logger.setLevel(config.Main.LOG_LEVEL)
-    handler = logging.FileHandler(filename=filename, encoding='utf-8', mode='w')
+    # handler = logging.FileHandler(filename=filename, encoding='utf-8', mode='w')
+    handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     logger.addHandler(handler)
 
@@ -83,7 +87,7 @@ def delete_oldest_saved_logs() -> None:
     # Some regex magic https://regex101.com/r/he2KNZ/1
     # './logs\\2023-05-08-00-10-27\\bot.log' matches into
     # /logs\\2023-05-08-00-10-27\\
-    regex = r"(\./logs)(/|\d|-)+" # NOSONAR
+    regex = r"(\./logs)(/|\d|-|_)+"
     folder_path = re.match(regex, oldest_files[0])[0]
     bot_logger.info(f"deleting old logs for space: {folder_path=}")
     for file in os.listdir(folder_path):
@@ -101,18 +105,28 @@ def save_logs() -> None:
         os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
     bot_logger.info("Saving log files")
     bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - bot.launch_time}")
-    logging.shutdown()
     for file in os.listdir("./"):
-        if file.endswith(".log"):
+        if file.endswith(".log") or file[:-2].endswith(".log"):
             print(file)
             shutil.copy(src=f"./{file}", dst=f"{config.Main.LOG_PATH}/{log_time}/{file}")
+    logging_rollover()
+
+
+def logging_rollover() -> None:
+    log_handlers = []
+    log_handlers.extend(sql_logger.handlers)
+    log_handlers.extend(discord_logger.handlers)
+    log_handlers.extend(bot_logger.handlers)
+    for handler in log_handlers:
+        if isinstance(handler, RotatingFileHandler):
+            handler.doRollover()
 
 
 def delete_toplevel_logs() -> None:
     if config.Main.KEEP_LATEST_LOGS:
         return
     for file in os.listdir("./"):
-        if file.endswith(".log"):
+        if file.endswith(".log") or file[:-2].endswith(".log"):
             print(f"Removing {file}")
             os.remove(file)
 
@@ -179,10 +193,10 @@ if __name__ == "__main__":
     delete_toplevel_logs()
 
     bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
-    bot_logger.addHandler(logging.StreamHandler())
     discord_logger = logging.getLogger('discord')
     setup_logging(bot_logger, 'bot.log')
     setup_logging(discord_logger, 'discord.log')
+    bot_logger.addHandler(logging.StreamHandler())
 
     asyncio.run(main())
 
