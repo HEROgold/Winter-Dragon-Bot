@@ -117,7 +117,7 @@ def delete_toplevel_logs() -> None:
             os.remove(file)
 
 
-@tasks.loop(hours = 24)
+@tasks.loop(hours=24)
 async def daily_save_logs() -> None:
     save_logs()
 
@@ -145,7 +145,7 @@ async def mass_load() -> None:
             bot_logger.exception(e)
 
 
-@tree.command(name = "shutdown", description = "(For bot developer only), since it runs it docker. It restarts!")
+@tree.command(name = "shutdown", description = "(For bot developer only)")
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     if not await bot.is_owner(interaction.user):
         raise commands.NotOwner
