@@ -40,9 +40,9 @@ tree = bot.tree
 
 def setup_logging(logger: logging.Logger, filename: str) -> None:
     logger.setLevel(config.Main.LOG_LEVEL)
-    # handler = logging.FileHandler(filename=filename, encoding='utf-8', mode='w')
+    # handler = logging.FileHandler(filename=filename, encoding="utf-8", mode="w")
     handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
-    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
     logger.addHandler(handler)
 
 
@@ -54,7 +54,7 @@ if config.Main.CUSTOM_HELP:
 async def on_ready() -> None:
     print("Bot is running!")
     if config.Main.SHOW_LOGGED_IN == True:
-        bot_logger.info(f'Logged on as {bot.user}!')
+        bot_logger.info(f"Logged on as {bot.user}!")
 
 
 async def main() -> None:
@@ -85,7 +85,7 @@ def delete_oldest_saved_logs() -> None:
         key=os.path.getctime,
     )
     # Some regex magic https://regex101.com/r/he2KNZ/1
-    # './logs\\2023-05-08-00-10-27\\bot.log' matches into
+    # "./logs\\2023-05-08-00-10-27\\bot.log" matches into
     # /logs\\2023-05-08-00-10-27\\
     regex = r"(\./logs)(/|\d|-|_)+"
     folder_path = re.match(regex, oldest_files[0])[0]
@@ -100,7 +100,7 @@ def save_logs() -> None:
         delete_oldest_saved_logs()
     if not os.path.exists(config.Main.LOG_PATH):
         os.mkdir(config.Main.LOG_PATH)
-    log_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    log_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
         os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
     bot_logger.info("Saving log files")
@@ -193,9 +193,9 @@ if __name__ == "__main__":
     delete_toplevel_logs()
 
     bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
-    discord_logger = logging.getLogger('discord')
-    setup_logging(bot_logger, 'bot.log')
-    setup_logging(discord_logger, 'discord.log')
+    discord_logger = logging.getLogger("discord")
+    setup_logging(bot_logger, "bot.log")
+    setup_logging(discord_logger, "discord.log")
     bot_logger.addHandler(logging.StreamHandler())
 
     asyncio.run(main())
