@@ -1,6 +1,6 @@
 from asyncio import iscoroutinefunction
 import logging
-from typing import Any, Optional, Self
+from typing import Any, Self
 
 import discord  # type: ignore
 from discord import app_commands
@@ -48,7 +48,6 @@ class Converter:
     bot: commands.Bot
     tree: app_commands.CommandTree
     logger: logging.Logger
-    cache: Optional[dict] = None
     parameter_args = None
 
     def __init__(self, bot: commands.Bot) -> Self:
@@ -56,7 +55,7 @@ class Converter:
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
 
-    def is_group(self, app_command:app_commands.AppCommand) -> bool:
+    def is_group(self, app_command: app_commands.AppCommand) -> bool:
         self.logger.debug(f"Checking is_group: {app_command.name}")
         return any(type(i) == app_commands.AppCommandGroup for i in app_command.options)
 
@@ -133,20 +132,20 @@ class Converter:
     # TODO, return pre-filled arguments for a given command
     # Doesn't work with discord's api (yet?)
     # Needs to work both with and without sub commands.
-    # Doesnt seem to be working
     # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
     async def with_parameters(
         self,
         command: commands.Command,
         **kwargs
     ) -> str:
-        app_command, custom_mention = await self.get_app_sub_command(command)
-        args = " ".join(f"{k}:{v}" for k, v in kwargs.items())
-        _test = f"{custom_mention[:-1]} {args}>"
-        try:
-            self.logger.debug(command.clean_params)
-        except AttributeError:
-            pass
-        self.logger.debug(app_command.to_dict())
-        return _test
+        raise NotImplementedError("Not yet supported on discord's end")
+        # app_command, custom_mention = await self.get_app_sub_command(command)
+        # args = " ".join(f"{k}:{v}" for k, v in kwargs.items())
+        # _test = f"{custom_mention[:-1]} {args}>"
+        # try:
+        #     self.logger.debug(command.clean_params)
+        # except AttributeError:
+        #     pass
+        # self.logger.debug(app_command.to_dict())
+        # return _test
 
