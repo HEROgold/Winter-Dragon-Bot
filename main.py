@@ -32,7 +32,6 @@ Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
 
-client = discord.Client(intents=Intents)
 bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
 bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
@@ -168,7 +167,6 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
         bot_logger.info("shutdown by command.")
         save_logs()
         await bot.close()
-        await client.close()
         delete_toplevel_logs()
     except Exception: pass
     sys.exit()
@@ -180,7 +178,6 @@ def terminate() -> None:
     save_logs()
     try:
         asyncio.run(bot.close())
-        asyncio.run(client.close())
         delete_toplevel_logs()
     except Exception: pass
     sys.exit()
