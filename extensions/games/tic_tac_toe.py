@@ -11,10 +11,13 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 import config
-from tools.database_tables import AssociationUserLobby as AUL
+from tools.database_tables import AssociationUserLobby as AUL, Game
 from tools.database_tables import Lobby, ResultDuels, Session, engine
 
 # TODO: Add ai if bot is challenged?
+
+GAME_NAME = "ttt"
+
 
 @app_commands.guild_only()
 class TicTacToe(commands.GroupCog):
@@ -87,7 +90,7 @@ class TicTacToe(commands.GroupCog):
     def get_sql_leader_board(self, interaction_user_id: int) -> list[ResultDuels]:
         with Session(engine) as session:
             result = session.query(ResultDuels).where(
-                ResultDuels.game == "ttt",
+                ResultDuels.game == GAME_NAME,
                 sqlalchemy.or_(
                     ResultDuels.player_1 == interaction_user_id,
                     ResultDuels.player_2 == interaction_user_id
@@ -137,7 +140,7 @@ class TicTacToe(commands.GroupCog):
         with Session(engine) as session:
             session.add(Lobby(
                 id = response_message.id,
-                game = "ttt",
+                game = GAME_NAME,
                 status = "waiting"
             ))
             session.commit()
@@ -344,7 +347,7 @@ class TicTacToe(commands.GroupCog):
 
 # LOBBY end
 
-# TODO: Add result to DB on win/loss.
+# TODO: test db result on win/loss/tie
 # GAME start
 
     async def start_game(self, interaction: discord.Interaction, game_data: dict = None) -> None:
@@ -453,7 +456,7 @@ class TicTacToeGame(discord.ui.View):
 
     # This method checks for the board winner -- it is used by the TicTacToeButton
     def check_board_winner(self) -> int | None:
-        row = None
+        duel_result = None
         game_result = None
 
         # Check horizontal
@@ -461,7 +464,7 @@ class TicTacToeGame(discord.ui.View):
             value = sum(across)
             if value == (self.player_x.id*3):
                 self.logger.debug(f"player X: {self.player_x} won straight on {across}")
-                row = ResultDuels(
+                duel_result = ResultDuels(
                     player_1 = self.player_x.id,
                     player_2 = self.player_o.id,
                     winner = self.player_x.id,
@@ -471,7 +474,7 @@ class TicTacToeGame(discord.ui.View):
                 game_result = self.player_x.id
             elif value == (self.player_o.id*3):
                 self.logger.debug(f"player O: {self.player_o} won straight on {across}")
-                row = ResultDuels(
+                duel_result = ResultDuels(
                     player_1 = self.player_o.id,
                     player_2 = self.player_x.id,
                     winner = self.player_o.id,
@@ -485,7 +488,7 @@ class TicTacToeGame(discord.ui.View):
             value = self.board[0][line] + self.board[1][line] + self.board[2][line]
             if value == (self.player_x.id*3):
                 self.logger.debug(f"player X: {self.player_x} won vertical on column {line}")
-                row = ResultDuels(
+                duel_result = ResultDuels(
                     player_1 = self.player_x.id,
                     player_2 = self.player_o.id,
                     winner = self.player_x.id,
@@ -495,7 +498,7 @@ class TicTacToeGame(discord.ui.View):
                 game_result = self.player_x.id
             elif value == (self.player_o.id*3):
                 self.logger.debug(f"player O: {self.player_o} won vertical on column {line}")
-                row = ResultDuels(
+                duel_result = ResultDuels(
                     player_1 = self.player_o.id,
                     player_2 = self.player_x.id,
                     winner = self.player_o.id,
@@ -508,7 +511,7 @@ class TicTacToeGame(discord.ui.View):
         diag = self.board[0][2] + self.board[1][1] + self.board[2][0] # /
         if diag == (self.player_x.id*3):
             self.logger.debug(f"player X: {self.player_x} won diagonally /")
-            row = ResultDuels(
+            duel_result = ResultDuels(
                 player_1 = self.player_x.id,
                 player_2 = self.player_o.id,
                 winner = self.player_x.id,
@@ -518,7 +521,7 @@ class TicTacToeGame(discord.ui.View):
             game_result = self.player_x.id
         elif diag == (self.player_o.id*3):
             self.logger.debug(f"player O: {self.player_o} won diagonally /")
-            row = ResultDuels(
+            duel_result = ResultDuels(
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = self.player_o.id,
@@ -530,7 +533,7 @@ class TicTacToeGame(discord.ui.View):
         diag = self.board[0][0] + self.board[1][1] + self.board[2][2] # \
         if diag == (self.player_x.id*3):
             self.logger.debug(f"player X: {self.player_x} won diagonally \\ ")
-            row = ResultDuels(
+            duel_result = ResultDuels(
                 player_1 = self.player_x.id,
                 player_2 = self.player_o.id,
                 winner = self.player_x.id,
@@ -540,7 +543,7 @@ class TicTacToeGame(discord.ui.View):
             game_result = self.player_x.id
         elif diag == (self.player_o.id*3):
             self.logger.debug(f"player O: {self.player_o} won diagonally \\ ")
-            row = ResultDuels(
+            duel_result = ResultDuels(
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = self.player_o.id,
@@ -549,12 +552,14 @@ class TicTacToeGame(discord.ui.View):
             self.game_data["status"] = "finished-player2"
             game_result = self.player_o.id
 
-        self.logger.debug(f"{game_result=}, {row=}")
+        game = Game().fetch_game_by_name(GAME_NAME)
+
+        self.logger.debug(f"{game_result=}, {duel_result=}")
         if game_result is not None:
             with Session(engine) as session:
                 self.logger.debug(f"There is a winner: {game_result=}")
-                row.game = "ttt"
-                session.add(row)
+                duel_result.game = game.id
+                session.add(duel_result)
                 session.commit()
                 self.logger.debug("Returning winner")
             return game_result
@@ -567,7 +572,7 @@ class TicTacToeGame(discord.ui.View):
         with Session(engine) as session:
             self.logger.debug("Adding tie to DB")
             session.add(ResultDuels(
-                game = "ttt",
+                game = game.id,
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = 0,
