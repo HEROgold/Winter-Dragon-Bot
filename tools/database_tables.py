@@ -91,8 +91,8 @@ class User(Base):
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
 
-    @staticmethod
-    def fetch_user(id: int) -> Self:
+    @classmethod
+    def fetch_user(cls, id: int) -> Self:
         """Find existing or create new user, and return it
 
         Args:
@@ -162,6 +162,27 @@ class Game(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     name: Mapped[str] = mapped_column(String(15))
 
+    @classmethod
+    def fetch_game_by_name(cls, name: str = None) -> Self:
+        """Find existing or create new game, and return it
+
+        Args:
+            id (int): Identifier for the game.
+            name (str): Name for the game
+        """
+        if not id and not name:
+            raise AttributeError("Missing id or name.")
+        with Session(engine) as session:
+            logger.debug(f"Looking for game {name=}")
+            game = session.query(Game).where(Game.name == name).first()
+            if game is None:
+                logger.debug(f"Creating game {name=}")
+                session.add(Game(name=name))
+                session.commit()
+                game = session.query(Game).where(Game.name == name).first()
+            logger.debug(f"Returning user {name=}")
+            return game
+
 
 class Lobby(Base):
     __tablename__ = "lobbies"
@@ -195,7 +216,7 @@ class ResultDuels(Base):
     __tablename__ = "results_1v1"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    game: Mapped[str] = mapped_column(ForeignKey(GAMES_ID))
+    game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
     player_1: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     player_2: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     winner: Mapped[Optional[int]] = mapped_column(ForeignKey(USERS_ID))
