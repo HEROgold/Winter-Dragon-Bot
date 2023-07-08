@@ -314,6 +314,20 @@ class Presence(Base):
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
+class AutochannelBlacklist(Base):
+    __tablename__ = "association_autochannel_blacklist"
+
+    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+
+
+class AutochannelWhitelist(Base):
+    __tablename__ = "association_autochannel_whitelist"
+
+    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+
+
 all_tables = Base.__subclasses__()
 
 try:

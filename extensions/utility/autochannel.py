@@ -8,6 +8,16 @@ import sqlalchemy
 import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
+from tools.database_tables import AutochannelBlacklist as AAB
+from tools.database_tables import AutochannelBlacklist as AAW
+
+
+# TODO
+# Add blacklist for each user to use
+# Add whitelist fo each user to use
+# /blacklist member:<TAG>
+# /whitelist member:<TAG>
+# Build permissions for channels based on these.
 
 
 @app_commands.guild_only()
@@ -154,8 +164,8 @@ class Autochannel(commands.GroupCog):
     @app_commands.command(
         name = "add",
         description = "Set up voice category and channels, which lets each user make their own channels"
-        )
-    async def slash_autochannel_add(self, interaction:discord.Interaction) -> None:
+    )
+    async def slash_autochannel_add(self, interaction: discord.Interaction) -> None:
         with Session(engine) as session:
             result = session.execute(sqlalchemy.select(Channel).where(
                 Channel.guild_id == interaction.guild.id, Channel.type == "autochannel"
@@ -164,10 +174,7 @@ class Autochannel(commands.GroupCog):
                 await interaction.response.send_message("Autochannel channels already set up", ephemeral=True)
                 return
         guild = interaction.guild
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
-            }
+        overwrites = self._create_overwrites(interaction.user)
         await interaction.response.defer()
         await self._setup_autochannel(guild, overwrites)
         _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_autochannel_remove)
@@ -271,6 +278,7 @@ class Autochannel(commands.GroupCog):
 
 
     # FIXME: Doesn't seem to print/work
+    # TODO: add helper functions to make this more clear
     @commands.Cog.listener()
     async def on_voice_state_update(
         self,
@@ -279,21 +287,23 @@ class Autochannel(commands.GroupCog):
         after: discord.VoiceState
     ) -> None:
         self.logger.debug(f"{member} moved from {before or None} to {after or None}")
+
         if before.channel:
             return await self._remove_user_autochannels(member, before)
+
         guild = member.guild
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
-            }
+        overwrites = self._create_overwrites(member)
         ac_voice_channel = await self._get_autochannel_voice(guild, category_channel, config.Autochannel.AUTOCHANNEL_NAME)
+
         if after.channel != ac_voice_channel:
             return
+
         guild = after.channel.guild
         channel_id = after.channel.id
         category_channel = await self._get_autochannel_category(guild, overwrites, str(member.id))
         voice_channel = await self._get_autochannel_voice(guild, category_channel, str(member.id))
         text_channel = await self._get_autochannel_text(guild, category_channel, str(member.id))
+
         if any([category_channel, text_channel, voice_channel]):
             return
         if channel_id != voice_channel.id:
@@ -305,6 +315,7 @@ class Autochannel(commands.GroupCog):
         before_channel = before.channel
         guild = before_channel.guild
         member_id = str(member.id)
+
         with Session(engine) as session:
             self.logger.debug("Getting autochannel voice")
             result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{member_id} voice")
@@ -341,12 +352,8 @@ class Autochannel(commands.GroupCog):
             session.commit()
 
 
-    async def _rename_user_autochannels(self, member: discord.Member, guild: discord.Guild) -> str:
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
-            member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
-        }
+    async def _rename_user_autochannels(self, member: discord.Member, guild: discord.Guild, overwrites) -> str:
+        overwrites = self._create_overwrites(member)
         member_id = str(member.id)
         category_channel = await self._get_autochannel_category(guild, overwrites, category_name=member_id)
         voice_channel = await self._get_autochannel_voice(guild, category_channel, voice_channel_name=member_id)
@@ -359,6 +366,79 @@ class Autochannel(commands.GroupCog):
             await voice_channel.edit(name=f"{member.name}'s Voice", reason=renamed_reason)
         if text_channel.name == member_id:
             await text_channel.edit(name=f"{member.name}'s Text", reason=renamed_reason)
+
+
+    async def _create_overwrites(self, member: discord.Member) -> None:
+        default_overwrites = {
+            member.guild.default_role: discord.PermissionOverwrite(),
+            member.guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
+            member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
+        }
+        overwrites = default_overwrites.copy()
+
+        with Session(engine) as session:
+            whitelist = session.query(AAW).where(AAW.id == member.id).all()
+            blacklist = session.query(AAB).where(AAB.id == member.id).all()
+
+            for i in blacklist:
+                dc_user = discord.utils.get(member.guild.members, i.user_id)
+                permissions = discord.Permissions.none()
+                overwrites += {dc_user: permissions}
+
+            for i in whitelist:
+                dc_user = discord.utils.get(member.guild.members, i.user_id)
+                permissions = discord.Permissions.voice() and discord.Permissions.text()
+                try:
+                    overwrites += {dc_user: permissions}
+                except KeyError as e:
+                    self.logger.warning(f"Cannot add whitelist on top of blacklist for {i.user_id}, {e}")
+            session.commit()
+        return overwrites
+
+
+    whitelist = app_commands.Group(name="whitelist", description="add or remove members from your personal whitelist")
+
+    @whitelist.command(name="add", description="add user to your whitelist")
+    async def slash_whitelist_add(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        with Session(engine) as session:
+            session.add(AAW(
+                id = interaction.user.id,
+                user_id = member.id
+            ))
+            session.commit()
+        await interaction.response.send_message(f"Added {member.mention} to whitelist")
+
+
+    @whitelist.command(name="remove", description="remove user to your whitelist")
+    async def slash_whitelist_remove(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        with Session(engine) as session:
+            black_user = session.query(AAW).where(AAW.id == interaction.user.id, AAW.user_id == member.id).first()
+            session.delete(black_user)
+            session.commit()
+        await interaction.response.send_message(f"Removed {member.mention} from whitelist")
+
+
+    blacklist = app_commands.Group(name="blacklist", description="add or remove members from your personal blacklist")
+
+    @blacklist.command(name="add", description="add user to your blacklist")
+    async def slash_blacklist_add(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        with Session(engine) as session:
+            session.add(AAB(
+                id = interaction.user.id,
+                user_id = member.id
+            ))
+            session.commit()
+        await interaction.response.send_message(f"Added {member.mention} to blacklist")
+
+
+    @blacklist.command(name="remove", description="remove user to your blacklist")
+    async def slash_blacklist_remove(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        with Session(engine) as session:
+            black_user = session.query(AAB).where(AAB.id == interaction.user.id, AAB.user_id == member.id).first()
+            session.delete(black_user)
+            session.commit()
+        await interaction.response.send_message(f"Removed {member.mention} from blacklist")
+
 
 
 async def setup(bot: commands.Bot) -> None:
