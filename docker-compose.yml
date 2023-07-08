@@ -16,7 +16,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    restart: always # unless-stopped
+    restart: unless-stopped # unless-stopped, change to always for auto reboot
   bot:
     container_name: discord-bot
     build: .
@@ -29,4 +29,4 @@ services:
         condition: service_healthy
     links:
       - db
-    restart: always # unless-stopped
+    restart: unless-stopped # unless-stopped, change to always for auto reboot
