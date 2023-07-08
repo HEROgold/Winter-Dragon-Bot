@@ -406,7 +406,7 @@ class Autochannel(commands.GroupCog):
                 user_id = member.id
             ))
             session.commit()
-        await interaction.response.send_message(f"Added {member.mention} to whitelist")
+        await interaction.response.send_message(f"Added {member.mention} to whitelist", ephemeral=True)
 
 
     @whitelist.command(name="remove", description="remove user to your whitelist")
@@ -415,7 +415,7 @@ class Autochannel(commands.GroupCog):
             black_user = session.query(AAW).where(AAW.id == interaction.user.id, AAW.user_id == member.id).first()
             session.delete(black_user)
             session.commit()
-        await interaction.response.send_message(f"Removed {member.mention} from whitelist")
+        await interaction.response.send_message(f"Removed {member.mention} from whitelist", ephemeral=True)
 
 
     blacklist = app_commands.Group(name="blacklist", description="add or remove members from your personal blacklist")
@@ -428,7 +428,7 @@ class Autochannel(commands.GroupCog):
                 user_id = member.id
             ))
             session.commit()
-        await interaction.response.send_message(f"Added {member.mention} to blacklist")
+        await interaction.response.send_message(f"Added {member.mention} to blacklist", ephemeral=True)
 
 
     @blacklist.command(name="remove", description="remove user to your blacklist")
@@ -437,7 +437,7 @@ class Autochannel(commands.GroupCog):
             black_user = session.query(AAB).where(AAB.id == interaction.user.id, AAB.user_id == member.id).first()
             session.delete(black_user)
             session.commit()
-        await interaction.response.send_message(f"Removed {member.mention} from blacklist")
+        await interaction.response.send_message(f"Removed {member.mention} from blacklist", ephemeral=True)
 
 
 
