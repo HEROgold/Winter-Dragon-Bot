@@ -155,10 +155,13 @@ class DragonLog(commands.GroupCog):
         before: discord.abc.GuildChannel = entry.before
         after: discord.abc.GuildChannel = entry.after
         channel = after or before
-        self.logger.debug(f"On channel update: guild='{entry.guild}' channel='{channel}'")
         embed = None
-        properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
-        if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
+        properties = "overwrites", "category", "permissions_synced", "name", "position", "type"
+
+        self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
+        found_properties = [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]
+
+        if differences := found_properties:
             if "name" in differences or before.name != after.name:
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
@@ -297,7 +300,7 @@ class DragonLog(commands.GroupCog):
         if before.clean_content == after.clean_content:
             self.logger.debug(f"Message content is the same: {before}")
             return
-        self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, changed=`{after.clean_content}`")
+        self.logger.debug(f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}")
         embed = discord.Embed(
             title="Message Edited",
             description=f"{before.author.mention} Edited a message",
@@ -314,13 +317,17 @@ class DragonLog(commands.GroupCog):
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
             return
-            
+    
+        DESC = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
         embed = discord.Embed(
             title="Message Deleted",
-            description=f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}",
+            description=DESC,
             color=0xFF0000
         )
+
+
         await self.send_dragon_logs(LogCategories.DELETEDMESSAGES, message.guild, embed)
+
         # artifacts from audit log
         if entry.action == entry.action.message_delete:
             # 99% other persons message
