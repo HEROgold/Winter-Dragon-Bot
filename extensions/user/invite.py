@@ -19,8 +19,11 @@ class Invite(commands.GroupCog):
         description="Invite this bot to your own server!",
         )
     async def slash_invite(self, interaction: discord.Interaction) -> None:
-        self.logger.debug(f"Invite created for: id=`{interaction.user.id}`")
-        await interaction.response.send_message("https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot", ephemeral=True)
+        self.logger.debug(f"Invite created for: {interaction.user.id=}")
+        await interaction.response.send_message(
+            "https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot",
+            ephemeral=True
+        )
 
 
     @app_commands.command(

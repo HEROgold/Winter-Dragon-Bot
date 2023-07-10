@@ -258,7 +258,7 @@ class TicTacToe(commands.GroupCog):
             lobby = session.query(Lobby).where(Lobby.id == original_interaction.id).first()
             results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
             associations = results.all()
-            self.logger.debug(f"User joined a game: user=`{interaction.user}, lobby=`{lobby.id}")
+            self.logger.debug(f"User joined a game: {interaction.user=}, {lobby.id=}")
             self.logger.debug(f"{associations=}, {lobby=}")
 
             if not associations:

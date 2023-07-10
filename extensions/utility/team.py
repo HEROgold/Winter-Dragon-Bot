@@ -174,7 +174,7 @@ class Team(commands.GroupCog):
             for team_id in list(team_group):
                 if team_id == "voted":
                     continue
-                self.logger.debug(f"team=`{team_id}`, user_id=`{user.id}`")
+                self.logger.debug(f"{team_id=}, {user.id=}")
                 if user.id not in to_vote:
                     self.logger.debug(f"removing {reaction}, {user.id}: not in {to_vote} or {user.bot}")
                     await reaction.remove(user)

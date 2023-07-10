@@ -74,7 +74,7 @@ class Sync(commands.Cog):
         guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
         local_sync = await self.bot.tree.sync(guild=guild)
         self.logger.warning(f"{interaction.user} Synced slash commands!")
-        self.logger.debug(f"Synced commands: global_commands={global_sync} guild_commands={local_sync}")
+        self.logger.debug(f"Synced commands: {global_sync=}, {local_sync=}")
         global_list = [command.name for command in global_sync]
         local_list = [command.name for command in local_sync]
         global_list.sort()
@@ -90,7 +90,7 @@ class Sync(commands.Cog):
         guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
         local_sync = await self.bot.tree.sync(guild=guild)
         self.logger.warning(f"{ctx.author} Synced slash commands!")
-        self.logger.debug(f"Synced commands: global_commands={global_sync} guild_commands={local_sync}")
+        self.logger.debug(f"Synced commands: {global_sync=} {local_sync=}")
         global_list = [command.name for command in global_sync]
         local_list = [command.name for command in local_sync]
         global_list.sort()

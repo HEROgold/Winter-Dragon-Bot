@@ -187,7 +187,7 @@ class Stats(commands.GroupCog):
             embed.add_field(name="Afk channel", value=guild.afk_channel.mention, inline=True)
         except AttributeError as e:
             self.logger.warning(f"Error caused by non-existing AFK channel: {e}")
-        self.logger.debug(f"Showing guild stats: guild='{interaction.guild}' user={interaction.user}")
+        self.logger.debug(f"Showing guild stats: {interaction.guild=}, {interaction.user=}")
         await interaction.response.send_message(embed=embed)
 
 
