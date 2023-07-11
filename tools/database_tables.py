@@ -4,7 +4,14 @@ from logging.handlers import RotatingFileHandler
 from typing import List, Optional, Self
 
 import sqlalchemy
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, BigInteger
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    BigInteger
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -26,7 +33,6 @@ else:
     logger.setLevel("DEBUG")
 
 
-# handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
 handler = RotatingFileHandler(filename='sqlalchemy.log', backupCount=7, encoding="utf-8")
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
@@ -100,12 +106,12 @@ class User(Base):
         """
         with Session(engine) as session:
             logger.debug(f"Looking for user {id=}")
-            user = session.query(User).where(User.id == id).first()
+            user = session.query(cls).where(cls.id == id).first()
             if user is None:
                 logger.debug(f"Creating user {id=}")
-                session.add(User(id=id))
+                session.add(cls(id=id))
                 session.commit()
-                user = session.query(User).where(User.id == id).first()
+                user = session.query(cls).where(cls.id == id).first()
             logger.debug(f"Returning user {id=}")
             return user
 
@@ -174,12 +180,12 @@ class Game(Base):
             raise AttributeError("Missing id or name.")
         with Session(engine) as session:
             logger.debug(f"Looking for game {name=}")
-            game = session.query(Game).where(Game.name == name).first()
+            game = session.query(cls).where(cls.name == name).first()
             if game is None:
                 logger.debug(f"Creating game {name=}")
-                session.add(Game(name=name))
+                session.add(cls(name=name))
                 session.commit()
-                game = session.query(Game).where(Game.name == name).first()
+                game = session.query(cls).where(cls.name == name).first()
             logger.debug(f"Returning user {name=}")
             return game
 
@@ -326,6 +332,16 @@ class AutochannelWhitelist(Base):
 
     id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
     user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+
+
+class Tickets(Base):
+    __tablename__ = "tickets"
+
+    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    channel: Mapped["Channel"] = mapped_column(ForeignKey(CHANNELS_ID))
+    start_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
+    end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
+    closed: Mapped[bool] = mapped_column(Boolean)
 
 
 all_tables = Base.__subclasses__()
