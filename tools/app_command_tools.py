@@ -48,7 +48,8 @@ class Converter:
     bot: commands.Bot
     tree: app_commands.CommandTree
     logger: logging.Logger
-    parameter_args = None
+    parameter_args = None # Not implemented
+
 
     def __init__(self, bot: commands.Bot) -> Self:
         self.bot = bot
