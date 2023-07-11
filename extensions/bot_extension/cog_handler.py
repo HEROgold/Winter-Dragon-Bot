@@ -84,7 +84,7 @@ class CogsC(commands.GroupCog):
         self.DATABASE_NAME = self.__class__.__name__
 
 
-    async def get_extensions(self) -> list[str]:
+    def get_extensions(self) -> list[str]:
         extensions = []
         for root, _, files in os.walk("extensions"):
             extensions.extend(
@@ -126,7 +126,7 @@ class CogsC(commands.GroupCog):
     async def slash_show(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        extensions = await self.get_extensions()
+        extensions = self.get_extensions()
         self.logger.debug(f"Showing {extensions} to {interaction.user}")
         await interaction.response.send_message(f"{extensions}", ephemeral=True)
 
@@ -212,7 +212,7 @@ class CogsC(commands.GroupCog):
 
     @slash_load.autocomplete("extension")
     async def load_autocomplete_extension(self, interaction:discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        extensions = await self.get_extensions()
+        extensions = self.get_extensions()
         return [
             app_commands.Choice(name=extension, value=extension)
             for extension in extensions
