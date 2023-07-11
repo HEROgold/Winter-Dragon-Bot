@@ -18,6 +18,7 @@ from tools.database_tables import AutochannelBlacklist as AAW
 # /blacklist member:<TAG>
 # /whitelist member:<TAG>
 # Build permissions for channels based on these.
+AC_TYPE = "autochannel"
 
 
 @app_commands.guild_only()
@@ -38,7 +39,7 @@ class Autochannel(commands.GroupCog):
         self.logger.info("Cleaning Autochannels.")
         with Session(engine) as session:
             results = session.query(Channel).where(
-                Channel.type == "autochannel",
+                Channel.type == AC_TYPE,
                 Channel.name != f"{config.Autochannel.AUTOCHANNEL_NAME} category",
                 Channel.name != f"{config.Autochannel.AUTOCHANNEL_NAME} text",
                 Channel.name != f"{config.Autochannel.AUTOCHANNEL_NAME} voice",
@@ -53,7 +54,7 @@ class Autochannel(commands.GroupCog):
                     continue
                 self.logger.debug(f"getting user channels: {channel.name=}")
                 # get all channels with same name,
-                user_channels = session.query(Channel).where(Channel.type == "autochannel", Channel.name == channel.name).all()
+                user_channels = session.query(Channel).where(Channel.type == AC_TYPE, Channel.name == channel.name).all()
                 for user_channel in user_channels:
                     self.logger.debug(f"cleaning user channel: {user_channel=}")
                     dc_user_channel = self.bot.get_channel(channel.id)
@@ -63,13 +64,13 @@ class Autochannel(commands.GroupCog):
 
                 # Else if name matches channels clean
             # db_category_channel = session.query(Channel).where(
-            #     Channel.guild_id == guild.id and Channel.type == "autochannel" and Channel.name == f"{member.id} category"
+            #     Channel.guild_id == guild.id and Channel.type == AC_TYPE and Channel.name == f"{member.id} category"
             #     ).first()
             # db_text_channel = session.query(Channel).where(
-            #     Channel.guild_id == guild.id and Channel.type == "autochannel"  and Channel.name == f"{member.id} text"
+            #     Channel.guild_id == guild.id and Channel.type == AC_TYPE  and Channel.name == f"{member.id} text"
             #     ).first()
             # db_voice_channel = session.query(Channel).where(
-            #     Channel.guild_id == guild.id and Channel.type == "autochannel" and Channel.name == f"{member.id} voice"
+            #     Channel.guild_id == guild.id and Channel.type == AC_TYPE and Channel.name == f"{member.id} voice"
             #     ).first()
             # for guild_id, autochannel_categories in list(self.data.items()):
             #     if len(autochannel_categories) <= 1:
@@ -85,7 +86,7 @@ class Autochannel(commands.GroupCog):
             # self.logger.info("database cleaned up")
 
 
-    @database_cleanup.before_loop # type: ignore
+    @database_cleanup.before_loop
     async def before_update(self) -> None:
         self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
@@ -128,7 +129,7 @@ class Autochannel(commands.GroupCog):
     async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
             result = session.execute(sqlalchemy.select(Channel).where(
-                Channel.guild_id == interaction.guild.id, Channel.type == "autochannel"
+                Channel.guild_id == interaction.guild.id, Channel.type == AC_TYPE
             ))
             if not result.all():
                 _, c_mention_add = await self.act.get_app_sub_command(self.slash_autochannel_add)
@@ -146,7 +147,7 @@ class Autochannel(commands.GroupCog):
         reason: str = None
     ) -> None:
         with Session(engine) as session:
-            results = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "autochannel")
+            results = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE)
             channels = results.all()
             self.logger.debug(f"{channels=}, {results=}")
             self.logger.info(f"Removing stats channels for: {guild=}, {channels=}")
@@ -170,7 +171,7 @@ class Autochannel(commands.GroupCog):
         with Session(engine) as session:
             result = session.execute(sqlalchemy.select(Channel).where(
                 Channel.guild_id == interaction.guild.id,
-                Channel.type == "autochannel"
+                Channel.type == AC_TYPE
             ))
             if result.all():
                 await interaction.response.send_message("Autochannel channels already set up", ephemeral=True)
@@ -210,7 +211,7 @@ class Autochannel(commands.GroupCog):
         self.logger.debug("Getting autochannel text")
         with Session(engine) as session:
             result = session.query(Channel).where(
-                Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{text_channel_name} text"
+                Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{text_channel_name} text"
             )
             if channel := result.first():
                 self.logger.debug(f"Found {channel}")
@@ -220,7 +221,7 @@ class Autochannel(commands.GroupCog):
             session.add(Channel(
                 id = text_channel.id,
                 name = f"{text_channel_name} text",
-                type = "autochannel",
+                type = AC_TYPE,
                 guild_id = text_channel.guild.id,
             ))
             session.commit()
@@ -238,7 +239,7 @@ class Autochannel(commands.GroupCog):
     ) -> discord.VoiceChannel:
         self.logger.debug("Getting autochannel voice")
         with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{voice_channel_name} voice")
+            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{voice_channel_name} voice")
             if channel := result.first():
                 self.logger.debug(f"Found {channel}")
                 voice_channel = self.bot.get_channel(result.first().id)
@@ -247,7 +248,7 @@ class Autochannel(commands.GroupCog):
             session.add(Channel(
                 id = voice_channel.id,
                 name = f"{voice_channel_name} voice",
-                type = "autochannel",
+                type = AC_TYPE,
                 guild_id = voice_channel.guild.id,
             ))
             session.commit()
@@ -264,7 +265,7 @@ class Autochannel(commands.GroupCog):
     ) -> discord.CategoryChannel:
         self.logger.debug("Getting autochannel category")
         with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{category_name} category")
+            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{category_name} category")
             if channel := result.first():
                 self.logger.debug(f"Found {channel}")
                 category_channel = self.bot.get_channel(result.first().id)
@@ -273,7 +274,7 @@ class Autochannel(commands.GroupCog):
             session.add(Channel(
                 id = category_channel.id,
                 name = f"{category_name} category",
-                type = "autochannel",
+                type = AC_TYPE,
                 guild_id = category_channel.guild.id,
             ))
             session.commit()
@@ -323,7 +324,7 @@ class Autochannel(commands.GroupCog):
 
         with Session(engine) as session:
             self.logger.debug("Getting autochannel voice")
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{member_id} voice")
+            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{member_id} voice")
             if db_voice_channel := result.first():
                 self.logger.debug(f"Found {db_voice_channel=}")
                 voice_channel = self.bot.get_channel(db_voice_channel.id)
@@ -333,14 +334,14 @@ class Autochannel(commands.GroupCog):
                 return
 
             self.logger.debug("Getting autochannel category")
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{member_id} category")
+            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{member_id} category")
             if db_category_channel := result.first():
                 self.logger.debug(f"Found {db_category_channel=}")
                 category_channel = self.bot.get_channel(db_category_channel.id)
 
             self.logger.debug("Getting autochannel text")
             result = session.query(Channel).where(
-                Channel.guild_id == guild.id, Channel.type == "autochannel", Channel.name == f"{member_id} text"
+                Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{member_id} text"
             )
             if db_text_channel := result.first():
                 self.logger.debug(f"Found {db_text_channel=}")
