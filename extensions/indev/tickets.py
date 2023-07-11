@@ -25,8 +25,7 @@ class TicketView(discord.ui.View):
     def __init__(self, *, timeout: float | None = 180, channel: discord.abc.GuildChannel) -> None:
         super().__init__(timeout=timeout)
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        # TODO: Move max cooldown (2nd param) to config
-        self.cooldown = commands.CooldownMapping.from_cooldown(1, 300, commands.BucketType.member)
+        self.cooldown = commands.CooldownMapping.from_cooldown(1, config.Tickets.MAX_COOLDOWN, commands.BucketType.member)
         self.channel: discord.TextChannel = channel
 
 
@@ -55,14 +54,21 @@ class TicketView(discord.ui.View):
             await interaction.response.send_message(f"Slow down! Try again in {round(retry, 1)} seconds!", ephemeral=True)
             return
 
-        channel_name = f"{interaction.user.display_name}'s ticket"
+        channel_name = f"{interaction.user.name}'s ticket"
 
         with Session(engine) as session:
             ticket_channel = session.query(Channel).where(
                 Channel.name == channel_name,
-                Channel.type == DB_CHANNEL_TYPE,
-                Channel.closed == False
+                Channel.type == DB_CHANNEL_TYPE
             ).first()
+
+            # TODO: test `is` or `==`
+            ticket = session.query(DbTickets).where(
+                DbTickets.closed == False,
+                DbTickets.channel is ticket_channel
+            ).first()
+
+            self.logger.debug(f"{ticket_channel=} IS part of {ticket=}")
 
         if ticket_channel is not None:
             dc_thread_channel = discord.utils.get(interaction.guild.threads, id=ticket_channel.id)

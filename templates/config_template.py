@@ -78,3 +78,6 @@ class Announcement:
 class Urban:
     ALLOW_RANDOM: bool = True
     MAX_LENGTH: int = 5 # Maximum 10
+
+class Tickets:
+    MAX_COOLDOWN: int = 300
