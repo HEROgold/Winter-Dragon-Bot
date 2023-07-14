@@ -27,37 +27,23 @@ class AutoCogReloader(commands.Cog):
 
 
     def get_cog_data(self) -> None:
-        for file in os.scandir("extensions"):
-            if not file.name.endswith(".py") \
-            or file.name == __file__:
-                continue
-
-            file_path = file.path
-            cog_path = file.path[:-3].replace("/", ".")
-            with open(file_path, "r") as f:
-                edit_timestamp = os.path.getmtime(file_path)
-                self.data["files"][file] = {
-                    "filepath": f.name,
-                    "cog_path": cog_path,
-                    "edit_time": edit_timestamp
-                }
-        # for root, _, files in os.walk("extensions"):
-        #     for file in files:
-        #         if not file.endswith(".py"):
-        #             continue
-        #         if file == os.path.basename(__file__):
-        #             # self.logger.debug(f"Skipping {file} (myself/itself)")
-        #             continue
-        #         # self.logger.debug(f"Getting data from {file}")
-        #         file_path = os.path.join(root, file)
-        #         cog_path = os.path.join(root, file[:-3]).replace("/", ".")
-        #         with open(file_path, "r") as f:
-        #             edit_timestamp = os.path.getmtime(file_path)
-        #             self.data["files"][file] = {
-        #                 "filepath": f.name,
-        #                 "cog_path": cog_path,
-        #                 "edit_time": edit_timestamp
-        #             }
+        for root, _, files in os.walk("extensions"):
+            for file in files:
+                if not file.endswith(".py"):
+                    continue
+                if file == os.path.basename(__file__):
+                    # self.logger.debug(f"Skipping {file} (myself/itself)")
+                    continue
+                # self.logger.debug(f"Getting data from {file}")
+                file_path = os.path.join(root, file)
+                cog_path = os.path.join(root, file[:-3]).replace("/", ".")
+                with open(file_path, "r") as f:
+                    edit_timestamp = os.path.getmtime(file_path)
+                    self.data["files"][file] = {
+                        "filepath": f.name,
+                        "cog_path": cog_path,
+                        "edit_time": edit_timestamp
+                    }
 
 
     def check_edits(self) -> None:
