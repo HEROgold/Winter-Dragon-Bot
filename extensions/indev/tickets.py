@@ -8,7 +8,6 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 import config
-from rainbow import RAINBOW
 from tools import app_command_tools
 from tools.database_tables import engine, Session
 from tools.database_tables import Channel
@@ -38,6 +37,16 @@ class TicketView(discord.ui.View):
     ) -> None:
         self.logger.debug(f"{interaction.user} closed a ticket")
 
+        channel_name = f"{interaction.user.name}'s ticket"
+        with Session(engine) as session:
+            ticket_channel = session.query(Channel).where(
+                Channel.name == channel_name,
+                Channel.type == DB_CHANNEL_TYPE
+            ).first()
+
+        dc_thread = discord.utils.get(interaction.guild.threads, id=ticket_channel.id)
+        await dc_thread.edit(locked=True)
+
 
     @discord.ui.button(label="Create A Ticket", style=discord.ButtonStyle.green, custom_id="ticket_view:create_new_ticket")
     async def create_ticket(
@@ -65,7 +74,7 @@ class TicketView(discord.ui.View):
             # TODO: test `is` or `==`
             ticket = session.query(DbTickets).where(
                 DbTickets.closed == False,
-                DbTickets.channel is ticket_channel
+                DbTickets.channel == ticket_channel
             ).first()
 
             self.logger.debug(f"{ticket_channel=} IS part of {ticket=}")
@@ -125,16 +134,17 @@ class Tickets(commands.GroupCog):
                 DbTickets.start_datetime <= seven_days_from_today
             ).all()
 
+            closed_start = "~CLOSED"
+
             for ticket in tickets:
                 self.logger.debug(f"cleaning {ticket=}")
                 ticket.closed = True
-                closed_name = "~CLOSED TIMEOUT~"
-
                 channel: discord.Thread = self.bot.get_channel(id=ticket.channel.id)
-                if not channel.name.endswith(closed_name):
+                if closed_start not in channel.name:
                     self.logger.debug(f"closing {ticket=}")
+                    closed_name = "~CLOSED TIMEOUT~"
                     await channel.edit(name=f"{channel.name} {closed_name}")
-                    # await channel.delete(reason="Ticket cleanup")
+                                            # await channel.delete(reason="Ticket cleanup")
             session.commit()
 
     @database_cleanup.before_loop
@@ -148,18 +158,21 @@ class Tickets(commands.GroupCog):
     @app_commands.command(name="create", description="Create a ticket channel and allow users to create new tickets")
     async def slash_ticket_create(self, interaction: discord.Interaction) -> None:
         with Session(engine) as session:
-            channel = session.query(Channel).where(Channel.type == DB_CHANNEL_TYPE).first()
+            channel = session.query(Channel).where(
+                Channel.type == DB_CHANNEL_TYPE,
+                Channel.guild_id == interaction.guild.id
+            ).first()
             _, c_mention = await self.act.get_app_sub_command(self.slash_ticket_remove)
 
             if channel:
                 await interaction.response.send_message(f"Ticket channel already set up, use {c_mention} to remove and disable it.", ephemeral=True)
                 return
 
-            dc_channel = await interaction.guild.create_text_channel(name="Tickets", reason="Adding Tickets channel")
+            dc_channel = await interaction.guild.create_text_channel(name="Tickets", reason="Removing Tickets channel")
             session.add(Channel(
                 id = dc_channel.id,
                 name = f"{dc_channel.name}",
-                type = f"{dc_channel.type}",
+                type = DB_CHANNEL_TYPE,
                 guild_id = interaction.guild.id,
             ))
             session.commit()
@@ -173,7 +186,10 @@ class Tickets(commands.GroupCog):
     @app_commands.command(name="remove", description="Remove a ticket channel and current tickets")
     async def slash_ticket_remove(self, interaction: discord.Interaction) -> None:
         with Session(engine) as session:
-            channel = session.query(Channel).where(Channel.type == DB_CHANNEL_TYPE).first()
+            channel = session.query(Channel).where(
+                Channel.type == DB_CHANNEL_TYPE,
+                Channel.guild_id == interaction.guild.id
+            ).first()
 
             if not channel:
                 await interaction.response.send_message("Ticket channel not found", ephemeral=True)
