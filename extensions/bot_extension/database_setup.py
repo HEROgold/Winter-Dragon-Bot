@@ -38,7 +38,11 @@ class DatabaseSetup(commands.Cog):
         user = message.author
         guild = message.guild
         channel = message.channel
-        
+
+        # TODO: if this works, remove comment. if not. use isinstance()
+        if channel == discord.DMChannel:
+            return
+
         with Session(engine) as session:
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
