@@ -25,10 +25,13 @@ class Stats(commands.GroupCog):
         self.logger.debug(f"Member update: {member.guild=}, {member=}")
         guild = member.guild
         with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.name == "peak_channel")
-            peak_online = result.first()
-            peak_channel_id = peak_online.id
-            peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
+            if peak_online := session.query(Channel).where(Channel.guild_id == guild.id, Channel.name == "peak_channel").first():
+                await self.update_peak(guild, peak_online)
+
+
+    async def update_peak(self, guild: discord.Guild, peak_online: Channel) -> None:
+        peak_channel_id = peak_online.id
+        peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
 
         try:
             peak_count = int(peak_channel.name[13:])
