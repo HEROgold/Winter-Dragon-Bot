@@ -41,6 +41,7 @@ class DatabaseSetup(commands.Cog):
 
         # TODO: if this works, remove comment. if not. use isinstance()
         if channel == discord.DMChannel:
+            self.logger.debug(f"{type(channel)=}")
             return
 
         with Session(engine) as session:
