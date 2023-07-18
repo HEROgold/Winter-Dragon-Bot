@@ -99,7 +99,7 @@ class Stats(commands.GroupCog):
                     self.logger.exception(e)
                 finally:
                     session.execute(sqlalchemy.delete(Channel).where(
-                        Channel.guild_id == channel.guild.id,
+                        Channel.guild_id == guild.id,
                         channel.type == "stats"
                     ))
             session.commit()
