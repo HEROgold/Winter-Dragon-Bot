@@ -167,7 +167,9 @@ class DragonLog(commands.GroupCog):
         after: discord.abc.GuildChannel = entry.after
         channel = after or before
         embed = None
-        properties = "overwrites", "category", "permissions_synced", "name", "position", "type"
+        properties = "overwrites", "name", "position", "type" 
+        # remove X since AuditLogDiff doesn't have them
+        # X = "category", "permissions_synced"
 
         self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
         found_properties = [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]
