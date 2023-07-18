@@ -136,10 +136,6 @@ class DragonLog(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
-        if entry != discord.AuditLogEntry:
-            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
-            return
-
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
