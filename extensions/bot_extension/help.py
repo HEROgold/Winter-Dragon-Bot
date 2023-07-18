@@ -140,6 +140,9 @@ class Help(commands.Cog):
             app_commands.Choice(name=commands, value=commands)
             for commands in command_names
             if current.lower() in commands.lower()
+        ] or [
+            app_commands.Choice(name=commands, value=commands)
+            for commands in command_names
         ]
 
 

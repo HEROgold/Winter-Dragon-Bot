@@ -32,7 +32,7 @@ class LogCategories(Enum):
 LOGS = "logs"
 LOG_CATEGORY = "LOG-CATEGORY"
 
-
+# TODO: Remove all listeners in favor for the on_guild_entry_create
 class DragonLog(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -49,38 +49,57 @@ class DragonLog(commands.GroupCog):
         if not guild:
             self.logger.debug("No guild during DragonLog channel fetching")
             return None, None
-        self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
-        if log_category is None:
-            log_category = None
-            mod_channel = None
-        else:
-            log_channel_name = log_category.value
-            self.logger.debug(f"Matched: {log_channel_name=}, {log_category=}")
-            with Session(engine) as session:
-                channel = session.query(Channel).where(Channel.guild_id == guild.id, Channel.name == log_channel_name).first()
-                mod_channel = discord.utils.get(
-                    guild.channels,
-                    id = channel.id
-                    ) or None
-            if mod_channel is not None:
-                await mod_channel.send(embed=embed)
 
+        self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
+
+        if log_category is not None:
+            await self.send_log_to_category(log_category, guild, embed)
+        else:
+            await self.send_log_to_global(guild, embed)
+
+
+    async def send_log_to_global(
+        self,
+        guild: discord.Guild,
+        embed: discord.Embed
+    ) -> None:
         with Session(engine) as session:
-            result = session.query(Channel).where(
+            channel = session.query(Channel).where(
                 Channel.guild_id == guild.id,
                 Channel.name == LogCategories.GLOBAL.value
-            )
-            channel = result.first()
-            self.logger.debug(f"{channel=}")
-            global_log_channel = discord.utils.get(
-                guild.channels,
-                id = channel.id
-                ) or None
+            ).first()
+
+        if not channel:
+            self.logger.warning(f"No global log channel found for {guild}")
+            return
+
+        global_log_channel = discord.utils.get(guild.channels, id=channel.id) or None
+
         self.logger.debug(f"Found: {LogCategories.GLOBAL=} as {global_log_channel=}")
         if global_log_channel is not None:
             await global_log_channel.send(embed=embed)
 
-        self.logger.debug(f"Send logs to named and global log channels {log_channel_name=}, {global_log_channel=}")
+        self.logger.debug(f"Send logs to {global_log_channel=}")
+
+
+    async def send_log_to_category(
+        self,
+        log_category: LogCategories,
+        guild: discord.Guild,
+        embed: discord.Embed
+    ) -> None:
+        log_channel_name = log_category.value
+
+        with Session(engine) as session:
+            channel = session.query(Channel).where(
+                    Channel.guild_id == guild.id,
+                    Channel.name == log_channel_name
+                ).first()
+
+        if mod_channel := discord.utils.get(guild.channels, id=channel.id):
+            await mod_channel.send(embed=embed)
+
+        self.logger.debug(f"Send logs to {log_channel_name=}")
 
 
     def get_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
@@ -117,6 +136,10 @@ class DragonLog(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
+        if entry != discord.AuditLogEntry:
+            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
+            return
+
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
@@ -130,8 +153,8 @@ class DragonLog(commands.GroupCog):
                 enum.invite_create: await self.on_invite_create(entry),
                 enum.invite_delete: await self.on_invite_delete(entry),
                 enum.member_move: await self.on_member_move(entry),
-                enum.member_update: await self.on_member_update(entry, False),
-                enum.member_role_update: await self.on_member_update(entry, True),
+                # enum.member_update: await self.on_member_update(entry, False), # fix and make work for AuditLogEntry
+                # enum.member_role_update: await self.on_member_update(entry, True), # fix and make work for AuditLogEntry
             }
         if action not in enum:
             await self.generic_change(entry)
@@ -143,11 +166,18 @@ class DragonLog(commands.GroupCog):
     async def on_guild_channel_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On channel create: {entry.guild=}, {entry.target=}")
         channel = entry.target
+
+        if channel.mentionable:
+            mention = channel.mention 
+        else:
+            mention = channel.name
+            self.logger.warning(f"on_guild_channel_create, {entry.target} not mentionable: {entry.target=}")
+
         embed = discord.Embed(
             title="Channel Created",
-            description=f"{entry.user.mention} created {channel.type} {channel.mention or entry.target.mention} with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} created {channel.type} {mention} with reason: {entry.reason or None}",
             color=0x00FF00
-            )
+        )
         await self.send_dragon_logs(LogCategories.CREATEDCHANNELS, entry.guild, embed)
 
 
@@ -155,10 +185,15 @@ class DragonLog(commands.GroupCog):
         before: discord.abc.GuildChannel = entry.before
         after: discord.abc.GuildChannel = entry.after
         channel = after or before
-        self.logger.debug(f"On channel update: guild='{entry.guild}' channel='{channel}'")
         embed = None
-        properts = "overwrites", "category", "permissions_synced", "name", "position", "type"
-        if differences := [prop for prop in properts if getattr(before, prop) != getattr(after, prop)]:
+        properties = "overwrites", "name", "position", "type" 
+        # remove X since AuditLogDiff doesn't have them
+        # X = "category", "permissions_synced"
+
+        self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
+        found_properties = [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]
+
+        if differences := found_properties:
             if "name" in differences or before.name != after.name:
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
@@ -172,9 +207,9 @@ class DragonLog(commands.GroupCog):
 
 
     async def on_guild_channel_delete(self, entry: discord.AuditLogEntry) -> None:
-        channel: discord.abc.GuildChannel = entry.before
         self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
-        embed = None
+        channel = entry.target
+
         embed = discord.Embed(
             title="Channel Deleted",
             description=f"{entry.user.mention} deleted {channel.type} `{channel.name}` with reason: {entry.reason or None}",
@@ -240,6 +275,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.DELETEDROLES, entry.guild, embed)
 
 
+    @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         member = before or after
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
@@ -260,9 +296,9 @@ class DragonLog(commands.GroupCog):
 
     async def on_member_move(self, entry: discord.AuditLogEntry) -> None:
         embed = discord.Embed(
-            title="Member Joined",
+            title="Member Moved",
             description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
-            color=0x00FF00
+            color=0xFFFF00
             )
         await self.send_dragon_logs(LogCategories.MEMBERMOVED, entry.guild, embed)
 
@@ -297,7 +333,7 @@ class DragonLog(commands.GroupCog):
         if before.clean_content == after.clean_content:
             self.logger.debug(f"Message content is the same: {before}")
             return
-        self.logger.debug(f"Message edited: guild={before.guild}, channel={before.channel}, content=`{before.clean_content}`, changed=`{after.clean_content}`")
+        self.logger.debug(f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}")
         embed = discord.Embed(
             title="Message Edited",
             description=f"{before.author.mention} Edited a message",
@@ -310,17 +346,24 @@ class DragonLog(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, entry: discord.AuditLogEntry) -> None:
+        if entry != discord.AuditLogEntry:
+            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
+            return
+
         message: discord.Message = entry.target
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
             return
-            
+
+        DESC = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
         embed = discord.Embed(
             title="Message Deleted",
-            description=f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}",
+            description=DESC,
             color=0xFF0000
         )
+
         await self.send_dragon_logs(LogCategories.DELETEDMESSAGES, message.guild, embed)
+
         # artifacts from audit log
         if entry.action == entry.action.message_delete:
             # 99% other persons message

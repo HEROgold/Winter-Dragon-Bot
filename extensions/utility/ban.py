@@ -105,7 +105,11 @@ class TempBan(commands.Cog):
         times = ["5", "10", "30", "60"]
         return [
             app_commands.Choice(name=time, value=time)
-            for time in times if current.lower() in time.lower()
+            for time in times
+            if current.lower() in time.lower()
+        ] or [
+            app_commands.Choice(name=time, value=time)
+            for time in times
         ]
 
 

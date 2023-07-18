@@ -1,9 +1,17 @@
 import datetime
 import logging
+from logging.handlers import RotatingFileHandler
 from typing import List, Optional, Self
 
 import sqlalchemy
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, BigInteger
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    BigInteger
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -25,7 +33,7 @@ else:
     logger.setLevel("DEBUG")
 
 
-handler = logging.FileHandler(filename='sqlalchemy.log', encoding='utf-8', mode='w')
+handler = RotatingFileHandler(filename='sqlalchemy.log', backupCount=7, encoding="utf-8")
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
 # logger.addHandler(logging.StreamHandler())
@@ -89,8 +97,8 @@ class User(Base):
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
 
-    @staticmethod
-    def fetch_user(id: int) -> Self:
+    @classmethod
+    def fetch_user(cls, id: int) -> Self:
         """Find existing or create new user, and return it
 
         Args:
@@ -98,12 +106,12 @@ class User(Base):
         """
         with Session(engine) as session:
             logger.debug(f"Looking for user {id=}")
-            user = session.query(User).where(User.id == id).first()
+            user = session.query(cls).where(cls.id == id).first()
             if user is None:
                 logger.debug(f"Creating user {id=}")
-                session.add(User(id=id))
+                session.add(cls(id=id))
                 session.commit()
-                user = session.query(User).where(User.id == id).first()
+                user = session.query(cls).where(cls.id == id).first()
             logger.debug(f"Returning user {id=}")
             return user
 
@@ -160,6 +168,27 @@ class Game(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     name: Mapped[str] = mapped_column(String(15))
 
+    @classmethod
+    def fetch_game_by_name(cls, name: str = None) -> Self:
+        """Find existing or create new game, and return it
+
+        Args:
+            id (int): Identifier for the game.
+            name (str): Name for the game
+        """
+        if not id and not name:
+            raise AttributeError("Missing id or name.")
+        with Session(engine) as session:
+            logger.debug(f"Looking for game {name=}")
+            game = session.query(cls).where(cls.name == name).first()
+            if game is None:
+                logger.debug(f"Creating game {name=}")
+                session.add(cls(name=name))
+                session.commit()
+                game = session.query(cls).where(cls.name == name).first()
+            logger.debug(f"Returning user {name=}")
+            return game
+
 
 class Lobby(Base):
     __tablename__ = "lobbies"
@@ -193,7 +222,7 @@ class ResultDuels(Base):
     __tablename__ = "results_1v1"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    game: Mapped[str] = mapped_column(ForeignKey(GAMES_ID))
+    game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
     player_1: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     player_2: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     winner: Mapped[Optional[int]] = mapped_column(ForeignKey(USERS_ID))
@@ -289,6 +318,30 @@ class Presence(Base):
     user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
     status: Mapped[str] = mapped_column(String(15))
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+
+class AutochannelBlacklist(Base):
+    __tablename__ = "association_autochannel_blacklist"
+
+    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+
+
+class AutochannelWhitelist(Base):
+    __tablename__ = "association_autochannel_whitelist"
+
+    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+
+
+class Tickets(Base):
+    __tablename__ = "tickets"
+
+    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    channel: Mapped["Channel"] = mapped_column(ForeignKey(CHANNELS_ID))
+    start_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
+    end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
+    closed: Mapped[bool] = mapped_column(Boolean)
 
 
 all_tables = Base.__subclasses__()

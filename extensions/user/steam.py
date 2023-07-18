@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import random
@@ -13,16 +14,21 @@ from discord.ext import commands, tasks
 import config
 import rainbow
 from tools import app_command_tools
+from tools.database_tables import Session
 from tools.database_tables import Steam as SteamDb
-from tools.database_tables import Session, engine, User
+from tools.database_tables import User, engine
+
+# Set update period and cooldown for user command.
+UPDATE_PERIOD = 3600
 
 
 class Steam(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.htmlFile = './database/SteamPage.html'
+        self.htmlFileBackup = './database/SteamPageBackup.html'
         self.bot = bot
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
-        self.setup_html_file()
+        self.setup_html_files()
         self.act = app_command_tools.Converter(bot=self.bot)
 
 
@@ -30,7 +36,7 @@ class Steam(commands.GroupCog):
         self.update.start()
 
 
-    def setup_html_file(self) -> None:
+    def setup_html_files(self) -> None:
         if not os.path.exists(self.htmlFile):
             with open(self.htmlFile, "w") as f:
                 f.write("")
@@ -39,12 +45,51 @@ class Steam(commands.GroupCog):
         else:
             self.logger.info("Steam local Html exists")
 
+        if not os.path.exists(self.htmlFileBackup):
+            with open(self.htmlFileBackup, "w") as f:
+                f.write("")
+                f.close()
+            self.logger.info("Empty Steam Html backup created")
+        else:
+            self.logger.info("Steam local Html backup exists")
 
-    def get_html_from_url(self, url: str = config.Steam.URL) -> str:
+
+    def check_empty(self, path: str) -> bool:
+        if os.path.exists(path):
+            return True
+        with open(path, "r") as f:
+            if f.read() == "":
+                return True
+        return False
+
+
+    def get_html(self) -> str:
+        # sourcery skip: aware-datetime-for-utc
+        self.logger.debug("getting html")
+        if not self.check_empty(self.htmlFile):
+            self.logger.debug("htmlFile not empty")
+            diff = datetime.datetime.utcfromtimestamp(os.path.getmtime(self.htmlFile)) - datetime.datetime.utcnow()
+            self.logger.debug(f"{diff=}")
+            if diff < datetime.timedelta(seconds=UPDATE_PERIOD):
+                return self._get_html_from_saved()
+        return self._get_html_from_url()
+
+
+    def _get_html_from_url(self, url: str = config.Steam.URL) -> str:
         requests.get(url)
         r = requests.get(url)
         self.logger.debug("Returning Steam html from url")
+
+        with open(self.htmlFile, "w", encoding="utf-8") as f:
+            f.write(r.text)
         return r.text
+
+
+    def _get_html_from_saved(self) -> str:
+        self.logger.debug(f"Updating {self.htmlFile=}")
+        with open(self.htmlFile, "r") as f:
+            self.logger.debug("Returning Steam html from saved file")
+            return f.read()
 
 
     def sales_from_html(self, html: str) -> list[str]:
@@ -74,6 +119,10 @@ class Steam(commands.GroupCog):
                 break
         else:
             return True
+        return False
+
+
+    def is_dlc(self, to_check: str) -> bool:
         return False
 
 
@@ -156,7 +205,7 @@ class Steam(commands.GroupCog):
         return new_sales
 
 
-    @tasks.loop(seconds=3600) # 6 hours > 21600, default.
+    @tasks.loop(seconds=UPDATE_PERIOD) # 6 hours > 21600, default.
     async def update(self) -> None:
         """
         Check if the sales from Html request and Html file are the same
@@ -164,15 +213,14 @@ class Steam(commands.GroupCog):
         and creates a discord Embed object to send and notify users.
         """
         self.logger.info("Checking for sales.")
-        html = self.get_html_from_url()
-        html_sales = self.sales_from_html(html)
-        with open(self.htmlFile, "r", encoding="utf8") as f:
+        html = self.get_html()
+
+        with open(self.htmlFileBackup, "r", encoding="utf8") as f:
             file_sales = self.sales_from_html(f.read())
 
-
+        html_sales = self.sales_from_html(html)
         if self.is_dupe(html_sales, file_sales):
             return None
-
 
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
         new_sales = self.get_new_freebies(file_sales, html_sales)
@@ -207,8 +255,8 @@ class Steam(commands.GroupCog):
                 else:
                     self.logger.debug(f"Not showing sales, empty embed fields: {user}, {embed}")
 
-        self.logger.debug(f"Updating {self.htmlFile}")
-        with open(self.htmlFile, "w", encoding="utf-8") as f:
+        self.logger.debug(f"Updating {self.htmlFileBackup=}")
+        with open(self.htmlFileBackup, "w", encoding="utf-8") as f:
             f.write(html)
             f.close()
 
@@ -219,11 +267,11 @@ class Steam(commands.GroupCog):
         await self.bot.wait_until_ready()
 
 
-    @app_commands.checks.cooldown(1, 3600)
+    @app_commands.checks.cooldown(1, UPDATE_PERIOD)
     @app_commands.command(name = "show", description = "Get a list of steam games that are on sale for the given percentage or higher")
     async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
         await interaction.response.defer()
-        html = self.get_html_from_url()
+        html = self.get_html()
         html_sales = self.sales_from_html(html)
         target_sales = self.find_percentage_sales(html_sales, percent)
         # self.is_dupe(html_sales, html_sales)

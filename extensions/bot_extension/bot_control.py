@@ -131,6 +131,9 @@ class BotC(commands.GroupCog):
             app_commands.Choice(name=stat, value=stat)
             for stat in self.STATUS
             if current.lower() in stat.lower()
+        ] or [
+            app_commands.Choice(name=stat, value=stat)
+            for stat in self.STATUS
         ]
 
     @slash_bot_activity.autocomplete("activity")
@@ -144,6 +147,9 @@ class BotC(commands.GroupCog):
             app_commands.Choice(name=activity, value=activity)
             for activity in self.ACTIVITIES
             if current.lower() in activity.lower()
+        ] or [
+            app_commands.Choice(name=activity, value=activity)
+            for activity in self.ACTIVITIES
         ]
 
 
@@ -205,10 +211,9 @@ class BotC(commands.GroupCog):
 
 
     # Potentially cleaner code \/ compared to code below that
-    # Add a color check and use most red
     # add field names
     @app_commands.command(
-        name="test",
+        name="test_performance",
         description="Show bot's Performance (Bot developer only)"
     )
     async def a(self, interaction: discord.Interaction) -> None:
@@ -219,6 +224,7 @@ class BotC(commands.GroupCog):
         )
         end_tag = "```"
 
+        worst_color = 0
         for i, value in enumerate([
             psutil.cpu_percent(),
             psutil.virtual_memory().percent,
@@ -229,17 +235,23 @@ class BotC(commands.GroupCog):
         ]):
             self.logger.debug(f"{i=}, {value=}")
             if i < 2:
-                color, _ = self.get_colors(value, max_amount=100)
+                ansi_color, color = self.get_colors(value, max_amount=100)
             elif i < 4:
-                color, _ = self.get_colors(value, max_amount=10_000_000_000)
+                ansi_color, color = self.get_colors(value, max_amount=10_000_000_000)
             elif i < 6:
-                color, _ = self.get_colors(value, max_amount=1_000_000_000)
-            
+                ansi_color, color = self.get_colors(value, max_amount=1_000_000_000)
+
+            colors = [worst_color, color]
+            colors.sort(reverse=True)
+            worst_color = colors[0]
+
             embed.add_field(
-                name="Bytes sent",
-                value=f"{color} {value} {end_tag}",
+                name=f"{i}",
+                value=f"{ansi_color} {value} {end_tag}",
                 inline=False
             )
+
+        embed.color = worst_color
         await interaction.response.send_message(embed=embed)
 
 

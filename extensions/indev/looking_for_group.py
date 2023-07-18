@@ -65,6 +65,9 @@ class Lfg(commands.GroupCog):
             app_commands.Choice(name=i, value=i)
             for i in self.games
             if current.lower() in i.name.lower()
+        ] or [
+            app_commands.Choice(name=i, value=i)
+            for i in self.games
         ]
 
 
