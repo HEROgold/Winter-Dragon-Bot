@@ -68,9 +68,12 @@ class DragonLog(commands.GroupCog):
                 Channel.guild_id == guild.id,
                 Channel.name == LogCategories.GLOBAL.value
             ).first()
-            self.logger.debug(f"{channel=}")
 
-            global_log_channel = discord.utils.get(guild.channels, id=channel.id) or None
+        if not channel:
+            self.logger.warning(f"No global log channel found for {guild}")
+            return
+
+        global_log_channel = discord.utils.get(guild.channels, id=channel.id) or None
 
         self.logger.debug(f"Found: {LogCategories.GLOBAL=} as {global_log_channel=}")
         if global_log_channel is not None:
