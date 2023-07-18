@@ -45,10 +45,16 @@ class DatabaseSetup(commands.Cog):
             return
 
         with Session(engine) as session:
+            if session.query(Guild).where(Guild.id == guild.id).first() is None:
+                self.logger.info(f"Adding new {guild=} to Guild table")
+                session.add(Guild(id = guild.id))
+
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
                 session.add(User(id = user.id))
+            session.commit()
 
+        with Session(engine) as session:
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")
                 session.add(Channel(
@@ -60,22 +66,16 @@ class DatabaseSetup(commands.Cog):
 
             if session.query(Message).where(Message.id == message.id).first() is None:
                 self.logger.debug(f"Adding new {message=} to Messages table")
+                
                 session.add(Message(
                     id = message.id,
                     content = message.clean_content,
                     user_id = user.id,
                     channel_id = channel.id,
-                    guild_id = guild.id or None
+                    guild_id = guild.id if guild else None
                 ))
-
-            if not guild or guild is None:
-                session.commit()
-                return
-
-            if session.query(Guild).where(Guild.id == guild.id).first() is None:
-                self.logger.info(f"Adding new {guild=} to Guild table")
-                session.add(Guild(id = guild.id))
             session.commit()
+
 
 
     @tasks.loop(hours=1)
