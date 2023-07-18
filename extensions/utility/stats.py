@@ -95,9 +95,10 @@ class Stats(commands.GroupCog):
                 try:
                     channel = discord.utils.get(guild.channels, id=db_channel.id)
                     await channel.delete(reason=reason)
-                    session.execute(sqlalchemy.delete(Channel).where(Channel.id == channel.id))
                 except AttributeError as e:
                     self.logger.exception(e)
+                finally:
+                    session.execute(sqlalchemy.delete(Channel).where(Channel.id == channel.id))
             session.commit()
 
 
