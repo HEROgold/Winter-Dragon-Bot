@@ -98,7 +98,10 @@ class Stats(commands.GroupCog):
                 except AttributeError as e:
                     self.logger.exception(e)
                 finally:
-                    session.execute(sqlalchemy.delete(Channel).where(Channel.id == channel.id))
+                    session.execute(sqlalchemy.delete(Channel).where(
+                        Channel.guild_id == channel.guild.id,
+                        channel.type == "stats"
+                    ))
             session.commit()
 
 
