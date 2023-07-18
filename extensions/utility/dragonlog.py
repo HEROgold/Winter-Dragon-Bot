@@ -188,9 +188,9 @@ class DragonLog(commands.GroupCog):
 
 
     async def on_guild_channel_delete(self, entry: discord.AuditLogEntry) -> None:
-        channel: discord.abc.GuildChannel = entry.before
         self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
-        embed = None
+        channel = entry.target
+
         embed = discord.Embed(
             title="Channel Deleted",
             description=f"{entry.user.mention} deleted {channel.type} `{channel.name}` with reason: {entry.reason or None}",
@@ -335,14 +335,13 @@ class DragonLog(commands.GroupCog):
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
             return
-    
+
         DESC = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
         embed = discord.Embed(
             title="Message Deleted",
             description=DESC,
             color=0xFF0000
         )
-
 
         await self.send_dragon_logs(LogCategories.DELETEDMESSAGES, message.guild, embed)
 
