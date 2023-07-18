@@ -11,6 +11,8 @@ import rainbow
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 
+STATS = "stats"
+
 
 @app_commands.guild_only()
 class Stats(commands.GroupCog):
@@ -52,7 +54,7 @@ class Stats(commands.GroupCog):
             guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=True),
             guild.me: discord.PermissionOverwrite(connect=True),
         }
-        category = await guild.create_category(name="Stats", overwrites=overwrite, position=0)
+        category = await guild.create_category(name=STATS, overwrites=overwrite, position=0)
         user_channel = await category.create_voice_channel(name="Total Users:", reason=reason)
         online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
         bot_channel = await category.create_voice_channel(name="Total Bots:", reason=reason)
@@ -73,7 +75,7 @@ class Stats(commands.GroupCog):
                 session.add(Channel(
                     id = v.id,
                     guild_id = guild.id,
-                    type = "stats",
+                    type = STATS,
                     name = k
                     ))
             session.commit()
@@ -86,7 +88,7 @@ class Stats(commands.GroupCog):
         reason: str = None
     ) -> None:
         with Session(engine) as session:
-            results = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == "stats")
+            results = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == STATS)
             channels = results.all()
             self.logger.debug(f"{channels=}, {results=}")
             self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
@@ -100,19 +102,19 @@ class Stats(commands.GroupCog):
                 finally:
                     session.execute(sqlalchemy.delete(Channel).where(
                         Channel.guild_id == guild.id,
-                        Channel.type == "stats"
+                        Channel.type == STATS
                     ))
             session.commit()
 
 
     @tasks.loop(seconds=3600)
-    async def update(self) -> None:  # sourcery skip: low-code-quality, NOSONAR
+    async def update(self) -> None:  # sourcery skip: low-code-quality
         # Note: keep for loop with if.
         # because fetching guild won't let the bot get members from guild.
         guilds = self.bot.guilds
         for guild in guilds:
             with Session(engine) as session:
-                if not session.query(Channel).get(guild.id):
+                if not session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == STATS):
                     continue
             self.logger.info(f"Updating stat channels: guild='{guild}'")
 
@@ -154,6 +156,7 @@ class Stats(commands.GroupCog):
             self.logger.info(f"Updated stat channels: guild='{guild}'")
 
 
+    # TODO: transform to fetch sql
     async def get_guild_stats_channels(
         self, guild: discord.Guild
     ) -> tuple[
@@ -207,7 +210,7 @@ class Stats(commands.GroupCog):
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
         _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_add)
         with Session(engine) as session:
-            result = session.execute(sqlalchemy.select(Channel).where(Channel.guild_id == interaction.guild.id, Channel.type == "stats"))
+            result = session.execute(sqlalchemy.select(Channel).where(Channel.guild_id == interaction.guild.id, Channel.type == STATS))
             if result.all():
                 await interaction.response.send_message("Stats channels already set up", ephemeral=True)
             else:
@@ -224,7 +227,7 @@ class Stats(commands.GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
-            result = session.execute(sqlalchemy.select(Channel).where(Channel.guild_id == interaction.guild.id, Channel.type == "stats"))
+            result = session.execute(sqlalchemy.select(Channel).where(Channel.guild_id == interaction.guild.id, Channel.type == STATS))
             if not result.all():
                 await interaction.response.send_message("No stats channels found to remove.", ephemeral=True)
                 return
@@ -241,7 +244,7 @@ class Stats(commands.GroupCog):
             raise commands.NotOwner
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == interaction.guild.id and Channel.type == "stats")
+            result = session.query(Channel).where(Channel.guild_id == interaction.guild.id and Channel.type == STATS)
             for channel in result.all():
                 guild_id = channel.guild_id
                 guild = discord.utils.get(self.bot.guilds, id=guild_id)
