@@ -32,7 +32,7 @@ class LogCategories(Enum):
 LOGS = "logs"
 LOG_CATEGORY = "LOG-CATEGORY"
 
-
+# TODO: Remove all listeners in favor for the on_guild_entry_create
 class DragonLog(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -117,6 +117,10 @@ class DragonLog(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
+        if entry != discord.AuditLogEntry:
+            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
+            return
+
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
@@ -130,8 +134,8 @@ class DragonLog(commands.GroupCog):
                 enum.invite_create: await self.on_invite_create(entry),
                 enum.invite_delete: await self.on_invite_delete(entry),
                 enum.member_move: await self.on_member_move(entry),
-                enum.member_update: await self.on_member_update(entry, False),
-                enum.member_role_update: await self.on_member_update(entry, True),
+                # enum.member_update: await self.on_member_update(entry, False), # fix and make work for AuditLogEntry
+                # enum.member_role_update: await self.on_member_update(entry, True), # fix and make work for AuditLogEntry
             }
         if action not in enum:
             await self.generic_change(entry)
@@ -143,11 +147,18 @@ class DragonLog(commands.GroupCog):
     async def on_guild_channel_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On channel create: {entry.guild=}, {entry.target=}")
         channel = entry.target
+
+        if channel.mentionable:
+            mention = channel.mention 
+        else:
+            mention = channel.name
+            self.logger.warning(f"on_guild_channel_create, {entry.target} not mentionable: {entry.target=}")
+
         embed = discord.Embed(
             title="Channel Created",
-            description=f"{entry.user.mention} created {channel.type} {channel.mention or entry.target.mention} with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} created {channel.type} {mention} with reason: {entry.reason or None}",
             color=0x00FF00
-            )
+        )
         await self.send_dragon_logs(LogCategories.CREATEDCHANNELS, entry.guild, embed)
 
 
@@ -243,6 +254,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.DELETEDROLES, entry.guild, embed)
 
 
+    @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         member = before or after
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
@@ -263,9 +275,9 @@ class DragonLog(commands.GroupCog):
 
     async def on_member_move(self, entry: discord.AuditLogEntry) -> None:
         embed = discord.Embed(
-            title="Member Joined",
+            title="Member Moved",
             description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
-            color=0x00FF00
+            color=0xFFFF00
             )
         await self.send_dragon_logs(LogCategories.MEMBERMOVED, entry.guild, embed)
 
@@ -313,6 +325,10 @@ class DragonLog(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, entry: discord.AuditLogEntry) -> None:
+        if entry != discord.AuditLogEntry:
+            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
+            return
+
         message: discord.Message = entry.target
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
