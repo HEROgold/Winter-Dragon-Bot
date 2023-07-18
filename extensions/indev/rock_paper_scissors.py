@@ -39,6 +39,10 @@ class RpsButton(Button['RPSView']):
         # return await super().callback(interaction)
 
 
+# TODO: add 3 buttons, look at ticket system.
+# Each button adds the player's choice, 
+# Set's player_1, and player_2 variable
+# calcs results and posts them
 class RPSView(discord.ui.View):
     """View created for rock paper scissors. Contains 3 buttons."""
     children: list[RpsButton] # type: ignore
@@ -48,11 +52,19 @@ class RPSView(discord.ui.View):
     player_2: discord.Member
 
 
-    def __init__(self, first_choice: str = None, second_choice: str = None) -> None:
+    def __init__(
+        self, 
+        first_choice: str = None,
+        second_choice: str = None,
+        player_1: discord.Member = None,
+        player_2: discord.Member = None
+    ) -> None:
         super().__init__()
         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
         self.p1_choice = first_choice
         self.p2_choice = second_choice
+        self.player_1 = player_1
+        self.player_2 = player_2
         rock = RpsButton(label="Rock", style=discord.ButtonStyle.blurple)
         paper = RpsButton(label="Paper", style=discord.ButtonStyle.blurple)
         scissor = RpsButton(label="Scissors", style=discord.ButtonStyle.blurple)
