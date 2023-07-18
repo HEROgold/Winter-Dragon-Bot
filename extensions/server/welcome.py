@@ -22,8 +22,7 @@ class Welcome(commands.GroupCog):
     async def on_member_join(self, member: discord.Member) -> None:
         self.logger.debug(f"{member} joined {member.guild}")
         with Session(engine) as session:
-            result = session.query(WelcomeDb).where(member.guild.id)
-            message = result.first().message
+            message = session.query(WelcomeDb).where(WelcomeDb.guild_id == member.guild.id).first().message
         channel = member.guild.system_channel
         cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.get_command("help"))
         default_message = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
