@@ -342,11 +342,14 @@ class DragonLog(commands.GroupCog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, entry: discord.AuditLogEntry) -> None:
-        if entry != discord.AuditLogEntry:
+        if isinstance(entry, discord.message.Message):
+            message = entry
+        elif entry != discord.AuditLogEntry:
             self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
             return
 
-        message: discord.Message = entry.target
+        # message: discord.Message = entry.target
+
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
             return
