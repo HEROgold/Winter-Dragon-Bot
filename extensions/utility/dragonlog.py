@@ -49,38 +49,54 @@ class DragonLog(commands.GroupCog):
         if not guild:
             self.logger.debug("No guild during DragonLog channel fetching")
             return None, None
-        self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
-        if log_category is None:
-            log_category = None
-            mod_channel = None
-        else:
-            log_channel_name = log_category.value
-            self.logger.debug(f"Matched: {log_channel_name=}, {log_category=}")
-            with Session(engine) as session:
-                channel = session.query(Channel).where(Channel.guild_id == guild.id, Channel.name == log_channel_name).first()
-                mod_channel = discord.utils.get(
-                    guild.channels,
-                    id = channel.id
-                    ) or None
-            if mod_channel is not None:
-                await mod_channel.send(embed=embed)
 
+        self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
+
+        if log_category is not None:
+            await self.send_log_to_category(log_category, guild, embed)
+        else:
+            await self.send_log_to_global(guild, embed)
+
+
+    async def send_log_to_global(
+        self,
+        guild: discord.Guild,
+        embed: discord.Embed
+    ) -> None:
         with Session(engine) as session:
-            result = session.query(Channel).where(
+            channel = session.query(Channel).where(
                 Channel.guild_id == guild.id,
                 Channel.name == LogCategories.GLOBAL.value
-            )
-            channel = result.first()
+            ).first()
             self.logger.debug(f"{channel=}")
-            global_log_channel = discord.utils.get(
-                guild.channels,
-                id = channel.id
-                ) or None
+
+            global_log_channel = discord.utils.get(guild.channels, id=channel.id) or None
+
         self.logger.debug(f"Found: {LogCategories.GLOBAL=} as {global_log_channel=}")
         if global_log_channel is not None:
             await global_log_channel.send(embed=embed)
 
-        self.logger.debug(f"Send logs to named and global log channels {log_channel_name=}, {global_log_channel=}")
+        self.logger.debug(f"Send logs to {global_log_channel=}")
+
+
+    async def send_log_to_category(
+        self,
+        log_category: LogCategories,
+        guild: discord.Guild,
+        embed: discord.Embed
+    ) -> None:
+        log_channel_name = log_category.value
+
+        with Session(engine) as session:
+            channel = session.query(Channel).where(
+                    Channel.guild_id == guild.id,
+                    Channel.name == log_channel_name
+                ).first()
+
+        if mod_channel := discord.utils.get(guild.channels, id=channel.id):
+            await mod_channel.send(embed=embed)
+
+        self.logger.debug(f"Send logs to {log_channel_name=}")
 
 
     def get_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
