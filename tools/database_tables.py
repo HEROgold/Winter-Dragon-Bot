@@ -246,7 +246,7 @@ class Suggestion(Base):
 
 
 # TODO: look at lobby database, create association table to map votes to users and polls.
-# TODO: restructure
+# TODO: restructure, reflect updates in polls extension/cog as well.
 class Poll(Base):
     __tablename__ = "polls"
 
@@ -350,7 +350,7 @@ try:
     with Session(engine) as session:
         for i in all_tables:
             logger.debug(f"Checking for existing database table: {i}")
-            session.query(i).all()
+            session.query(i).first()
 except Exception as e:
     logger.exception(f"Error getting all tables: {e}")
     """Should only run max once per startup, creating missing tables"""

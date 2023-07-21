@@ -11,7 +11,6 @@ class Main:
     SHOW_LOGGED_IN: bool = True # Show message when logged in.
     LOG_MESSAGES: bool = False # Seems to not work, even with Discord.Intents.message turned ON
     CUSTOM_HELP: bool = True # Enable custom help command! (Preferred)
-    # USE_DATABASE: bool = True # Use Sql instead of files # TODO: Remove
     SUPPORT_GUILD_ID: int = 0 # Guild id of the bot's support guild
     LOG_LEVEL: logging = "DEBUG"
     LOG_PATH: str = "./logs" # Path where logs are saved.

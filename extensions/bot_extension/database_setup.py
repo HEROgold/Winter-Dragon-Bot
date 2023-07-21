@@ -44,6 +44,10 @@ class DatabaseSetup(commands.Cog):
             self.logger.debug(f"{type(channel)=}")
             return
 
+        if not guild:
+            self.logger.warning(f"No guild found: {message=}")
+            return
+
         with Session(engine) as session:
             if session.query(Guild).where(Guild.id == guild.id).first() is None:
                 self.logger.info(f"Adding new {guild=} to Guild table")

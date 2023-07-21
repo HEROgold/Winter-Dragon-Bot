@@ -126,7 +126,7 @@ class Tickets(commands.GroupCog):
 
     @tasks.loop(seconds=3600)
     async def database_cleanup(self) -> None:
-        self.logger.debug("cleaning tickets")
+        self.logger.info("cleaning tickets")
         with Session(engine) as session:
             seven_days_from_today = datetime.datetime.now() - datetime.timedelta(days=7)
             tickets = session.query(DbTickets).where(
