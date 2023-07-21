@@ -48,7 +48,6 @@ class NeverHaveIEver(commands.GroupCog):
         emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
         emb.add_field(name="I Have", value="✅")
         emb.add_field(name="Never", value="⛔")
-        # TODO: Add emoji's directly using the interaction. > look at poll 162
         send_msg = await interaction.channel.send(embed=emb)
         await send_msg.add_reaction("✅")
         await send_msg.add_reaction("⛔")
