@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Welcome as WelcomeDb
 from tools.database_tables import Session, engine
@@ -15,7 +15,7 @@ from tools.database_tables import Session, engine
 class Welcome(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @commands.Cog.listener()

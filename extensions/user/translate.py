@@ -5,14 +5,14 @@ import flag
 import openai
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 
 
 class Translate(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        openai.api_key = config.Tokens.OPEN_API_KEY
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        openai.api_key = config["Tokens"]["open_api_key"]
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @commands.Cog.listener()
@@ -30,12 +30,12 @@ class Translate(commands.Cog):
         clean_content = reaction.message.clean_content
 
         self.logger.debug(f"translating message for {member}: {reaction.message}")
-        if len(clean_content) >= config.Translate.LIMIT:
+        if len(clean_content) >= config["Translate"]["limit"]:
             emb = discord.Embed(title="Cannot Translate", description="The message is too long to translate")
         else:
             emb = self.get_response(member, land_code, clean_content)
 
-        if config.Translate.DM_INSTEAD == True:
+        if config["Translate"]["dm_instead"] == True:
             await dm.send(embed=emb)
         else:
             await reaction.message.reply(embed=emb)
@@ -51,7 +51,7 @@ class Translate(commands.Cog):
                 model= "text-davinci-003",
                 prompt= f"Translate `{clean_content}` into {land_code}",
                 temperature=0.3,
-                max_tokens=config.Translate.LIMIT,
+                max_tokens=config["Translate"]["limit"],
                 top_p=1.0,
                 frequency_penalty=0.0,
                 presence_penalty=0.0

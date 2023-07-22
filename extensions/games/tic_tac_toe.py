@@ -10,7 +10,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, View
 
-import config
+from tools.config_reader import config
 from tools.database_tables import AssociationUserLobby as AUL, Game
 from tools.database_tables import Lobby, ResultDuels, Session, engine
 
@@ -34,7 +34,7 @@ class TicTacToe(commands.GroupCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     async def update_view(self, view: discord.ui.View, *items) -> discord.ui.View:
@@ -377,7 +377,7 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         # A View can only contain up to 5 rows -- each row can only have 5 buttons.
         # Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
         super().__init__(style=discord.ButtonStyle.secondary, label='\u200b', row=y)
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.x = x
         self.y = y
 
@@ -441,7 +441,7 @@ class TicTacToeGame(discord.ui.View):
         self.player_o = player_two
         self.current_player = self.player_x.id
         self.game_data = game_data
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.board = [
             [0, 0, 0],
             [0, 0, 0],

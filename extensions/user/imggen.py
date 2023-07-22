@@ -8,7 +8,7 @@ from craiyon import Craiyon
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 import rainbow
 
 
@@ -17,7 +17,7 @@ class Image(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.CrAIyonDataBase = "./database/crAIyon/"
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @tasks.loop(seconds=10)

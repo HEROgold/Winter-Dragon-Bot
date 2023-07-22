@@ -5,17 +5,16 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 import rainbow
 from tools.database_tables import NhieQuestion, Suggestion, engine, Session
 
 NHIE = "nhie"
 
-
 class NeverHaveIEver(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.set_default_data()
 
     def set_default_data(self) -> None:
@@ -73,7 +72,7 @@ class NeverHaveIEver(commands.GroupCog):
         name = "add_verified",
         description = "Add all questions stored in the NHIE database file, to the questions data section."
         )
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     async def slash_nhie_add_verified(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner

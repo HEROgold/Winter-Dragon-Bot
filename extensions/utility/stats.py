@@ -6,7 +6,7 @@ import sqlalchemy
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 import rainbow
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
@@ -18,7 +18,7 @@ STATS = "stats"
 class Stats(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @commands.Cog.listener()
@@ -237,7 +237,7 @@ class Stats(commands.GroupCog):
         await interaction.followup.send("Removed stats channels")
 
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     @app_commands.command(name="reset", description="Reset stats of all servers")
     async def reset_stats(self, interaction:discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):

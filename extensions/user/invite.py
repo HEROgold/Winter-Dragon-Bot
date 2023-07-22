@@ -5,13 +5,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 
 
 class Invite(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @app_commands.command(
@@ -31,7 +31,7 @@ class Invite(commands.GroupCog):
         description="get invited to the official support server"
     )
     async def slash_support(self, interaction: discord.Interaction) -> None:
-        guild: discord.Guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID) or await self.bot.fetch_guild(config.Main.SUPPORT_GUILD_ID)
+        guild: discord.Guild = self.bot.get_guild(int(config["Main"]["support_guild_id"])) or await self.bot.fetch_guild(int(config["Main"]["support_guild_id"]))
         channel = guild.system_channel or guild.channels[0]
         invite = await channel.create_invite(max_uses=1, max_age=60, reason=f"Support command used by {interaction.user.mention}")
         await interaction.response.send_message(invite.url, ephemeral=True)

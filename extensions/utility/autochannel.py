@@ -5,11 +5,11 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import sqlalchemy
 
-import config
+from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 from tools.database_tables import AutochannelBlacklist as AAB
-from tools.database_tables import AutochannelBlacklist as AAW
+from tools.database_tables import AutochannelWhitelist as AAW
 
 
 # TODO
@@ -21,13 +21,14 @@ from tools.database_tables import AutochannelBlacklist as AAW
 AC_TYPE = "autochannel"
 
 
+
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(manage_channels = True)
 @app_commands.checks.bot_has_permissions(manage_channels = True)
 class Autochannel(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.act = app_command_tools.Converter(bot=self.bot)
 
 
@@ -40,9 +41,9 @@ class Autochannel(commands.GroupCog):
         with Session(engine) as session:
             results = session.query(Channel).where(
                 Channel.type == AC_TYPE,
-                Channel.name != f"{config.Autochannel.AUTOCHANNEL_NAME} category",
-                Channel.name != f"{config.Autochannel.AUTOCHANNEL_NAME} text",
-                Channel.name != f"{config.Autochannel.AUTOCHANNEL_NAME} voice",
+                Channel.name != f"{config['Autochannel']['AUTOCHANNEL_NAME']} category",
+                Channel.name != f"{config['Autochannel']['AUTOCHANNEL_NAME']} text",
+                Channel.name != f"{config['Autochannel']['AUTOCHANNEL_NAME']} voice",
             )
             channels = results.all()
             self.logger.debug(f"to clean: {channels=}")
@@ -96,8 +97,8 @@ class Autochannel(commands.GroupCog):
     #     self.logger.debug(f"Cleaning {guild.name=} Auto channels")
     #     cleaned = False
     #     for key, channels in list(autochannel_categories.items()):
-    #         if key == config.Autochannel.AUTOCHANNEL_NAME:
-    #             self.logger.debug(f"Skipping clean: {guild.name}, {key == config.Autochannel.AUTOCHANNEL_NAME=}")
+    #         if key == config['Autochannel']['AUTOCHANNEL_NAME']:
+    #             self.logger.debug(f"Skipping clean: {guild.name}, {key == config['Autochannel']['AUTOCHANNEL_NAME']=}")
     #             continue
     #         cleaned = await self._clean_channels(channels, guild)
     #         if cleaned == False:
@@ -192,9 +193,9 @@ class Autochannel(commands.GroupCog):
         guild: discord.Guild,
         overwrites: discord.PermissionOverwrite
     ) -> None:
-        category_channel = await self._get_autochannel_category(guild, overwrites, config.Autochannel.AUTOCHANNEL_NAME)
-        voice_channel = await self._get_autochannel_voice(guild, category_channel, config.Autochannel.AUTOCHANNEL_NAME)
-        text_channel = await self._get_autochannel_text(guild, category_channel, config.Autochannel.AUTOCHANNEL_NAME)
+        category_channel = await self._get_autochannel_category(guild, overwrites, config['Autochannel']['AUTOCHANNEL_NAME'])
+        voice_channel = await self._get_autochannel_voice(guild, category_channel, config['Autochannel']['AUTOCHANNEL_NAME'])
+        text_channel = await self._get_autochannel_text(guild, category_channel, config['Autochannel']['AUTOCHANNEL_NAME'])
         
         await voice_channel.edit(name="Join Me!", reason="Autochannel rename")
         await text_channel.edit(name="Autochannel Info", reason="Autochannel rename")
@@ -299,7 +300,7 @@ class Autochannel(commands.GroupCog):
 
         guild = member.guild
         overwrites = self._create_overwrites(member)
-        ac_voice_channel = await self._get_autochannel_voice(guild, category_channel, config.Autochannel.AUTOCHANNEL_NAME)
+        ac_voice_channel = await self._get_autochannel_voice(guild, category_channel, config['Autochannel']['AUTOCHANNEL_NAME'])
 
         if after.channel != ac_voice_channel:
             return

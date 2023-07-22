@@ -6,15 +6,14 @@ import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands
 
-import config
-
+from tools.config_reader import config
 
 def memoize(func):
     """
     (c) 2021 Nathan Henrie, MIT License
     https://n8henrie.com/2021/11/decorator-to-memoize-sync-or-async-functions-in-python/
     """
-    logger = logging.getLogger(f"{config.Main.BOT_NAME}.memoize")
+    logger = logging.getLogger(f"{config['Main']['bot_name']}.memoize")
     cache = {}
 
     async def memoized_async_func(*args, **kwargs) -> Any:
@@ -54,7 +53,7 @@ class Converter:
     def __init__(self, bot: commands.Bot) -> Self:
         self.bot = bot
         self.tree = self.bot.tree
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     def is_group(self, app_command: app_commands.AppCommand) -> bool:
         self.logger.debug(f"Checking is_group: {app_command.name}")

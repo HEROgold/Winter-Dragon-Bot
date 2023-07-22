@@ -7,7 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 
@@ -36,7 +36,7 @@ LOG_CATEGORY = "LOG-CATEGORY"
 class DragonLog(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.act = app_command_tools.Converter(bot=self.bot)
 
 
@@ -491,7 +491,7 @@ class DragonLog(commands.GroupCog):
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     @app_commands.command(
         name = "update",
         description = "Update DragonLog channels"
