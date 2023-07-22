@@ -75,7 +75,12 @@ class Steam(commands.GroupCog):
         return self._get_html_from_url()
 
 
-    def _get_html_from_url(self, url: str = config["Steam"]["url"]) -> str:
+    def _get_html_from_url(self, url: str = None) -> str:
+        if url is None:
+            # FIXME: doesn't get sales/url from config
+            # url = config["Steam"]["url"]
+            url = "https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1&supportedlang=english"
+
         requests.get(url)
         r = requests.get(url)
         self.logger.debug("Returning Steam html from url")
