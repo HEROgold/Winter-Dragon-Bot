@@ -35,9 +35,7 @@ config = ConfigParserSingleton().config
 
 def is_valid() -> None:
     for section in config.sections():
-        print(f"{section=}")
         for setting in config.options(section):
-            print(f"{setting=}, value={config[section][setting]}")
             if config[section][setting] == "!!":
                 return False
     return True
