@@ -12,13 +12,13 @@ from logging.handlers import RotatingFileHandler
 import discord
 from discord.ext import commands, tasks
 
-from tools.database_tables import logger as sql_logger
+from tools.config_reader import config
+from tools.config_reader import is_valid as config_validator
+from tools.config_reader import get_invalid as get_invalid_configs
 
-try:
-    import config
-except ModuleNotFoundError:
-    shutil.copy("./templates/config_template.py", "./config.py")
-    import config
+
+if not config_validator():
+    raise ValueError(f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}")
 
 
 Intents = discord.Intents.none()
@@ -32,27 +32,27 @@ Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
 
-bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config.Main.PREFIX), case_insensitive=True)
+bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), case_insensitive=True)
 bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
 
 
 def setup_logging(logger: logging.Logger, filename: str) -> None:
-    logger.setLevel(config.Main.LOG_LEVEL)
+    logger.setLevel(config["Main"]["log_level"])
     # handler = logging.FileHandler(filename=filename, encoding="utf-8", mode="w")
     handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
     logger.addHandler(handler)
 
 
-if config.Main.CUSTOM_HELP:
+if config["Main"]["custom_help"]:
     bot.remove_command("help")
 
 
 @bot.event
 async def on_ready() -> None:
     print("Bot is running!")
-    if config.Main.SHOW_LOGGED_IN == True:
+    if config["Main"]["show_logged_in"] == True:
         bot_logger.info(f"Logged on as {bot.user}!")
 
 
@@ -60,14 +60,14 @@ async def main() -> None:
     async with bot:
         await mass_load()
         # await bot.load_extension("jishaku")
-        await bot.start(config.Tokens.DISCORD_TOKEN)
+        await bot.start(config["Tokens"]["discord_token"])
         daily_save_logs.start()
 
 
 def logs_size_limit_check(size_in_kb: int) -> bool:
     total_size = sum(
         os.path.getsize(os.path.join(root, file))
-        for root, _, files in os.walk(config.Main.LOG_PATH)
+        for root, _, files in os.walk(config["Main"]["log_path"])
         for file in files
     )
     bot_logger.debug(f"{total_size=} {size_in_kb=}")
@@ -75,10 +75,9 @@ def logs_size_limit_check(size_in_kb: int) -> bool:
 
 
 def delete_oldest_saved_logs() -> None:
-    oldest_files = sorted(
-        (
+    oldest_files = sorted((
             os.path.join(root, file)
-            for root, _, files in os.walk(config.Main.LOG_PATH)
+            for root, _, files in os.walk(config["Main"]["log_path"])
             for file in files
         ),
         key=os.path.getctime,
@@ -89,29 +88,36 @@ def delete_oldest_saved_logs() -> None:
     regex = r"(\./logs)(/|\d|-|_)+"
     folder_path = re.match(regex, oldest_files[0])[0]
     bot_logger.info(f"deleting old logs for space: {folder_path=}")
+
     for file in os.listdir(folder_path):
         os.remove(f"{folder_path}{file}")
     os.rmdir(folder_path)
 
 
 def save_logs() -> None:
-    while logs_size_limit_check(config.Main.LOG_SIZE_KB_LIMIT):
+    while logs_size_limit_check(int(config["Main"]["log_size_kb_limit"])):
         delete_oldest_saved_logs()
-    if not os.path.exists(config.Main.LOG_PATH):
-        os.mkdir(config.Main.LOG_PATH)
+
+    if not os.path.exists(config["Main"]["log_path"]):
+        os.mkdir(config["Main"]["log_path"])
+
     log_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    if not os.path.exists(f"{config.Main.LOG_PATH}/{log_time}"):
-        os.mkdir(f"{config.Main.LOG_PATH}/{log_time}")
+
+    if not os.path.exists(f"{config['Main']['log_path']}/{log_time}"):
+        os.mkdir(f"{config['Main']['log_path']}/{log_time}")
+
     bot_logger.info("Saving log files")
     bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - bot.launch_time}")
+
     for file in os.listdir("./"):
         if file.endswith(".log") or file[:-2].endswith(".log"):
             print(file)
-            shutil.copy(src=f"./{file}", dst=f"{config.Main.LOG_PATH}/{log_time}/{file}")
+            shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
     logging_rollover()
 
 
 def logging_rollover() -> None:
+    from tools.database_tables import logger as sql_logger
     log_handlers = []
     log_handlers.extend(sql_logger.handlers)
     log_handlers.extend(discord_logger.handlers)
@@ -122,7 +128,7 @@ def logging_rollover() -> None:
 
 
 def delete_toplevel_logs() -> None:
-    if config.Main.KEEP_LATEST_LOGS:
+    if config["Main"]["keep_latest_logs"]:
         return
     for file in os.listdir("./"):
         if file.endswith(".log") or file[:-2].endswith(".log"):
@@ -139,7 +145,7 @@ async def get_extensions() -> list[str]:
     extensions = []
     for root, _, files in os.walk("extensions"):
         extensions.extend(
-            os.path.join(root, file[:-3]).replace("/", ".")
+            os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
             for file in files
             if file.endswith(".py")
         )
@@ -189,7 +195,7 @@ if __name__ == "__main__":
 
     delete_toplevel_logs()
 
-    bot_logger = logging.getLogger(f"{config.Main.BOT_NAME}")
+    bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
     discord_logger = logging.getLogger("discord")
     setup_logging(bot_logger, "bot.log")
     setup_logging(discord_logger, "discord.log")

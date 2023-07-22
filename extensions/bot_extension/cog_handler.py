@@ -6,13 +6,12 @@ import discord
 from discord import NotFound, app_commands
 from discord.ext import commands, tasks
 
-import config
-
+from tools.config_reader import config
 
 class AutoCogReloader(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.data = {
             "timestamp": datetime.datetime.now().timestamp(),
             "files": {},
@@ -36,7 +35,7 @@ class AutoCogReloader(commands.Cog):
                     continue
                 # self.logger.debug(f"Getting data from {file}")
                 file_path = os.path.join(root, file)
-                cog_path = os.path.join(root, file[:-3]).replace("/", ".")
+                cog_path = os.path.join(root, file)
                 with open(file_path, "r") as f:
                     edit_timestamp = os.path.getmtime(file_path)
                     self.data["files"][file] = {
@@ -76,11 +75,11 @@ class AutoCogReloader(commands.Cog):
 
 
 
-@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+@app_commands.guilds(int(config["Main"]["support_guild_id"]))
 class CogsC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.DATABASE_NAME = self.__class__.__name__
 
 
@@ -88,7 +87,7 @@ class CogsC(commands.GroupCog):
         extensions = []
         for root, _, files in os.walk("extensions"):
             extensions.extend(
-                os.path.join(root, file[:-3]).replace("/", ".")
+                os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
                 for file in files
                 if file.endswith(".py")
             )

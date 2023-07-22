@@ -4,19 +4,19 @@ import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Session, engine, Game, LookingForGroup
 
 
 # TODO: Allow requests for adding new game types
-@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+@app_commands.guilds(int(config["Main"]["support_guild_id"]))
 class Lfg(commands.GroupCog):
     GAMES = ["League of Legends"]
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.converter = app_command_tools.Converter(bot)
         with Session(engine) as session:
             self.games = session.query(Game).all()

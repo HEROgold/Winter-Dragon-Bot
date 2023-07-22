@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from tools.config_reader import config
 import rainbow
 
 

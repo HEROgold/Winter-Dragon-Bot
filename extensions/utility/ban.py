@@ -5,14 +5,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
-# from tools.database_tables Session, engine
+from tools.config_reader import config# from tools.database_tables Session, engine
 
 
 class TempBan(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @tasks.loop(seconds=3600)
@@ -85,7 +84,7 @@ class TempBan(commands.Cog):
         time = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=self.get_seconds(seconds, minutes, hours, days))).timestamp()
         epoch = int(time)
         roles = [role.id for role in member.roles]
-        self.data[member.id]= {"Name" : member.name, "Roles": roles, "Epoch_unban" : epoch, "Reason" : reason_msg, "guild_id" : interaction.guild.id}
+        self.data[member.id] = {"Name" : member.name, "Roles": roles, "Epoch_unban" : epoch, "Reason" : reason_msg, "guild_id" : interaction.guild.id}
         await self.set_data(data=self.data)
 
         banned_role = discord.utils.get(interaction.guild.roles, name="Banned")

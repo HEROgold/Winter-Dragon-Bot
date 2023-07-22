@@ -5,17 +5,17 @@ import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
 
 
-@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+@app_commands.guilds(int(config["Main"]["support_guild_id"]))
 class DatabaseSetup(commands.Cog):
     bot: commands.Bot
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     async def cog_load(self) -> None:

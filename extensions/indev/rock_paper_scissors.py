@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button
 
-import config
+from tools.config_reader import config
 from tools.database_tables import ResultDuels, Session, engine
 
 # TODO: change command /rps new
@@ -17,7 +17,7 @@ from tools.database_tables import ResultDuels, Session, engine
 class RpsButton(Button['RPSView']):
     def __init__(self, label: str, style: discord.ButtonStyle) -> None:
         super().__init__(label=label, style=style)
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         view = self._view
@@ -60,7 +60,7 @@ class RPSView(discord.ui.View):
         player_2: discord.Member = None
     ) -> None:
         super().__init__()
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.p1_choice = first_choice
         self.p2_choice = second_choice
         self.player_1 = player_1
@@ -126,7 +126,7 @@ class RockPaperScissors(commands.GroupCog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @app_commands.checks.cooldown(1, 30)

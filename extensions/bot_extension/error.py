@@ -1,3 +1,4 @@
+import configparser
 import datetime
 import logging
 
@@ -8,6 +9,10 @@ from discord.ext import commands
 from config import Error as CE
 from config import Main as CM
 from tools import app_command_tools
+
+
+config = configparser.ConfigParser()
+config.read("config.ini")
 
 
 # FIXME: Doesn't work when a listener() raises an error.

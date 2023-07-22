@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 import rainbow
 from tools import app_command_tools
 from tools.database_tables import Session
@@ -27,7 +27,7 @@ class Steam(commands.GroupCog):
         self.htmlFile = './database/SteamPage.html'
         self.htmlFileBackup = './database/SteamPageBackup.html'
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.setup_html_files()
         self.act = app_command_tools.Converter(bot=self.bot)
 
@@ -75,7 +75,7 @@ class Steam(commands.GroupCog):
         return self._get_html_from_url()
 
 
-    def _get_html_from_url(self, url: str = config.Steam.URL) -> str:
+    def _get_html_from_url(self, url: str = config["Steam"]["url"]) -> str:
         requests.get(url)
         r = requests.get(url)
         self.logger.debug("Returning Steam html from url")

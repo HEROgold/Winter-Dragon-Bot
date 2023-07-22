@@ -4,13 +4,13 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 
 
 class Sync(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     async def cog_load(self) -> None:
         self.update.start()
@@ -65,13 +65,13 @@ class Sync(commands.Cog):
         await self.bot.wait_until_ready()
 
 
-    @app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     @app_commands.command(name="sync", description="Sync all commands on all servers (Bot dev only)")
     async def slash_sync(self, interaction: discord.Interaction) -> None:
         if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
         global_sync = await self.bot.tree.sync()
-        guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+        guild = self.bot.get_guild(int(config["Main"]["support_guild_id"]))
         local_sync = await self.bot.tree.sync(guild=guild)
         self.logger.warning(f"{interaction.user} Synced slash commands!")
         self.logger.debug(f"Synced commands: {global_sync=}, {local_sync=}")
@@ -87,7 +87,7 @@ class Sync(commands.Cog):
         if not await self.bot.is_owner(ctx.author):
             raise commands.NotOwner
         global_sync = await self.bot.tree.sync()
-        guild = self.bot.get_guild(config.Main.SUPPORT_GUILD_ID)
+        guild = self.bot.get_guild(int(config["Main"]["support_guild_id"]))
         local_sync = await self.bot.tree.sync(guild=guild)
         self.logger.warning(f"{ctx.author} Synced slash commands!")
         self.logger.debug(f"Synced commands: {global_sync=} {local_sync=}")

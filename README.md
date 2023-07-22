@@ -16,6 +16,8 @@ This project runs using docker. With 2 main containers, one for python 3.11 and 
 
 Using `docker-compose build`, and `docker-compose up` should suffice to start and run the bot.
 
+On the 1st time, it will fail, because some config settings need to be adjusted. These are marked with `!!`
+
 ## Features:
 
 PostgreSQL

@@ -8,7 +8,7 @@ from discord.ext import commands
 from discord.ui import Button, View
 from discord import app_commands
 
-import config
+from tools.config_reader import config
 import rainbow
 
 
@@ -16,7 +16,7 @@ import rainbow
 class Help(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @overload
@@ -244,7 +244,7 @@ class HelpView(discord.ui.View):
 class CopiedDropdownHelp(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     # @app_commands.describe(group = "The specific group you want help on.")
     @app_commands.command(name="helpcopied", description="Gives a brief description of all features.")

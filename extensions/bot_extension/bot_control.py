@@ -9,14 +9,14 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import psutil
 
-import config
+from tools.config_reader import config
 
 
-@app_commands.guilds(config.Main.SUPPORT_GUILD_ID)
+@app_commands.guilds(int(config["Main"]["support_guild_id"]))
 class BotC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.STATUS = [
             "dnd",
             "do_not_disturb",
@@ -69,29 +69,28 @@ class BotC(commands.GroupCog):
     async def on_ready(self) -> None:
         self.activity_switch.start()
 
-    @tasks.loop(seconds=config.Activity.PERIODIC_TIME)
+    @tasks.loop(seconds=int(config["Activity"]["periodic_time"]))
     async def activity_switch(self) -> None:
-        if config.Activity.RANDOM_ACTIVITY != True:
+        if config["Activity"]["random_activity"] != "True":
             self.activity_switch.stop()
             return
         status, activity = self.get_random_activity()
-        # if status is None or activity is None:
-            # activity = discord.Activity(type=discord.ActivityType.competing, name="Licking wedding cakes")
+
         await self.bot.change_presence(status=status, activity=activity)
         self.logger.debug(f"Activity and status set to {activity}")
-        if config.Activity.PERIODIC_CHANGE != True:
+        if config["Activity"]["periodic_change"] != "True":
             self.activity_switch.stop()
             return
 
 
-    def get_random_activity(self) -> tuple[discord.Status, discord.Activity] | None:
+    def get_random_activity(self) -> tuple[discord.Status, discord.Activity]:
         status = None
         activity_type = None
         while status in [discord.Status.invisible, discord.Status.offline, None]:
-            status:discord.Status = random.choice(self.STATUS_TYPE)
+            status: discord.Status = random.choice(self.STATUS_TYPE)
         while activity_type in [discord.ActivityType.custom, None]:
             activity_type:discord.ActivityType = random.choice(self.ACTIVITY_TYPE)
-        activity:discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUS_MSG))
+        activity: discord.Activity = discord.Activity(type=activity_type, name=random.choice(self.STATUS_MSG))
         return status, activity
 
 
@@ -106,7 +105,7 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
             return
         elif status.lower() == "random" and activity.lower() == "random":
-            config.Activity.PERIODIC_CHANGE = True
+            config["Activity"]["PERIODIC_CHANGE"] = "True"
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.response.send_message("I will randomly change my status and activity", ephemeral=True)
             self.activity_switch.start()
@@ -122,7 +121,7 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message("Updated my activity!", ephemeral=True)
             self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
             self.logger.info(f"Turned off periodic activity change by {interaction.user}")
-            config.Activity.PERIODIC_CHANGE = False
+            config["Activity"]["PERIODIC_CHANGE"] = "False"
             self.activity_switch.stop()
 
     @slash_bot_activity.autocomplete("status")

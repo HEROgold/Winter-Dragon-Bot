@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 from tools.database_tables import Reminder as ReminderDb
 from tools.database_tables import engine, Session
 
@@ -13,7 +13,7 @@ from tools.database_tables import engine, Session
 class Reminder(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     def get_seconds(self, seconds:int=0, minutes:int=0, hours:int=0, days:int=0) -> int:
         hours += days * 24

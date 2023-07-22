@@ -7,7 +7,7 @@ import discord.ui
 from discord import app_commands
 from discord.ext import commands, tasks
 
-import config
+from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import engine, Session
 from tools.database_tables import Channel
@@ -23,7 +23,7 @@ DB_CHANNEL_TYPE = "tickets"
 class TicketView(discord.ui.View):
     def __init__(self, *, timeout: float | None = 180, channel: discord.abc.GuildChannel) -> None:
         super().__init__(timeout=timeout)
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.cooldown = commands.CooldownMapping.from_cooldown(1, config.Tickets.MAX_COOLDOWN, commands.BucketType.member)
         self.channel: discord.TextChannel = channel
 
@@ -117,7 +117,7 @@ class Tickets(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.act = app_command_tools.Converter(bot=bot)
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     async def cog_load(self) -> None:
@@ -327,7 +327,7 @@ class Tickets(commands.GroupCog):
 
 #     def __init__(self, bot) -> None:
 #         self.bot = bot
-#         self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+#         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 #         self.act = app_command_tools.Converter(bot=self.bot)
 
 

@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 import requests
 
-import config
+from tools.config_reader import config
 from tools.database_tables import ResultMassiveMultiplayer as ResultMM
 from tools.database_tables import AssociationUserHangman as AUH
 from tools.database_tables import Hangman as HangmanDb
@@ -156,7 +156,7 @@ def create_hangman(guess_amount: int) -> str:
 class HangmanButton(discord.ui.Button):
     def __init__(self, label: str, style: discord.ButtonStyle) -> None:
         super().__init__(label=label, style=style)
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         try:
@@ -173,7 +173,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         # sourcery skip: low-code-quality
-        logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         logger.debug(f"Submitting {self.letter.value=}")
 
         # Add full game logic here, and use DB to keep track of chosen letters, progress etc.
@@ -299,7 +299,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
 class Hangman(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config.Main.BOT_NAME}.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
         with Session(engine) as session:
             self.game = session.query(Game).where(Game.name == "hangman").first()
