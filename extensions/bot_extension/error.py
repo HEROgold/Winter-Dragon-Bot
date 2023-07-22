@@ -6,8 +6,6 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from config import Error as CE
-from config import Main as CM
 from tools import app_command_tools
 
 
@@ -20,7 +18,7 @@ class Error(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot: commands.Bot = bot
         self.help_msg = ""
-        self.logger = logging.getLogger(f"{CM.BOT_NAME}.error")
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.act = app_command_tools.Converter(bot=self.bot)
 
     # -> --- Change on_error to self.on_error on load
@@ -107,9 +105,9 @@ class Error(commands.Cog):
         self.logger.debug(f"ErrorType: {type(error)}, error: {error.args}")
         dm = await self.get_dm(x)
         code = datetime.datetime.now(datetime.timezone.utc).timestamp()
-        if CE.ALWAYS_LOG_ERRORS == True:
+        if config["Error"]["always_log_errors"] == "True":
             self.logger.exception(f"{error}")
-        if CE.IGNORE_ERRORS == True:
+        if config["Error"]["ignore_errors"] == "True":
             return
         invite_command = await self.act.get_app_command(self.bot.tree.get_command("invite"))
         help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
