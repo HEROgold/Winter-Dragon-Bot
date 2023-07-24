@@ -163,4 +163,5 @@ servers/docker-scpsl/
 servers/docker-conanexiles/
 database/SteamPage.html
 database/SteamPageBackup.html
+database/img
 logon.txt
