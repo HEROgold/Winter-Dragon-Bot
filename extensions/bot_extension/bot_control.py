@@ -388,7 +388,6 @@ class BotC(commands.GroupCog):
                 )
             )
         scaler = max(values)
-        self.logger.debug(f"{[self.ram_percentages]=},\n{[self.cpu_percentages]=}")
 
         plt.plot(self.timestamps, [scaler * (i/100) for i in self.cpu_percentages], label="CPU Usage (%)")
         plt.plot(self.timestamps, [scaler * (i/100) for i in self.ram_percentages], label="RAM Usage (%)")
