@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import random
 import time
 
@@ -11,7 +12,8 @@ import psutil
 
 from tools.config_reader import config
 
-METRICS_FILE = "./database/img/system_metrics.png"
+IMG_DIR = "./database/img/"
+METRICS_FILE = f"{IMG_DIR}system_metrics.png"
 
 
 @app_commands.guilds(int(config["Main"]["support_guild_id"]))
@@ -396,6 +398,7 @@ class BotC(commands.GroupCog):
         plt.ylabel("Value")
         plt.title("System Metrics Over Time")
         plt.legend()
+        os.makedirs(IMG_DIR)
         plt.savefig(METRICS_FILE)
         plt.clf()
         # plt.show()
