@@ -33,7 +33,7 @@ class Uptime(commands.GroupCog):
                     time_difference = (now - last_time)
                     self.logger.debug(f"{time_difference=}, {last_time=}")
                 if presence.status in ["online", "dnd", "do-not-disturb", "idle"]:
-                    # TODO: create a chart, maybe.
+                    # TODO: create a pie chart
                     pass
                 elif presence.status in ["offline", "invisible"]:
                     pass
