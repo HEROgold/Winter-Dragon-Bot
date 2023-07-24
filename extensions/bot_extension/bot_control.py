@@ -398,7 +398,7 @@ class BotC(commands.GroupCog):
         plt.ylabel("Value")
         plt.title("System Metrics Over Time")
         plt.legend()
-        os.makedirs(IMG_DIR)
+        os.makedirs(IMG_DIR, exist_ok=True)
         plt.savefig(METRICS_FILE)
         plt.clf()
         # plt.show()
