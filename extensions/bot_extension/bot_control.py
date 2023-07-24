@@ -1,5 +1,4 @@
 import datetime
-import itertools
 import logging
 import random
 import time
@@ -7,9 +6,12 @@ import time
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
+from matplotlib import pyplot as plt
 import psutil
 
 from tools.config_reader import config
+
+METRICS_FILE = "./database/img/system_metrics.png"
 
 
 @app_commands.guilds(int(config["Main"]["support_guild_id"]))
@@ -63,11 +65,20 @@ class BotC(commands.GroupCog):
             "Touching a wedding cake",
             "Magically spawning a wedding cake"
         ]
+        self.timestamps = []
+        self.cpu_percentages = []
+        self.net_io_counters = []
+        self.ram_percentages = []
+        self.bytes_sent = []
+        self.bytes_received = []
+        self.packets_sent = []
+        self.packets_received = []
 
 
-    @commands.Cog.listener()
-    async def on_ready(self) -> None:
+    async def cog_load(self) -> None:
         self.activity_switch.start()
+        self.gather_metrics_loop.start()
+
 
     @tasks.loop(seconds=int(config["Activity"]["periodic_time"]))
     async def activity_switch(self) -> None:
@@ -212,7 +223,7 @@ class BotC(commands.GroupCog):
     # Potentially cleaner code \/ compared to code below that
     # add field names
     @app_commands.command(
-        name="test_performance",
+        name="performance",
         description="Show bot's Performance (Bot developer only)"
     )
     async def a(self, interaction: discord.Interaction) -> None:
@@ -224,6 +235,16 @@ class BotC(commands.GroupCog):
         end_tag = "```"
 
         worst_color = 0
+
+        field_names = [
+            "Cpu %",
+            "Memory %",
+            "Bytes Sent",
+            "Bytes Received",
+            "Packets Sent",
+            "Packets Received"
+        ]
+
         for i, value in enumerate([
             psutil.cpu_percent(),
             psutil.virtual_memory().percent,
@@ -245,7 +266,7 @@ class BotC(commands.GroupCog):
             worst_color = colors[0]
 
             embed.add_field(
-                name=f"{i}",
+                name=f"{field_names[i]}",
                 value=f"{ansi_color} {value} {end_tag}",
                 inline=False
             )
@@ -254,74 +275,23 @@ class BotC(commands.GroupCog):
         await interaction.response.send_message(embed=embed)
 
 
-    # TODO: Make and show a graph with 1 hour timeline.
     @app_commands.command(
-        name="performance",
+        name="performance_graph",
         description="Show bot's Performance (Bot developer only)"
     )
     async def slash_performance(self, interaction: discord.Interaction) -> None:
-        if not self.bot.is_owner(interaction.user):
+        if not await self.bot.is_owner(interaction.user):
             raise commands.NotOwner
-        
-        cpu_percent = psutil.cpu_percent()
-        ram_percent = psutil.virtual_memory().percent
-        percent_colors = list(map(self.get_percentage_colors, [cpu_percent, ram_percent]))
-        cpu_color, _ = percent_colors[0]
-        ram_color, _ = percent_colors[1]
 
-        bytes_sent = psutil.net_io_counters().bytes_sent
-        bytes_received = psutil.net_io_counters().bytes_recv
-        bytes_colors = list(map(self.get_bytes_colors, [bytes_sent, bytes_received]))
-        bytes_sent_color, _ = bytes_colors[0]
-        bytes_received_color, _ = bytes_colors[1]
+        self.gather_system_metrics()
+        self.plot_system_metrics()
 
-        packets_sent = psutil.net_io_counters().packets_sent
-        packets_received = psutil.net_io_counters().packets_recv
-        packets_colors = list(map(self.get_packets_colors, [packets_sent, packets_received]))
-        packets_sent_color, _ = packets_colors[0]
-        packets_received_color, _ = packets_colors[1]
+        try:
+            file = discord.File(METRICS_FILE)
+        except Exception:
+            file = None
 
-        colors = [i[1] for i in list(itertools.chain(percent_colors, bytes_colors, packets_colors))]
-        colors.sort(reverse=True)
-
-        embed = discord.Embed(
-            title="Performance",
-            color=colors[0],
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
-        )
-        end_tag = "```"
-        embed.add_field(
-            name="Bytes sent",
-            value=f"{bytes_sent_color} {bytes_sent} {end_tag}",
-            inline=False
-        )
-        embed.add_field(
-            name="Bytes received",
-            value=f"{bytes_received_color} {bytes_received} {end_tag}",
-            inline=False
-        )
-        embed.add_field(
-            name="Packets sent",
-            value=f"{packets_sent_color} {packets_sent} {end_tag}",
-            inline=False
-        )
-        embed.add_field(
-            name="Packets received",
-            value=f"{packets_received_color} {packets_received} {end_tag}",
-            inline=False
-        )
-        embed.add_field(
-            name="CPU usage",
-            value=f"{cpu_color} {cpu_percent}%{end_tag}",
-            inline=False
-        )
-        embed.add_field(
-            name="RAM usage",
-            value=f"{ram_color} {ram_percent}%{end_tag}",
-            inline=False
-        )
-
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(file=file) # embed=embed, 
 
 
     def get_colors(
@@ -358,6 +328,95 @@ class BotC(commands.GroupCog):
 
     def get_packets_colors(self, packets_count) -> tuple[str, int]:
         return self.get_colors(packets_count, 1_000_000_000)
+
+
+    # @tasks.loop(minutes=10)
+    @tasks.loop(seconds=1)
+    async def gather_metrics_loop(self) -> None:
+        self.gather_system_metrics()
+
+
+    def gather_system_metrics(self) -> None:
+        # Get the current timestamp
+        timestamp = time.time()
+        self.timestamps.append(timestamp)
+
+        # Get the CPU usage percentage
+        cpu_percent = psutil.cpu_percent()
+        self.cpu_percentages.append(cpu_percent)
+
+        # Get the network I/O counters
+        net_io = psutil.net_io_counters()
+        self.net_io_counters.append(net_io)
+
+        # Get the RAM percentage
+        ram_percent = psutil.virtual_memory().percent
+        self.ram_percentages.append(ram_percent)
+
+        # Get the bytes sent and received
+        bytes_sent_value = net_io.bytes_sent
+        self.bytes_sent.append(bytes_sent_value)
+        bytes_received_value = net_io.bytes_recv
+        self.bytes_received.append(bytes_received_value)
+
+        # Get the packets sent and received
+        packets_sent_value = net_io.packets_sent
+        packets_received_value = net_io.packets_recv
+        self.packets_sent.append(packets_sent_value)
+        self.packets_received.append(packets_received_value)
+
+        # Check if an hour has passed and update the data for the last hour
+        if timestamp - self.timestamps[0] > 3600:
+            self._remove_oldest_system_metrics()
+
+
+    def plot_system_metrics(self) -> None:
+        plt.plot(self.timestamps, [net_io.bytes_sent for net_io in self.net_io_counters], label="Bytes Sent")
+        plt.plot(self.timestamps, [net_io.bytes_recv for net_io in self.net_io_counters], label="Bytes Received")
+        plt.plot(self.timestamps, [net_io.packets_sent for net_io in self.net_io_counters], label="Packets Sent")
+        plt.plot(self.timestamps, [net_io.packets_recv for net_io in self.net_io_counters], label="Packets Received")
+
+        # Make the cpu and ram % fit the full scale of the plot/graph
+        values = []
+        for net_io in self.net_io_counters:
+            values.extend(
+                (
+                    net_io.bytes_sent,
+                    net_io.bytes_recv,
+                    net_io.packets_sent,
+                    net_io.packets_recv,
+                )
+            )
+        scaler = max(values)
+
+        plt.plot(self.timestamps, [scaler * (i/100) for i in self.cpu_percentages], label="CPU Usage (%)")
+        plt.plot(self.timestamps, [scaler * (i/100) for i in self.ram_percentages], label="RAM Usage (%)")
+
+        plt.xlabel("Time (seconds)")
+        plt.ylabel("Value")
+        plt.title("System Metrics Over Time")
+        plt.legend()
+        plt.savefig(METRICS_FILE)
+        plt.clf()
+        # plt.show()
+
+
+    def _remove_oldest_system_metrics(self) -> None:
+        self.timestamps.pop(0)
+        self.cpu_percentages.pop(0)
+        self.net_io_counters.pop(0)
+        self.ram_percentages.pop(0)
+        self.bytes_sent.pop(0)
+        self.bytes_received.pop(0)
+        self.packets_sent.pop(0)
+        self.packets_received.pop(0)
+
+
+    @gather_metrics_loop.before_loop
+    @activity_switch.before_loop # type: ignore
+    async def before_update(self) -> None:
+        self.logger.info("Waiting until bot is online")
+        await self.bot.wait_until_ready()
 
 
 async def setup(bot: commands.Bot) -> None:

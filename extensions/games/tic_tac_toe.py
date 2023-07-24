@@ -1,7 +1,7 @@
 import itertools
 import logging
 import os
-from typing import Callable, List
+from typing import Callable, Dict, List, TypedDict
 
 import discord
 import matplotlib.pyplot as plt
@@ -17,6 +17,12 @@ from tools.database_tables import Lobby, ResultDuels, Session, engine
 # TODO: Add ai if bot is challenged?
 
 GAME_NAME = "ttt"
+
+
+class GameData(TypedDict):
+    status: str
+    member1: Dict[str, int]
+    member2: Dict[str, int]
 
 
 @app_commands.guild_only()
@@ -156,7 +162,7 @@ class TicTacToe(commands.GroupCog):
             await interaction.response.send_message("Bot's cannot play.")
         await interaction.response.send_message(f"{interaction.user.mention} challenged {member.mention} in tic tac toe!")
         # resp_msg = await interaction.original_response()
-        game_data = {"status":"waiting", "member1":{"id": interaction.user.id}, "member2":{"id": member.id}}
+        game_data: GameData = {"status":"waiting", "member1":{"id": interaction.user.id}, "member2":{"id": member.id}}
         # self.data[str(resp_msg.id)] = game_data
         await self.start_game(interaction=interaction, game_data=game_data)
 
@@ -350,7 +356,7 @@ class TicTacToe(commands.GroupCog):
 # TODO: test db result on win/loss/tie
 # GAME start
 
-    async def start_game(self, interaction: discord.Interaction, game_data: dict = None) -> None:
+    async def start_game(self, interaction: discord.Interaction, game_data: GameData = None) -> None:
         game_data["status"] = "running"
         all_members = self.bot.get_all_members()
         p1 = discord.utils.get(all_members, id=game_data["member1"]["id"])
@@ -435,7 +441,7 @@ class TicTacToeGame(discord.ui.View):
     Tie = 2
     children: List[TicTacToeButton] # type: ignore
 
-    def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: dict) -> None:
+    def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: GameData) -> None:
         super().__init__()
         self.player_x = player_one
         self.player_o = player_two
