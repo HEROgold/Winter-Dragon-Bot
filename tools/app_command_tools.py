@@ -1,42 +1,12 @@
-from asyncio import iscoroutinefunction
 import logging
-from typing import Any, Self
+from typing import Self
 
 import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands
 
 from tools.config_reader import config
-
-def memoize(func):
-    """
-    (c) 2021 Nathan Henrie, MIT License
-    https://n8henrie.com/2021/11/decorator-to-memoize-sync-or-async-functions-in-python/
-    """
-    logger = logging.getLogger(f"{config['Main']['bot_name']}.memoize")
-    cache = {}
-
-    async def memoized_async_func(*args, **kwargs) -> Any:
-        key = (args, frozenset(sorted(kwargs.items())))
-        if key in cache:
-            logger.debug(f"returning cached async function {cache[key]=}")
-            return cache[key]
-        result = await func(*args, **kwargs)
-        cache[key] = result
-        logger.debug(f"caching async function {cache[key]=}")
-        return result
-
-    def memoized_sync_func(*args, **kwargs) -> Any:
-        key = (args, frozenset(sorted(kwargs.items())))
-        if key in cache:
-            logger.debug(f"returning cached function {cache[key]=}")
-            return cache[key]
-        result = func(*args, **kwargs)
-        cache[key] = result
-        logger.debug(f"caching function {cache[key]=}")
-        return result
-
-    return memoized_async_func if iscoroutinefunction(func) else memoized_sync_func
+from tools.caching import memoize
 
 
 class CommandNotFound(Exception):
