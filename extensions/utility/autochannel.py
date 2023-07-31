@@ -384,8 +384,8 @@ class Autochannel(commands.GroupCog):
         overwrites = default_overwrites.copy()
 
         with Session(engine) as session:
-            whitelist = session.query(AAW).where(AAW.id == member.id).all()
-            blacklist = session.query(AAB).where(AAB.id == member.id).all()
+            whitelist: list[AAW] = session.query(AAW).where(AAW.id == member.id).all()
+            blacklist: list[AAB] = session.query(AAB).where(AAB.id == member.id).all()
 
             for i in blacklist:
                 dc_user = discord.utils.get(member.guild.members, i.user_id)
