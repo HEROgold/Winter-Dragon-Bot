@@ -74,9 +74,8 @@ class WouldYouRather(commands.GroupCog):
         description = "Add all questions stored in the WYR database file, to the questions data section."
         )
     @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @commands.is_owner()
     async def slash_add_verified(self, interaction:discord.Interaction) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         with Session(engine) as session:
             result = session.query(Suggestion).where(Suggestion.type == WYR, Suggestion.is_verified == True)
             questions = result.all()

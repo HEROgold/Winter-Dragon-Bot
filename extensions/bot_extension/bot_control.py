@@ -108,9 +108,8 @@ class BotC(commands.GroupCog):
 
 
     @app_commands.command(name="activity", description="change bot activity")
+    @commands.is_owner()
     async def slash_bot_activity(self, interaction: discord.Interaction, status:str, activity:str, msg:str="") -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         if status.lower() not in self.STATUS:
             await interaction.response.send_message(f"Status not found, can only be\n{self.STATUS}",ephemeral=True)
             return
@@ -169,10 +168,9 @@ class BotC(commands.GroupCog):
         name = "announce",
         description = "Announce important messages on all servers the bot runs on"
         )
+    @commands.is_owner()
     @app_commands.guild_only()
     async def slash_bot_announce(self, interaction: discord.Interaction, msg:str) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         for guild in self.bot.guilds:
             await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
         await interaction.response.send_message("Message send to all update channels on all servers!", ephemeral=True)
@@ -182,11 +180,10 @@ class BotC(commands.GroupCog):
         name = "ping",
         description = "show latency"
     )
+    @commands.is_owner()
     async def slash_ping(self, interaction: discord.Interaction) -> None:
         # Credits go to https://discord.com/channels/336642139381301249/1080409171050115092
         # Modified their code to fit my needs
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
 
         latency = round(self.bot.latency * 1000)
 
@@ -281,9 +278,8 @@ class BotC(commands.GroupCog):
         name="performance_graph",
         description="Show bot's Performance (Bot developer only)"
     )
+    @commands.is_owner()
     async def slash_performance(self, interaction: discord.Interaction) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
 
         self.gather_system_metrics()
         self.plot_system_metrics()

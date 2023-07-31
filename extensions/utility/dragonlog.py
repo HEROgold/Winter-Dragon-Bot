@@ -491,14 +491,13 @@ class DragonLog(commands.GroupCog):
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
 
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     @app_commands.command(
         name = "update",
         description = "Update DragonLog channels"
         )
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @commands.is_owner()
     async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: str = None) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
 
