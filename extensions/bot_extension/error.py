@@ -135,8 +135,8 @@ class ErrorHandler:
         self.logger.debug(f"{type(error)=}, {error.args=}")
         
         if config["Error"]["always_log_errors"] == "True":
-            # TODO: add full traceback
-            self.logger.exception(f"always log: {error}")
+            self.logger.error("Always log error:")
+            self.logger.exception(error)
         if config["Error"]["ignore_errors"] == "True":
             return
 
