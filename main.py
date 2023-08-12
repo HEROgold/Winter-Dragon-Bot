@@ -86,15 +86,20 @@ def delete_oldest_saved_logs() -> None:
     # "./logs\\2023-05-08-00-10-27\\bot.log" matches into
     # /logs\\2023-05-08-00-10-27\\
     regex = r"(\./logs)(/|\d|-|_)+"
-    folder_path = re.match(regex, oldest_files[0])[0]
+    if os.name == "nt":
+        folder_path = re.match(regex, oldest_files[0])
+        # FIXME: folder_path=None
+    elif os.name == "posix":
+        folder_path = re.search(regex, oldest_files[0])[0]
     bot_logger.info(f"deleting old logs for space: {folder_path=}")
-
+    
     for file in os.listdir(folder_path):
         os.remove(f"{folder_path}{file}")
     os.rmdir(folder_path)
 
 
 def save_logs() -> None:
+    # FIXME: fix issue where logs stay on top level
     while logs_size_limit_check(int(config["Main"]["log_size_kb_limit"])):
         delete_oldest_saved_logs()
 
@@ -165,9 +170,8 @@ async def mass_load() -> None:
 
 
 @tree.command(name = "shutdown", description = "(For bot developer only)")
+@commands.is_owner()
 async def slash_shutdown(interaction: discord.Interaction) -> None:
-    if not await bot.is_owner(interaction.user):
-        raise commands.NotOwner
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
         bot_logger.info("shutdown by command.")
