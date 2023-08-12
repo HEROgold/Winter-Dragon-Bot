@@ -17,6 +17,7 @@ class Sync(commands.Cog):
 
 
     # TODO: Extensive testing for edge cases
+    # Seems to work properly
     @tasks.loop(count = 1)
     async def update(self) -> None:
         # sourcery skip: useless-else-on-loop
