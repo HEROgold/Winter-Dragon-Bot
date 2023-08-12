@@ -111,9 +111,8 @@ class CogsC(commands.GroupCog):
             name="crash",
             description="Raise a random Exception (Bot Dev only)",
     )
+    @commands.is_owner()
     async def slash_crash(self, interaction:discord.Interaction) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         await interaction.response.send_message("Crashing with discord.app_commands.errors.CommandInvokeError")
         raise commands.CommandInvokeError("Test Exception")
 
@@ -122,9 +121,8 @@ class CogsC(commands.GroupCog):
         name = "show",
         description = "Show loaded extensions (For bot developer only)"
         )
+    @commands.is_owner()
     async def slash_show(self, interaction:discord.Interaction) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         extensions = self.get_extensions()
         self.logger.debug(f"Showing {extensions} to {interaction.user}")
         await interaction.response.send_message(f"{extensions}", ephemeral=True)
@@ -134,9 +132,8 @@ class CogsC(commands.GroupCog):
         name = "reload",
         description = "Reload a specified or all available extensions (For bot developer only)"
         )
+    @commands.is_owner()
     async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         self.logger.info(f"{interaction.user} used /reload")
         if extension is None:
             self.logger.warning("Reloaded all extensions")
@@ -157,9 +154,8 @@ class CogsC(commands.GroupCog):
         name = "unload",
         description = "Unload a specified cog (For bot developer only)"
         )
+    @commands.is_owner()
     async def slash_unload(self, interaction:discord.Interaction, extension:str) -> None:
-        if not self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         try:
             self.logger.info(f"Unloaded {extension}")
             await self.bot.unload_extension(extension)
@@ -188,9 +184,8 @@ class CogsC(commands.GroupCog):
         name = "load",
         description = "Load a specified or all available extensions (For bot developer only)"
         )
+    @commands.is_owner()
     async def slash_load(self, interaction:discord.Interaction, extension:str) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         try:
             await self.bot.load_extension(extension)
             self.logger.info(f"Loaded {extension}")

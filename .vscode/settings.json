@@ -12,9 +12,12 @@
         "reportMissingParameterType": "none",
         "reportUnnecessaryComparison": "none",
         "reportMissingTypeStubs": "none",
-        "reportOptionalSubscript": "none"
+        "reportOptionalSubscript": "none",
+        // "reportUnnecessaryIsInstance": "none"
     },
     "cSpell.words": [
+        "apphub",
+        "apppage",
         "AUTOCHANNEL",
         "autochannels",
         "autopct",

@@ -237,11 +237,10 @@ class Stats(commands.GroupCog):
         await interaction.followup.send("Removed stats channels")
 
 
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     @app_commands.command(name="reset", description="Reset stats of all servers")
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @commands.is_owner()
     async def reset_stats(self, interaction:discord.Interaction) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         with Session(engine) as session:
             result = session.query(Channel).where(Channel.guild_id == interaction.guild.id and Channel.type == STATS)

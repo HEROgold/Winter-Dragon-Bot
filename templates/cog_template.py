@@ -1,10 +1,11 @@
 import logging
 
-import discord  # type: ignore
+import discord
 from discord import app_commands
 from discord.ext import commands
 
 from tools.config_reader import config
+
 
 @app_commands.guilds(int(config["Main"]["support_guild_id"]))
 class TEMP(commands.GroupCog):
@@ -12,8 +13,10 @@ class TEMP(commands.GroupCog):
         self.bot = bot
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
+
     # TEMP_GROUP = app_commands.Group(name="TEMPGroup", description="TEMP")
     # @TEMP_GROUP.command()
+
 
     @app_commands.command(name="TEMP", description="TEMP")
     async def slash_TEMP(self, interaction: discord.Interaction) -> None:
@@ -22,4 +25,4 @@ class TEMP(commands.GroupCog):
 
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(TEMP(bot))  # type: ignore
+    await bot.add_cog(TEMP(bot))

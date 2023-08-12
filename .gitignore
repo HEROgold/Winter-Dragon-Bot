@@ -161,7 +161,6 @@ Reminders.txt
 *.lnk
 servers/docker-scpsl/
 servers/docker-conanexiles/
-database/SteamPage.html
-database/SteamPageBackup.html
+database/steam/
 database/img
 logon.txt

@@ -65,11 +65,10 @@ class Sync(commands.Cog):
         await self.bot.wait_until_ready()
 
 
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
     @app_commands.command(name="sync", description="Sync all commands on all servers (Bot dev only)")
+    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @commands.is_owner()
     async def slash_sync(self, interaction: discord.Interaction) -> None:
-        if not await self.bot.is_owner(interaction.user):
-            raise commands.NotOwner
         global_sync = await self.bot.tree.sync()
         guild = self.bot.get_guild(int(config["Main"]["support_guild_id"]))
         local_sync = await self.bot.tree.sync(guild=guild)
@@ -83,9 +82,8 @@ class Sync(commands.Cog):
 
 
     @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")
+    @commands.is_owner()
     async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
-        if not await self.bot.is_owner(ctx.author):
-            raise commands.NotOwner
         global_sync = await self.bot.tree.sync()
         guild = self.bot.get_guild(int(config["Main"]["support_guild_id"]))
         local_sync = await self.bot.tree.sync(guild=guild)
