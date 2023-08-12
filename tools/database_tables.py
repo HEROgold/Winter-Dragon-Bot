@@ -7,6 +7,7 @@ import sqlalchemy
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -227,11 +228,23 @@ class ResultDuels(Base):
     loser: Mapped[Optional[int]] = mapped_column(ForeignKey(USERS_ID))
 
 
-class Steam(Base):
-    __tablename__ = "steam"
+class SteamUser(Base):
+    __tablename__ = "steam_users"
 
-    # id: Mapped[int] = mapped_column( unique=True)
     id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+
+
+class SteamSale(Base):
+    __tablename__ = "steam_sales"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    title: Mapped[str] = mapped_column(String(50))
+    url: Mapped[str] = mapped_column(String(200))
+    sale_percent: Mapped[int] = mapped_column(Integer)
+    final_price: Mapped[int] = mapped_column(Float) # (5, True, 2)
+    is_dlc: Mapped[bool] = mapped_column(Boolean)
+    is_bundle: Mapped[bool] = mapped_column(Boolean)
+    update_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
 class Suggestion(Base):
