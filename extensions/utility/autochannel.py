@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from typing import Any, Coroutine, Literal, Optional, Self, get_overloads, overload
 
 import discord
 from discord import app_commands
@@ -174,7 +176,7 @@ class Autochannel(commands.GroupCog):
                 Channel.guild_id == interaction.guild.id,
                 Channel.type == AC_TYPE
             ))
-            if result.all():
+            if result.first():
                 await interaction.response.send_message("Autochannel channels already set up", ephemeral=True)
                 return
         guild = interaction.guild
@@ -453,3 +455,209 @@ class Autochannel(commands.GroupCog):
 
 async def setup(bot: commands.Bot) -> None:
 	await bot.add_cog(Autochannel(bot))
+
+
+
+# Code below should be used when rewriting the autochannel cog,
+# for easier and more maintainable code
+
+
+ALLOWED_TYPES = ["category", "text", "voice"]
+
+
+class AutoChannel:
+    _discord_channel: discord.abc.GuildChannel
+    _database_channel: Channel
+    _id: int
+    _name: Literal["category", "text", "voice"]
+    _type: str = AC_TYPE
+
+
+    @property
+    def discord_channel(self) -> discord.abc.GuildChannel:
+        return self._discord_channel
+
+
+    @property
+    def database_channel(self) -> Channel:
+        return self._database_channel
+
+
+    @property
+    def id(self) -> int:
+        # self._id, self._discord_channel.id and self._database_channel.id should all be the same!
+        if self._discord_channel.id == self._id \
+        and self._database_channel.id == self._id:
+            return self._id
+        else:
+            raise ValueError(f"database id and discord id mismatch: {self._database_channel.id}, {self._discord_channel} should both be {self._id}")
+
+
+    @overload
+    def __init__(
+        self,
+        discord_channel: discord.abc.GuildChannel,
+        database_channel: Channel,
+    ) -> None:
+        pass
+
+
+    @overload
+    def __init__(
+        self,
+        discord_channel: discord.abc.GuildChannel
+    ) -> None:
+        pass
+
+
+    @overload
+    def __init__(
+        self,
+        database_channel: Channel,
+        bot: commands.Bot
+    ) -> None:
+        pass
+
+
+    def __init__(
+        self,
+        discord_channel: Optional[discord.abc.GuildChannel],
+        database_channel: Optional[Channel],
+        bot: Optional[commands.Bot]
+    ) -> None:
+        """
+        Initializes an instance of the AutoChannel class.
+
+        Args:
+            discord_channel (discord.abc.GuildChannel): The Discord channel associated with the AutoChannel.
+            database_channel (Channel): The database channel associated with the AutoChannel.
+            bot (Optional[commands.Bot]): The Discord bot instance.
+
+        Returns:
+            None
+
+        Raises:
+            AttributeError: Raised when the wrong argument combination is provided.
+            See overloaded functions for valid combinations
+
+        Behavior:
+        - If both `discord_channel` and `database_channel` are provided, their values are set.
+        - If `discord_channel` is provided and `database_channel` is not provided,
+        the `_database_channel` attribute is set by retrieving the database channel from `discord_channel`.
+        - If `discord_channel` is not provided and `database_channel` is provided,
+        the `_discord_channel` attribute is set by retrieving the Discord channel from `database_channel` and `bot`.
+        """
+        if discord_channel and database_channel:
+            self._discord_channel = discord_channel
+            self._database_channel = database_channel
+        elif discord_channel and not bot:
+            self._database_channel = self._get_database_from_discord(discord_channel)
+        elif database_channel and bot:
+            self._discord_channel = self._get_discord_from_database(database_channel, bot)
+        else:
+            combinations = get_overloads(self.__init__) # TODO: test and check if results look good
+            raise ValueError(f"Wrong argument combination, valid options are {combinations}")
+        
+        if database_channel.name not in ALLOWED_TYPES:
+            raise ValueError(f"Expected one of {ALLOWED_TYPES} not {database_channel.name}")
+
+        self._id = self.database_channel.id or self.discord_channel.id
+        self._name = database_channel.name
+
+
+    def _get_discord_from_database(
+        self, database_channel: Channel,
+        bot: commands.Bot
+    ) -> discord.abc.GuildChannel:
+        return discord.utils.get(bot.get_all_channels(), database_channel.id)
+
+
+    def _get_database_from_discord(self, discord_channel: discord.abc.GuildChannel) -> Channel:
+        with Session(engine) as session:
+            channel = session.query(Channel).where(Channel.id == discord_channel.id).first()
+        return channel
+
+
+    @staticmethod
+    @overload
+    async def create(
+        channel_type: Literal["category"],
+        reason: Optional[str],
+        overwrites: Optional[discord.PermissionOverwrite],
+        position: Optional[int]
+    ) -> Coroutine[Any, Any, Self]: pass
+
+
+    @staticmethod
+    @overload
+    async def create(
+        channel_type: Literal["text"],
+        reason: Optional[str],
+        overwrites: Optional[discord.PermissionOverwrite]
+    ) -> Coroutine[Any, Any, Self]: pass
+
+
+    @staticmethod
+    @overload
+    async def create(
+        channel_type: Literal["voice"],
+        reason: Optional[str],
+        overwrites: Optional[discord.PermissionOverwrite]
+    ) -> Coroutine[Any, Any, Self]: pass
+
+
+    @staticmethod
+    async def create(
+        guild: discord.Guild,
+        channel_type: Literal["category", "text", "voice"] = None,
+        reason: Optional[str] = None,
+        overwrites: Optional[discord.PermissionOverwrite] = None,
+        position: Optional[int] = None
+    ) -> Coroutine[Any, Any, Self]:
+        if channel_type is None:
+            raise ValueError(f"channel_type is None not one of {ALLOWED_TYPES}")
+        elif channel_type == "category":
+            discord_channel = await guild.create_category(reason=reason, overwrites=overwrites, position=position)
+        elif channel_type == "text":
+            discord_channel = await guild.create_text_channel(reason=reason, overwrites=overwrites)
+        elif channel_type == "voice":
+            discord_channel = await guild.create_voice_channel(reason=reason, overwrites=overwrites)
+        
+        discord_channel: discord.abc.GuildChannel
+        
+        with Session(engine) as session:
+            channel = Channel(
+                id = discord_channel.id,
+                guild_id = discord_channel.guild.id,
+                name = channel_type,
+                type = AC_TYPE,
+            )
+            session.add(channel)
+            session.commit()
+
+        return AutoChannel(
+            discord_channel=discord_channel,
+            database_channel=channel
+        )
+
+
+    def delete_all(self, reason: str) -> None:
+        """
+        This method only exists to pass the `reason` parameter
+
+        1. Deletes the Discord channel associated with the instance.
+        2. Deletes the database channel associated with the instance.
+        3. Deletes the instance itself.
+
+        Args:
+            reason (str): The reason for the deletion.
+
+        Returns:
+            None
+        """
+        asyncio.get_event_loop().run_until_complete(self._discord_channel.delete(reason=reason))
+        with Session(engine) as session:
+            session.delete(self._database_channel)
+            session.commit()
+
+        del self
