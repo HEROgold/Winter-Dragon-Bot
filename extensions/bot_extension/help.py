@@ -225,7 +225,7 @@ class Help(commands.Cog):
 
 
 # TODO: get code underneath to work.
-# Then inplement in own help cmd.
+# Then implement in own help cmd.
 class HelpView(discord.ui.View):
     def __init__(
         self,
