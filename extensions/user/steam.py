@@ -1,366 +1,124 @@
 import datetime
 import logging
-import os
-import random
 import re
-from typing import Any, Optional, TypedDict
+from textwrap import dedent
+from typing import TypedDict, overload
+from bs4 import BeautifulSoup
+import bs4
 
 import discord
-import requests
-from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import commands, tasks
-
-import rainbow
+import requests
 from tools import app_command_tools
+
 from tools.config_reader import config
-from tools.database_tables import Session
-from tools.database_tables import Steam as SteamDb
-from tools.database_tables import User, engine
+from tools.database_tables import SteamSale, SteamUser, User, engine, Session
 
 
-# Set update period and cooldown for user command.
-UPDATE_PERIOD = 3600 * 3 # 3 hour cooldown
-HTML_SIZE_LIMIT = 50_000_000
-ENCODING = "utf-8"
+# Constant vars that contain tag names to look for
+DISCOUNT_FINAL_PRICE = "discount_final_price"
+DISCOUNT_PERCENT = "discount_pct"
+SEARCH_GAME_TITLE = "title"
+DATA_APPID = "data-ds-appid"
+
+GAME_BUY_AREA = "game_area_purchase_game_wrapper"
+SINGLE_GAME_TITLE = "apphub_AppName"
+GAME_RELEVANT = "block responsive_apppage_details_right heading responsive_hidden"
+IS_DLC_RELEVANT_TO_YOU = "Is this DLC relevant to you?"
+
+BUNDLE_TITLE = "pageheader"
+BUNDLE_LINK = "tab_item_overlay"
+BUNDLE_PRICE = "price bundle_final_package_price"
+BUNDLE_DISCOUNT = "price bundle_discount"
+BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
+
+DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
+
+# 3 hour cooldown on html updates
+UPDATE_PERIOD = 3600 * 3 
 
 
 class Sale(TypedDict):
     title: str
-    sale_amount: int
     url: str
+    sale_percent: int
+    final_price: int
     is_dlc: bool
+    is_bundle: bool
+    update_datetime: datetime.datetime
 
 
 class Steam(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
-        self.base_path = "./database/steam"
-        self.sales_file = f"{self.base_path}/SteamPage.html"
-        self.sales_backup_file = f"{self.base_path}/SteamPageBackup.html"
-        self.known_sales = []
         self.bot = bot
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.setup_html_files()
         self.act = app_command_tools.Converter(bot=self.bot)
+
+
+    @app_commands.command(name="add", description="Get notified automatically about free steam games")
+    async def slash_add(self, interaction:discord.Interaction) -> None:
+        with Session(engine) as session:
+            if session.query(User).where(User.id == interaction.user.id).first() is None:
+                session.add(User(id = interaction.user.id))
+                session.commit()
+
+            result = session.query(SteamUser).where(SteamUser.id == interaction.user.id)
+            if result.first():
+                await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
+                return
+            session.add(SteamUser(id = interaction.user.id))
+            session.commit()
+        _, sub_mention = await self.act.get_app_sub_command(self.slash_show)
+        await interaction.response.send_message(f"I will notify you of new steam games!\nUse {sub_mention} to view current sales.", ephemeral=True)
+
+
+    @app_commands.command(name="remove", description="No longer get notified of free steam games")
+    async def slash_remove(self, interaction:discord.Interaction) -> None:
+        with Session(engine) as session:
+            result = session.query(SteamUser).where(SteamUser.id == interaction.user.id)
+            user = result.first()
+            if not user:
+                await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
+                return
+            session.delete(user)
+            session.commit()
+        await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
+
+
+    @app_commands.checks.cooldown(1, UPDATE_PERIOD)
+    @app_commands.command(name="show", description="Get a list of steam games that are on sale for the given percentage or higher")
+    async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
+        await interaction.response.defer()
+
+        embed = discord.Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
+        embed = self.populate_embed(embed, self.get_steam_sales(percent))
+        self.logger.debug(f"{embed.to_dict()}")
+
+        if len(embed.fields) > 0:
+            # await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            # await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
+            await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
 
 
     async def cog_load(self) -> None:
         self.update.start()
 
 
-    def setup_html_files(self) -> None:
-        os.makedirs(self.base_path, exist_ok=True)
-        if not os.path.exists(self.sales_file):
-            with open(self.sales_file, "w") as f:
-                f.write("")
-                f.close()
-            self.logger.info("Empty Steam Html created")
-        else:
-            self.logger.info("Steam local Html exists")
-
-        if not os.path.exists(self.sales_backup_file):
-            with open(self.sales_backup_file, "w") as f:
-                f.write("")
-                f.close()
-            self.logger.info("Empty Steam Html backup created")
-        else:
-            self.logger.info("Steam local Html backup exists")
-
-
-    def check_empty(self, path: str) -> bool:
-        if os.path.exists(path):
-            with open(path, "r", encoding=ENCODING) as f:
-                return f.read() == ""
-        return True
-
-
-    async def _get_saved_html(self, url: str, file: str) -> str:
-        """Handles everything related to fetching and updating the steam page either from url,
-        or from a saved html file
-
-        Returns:
-            str: returns the html as a str
-        """
-        # sourcery skip: aware-datetime-for-utc
-        self.logger.debug(f"getting html {file=}")
-        if not self.check_empty(file):
-            self.logger.debug("htmlFile not empty")
-            diff = datetime.datetime.now() - datetime.datetime.fromtimestamp(os.path.getmtime(file))
-            self.logger.debug(f"{diff=}")
-            if diff < datetime.timedelta(seconds=UPDATE_PERIOD):
-                return await self._get_html_from_saved(file)
-        return await self._get_html_from_url(url=url, file=file)
-
-
-    async def _get_game_html(self, game_id) -> str:
-        """Handles everything related to fetching and updating the game page either from url,
-        or from a saved html file
-
-        Returns:
-            str: returns the html as a str
-        """
-        self.logger.debug(f"getting html for {game_id=}")
-        game_url = f"https://store.steampowered.com/app/{game_id}"
-        return await self._get_saved_html(url=game_url, file=f"{self.base_path}/{game_id}.html")
-
-
-    async def get_game_sale(self, game_id: int) -> Sale:
-        """Get a Sale from a game id on Steam
-
-        Args:
-            game_id (int): Id to check
-
-        Returns:
-            Sale: Dictionary containing title, sale amount, url and is_dlc
-        """
-        # TODO: add func call somewhere else and find out when to use this.
-        html = await self._get_game_html(game_id)
-
-        soup = BeautifulSoup(html, "html.parser")
-        sale_amount = soup.find(class_="discount_pct") # type: ignore
-        game_meta = soup.find(class_="rightcol game_meta_data")
-        dlc = game_meta.find(class_="block responsive_apppage_details_right heading responsive_hidden")
-        title = soup.find(class_="apphub_AppName")
-        is_dlc = dlc.text == "Is this DLC relevant to you?"
-
-        url = f"https://store.steampowered.com/app/{game_id}"
-        sale = {
-            "title": title.text,
-            "sale_amount": int(sale_amount.text[1:-1]), # strip the - and % from sale_amount.text
-            "url": url,
-            "is_dlc": is_dlc
-        }
-
-        self.logger.debug(sale)
-        return sale
-
-
-    async def _get_html_from_url(self, url: str, file: str = None) -> str:
-        r = requests.get(url)
-        self.logger.debug("Returning Steam html from url")
-
-        await self._save_html_file(file, r)
-        return r.text
-
-
-    async def _save_html_file(self, file: str, r: requests.Response) -> None:
-        if file is None:
-            self.logger.warning("no file to safe to")
-            return
-
-        self.logger.debug(f"Updating {file=}")
-        with open(file, "w", encoding=ENCODING) as f:
-            f.write(r.text)
-
-
-    async def _get_html_from_saved(self, file) -> str:
-        self.logger.debug(f"Returning {file=}")
-        with open(self.sales_file, "r", encoding=ENCODING) as f:
-            self.logger.debug("Returning Steam html from saved file")
-            return f.read()
-
-
-    def is_bundle(self, url: str) -> bool:
-        self.logger.debug(f"Checking bundle: {url}")
-        regex_bundle = r"(?:https?:\/\/)?store\.steampowered\.com\/(bundle)\/(?:\d+)\/[a-zA-Z0-9_\/]+"
-        matches = re.findall(regex_bundle, url)
-        return len(matches) >= 1
-
-
-    async def sales_from_html(self, html: str) -> list[Sale]:
-        sales: list[Sale] = []
-        soup = BeautifulSoup(html, "html.parser")
-        # for i in soup.find_all(class_="col search_discount responsive_secondrow"):
-        for i in soup.find_all("span", {"class": "title"}):
-            i: BeautifulSoup # works for highlighting i.parent, and i.find
-            steam_item: BeautifulSoup = i.parent.parent.parent # go to <a> tag, from title.
-
-            url = steam_item["href"]
-            if self.is_bundle(url):
-                self.logger.debug(f"skipping bundle: {url}")
-                continue
-
-            title = i.text
-            sale_amount = steam_item.find(class_="discount_pct")
-            try:
-                sale: Sale = {
-                    "title": title,
-                    "sale_amount": int(sale_amount.text[1:-1]), # strip the - and % from sale_amount.text
-                    "url": url,
-                    "is_dlc": None,
-                }
-                # FIXME: always returns empty
-                # game_id = self.get_game_id(sale)
-                # game_sale = await self.get_game_sale(game_id)
-                # sales.append(game_sale) 
-                # self.logger.debug(f"{sale=}, {game_id=}, {game_sale=}")
-                sales.append(sale)
-            except AttributeError:
-                # self.logger.exception(f"Skipping adding sale, Could not append: {e}")
-                continue
-        self.logger.debug(f"Returning sales {sales}")
-        return sales
-
-
-    def is_dupe(self, *to_check: Any) -> bool:
-        self.logger.debug(f"dupe checking {to_check}")
-        seen = []
-        for i in to_check:
-            if i not in seen:
-                seen.append(i)
-            else:
-                break
-        else:
-            return True
-        return False
-
-
-    def find_percentage_sales(self, sales: list[Sale], percentage: int) -> list[Sale]:
-        requested_sales: list[Sale] = []
-        for perc in range(percentage, 101):
-            # format: i[title, sale_amount, url]
-            target_sales: Sale = [
-                i
-                for i in sales
-                if i["sale_amount"] == perc
-            ]
-            requested_sales.extend(target_sales)
-            self.logger.debug(f"found {perc} sale, {target_sales}")
-        self.logger.debug(f"returning {requested_sales=}")
-        return requested_sales
-
-
-    def get_game_id(self, sale: Sale) -> int:
-        regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
-        matches = re.findall(regex_game_id, sale["url"])
-        try:
-            return int(matches[0])
-        except IndexError as e:
-            self.logger.warning(f"Game_id not found: {e}, {sale}")
-
-
-    async def populate_embed(self, sales: list[Sale], embed: discord.Embed) -> Optional[discord.Embed]:
-        """Fills an embed with sales, and then returns the populated embed
-
-        Args:
-            sales (list): List of found sales
-            embed (discord.Embed): discord.Embed
-
-        Returns:
-            discord.Embed
-        """
-        if sales is None:
-            return
-
-        # Switch to following regex?
-        # r"^https:\/\/store\.steampowered\.com\/app\/(\d+)\/?.*$"gm
-
-        try:
-            # Sort on int, so reverse to get highest first
-            sales.sort(key=lambda x: x["sale_amount"], reverse=True)
-        except AttributeError:
-            pass
-
-        for sale in sales:
-            # game: Sale = {"title":i[0], "sale_amount":i[1], "url":i[2]}
-            game_id = self.get_game_id(sale)
-
-            match sale["is_dlc"]:
-                case True:
-                    is_dlc = "yes"
-                case False:
-                    is_dlc = "no"
-                case None:
-                    is_dlc = "unknown"
-
-            # install_game_uri = f"steam://install/{game_id}"
-            embed.add_field(name=sale["title"], value=f"{sale['url']}\nSale: {sale['sale_amount']}%\nDlc: {is_dlc}", inline=False)
-            # rungameid doesn't work with new discord custom url [text](https://link.url)
-            # run_game_id = f"steam://rungameid/{game_id}"
-            # \nInstall directly here: {install_game_uri}
-
-            self.logger.debug(f"Populate embed with:\nSale: {sale}\nGameId: {game_id}")
-        self.logger.debug("Returning filled embed")
-        return embed
-
-
-    def get_new_freebies(self, old: list[Sale], new: list[Sale]) -> Optional[list[Sale]]:
-        """Check if sale's from NEW are not found in OLD
-
-
-        Args:
-            old (List): Old Sales list to check against
-            new (List): New Sales list to check from
-
-
-        Returns:
-            new_sales (List): List of new sales
-        """
-        self.logger.debug(f"Checking for new item(s): {old=}, {new=}")
-        new_sales = [
-            sale
-            for sale in new
-            if sale not in old
-            and sale["sale_amount"] == 100
-        ]
-        if not new_sales:
-            self.logger.info("No new sale from_html")
-            return None
-        return new_sales
-
-
-    def saved_file_size_check(self, size_in_kb: int) -> bool:
-        total_size = sum(
-            os.path.getsize(os.path.join(root, file))
-            for root, _, files in os.walk(self.base_path)
-            for file in files
-        )
-        self.logger.debug(f"{total_size=} {size_in_kb=}")
-        return total_size > size_in_kb
-
-
-    def remove_oldest_html_file(self) -> None:
-        oldest_files = sorted((
-                os.path.join(root, file)
-                for root, _, files in os.walk(self.base_path)
-                for file in files
-            ),
-            key=os.path.getctime,
-        )
-        self.logger.info(f"deleting old html for space: {oldest_files[0]=}")
-
-        os.remove(oldest_files[0])
-
-
     @tasks.loop(seconds=UPDATE_PERIOD)
     async def update(self) -> None:
         """
-        Check if the sales from Html request and Html file are the same
-        When they are not, replaces old .html with the latest one
-        and creates a discord Embed object to send and notify users.
+        creates a discord Embed object to send and notify users of new 100% sales.
         Expected amount of sales should be low enough it'll never reach embed size limit
         """
-        while self.saved_file_size_check(HTML_SIZE_LIMIT):
-            self.remove_oldest_html_file()
-
         self.logger.info("Checking for sales.")
-        html = await self._get_saved_html(config["Steam"]["url"], self.sales_file)
 
-        with open(self.sales_backup_file, "r", encoding=ENCODING) as f:
-            file_sales = await self.sales_from_html(f.read())
-
-        html_sales = await self.sales_from_html(html)
-        if self.is_dupe(html_sales, file_sales):
-            return None
-
-        embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=random.choice(rainbow.RAINBOW))
-        new_sales = self.get_new_freebies(file_sales, html_sales)
-
-        if new_sales is None:
-            self.logger.debug("No sale, skipping sale sending.")
-            return 
-
-        embed = await self.populate_embed(new_sales, embed)
+        embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=0x094d7f)
+        new_sales = self.get_new_steam_sales(percent=100)
+        self.logger.debug(f"{new_sales=}")
+        embed = self.populate_embed(embed, new_sales)
 
         if embed is None:
             self.logger.warning("Got no populated embed, skipping sale sending.")
@@ -369,10 +127,10 @@ class Steam(commands.GroupCog):
         _, sub_mention_remove = await self.act.get_app_sub_command(self.slash_remove)
         _, sub_mention_show = await self.act.get_app_sub_command(self.slash_show)
         disable_message = f"You can disable this message by using {sub_mention_remove}"
-        all_sale_message = f"You can see other sales by using {sub_mention_show}"
+        all_sale_message = f"You can see other sales by using {sub_mention_show}, followed by a percentage"
 
         with Session(engine) as session:
-            users = session.query(SteamDb).all()
+            users = session.query(SteamUser).all()
             self.logger.debug(f"Got embed with sales, {embed}, to send to {users=}")
 
             for db_user in users:
@@ -383,72 +141,422 @@ class Steam(commands.GroupCog):
                     self.logger.warning(f"Not showing {db_user.id=} sales, discord.errors.NotFound")
                     continue
                 dm = user.dm_channel or await user.create_dm()
+
                 if len(embed.fields) > 0:
                     self.logger.debug(f"Showing {user}, {embed}")
                     await dm.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
                 else:
                     self.logger.debug(f"Not showing sales, empty embed fields: {user}, {embed}")
 
-        self.logger.debug(f"Updating {self.sales_backup_file=}")
-        with open(self.sales_backup_file, "w", encoding=ENCODING) as f:
-            f.write(html)
-            f.close()
 
-
-    @update.before_loop # type: ignore
+    @update.before_loop
     async def before_update(self) -> None:
         self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
-    @app_commands.checks.cooldown(1, UPDATE_PERIOD)
-    @app_commands.command(name = "show", description = "Get a list of steam games that are on sale for the given percentage or higher")
-    async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
-        await interaction.response.defer()
-        html = await self._get_saved_html(config["Steam"]["url"], self.sales_file)
-        html_sales = await self.sales_from_html(html)
-        target_sales = self.find_percentage_sales(html_sales, percent)
-        # self.is_dupe(html_sales, html_sales)
+    def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed:
+        """Fills a given embed with sales, and then returns the populated embed
 
-        embed=discord.Embed(title="Steam Games", description=f"Steam Games with sales {percent} or higher", color=0x094d7f)
-        embed = await self.populate_embed(target_sales, embed)
+        Args:
+            sales (list): List of found sales
+            embed (discord.Embed): discord.Embed
 
-        if len(embed.fields) > 0:
-            # await interaction.response.send_message(embed=embed, ephemeral=True)
-            await interaction.followup.send(embed=embed, ephemeral=True)
+        Returns:
+            discord.Embed
+        """
+        if sales is None:
+            return embed
+
+        try:
+            # Sort on sale percentage (int), so reverse to get highest first
+            sales.sort(key=lambda x: x["sale_percent"], reverse=True)
+        except AttributeError:
+            pass
+
+        for sale in sales:
+            # install_game_uri = f"steam://install/{game_id}"
+            embed_text = f"""
+                Url: {sale["url"]}
+                Sale: {sale["sale_percent"]}%
+                Price {sale["final_price"]}
+                Is dlc: {sale["is_dlc"]}
+                Is bundle: {sale["is_bundle"]}
+                Last Checked: {sale["update_datetime"].strftime(DATE_FORMAT)}
+            """
+            embed.add_field(
+                name = sale["title"],
+                value = dedent(embed_text),
+                inline = False
+            )
+            self.logger.debug(f"Populated embed with:\n{sale=}")
+
+        # embed size above 6000 characters.
+        while len(str(embed.to_dict())) >= 6000:
+            self.logger.debug(f"{len(str(embed.to_dict()))=}")
+            self.logger.debug(f"removing to decrease size: {embed.fields[-1]=}")
+            embed.remove_field(-1)
+        
+        self.logger.debug(f"Returning {embed}")
+        return embed
+
+
+    def get_updated_sales(self, sales: list[SteamSale | Sale]) -> list[Sale]:
+        # sourcery skip: assign-if-exp, reintroduce-else
+        """Return a new list of sales, based of a given list of sales
+
+        Args:
+            sales (list[SteamSale]): Old list to run checks on
+
+        Returns:
+            list[SteamSale]: New list that gets returned
+        """
+        # convert to Sale for each element that is SteamSale
+        sales: list[Sale] = [
+            self.db_to_dict(i)
+            if isinstance(i, SteamSale)
+            else i
+            for i in sales
+        ]
+
+        updated_sales: list[Sale] = []
+        for sale in sales:
+            if self.is_outdated(sale):
+                updated_sales.append(self.get_game_sale(sale["url"]))
+            else:
+                updated_sales.append(sale)
+
+        self.logger.debug(f"{updated_sales=}")
+        if sales == updated_sales:
+            return sales
+        return updated_sales
+
+
+    @overload
+    def is_outdated(self, sale: SteamSale) -> bool: ...
+    @overload
+    def is_outdated(self, sale: Sale) -> bool: ...
+    def is_outdated(self, sale: SteamSale | Sale) -> bool:
+        """Check if a sale has recently been updated
+
+        Args:
+            sale (SteamSale | Sale): The sale to check against
+
+        Returns:
+            bool: True, False
+        """
+        if isinstance(sale, SteamSale): # type: ignore
+            update_period_date = sale.update_datetime + datetime.timedelta(minutes=UPDATE_PERIOD)
         else:
-            # await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
-            await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
+            update_period_date = sale["update_datetime"] + datetime.timedelta(minutes=UPDATE_PERIOD)
+
+        return (
+            update_period_date
+            <= datetime.datetime.now()
+        )
 
 
-    @app_commands.command(name = "add", description = "Get notified automatically about free steam games")
-    async def slash_add(self, interaction:discord.Interaction) -> None:
+    def get_saved_sales(self, percent: int) -> list[SteamSale]:
+        """get saved/known sales from database
+
+        Returns:
+            list[SteamSale]: List of SteamSale database objects
+        """
         with Session(engine) as session:
-            if session.query(User).where(User.id == interaction.user.id).first() is None:
-                session.add(User(id = interaction.user.id))
-                session.commit()
-
-            result = session.query(SteamDb).where(SteamDb.id == interaction.user.id)
-            if result.first():
-                await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
-                return
-            session.add(SteamDb(id = interaction.user.id))
-            session.commit()
-        _, sub_mention = await self.act.get_app_sub_command(self.slash_show)
-        await interaction.response.send_message(f"I will notify you of new steam games!\nUse {sub_mention} to view current sales.", ephemeral=True)
+            sales = session.query(SteamSale).where(SteamSale.sale_percent >= percent).all()
+        self.logger.debug(f"saved {sales=}")
+        return sales
 
 
-    @app_commands.command(name = "remove", description = "No longer get notified of free steam games")
-    async def slash_remove(self, interaction:discord.Interaction) -> None:
+    def get_id_from_game_url(self, url: str) -> int:
+        """Get an id from a steam game url
+
+        Args:
+            url (str): Url to extract the id from
+
+        Returns:
+            int: The found id of a game
+        """
+        # sourcery skip: class-extract-method
+        # example: https://store.steampowered.com/app/1168660/Barro_2020/
+        regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
+        matches = re.findall(regex_game_id, url)
+        self.logger.debug(f"game id: {matches=}")
+        # return first match as int, or 0
+        return int(matches[0]) or 0
+
+
+    def is_bundle(self, url: str) -> bool:
+        """Find out if a url is for a bundle
+
+        Args:
+            url (str): Url to look through
+
+        Returns:
+            bool: True, False
+        """
+        # sourcery skip: class-extract-method
+        # example: https://store.steampowered.com/bundle/23756/Bundle_with_fun_games/?l=dutch&curator_clanid=4777282
+        regex_bundle = r"(?:https?:\/\/)?store\.steampowered\.com\/(bundle)\/\d+\/[a-zA-Z0-9_\/]+"
+        matches = re.findall(regex_bundle, url)
+        self.logger.debug(f"bundle: {matches=}")
+        return bool(matches)
+
+
+    def is_valid_game_url(self, url: str) -> bool:
+        """Find out if a url is for a valid game
+
+        Args:
+            url (str): Url to check for
+
+        Returns:
+            bool: True, False
+        """
+        return bool(self.get_id_from_game_url(url))
+
+
+    def get_new_steam_sales(self, percent: int) -> list[Sale]:
+        """Get only unknown/new sales
+
+        Args:
+            percent (int): Percentage to check for
+
+        Returns:
+            list[Sale]: List of TypedDict Sale
+        """
+        known_sales = [self.db_to_dict(i) for i in self.get_saved_sales(percent)]
+        steam_sales = self.get_sales_from_steam(percent)
+        
+        self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
+
+        outdated = [
+            i["title"]
+            for i in known_sales
+            if self.is_outdated(i)
+        ]
+
+        return [
+            sale
+            for sale in steam_sales
+            if sale["title"] not in outdated
+        ]
+
+
+    def get_steam_sales(self, percent: int) -> list[Sale]:
+        """get sales from database or from website depending on `UPDATE_PERIOD`
+
+        Returns:
+            list[SteamSale]: List of SteamSale database objects
+        """
+        # return self.get_updated_sales(self.get_saved_sales(percent)) or self.get_sales_from_steam(percent)
+
+        updated_sales = self.get_updated_sales(self.get_saved_sales(percent))
+        if updated_sales == []:
+            self.logger.debug("getting sales from steam")
+            return self.get_sales_from_steam(percent)
+        else:
+            self.logger.debug("returning known sales")
+            return updated_sales
+
+
+    def get_games_from_bundle(self, url: str) -> list[Sale]:
+        """Get the sales from a bundle
+
+        Args:
+            url (str): Url of the bundle to get the game sales from
+
+        Raises:
+            ValueError: Error when url is invalid
+
+        Returns:
+            SteamSale: SteamSale database object
+        """
+        if not self.is_bundle(url):
+            raise ValueError("Invalid Steam Bundle URL")
+
+        html = requests.get(url).text
+        soup = BeautifulSoup(html, "html.parser")
+
+        game_sales = []
+        for sale_tag in soup.find_all("a", class_=BUNDLE_LINK):
+            sale_tag: bs4.element.Tag
+            game_sales.append(self.get_game_sale(sale_tag["href"]))
+        return game_sales
+
+
+    def db_to_dict(self, sale: SteamSale) -> Sale:
+        """Convert a SteamSale db object to TypedDict Sale
+
+        Args:
+            sale (SteamSale): SteamSale database object
+
+        Returns:
+            Sale: TypedDict containing the same items as Db object
+        """
+        return {
+            "title": sale.title,
+            "url": sale.url,
+            "sale_percent": sale.sale_percent,
+            "final_price": sale.final_price,
+            "is_dlc": sale.is_dlc,
+            "is_bundle": sale.is_bundle,
+            "update_datetime": sale.update_datetime
+        }
+
+
+    def get_sales_from_steam(self, percent: int) -> list[Sale]:
+        """Scrape sales from https://store.steampowered.com/search/
+        With the search options: Ascending price, Special deals, English
+
+        Args:
+            search_percent (int, optional): Percentage of sale to look for. Defaults to 100.
+
+        Returns:
+            list[Sale]: List of SteamSale database objects
+        """
+        html = requests.get(config["Steam"]["url"]).text
+        soup = BeautifulSoup(html, "html.parser")
+        sales: list[Sale] = []
         with Session(engine) as session:
-            result = session.query(SteamDb).where(SteamDb.id == interaction.user.id)
-            user = result.first()
-            if not user:
-                await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
-                return
-            session.delete(user)
+            for sale_tag in soup.find_all(class_=DISCOUNT_PERCENT):
+                sale_tag: bs4.element.Tag
+                # strip the - and % from the tag
+                discount = int(sale_tag.text[1:-1])
+                sale = sale_tag.find_parent("a")
+
+                if sale is None:
+                    self.logger.warning(f"Got empty sale: {sale_tag=}, {sale=}")
+
+                if discount >= percent:
+                    price = sale.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
+                    sale = SteamSale(
+                        id = sale[DATA_APPID],
+                        title = sale.find(class_=SEARCH_GAME_TITLE).text,
+                        url = sale["href"],
+                        sale_percent = discount,
+                        final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
+                        is_dlc = False,
+                        is_bundle = False,
+                        update_datetime = datetime.datetime.now(),
+                    )
+                    sales.append(self.add_sale(session, sale, "steam search"))
+
             session.commit()
-        await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
+
+        return sales
+
+
+    def get_bundle_sale(self, url: str) -> Sale:
+        # sourcery skip: extract-method
+        """Get sale for a bundle
+
+        Args:
+            url (str): Url of the bundle to get the sale from
+
+        Raises:
+            ValueError: Error when url is invalid
+
+        Returns:
+            SteamSale: SteamSale database object
+        """
+        if not self.is_bundle(url):
+            raise ValueError("Invalid Steam Bundle URL")
+
+        html = requests.get(url).text
+        soup = BeautifulSoup(html, "html.parser")
+
+        with Session(engine) as session:
+            price = soup.find(class_=BUNDLE_FINAL_PRICE).text[:-1].replace(",", ".")
+            sale = SteamSale(
+                id = self.get_id_from_game_url(url),
+                title = soup.find(class_=BUNDLE_TITLE).text,
+                url = url,
+                sale_percent = soup.find(class_=BUNDLE_DISCOUNT).text[:-1], # strip %
+                final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
+                is_dlc = False,
+                is_bundle = True,
+                update_datetime = datetime.datetime.now(),
+            )
+            return self.add_sale(session, sale, "bundle")
+
+
+    def get_game_sale(self, url: str) -> Sale:
+        # sourcery skip: extract-method
+        """get a single game sale from specific url
+
+        Args:
+            url (str): Url of the game to get a sale from
+
+        Raises:
+            ValueError: Error when url is invalid
+
+        Returns:
+            SteamSale: SteamSale database object
+        """
+        if not self.is_valid_game_url(url):
+            raise ValueError("Invalid Steam Game URL")
+
+        html = requests.get(url).text
+        soup = BeautifulSoup(html, "html.parser")
+        regex = r"btn_add_to_cart_\d+"
+
+        title = soup.find(class_=SINGLE_GAME_TITLE).text
+        add_to_cart = soup.find("a", href=re.compile(regex))
+        buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA)
+
+        with Session(engine) as session:
+            price = buy_area.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
+            sale = SteamSale(
+                id = self.get_id_from_game_url(url),
+                title = title,
+                url = sale["href"],
+                sale_percent = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1], # strip - and % from sale tag
+                final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
+                is_dlc = (buy_area.find(class_=GAME_RELEVANT).text == IS_DLC_RELEVANT_TO_YOU), # boolean, match 2 texts to check dlc
+                is_bundle = False,
+                update_datetime = datetime.datetime.now(),
+            )
+            return self.add_sale(session, sale, "game")
+
+
+    def update_sale(self, session: Session, sale: SteamSale) -> bool:
+        """Update a sale record in Database, if successful return True
+
+        Args:
+            session (Session): Session to connect to DataBase
+            sale (SteamSale): Sale to update
+
+        Returns:
+            bool: True, False
+        """
+        if known:= session.query(SteamSale).where(SteamSale.id == sale.id).first():
+            known.title = sale.title
+            known.url = sale.url
+            known.sale_percent = sale.sale_percent
+            known.final_price = sale.final_price
+            known.is_dlc = sale.is_dlc
+            known.is_bundle = sale.is_bundle
+            known.update_datetime = sale.update_datetime
+            return True
+        return False
+
+
+    def add_sale(self, session: Session, sale: SteamSale, category: str) -> Sale:
+        """Add a sale to db, and return presentable TypedDict
+
+        Args:
+            session (Session): Session for database connection
+            sale (SteamSale): SteamSale database object
+            category (str): Category where sale was found
+
+        Returns:
+            Sale: TypedDict in presentable format
+        """
+        if not self.update_sale(session, sale):
+            session.add(sale)
+        session.commit()
+        self.logger.debug(f"Found {category} {sale=}")
+        return self.db_to_dict(sale)
 
 
 async def setup(bot: commands.Bot) -> None:
