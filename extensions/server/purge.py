@@ -16,6 +16,7 @@ class Purge(commands.Cog):
 
     @app_commands.command(name="purge", description="Purge X amount of messages, use history to delete older messages.")
     @app_commands.checks.has_permissions(manage_messages=True, manage_channels=True)
+    @app_commands.checks.bot_has_permissions(manage_messages=True, manage_channels=True)
     async def slash_purge(self, interaction: discord.Interaction, count: int, use_history: bool = False) -> None:
         if count == -1:
             count = int(config["Purge"]["limit"])
