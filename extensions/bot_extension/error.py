@@ -48,7 +48,7 @@ class ErrorHandler:
 
     @_async_init.before_loop
     async def before_async_init(self) -> None:
-        self.logger.info("Waiting until bot is online")
+        self.logger.debug("Setting up error handler")
         await self.bot.wait_until_ready()
 
 
