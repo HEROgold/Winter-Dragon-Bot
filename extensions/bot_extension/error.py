@@ -203,11 +203,9 @@ class Error(commands.Cog):
             return
         # Issue with typing /command and spamming dm about cmd not found.
         # Leave handle_error inside if
-        if type(error) != app_commands.errors.CommandNotFound:
-            self.logger.debug(f"Error from: {interaction.command.name=}")
-            if interaction.command.name == "shutdown":
-                self.logger.exception(error)
-                return
+        if type(error) != app_commands.errors.CommandNotFound and interaction.command.name == "shutdown":
+            self.logger.exception(error)
+            return
         ErrorHandler(self.bot, interaction, error)
 
 
