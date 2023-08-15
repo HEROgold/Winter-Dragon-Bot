@@ -641,7 +641,25 @@ class AutoChannel:
         )
 
 
-    def delete_all(self, reason: str) -> None:
+    def __del__(self, **kwargs) -> None:
+        """
+        1. Deletes the Discord channel associated with the instance.
+        2. Deletes the database channel associated with the instance.
+        3. Deletes the instance itself.
+
+        Args:
+            reason (str): The reason for the deletion.
+
+        Returns:
+            None
+        """
+        asyncio.get_event_loop().run_until_complete(self._discord_channel.delete(reason=kwargs.get("reason", "None")))
+        with Session(engine) as session:
+            session.delete(self._database_channel)
+            session.commit()
+
+
+    def delete(self, reason: str) -> None:
         """
         This method only exists to pass the `reason` parameter
 
@@ -655,9 +673,4 @@ class AutoChannel:
         Returns:
             None
         """
-        asyncio.get_event_loop().run_until_complete(self._discord_channel.delete(reason=reason))
-        with Session(engine) as session:
-            session.delete(self._database_channel)
-            session.commit()
-
-        del self
+        self.__del__(self, reason=reason)
