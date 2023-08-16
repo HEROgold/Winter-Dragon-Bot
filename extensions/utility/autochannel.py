@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Coroutine, Literal, Optional, Self, get_overloads, overload
+from typing import Literal, Optional, Self, Union, get_overloads, overload
 
 import discord
 from discord import app_commands
@@ -465,8 +465,8 @@ async def setup(bot: commands.Bot) -> None:
 ALLOWED_TYPES = ["category", "text", "voice"]
 
 
-class AutoChannel:
-    _discord_channel: discord.abc.GuildChannel
+class AutomaticChannel:
+    _discord_channel: Union[discord.CategoryChannel, discord.TextChannel, discord.VoiceChannel]
     _database_channel: Channel
     _id: int
     _name: Literal["category", "text", "voice"]
@@ -474,13 +474,18 @@ class AutoChannel:
 
 
     @property
-    def discord_channel(self) -> discord.abc.GuildChannel:
+    def discord_channel(self) -> discord.CategoryChannel | discord.TextChannel | discord.VoiceChannel:
         return self._discord_channel
 
 
     @property
     def database_channel(self) -> Channel:
         return self._database_channel
+
+
+    @property
+    def name(self) -> Literal['category', 'text', 'voice']:
+        return self._name
 
 
     @property
@@ -523,7 +528,7 @@ class AutoChannel:
         self,
         discord_channel: Optional[discord.abc.GuildChannel],
         database_channel: Optional[Channel],
-        bot: Optional[commands.Bot]
+        bot: Optional[commands.Bot],
     ) -> None:
         """
         Initializes an instance of the AutoChannel class.
@@ -577,51 +582,43 @@ class AutoChannel:
             channel = session.query(Channel).where(Channel.id == discord_channel.id).first()
         return channel
 
+    # TODO: add type hinting for overloaded create
+    # each overload should show each expected combination of arguments
 
-    @staticmethod
-    @overload
+    @classmethod
     async def create(
-        channel_type: Literal["category"],
-        reason: Optional[str],
-        overwrites: Optional[discord.PermissionOverwrite],
-        position: Optional[int]
-    ) -> Coroutine[Any, Any, Self]: pass
-
-
-    @staticmethod
-    @overload
-    async def create(
-        channel_type: Literal["text"],
-        reason: Optional[str],
-        overwrites: Optional[discord.PermissionOverwrite]
-    ) -> Coroutine[Any, Any, Self]: pass
-
-
-    @staticmethod
-    @overload
-    async def create(
-        channel_type: Literal["voice"],
-        reason: Optional[str],
-        overwrites: Optional[discord.PermissionOverwrite]
-    ) -> Coroutine[Any, Any, Self]: pass
-
-
-    @staticmethod
-    async def create(
+        cls,
         guild: discord.Guild,
         channel_type: Literal["category", "text", "voice"] = None,
         reason: Optional[str] = None,
         overwrites: Optional[discord.PermissionOverwrite] = None,
         position: Optional[int] = None
-    ) -> Coroutine[Any, Any, Self]:
+    ) -> Self:
+        """
+        Creates a new channel in a Discord guild, and database row.
+
+        Args:
+            guild (discord.Guild): The guild in which to create the channel.
+            channel_type ("category", "text", "voice", optional): The type of channel to create. Defaults to None.
+            reason (str, optional): The reason for creating the channel. Defaults to None.
+            overwrites (discord.PermissionOverwrite, optional): The permission overwrites for the channel. Defaults to None.
+            position (int, optional): The position of the channel. Defaults to None.
+
+        Returns:
+            AutomaticChannel: An object representing the created channel and database row.
+
+        Raises:
+            ValueError: Raised when `channel_type` is None and not one of the allowed types.
+        """
+
         if channel_type is None:
             raise ValueError(f"channel_type is None not one of {ALLOWED_TYPES}")
         elif channel_type == "category":
             discord_channel = await guild.create_category(reason=reason, overwrites=overwrites, position=position)
         elif channel_type == "text":
-            discord_channel = await guild.create_text_channel(reason=reason, overwrites=overwrites)
+            discord_channel = await guild.create_text_channel(reason=reason, overwrites=overwrites, position=position)
         elif channel_type == "voice":
-            discord_channel = await guild.create_voice_channel(reason=reason, overwrites=overwrites)
+            discord_channel = await guild.create_voice_channel(reason=reason, overwrites=overwrites, position=position)
         
         discord_channel: discord.abc.GuildChannel
         
@@ -635,7 +632,7 @@ class AutoChannel:
             session.add(channel)
             session.commit()
 
-        return AutoChannel(
+        return AutomaticChannel(
             discord_channel=discord_channel,
             database_channel=channel
         )
@@ -653,7 +650,9 @@ class AutoChannel:
         Returns:
             None
         """
-        asyncio.get_event_loop().run_until_complete(self._discord_channel.delete(reason=kwargs.get("reason", "None")))
+        # TODO: Find out which one to use, guess is ensure_future
+        asyncio.ensure_future(self._discord_channel.delete(reason=kwargs.get("reason", "None")))
+        # asyncio.get_event_loop().run_until_complete(self._discord_channel.delete(reason=kwargs.get("reason", "None")))
         with Session(engine) as session:
             session.delete(self._database_channel)
             session.commit()
@@ -674,3 +673,24 @@ class AutoChannel:
             None
         """
         self.__del__(self, reason=reason)
+
+
+# Code idea 
+
+AUTOMATIC_CHANNELS = []
+
+
+async def on_voice_state_update(
+    member: discord.Member,
+    before: discord.VoiceState,
+    after: discord.VoiceState
+) -> None:
+    if after.channel.id not in AUTOMATIC_CHANNELS:
+        return
+    category = await AutomaticChannel.create("category")
+    text = await AutomaticChannel.create("text")
+    voice = await AutomaticChannel.create("voice")
+
+    for i in [category, text, voice]:
+        # rename each channel to "username" + category, text or voice
+        await i.discord_channel.edit(name=f"{member.display_name} {i.name}", reason="Renaming AutomaticChannel")
