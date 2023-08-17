@@ -16,7 +16,6 @@ from tools.database_tables import Incremental as DbIncremental
 from enums.incremental import Generators
 
 
-
 def update_balance(incremental: DbIncremental) -> None:
     """Updates the balance of a incremental, based on time past since last increment, and gain rate
 

@@ -9,7 +9,7 @@ from discord.ui import Button, View
 from discord import app_commands
 
 from tools.config_reader import config
-import rainbow
+import tools.rainbow as rainbow
 
 
 # TODO: Rewrite/cleanup

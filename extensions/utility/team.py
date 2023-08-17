@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
-import rainbow
+import tools.rainbow as rainbow
 from tools import app_command_tools
 # from tools.database_tables import Team as Teamdb
 # from tools.database_tables import User, engine, Session

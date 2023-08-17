@@ -6,7 +6,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from tools.config_reader import config
-import rainbow
+import tools.rainbow as rainbow
 
 
 class Announce(commands.Cog):

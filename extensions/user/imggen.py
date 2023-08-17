@@ -9,7 +9,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
-import rainbow
+import tools.rainbow as rainbow
 
 
 # FIXME: Find out what doesn't work
