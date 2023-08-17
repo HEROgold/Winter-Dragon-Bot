@@ -675,6 +675,32 @@ class AutomaticChannel:
         self.__del__(self, reason=reason)
 
 
+# TODO: figure out if AC channel or users channel
+class AutomaticChannels:
+    """A class that represents a collection of automatic channels."""
+    def __init__(self, guild: discord.Guild, bot: commands.Bot) -> None:
+        """Fetch existing automaticChannels from guild, if nothing is found create them
+        """
+        with Session(engine) as session:
+            channels = session.query(Channel).where(Channel.guild_id == guild.id).all()
+            if not channels:
+                self._create(guild)
+                return
+            for channel in channels:
+                if channel.type == AC_TYPE and channel.name in ALLOWED_TYPES:
+                    print("Channel is guild autochannel")
+                    if channel.name == "category":
+                        self.category = AutomaticChannel(channel, bot)
+                    if channel.name == "text":
+                        self.text = AutomaticChannel(channel, bot)
+                    if channel.name == "voice":
+                        self.voice = AutomaticChannel(channel, bot)
+
+    def _create(self, guild: discord.Guild):
+        self.category = AutomaticChannel.create(guild, "category")
+        self.text = AutomaticChannel.create(guild, "text")
+        self.voice = AutomaticChannel.create(guild, "voice")
+
 # Code idea 
 
 AUTOMATIC_CHANNELS = []
@@ -687,9 +713,13 @@ async def on_voice_state_update(
 ) -> None:
     if after.channel.id not in AUTOMATIC_CHANNELS:
         return
-    category = await AutomaticChannel.create("category")
-    text = await AutomaticChannel.create("text")
-    voice = await AutomaticChannel.create("voice")
+    else:
+        voice = AutomaticChannel(after.channel)
+    
+    if not before:
+        category = await AutomaticChannel.create("category")
+        text = await AutomaticChannel.create("text")
+        voice = await AutomaticChannel.create("voice")
 
     for i in [category, text, voice]:
         # rename each channel to "username" + category, text or voice
