@@ -44,7 +44,9 @@ class Purge(commands.Cog):
         messages = []
         async for message in interaction.channel.history(limit=count):
             message: discord.Message
-            await message.delete()
+            try:
+                await message.delete()
+            except discord.NotFound: pass
             messages.append(message)
         return messages
 
