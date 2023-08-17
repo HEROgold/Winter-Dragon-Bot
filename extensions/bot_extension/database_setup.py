@@ -35,7 +35,7 @@ class DatabaseSetup(commands.Cog):
 
 
     @commands.Cog.listener()
-    @event_errors.event_logger
+    # @event_errors.event_logger
     async def on_message(self, message: discord.Message) -> None:
         user = message.author
         guild = message.guild
