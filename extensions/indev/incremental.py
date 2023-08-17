@@ -25,11 +25,8 @@ def update_balance(incremental: DbIncremental) -> None:
     difference = incremental.last_update - datetime.datetime.now()
     seconds = math.floor(difference.total_seconds())
 
-    total_gain_rate = 0
-    for gen in incremental.generators:
-        total_gain_rate += gen.generating
-    
-    incremental.balance = incremental.balance + total_gain_rate * seconds 
+    total_gain_rate = sum(gen.generating for gen in incremental.generators)
+    incremental.balance = incremental.balance + total_gain_rate * seconds
     incremental.last_update = datetime.datetime.now()
 
 
@@ -45,7 +42,7 @@ class ShopItems(Select):
         disabled: bool = False,
         row: int | None = None
     ) -> None:
-        placeholder = f"Choose generator to buy"
+        placeholder = "Choose generator to buy"
 
         options = [
             discord.SelectOption(label=i.name, description=f"Tier {i.value}")
