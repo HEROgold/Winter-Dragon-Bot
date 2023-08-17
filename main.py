@@ -52,7 +52,7 @@ if config["Main"]["custom_help"]:
 async def on_ready() -> None:
     print("Bot is running!")
     if config["Main"]["show_logged_in"] == True:
-        bot_logger.info(f"Logged on as {bot.user}!")
+        log.bot_logger.info(f"Logged on as {bot.user}!")
 
 
 
@@ -69,14 +69,14 @@ async def get_extensions() -> list[str]:
 
 async def mass_load() -> None:
     if not (os.listdir("./extensions")):
-        bot_logger.critical("No extensions Directory To Load!")
+        log.bot_logger.critical("No extensions Directory To Load!")
         return
     for extension in await get_extensions():
         try:
             await bot.load_extension(extension)
-            bot_logger.info(f"Loaded {extension}")
+            log.bot_logger.info(f"Loaded {extension}")
         except Exception as e:
-            bot_logger.exception(e)
+            log.bot_logger.exception(e)
 
 
 @commands.is_owner()
@@ -84,7 +84,7 @@ async def mass_load() -> None:
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-        bot_logger.info("shutdown by command.")
+        log.bot_logger.info("shutdown by command.")
     except Exception: pass
     raise KeyboardInterrupt
 
@@ -107,11 +107,7 @@ async def main() -> None:
         # global here, since they should be accessible module wide,
         # but they require a running even loop
         global log
-        global bot_logger
-        global discord_logger
         log = logs(bot=bot)
-        bot_logger = log.bot_logger
-        discord_logger = log.discord_logger
 
         await mass_load()
         # await bot.load_extension("jishaku")
