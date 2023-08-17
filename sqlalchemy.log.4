@@ -1,0 +1,765 @@
+2023-08-17 19:45:27,064:INFO:sqlalchemy.engine: Connecting to postgres db_name='db', as username='postgres'
+2023-08-17 19:45:27,188:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Guild'>
+2023-08-17 19:45:27,322:INFO:sqlalchemy.engine.Engine: select pg_catalog.version()
+2023-08-17 19:45:27,324:INFO:sqlalchemy.engine.Engine: [raw sql] {}
+2023-08-17 19:45:27,327:DEBUG:sqlalchemy.engine.Engine: Col ('version',)
+2023-08-17 19:45:27,328:DEBUG:sqlalchemy.engine.Engine: Row ('PostgreSQL 15.3 (Debian 15.3-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit',)
+2023-08-17 19:45:27,329:INFO:sqlalchemy.engine.Engine: select current_schema()
+2023-08-17 19:45:27,330:INFO:sqlalchemy.engine.Engine: [raw sql] {}
+2023-08-17 19:45:27,331:DEBUG:sqlalchemy.engine.Engine: Col ('current_schema',)
+2023-08-17 19:45:27,332:DEBUG:sqlalchemy.engine.Engine: Row ('public',)
+2023-08-17 19:45:27,333:INFO:sqlalchemy.engine.Engine: show standard_conforming_strings
+2023-08-17 19:45:27,334:INFO:sqlalchemy.engine.Engine: [raw sql] {}
+2023-08-17 19:45:27,335:DEBUG:sqlalchemy.engine.Engine: Col ('standard_conforming_strings',)
+2023-08-17 19:45:27,336:DEBUG:sqlalchemy.engine.Engine: Row ('on',)
+2023-08-17 19:45:27,337:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:27,339:INFO:sqlalchemy.engine.Engine: SELECT guilds.id AS guilds_id 
+FROM guilds 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,340:INFO:sqlalchemy.engine.Engine: [generated in 0.00102s] {'param_1': 1}
+2023-08-17 19:45:27,349:DEBUG:sqlalchemy.engine.Engine: Col ('guilds_id',)
+2023-08-17 19:45:27,351:DEBUG:sqlalchemy.engine.Engine: Row (765965358754037801,)
+2023-08-17 19:45:27,352:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Channel'>
+2023-08-17 19:45:27,354:INFO:sqlalchemy.engine.Engine: SELECT channels.id AS channels_id, channels.name AS channels_name, channels.type AS channels_type, channels.guild_id AS channels_guild_id 
+FROM channels 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,356:INFO:sqlalchemy.engine.Engine: [generated in 0.00112s] {'param_1': 1}
+2023-08-17 19:45:27,361:DEBUG:sqlalchemy.engine.Engine: Col ('channels_id', 'channels_name', 'channels_type', 'channels_guild_id')
+2023-08-17 19:45:27,363:DEBUG:sqlalchemy.engine.Engine: Row (1081025526803738709, 'bot-test', 'text', 765965358754037801)
+2023-08-17 19:45:27,364:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.User'>
+2023-08-17 19:45:27,366:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,367:INFO:sqlalchemy.engine.Engine: [generated in 0.00074s] {'param_1': 1}
+2023-08-17 19:45:27,370:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:27,370:DEBUG:sqlalchemy.engine.Engine: Row (742777596734996582,)
+2023-08-17 19:45:27,371:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Message'>
+2023-08-17 19:45:27,373:INFO:sqlalchemy.engine.Engine: SELECT messages.id AS messages_id, messages.content AS messages_content, messages.user_id AS messages_user_id, messages.channel_id AS messages_channel_id, messages.guild_id AS messages_guild_id 
+FROM messages 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,374:INFO:sqlalchemy.engine.Engine: [generated in 0.00074s] {'param_1': 1}
+2023-08-17 19:45:27,378:DEBUG:sqlalchemy.engine.Engine: Col ('messages_id', 'messages_content', 'messages_user_id', 'messages_channel_id', 'messages_guild_id')
+2023-08-17 19:45:27,379:DEBUG:sqlalchemy.engine.Engine: Row (1127214404522483782, '', 1115607115189461034, 1081025526803738709, 765965358754037801)
+2023-08-17 19:45:27,380:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Reminder'>
+2023-08-17 19:45:27,381:INFO:sqlalchemy.engine.Engine: SELECT reminders.id AS reminders_id, reminders.content AS reminders_content, reminders.user_id AS reminders_user_id, reminders.timestamp AS reminders_timestamp 
+FROM reminders 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,382:INFO:sqlalchemy.engine.Engine: [generated in 0.00075s] {'param_1': 1}
+2023-08-17 19:45:27,387:DEBUG:sqlalchemy.engine.Engine: Col ('reminders_id', 'reminders_content', 'reminders_user_id', 'reminders_timestamp')
+2023-08-17 19:45:27,388:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Welcome'>
+2023-08-17 19:45:27,389:INFO:sqlalchemy.engine.Engine: SELECT welcome.guild_id AS welcome_guild_id, welcome.channel_id AS welcome_channel_id, welcome.message AS welcome_message, welcome.enabled AS welcome_enabled 
+FROM welcome 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,390:INFO:sqlalchemy.engine.Engine: [generated in 0.00088s] {'param_1': 1}
+2023-08-17 19:45:27,393:DEBUG:sqlalchemy.engine.Engine: Col ('welcome_guild_id', 'welcome_channel_id', 'welcome_message', 'welcome_enabled')
+2023-08-17 19:45:27,394:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.NhieQuestion'>
+2023-08-17 19:45:27,396:INFO:sqlalchemy.engine.Engine: SELECT nhie_questions.id AS nhie_questions_id, nhie_questions.value AS nhie_questions_value 
+FROM nhie_questions 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,397:INFO:sqlalchemy.engine.Engine: [generated in 0.00096s] {'param_1': 1}
+2023-08-17 19:45:27,400:DEBUG:sqlalchemy.engine.Engine: Col ('nhie_questions_id', 'nhie_questions_value')
+2023-08-17 19:45:27,400:DEBUG:sqlalchemy.engine.Engine: Row (0, 'Never have I ever gone skinny dipping.')
+2023-08-17 19:45:27,401:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.WyrQuestion'>
+2023-08-17 19:45:27,402:INFO:sqlalchemy.engine.Engine: SELECT wyr_questions.id AS wyr_questions_id, wyr_questions.value AS wyr_questions_value 
+FROM wyr_questions 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,403:INFO:sqlalchemy.engine.Engine: [generated in 0.00055s] {'param_1': 1}
+2023-08-17 19:45:27,407:DEBUG:sqlalchemy.engine.Engine: Col ('wyr_questions_id', 'wyr_questions_value')
+2023-08-17 19:45:27,408:DEBUG:sqlalchemy.engine.Engine: Row (0, 'Would you rather eat a bug or a fly?')
+2023-08-17 19:45:27,409:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Game'>
+2023-08-17 19:45:27,410:INFO:sqlalchemy.engine.Engine: SELECT games.id AS games_id, games.name AS games_name 
+FROM games 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,411:INFO:sqlalchemy.engine.Engine: [generated in 0.00053s] {'param_1': 1}
+2023-08-17 19:45:27,414:DEBUG:sqlalchemy.engine.Engine: Col ('games_id', 'games_name')
+2023-08-17 19:45:27,415:DEBUG:sqlalchemy.engine.Engine: Row (1, 'hangman')
+2023-08-17 19:45:27,416:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Lobby'>
+2023-08-17 19:45:27,417:INFO:sqlalchemy.engine.Engine: SELECT lobbies.id AS lobbies_id, lobbies.game AS lobbies_game, lobbies.status AS lobbies_status 
+FROM lobbies 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,418:INFO:sqlalchemy.engine.Engine: [generated in 0.00071s] {'param_1': 1}
+2023-08-17 19:45:27,420:DEBUG:sqlalchemy.engine.Engine: Col ('lobbies_id', 'lobbies_game', 'lobbies_status')
+2023-08-17 19:45:27,421:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.AssociationUserLobby'>
+2023-08-17 19:45:27,423:INFO:sqlalchemy.engine.Engine: SELECT association_users_lobbies.id AS association_users_lobbies_id, association_users_lobbies.lobby_id AS association_users_lobbies_lobby_id, association_users_lobbies.user_id AS association_users_lobbies_user_id 
+FROM association_users_lobbies 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,424:INFO:sqlalchemy.engine.Engine: [generated in 0.00082s] {'param_1': 1}
+2023-08-17 19:45:27,427:DEBUG:sqlalchemy.engine.Engine: Col ('association_users_lobbies_id', 'association_users_lobbies_lobby_id', 'association_users_lobbies_user_id')
+2023-08-17 19:45:27,428:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.ResultMassiveMultiplayer'>
+2023-08-17 19:45:27,429:INFO:sqlalchemy.engine.Engine: SELECT results_mp.id AS results_mp_id, results_mp.game AS results_mp_game, results_mp.user_id AS results_mp_user_id, results_mp.placement AS results_mp_placement 
+FROM results_mp 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,430:INFO:sqlalchemy.engine.Engine: [generated in 0.00078s] {'param_1': 1}
+2023-08-17 19:45:27,432:DEBUG:sqlalchemy.engine.Engine: Col ('results_mp_id', 'results_mp_game', 'results_mp_user_id', 'results_mp_placement')
+2023-08-17 19:45:27,433:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.ResultDuels'>
+2023-08-17 19:45:27,435:INFO:sqlalchemy.engine.Engine: SELECT results_1v1.id AS results_1v1_id, results_1v1.game AS results_1v1_game, results_1v1.player_1 AS results_1v1_player_1, results_1v1.player_2 AS results_1v1_player_2, results_1v1.winner AS results_1v1_winner, results_1v1.loser AS results_1v1_loser 
+FROM results_1v1 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,435:INFO:sqlalchemy.engine.Engine: [generated in 0.00079s] {'param_1': 1}
+2023-08-17 19:45:27,438:DEBUG:sqlalchemy.engine.Engine: Col ('results_1v1_id', 'results_1v1_game', 'results_1v1_player_1', 'results_1v1_player_2', 'results_1v1_winner', 'results_1v1_loser')
+2023-08-17 19:45:27,438:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.SteamUser'>
+2023-08-17 19:45:27,439:INFO:sqlalchemy.engine.Engine: SELECT steam_users.id AS steam_users_id 
+FROM steam_users 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,440:INFO:sqlalchemy.engine.Engine: [generated in 0.00054s] {'param_1': 1}
+2023-08-17 19:45:27,442:DEBUG:sqlalchemy.engine.Engine: Col ('steam_users_id',)
+2023-08-17 19:45:27,443:DEBUG:sqlalchemy.engine.Engine: Row (216308400336797706,)
+2023-08-17 19:45:27,444:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.SteamSale'>
+2023-08-17 19:45:27,445:INFO:sqlalchemy.engine.Engine: SELECT steam_sales.id AS steam_sales_id, steam_sales.title AS steam_sales_title, steam_sales.url AS steam_sales_url, steam_sales.sale_percent AS steam_sales_sale_percent, steam_sales.final_price AS steam_sales_final_price, steam_sales.is_dlc AS steam_sales_is_dlc, steam_sales.is_bundle AS steam_sales_is_bundle, steam_sales.update_datetime AS steam_sales_update_datetime 
+FROM steam_sales 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,446:INFO:sqlalchemy.engine.Engine: [generated in 0.00062s] {'param_1': 1}
+2023-08-17 19:45:27,448:DEBUG:sqlalchemy.engine.Engine: Col ('steam_sales_id', 'steam_sales_title', 'steam_sales_url', 'steam_sales_sale_percent', 'steam_sales_final_price', 'steam_sales_is_dlc', 'steam_sales_is_bundle', 'steam_sales_update_datetime')
+2023-08-17 19:45:27,449:DEBUG:sqlalchemy.engine.Engine: Row (1168660, 'Barro 2020', 'https://store.steampowered.com/app/1168660/Barro_2020/?snr=1_7_7_2300_150_1', 90, 0.19, False, False, datetime.datetime(2023, 8, 12, 16, 2, 28, 432357))
+2023-08-17 19:45:27,450:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Suggestion'>
+2023-08-17 19:45:27,452:INFO:sqlalchemy.engine.Engine: SELECT suggestions.id AS suggestions_id, suggestions.type AS suggestions_type, suggestions.is_verified AS suggestions_is_verified, suggestions.content AS suggestions_content 
+FROM suggestions 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,452:INFO:sqlalchemy.engine.Engine: [generated in 0.00074s] {'param_1': 1}
+2023-08-17 19:45:27,455:DEBUG:sqlalchemy.engine.Engine: Col ('suggestions_id', 'suggestions_type', 'suggestions_is_verified', 'suggestions_content')
+2023-08-17 19:45:27,456:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Poll'>
+2023-08-17 19:45:27,458:INFO:sqlalchemy.engine.Engine: SELECT polls.id AS polls_id, polls.channel_id AS polls_channel_id, polls.message_id AS polls_message_id, polls.content AS polls_content, polls.end_date AS polls_end_date, polls.votes AS polls_votes, polls.values AS polls_values 
+FROM polls 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,458:INFO:sqlalchemy.engine.Engine: [generated in 0.00077s] {'param_1': 1}
+2023-08-17 19:45:27,461:DEBUG:sqlalchemy.engine.Engine: Col ('polls_id', 'polls_channel_id', 'polls_message_id', 'polls_content', 'polls_end_date', 'polls_votes', 'polls_values')
+2023-08-17 19:45:27,462:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Team'>
+2023-08-17 19:45:27,463:INFO:sqlalchemy.engine.Engine: SELECT teams.id AS teams_id 
+FROM teams 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,464:INFO:sqlalchemy.engine.Engine: [generated in 0.00078s] {'param_1': 1}
+2023-08-17 19:45:27,466:DEBUG:sqlalchemy.engine.Engine: Col ('teams_id',)
+2023-08-17 19:45:27,467:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.AssociationUserTeam'>
+2023-08-17 19:45:27,469:INFO:sqlalchemy.engine.Engine: SELECT association_users_teams.id AS association_users_teams_id, association_users_teams.team_id AS association_users_teams_team_id, association_users_teams.user_id AS association_users_teams_user_id, association_users_teams.voted AS association_users_teams_voted 
+FROM association_users_teams 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,470:INFO:sqlalchemy.engine.Engine: [generated in 0.00085s] {'param_1': 1}
+2023-08-17 19:45:27,473:DEBUG:sqlalchemy.engine.Engine: Col ('association_users_teams_id', 'association_users_teams_team_id', 'association_users_teams_user_id', 'association_users_teams_voted')
+2023-08-17 19:45:27,474:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Server'>
+2023-08-17 19:45:27,476:INFO:sqlalchemy.engine.Engine: SELECT servers.id AS servers_id, servers.process_id AS servers_process_id, servers.name AS servers_name, servers.status AS servers_status, servers.run_path AS servers_run_path 
+FROM servers 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,476:INFO:sqlalchemy.engine.Engine: [generated in 0.00077s] {'param_1': 1}
+2023-08-17 19:45:27,479:DEBUG:sqlalchemy.engine.Engine: Col ('servers_id', 'servers_process_id', 'servers_name', 'servers_status', 'servers_run_path')
+2023-08-17 19:45:27,480:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Hangman'>
+2023-08-17 19:45:27,483:INFO:sqlalchemy.engine.Engine: SELECT hangman.id AS hangman_id, hangman.word AS hangman_word, hangman.letters AS hangman_letters 
+FROM hangman 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,484:INFO:sqlalchemy.engine.Engine: [generated in 0.00089s] {'param_1': 1}
+2023-08-17 19:45:27,487:DEBUG:sqlalchemy.engine.Engine: Col ('hangman_id', 'hangman_word', 'hangman_letters')
+2023-08-17 19:45:27,488:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.AssociationUserHangman'>
+2023-08-17 19:45:27,489:INFO:sqlalchemy.engine.Engine: SELECT association_users_hangman.id AS association_users_hangman_id, association_users_hangman.hangman_id AS association_users_hangman_hangman_id, association_users_hangman.user_id AS association_users_hangman_user_id, association_users_hangman.score AS association_users_hangman_score 
+FROM association_users_hangman 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,490:INFO:sqlalchemy.engine.Engine: [generated in 0.00054s] {'param_1': 1}
+2023-08-17 19:45:27,492:DEBUG:sqlalchemy.engine.Engine: Col ('association_users_hangman_id', 'association_users_hangman_hangman_id', 'association_users_hangman_user_id', 'association_users_hangman_score')
+2023-08-17 19:45:27,493:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.LookingForGroup'>
+2023-08-17 19:45:27,494:INFO:sqlalchemy.engine.Engine: SELECT looking_for_groups.id AS looking_for_groups_id, looking_for_groups.user_id AS looking_for_groups_user_id, looking_for_groups.game_id AS looking_for_groups_game_id 
+FROM looking_for_groups 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,494:INFO:sqlalchemy.engine.Engine: [generated in 0.00058s] {'param_1': 1}
+2023-08-17 19:45:27,496:DEBUG:sqlalchemy.engine.Engine: Col ('looking_for_groups_id', 'looking_for_groups_user_id', 'looking_for_groups_game_id')
+2023-08-17 19:45:27,497:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Presence'>
+2023-08-17 19:45:27,498:INFO:sqlalchemy.engine.Engine: SELECT presence.id AS presence_id, presence.user_id AS presence_user_id, presence.status AS presence_status, presence.date_time AS presence_date_time 
+FROM presence 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,499:INFO:sqlalchemy.engine.Engine: [generated in 0.00074s] {'param_1': 1}
+2023-08-17 19:45:27,501:DEBUG:sqlalchemy.engine.Engine: Col ('presence_id', 'presence_user_id', 'presence_status', 'presence_date_time')
+2023-08-17 19:45:27,502:DEBUG:sqlalchemy.engine.Engine: Row (1, 216308400336797706, 'online', datetime.datetime(2023, 7, 3, 9, 54, 14, 562301))
+2023-08-17 19:45:27,502:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.AutochannelBlacklist'>
+2023-08-17 19:45:27,503:INFO:sqlalchemy.engine.Engine: SELECT association_autochannel_blacklist.id AS association_autochannel_blacklist_id, association_autochannel_blacklist.user_id AS association_autochannel_blacklist_user_id 
+FROM association_autochannel_blacklist 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,504:INFO:sqlalchemy.engine.Engine: [generated in 0.00053s] {'param_1': 1}
+2023-08-17 19:45:27,506:DEBUG:sqlalchemy.engine.Engine: Col ('association_autochannel_blacklist_id', 'association_autochannel_blacklist_user_id')
+2023-08-17 19:45:27,507:DEBUG:sqlalchemy.engine.Engine: Row (216308400336797706, 742777596734996582)
+2023-08-17 19:45:27,507:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.AutochannelWhitelist'>
+2023-08-17 19:45:27,508:INFO:sqlalchemy.engine.Engine: SELECT association_autochannel_whitelist.id AS association_autochannel_whitelist_id, association_autochannel_whitelist.user_id AS association_autochannel_whitelist_user_id 
+FROM association_autochannel_whitelist 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,509:INFO:sqlalchemy.engine.Engine: [generated in 0.00052s] {'param_1': 1}
+2023-08-17 19:45:27,511:DEBUG:sqlalchemy.engine.Engine: Col ('association_autochannel_whitelist_id', 'association_autochannel_whitelist_user_id')
+2023-08-17 19:45:27,512:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Tickets'>
+2023-08-17 19:45:27,513:INFO:sqlalchemy.engine.Engine: SELECT tickets.id AS tickets_id, tickets.channel AS tickets_channel, tickets.start_datetime AS tickets_start_datetime, tickets.end_datetime AS tickets_end_datetime, tickets.closed AS tickets_closed 
+FROM tickets 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,514:INFO:sqlalchemy.engine.Engine: [generated in 0.00073s] {'param_1': 1}
+2023-08-17 19:45:27,516:DEBUG:sqlalchemy.engine.Engine: Col ('tickets_id', 'tickets_channel', 'tickets_start_datetime', 'tickets_end_datetime', 'tickets_closed')
+2023-08-17 19:45:27,517:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Role'>
+2023-08-17 19:45:27,518:INFO:sqlalchemy.engine.Engine: SELECT roles.id AS roles_id 
+FROM roles 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,519:INFO:sqlalchemy.engine.Engine: [generated in 0.00074s] {'param_1': 1}
+2023-08-17 19:45:27,521:DEBUG:sqlalchemy.engine.Engine: Col ('roles_id',)
+2023-08-17 19:45:27,522:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.AutoAssignRole'>
+2023-08-17 19:45:27,524:INFO:sqlalchemy.engine.Engine: SELECT auto_assign.id AS auto_assign_id, auto_assign.role_id AS auto_assign_role_id, auto_assign.guild_id AS auto_assign_guild_id 
+FROM auto_assign 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,525:INFO:sqlalchemy.engine.Engine: [generated in 0.00091s] {'param_1': 1}
+2023-08-17 19:45:27,527:DEBUG:sqlalchemy.engine.Engine: Col ('auto_assign_id', 'auto_assign_role_id', 'auto_assign_guild_id')
+2023-08-17 19:45:27,528:DEBUG:sqlalchemy.engine: Checking for existing database table: <class 'tools.database_tables.Incremental'>
+2023-08-17 19:45:27,529:INFO:sqlalchemy.engine.Engine: SELECT incremental_data.id AS incremental_data_id, incremental_data.user_id AS incremental_data_user_id, incremental_data.balance AS incremental_data_balance, incremental_data.last_update AS incremental_data_last_update 
+FROM incremental_data 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,529:INFO:sqlalchemy.engine.Engine: [generated in 0.00074s] {'param_1': 1}
+2023-08-17 19:45:27,532:INFO:sqlalchemy.engine.Engine: ROLLBACK
+2023-08-17 19:45:27,533:ERROR:sqlalchemy.engine: Error getting all tables: (psycopg2.errors.UndefinedColumn) column incremental_data.last_update does not exist
+LINE 1: ...emental_data.balance AS incremental_data_balance, incrementa...
+                                                             ^
+
+[SQL: SELECT incremental_data.id AS incremental_data_id, incremental_data.user_id AS incremental_data_user_id, incremental_data.balance AS incremental_data_balance, incremental_data.last_update AS incremental_data_last_update 
+FROM incremental_data 
+ LIMIT %(param_1)s]
+[parameters: {'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1968, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 920, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column incremental_data.last_update does not exist
+LINE 1: ...emental_data.balance AS incremental_data_balance, incrementa...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/tools/database_tables.py", line 435, in <module>
+    session.query(i).first()
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2747, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2846, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2232, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2127, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1413, in execute
+    return meth(
+           ^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 483, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1987, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2344, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1968, in _exec_single_context
+    self.dialect.do_execute(
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 920, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column incremental_data.last_update does not exist
+LINE 1: ...emental_data.balance AS incremental_data_balance, incrementa...
+                                                             ^
+
+[SQL: SELECT incremental_data.id AS incremental_data_id, incremental_data.user_id AS incremental_data_user_id, incremental_data.balance AS incremental_data_balance, incremental_data.last_update AS incremental_data_last_update 
+FROM incremental_data 
+ LIMIT %(param_1)s]
+[parameters: {'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2023-08-17 19:45:27,541:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:27,546:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,546:INFO:sqlalchemy.engine.Engine: [generated in 0.00089s] {'table_name': 'guilds', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,551:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,551:DEBUG:sqlalchemy.engine.Engine: Row ('guilds',)
+2023-08-17 19:45:27,552:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,553:INFO:sqlalchemy.engine.Engine: [cached since 0.007048s ago] {'table_name': 'channels', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,554:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,555:DEBUG:sqlalchemy.engine.Engine: Row ('channels',)
+2023-08-17 19:45:27,555:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,556:INFO:sqlalchemy.engine.Engine: [cached since 0.01049s ago] {'table_name': 'users', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,557:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,557:DEBUG:sqlalchemy.engine.Engine: Row ('users',)
+2023-08-17 19:45:27,558:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,558:INFO:sqlalchemy.engine.Engine: [cached since 0.01286s ago] {'table_name': 'messages', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,559:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,560:DEBUG:sqlalchemy.engine.Engine: Row ('messages',)
+2023-08-17 19:45:27,561:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,561:INFO:sqlalchemy.engine.Engine: [cached since 0.01593s ago] {'table_name': 'reminders', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,562:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,563:DEBUG:sqlalchemy.engine.Engine: Row ('reminders',)
+2023-08-17 19:45:27,564:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,564:INFO:sqlalchemy.engine.Engine: [cached since 0.01862s ago] {'table_name': 'welcome', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,565:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,566:DEBUG:sqlalchemy.engine.Engine: Row ('welcome',)
+2023-08-17 19:45:27,567:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,567:INFO:sqlalchemy.engine.Engine: [cached since 0.02166s ago] {'table_name': 'nhie_questions', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,568:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,569:DEBUG:sqlalchemy.engine.Engine: Row ('nhie_questions',)
+2023-08-17 19:45:27,570:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,570:INFO:sqlalchemy.engine.Engine: [cached since 0.02464s ago] {'table_name': 'wyr_questions', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,571:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,572:DEBUG:sqlalchemy.engine.Engine: Row ('wyr_questions',)
+2023-08-17 19:45:27,573:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,574:INFO:sqlalchemy.engine.Engine: [cached since 0.02831s ago] {'table_name': 'games', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,575:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,576:DEBUG:sqlalchemy.engine.Engine: Row ('games',)
+2023-08-17 19:45:27,577:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,578:INFO:sqlalchemy.engine.Engine: [cached since 0.03221s ago] {'table_name': 'lobbies', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,579:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,580:DEBUG:sqlalchemy.engine.Engine: Row ('lobbies',)
+2023-08-17 19:45:27,581:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,582:INFO:sqlalchemy.engine.Engine: [cached since 0.03634s ago] {'table_name': 'association_users_lobbies', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,583:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,584:DEBUG:sqlalchemy.engine.Engine: Row ('association_users_lobbies',)
+2023-08-17 19:45:27,585:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,586:INFO:sqlalchemy.engine.Engine: [cached since 0.04066s ago] {'table_name': 'results_mp', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,588:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,589:DEBUG:sqlalchemy.engine.Engine: Row ('results_mp',)
+2023-08-17 19:45:27,589:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,590:INFO:sqlalchemy.engine.Engine: [cached since 0.04466s ago] {'table_name': 'results_1v1', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,591:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,592:DEBUG:sqlalchemy.engine.Engine: Row ('results_1v1',)
+2023-08-17 19:45:27,593:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,593:INFO:sqlalchemy.engine.Engine: [cached since 0.04767s ago] {'table_name': 'steam_users', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,594:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,595:DEBUG:sqlalchemy.engine.Engine: Row ('steam_users',)
+2023-08-17 19:45:27,595:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,596:INFO:sqlalchemy.engine.Engine: [cached since 0.05007s ago] {'table_name': 'steam_sales', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,597:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,598:DEBUG:sqlalchemy.engine.Engine: Row ('steam_sales',)
+2023-08-17 19:45:27,598:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,599:INFO:sqlalchemy.engine.Engine: [cached since 0.05316s ago] {'table_name': 'suggestions', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,599:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,600:DEBUG:sqlalchemy.engine.Engine: Row ('suggestions',)
+2023-08-17 19:45:27,601:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,601:INFO:sqlalchemy.engine.Engine: [cached since 0.05559s ago] {'table_name': 'polls', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,602:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,603:DEBUG:sqlalchemy.engine.Engine: Row ('polls',)
+2023-08-17 19:45:27,604:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,604:INFO:sqlalchemy.engine.Engine: [cached since 0.05896s ago] {'table_name': 'teams', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,605:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,606:DEBUG:sqlalchemy.engine.Engine: Row ('teams',)
+2023-08-17 19:45:27,606:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,607:INFO:sqlalchemy.engine.Engine: [cached since 0.06136s ago] {'table_name': 'association_users_teams', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,608:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,608:DEBUG:sqlalchemy.engine.Engine: Row ('association_users_teams',)
+2023-08-17 19:45:27,609:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,610:INFO:sqlalchemy.engine.Engine: [cached since 0.06428s ago] {'table_name': 'servers', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,611:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,611:DEBUG:sqlalchemy.engine.Engine: Row ('servers',)
+2023-08-17 19:45:27,612:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,612:INFO:sqlalchemy.engine.Engine: [cached since 0.06668s ago] {'table_name': 'hangman', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,613:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,614:DEBUG:sqlalchemy.engine.Engine: Row ('hangman',)
+2023-08-17 19:45:27,615:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,615:INFO:sqlalchemy.engine.Engine: [cached since 0.06991s ago] {'table_name': 'association_users_hangman', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,617:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,617:DEBUG:sqlalchemy.engine.Engine: Row ('association_users_hangman',)
+2023-08-17 19:45:27,618:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,618:INFO:sqlalchemy.engine.Engine: [cached since 0.0727s ago] {'table_name': 'looking_for_groups', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,619:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,620:DEBUG:sqlalchemy.engine.Engine: Row ('looking_for_groups',)
+2023-08-17 19:45:27,621:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,621:INFO:sqlalchemy.engine.Engine: [cached since 0.0759s ago] {'table_name': 'presence', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,623:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,623:DEBUG:sqlalchemy.engine.Engine: Row ('presence',)
+2023-08-17 19:45:27,624:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,624:INFO:sqlalchemy.engine.Engine: [cached since 0.07876s ago] {'table_name': 'association_autochannel_blacklist', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,625:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,626:DEBUG:sqlalchemy.engine.Engine: Row ('association_autochannel_blacklist',)
+2023-08-17 19:45:27,626:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,627:INFO:sqlalchemy.engine.Engine: [cached since 0.08155s ago] {'table_name': 'association_autochannel_whitelist', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,628:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,629:DEBUG:sqlalchemy.engine.Engine: Row ('association_autochannel_whitelist',)
+2023-08-17 19:45:27,629:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,630:INFO:sqlalchemy.engine.Engine: [cached since 0.08411s ago] {'table_name': 'tickets', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,630:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,631:DEBUG:sqlalchemy.engine.Engine: Row ('tickets',)
+2023-08-17 19:45:27,631:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,632:INFO:sqlalchemy.engine.Engine: [cached since 0.08675s ago] {'table_name': 'roles', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,634:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,635:DEBUG:sqlalchemy.engine.Engine: Row ('roles',)
+2023-08-17 19:45:27,635:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,636:INFO:sqlalchemy.engine.Engine: [cached since 0.09026s ago] {'table_name': 'auto_assign', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,637:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,637:DEBUG:sqlalchemy.engine.Engine: Row ('auto_assign',)
+2023-08-17 19:45:27,638:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,638:INFO:sqlalchemy.engine.Engine: [cached since 0.09293s ago] {'table_name': 'incremental_data', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,640:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,640:DEBUG:sqlalchemy.engine.Engine: Row ('incremental_data',)
+2023-08-17 19:45:27,641:INFO:sqlalchemy.engine.Engine: SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = %(table_name)s AND pg_catalog.pg_class.relkind = ANY (ARRAY[%(param_1)s, %(param_2)s, %(param_3)s, %(param_4)s, %(param_5)s]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != %(nspname_1)s
+2023-08-17 19:45:27,641:INFO:sqlalchemy.engine.Engine: [cached since 0.09573s ago] {'table_name': 'incremental_gens', 'param_1': 'r', 'param_2': 'p', 'param_3': 'f', 'param_4': 'v', 'param_5': 'm', 'nspname_1': 'pg_catalog'}
+2023-08-17 19:45:27,642:DEBUG:sqlalchemy.engine.Engine: Col ('relname',)
+2023-08-17 19:45:27,643:DEBUG:sqlalchemy.engine.Engine: Row ('incremental_gens',)
+2023-08-17 19:45:27,643:INFO:sqlalchemy.engine.Engine: COMMIT
+2023-08-17 19:45:27,724:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:27,726:INFO:sqlalchemy.engine.Engine: SELECT nhie_questions.id AS nhie_questions_id, nhie_questions.value AS nhie_questions_value 
+FROM nhie_questions
+2023-08-17 19:45:27,726:INFO:sqlalchemy.engine.Engine: [generated in 0.00070s] {}
+2023-08-17 19:45:27,727:DEBUG:sqlalchemy.engine.Engine: Col ('nhie_questions_id', 'nhie_questions_value')
+2023-08-17 19:45:27,728:DEBUG:sqlalchemy.engine.Engine: Row (0, 'Never have I ever gone skinny dipping.')
+2023-08-17 19:45:27,729:DEBUG:sqlalchemy.engine.Engine: Row (1, 'Never have I ever gone on a blind date.')
+2023-08-17 19:45:27,730:DEBUG:sqlalchemy.engine.Engine: Row (2, 'Never have I ever creeped an ex on social media.')
+2023-08-17 19:45:27,730:DEBUG:sqlalchemy.engine.Engine: Row (3, 'Never have I ever been hungover.')
+2023-08-17 19:45:27,731:DEBUG:sqlalchemy.engine.Engine: Row (4, 'Never have I ever kissed my best friend.')
+2023-08-17 19:45:27,731:DEBUG:sqlalchemy.engine.Engine: Row (5, 'Never have I ever ghosted someone.')
+2023-08-17 19:45:27,732:DEBUG:sqlalchemy.engine.Engine: Row (6, 'Never have I ever gotten a speeding ticket.')
+2023-08-17 19:45:27,733:DEBUG:sqlalchemy.engine.Engine: Row (7, "Never have I ever slid into someone's DMs.")
+2023-08-17 19:45:27,733:DEBUG:sqlalchemy.engine.Engine: Row (8, 'Never have I ever dined and dashed.')
+2023-08-17 19:45:27,734:DEBUG:sqlalchemy.engine.Engine: Row (9, 'Never have I ever used a fake ID.')
+2023-08-17 19:45:27,734:DEBUG:sqlalchemy.engine.Engine: Row (10, 'Never have I ever had a crush on a teacher.')
+2023-08-17 19:45:27,735:DEBUG:sqlalchemy.engine.Engine: Row (11, 'Never have I ever been in love.')
+2023-08-17 19:45:27,735:DEBUG:sqlalchemy.engine.Engine: Row (12, 'Never have I ever made out in a public place.')
+2023-08-17 19:45:27,736:DEBUG:sqlalchemy.engine.Engine: Row (13, 'Never have I ever gotten into a physical fight.')
+2023-08-17 19:45:27,737:DEBUG:sqlalchemy.engine.Engine: Row (14, 'Never have I ever had an alcoholic drink.')
+2023-08-17 19:45:27,737:DEBUG:sqlalchemy.engine.Engine: Row (15, 'Never have I ever played spin the bottle.')
+2023-08-17 19:45:27,738:DEBUG:sqlalchemy.engine.Engine: Row (16, "Never have I ever snooped through someone's phone.")
+2023-08-17 19:45:27,738:DEBUG:sqlalchemy.engine.Engine: Row (17, 'Never have I ever snuck into a movie theater.')
+2023-08-17 19:45:27,738:DEBUG:sqlalchemy.engine.Engine: Row (18, "Never have I ever kissed a friend's ex.")
+2023-08-17 19:45:27,739:DEBUG:sqlalchemy.engine.Engine: Row (19, 'Never have I ever told someone "I love you" without meaning it.')
+2023-08-17 19:45:27,739:DEBUG:sqlalchemy.engine.Engine: Row (20, 'Never have I ever been called a player.')
+2023-08-17 19:45:27,740:DEBUG:sqlalchemy.engine.Engine: Row (21, 'Never have I ever smoked a cigarette.')
+2023-08-17 19:45:27,740:DEBUG:sqlalchemy.engine.Engine: Row (22, 'Never have I ever given a lap dance.')
+2023-08-17 19:45:27,741:DEBUG:sqlalchemy.engine.Engine: Row (23, 'Never have I ever gotten a lap dance.')
+2023-08-17 19:45:27,742:DEBUG:sqlalchemy.engine.Engine: Row (24, 'Never have I ever cheated on a test.')
+2023-08-17 19:45:27,743:DEBUG:sqlalchemy.engine.Engine: Row (25, 'Never have I ever used a dating app.')
+2023-08-17 19:45:27,743:DEBUG:sqlalchemy.engine.Engine: Row (26, 'Never have I ever kissed more than one person in 24 hours.')
+2023-08-17 19:45:27,744:DEBUG:sqlalchemy.engine.Engine: Row (27, 'Never have I ever cheated on someone.')
+2023-08-17 19:45:27,744:DEBUG:sqlalchemy.engine.Engine: Row (28, 'Never have I ever been cheated on.')
+2023-08-17 19:45:27,745:DEBUG:sqlalchemy.engine.Engine: Row (29, 'Never have I ever sent a racy text to the wrong person.')
+2023-08-17 19:45:27,745:DEBUG:sqlalchemy.engine.Engine: Row (30, 'Never have I ever had a negative bank account balance.')
+2023-08-17 19:45:27,746:DEBUG:sqlalchemy.engine.Engine: Row (31, 'Never have I ever played strip poker.')
+2023-08-17 19:45:27,747:DEBUG:sqlalchemy.engine.Engine: Row (32, 'Never have I ever been arrested.')
+2023-08-17 19:45:27,747:DEBUG:sqlalchemy.engine.Engine: Row (33, 'Never have I ever been expelled.')
+2023-08-17 19:45:27,748:DEBUG:sqlalchemy.engine.Engine: Row (34, 'Never have I ever stolen anything.')
+2023-08-17 19:45:27,749:DEBUG:sqlalchemy.engine.Engine: Row (35, 'Never have I ever gotten a hickey.')
+2023-08-17 19:45:27,750:DEBUG:sqlalchemy.engine.Engine: Row (36, 'Never have I ever been fired.')
+2023-08-17 19:45:27,750:DEBUG:sqlalchemy.engine.Engine: Row (37, 'Never have I ever made out in a movie theater.')
+2023-08-17 19:45:27,751:DEBUG:sqlalchemy.engine.Engine: Row (38, 'Never have I ever dated someone older than me.')
+2023-08-17 19:45:27,751:DEBUG:sqlalchemy.engine.Engine: Row (39, 'Never have I ever dated someone younger than me.')
+2023-08-17 19:45:27,752:DEBUG:sqlalchemy.engine.Engine: Row (40, 'Never have I ever broken the law.')
+2023-08-17 19:45:27,752:DEBUG:sqlalchemy.engine.Engine: Row (41, 'Never have I ever been to a nude beach.')
+2023-08-17 19:45:27,752:DEBUG:sqlalchemy.engine.Engine: Row (42, 'Never have I stood a date up.')
+2023-08-17 19:45:27,753:DEBUG:sqlalchemy.engine.Engine: Row (43, 'Never have I ever stayed in a relationship that I really wasn`t feeling.')
+2023-08-17 19:45:27,754:DEBUG:sqlalchemy.engine.Engine: Row (44, 'Never have I ever given someone a fake phone number.')
+2023-08-17 19:45:27,755:DEBUG:sqlalchemy.engine.Engine: Row (45, 'Never have I ever lied to someone in this room.')
+2023-08-17 19:45:27,756:DEBUG:sqlalchemy.engine.Engine: Row (46, 'Never have I ever broken up with someone over text.')
+2023-08-17 19:45:27,756:DEBUG:sqlalchemy.engine.Engine: Row (47, 'Never have I ever had a crush on an SO`s best friend.')
+2023-08-17 19:45:27,757:DEBUG:sqlalchemy.engine.Engine: Row (48, 'Never have I ever shoplifted.')
+2023-08-17 19:45:27,757:DEBUG:sqlalchemy.engine.Engine: Row (49, 'Never have I ever seen a ghost.')
+2023-08-17 19:45:27,758:DEBUG:sqlalchemy.engine.Engine: Row (50, 'Never have I told a secret I wasn`t supposed to share.')
+2023-08-17 19:45:27,758:DEBUG:sqlalchemy.engine.Engine: Row (51, 'Never have I ever had a friend with benefits.')
+2023-08-17 19:45:27,759:DEBUG:sqlalchemy.engine.Engine: Row (52, 'Never have I ever intentionally started a fight between other people.')
+2023-08-17 19:45:27,759:DEBUG:sqlalchemy.engine.Engine: Row (53, 'Never have I ever dated more than one person at once.')
+2023-08-17 19:45:27,760:DEBUG:sqlalchemy.engine.Engine: Row (54, 'Never have I ever spent money that wasn`t mine to spend.')
+2023-08-17 19:45:27,761:DEBUG:sqlalchemy.engine.Engine: Row (55, 'Never have I ever had a relationship last less than a month.')
+2023-08-17 19:45:27,761:DEBUG:sqlalchemy.engine.Engine: Row (56, 'Never have I ever had a relationship last longer than a year.')
+2023-08-17 19:45:27,762:DEBUG:sqlalchemy.engine.Engine: Row (57, 'Never have I ever gotten an unexpected piercing.')
+2023-08-17 19:45:27,762:DEBUG:sqlalchemy.engine.Engine: Row (58, 'Never have I ever found a dumb excuse to text an ex.')
+2023-08-17 19:45:27,763:DEBUG:sqlalchemy.engine.Engine: Row (59, 'Never have I ever fallen in love at first sight.')
+2023-08-17 19:45:27,763:DEBUG:sqlalchemy.engine.Engine: Row (60, 'Never have I ever kissed someone I just met.')
+2023-08-17 19:45:27,764:DEBUG:sqlalchemy.engine.Engine: Row (61, 'Never have I ever kept a crush secret from people in this room.')
+2023-08-17 19:45:27,764:DEBUG:sqlalchemy.engine.Engine: Row (62, 'Never have I ever been in love with someone without them knowing.')
+2023-08-17 19:45:27,765:DEBUG:sqlalchemy.engine.Engine: Row (63, 'Never have I ever been in an open relationship.')
+2023-08-17 19:45:27,766:DEBUG:sqlalchemy.engine.Engine: Row (64, 'Never have I ever fantasized about getting back with an ex.')
+2023-08-17 19:45:27,767:DEBUG:sqlalchemy.engine.Engine: Row (65, 'Never have I ever helped a friend lie by being their alibi.')
+2023-08-17 19:45:27,768:DEBUG:sqlalchemy.engine.Engine: Row (66, 'Never have I ever seriously thought about marrying someone.')
+2023-08-17 19:45:27,768:DEBUG:sqlalchemy.engine.Engine: Row (67, 'Never have I ever had a totally online relationship.')
+2023-08-17 19:45:27,769:DEBUG:sqlalchemy.engine.Engine: Row (68, 'Never have I ever flirted just to get something I wanted.')
+2023-08-17 19:45:27,769:DEBUG:sqlalchemy.engine.Engine: Row (69, 'Never have I ever tried guessing someone`s password.')
+2023-08-17 19:45:27,770:DEBUG:sqlalchemy.engine.Engine: Row (70, 'Never have I ever been caught lying.')
+2023-08-17 19:45:27,772:INFO:sqlalchemy.engine.Engine: ROLLBACK
+2023-08-17 19:45:27,806:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:27,807:INFO:sqlalchemy.engine.Engine: SELECT wyr_questions.id AS wyr_questions_id, wyr_questions.value AS wyr_questions_value 
+FROM wyr_questions
+2023-08-17 19:45:27,808:INFO:sqlalchemy.engine.Engine: [generated in 0.00109s] {}
+2023-08-17 19:45:27,810:DEBUG:sqlalchemy.engine.Engine: Col ('wyr_questions_id', 'wyr_questions_value')
+2023-08-17 19:45:27,812:DEBUG:sqlalchemy.engine.Engine: Row (0, 'Would you rather eat a bug or a fly?')
+2023-08-17 19:45:27,813:DEBUG:sqlalchemy.engine.Engine: Row (1, 'Would you rather lick the floor or a broom?')
+2023-08-17 19:45:27,815:DEBUG:sqlalchemy.engine.Engine: Row (2, 'Would you rather eat ice cream or cake?')
+2023-08-17 19:45:27,816:DEBUG:sqlalchemy.engine.Engine: Row (3, "Would you rather clean a toilet or a baby's diaper")
+2023-08-17 19:45:27,817:DEBUG:sqlalchemy.engine.Engine: Row (4, 'Would you rather lick your keyboard or mouse?')
+2023-08-17 19:45:27,818:DEBUG:sqlalchemy.engine.Engine: Row (5, 'Would you rather wash your hair with mash potatoes or cranberry sauce?')
+2023-08-17 19:45:27,819:DEBUG:sqlalchemy.engine.Engine: Row (6, 'Would you rather team up with Wonder Woman or Captain Marvel?')
+2023-08-17 19:45:27,821:DEBUG:sqlalchemy.engine.Engine: Row (7, 'Would you rather want to find true love or win lottery next month?')
+2023-08-17 19:45:27,822:DEBUG:sqlalchemy.engine.Engine: Row (8, 'Would you rather be forced to sing along or dance to every song you hear?')
+2023-08-17 19:45:27,824:DEBUG:sqlalchemy.engine.Engine: Row (9, 'Would you rather have everyone you know be able to read your thoughts or for everyone you know to have access to your Internet history?')
+2023-08-17 19:45:27,825:DEBUG:sqlalchemy.engine.Engine: Row (10, 'Would you rather be chronically under-dressed or overdressed?')
+2023-08-17 19:45:27,827:DEBUG:sqlalchemy.engine.Engine: Row (11, 'Would you rather lose your sight or your memories?')
+2023-08-17 19:45:27,828:DEBUG:sqlalchemy.engine.Engine: Row (12, 'Would you rather have universal respect or unlimited power?')
+2023-08-17 19:45:27,829:DEBUG:sqlalchemy.engine.Engine: Row (13, 'Would you rather give up air conditioning and heating for the rest of your life or give up the Internet for the rest of your life?')
+2023-08-17 19:45:27,831:DEBUG:sqlalchemy.engine.Engine: Row (14, 'Would you rather swim in a pool full of Nutella or a pool full of maple syrup?')
+2023-08-17 19:45:27,833:DEBUG:sqlalchemy.engine.Engine: Row (15, 'Would you rather labor under a hot sun or extreme cold?')
+2023-08-17 19:45:27,834:DEBUG:sqlalchemy.engine.Engine: Row (16, 'Would you rather stay in during a snow day or build a fort?')
+2023-08-17 19:45:27,836:DEBUG:sqlalchemy.engine.Engine: Row (17, 'Would you rather buy 10 things you don�t need every time you go shopping or always forget the one thing that you need when you go to the store?')
+2023-08-17 19:45:27,837:DEBUG:sqlalchemy.engine.Engine: Row (18, 'Would you rather never be able to go out during the day or never be able to go out at night?')
+2023-08-17 19:45:27,838:DEBUG:sqlalchemy.engine.Engine: Row (19, 'Would you rather have a personal maid or a personal chef?')
+2023-08-17 19:45:27,839:DEBUG:sqlalchemy.engine.Engine: Row (20, 'Would you rather have beyonc�s talent or Jay-Z�s business acumen?')
+2023-08-17 19:45:27,840:DEBUG:sqlalchemy.engine.Engine: Row (21, 'Would you rather be an extra in an Oscar-winning movie or the lead in a box office bomb?')
+2023-08-17 19:45:27,841:DEBUG:sqlalchemy.engine.Engine: Row (22, 'Would you rather vomit on your hero or have your hero vomit on you?')
+2023-08-17 19:45:27,842:DEBUG:sqlalchemy.engine.Engine: Row (23, 'Would you rather communicate only in emoji or never be able to text at all ever again?')
+2023-08-17 19:45:27,843:DEBUG:sqlalchemy.engine.Engine: Row (24, 'Would you rather be royalty 1,000 years ago or an average person today?')
+2023-08-17 19:45:27,845:DEBUG:sqlalchemy.engine.Engine: Row (25, 'Would you rather lounge by the pool or on the beach?')
+2023-08-17 19:45:27,846:DEBUG:sqlalchemy.engine.Engine: Row (26, 'Would you rather wear the same socks for a month or the same underwear for a week?')
+2023-08-17 19:45:27,847:DEBUG:sqlalchemy.engine.Engine: Row (27, 'Would you rather work an overtime shift with your annoying boss or spend full day with your mother-in-law?')
+2023-08-17 19:45:27,848:DEBUG:sqlalchemy.engine.Engine: Row (28, 'Would you rather cuddle a koala or pal around with a panda?')
+2023-08-17 19:45:27,849:DEBUG:sqlalchemy.engine.Engine: Row (29, 'Would you rather have a sing-off with Ariana Grande or a dance-off with Rihanna?')
+2023-08-17 19:45:27,850:DEBUG:sqlalchemy.engine.Engine: Row (30, 'Would you rather watch nothing but Hallmark Christmas movies or nothing but horror movies?')
+2023-08-17 19:45:27,851:DEBUG:sqlalchemy.engine.Engine: Row (31, 'Would you rather always be 10 minutes late or always be 20 minutes early?')
+2023-08-17 19:45:27,852:DEBUG:sqlalchemy.engine.Engine: Row (32, 'Would you rather have a pause or a rewind button in your life?')
+2023-08-17 19:45:27,853:DEBUG:sqlalchemy.engine.Engine: Row (33, 'Would you rather lose all your teeth or lose a day of your life every time you kissed someone?')
+2023-08-17 19:45:27,854:DEBUG:sqlalchemy.engine.Engine: Row (34, 'Would you rather drink from a toilet or pee in a litter box?')
+2023-08-17 19:45:27,855:DEBUG:sqlalchemy.engine.Engine: Row (35, 'Would you rather be forced to live the same day over and over again for a full year, or take 3 years off the end of your life?')
+2023-08-17 19:45:27,856:DEBUG:sqlalchemy.engine.Engine: Row (36, 'Would you rather never eat watermelon ever again or be forced to eat watermelon with every meal?')
+2023-08-17 19:45:27,857:DEBUG:sqlalchemy.engine.Engine: Row (37, 'Would you rather go to Harvard but graduate and be jobless, or graduate from another college and work for Harvard')
+2023-08-17 19:45:27,858:DEBUG:sqlalchemy.engine.Engine: Row (38, 'Would you rather the aliens that make first contact be robotic or organic?')
+2023-08-17 19:45:27,859:DEBUG:sqlalchemy.engine.Engine: Row (39, 'Would you rather lose the ability to read or lose the ability to speak?')
+2023-08-17 19:45:27,860:DEBUG:sqlalchemy.engine.Engine: Row (40, 'Would you rather have a golden voice or a silver tongue?')
+2023-08-17 19:45:27,861:DEBUG:sqlalchemy.engine.Engine: Row (41, 'Would you rather be covered in fur or covered in scales?')
+2023-08-17 19:45:27,861:DEBUG:sqlalchemy.engine.Engine: Row (42, 'Would you rather be in jail for a year or lose a year off your life?')
+2023-08-17 19:45:27,862:DEBUG:sqlalchemy.engine.Engine: Row (43, 'Would you rather have one real get out of jail free card or a key that opens any door?')
+2023-08-17 19:45:27,863:DEBUG:sqlalchemy.engine.Engine: Row (44, 'Would you rather know the history of every object you touched or be able to talk to animals?')
+2023-08-17 19:45:27,864:DEBUG:sqlalchemy.engine.Engine: Row (45, 'Would you rather be married to a 10 with a bad personality or a 6 with an amazing personality?')
+2023-08-17 19:45:27,865:DEBUG:sqlalchemy.engine.Engine: Row (46, 'Would you rather be able to talk to land animals, animals that fly, or animals that live under the water?')
+2023-08-17 19:45:27,866:DEBUG:sqlalchemy.engine.Engine: Row (47, 'Would you rather have all traffic lights you approach be green or never have to stand in line again?')
+2023-08-17 19:45:27,867:DEBUG:sqlalchemy.engine.Engine: Row (48, 'Would you rather spend the rest of your life with a sailboat as your home or an RV as your home?')
+2023-08-17 19:45:27,868:DEBUG:sqlalchemy.engine.Engine: Row (49, 'Would you rather marry someone pretty but stupid or clever but ugly?')
+2023-08-17 19:45:27,869:DEBUG:sqlalchemy.engine.Engine: Row (50, 'Would you rather give up all drinks except for water or give up eating anything that was cooked in an oven?')
+2023-08-17 19:45:27,870:DEBUG:sqlalchemy.engine.Engine: Row (51, 'Would you rather be able to see 10 minutes into your own future or 10 minutes into the future of anyone but yourself?')
+2023-08-17 19:45:27,871:DEBUG:sqlalchemy.engine.Engine: Row (52, 'Would you rather have to fart loudly every time you have a serious conversation or have to burp after every kiss?')
+2023-08-17 19:45:27,871:DEBUG:sqlalchemy.engine.Engine: Row (53, 'Would you rather become twice as strong when both of your fingers are stuck in your ears or crawl twice as fast as you can run?')
+2023-08-17 19:45:27,872:DEBUG:sqlalchemy.engine.Engine: Row (54, 'Would you rather have everything you draw become real but be permanently terrible at drawing or be able to fly but only as fast as you can walk?')
+2023-08-17 19:45:27,872:DEBUG:sqlalchemy.engine.Engine: Row (55, 'Would you rather thirty butterflies instantly appear from nowhere every time you sneeze or one very angry squirrel appear from nowhere every time you cough?')
+2023-08-17 19:45:27,873:DEBUG:sqlalchemy.engine.Engine: Row (56, 'Would you rather vomit uncontrollably for one minute every time you hear the happy birthday song or get a headache that lasts for the rest of the day every time you see a bird (including in pictures or a video)?')
+2023-08-17 19:45:27,874:DEBUG:sqlalchemy.engine.Engine: Row (57, 'Would you rather eat a sandwich made from 4 ingredients in your fridge chosen at random or eat a sandwich made by a group of your friends from 4 ingredients in your fridge?')
+2023-08-17 19:45:27,875:DEBUG:sqlalchemy.engine.Engine: Row (58, 'Would you rather everyone be required to wear identical silver jumpsuits or any time two people meet and are wearing an identical article of clothing they must fight to the death?')
+2023-08-17 19:45:27,876:DEBUG:sqlalchemy.engine.Engine: Row (59, 'Would you rather have to read aloud every word you read or sing everything you say out loud?')
+2023-08-17 19:45:27,877:DEBUG:sqlalchemy.engine.Engine: Row (60, 'Would you rather wear a wedding dress/tuxedo every single day or wear a bathing suit every single day?')
+2023-08-17 19:45:27,877:DEBUG:sqlalchemy.engine.Engine: Row (61, 'Would you rather be unable to move your body every time it rains or not be able to stop moving while the sun is out?')
+2023-08-17 19:45:27,878:DEBUG:sqlalchemy.engine.Engine: Row (62, 'Would you rather have all dogs try to attack you when they see you or all birds try to attack you when they see you?')
+2023-08-17 19:45:27,879:DEBUG:sqlalchemy.engine.Engine: Row (63, 'Would you rather be compelled to high five everyone you meet or be compelled to give wedgies to anyone in a green shirt?')
+2023-08-17 19:45:27,880:DEBUG:sqlalchemy.engine.Engine: Row (64, 'Would you rather have skin that changes color based on your emotions or tattoos appear all over your body depicting what you did yesterday?')
+2023-08-17 19:45:27,880:DEBUG:sqlalchemy.engine.Engine: Row (65, 'Would you rather randomly time travel +/- 20 years every time you fart or teleport to a different place on earth (on land, not water) every time you sneeze?')
+2023-08-17 19:45:27,882:DEBUG:sqlalchemy.engine.Engine: Row (66, 'Would you rather there be a perpetual water balloon war going on in your city/town or a perpetual food fight?')
+2023-08-17 19:45:27,883:DEBUG:sqlalchemy.engine.Engine: Row (67, 'Would you rather have a dog with a cat�s personality or a cat with a dog�s personality?')
+2023-08-17 19:45:27,883:DEBUG:sqlalchemy.engine.Engine: Row (68, 'If you were reborn in a new life, would you rather be alive in the past or future?')
+2023-08-17 19:45:27,884:DEBUG:sqlalchemy.engine.Engine: Row (69, 'Would you rather eat no candy at Halloween or no turkey at Thanksgiving?')
+2023-08-17 19:45:27,885:DEBUG:sqlalchemy.engine.Engine: Row (70, 'Would you rather date someone you love or date someone who loves you?')
+2023-08-17 19:45:27,886:DEBUG:sqlalchemy.engine.Engine: Row (71, 'Would you rather lose the ability to lie or believe everything you�re told?')
+2023-08-17 19:45:27,886:DEBUG:sqlalchemy.engine.Engine: Row (72, 'Would you rather be free or be totally safe?')
+2023-08-17 19:45:27,887:DEBUG:sqlalchemy.engine.Engine: Row (73, 'Would you rather eat poop that tasted like chocolate, or eat chocolate that tasted like crap?')
+2023-08-17 19:45:27,888:DEBUG:sqlalchemy.engine.Engine: Row (74, 'Would you rather Look 10 years older from the neck up, or the neck down?')
+2023-08-17 19:45:27,889:DEBUG:sqlalchemy.engine.Engine: Row (75, 'Would you rather be extremely underweight or extremely overweight?')
+2023-08-17 19:45:27,889:DEBUG:sqlalchemy.engine.Engine: Row (76, 'Would you rather Experience the beginning of planet earth or the end of planet earth?')
+2023-08-17 19:45:27,890:DEBUG:sqlalchemy.engine.Engine: Row (77, 'Would you rather have three kids and no money, or no kids with three million dollars?')
+2023-08-17 19:45:27,891:DEBUG:sqlalchemy.engine.Engine: Row (78, 'Would you rather be the funniest person in the room or the most intelligent?')
+2023-08-17 19:45:27,891:DEBUG:sqlalchemy.engine.Engine: Row (79, 'Would you rather have a Lamborghini in your garage or a bookcase with 9000 books and infinite knowledge?')
+2023-08-17 19:45:27,892:DEBUG:sqlalchemy.engine.Engine: Row (80, 'Would you rather Reverse one decision you make every day or be able to stop time for 10 seconds every day?')
+2023-08-17 19:45:27,892:DEBUG:sqlalchemy.engine.Engine: Row (81, 'Would you rather win $50,000 or let your best friend win $500,000?')
+2023-08-17 19:45:27,893:DEBUG:sqlalchemy.engine.Engine: Row (82, 'Would you rather Run at 100 mph or fly at ten mph?')
+2023-08-17 19:45:27,894:DEBUG:sqlalchemy.engine.Engine: Row (83, 'Would you rather Continue with your life or restart it?')
+2023-08-17 19:45:27,895:DEBUG:sqlalchemy.engine.Engine: Row (84, 'Would you rather be able to talk your way out of any situation, or punch your way out of any situation?')
+2023-08-17 19:45:27,895:DEBUG:sqlalchemy.engine.Engine: Row (85, 'Would you rather have free Wi-Fi wherever you go or have free coffee where/whenever you want?')
+2023-08-17 19:45:27,896:DEBUG:sqlalchemy.engine.Engine: Row (86, 'Would you rather have seven fingers on each hand or have seven toes on each foot?')
+2023-08-17 19:45:27,897:DEBUG:sqlalchemy.engine.Engine: Row (87, 'Would you rather live low life with your loved one or rich life all alone?')
+2023-08-17 19:45:27,897:DEBUG:sqlalchemy.engine.Engine: Row (88, 'Would you rather have no one to show up for your wedding or your funeral?')
+2023-08-17 19:45:27,898:DEBUG:sqlalchemy.engine.Engine: Row (89, 'Would you rather Rule the world or live in a world with absolutely no problems at all?')
+2023-08-17 19:45:27,898:DEBUG:sqlalchemy.engine.Engine: Row (90, 'Would you rather go back to the past and meet your loved ones who passed away or go to the future to meet your children or grandchildren to be?')
+2023-08-17 19:45:27,899:DEBUG:sqlalchemy.engine.Engine: Row (91, 'Would you rather Speak your mind or never speak again?')
+2023-08-17 19:45:27,900:DEBUG:sqlalchemy.engine.Engine: Row (92, 'Would you rather live the life of a king with no family or friends or live like a vagabond with your friends or family?')
+2023-08-17 19:45:27,901:DEBUG:sqlalchemy.engine.Engine: Row (93, 'Would you rather know how you will die or when you will die?')
+2023-08-17 19:45:27,902:DEBUG:sqlalchemy.engine.Engine: Row (94, 'Would you rather Speak all languages or be able to speak to all animals?')
+2023-08-17 19:45:27,902:DEBUG:sqlalchemy.engine.Engine: Row (95, 'Would you rather get away with lying every time or always know that someone is lying?')
+2023-08-17 19:45:27,903:DEBUG:sqlalchemy.engine.Engine: Row (96, 'Would you rather Eat your dead friend or kill your dog and eat it when you are marooned on a lonely island?')
+2023-08-17 19:45:27,904:DEBUG:sqlalchemy.engine.Engine: Row (97, 'Would you rather have a billion dollars to your name or spend $1000 for each hungry and homeless person?')
+2023-08-17 19:45:27,904:DEBUG:sqlalchemy.engine.Engine: Row (98, 'Would you rather end death due to car accidents or end terrorism?')
+2023-08-17 19:45:27,905:DEBUG:sqlalchemy.engine.Engine: Row (99, 'Would you rather end the life a single human being or 100 cute baby animals?')
+2023-08-17 19:45:27,906:DEBUG:sqlalchemy.engine.Engine: Row (100, 'Would you rather end hunger or end your hunger?')
+2023-08-17 19:45:27,906:DEBUG:sqlalchemy.engine.Engine: Row (101, 'Would you rather give up your love life or work life?')
+2023-08-17 19:45:27,907:DEBUG:sqlalchemy.engine.Engine: Row (102, 'Would you rather live in an amusement park or a zoo?')
+2023-08-17 19:45:27,908:DEBUG:sqlalchemy.engine.Engine: Row (103, 'Would you rather be a millionaire by winning the lottery or by working 100 hours a week?')
+2023-08-17 19:45:27,908:DEBUG:sqlalchemy.engine.Engine: Row (104, 'Would you rather read minds or accurately predict future?')
+2023-08-17 19:45:27,909:DEBUG:sqlalchemy.engine.Engine: Row (105, 'Would you rather eat only pizza for 1 year or eat no pizza for 1 year?')
+2023-08-17 19:45:27,909:DEBUG:sqlalchemy.engine.Engine: Row (106, 'Would you rather visit 100 years in the past or 100 years in the future?')
+2023-08-17 19:45:27,910:DEBUG:sqlalchemy.engine.Engine: Row (107, 'Would you rather be invisible or be fast?')
+2023-08-17 19:45:27,911:DEBUG:sqlalchemy.engine.Engine: Row (108, 'Would you rather Look like a fish or smell like a fish?')
+2023-08-17 19:45:27,911:DEBUG:sqlalchemy.engine.Engine: Row (109, 'Would you rather Play on Minecraft or play FIFA?')
+2023-08-17 19:45:27,912:DEBUG:sqlalchemy.engine.Engine: Row (110, 'Would you rather Fight 100 duck-sized horses or 1 horse-sized duck?')
+2023-08-17 19:45:27,913:DEBUG:sqlalchemy.engine.Engine: Row (111, 'Would you rather have a grapefruit-sized head or a head the size of a watermelon?')
+2023-08-17 19:45:27,914:DEBUG:sqlalchemy.engine.Engine: Row (112, 'Would you rather be a tree or have to live in a tree for the rest of your life?')
+2023-08-17 19:45:27,914:DEBUG:sqlalchemy.engine.Engine: Row (113, 'Would you rather live in space or under the sea?')
+2023-08-17 19:45:27,915:DEBUG:sqlalchemy.engine.Engine: Row (114, 'Would you rather lose your sense of touch or your sense of smell?')
+2023-08-17 19:45:27,916:DEBUG:sqlalchemy.engine.Engine: Row (115, 'Would you rather be Donald Trump or George Bush?')
+2023-08-17 19:45:27,916:DEBUG:sqlalchemy.engine.Engine: Row (116, 'Would you rather have no hair or be completely hairy?')
+2023-08-17 19:45:27,917:DEBUG:sqlalchemy.engine.Engine: Row (117, 'Would you rather wake up in the morning looking like a giraffe or a kangaroo?')
+2023-08-17 19:45:27,918:DEBUG:sqlalchemy.engine.Engine: Row (118, 'Would you rather have a booger hanging from your nose for the rest of your life or earwax planted on your earlobes?')
+2023-08-17 19:45:27,918:DEBUG:sqlalchemy.engine.Engine: Row (119, 'Would you rather have a sumo wrestler on top of you or yourself on top of him?')
+2023-08-17 19:45:27,920:INFO:sqlalchemy.engine.Engine: ROLLBACK
+2023-08-17 19:45:27,983:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:27,985:INFO:sqlalchemy.engine.Engine: SELECT games.id AS games_id, games.name AS games_name 
+FROM games 
+WHERE games.name = %(name_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:27,986:INFO:sqlalchemy.engine.Engine: [generated in 0.00105s] {'name_1': 'hangman', 'param_1': 1}
+2023-08-17 19:45:27,989:DEBUG:sqlalchemy.engine.Engine: Col ('games_id', 'games_name')
+2023-08-17 19:45:27,990:DEBUG:sqlalchemy.engine.Engine: Row (1, 'hangman')
+2023-08-17 19:45:27,991:INFO:sqlalchemy.engine.Engine: COMMIT
+2023-08-17 19:45:28,054:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:28,057:INFO:sqlalchemy.engine.Engine: SELECT games.id AS games_id, games.name AS games_name 
+FROM games
+2023-08-17 19:45:28,058:INFO:sqlalchemy.engine.Engine: [generated in 0.00095s] {}
+2023-08-17 19:45:28,059:DEBUG:sqlalchemy.engine.Engine: Col ('games_id', 'games_name')
+2023-08-17 19:45:28,060:DEBUG:sqlalchemy.engine.Engine: Row (1, 'hangman')
+2023-08-17 19:45:28,061:INFO:sqlalchemy.engine.Engine: ROLLBACK
+2023-08-17 19:45:31,717:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:31,719:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+WHERE users.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,720:INFO:sqlalchemy.engine.Engine: [generated in 0.00095s] {'id_1': 1115607115189461034, 'param_1': 1}
+2023-08-17 19:45:31,721:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:31,722:DEBUG:sqlalchemy.engine.Engine: Row (1115607115189461034,)
+2023-08-17 19:45:31,723:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+WHERE users.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,724:INFO:sqlalchemy.engine.Engine: [cached since 0.005161s ago] {'id_1': 216308400336797706, 'param_1': 1}
+2023-08-17 19:45:31,725:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:31,726:DEBUG:sqlalchemy.engine.Engine: Row (216308400336797706,)
+2023-08-17 19:45:31,727:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+WHERE users.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,728:INFO:sqlalchemy.engine.Engine: [cached since 0.009025s ago] {'id_1': 295331644208840704, 'param_1': 1}
+2023-08-17 19:45:31,728:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:31,729:DEBUG:sqlalchemy.engine.Engine: Row (295331644208840704,)
+2023-08-17 19:45:31,731:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+WHERE users.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,734:INFO:sqlalchemy.engine.Engine: [cached since 0.01527s ago] {'id_1': 643473774255144981, 'param_1': 1}
+2023-08-17 19:45:31,737:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:31,738:DEBUG:sqlalchemy.engine.Engine: Row (643473774255144981,)
+2023-08-17 19:45:31,741:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+WHERE users.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,743:INFO:sqlalchemy.engine.Engine: [cached since 0.02474s ago] {'id_1': 742777596734996582, 'param_1': 1}
+2023-08-17 19:45:31,745:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:31,747:DEBUG:sqlalchemy.engine.Engine: Row (742777596734996582,)
+2023-08-17 19:45:31,749:INFO:sqlalchemy.engine.Engine: SELECT users.id AS users_id 
+FROM users 
+WHERE users.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,751:INFO:sqlalchemy.engine.Engine: [cached since 0.0319s ago] {'id_1': 1031328980810350632, 'param_1': 1}
+2023-08-17 19:45:31,754:DEBUG:sqlalchemy.engine.Engine: Col ('users_id',)
+2023-08-17 19:45:31,756:DEBUG:sqlalchemy.engine.Engine: Row (1031328980810350632,)
+2023-08-17 19:45:31,758:INFO:sqlalchemy.engine.Engine: SELECT guilds.id AS guilds_id 
+FROM guilds 
+WHERE guilds.id = %(id_1)s 
+ LIMIT %(param_1)s
+2023-08-17 19:45:31,759:INFO:sqlalchemy.engine.Engine: [generated in 0.00115s] {'id_1': 765965358754037801, 'param_1': 1}
+2023-08-17 19:45:31,761:DEBUG:sqlalchemy.engine.Engine: Col ('guilds_id',)
+2023-08-17 19:45:31,762:DEBUG:sqlalchemy.engine.Engine: Row (765965358754037801,)
+2023-08-17 19:45:31,763:INFO:sqlalchemy.engine.Engine: COMMIT
+2023-08-17 19:45:31,766:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:31,768:INFO:sqlalchemy.engine.Engine: SELECT tickets.id AS tickets_id, tickets.channel AS tickets_channel, tickets.start_datetime AS tickets_start_datetime, tickets.end_datetime AS tickets_end_datetime, tickets.closed AS tickets_closed 
+FROM tickets 
+WHERE tickets.closed = false AND tickets.start_datetime <= %(start_datetime_1)s
+2023-08-17 19:45:31,769:INFO:sqlalchemy.engine.Engine: [generated in 0.00085s] {'start_datetime_1': datetime.datetime(2023, 8, 10, 19, 45, 31, 765737)}
+2023-08-17 19:45:31,770:DEBUG:sqlalchemy.engine.Engine: Col ('tickets_id', 'tickets_channel', 'tickets_start_datetime', 'tickets_end_datetime', 'tickets_closed')
+2023-08-17 19:45:31,771:INFO:sqlalchemy.engine.Engine: COMMIT
+2023-08-17 19:45:31,773:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:31,774:INFO:sqlalchemy.engine.Engine: SELECT reminders.id AS reminders_id, reminders.content AS reminders_content, reminders.user_id AS reminders_user_id, reminders.timestamp AS reminders_timestamp 
+FROM reminders 
+WHERE reminders.timestamp <= %(timestamp_1)s
+2023-08-17 19:45:31,775:INFO:sqlalchemy.engine.Engine: [generated in 0.00094s] {'timestamp_1': datetime.datetime(2023, 8, 17, 19, 45, 31, 772604)}
+2023-08-17 19:45:31,777:DEBUG:sqlalchemy.engine.Engine: Col ('reminders_id', 'reminders_content', 'reminders_user_id', 'reminders_timestamp')
+2023-08-17 19:45:31,777:INFO:sqlalchemy.engine.Engine: ROLLBACK
+2023-08-17 19:45:31,780:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:31,782:INFO:sqlalchemy.engine.Engine: SELECT steam_sales.id AS steam_sales_id, steam_sales.title AS steam_sales_title, steam_sales.url AS steam_sales_url, steam_sales.sale_percent AS steam_sales_sale_percent, steam_sales.final_price AS steam_sales_final_price, steam_sales.is_dlc AS steam_sales_is_dlc, steam_sales.is_bundle AS steam_sales_is_bundle, steam_sales.update_datetime AS steam_sales_update_datetime 
+FROM steam_sales 
+WHERE steam_sales.sale_percent >= %(sale_percent_1)s
+2023-08-17 19:45:31,782:INFO:sqlalchemy.engine.Engine: [generated in 0.00084s] {'sale_percent_1': 100}
+2023-08-17 19:45:31,784:DEBUG:sqlalchemy.engine.Engine: Col ('steam_sales_id', 'steam_sales_title', 'steam_sales_url', 'steam_sales_sale_percent', 'steam_sales_final_price', 'steam_sales_is_dlc', 'steam_sales_is_bundle', 'steam_sales_update_datetime')
+2023-08-17 19:45:31,785:INFO:sqlalchemy.engine.Engine: ROLLBACK
+2023-08-17 19:45:32,776:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:32,777:INFO:sqlalchemy.engine.Engine: SELECT channels.id AS channels_id, channels.name AS channels_name, channels.type AS channels_type, channels.guild_id AS channels_guild_id 
+FROM channels 
+WHERE channels.type = %(type_1)s AND channels.name != %(name_1)s AND channels.name != %(name_2)s AND channels.name != %(name_3)s
+2023-08-17 19:45:32,778:INFO:sqlalchemy.engine.Engine: [generated in 0.00103s] {'type_1': 'autochannel', 'name_1': 'AutoChannel category', 'name_2': 'AutoChannel text', 'name_3': 'AutoChannel voice'}
+2023-08-17 19:45:32,780:DEBUG:sqlalchemy.engine.Engine: Col ('channels_id', 'channels_name', 'channels_type', 'channels_guild_id')
+2023-08-17 19:45:32,781:INFO:sqlalchemy.engine.Engine: COMMIT
+2023-08-17 19:45:33,051:INFO:sqlalchemy.engine.Engine: BEGIN (implicit)
+2023-08-17 19:45:33,053:INFO:sqlalchemy.engine.Engine: SELECT steam_users.id AS steam_users_id 
+FROM steam_users
+2023-08-17 19:45:33,055:INFO:sqlalchemy.engine.Engine: [generated in 0.00154s] {}
+2023-08-17 19:45:33,057:DEBUG:sqlalchemy.engine.Engine: Col ('steam_users_id',)
+2023-08-17 19:45:33,059:DEBUG:sqlalchemy.engine.Engine: Row (216308400336797706,)
