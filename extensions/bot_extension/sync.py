@@ -25,11 +25,13 @@ class Sync(commands.Cog):
         app_commands = await self.bot.tree.fetch_commands()
         commands = list(self.bot.tree.walk_commands())
         synced = [
-            cmd.name for cmd in commands
+            cmd.name 
+            for cmd in commands
             for app_cmd in app_commands
             if app_cmd.name == cmd.name
             # or cmd.parent.name == app_cmd.name
         ]
+        # synced shows wrong list
         self.logger.debug(f"{synced=}")
         self.logger.debug(f"{[i.name for i in app_commands]=}")
 
