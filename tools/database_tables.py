@@ -62,7 +62,7 @@ GAMES_ID = "games.id"
 LOBBIES_ID = "lobbies.id"
 TEAMS_ID = "teams.id"
 HANGMAN_ID = "hangman.id"
-
+ROLE_ID = "roles.id"
 
 class Base(DeclarativeBase):
     "Subclass of DeclarativeBase with customizations."
@@ -353,6 +353,20 @@ class Tickets(Base):
     start_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
     end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
     closed: Mapped[bool] = mapped_column(Boolean)
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+
+
+class AutoAssignRole(Base):
+    __tablename__ = "auto_assign"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID))
+    guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID))
 
 
 all_tables = Base.__subclasses__()
