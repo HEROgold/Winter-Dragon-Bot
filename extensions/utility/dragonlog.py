@@ -13,7 +13,7 @@ from tools.database_tables import Channel, engine, Session
 
 
 class LogCategories(Enum):
-    GLOBAL:str = "ALL-CATEGORIES"
+    GLOBAL: str = "ALL-CATEGORIES"
     CREATEDCHANNELS: str = "CREATEDCHANNELS"
     UPDATEDCHANNELS: str = "UPDATEDCHANNELS"
     DELETEDCHANNELS: str = "DELETEDCHANNELS"
@@ -379,7 +379,6 @@ class DragonLog(commands.GroupCog):
         )
 
         await self.send_dragon_logs(LogCategories.DELETEDMESSAGES, message.guild, embed)
-
 
 
     async def audit_message_delete(self, entry: discord.AuditLogEntry) -> None:
