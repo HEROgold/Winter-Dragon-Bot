@@ -161,13 +161,9 @@ class DragonLog(commands.GroupCog):
 
     async def on_guild_channel_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On channel create: {entry.guild=}, {entry.target=}")
-        channel = entry.target
+        channel: discord.abc.GuildChannel = entry.target
 
-        if channel.mentionable:
-            mention = channel.mention 
-        else:
-            mention = channel.name
-            self.logger.warning(f"on_guild_channel_create, {entry.target} not mentionable: {entry.target=}")
+        mention = channel.mention 
 
         embed = discord.Embed(
             title="Channel Created",
