@@ -8,7 +8,8 @@ from logging.handlers import RotatingFileHandler
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
-from tools.database_tables import logger as sql_logger
+
+keep_latest = config.getboolean("Main","keep_latest_logs")
 
 
 class logs:
@@ -21,11 +22,20 @@ class logs:
         self.bot = bot
         self.bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
         self.discord_logger = logging.getLogger("discord")
-        self.delete_toplevel_logs()
+        self._delete_top_level_logs()
+        self._add_sql_logger()
         self.setup_logging(self.bot_logger, "bot.log")
         self.setup_logging(self.discord_logger, "discord.log")
-        self.sql_logger = sql_logger
         self.bot_logger.addHandler(logging.StreamHandler())
+
+
+    @classmethod
+    def _add_sql_logger(cls) -> None:
+        try:
+            cls.sql_logger
+        except AttributeError:
+            from tools.database_tables import logger as sql_logger
+            cls.sql_logger = sql_logger
 
 
     @tasks.loop(hours=24)
@@ -49,6 +59,14 @@ class logs:
 
 
     def logs_size_limit_check(self, size_in_kb: int) -> bool:
+        """Check if the stored logs total size in kb, is bigger then given value
+
+        Args:
+            size_in_kb (int): Size in kb
+
+        Returns:
+            bool: True, False
+        """
         total_size = sum(
             os.path.getsize(os.path.join(root, file))
             for root, _, files in os.walk(config["Main"]["log_path"])
@@ -59,6 +77,7 @@ class logs:
 
 
     def delete_oldest_saved_logs(self) -> None:
+        """Delete the oldest findable logs"""
         oldest_files = sorted((
                 os.path.join(root, file)
                 for root, _, files in os.walk(config["Main"]["log_path"])
@@ -80,7 +99,8 @@ class logs:
 
 
     def save_logs(self) -> None:
-        while self.logs_size_limit_check(config.getint("Main", "log_size_kb_limit")):
+        size_limit = config.getint("Main", "log_size_kb_limit")
+        while self.logs_size_limit_check(size_limit):
             self.delete_oldest_saved_logs()
 
         log_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -94,7 +114,9 @@ class logs:
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 print(file)
                 shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
-        self.logging_rollover()
+
+        if not keep_latest:
+            self.logging_rollover()
 
 
     def logging_rollover(self) -> None:
@@ -107,9 +129,14 @@ class logs:
                 handler.doRollover()
 
 
-    def delete_toplevel_logs(self) -> None:
-        if config.getboolean("Main","keep_latest_logs"):
+    def delete_latest_logs(self) -> None:
+        if keep_latest:
+            self.bot_logger.info("Keeping top level logs.")
             return
+        self._delete_top_level_logs()
+
+
+    def _delete_top_level_logs(self) -> None:
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 print(f"Removing {file}")
