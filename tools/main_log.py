@@ -41,6 +41,7 @@ class logs:
     @tasks.loop(hours=24)
     async def daily_save_logs(self) -> None:
         self.save_logs()
+        self.logging_rollover()
 
 
     @daily_save_logs.before_loop
@@ -115,9 +116,6 @@ class logs:
                 print(file)
                 shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
 
-        if not keep_latest:
-            self.logging_rollover()
-
 
     def logging_rollover(self) -> None:
         log_handlers = []
@@ -141,6 +139,14 @@ class logs:
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 print(f"Removing {file}")
                 os.remove(file)
+
+
+    def shutdown(self) -> None:
+        """Calls `save_logs` and `delete_latest_logs` before `logging.shutdown`
+        """
+        self.save_logs()
+        self.delete_latest_logs()
+        logging.shutdown()
 
 
 if __name__ == "__main__":
