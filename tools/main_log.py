@@ -98,9 +98,8 @@ class logs:
 
 
     def logging_rollover(self) -> None:
-        from tools.database_tables import logger as sql_logger
         log_handlers = []
-        log_handlers.extend(sql_logger.handlers)
+        log_handlers.extend(self.sql_logger.handlers)
         log_handlers.extend(self.discord_logger.handlers)
         log_handlers.extend(self.bot_logger.handlers)
         for handler in log_handlers:
