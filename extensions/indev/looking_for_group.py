@@ -10,7 +10,7 @@ from tools.database_tables import Session, engine, Game, LookingForGroup
 
 
 # TODO: Allow requests for adding new game types
-@app_commands.guilds(int(config["Main"]["support_guild_id"]))
+@app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Lfg(commands.GroupCog):
     GAMES = ["League of Legends"]
 

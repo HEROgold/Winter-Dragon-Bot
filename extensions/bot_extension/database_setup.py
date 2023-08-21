@@ -10,7 +10,7 @@ from tools.config_reader import config
 from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
 
 
-@app_commands.guilds(int(config["Main"]["support_guild_id"]))
+@app_commands.guilds(config.getint("Main", "support_guild_id"))
 class DatabaseSetup(commands.Cog):
     bot: commands.Bot
 
@@ -42,7 +42,6 @@ class DatabaseSetup(commands.Cog):
         channel = message.channel
 
         if isinstance(channel, discord.DMChannel):
-            self.logger.debug(f"{type(channel)=}")
             return
 
         if not guild:

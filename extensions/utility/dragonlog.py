@@ -529,7 +529,7 @@ class DragonLog(commands.GroupCog):
         name = "update",
         description = "Update DragonLog channels"
         )
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: str = None) -> None:
         # defer here to avoid timeout

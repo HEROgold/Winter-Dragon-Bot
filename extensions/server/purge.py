@@ -19,8 +19,8 @@ class Purge(commands.Cog):
     @app_commands.checks.bot_has_permissions(manage_messages=True, manage_channels=True)
     async def slash_purge(self, interaction: discord.Interaction, count: int, use_history: bool = False) -> None:
         if count == -1:
-            count = int(config["Purge"]["limit"])
-        if count <= int(config["Purge"]["limit"]):
+            count = config.getint("Purge", "limit")
+        if count <= config.getint("Purge", "limit"):
             await interaction.response.defer()
             history_messages_count = 0
             purged_count = 0
@@ -29,7 +29,7 @@ class Purge(commands.Cog):
             self.logger.debug(f"Purged: {purged_count}")
             if (
                 purged_count < count
-                and config["Purge"]["use_history"] == "True"
+                and config.getboolean("Purge", "use_history")
                 and use_history
             ):
                 history_messages = await self.history_delete(interaction=interaction, count=(count - purged_count))

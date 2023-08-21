@@ -73,7 +73,7 @@ class WouldYouRather(commands.GroupCog):
         name = "add_verified",
         description = "Add all questions stored in the WYR database file, to the questions data section."
         )
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_add_verified(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:

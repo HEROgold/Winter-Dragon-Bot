@@ -70,11 +70,11 @@ class Sync(commands.Cog):
 
 
     @app_commands.command(name="sync", description="Sync all commands on all servers (Bot dev only)")
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_sync(self, interaction: discord.Interaction) -> None:
         global_sync = await self.bot.tree.sync()
-        guild = self.bot.get_guild(int(config["Main"]["support_guild_id"]))
+        guild = self.bot.get_guild(config.getint("Main", "support_guild_id"))
         local_sync = await self.bot.tree.sync(guild=guild)
         self.logger.warning(f"{interaction.user} Synced slash commands!")
         self.logger.debug(f"Synced commands: {global_sync=}, {local_sync=}")
@@ -89,7 +89,7 @@ class Sync(commands.Cog):
     @commands.is_owner()
     async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
         global_sync = await self.bot.tree.sync()
-        guild = self.bot.get_guild(int(config["Main"]["support_guild_id"]))
+        guild = self.bot.get_guild(config.getint("Main", "support_guild_id"))
         local_sync = await self.bot.tree.sync(guild=guild)
         self.logger.warning(f"{ctx.author} Synced slash commands!")
         self.logger.debug(f"Synced commands: {global_sync=} {local_sync=}")

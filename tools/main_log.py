@@ -8,12 +8,14 @@ from logging.handlers import RotatingFileHandler
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
+from tools.database_tables import logger as sql_logger
 
 
 class logs:
     bot: commands.Bot
     bot_logger: logging.Logger
     discord_logger: logging.Logger
+    sql_logger: logging.Logger
 
     def __init__(self, bot: commands.bot) -> None:
         self.bot = bot
@@ -22,6 +24,7 @@ class logs:
         self.delete_toplevel_logs()
         self.setup_logging(self.bot_logger, "bot.log")
         self.setup_logging(self.discord_logger, "discord.log")
+        self.sql_logger = sql_logger
         self.bot_logger.addHandler(logging.StreamHandler())
 
 
@@ -66,12 +69,9 @@ class logs:
         # Some regex magic https://regex101.com/r/he2KNZ/1
         # "./logs\\2023-05-08-00-10-27\\bot.log" matches into
         # /logs\\2023-05-08-00-10-27\\
-        regex = r"(\./logs)(/|\d|-|_)+"
+        regex = r"(\.\/logs)(\/|\\|\d|-|_)+"
 
-        if os.name == "nt":
-            folder_path = re.match(regex, oldest_files[0])
-        if os.name == "posix":
-            folder_path = re.search(regex, oldest_files[0])[0]
+        folder_path = re.match(regex, oldest_files[0])[0]
         self.bot_logger.info(f"deleting old logs for space: {folder_path=}")
 
         for file in os.listdir(folder_path):
@@ -80,7 +80,7 @@ class logs:
 
 
     def save_logs(self) -> None:
-        while self.logs_size_limit_check(int(config["Main"]["log_size_kb_limit"])):
+        while self.logs_size_limit_check(config.getint("Main", "log_size_kb_limit")):
             self.delete_oldest_saved_logs()
 
         log_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -109,7 +109,7 @@ class logs:
 
 
     def delete_toplevel_logs(self) -> None:
-        if config["Main"]["keep_latest_logs"] == "True":
+        if config.getboolean("Main","keep_latest_logs"):
             return
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):

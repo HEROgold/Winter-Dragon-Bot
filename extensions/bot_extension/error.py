@@ -134,10 +134,10 @@ class ErrorHandler:
         error = self.error
         self.logger.debug(f"{type(error)=}, {error.args=}")
         
-        if config["Error"]["always_log_errors"] == "True":
+        if config.getboolean("Error", "always_log_errors"):
             self.logger.error("Always log error:")
             self.logger.exception(error)
-        if config["Error"]["ignore_errors"] == "True":
+        if config.getboolean("Error", "ignore_errors"):
             return
 
         message = self._get_message_from_error()
