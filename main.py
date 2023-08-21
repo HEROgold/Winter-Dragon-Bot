@@ -3,7 +3,6 @@ import logging
 import os
 import signal
 import sys
-from atexit import register
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 
@@ -89,15 +88,13 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     raise KeyboardInterrupt
 
 
-@register
 def terminate(*args, **kwargs) -> None: 
     log.bot_logger.warning(f"{args=}, {kwargs=}")
     log.bot_logger.info("terminated")
-    log.save_logs()
-    logging.shutdown()
-    log.delete_toplevel_logs()
+    log.shutdown()
     try:
-        asyncio.run(bot.close())
+        asyncio.ensure_future(bot.close())
+        # asyncio.run(bot.close())
     except Exception: pass
     sys.exit()
 
@@ -119,4 +116,3 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
     asyncio.run(main())
-
