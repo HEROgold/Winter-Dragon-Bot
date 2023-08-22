@@ -11,7 +11,8 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    BigInteger
+    BigInteger,
+    Text
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -64,6 +65,8 @@ TEAMS_ID = "teams.id"
 HANGMAN_ID = "hangman.id"
 ROLE_ID = "roles.id"
 INCREMENTAL_ID = "incremental_data.id"
+AUTOCHANNEL_ID = "autochannels.id"
+
 
 class Base(DeclarativeBase):
     "Subclass of DeclarativeBase with customizations."
@@ -85,9 +88,10 @@ class Channel(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
     type: Mapped[str] = mapped_column(String(15))
-    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID)) # , unique=True, nullable=False
-    guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
     messages: Mapped[List["Message"]] = relationship(back_populates="channel")
+    guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
+
 
 
 class User(Base):
@@ -232,7 +236,7 @@ class ResultDuels(Base):
 class SteamUser(Base):
     __tablename__ = "steam_users"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
 
 
 class SteamSale(Base):
@@ -332,24 +336,33 @@ class Presence(Base):
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
-class AutochannelBlacklist(Base):
-    __tablename__ = "association_autochannel_blacklist"
+class AutoChannel(Base):
+    __tablename__ = "autochannels"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
+
+
+class AutoChannelSettings(Base):
+    __tablename__ = "autochannel_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
+    channel_name: Mapped[str] = mapped_column(Text)
+    channel_limit: Mapped[int] = mapped_column(Integer)
+
+
+class AssociationUserAutochannel(Base):
+    __tablename__ = "association_users_autochannels"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-
-
-class AutochannelWhitelist(Base):
-    __tablename__ = "association_autochannel_whitelist"
-
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
+    channel_id: Mapped[int] = mapped_column(ForeignKey(AUTOCHANNEL_ID))
 
 
 class Tickets(Base):
     __tablename__ = "tickets"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
     channel: Mapped["Channel"] = mapped_column(ForeignKey(CHANNELS_ID))
     start_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
     end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
