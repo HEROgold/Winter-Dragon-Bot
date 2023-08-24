@@ -97,13 +97,26 @@ class CogsC(commands.GroupCog):
     async def mass_reload(self, interaction:discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         reload_message = ""
-        for cog in self.get_extensions():
+        for extension in self.get_extensions():
             try:
-                await self.bot.reload_extension(cog)
+                await self.bot.reload_extension(extension)
             except commands.errors.ExtensionNotLoaded as e:
-                self.logger.exception(f"Cog not loaded {cog}, {e}")
-            self.logger.info(f"Reloaded {cog}")
-            reload_message += f"Reloaded {cog}\n"
+                self.logger.exception(f"Cog not loaded {extension}, {e}")
+            except commands.errors.NoEntryPointError as e:
+                await interaction.response.send_message(f"Could not oad {extension}, it has no setup function.", ephemeral=True)
+                self.logger.warning(e)
+            except commands.errors.ExtensionAlreadyLoaded as e:
+                await interaction.response.send_message(f"Could not load {extension}, it is already loaded", ephemeral=True)
+                self.logger.warning(e)
+            except commands.errors.ExtensionFailed as e:
+                await interaction.response.send_message(f"Could not load {extension}, {e}", ephemeral=True)
+                self.logger.exception(e)
+            except Exception as e:
+                self.logger.exception(f"unable to unload {extension}, {e}")
+                await interaction.response.send_message(f"Unable to load {extension}", ephemeral=True)
+
+            self.logger.info(f"Reloaded {extension}")
+            reload_message += f"Reloaded {extension}\n"
         await interaction.followup.send(f"{reload_message}Restart complete.")
 
 
@@ -133,7 +146,7 @@ class CogsC(commands.GroupCog):
         description = "Reload a specified or all available extensions (For bot developer only)"
         )
     @commands.is_owner()
-    async def slash_restart(self, interaction:discord.Interaction, extension:str=None) -> None: # type: ignore
+    async def slash_restart(self, interaction:discord.Interaction, extension: str = None) -> None: # type: ignore
         self.logger.info(f"{interaction.user} used /reload")
         if extension is None:
             self.logger.warning("Reloaded all extensions")

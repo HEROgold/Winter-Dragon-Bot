@@ -273,7 +273,8 @@ class DragonLog(commands.GroupCog):
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
         if before.voice != after.voice:
             self.logger.critical(f"{before.voice=}, {after.voice=}")
-        diffs = self.get_role_difference(member) if before.roles != after.roles else ""
+        # diffs = self.get_role_difference(member) if before.roles != after.roles else ""
+        diffs = [role for role in after.roles if role not in before.roles]
         embed = None
         properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
         if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
