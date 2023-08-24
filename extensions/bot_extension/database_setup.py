@@ -4,12 +4,13 @@ import logging
 import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands, tasks
+from tools import event_errors
 
 from tools.config_reader import config
 from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
 
 
-@app_commands.guilds(int(config["Main"]["support_guild_id"]))
+@app_commands.guilds(config.getint("Main", "support_guild_id"))
 class DatabaseSetup(commands.Cog):
     bot: commands.Bot
 
@@ -34,14 +35,13 @@ class DatabaseSetup(commands.Cog):
 
 
     @commands.Cog.listener()
+    # @event_errors.event_logger
     async def on_message(self, message: discord.Message) -> None:
         user = message.author
         guild = message.guild
         channel = message.channel
 
-        # TODO: if this works, remove comment. if not. use isinstance()
-        if channel == discord.DMChannel:
-            self.logger.debug(f"{type(channel)=}")
+        if isinstance(channel, discord.DMChannel):
             return
 
         if not guild:

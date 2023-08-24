@@ -16,7 +16,7 @@ IMG_DIR = "./database/img/"
 METRICS_FILE = f"{IMG_DIR}system_metrics.png"
 
 
-@app_commands.guilds(int(config["Main"]["support_guild_id"]))
+@app_commands.guilds(config.getint("Main", "support_guild_id"))
 class BotC(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
@@ -82,16 +82,16 @@ class BotC(commands.GroupCog):
         self.gather_metrics_loop.start()
 
 
-    @tasks.loop(seconds=int(config["Activity"]["periodic_time"]))
+    @tasks.loop(seconds=config.getint("Activity", "periodic_time"))
     async def activity_switch(self) -> None:
-        if config["Activity"]["random_activity"] != "True":
+        if not config.getboolean("Activity", "random_activity"):
             self.activity_switch.stop()
             return
         status, activity = self.get_random_activity()
 
         await self.bot.change_presence(status=status, activity=activity)
         self.logger.debug(f"Activity and status set to {activity}")
-        if config["Activity"]["periodic_change"] != "True":
+        if not config.getboolean("Activity", "periodic_change"):
             self.activity_switch.stop()
             return
 
@@ -117,7 +117,7 @@ class BotC(commands.GroupCog):
             await interaction.response.send_message(f"Activity not found, can only be\n{self.ACTIVITIES}", ephemeral=True)
             return
         elif status.lower() == "random" and activity.lower() == "random":
-            config["Activity"]["PERIODIC_CHANGE"] = "True"
+            config["Activity"]["PERIODIC_CHANGE"] = True
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.response.send_message("I will randomly change my status and activity", ephemeral=True)
             self.activity_switch.start()

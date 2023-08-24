@@ -9,7 +9,7 @@ from discord.ui import Button, View
 from discord import app_commands
 
 from tools.config_reader import config
-import rainbow
+import tools.rainbow as rainbow
 
 
 # TODO: Rewrite/cleanup
@@ -225,7 +225,7 @@ class Help(commands.Cog):
 
 
 # TODO: get code underneath to work.
-# Then inplement in own help cmd.
+# Then implement in own help cmd.
 class HelpView(discord.ui.View):
     def __init__(
         self,

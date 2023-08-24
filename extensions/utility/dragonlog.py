@@ -13,7 +13,7 @@ from tools.database_tables import Channel, engine, Session
 
 
 class LogCategories(Enum):
-    GLOBAL:str = "ALL-CATEGORIES"
+    GLOBAL: str = "ALL-CATEGORIES"
     CREATEDCHANNELS: str = "CREATEDCHANNELS"
     UPDATEDCHANNELS: str = "UPDATEDCHANNELS"
     DELETEDCHANNELS: str = "DELETEDCHANNELS"
@@ -149,25 +149,21 @@ class DragonLog(commands.GroupCog):
                 enum.invite_create: await self.on_invite_create(entry),
                 enum.invite_delete: await self.on_invite_delete(entry),
                 enum.member_move: await self.on_member_move(entry),
-                # enum.member_update: await self.on_member_update(entry, False), # fix and make work for AuditLogEntry
-                # enum.member_role_update: await self.on_member_update(entry, True), # fix and make work for AuditLogEntry
+                enum.member_update: await self.audit_member_update(entry, False),
+                enum.member_role_update: await self.audit_member_update(entry, True),
+                enum.message_delete: await self.audit_message_delete(entry),
             }
         if action not in enum:
             await self.generic_change(entry)
-            return
         else:
             await actions[action]
 
 
     async def on_guild_channel_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On channel create: {entry.guild=}, {entry.target=}")
-        channel = entry.target
+        channel: discord.abc.GuildChannel = entry.target
 
-        if channel.mentionable:
-            mention = channel.mention 
-        else:
-            mention = channel.name
-            self.logger.warning(f"on_guild_channel_create, {entry.target} not mentionable: {entry.target=}")
+        mention = channel.mention 
 
         embed = discord.Embed(
             title="Channel Created",
@@ -282,9 +278,28 @@ class DragonLog(commands.GroupCog):
         properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
         if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
             embed = discord.Embed(
-                title="Member Update", description=f"{member} got updated with {differences} {diffs}",
+                title="Member Update",
+                description=f"{member} got updated with {differences} {diffs}",
                 color=0xFFFF00
-                )
+            )
+        if not embed:
+            return
+        await self.send_dragon_logs(LogCategories.MEMBERUPDATES, member.guild, embed)
+
+
+    async def audit_member_update(self, entry: discord.AuditLogEntry) -> None:
+        member: discord.Member = entry.target
+        self.logger.debug(f"On member update: guild='{member.guild}', member='{member}'")
+        
+        diffs = self.get_role_difference(entry)
+        embed = None
+        properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
+        if differences := [prop for prop in properties if getattr(entry, prop) != getattr(entry, prop)]:
+            embed = discord.Embed(
+                title="Member Update",
+                description=f"{member} got updated with {differences} {diffs}",
+                color=0xFFFF00
+            )
         if not embed:
             return
         await self.send_dragon_logs(LogCategories.MEMBERUPDATES, member.guild, embed)
@@ -341,14 +356,33 @@ class DragonLog(commands.GroupCog):
 
 
     @commands.Cog.listener()
-    async def on_message_delete(self, entry: discord.AuditLogEntry) -> None:
-        if isinstance(entry, discord.message.Message):
-            message = entry
-        elif entry != discord.AuditLogEntry:
-            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry. returning early")
+    async def on_message_delete(self, message: discord.Message) -> None:
+        if isinstance(message, discord.Message):
+            message = message
+        else:
+            self.logger.warning(f"got {type(message)} from {message}, where expected discord.AuditLogEntry.")
             return
 
-        # message: discord.Message = entry.target
+        self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
+        if message.clean_content == "":
+            return
+
+        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {message.reason or None}"
+        embed = discord.Embed(
+            title="Message Deleted",
+            description=DESC,
+            color=0xFF0000
+        )
+
+        await self.send_dragon_logs(LogCategories.DELETEDMESSAGES, message.guild, embed)
+
+
+    async def audit_message_delete(self, entry: discord.AuditLogEntry) -> None:
+        if entry != discord.AuditLogEntry:
+            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry.")
+            return
+
+        message: discord.Message = entry.target
 
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
@@ -495,7 +529,7 @@ class DragonLog(commands.GroupCog):
         name = "update",
         description = "Update DragonLog channels"
         )
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: str = None) -> None:
         # defer here to avoid timeout

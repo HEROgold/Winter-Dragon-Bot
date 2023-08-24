@@ -1,293 +1,23 @@
-import asyncio
 import logging
-from typing import Any, Coroutine, Literal, Optional, Self, get_overloads, overload
+from typing import Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
-import sqlalchemy
+from discord.ext import commands
 
 from tools.config_reader import config
-from tools import app_command_tools
-from tools.database_tables import Channel, engine, Session
-from tools.database_tables import AutochannelBlacklist as AAB
-from tools.database_tables import AutochannelWhitelist as AAW
+from tools.database_tables import Session, engine
+from tools.database_tables import AutoChannel as AC
+from tools.database_tables import AutoChannelSettings as ACS
+# from tools.database_tables import AssociationUserAutochannel as AUA
 
 
-# TODO
-# Add blacklist for each user to use
-# Add whitelist fo each user to use
-# /blacklist member:<TAG>
-# /whitelist member:<TAG>
-# Build permissions for channels based on these.
-AC_TYPE = "autochannel"
-
-
-
-@app_commands.guild_only()
-@app_commands.checks.has_permissions(manage_channels = True)
-@app_commands.checks.bot_has_permissions(manage_channels = True)
-class Autochannel(commands.GroupCog):
+class AutomaticChannels(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
 
 
-    async def cog_load(self) -> None:
-        self.database_cleanup.start()
-
-    @tasks.loop(seconds=3600)
-    async def database_cleanup(self) -> None:
-        self.logger.info("Cleaning Autochannels.")
-        with Session(engine) as session:
-            results = session.query(Channel).where(
-                Channel.type == AC_TYPE,
-                Channel.name != f"{config['Autochannel']['AUTOCHANNEL_NAME']} category",
-                Channel.name != f"{config['Autochannel']['AUTOCHANNEL_NAME']} text",
-                Channel.name != f"{config['Autochannel']['AUTOCHANNEL_NAME']} voice",
-            )
-            channels = results.all()
-            self.logger.debug(f"to clean: {channels=}")
-            for channel in channels:
-                dc_channel = self.bot.get_channel(channel.id)
-                self.logger.debug(f"cleaning {channel=}, {dc_channel}")
-                if len(dc_channel.members) > 0 or dc_channel.type != discord.VoiceChannel:
-                    self.logger.debug(f"user in {channel=}, {dc_channel=}")
-                    continue
-                self.logger.debug(f"getting user channels: {channel.name=}")
-                # get all channels with same name,
-                user_channels = session.query(Channel).where(Channel.type == AC_TYPE, Channel.name == channel.name).all()
-                for user_channel in user_channels:
-                    self.logger.debug(f"cleaning user channel: {user_channel=}")
-                    dc_user_channel = self.bot.get_channel(channel.id)
-                    await dc_user_channel.delete()
-                    session.delete(user_channel)
-            session.commit()
-
-                # Else if name matches channels clean
-            # db_category_channel = session.query(Channel).where(
-            #     Channel.guild_id == guild.id and Channel.type == AC_TYPE and Channel.name == f"{member.id} category"
-            #     ).first()
-            # db_text_channel = session.query(Channel).where(
-            #     Channel.guild_id == guild.id and Channel.type == AC_TYPE  and Channel.name == f"{member.id} text"
-            #     ).first()
-            # db_voice_channel = session.query(Channel).where(
-            #     Channel.guild_id == guild.id and Channel.type == AC_TYPE and Channel.name == f"{member.id} voice"
-            #     ).first()
-            # for guild_id, autochannel_categories in list(self.data.items()):
-            #     if len(autochannel_categories) <= 1:
-            #         self.logger.debug(f"skipping cleaning: {len(autochannel_categories)=}")
-            #         if len(autochannel_categories) == 0:
-            #             del self.data[autochannel_categories]
-            #         continue
-            #     guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-            #     cleaned = await self._clean_categories(autochannel_categories, guild)
-            #     if cleaned == True:
-            #         self.logger.debug(f"Most (or all) channels from {guild.name} are cleaned.")
-            # self.set_data(self.data)
-            # self.logger.info("database cleaned up")
-
-
-    @database_cleanup.before_loop
-    async def before_update(self) -> None:
-        self.logger.info("Waiting until bot is online")
-        await self.bot.wait_until_ready()
-
-
-    # async def _clean_categories(self, autochannel_categories: dict, guild: discord.Guild) -> dict:
-    #     self.logger.debug(f"Cleaning {guild.name=} Auto channels")
-    #     cleaned = False
-    #     for key, channels in list(autochannel_categories.items()):
-    #         if key == config['Autochannel']['AUTOCHANNEL_NAME']:
-    #             self.logger.debug(f"Skipping clean: {guild.name}, {key == config['Autochannel']['AUTOCHANNEL_NAME']=}")
-    #             continue
-    #         cleaned = await self._clean_channels(channels, guild)
-    #         if cleaned == False:
-    #             continue
-    #         del self.data[str(guild.id)][key]
-    #     return cleaned
-
-
-    # async def _clean_channels(self, channels:dict, guild:discord.Guild) -> bool:
-    #     self.logger.info(f"Cleaning Channels {channels}")
-    #     channel = discord.utils.get(guild.voice_channels, id=int(channels["Voice"]))
-    #     if channel.type is discord.ChannelType.voice:
-    #         empty = len(channel.members) <= 0
-    #         if not empty:
-    #             return False
-    #         for channel_id in channels.values():
-    #             channel = discord.utils.get(guild.channels, id=int(channel_id))
-    #             try:
-    #                 await channel.delete()
-    #             except AttributeError as e:
-    #                 self.logger.debug(f"{e}")
-    #     return True
-
-
-    @app_commands.command(
-        name = "remove",
-        description="Remove the autochannel from this server"
-    )
-    async def slash_autochannel_remove(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
-            result = session.execute(sqlalchemy.select(Channel).where(
-                Channel.guild_id == interaction.guild.id, Channel.type == AC_TYPE
-            ))
-            if not result.all():
-                _, c_mention_add = await self.act.get_app_sub_command(self.slash_autochannel_add)
-                await interaction.response.send_message(f"No autochannel found. use {c_mention_add} to add them.")
-                return
-        await interaction.response.defer()
-        _, c_mention_remove = await self.act.get_app_sub_command(self.slash_autochannel_remove)
-        await self.remove_auto_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention_remove}")
-        await interaction.followup.send("Removed the autochannels")
-
-
-    async def remove_auto_channels(
-        self,
-        guild: discord.Guild,
-        reason: str = None
-    ) -> None:
-        with Session(engine) as session:
-            results = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE)
-            channels = results.all()
-            self.logger.debug(f"{channels=}, {results=}")
-            self.logger.info(f"Removing stats channels for: {guild=}, {channels=}")
-            for db_channel in channels:
-                self.logger.debug(f"{db_channel}")
-                try:
-                    channel = discord.utils.get(guild.channels, id=db_channel.id)
-                    await channel.delete(reason=reason)
-                    session.execute(sqlalchemy.delete(Channel).where(Channel.id == channel.id))
-                except AttributeError as e:
-                    self.logger.exception(e)
-            session.commit()
-
-
-    # @app_commands.checks.has_permissions(manage_channels = True) # FIXME, TODO. Add manage channels perms check
-    @app_commands.command(
-        name = "add",
-        description = "Set up voice category and channels, which lets each user make their own channels"
-    )
-    async def slash_autochannel_add(self, interaction: discord.Interaction) -> None:
-        with Session(engine) as session:
-            result = session.execute(sqlalchemy.select(Channel).where(
-                Channel.guild_id == interaction.guild.id,
-                Channel.type == AC_TYPE
-            ))
-            if result.first():
-                await interaction.response.send_message("Autochannel channels already set up", ephemeral=True)
-                return
-        guild = interaction.guild
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
-        }
-        await interaction.response.defer()
-        await self._setup_autochannel(guild, overwrites)
-        _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_autochannel_remove)
-        await interaction.followup.send(f"The channels are set up!\n use {c_mention} before adding again to avoid issues.")
-
-
-    async def _setup_autochannel(
-        self,
-        guild: discord.Guild,
-        overwrites: discord.PermissionOverwrite
-    ) -> None:
-        category_channel = await self._get_autochannel_category(guild, overwrites, config['Autochannel']['AUTOCHANNEL_NAME'])
-        voice_channel = await self._get_autochannel_voice(guild, category_channel, config['Autochannel']['AUTOCHANNEL_NAME'])
-        text_channel = await self._get_autochannel_text(guild, category_channel, config['Autochannel']['AUTOCHANNEL_NAME'])
-        
-        await voice_channel.edit(name="Join Me!", reason="Autochannel rename")
-        await text_channel.edit(name="Autochannel Info", reason="Autochannel rename")
-        msg = await text_channel.send(f"To create your own voice and text channel, just join <#{voice_channel.id}>")
-        await msg.pin()
-
-
-    async def _get_autochannel_text(
-        self,
-        guild: discord.Guild,
-        category_channel: discord.CategoryChannel,
-        text_channel_name: str
-    ) -> discord.TextChannel:
-        self.logger.debug("Getting autochannel text")
-        with Session(engine) as session:
-            result = session.query(Channel).where(
-                Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{text_channel_name} text"
-            )
-            if channel := result.first():
-                self.logger.debug(f"Found {channel}")
-                text_channel = self.bot.get_channel(result.first().id)
-
-            text_channel = await category_channel.create_text_channel(name=text_channel_name, reason="Autochannel")
-            session.add(Channel(
-                id = text_channel.id,
-                name = f"{text_channel_name} text",
-                type = AC_TYPE,
-                guild_id = text_channel.guild.id,
-            ))
-            session.commit()
-
-            self.logger.debug(f"Created {text_channel=}")
-
-        return text_channel
-
-
-    async def _get_autochannel_voice(
-        self,
-        guild: discord.Guild,
-        category_channel: discord.CategoryChannel,
-        voice_channel_name: str
-    ) -> discord.VoiceChannel:
-        self.logger.debug("Getting autochannel voice")
-        with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{voice_channel_name} voice")
-            if channel := result.first():
-                self.logger.debug(f"Found {channel}")
-                voice_channel = self.bot.get_channel(result.first().id)
-
-            voice_channel = await category_channel.create_voice_channel(name=voice_channel_name, reason="Autochannel")
-            session.add(Channel(
-                id = voice_channel.id,
-                name = f"{voice_channel_name} voice",
-                type = AC_TYPE,
-                guild_id = voice_channel.guild.id,
-            ))
-            session.commit()
-            self.logger.debug(f"Created {voice_channel=}")
-
-        return voice_channel
-
-
-    async def _get_autochannel_category(
-        self,
-        guild: discord.Guild,
-        overwrites: discord.PermissionOverwrite,
-        category_name: str
-    ) -> discord.CategoryChannel:
-        self.logger.debug("Getting autochannel category")
-        with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{category_name} category")
-            if channel := result.first():
-                self.logger.debug(f"Found {channel}")
-                category_channel = self.bot.get_channel(result.first().id)
-
-            category_channel = await guild.create_category(name=category_name, overwrites=overwrites, reason="Autochannel")
-            session.add(Channel(
-                id = category_channel.id,
-                name = f"{category_name} category",
-                type = AC_TYPE,
-                guild_id = category_channel.guild.id,
-            ))
-            session.commit()
-            self.logger.debug(f"Created {category_channel=}")
-
-        return category_channel
-
-
-    # FIXME: Doesn't seem to print/work
-    # TODO: add helper functions to make this more clear
     @commands.Cog.listener()
     async def on_voice_state_update(
         self,
@@ -295,369 +25,237 @@ class Autochannel(commands.GroupCog):
         before: discord.VoiceState,
         after: discord.VoiceState
     ) -> None:
-        self.logger.debug(f"{member} moved from {before or None} to {after or None}")
-
-        if before.channel:
-            return await self._remove_user_autochannels(member, before)
-
-        guild = member.guild
-        overwrites = self._create_overwrites(member)
-        ac_voice_channel = await self._get_autochannel_voice(guild, category_channel, config['Autochannel']['AUTOCHANNEL_NAME'])
-
-        if after.channel != ac_voice_channel:
-            return
-
-        guild = after.channel.guild
-        channel_id = after.channel.id
-        category_channel = await self._get_autochannel_category(guild, overwrites, str(member.id))
-        voice_channel = await self._get_autochannel_voice(guild, category_channel, str(member.id))
-        text_channel = await self._get_autochannel_text(guild, category_channel, str(member.id))
-
-        if any([category_channel, text_channel, voice_channel]):
-            return
-        if channel_id != voice_channel.id:
-            return
-        await self._rename_user_autochannels(member, guild)
-
-
-    async def _remove_user_autochannels(self, member: discord.Member, before: discord.VoiceState) -> None:
-        before_channel = before.channel
-        guild = before_channel.guild
-        member_id = str(member.id)
-
+        self.logger.debug(f"{member} moved from {before} to {after}")
         with Session(engine) as session:
-            self.logger.debug("Getting autochannel voice")
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{member_id} voice")
-            if db_voice_channel := result.first():
-                self.logger.debug(f"Found {db_voice_channel=}")
-                voice_channel = self.bot.get_channel(db_voice_channel.id)
+            if voice_create := session.query(AC).where(AC.id == after.channel.guild.id).first():
+                self.logger.debug(f"{voice_create}")
+                # ignore when already moved from "Join Me"
+                if before.channel is not None:
+                    if before.channel.id == voice_create.channel_id:
+                        return
 
-            if before_channel.id != db_voice_channel.id or len(before_channel.members) > 0:
-                # Early return when channel not empty, or isn't a known auto channel voice channel.
-                return
+                    if len(before.channel.members > 0):
+                        await before.channel.delete(reason="removing empty voice")
+                        session.delete(session.query(AC).where(AC.channel_id == before.channel.id).first())
 
-            self.logger.debug("Getting autochannel category")
-            result = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{member_id} category")
-            if db_category_channel := result.first():
-                self.logger.debug(f"Found {db_category_channel=}")
-                category_channel = self.bot.get_channel(db_category_channel.id)
-
-            self.logger.debug("Getting autochannel text")
-            result = session.query(Channel).where(
-                Channel.guild_id == guild.id, Channel.type == AC_TYPE, Channel.name == f"{member_id} text"
-            )
-            if db_text_channel := result.first():
-                self.logger.debug(f"Found {db_text_channel=}")
-                autochannel_text = self.bot.get_channel(db_text_channel.id)
-
-        empty_reason = "Autochannel is empty"
-        await voice_channel.delete(reason=empty_reason)
-        await autochannel_text.delete(reason=empty_reason)
-        await category_channel.delete(reason=empty_reason)
-        with Session(engine) as session:
-            session.delete(db_category_channel)
-            session.delete(db_text_channel)
-            session.delete(db_voice_channel)
-            session.commit()
+                if after.channel is not None and after.channel.id == voice_create.channel_id:
+                    return await self.create_user_channel(member, after, session, after.channel.guild)
+                session.commit()
 
 
-    async def _rename_user_autochannels(self, member: discord.Member, guild: discord.Guild, overwrites) -> str:
-        overwrites = self._create_overwrites(member)
-        member_id = str(member.id)
-        category_channel = await self._get_autochannel_category(guild, overwrites, category_name=member_id)
-        voice_channel = await self._get_autochannel_voice(guild, category_channel, voice_channel_name=member_id)
-        text_channel = await self._get_autochannel_text(guild, category_channel, text_channel_name=member_id)
-        await member.move_to(voice_channel)
-        renamed_reason = "Autochannel Renamed to username"
-        if category_channel.name == member_id:
-            await category_channel.edit(name=f"{member.name}'s Channels", reason=renamed_reason)
-        if voice_channel.name == member_id:
-            await voice_channel.edit(name=f"{member.name}'s Voice", reason=renamed_reason)
-        if text_channel.name == member_id:
-            await text_channel.edit(name=f"{member.name}'s Text", reason=renamed_reason)
-
-
-    async def _create_overwrites(self, member: discord.Member) -> None:
-        default_overwrites = {
-            member.guild.default_role: discord.PermissionOverwrite(),
+    async def create_user_channel(
+            self,
+            member: discord.Member,
+            after: discord.VoiceState,
+            session: Session,
+            guild: discord.Guild
+        ) -> None:
+        overwrites = {
+            member.guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             member.guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
             member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
         }
-        overwrites = default_overwrites.copy()
+        if after.channel is None:
+            return
 
-        with Session(engine) as session:
-            whitelist: list[AAW] = session.query(AAW).where(AAW.id == member.id).all()
-            blacklist: list[AAB] = session.query(AAB).where(AAB.id == member.id).all()
+        if user_channel := session.query(AC).where(AC.channel_id == after.channel.id).first():
+            name, limit = self.get_final_settings(
+                member,
+                session.query(ACS).where(ACS.id == member.id).first(),
+                session.query(ACS).where(ACS.id == guild.id).first()
+            )
 
-            for i in blacklist:
-                dc_user = discord.utils.get(member.guild.members, i.user_id)
-                permissions = discord.Permissions.none()
-                overwrites[dc_user] = permissions
-                self.logger.debug(f"adding {i=} to blacklist")
-
-            for i in whitelist:
-                dc_user = discord.utils.get(member.guild.members, i.user_id)
-                permissions = discord.Permissions.voice() and discord.Permissions.text()
-                try:
-                    overwrites[dc_user] = permissions
-                    self.logger.debug(f"adding {i=} to whitelist")
-                except KeyError as e:
-                    self.logger.warning(f"Cannot add whitelist on top of blacklist for {i.user_id}, {e}")
-            session.commit()
-        self.logger.debug(f"{overwrites=}")
-        return overwrites
-
-
-    whitelist = app_commands.Group(name="whitelist", description="add or remove members from your personal whitelist")
-
-    @whitelist.command(name="add", description="add user to your whitelist")
-    async def slash_whitelist_add(self, interaction: discord.Interaction, member: discord.Member) -> None:
-        with Session(engine) as session:
-            session.add(AAW(
-                id = interaction.user.id,
-                user_id = member.id
+            voice_channel = await member.guild.create_voice_channel(
+                name,
+                category=guild.get_channel(session.query(AC).where(AC.id == guild.id).first().id).category,
+                overwrites=overwrites
+            )
+            channel_id = voice_channel.id
+            await member.move_to(voice_channel)
+            # await voice_channel.set_permissions(self.bot.user, connect=True, read_messages=True)
+            # await voice_channel.set_permissions(member, connect=True, read_messages=True)
+            await voice_channel.edit(name=name, user_limit=limit)
+            session.add(AC(
+                id=member.id,
+                channel_id=channel_id
             ))
             session.commit()
-        await interaction.response.send_message(f"Added {member.mention} to whitelist", ephemeral=True)
+        else:
+            await member.send(f"You already have a channel at {self.bot.get_channel(user_channel[1]).mention}")
+            return
 
 
-    @whitelist.command(name="remove", description="remove user to your whitelist")
-    async def slash_whitelist_remove(self, interaction: discord.Interaction, member: discord.Member) -> None:
+    def get_final_settings(
+            self,
+            member: discord.Member,
+            setting: Optional[tuple[str, int]],
+            guild_setting: Optional[tuple[str, int]]
+        ) -> tuple[str, int]:
+        print(f"transform settings: {member}, {setting=}, {guild_setting=}")
+        name = f"{member.name}'s channel" if setting is None else setting[0]
+        if (
+            setting is None 
+            or guild_setting is None 
+            or setting[1] == 0
+        ):
+            limit = 0
+        else:
+            limit = setting[1]
+        return name, limit
+
+
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.command(name="setup", description="Start the AutoChannel setup")
+    async def slash_setup(self, interaction: discord.Interaction, category_name: str, voice_channel_name: str) -> None:
+        channel = await interaction.guild.create_voice_channel(
+            voice_channel_name,
+            category=(
+                await interaction.guild.create_category(category_name)
+            )
+        )
+
         with Session(engine) as session:
-            black_user = session.query(AAW).where(AAW.id == interaction.user.id, AAW.user_id == member.id).first()
-            session.delete(black_user)
+            if session.query(AC).where(AC.id == interaction.guild.id).first() is not None:
+                await interaction.response.send_message("You are already set up", ephemeral=True)
+            else:
+                session.add(AC(
+                    id = interaction.guild.id,
+                    channel_id = channel.id
+                ))
             session.commit()
-        await interaction.response.send_message(f"Removed {member.mention} from whitelist", ephemeral=True)
+        await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
 
 
-    blacklist = app_commands.Group(name="blacklist", description="add or remove members from your personal blacklist")
-
-    @blacklist.command(name="add", description="add user to your blacklist")
-    async def slash_blacklist_add(self, interaction: discord.Interaction, member: discord.Member) -> None:
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.command(name="guild_limit", description="Set a default limit for AutoChannels")
+    async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
         with Session(engine) as session:
-            session.add(AAB(
-                id = interaction.user.id,
-                user_id = member.id
-            ))
+            if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
+                autochannel_settings.channel_limit = limit
+            else:
+                session.add(ACS(
+                    id = interaction.user.id,
+                    channel_name = interaction.user.name,
+                    channel_limit = 0
+                ))
             session.commit()
-        await interaction.response.send_message(f"Added {member.mention} to blacklist", ephemeral=True)
+        await interaction.response.send_message("You have changed the default channel limit for your server!", ephemeral=True)
 
 
-    @blacklist.command(name="remove", description="remove user to your blacklist")
-    async def slash_blacklist_remove(self, interaction: discord.Interaction, member: discord.Member) -> None:
+    @app_commands.command(name="limit", description="Set a limit for your channel")
+    async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
         with Session(engine) as session:
-            black_user = session.query(AAB).where(AAB.id == interaction.user.id, AAB.user_id == member.id).first()
-            session.delete(black_user)
-            session.commit()
-        await interaction.response.send_message(f"Removed {member.mention} from blacklist", ephemeral=True)
+            if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
+                channel = self.bot.get_channel(autochannel.channel_id)
+                await channel.edit(user_limit=limit)
+                await interaction.response.send_message(f"{interaction.user.mention} You have set the channel limit to be {limit}!", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"{interaction.user.mention} You don't own a channel.", ephemeral=True)
 
+            if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
+                autochannel_settings.channel_limit = limit
+            else:
+                session.add(ACS(
+                    id = interaction.user.id,
+                    channel_name = interaction.user.name,
+                    channel_limit = 0
+                ))
+            session.commit()
+
+
+    @slash_setup.error
+    async def info_error(self, interaction: discord.Interaction, error: Exception) -> None:
+        print(error)
+
+
+    # TODO: Remove lock, unlock, whitelist and blacklist commands,
+    # since users should be able to edit their own channel permissions
+
+    # @app_commands.command(name="lock", description="Lock your channel")
+    # async def slash_lock(self, interaction: discord.Interaction) -> None:
+    #     with Session(engine) as session:
+    #         if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
+    #             role = interaction.guild.default_role
+    #             channel = self.bot.get_channel(autochannel.channel_id)
+    #             await channel.set_permissions(role, connect=False)
+    #             await interaction.channel.send(f"{interaction.user.mention} Voice chat locked! 🔒")
+    #         else:
+    #             await interaction.channel.send(f"{interaction.user.mention} You don't own a channel.")
+    #         session.commit()
+
+    # @app_commands.command(name="unlock", description="Unlock your channel")
+    # async def slash_unlock(self, interaction: discord.Interaction) -> None:
+    #     with Session(engine) as session:
+    #         if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
+    #             role = interaction.guild.default_role
+    #             channel = self.bot.get_channel(autochannel.channel_id)
+    #             await channel.set_permissions(role, connect=True)
+    #             await interaction.channel.send(f"{interaction.user.mention} Voice chat unlocked! 🔓")
+    #         else:
+    #             await interaction.response.send_message(f"{interaction.user.mention} You don't own a channel.", ephemeral=True)
+    #         session.commit()
+
+    # @app_commands.command(name="whitelist", description="Allow a specific member to your channel")
+    # async def permit(self, interaction: discord.Interaction, member: discord.Member) -> None:
+    #     with Session(engine) as session:
+    #         c = session.cursor()
+    #         author_id = interaction.user.id
+    #         voice = FromDatabase.get_voice_id_from_user(author_id, c)
+    #         if voice is None:
+    #             await interaction.channel.send(f"{interaction.user.mention} You don't own a channel.")
+    #         else:
+    #             channel_id = voice[0]
+    #             channel = self.bot.get_channel(channel_id)
+    #             await channel.set_permissions(member, connect=True)
+    #             await interaction.channel.send(
+    #                 f"{interaction.user.mention} You have permitted {member.name} to have access to the channel. ✅"
+    #             )
+    #         session.commit()
+
+    # @app_commands.command(name="blacklist", description="Deny a specific member to your channel")
+    # async def reject(self, interaction: discord.Interaction, member: discord.Member) -> None:
+    #     with Session(engine) as session:
+    #         c = session.cursor()
+    #         author_id = interaction.user.id
+    #         guild_id = interaction.guild.id
+    #         voice = FromDatabase.get_voice_id_from_user(author_id, c)
+    #         if voice is None:
+    #             await interaction.channel.send(f"{interaction.user.mention} You don't own a channel.")
+    #         else:
+    #             channel_id = voice[0]
+    #             channel = self.bot.get_channel(channel_id)
+    #             for members in channel.members:
+    #                 if members.id == member.id:
+    #                     c.execute("SELECT voiceChannelID FROM guild WHERE guildID = ?", (guild_id,))
+    #                     voice = c.fetchone()
+    #                     channel2 = self.bot.get_channel(voice[0])
+    #                     await member.move_to(channel2)
+    #             await channel.set_permissions(member, connect=False, read_messages=True)
+    #             await interaction.channel.send(
+    #                 f"{interaction.user.mention} You have rejected {member.name} from accessing the channel. ❌"
+    #             )
+    #         session.commit()
+
+
+    @app_commands.command(name="name", description="Change the name of your channels")
+    async def slash_name(self, interaction: discord.Interaction, *, name: str) -> None:
+        with Session(engine) as session:
+            if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
+                channel = self.bot.get_channel(autochannel.channel_id)
+                await channel.edit(name=name)
+
+            await interaction.response.send_message(f"{interaction.user.mention} You have changed the channel name to {name}!", ephemeral=True)
+            
+            if voice_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
+                voice_settings.channel_name = name
+            else:
+                session.add(ACS(
+                    id = interaction.user.id,
+                    channel_name = name,
+                    channel_limit = 0
+                ))
+            session.commit()
 
 
 async def setup(bot: commands.Bot) -> None:
-	await bot.add_cog(Autochannel(bot))
-
-
-
-# Code below should be used when rewriting the autochannel cog,
-# for easier and more maintainable code
-
-
-ALLOWED_TYPES = ["category", "text", "voice"]
-
-
-class AutoChannel:
-    _discord_channel: discord.abc.GuildChannel
-    _database_channel: Channel
-    _id: int
-    _name: Literal["category", "text", "voice"]
-    _type: str = AC_TYPE
-
-
-    @property
-    def discord_channel(self) -> discord.abc.GuildChannel:
-        return self._discord_channel
-
-
-    @property
-    def database_channel(self) -> Channel:
-        return self._database_channel
-
-
-    @property
-    def id(self) -> int:
-        # self._id, self._discord_channel.id and self._database_channel.id should all be the same!
-        if self._discord_channel.id == self._id \
-        and self._database_channel.id == self._id:
-            return self._id
-        else:
-            raise ValueError(f"database id and discord id mismatch: {self._database_channel.id}, {self._discord_channel} should both be {self._id}")
-
-
-    @overload
-    def __init__(
-        self,
-        discord_channel: discord.abc.GuildChannel,
-        database_channel: Channel,
-    ) -> None:
-        pass
-
-
-    @overload
-    def __init__(
-        self,
-        discord_channel: discord.abc.GuildChannel
-    ) -> None:
-        pass
-
-
-    @overload
-    def __init__(
-        self,
-        database_channel: Channel,
-        bot: commands.Bot
-    ) -> None:
-        pass
-
-
-    def __init__(
-        self,
-        discord_channel: Optional[discord.abc.GuildChannel],
-        database_channel: Optional[Channel],
-        bot: Optional[commands.Bot]
-    ) -> None:
-        """
-        Initializes an instance of the AutoChannel class.
-
-        Args:
-            discord_channel (discord.abc.GuildChannel): The Discord channel associated with the AutoChannel.
-            database_channel (Channel): The database channel associated with the AutoChannel.
-            bot (Optional[commands.Bot]): The Discord bot instance.
-
-        Returns:
-            None
-
-        Raises:
-            AttributeError: Raised when the wrong argument combination is provided.
-            See overloaded functions for valid combinations
-
-        Behavior:
-        - If both `discord_channel` and `database_channel` are provided, their values are set.
-        - If `discord_channel` is provided and `database_channel` is not provided,
-        the `_database_channel` attribute is set by retrieving the database channel from `discord_channel`.
-        - If `discord_channel` is not provided and `database_channel` is provided,
-        the `_discord_channel` attribute is set by retrieving the Discord channel from `database_channel` and `bot`.
-        """
-        if discord_channel and database_channel:
-            self._discord_channel = discord_channel
-            self._database_channel = database_channel
-        elif discord_channel and not bot:
-            self._database_channel = self._get_database_from_discord(discord_channel)
-        elif database_channel and bot:
-            self._discord_channel = self._get_discord_from_database(database_channel, bot)
-        else:
-            combinations = get_overloads(self.__init__) # TODO: test and check if results look good
-            raise ValueError(f"Wrong argument combination, valid options are {combinations}")
-        
-        if database_channel.name not in ALLOWED_TYPES:
-            raise ValueError(f"Expected one of {ALLOWED_TYPES} not {database_channel.name}")
-
-        self._id = self.database_channel.id or self.discord_channel.id
-        self._name = database_channel.name
-
-
-    def _get_discord_from_database(
-        self, database_channel: Channel,
-        bot: commands.Bot
-    ) -> discord.abc.GuildChannel:
-        return discord.utils.get(bot.get_all_channels(), database_channel.id)
-
-
-    def _get_database_from_discord(self, discord_channel: discord.abc.GuildChannel) -> Channel:
-        with Session(engine) as session:
-            channel = session.query(Channel).where(Channel.id == discord_channel.id).first()
-        return channel
-
-
-    @staticmethod
-    @overload
-    async def create(
-        channel_type: Literal["category"],
-        reason: Optional[str],
-        overwrites: Optional[discord.PermissionOverwrite],
-        position: Optional[int]
-    ) -> Coroutine[Any, Any, Self]: pass
-
-
-    @staticmethod
-    @overload
-    async def create(
-        channel_type: Literal["text"],
-        reason: Optional[str],
-        overwrites: Optional[discord.PermissionOverwrite]
-    ) -> Coroutine[Any, Any, Self]: pass
-
-
-    @staticmethod
-    @overload
-    async def create(
-        channel_type: Literal["voice"],
-        reason: Optional[str],
-        overwrites: Optional[discord.PermissionOverwrite]
-    ) -> Coroutine[Any, Any, Self]: pass
-
-
-    @staticmethod
-    async def create(
-        guild: discord.Guild,
-        channel_type: Literal["category", "text", "voice"] = None,
-        reason: Optional[str] = None,
-        overwrites: Optional[discord.PermissionOverwrite] = None,
-        position: Optional[int] = None
-    ) -> Coroutine[Any, Any, Self]:
-        if channel_type is None:
-            raise ValueError(f"channel_type is None not one of {ALLOWED_TYPES}")
-        elif channel_type == "category":
-            discord_channel = await guild.create_category(reason=reason, overwrites=overwrites, position=position)
-        elif channel_type == "text":
-            discord_channel = await guild.create_text_channel(reason=reason, overwrites=overwrites)
-        elif channel_type == "voice":
-            discord_channel = await guild.create_voice_channel(reason=reason, overwrites=overwrites)
-        
-        discord_channel: discord.abc.GuildChannel
-        
-        with Session(engine) as session:
-            channel = Channel(
-                id = discord_channel.id,
-                guild_id = discord_channel.guild.id,
-                name = channel_type,
-                type = AC_TYPE,
-            )
-            session.add(channel)
-            session.commit()
-
-        return AutoChannel(
-            discord_channel=discord_channel,
-            database_channel=channel
-        )
-
-
-    def delete_all(self, reason: str) -> None:
-        """
-        This method only exists to pass the `reason` parameter
-
-        1. Deletes the Discord channel associated with the instance.
-        2. Deletes the database channel associated with the instance.
-        3. Deletes the instance itself.
-
-        Args:
-            reason (str): The reason for the deletion.
-
-        Returns:
-            None
-        """
-        asyncio.get_event_loop().run_until_complete(self._discord_channel.delete(reason=reason))
-        with Session(engine) as session:
-            session.delete(self._database_channel)
-            session.commit()
-
-        del self
+    await bot.add_cog(AutomaticChannels(bot))

@@ -18,6 +18,8 @@ Using `docker-compose build`, and `docker-compose up` should suffice to start an
 
 On the 1st time, it will fail, because some config settings need to be adjusted. These are marked with `!!`
 
+Notes: However it can be run on windows, by just running `python main.py` It is not intended to be used this way.
+
 ## Features:
 
 PostgreSQL

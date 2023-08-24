@@ -163,4 +163,5 @@ servers/docker-scpsl/
 servers/docker-conanexiles/
 database/steam/
 database/img
+database/db
 logon.txt

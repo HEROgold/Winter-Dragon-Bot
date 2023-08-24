@@ -48,7 +48,7 @@ class ErrorHandler:
 
     @_async_init.before_loop
     async def before_async_init(self) -> None:
-        self.logger.info("Waiting until bot is online")
+        self.logger.debug("Setting up error handler")
         await self.bot.wait_until_ready()
 
 
@@ -134,10 +134,10 @@ class ErrorHandler:
         error = self.error
         self.logger.debug(f"{type(error)=}, {error.args=}")
         
-        if config["Error"]["always_log_errors"] == "True":
-            # TODO: add full traceback
-            self.logger.exception(f"always log: {error}")
-        if config["Error"]["ignore_errors"] == "True":
+        if config.getboolean("Error", "always_log_errors"):
+            self.logger.error("Always log error:")
+            self.logger.exception(error)
+        if config.getboolean("Error", "ignore_errors"):
             return
 
         message = self._get_message_from_error()

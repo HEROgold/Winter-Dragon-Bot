@@ -11,7 +11,8 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    BigInteger
+    BigInteger,
+    Text
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -62,6 +63,9 @@ GAMES_ID = "games.id"
 LOBBIES_ID = "lobbies.id"
 TEAMS_ID = "teams.id"
 HANGMAN_ID = "hangman.id"
+ROLE_ID = "roles.id"
+INCREMENTAL_ID = "incremental_data.id"
+AUTOCHANNEL_ID = "autochannels.id"
 
 
 class Base(DeclarativeBase):
@@ -84,9 +88,10 @@ class Channel(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
     type: Mapped[str] = mapped_column(String(15))
-    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID)) # , unique=True, nullable=False
-    guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
     messages: Mapped[List["Message"]] = relationship(back_populates="channel")
+    guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
+
 
 
 class User(Base):
@@ -203,7 +208,7 @@ class AssociationUserLobby(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     lobby_id: Mapped["Lobby"] = mapped_column(ForeignKey(LOBBIES_ID))
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
 
 
 # Should work for any player count.
@@ -212,7 +217,7 @@ class ResultMassiveMultiplayer(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     placement: Mapped[Optional[int]] = mapped_column()
 
 
@@ -231,7 +236,7 @@ class ResultDuels(Base):
 class SteamUser(Base):
     __tablename__ = "steam_users"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
 
 
 class SteamSale(Base):
@@ -283,7 +288,7 @@ class AssociationUserTeam(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     team_id: Mapped["Lobby"] = mapped_column(ForeignKey(TEAMS_ID))
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     voted: Mapped[bool] = mapped_column(Boolean)
 
 
@@ -310,7 +315,7 @@ class AssociationUserHangman(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     hangman_id: Mapped["Hangman"] = mapped_column(ForeignKey(HANGMAN_ID))
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     score: Mapped[int] = mapped_column(Integer, default=0)
 
 
@@ -318,7 +323,7 @@ class LookingForGroup(Base):
     __tablename__ = "looking_for_groups"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
 
 
@@ -326,33 +331,113 @@ class Presence(Base):
     __tablename__ = "presence"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     status: Mapped[str] = mapped_column(String(15))
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
-class AutochannelBlacklist(Base):
-    __tablename__ = "association_autochannel_blacklist"
+class AutoChannel(Base):
+    __tablename__ = "autochannels"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
 
 
-class AutochannelWhitelist(Base):
-    __tablename__ = "association_autochannel_whitelist"
+class AutoChannelSettings(Base):
+    __tablename__ = "autochannel_settings"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
-    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID))
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
+    channel_name: Mapped[str] = mapped_column(Text)
+    channel_limit: Mapped[int] = mapped_column(Integer)
+
+
+class AssociationUserAutochannel(Base):
+    __tablename__ = "association_users_autochannels"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
+    channel_id: Mapped[int] = mapped_column(ForeignKey(AUTOCHANNEL_ID))
 
 
 class Tickets(Base):
     __tablename__ = "tickets"
 
-    id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
     channel: Mapped["Channel"] = mapped_column(ForeignKey(CHANNELS_ID))
     start_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
     end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
     closed: Mapped[bool] = mapped_column(Boolean)
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+
+
+class AutoAssignRole(Base):
+    __tablename__ = "auto_assign"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID))
+    guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID))
+
+
+class Incremental(Base):
+    __tablename__ = "incremental_data"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
+    balance: Mapped[int] = mapped_column(BigInteger)
+    last_update: Mapped[datetime.datetime] = mapped_column(DateTime)
+    generators: Mapped[List["IncrementalGen"]] = relationship(back_populates="incremental")
+
+    @classmethod
+    def fetch_user(cls, user_id: int) -> Self:
+        """Find existing or create new incremental, and return it
+
+        Args:
+            user_id (int): Identifier for the incremental.
+        """
+        with Session(engine) as session:
+            logger.debug(f"Looking for incremental {user_id=}")
+            incremental = session.query(cls).where(cls.user_id == user_id).first()
+            if incremental is None:
+                from enums.incremental import Generators
+                logger.debug(f"Creating incremental {user_id=}")
+                incremental = cls(
+                    user_id = user_id,
+                    balance = 0,
+                    last_update = datetime.datetime.now()
+                )
+                session.add(incremental)
+
+                gen = Generators(0)
+
+                session.add(IncrementalGen(
+                    user_id = user_id,
+                    incremental_id = incremental.id,
+                    generator_id = gen.value,
+                    name = gen.name,
+                    price = gen.value << 2,
+                    generating = gen.gen_rate
+                ))
+            session.commit()
+            logger.debug(f"Returning incremental {user_id=}")
+            return incremental
+
+
+class IncrementalGen(Base):
+    __tablename__ = "incremental_gens"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
+    incremental_id: Mapped[int] = mapped_column(ForeignKey(INCREMENTAL_ID))
+    incremental: Mapped["Incremental"] = relationship(back_populates="generators", foreign_keys=[incremental_id])
+    generator_id: Mapped[int] = mapped_column(Integer)
+    name : Mapped[str] = mapped_column(String(15))
+    price : Mapped[str] = mapped_column(Integer)
+    generating : Mapped[float] = mapped_column(Float)
 
 
 all_tables = Base.__subclasses__()

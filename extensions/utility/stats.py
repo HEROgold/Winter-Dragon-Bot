@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
-import rainbow
+import tools.rainbow as rainbow
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 
@@ -238,7 +238,7 @@ class Stats(commands.GroupCog):
 
 
     @app_commands.command(name="reset", description="Reset stats of all servers")
-    @app_commands.guilds(int(config["Main"]["support_guild_id"]))
+    @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def reset_stats(self, interaction:discord.Interaction) -> None:
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
