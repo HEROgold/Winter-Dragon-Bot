@@ -86,7 +86,7 @@ class Steam(commands.GroupCog):
         await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
 
 
-    @app_commands.checks.cooldown(1, UPDATE_PERIOD)
+    # @app_commands.checks.cooldown(1, UPDATE_PERIOD)
     @app_commands.command(name="show", description="Get a list of steam games that are on sale for the given percentage or higher")
     async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
         await interaction.response.defer()
