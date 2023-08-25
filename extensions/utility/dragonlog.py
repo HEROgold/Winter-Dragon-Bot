@@ -367,7 +367,7 @@ class DragonLog(commands.GroupCog):
         if message.clean_content == "":
             return
 
-        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {message.reason or None}"
+        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
         embed = discord.Embed(
             title="Message Deleted",
             description=DESC,
