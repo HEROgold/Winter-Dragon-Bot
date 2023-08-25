@@ -350,10 +350,10 @@ class DragonLog(commands.GroupCog):
         if message.clean_content == "":
             return
 
-        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
+        description = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
         embed = discord.Embed(
             title="Message Deleted",
-            description=DESC,
+            description=description,
             color=0xFF0000
         )
 
@@ -371,10 +371,10 @@ class DragonLog(commands.GroupCog):
         if message.clean_content == "":
             return
 
-        DESC = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
+        description = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
         embed = discord.Embed(
             title="Message Deleted",
-            description=DESC,
+            description=description,
             color=0xFF0000
         )
 
