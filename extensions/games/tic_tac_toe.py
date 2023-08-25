@@ -11,8 +11,8 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 from tools.config_reader import config
-from tools.database_tables import AssociationUserLobby as AUL, Game
-from tools.database_tables import Lobby, ResultDuels, Session, engine
+from tools.database_tables import AssociationUserLobby as AUL
+from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
 
 # TODO: Add ai if bot is challenged?
 
