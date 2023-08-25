@@ -11,8 +11,7 @@ from tools.config_reader import config
 
 keep_latest = config.getboolean("Main","keep_latest_logs")
 
-
-class logs:
+class Logs:
     bot: commands.Bot
     bot_logger: logging.Logger
     discord_logger: logging.Logger
@@ -150,5 +149,5 @@ class logs:
 
 
 if __name__ == "__main__":
-    l = logs
+    l = Logs
 
