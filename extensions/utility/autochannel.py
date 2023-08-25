@@ -9,7 +9,6 @@ from tools.config_reader import config
 from tools.database_tables import Session, engine
 from tools.database_tables import AutoChannel as AC
 from tools.database_tables import AutoChannelSettings as ACS
-# from tools.database_tables import AssociationUserAutochannel as AUA
 
 
 class AutomaticChannels(commands.GroupCog):
