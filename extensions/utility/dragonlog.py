@@ -1,6 +1,5 @@
 import itertools
 import logging
-from enum import Enum
 from typing import Optional
 
 import discord
@@ -10,23 +9,7 @@ from discord.ext import commands
 from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
-
-
-class LogCategories(Enum):
-    GLOBAL: str = "ALL-CATEGORIES"
-    CREATEDCHANNELS: str = "CREATEDCHANNELS"
-    UPDATEDCHANNELS: str = "UPDATEDCHANNELS"
-    DELETEDCHANNELS: str = "DELETEDCHANNELS"
-    CREATEDINVITES: str = "CREATEDINVITES"
-    MEMBERUPDATES: str = "MEMBERUPDATES"
-    MEMBERMOVED: str = "MEMBERMOVED"
-    MEMBERJOINED: str = "MEMBERJOINED"
-    MEMBERLEFT: str = "MEMBERLEFT"
-    EDITEDMESSAGES: str = "EDITEDMESSAGES"
-    DELETEDMESSAGES: str = "DELETEDMESSAGES"
-    CREATEDROLES: str = "CREATEDROLES"
-    UPDATEDROLES: str = "UPDATEDROLES"
-    DELETEDROLES: str = "DELETEDROLES"
+from enums.dragonlog import LogCategories
 
 
 LOGS = "logs"
