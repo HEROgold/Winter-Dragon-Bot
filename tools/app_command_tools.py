@@ -18,7 +18,13 @@ class Converter:
     tree: app_commands.CommandTree
     logger: logging.Logger
     parameter_args = None # Not implemented
+    _instance = None
 
+    # TODO: test, does singleton work, keep it. (for caching)
+    def __new__(cls, bot: commands.Bot) -> Self:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self, bot: commands.Bot) -> Self:
         self.bot = bot
@@ -100,9 +106,9 @@ class Converter:
 
 
     # TODO, return pre-filled arguments for a given command
-    # Doesn't work with discord's api (yet?)
     # Needs to work both with and without sub commands.
     # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
+    # Doesn't work with discord's api (yet?)!!
     async def with_parameters(
         self,
         command: commands.Command,
@@ -118,4 +124,3 @@ class Converter:
         #     pass
         # self.logger.debug(app_command.to_dict())
         # return _test
-

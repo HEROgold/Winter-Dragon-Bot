@@ -139,24 +139,24 @@ class DragonLog(commands.GroupCog):
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
-        actions = {
-                enum.channel_create: await self.on_guild_channel_create(entry),
-                enum.channel_delete: await self.on_guild_channel_delete(entry),
-                enum.channel_update: await self.on_guild_channel_update(entry),
-                enum.role_create: await self.on_role_create(entry),
-                enum.role_update: await self.on_role_update(entry),
-                enum.role_delete: await self.on_role_delete(entry),
-                enum.invite_create: await self.on_invite_create(entry),
-                enum.invite_delete: await self.on_invite_delete(entry),
-                enum.member_move: await self.on_member_move(entry),
-                enum.member_update: await self.audit_member_update(entry, False),
-                enum.member_role_update: await self.audit_member_update(entry, True),
-                enum.message_delete: await self.audit_message_delete(entry),
-            }
         if action not in enum:
             await self.generic_change(entry)
         else:
-            await actions[action]
+            actions = {
+                    enum.channel_create: self.on_guild_channel_create,
+                    enum.channel_delete: self.on_guild_channel_delete,
+                    enum.channel_update: self.on_guild_channel_update,
+                    enum.role_create: self.on_role_create,
+                    enum.role_update: self.on_role_update,
+                    enum.role_delete: self.on_role_delete,
+                    enum.invite_create: self.on_invite_create,
+                    enum.invite_delete: self.on_invite_delete,
+                    enum.member_move: self.on_member_move,
+                    enum.member_update: self.audit_member_update,
+                    enum.member_role_update: self.audit_member_update,
+                    enum.message_delete: self.audit_message_delete,
+                }
+            await actions[action](entry)
 
 
     async def on_guild_channel_create(self, entry: discord.AuditLogEntry) -> None:
@@ -367,7 +367,7 @@ class DragonLog(commands.GroupCog):
         if message.clean_content == "":
             return
 
-        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {message.reason or None}"
+        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
         embed = discord.Embed(
             title="Message Deleted",
             description=DESC,

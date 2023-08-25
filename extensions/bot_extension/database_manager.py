@@ -4,7 +4,6 @@ import logging
 import discord  # type: ignore
 from discord import app_commands
 from discord.ext import commands, tasks
-from tools import event_errors
 
 from tools.config_reader import config
 from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
@@ -13,6 +12,7 @@ from tools.database_tables import Session, engine, Channel, Guild, Message, User
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class DatabaseSetup(commands.Cog):
     bot: commands.Bot
+    logger: logging.Logger
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot

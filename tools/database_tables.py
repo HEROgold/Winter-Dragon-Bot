@@ -180,8 +180,8 @@ class Game(Base):
             id (int): Identifier for the game.
             name (str): Name for the game
         """
-        if not id and not name:
-            raise AttributeError("Missing id or name.")
+        if not name:
+            raise AttributeError("Missing name.")
         with Session(engine) as session:
             logger.debug(f"Looking for game {name=}")
             game = session.query(cls).where(cls.name == name).first()
@@ -190,7 +190,7 @@ class Game(Base):
                 session.add(cls(name=name))
                 session.commit()
                 game = session.query(cls).where(cls.name == name).first()
-            logger.debug(f"Returning user {name=}")
+            logger.debug(f"Returning game {name=}")
             return game
 
 
@@ -349,14 +349,6 @@ class AutoChannelSettings(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
     channel_name: Mapped[str] = mapped_column(Text)
     channel_limit: Mapped[int] = mapped_column(Integer)
-
-
-class AssociationUserAutochannel(Base):
-    __tablename__ = "association_users_autochannels"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    channel_id: Mapped[int] = mapped_column(ForeignKey(AUTOCHANNEL_ID))
 
 
 class Tickets(Base):

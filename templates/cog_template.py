@@ -9,6 +9,9 @@ from tools.config_reader import config
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class TEMP(commands.GroupCog):
+    bot: commands.Bot
+    logger: logging.Logger
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
