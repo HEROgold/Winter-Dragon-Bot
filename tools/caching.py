@@ -30,6 +30,7 @@ def memoize(func):
     return memoized_async_func if iscoroutinefunction(func) else memoized_sync_func
 
 
+# unused
 def lru_cache_with_ttl(maxsize=128, typed=False, ttl=60):
     """
     Least-recently used cache with time-to-live (ttl) limit.
