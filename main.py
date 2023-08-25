@@ -12,8 +12,8 @@ from discord.ext import commands
 from tools.config_reader import config
 from tools.config_reader import is_valid as config_validator
 from tools.config_reader import get_invalid as get_invalid_configs
-from tools.main_log import logs
-
+from tools.main_log import Logs
+from _types.bot import WinterDragon
 
 if not config_validator():
     raise ValueError(f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}")
@@ -30,7 +30,7 @@ Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
 
-bot = commands.AutoShardedBot(intents=Intents, command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), case_insensitive=True)
+bot = WinterDragon(intents=Intents, command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), case_insensitive=True)
 bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
 
@@ -104,7 +104,7 @@ async def main() -> None:
         # global here, since they should be accessible module wide,
         # but they require a running even loop
         global log
-        log = logs(bot=bot)
+        log = Logs(bot=bot)
 
         await mass_load()
         # await bot.load_extension("jishaku")
