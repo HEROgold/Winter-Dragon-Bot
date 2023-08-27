@@ -50,9 +50,8 @@ if config["Main"]["custom_help"]:
 @bot.event
 async def on_ready() -> None:
     print("Bot is running!")
-    if config["Main"]["show_logged_in"] == True:
+    if config.getboolean("Main", "show_logged_in"):
         log.bot_logger.info(f"Logged on as {bot.user}!")
-
 
 
 async def get_extensions() -> list[str]:
