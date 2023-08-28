@@ -113,7 +113,7 @@ class Steam(commands.GroupCog):
         creates a discord Embed object to send and notify users of new 100% sales.
         Expected amount of sales should be low enough it'll never reach embed size limit
         """
-        self.logger.info("Checking for sales.")
+        self.logger.info("updating sales")
 
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=0x094d7f)
         new_sales = self.get_new_steam_sales(percent=100)

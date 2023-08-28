@@ -1,6 +1,5 @@
 import itertools
 import logging
-from enum import Enum
 from typing import Optional
 
 import discord
@@ -10,23 +9,7 @@ from discord.ext import commands
 from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
-
-
-class LogCategories(Enum):
-    GLOBAL: str = "ALL-CATEGORIES"
-    CREATEDCHANNELS: str = "CREATEDCHANNELS"
-    UPDATEDCHANNELS: str = "UPDATEDCHANNELS"
-    DELETEDCHANNELS: str = "DELETEDCHANNELS"
-    CREATEDINVITES: str = "CREATEDINVITES"
-    MEMBERUPDATES: str = "MEMBERUPDATES"
-    MEMBERMOVED: str = "MEMBERMOVED"
-    MEMBERJOINED: str = "MEMBERJOINED"
-    MEMBERLEFT: str = "MEMBERLEFT"
-    EDITEDMESSAGES: str = "EDITEDMESSAGES"
-    DELETEDMESSAGES: str = "DELETEDMESSAGES"
-    CREATEDROLES: str = "CREATEDROLES"
-    UPDATEDROLES: str = "UPDATEDROLES"
-    DELETEDROLES: str = "DELETEDROLES"
+from enums.dragonlog import LogCategories
 
 
 LOGS = "logs"
@@ -367,10 +350,10 @@ class DragonLog(commands.GroupCog):
         if message.clean_content == "":
             return
 
-        DESC = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
+        description = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
         embed = discord.Embed(
             title="Message Deleted",
-            description=DESC,
+            description=description,
             color=0xFF0000
         )
 
@@ -388,10 +371,10 @@ class DragonLog(commands.GroupCog):
         if message.clean_content == "":
             return
 
-        DESC = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
+        description = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
         embed = discord.Embed(
             title="Message Deleted",
-            description=DESC,
+            description=description,
             color=0xFF0000
         )
 

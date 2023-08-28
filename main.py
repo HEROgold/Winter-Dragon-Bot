@@ -13,7 +13,7 @@ from tools.config_reader import config
 from tools.config_reader import is_valid as config_validator
 from tools.config_reader import get_invalid as get_invalid_configs
 from tools.main_log import Logs
-from _types.bot import WinterDragon
+from extras.bot import WinterDragon
 
 if not config_validator():
     raise ValueError(f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}")
@@ -43,16 +43,15 @@ def setup_logging(logger: logging.Logger, filename: str) -> None:
     logger.addHandler(handler)
 
 
-if config["Main"]["custom_help"]:
-    bot.remove_command("help")
+# if config["Main"]["custom_help"]:
+    # bot.remove_command("help")
 
 
 @bot.event
 async def on_ready() -> None:
     print("Bot is running!")
-    if config["Main"]["show_logged_in"] == True:
+    if config.getboolean("Main", "show_logged_in"):
         log.bot_logger.info(f"Logged on as {bot.user}!")
-
 
 
 async def get_extensions() -> list[str]:
