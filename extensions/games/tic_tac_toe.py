@@ -9,6 +9,7 @@ import sqlalchemy
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, View
+from extras.ttt_ai import TicTacToeAi
 
 from tools.config_reader import config
 from tools.database_tables import AssociationUserLobby as AUL
@@ -158,12 +159,8 @@ class TicTacToe(commands.GroupCog):
         description="Start a tic tac toe game, challenging a specific member/user"
     )
     async def slash_challenge(self, interaction: discord.Interaction, member: discord.Member) -> None:
-        if member.bot is True:
-            await interaction.response.send_message("Bot's cannot play.")
         await interaction.response.send_message(f"{interaction.user.mention} challenged {member.mention} in tic tac toe!")
-        # resp_msg = await interaction.original_response()
         game_data: GameData = {"status":"waiting", "member1":{"id": interaction.user.id}, "member2":{"id": member.id}}
-        # self.data[str(resp_msg.id)] = game_data
         await self.start_game(interaction=interaction, game_data=game_data)
 
 # LOBBY start
@@ -393,12 +390,13 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         if interaction.user.id not in [view.player_x.id, view.player_o.id]:
             await interaction.response.send_message("You may not play in this game", ephemeral=True)
             return
-        elif interaction.user.id != view.current_player:
+        elif interaction.user.id != view.current_player and not view.is_vs_bot:
             await interaction.response.send_message("It's not your turn", ephemeral=True)
             return
+
         assert self.view is not None
         state = view.board[self.y][self.x]
-        if state in (view.player_x.id, view.player_o.id):
+        if state in [view.player_x.id, view.player_o.id]:
             return
 
         if view.current_player == view.player_x.id:
@@ -431,7 +429,18 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
             view.stop()
 
+        if view.is_vs_bot:
+            self.logger.debug("Before TTT AI Move")
+            await view.make_bot_move(interaction)
+            self.logger.debug("After TTT AI Move")
+
+        # if interaction.user.id != view.current_player and view.is_vs_bot:
+        #     # switch player and player2/ switch current_player to human.
+        #     # Player O is always 2nd joined player/Bot
+        #     view.current_player = view.player_x.id
+
         await interaction.response.edit_message(content=content, view=view)
+
 
 
 # This is our actual board View
@@ -440,6 +449,42 @@ class TicTacToeGame(discord.ui.View):
     player_o: discord.Member
     Tie = 2
     children: List[TicTacToeButton] # type: ignore
+
+
+    @property
+    def is_vs_bot(self) -> bool:
+        return any([self.player_o.bot, self.player_x.bot])
+
+
+    async def make_bot_move(self, interaction: discord.Interaction) -> None:
+        """Make the bot/ai do a move!"""
+        print("TTT AI Turn!")
+
+        ai = TicTacToeAi(
+            o=self.player_o.id,
+            x=self.player_x.id,
+            board=self.board
+        )
+
+        if self.player_o.bot:
+            row, column = ai.get_best_move(self.player_o.id)
+            self.current_player = self.player_x
+        elif self.player_x.bot:
+            row, column = ai.get_best_move(self.player_x.id)
+            self.current_player = self.player_o
+        else:
+            raise ValueError(f"HOW DID WE GET HERE?: Expected Bot User, but got {self.player_o} and {self.player_x}")
+
+        button_nr = ai.get_button_location(row, column)
+        # FIXME: callback keeps looping!
+        await self.children[button_nr].callback(interaction)
+        
+        if interaction.user.id != self.current_player and self.is_vs_bot:
+            # switch player and player2/ switch current_player to human.
+            # Player O is always 2nd joined player/Bot
+            self.current_player = self.player_x.id
+
+
 
     def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: GameData) -> None:
         super().__init__()
@@ -558,7 +603,7 @@ class TicTacToeGame(discord.ui.View):
             self.game_data["status"] = "finished-player2"
             game_result = self.player_o.id
 
-        game = Game().fetch_game_by_name(GAME_NAME)
+        game = Game.fetch_game_by_name(GAME_NAME)
 
         self.logger.debug(f"{game_result=}, {duel_result=}")
         if game_result is not None:
