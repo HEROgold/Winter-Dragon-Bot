@@ -10,6 +10,7 @@ from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 from enums.dragonlog import LogCategories
+from extras.msg_checks import is_tic_tac_toe
 
 
 LOGS = "logs"
@@ -78,6 +79,10 @@ class DragonLog(commands.GroupCog):
                     Channel.guild_id == guild.id,
                     Channel.name == log_channel_name
                 ).first()
+        
+        if channel is None:
+            self.logger.warning(f"Found no logs channel! {channel=}, {guild=}, {embed=}")
+            return
 
         if mod_channel := discord.utils.get(guild.channels, id=channel.id):
             await mod_channel.send(embed=embed)
@@ -327,6 +332,10 @@ class DragonLog(commands.GroupCog):
         if before.clean_content == after.clean_content:
             self.logger.debug(f"Message content is the same: {before}")
             return
+        if is_tic_tac_toe(before.clean_content):
+            self.logger.debug(f"Edited message was tic-tac-toe game: {before}")
+            return
+
         self.logger.debug(f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}")
         embed = discord.Embed(
             title="Message Edited",
