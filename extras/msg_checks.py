@@ -4,22 +4,24 @@ from textwrap import dedent
 
 
 def is_tic_tac_toe(msg: str) -> bool:
-    """Checks if the message contains a tic-tac-toe game (that hasn't ended)"""
-    # TODO: figure out which mention_regex to use in dragon-log
-    # mention_regex = r"<@!*&*[0-9]+>"
-    mention_regex = r"\@[a-zA-Z0-9_ ]+"
-    user_regex = rf"(X|O|{mention_regex})"
-    to_find = dedent(fr"""
-        It is now {user_regex}'s turn
-        It's a tie!
-        {user_regex} won!
-        {user_regex}'s turn
-        Game has started!, It is {user_regex}'s Turn
-        Lobby created!\nJoin here to start playing!
-        {user_regex} challenged {user_regex} in tic tac toe!
-    """).splitlines()
+    """
+    Checks if a given message contains a tic-tac-toe game pattern.
 
-    regex = "".join(f"({line}|)" for line in to_find)
+    Args:
+        msg (str): The message to check.
+
+    Returns:
+        bool: True if the message contains a tic-tac-toe game pattern, False otherwise.
+
+    Example:
+        ```python
+        msg = "It is now X's turn"
+        result = is_tic_tac_toe(msg)
+        print(result)
+        ```
+    """
+
+    regex = generate_ttt_regex()
 
     find_all = re.findall(regex, msg)
     print(regex)
@@ -34,6 +36,36 @@ def is_tic_tac_toe(msg: str) -> bool:
 
     print(total)
     return len(total) > 0
+
+
+def generate_ttt_regex() -> str:
+    """
+    Generates a regular expression pattern for tic-tac-toe game messages.
+
+    Returns:
+        str: The generated regular expression pattern.
+
+    Example:
+        ```python
+        regex = generate_ttt_regex()
+        print(regex)
+        ```
+    """
+    # TODO: figure out which mention_regex to use in dragon-log
+    # mention_regex = r"<@!*&*[0-9]+>"
+    mention_regex = r"\@[a-zA-Z0-9_ ]+"
+    user_regex = rf"(X|O|{mention_regex})"
+    to_find = dedent(fr"""
+        It is now {user_regex}'s turn
+        It's a tie!
+        {user_regex} won!
+        {user_regex}'s turn
+        Game has started!, It is {user_regex}'s Turn
+        Lobby created!\nJoin here to start playing!
+        {user_regex} challenged {user_regex} in tic tac toe!
+    """).splitlines()
+
+    return "".join(f"({line}|)" for line in to_find)
 
 
 def main() -> None:
