@@ -57,7 +57,21 @@ class Converter:
         guild: discord.Guild = None,
         app_command: app_commands.AppCommand = None
     ) -> tuple[app_commands.AppCommand, str] | None:
-        """Returns a AppCommand and a string that can be used to mention the subcommand"""
+        """
+        Retrieves the sub-command of an app.
+    
+        Args:
+            self: The instance of the class.
+            sub_command (app_commands.Command): The sub-command to retrieve.
+            guild (discord.Guild, optional): The guild to retrieve the sub-command from. Defaults to None.
+            app_command (app_commands.AppCommand, optional): The app command to retrieve the sub-command from. Defaults to None.
+    
+        Returns:
+            tuple[app_commands.AppCommand, str] | None: A tuple containing the app command and a custom mention string, or None if the sub-command is not found.
+    
+        Raises:
+            CommandNotFound: Raised when the sub-command is not found.
+        """
         if not sub_command:
             raise CommandNotFound
         if not app_command or app_command is None:
