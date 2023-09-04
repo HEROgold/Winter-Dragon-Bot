@@ -64,7 +64,7 @@ class AutoCogReloader(commands.Cog):
     async def auto_reload(self) -> None:
         if not self.data["edited"]:
             self.check_edits()
-        for file_data in self.data["edited"]:
+        for file_data in list(self.data["edited"]):
             try:
                 await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
                 self.logger.info(f"Automatically reloaded {file_data}")
