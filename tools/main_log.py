@@ -9,7 +9,7 @@ from discord.ext import commands, tasks
 
 from tools.config_reader import config
 
-keep_latest = config.getboolean("Main","keep_latest_logs")
+KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
 class Logs:
     bot: commands.Bot
@@ -34,6 +34,7 @@ class Logs:
             cls.sql_logger
         except AttributeError:
             from tools.database_tables import logger as sql_logger
+
             cls.sql_logger = sql_logger
 
 
@@ -52,7 +53,6 @@ class Logs:
     @staticmethod
     def setup_logging(logger: logging.Logger, filename: str) -> None:
         logger.setLevel(config["Main"]["log_level"])
-        # handler = logging.FileHandler(filename=filename, encoding="utf-8", mode="w")
         handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
         logger.addHandler(handler)
@@ -79,9 +79,9 @@ class Logs:
     def delete_oldest_saved_logs(self) -> None:
         """Delete the oldest findable logs"""
         oldest_files = sorted((
-                os.path.join(root, file)
-                for root, _, files in os.walk(config["Main"]["log_path"])
-                for file in files
+            os.path.join(root, file)
+            for root, _, files in os.walk(config["Main"]["log_path"])
+            for file in files
             ),
             key=os.path.getctime,
         )
@@ -117,23 +117,26 @@ class Logs:
 
 
     def logging_rollover(self) -> None:
-        log_handlers = []
-        log_handlers.extend(self.sql_logger.handlers)
-        log_handlers.extend(self.discord_logger.handlers)
-        log_handlers.extend(self.bot_logger.handlers)
-        for handler in log_handlers:
+        """Rolls over bot, discord and sql log handlers."""
+        for handler in [
+            *self.sql_logger.handlers,
+            *self.discord_logger.handlers,
+            *self.bot_logger.handlers,
+        ]:
             if isinstance(handler, RotatingFileHandler):
                 handler.doRollover()
 
 
     def delete_latest_logs(self) -> None:
-        if keep_latest:
+        if KEEP_LATEST:
             self.bot_logger.info("Keeping top level logs.")
             return
         self._delete_top_level_logs()
 
 
-    def _delete_top_level_logs(self) -> None:
+    @staticmethod
+    def _delete_top_level_logs() -> None:
+        """Deletes the top level logs (not in logs directory)"""
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 print(f"Removing {file}")
@@ -141,13 +144,7 @@ class Logs:
 
 
     def shutdown(self) -> None:
-        """Calls `save_logs` and `delete_latest_logs` before `logging.shutdown`
-        """
+        """Calls `save_logs` and `delete_latest_logs` before `logging.shutdown`"""
         self.save_logs()
         self.delete_latest_logs()
         logging.shutdown()
-
-
-if __name__ == "__main__":
-    l = Logs
-
