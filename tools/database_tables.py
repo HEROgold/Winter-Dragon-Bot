@@ -66,6 +66,7 @@ HANGMAN_ID = "hangman.id"
 ROLE_ID = "roles.id"
 INCREMENTAL_ID = "incremental_data.id"
 AUTOCHANNEL_ID = "autochannels.id"
+POLLS_ID = "polls.id"
 
 
 class Base(DeclarativeBase):
@@ -274,6 +275,25 @@ class Poll(Base):
     end_date: Mapped[datetime.datetime] = mapped_column(DateTime)
     votes: Mapped[list[int]] = mapped_column(ForeignKey(USERS_ID), nullable=True)
     values: Mapped[list[int]] = mapped_column(Integer, nullable=True)
+
+
+class Poll(Base):
+    __tablename__ = "polls"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
+    message_id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID))
+    content: Mapped[str] = mapped_column(Text)
+    end_date: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+
+class AssociationUserPoll(Base):
+    __tablename__ = "association_users_polls"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    poll_id: Mapped[int] = mapped_column(ForeignKey(POLLS_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
+    voted_value: Mapped[int] = mapped_column(Integer)
 
 
 class Team(Base):
