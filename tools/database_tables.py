@@ -262,21 +262,6 @@ class Suggestion(Base):
     content: Mapped[str] = mapped_column(String(2048))
 
 
-# TODO: look at lobby database, create association table to map votes to users and polls.
-# TODO: restructure, reflect updates in polls extension/cog as well.
-class Poll(Base):
-    __tablename__ = "polls"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
-    message_id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID))
-    # guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
-    content: Mapped[str] = mapped_column(String(2048))
-    end_date: Mapped[datetime.datetime] = mapped_column(DateTime)
-    votes: Mapped[list[int]] = mapped_column(ForeignKey(USERS_ID), nullable=True)
-    values: Mapped[list[int]] = mapped_column(Integer, nullable=True)
-
-
 class Poll(Base):
     __tablename__ = "polls"
 
