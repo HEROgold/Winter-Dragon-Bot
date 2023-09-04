@@ -33,9 +33,9 @@ class AutoCogReloader(commands.Cog):
                 if not file.endswith(".py"):
                     continue
                 if file == os.path.basename(__file__):
-                    self.logger.debug(f"Skipping {file} (myself/itself)")
+                    # self.logger.debug(f"Skipping {file} (myself/itself)")
                     continue
-                self.logger.debug(f"Getting data from {file}")
+                # self.logger.debug(f"Getting data from {file}")
                 file_path = os.path.join(root, file)
                 cog_path = os.path.join(root, file)
                 with open(file_path, "r") as f:
