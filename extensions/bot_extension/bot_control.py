@@ -80,7 +80,6 @@ Snetio = namedtuple(
 ) # type: ignore
 
 
-# TODO: test if working
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class BotC(commands.GroupCog):
     timestamps: list[float]

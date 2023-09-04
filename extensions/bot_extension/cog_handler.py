@@ -9,7 +9,6 @@ from discord.ext import commands, tasks
 from tools.config_reader import config
 
 
-# TODO: needs testing
 class AutoCogReloader(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
