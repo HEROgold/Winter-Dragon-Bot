@@ -5,19 +5,20 @@ import shutil
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 
-from discord.ext import commands, tasks
+from discord.ext import tasks
 
 from tools.config_reader import config
+from extras.bot import WinterDragon
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
 class Logs:
-    bot: commands.Bot
+    bot: WinterDragon
     bot_logger: logging.Logger
     discord_logger: logging.Logger
     sql_logger: logging.Logger
 
-    def __init__(self, bot: commands.bot) -> None:
+    def __init__(self, bot: WinterDragon) -> None:
         self.bot = bot
         self.bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
         self.discord_logger = logging.getLogger("discord")
