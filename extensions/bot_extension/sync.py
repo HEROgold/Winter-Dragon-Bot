@@ -16,9 +16,7 @@ class Sync(commands.Cog):
         self.update.start()
 
 
-    # TODO: Extensive testing for edge cases
     # Seems to work properly
-    # TODO: Rewrite, figure out what is synced, what is loaded in memory
     @tasks.loop(count = 1)
     async def update(self) -> None:
         # sourcery skip: useless-else-on-loop
