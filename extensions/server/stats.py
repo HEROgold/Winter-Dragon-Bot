@@ -72,12 +72,12 @@ class Stats(commands.GroupCog):
 
         with Session(engine) as session:
             for k, v in channels.items():
-                session.add(Channel(
+                Channel.update(Channel(
                     id = v.id,
                     guild_id = guild.id,
                     type = STATS,
                     name = k
-                    ))
+                ))
             session.commit()
         self.logger.info(f"Created stats channels for: guild='{guild}'")
 
