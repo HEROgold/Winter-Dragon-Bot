@@ -10,13 +10,14 @@ from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 from enums.dragonlog import LogCategories
-from extras.msg_checks import is_tic_tac_toe
+from tools.msg_checks import is_tic_tac_toe
 
 
 LOGS = "logs"
 LOG_CATEGORY = "LOG-CATEGORY"
 
 # TODO: Remove all listeners in favor for the on_guild_entry_create
+# instead, of above line, keep both separate
 class DragonLog(commands.GroupCog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -463,11 +464,11 @@ class DragonLog(commands.GroupCog):
         await interaction.response.defer(ephemeral=True)
         with Session(engine) as session:
             category_channel = await guild.create_category(name="Dragon DragonLog", overwrites=overwrites, position=99, reason="Adding DragonLog channels")
-            session.add(Channel(id = category_channel.id, name=LOG_CATEGORY, type=LOGS, guild_id=category_channel.guild.id))
+            Channel.update(Channel(id = category_channel.id, name=LOG_CATEGORY, type=LOGS, guild_id=category_channel.guild.id))
             for log_category in LogCategories:
                 log_category_name = log_category.value
                 text_channel = await category_channel.create_text_channel(name=f"{log_category_name.lower()}", reason="Adding DragonLog channels")
-                session.add(Channel(
+                Channel.update(Channel(
                     id = text_channel.id,
                     name = log_category_name,
                     type = LOGS,
@@ -565,13 +566,13 @@ class DragonLog(commands.GroupCog):
         difference.extend(
             j for j in [i.value.lower() for i in LogCategories]
             if j not in known_names
-            )
+        )
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
         with Session(engine) as session:
             for channel_diff in difference:
                 new_log_channel = await category_channel.create_text_channel(channel_diff, reason="DragonLog update")
                 self.logger.info(f"Updated DragonLog for {guild=} with {new_log_channel=}")
-                session.add(Channel(
+                Channel.update(Channel(
                     id = new_log_channel.id,
                     name = channel_diff,
                     type = LOGS,
