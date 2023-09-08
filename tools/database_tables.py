@@ -12,7 +12,9 @@ from sqlalchemy import (
     Integer,
     String,
     BigInteger,
-    Text
+    Text,
+    Table,
+    Column
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -38,6 +40,13 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 # logger.addHandler(logging.StreamHandler())
 
+# TODO: Change association tables to the following format:
+# 
+# ticket_helpers = Table('ticket_helpers', Base.metadata,
+#     Column('ticket_id', Integer, ForeignKey('tickets.id'), primary_key=True),
+#     Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+# )
+# 
 
 db_name = "db" # Defined in docker-compose.yml
 match config["Database"]["db"]:
@@ -88,10 +97,24 @@ class Channel(Base):
     
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
-    type: Mapped[str] = mapped_column(String(15))
+    type: Mapped[str] = mapped_column(String(15), nullable=True)
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
     messages: Mapped[List["Message"]] = relationship(back_populates="channel")
     guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
+
+
+    @classmethod
+    def update(cls, channel: Self):
+        with Session(engine) as session:
+            if db_channel := session.query(Channel).where(Channel.id == channel.id).first():
+                if db_channel.type is None:
+                    db_channel.id = channel.id
+                    db_channel.name = channel.name
+                    db_channel.type = channel.type
+                    db_channel.guild_id = channel.guild_id
+                    session.commit()
+            else:
+                session.add(channel)
 
 
 
@@ -356,14 +379,52 @@ class AutoChannelSettings(Base):
     channel_limit: Mapped[int] = mapped_column(Integer)
 
 
-class Tickets(Base):
+ticket_helpers = Table("ticket_helpers", Base.metadata,
+    Column("ticket_id", Integer, ForeignKey("tickets.id"), primary_key=True),
+    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True)
+)
+
+class Ticket(Base):
     __tablename__ = "tickets"
 
-    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
-    channel: Mapped["Channel"] = mapped_column(ForeignKey(CHANNELS_ID))
-    start_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
-    end_datetime: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
-    closed: Mapped[bool] = mapped_column(Boolean)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String)
+    description: Mapped[str] = mapped_column(String)
+    
+    opened_at: Mapped[DateTime] = mapped_column(DateTime)
+    closed_at: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
+    is_closed: Mapped[bool] = mapped_column(Boolean)
+    
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    user: Mapped[User] = relationship("User")
+    
+    channel_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("channels.id"))
+    channel: Mapped["Channel"] = relationship("Channel")
+
+    transactions: Mapped[list["Transaction"]] = relationship("Transaction", back_populates="ticket")
+    helpers: Mapped[list["User"]] = relationship("User", secondary=ticket_helpers, back_populates="tickets")
+
+    @classmethod    
+    def close(cls) -> None:
+        with Session(engine) as session:
+            cls.is_closed = True
+            cls.closed_at = datetime.datetime.now()
+            session.commit()
+
+
+class Transaction(Base):
+    __tablename__ = "ticket_transactions"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[DateTime] = mapped_column(DateTime)
+    action: Mapped[str] = mapped_column(String)
+    details: Mapped[str] = mapped_column(String)
+    
+    ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickets.id"))
+    ticket: Mapped[Ticket] = relationship("Ticket", back_populates="transactions")
+    
+    responder_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    responder: Mapped[User] = relationship("User")
 
 
 class Role(Base):
@@ -417,7 +478,7 @@ class Incremental(Base):
                     generator_id = gen.value,
                     name = gen.name,
                     price = gen.value << 2,
-                    generating = gen.gen_rate
+                    generating = gen.generation_rate
                 ))
             session.commit()
             logger.debug(f"Returning incremental {user_id=}")
