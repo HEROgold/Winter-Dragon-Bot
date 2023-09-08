@@ -9,7 +9,7 @@ import sqlalchemy
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, View
-from extras.ttt_ai import TicTacToeAi
+from tools.ttt_ai import TicTacToeAi
 
 from tools.config_reader import config
 from tools.database_tables import AssociationUserLobby as AUL
