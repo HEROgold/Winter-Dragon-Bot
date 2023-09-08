@@ -75,7 +75,7 @@ class ShopItems(Select):
                 generator_id = gen.value,
                 name = gen.name,
                 price = gen.value << 2,
-                generating = gen.gen_rate
+                generating = gen.generation_rate
             ))
             session.commit()
         await interaction.response.send_message(f"Successfully bought {self.values[0]} for {Generators[self.values[0]].value}", ephemeral=True)
