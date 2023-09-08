@@ -64,7 +64,7 @@ class DatabaseSetup(commands.Cog):
                 session.add(Channel(
                     id = channel.id,
                     name = f"{channel.name}",
-                    type = f"{channel.type}",
+                    type = None,
                     guild_id = guild.id,
                 ))
 
