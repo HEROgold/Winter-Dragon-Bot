@@ -21,7 +21,7 @@ POLL = "poll"
 
 
 # TODO: Needs testing!
-class PollModal(discord.ui.Modal, title="Poll Question"):
+class PollModal(discord.ui.Modal):
     place_holder = "Empty Answer"
     q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder)
     q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder)
@@ -34,6 +34,7 @@ class PollModal(discord.ui.Modal, title="Poll Question"):
         self.end_epoch = end_epoch
         self.content = content
         self.poll_channel = poll_channel
+        super().__init__(title=f"{content}", timeout=180)
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
@@ -157,8 +158,8 @@ class Poll(commands.GroupCog):
 
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
-    @poll_channel.command(name="add", description="Set the poll channel")
-    async def slash_set_poll_channel(self, interaction: discord.Interaction, channel: discord.abc.GuildChannel):
+    @poll_channel.command(name="set", description="Set the poll channel")
+    async def slash_set_poll_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         with Session(engine) as session:
             if (
                 found := session.query(Channel).where(
@@ -166,14 +167,15 @@ class Poll(commands.GroupCog):
                     Channel.guild_id == channel.guild.id
                 ).first()
             ):
-                _, remove_channel_command = self.act.get_app_sub_command(self.slash_remove_poll_channel)
+                found.id = channel.id
+                found.name = channel.name
+                session.commit()
                 await interaction.response.send_message(dedent(f"""
-                    Channel already set to {self.bot.get_channel(found.id).mention}
-                    Please remove by using {remove_channel_command}
+                    Channel set to {self.bot.get_channel(found.id).mention}
                 """))
                 return
-            
-            session.add(Channel(
+
+            Channel.update(Channel(
                 id = channel.id,
                 name = channel.name,
                 type = POLL,
@@ -217,7 +219,7 @@ class Poll(commands.GroupCog):
         hours: int = 0,
         days: int = 0,
     ) -> None:
-        if sum(minutes, hours, days) == 0:
+        if sum((minutes, hours, days)) == 0:
             await interaction.response.send_message("No duration time given", ephemeral=True)
             return
 
@@ -226,10 +228,11 @@ class Poll(commands.GroupCog):
                 Channel.type == POLL,
                 Channel.guild_id == interaction.guild.id
             ).first():
+                self.logger.debug(f"{channel=}")
                 await interaction.response.send_modal(PollModal(
                     end_epoch = self.get_future_epoch(minutes, hours, days),
                     content = question,
-                    channel = channel
+                    poll_channel = channel
                 ))
                 return
 
@@ -242,7 +245,7 @@ class Poll(commands.GroupCog):
                 )
             else:
                 await interaction.response.send_message(
-                    f"No channel found to send poll.",
+                    "No channel found to send poll.",
                     ephemeral=True
                 )
 
