@@ -30,7 +30,7 @@ class Generators(Enum):
 
 
     @property
-    def gen_rate(cls, generator: Self) -> float:
+    def generation_rate(cls, generator: Self) -> float:
         if generator.value >> 2 == 0:
             val = generator.value / 2
         else:
