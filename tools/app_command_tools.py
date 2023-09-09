@@ -20,7 +20,6 @@ class Converter:
     parameter_args = None # Not implemented
     _instance = None
 
-    # TODO: test, does singleton work, keep it. (for caching)
     def __new__(cls, bot: commands.Bot) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
