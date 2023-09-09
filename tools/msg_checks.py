@@ -51,8 +51,6 @@ def generate_ttt_regex() -> str:
         print(regex)
         ```
     """
-    # TODO: figure out which mention_regex to use in dragon-log
-    # mention_regex = r"<@!*&*[0-9]+>"
     mention_regex = r"\@[a-zA-Z0-9_ ]+"
     user_regex = rf"(X|O|{mention_regex})"
     to_find = dedent(fr"""
