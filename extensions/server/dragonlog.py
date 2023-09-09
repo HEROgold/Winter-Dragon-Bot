@@ -39,8 +39,8 @@ class DragonLog(commands.GroupCog):
 
         if log_category is not None:
             await self.send_log_to_category(log_category, guild, embed)
-        else:
-            await self.send_log_to_global(guild, embed)
+
+        await self.send_log_to_global(guild, embed)
 
 
     async def send_log_to_global(
@@ -144,6 +144,7 @@ class DragonLog(commands.GroupCog):
                     enum.member_update: self.audit_member_update,
                     enum.member_role_update: self.audit_member_update,
                     enum.message_delete: self.audit_message_delete,
+                    enum.message_bulk_delete: self.audit_message_delete,
                 }
             await actions[action](entry)
 
@@ -188,12 +189,13 @@ class DragonLog(commands.GroupCog):
 
 
     async def on_guild_channel_delete(self, entry: discord.AuditLogEntry) -> None:
-        self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
         channel = entry.target
+        self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
+        channel_type = channel.type if channel.type != discord.object.Object else ''
 
         embed = discord.Embed(
             title="Channel Deleted",
-            description=f"{entry.user.mention} deleted {channel.type} `{channel.name}` with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} deleted {channel_type} `{channel.id}` with reason: {entry.reason or None}",
             color=0xff0000
             )
         await self.send_dragon_logs(LogCategories.DELETEDCHANNELS, entry.guild, embed)
@@ -452,11 +454,10 @@ class DragonLog(commands.GroupCog):
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none())
         }
         with Session(engine) as session:
-            result = session.query(Channel).where(
+            channels = session.query(Channel).where(
                 Channel.type == LOGS,
                 Channel.guild_id == interaction.guild.id
-            )
-            channels = result.all()
+            ).all()
             if len(channels) > 0:
                 await interaction.response.send_message("DragonLog channels are already set up.")
                 return
@@ -464,7 +465,12 @@ class DragonLog(commands.GroupCog):
         await interaction.response.defer(ephemeral=True)
         with Session(engine) as session:
             category_channel = await guild.create_category(name="Dragon DragonLog", overwrites=overwrites, position=99, reason="Adding DragonLog channels")
-            Channel.update(Channel(id = category_channel.id, name=LOG_CATEGORY, type=LOGS, guild_id=category_channel.guild.id))
+            Channel.update(Channel(
+                id = category_channel.id,
+                name = LOG_CATEGORY,
+                type = LOGS,
+                guild_id = category_channel.guild.id
+            ))
             for log_category in LogCategories:
                 log_category_name = log_category.value
                 text_channel = await category_channel.create_text_channel(name=f"{log_category_name.lower()}", reason="Adding DragonLog channels")
