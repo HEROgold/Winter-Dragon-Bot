@@ -223,6 +223,6 @@ class Error(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
-    if config["main"]["log_level"] == "DEBUG":
+    if config["Main"]["log_level"] == "DEBUG":
         return
     await bot.add_cog(Error(bot))
