@@ -1,0 +1,44 @@
+import logging
+
+import discord  # type: ignore
+from discord import app_commands
+from discord.ext import commands
+
+from tools.config_reader import config
+from tools import app_command_tools
+from tools.database_tables import Session, engine, Game, Suggestion
+
+
+class Games(commands.GroupCog):
+    games: list[Game]
+
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+        self.converter = app_command_tools.Converter(bot)
+        with Session(engine) as session:
+            self.games = session.query(Game).all()
+
+
+    @app_commands.command(name="list", description="Get a list of known games")
+    async def slash_list(self, interaction: discord.Interaction) -> None:
+        await interaction.response.send_message(", ".join(self.games), ephemeral=True)
+
+
+    @app_commands.command(name="suggest", description="Suggest a new game to be added")
+    async def slash_suggest(self, interaction: discord.Interaction, name: str) -> None:
+        with Session(engine) as session:
+            for suggestion in session.query(Suggestion).where(Suggestion.type == "game").all():
+                if suggestion.content == name:
+                    await interaction.response.send_message("That game is already in review", ephemeral=True)
+
+            session.add(Suggestion(
+                type = "game",
+                content = name
+            ))
+            session.commit()
+        await interaction.response.send_message(f"Added {name} for review", ephemeral=True)
+
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(Games(bot))
