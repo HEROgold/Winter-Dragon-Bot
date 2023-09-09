@@ -17,7 +17,7 @@ from tools.database_tables import Channel
 from tools.database_tables import Poll as PollDb
 from tools.database_tables import Session, engine
 
-POLL = "poll"
+POLL_TYPE = "poll"
 
 
 # TODO: Needs testing!
@@ -163,7 +163,7 @@ class Poll(commands.GroupCog):
         with Session(engine) as session:
             if (
                 found := session.query(Channel).where(
-                    Channel.type == POLL,
+                    Channel.type == POLL_TYPE,
                     Channel.guild_id == channel.guild.id
                 ).first()
             ):
@@ -178,7 +178,7 @@ class Poll(commands.GroupCog):
             Channel.update(Channel(
                 id = channel.id,
                 name = channel.name,
-                type = POLL,
+                type = POLL_TYPE,
                 guild_id = channel.guild.id,
             ))
             session.commit()
@@ -191,7 +191,7 @@ class Poll(commands.GroupCog):
         with Session(engine) as session:
             if (
                 found := session.query(Channel).where(
-                    Channel.type == POLL,
+                    Channel.type == POLL_TYPE,
                     Channel.guild_id == interaction.guild.id
                 ).first()
             ):
@@ -225,7 +225,7 @@ class Poll(commands.GroupCog):
 
         with Session(engine) as session:
             if channel := session.query(Channel).where(
-                Channel.type == POLL,
+                Channel.type == POLL_TYPE,
                 Channel.guild_id == interaction.guild.id
             ).first():
                 self.logger.debug(f"{channel=}")
