@@ -56,7 +56,7 @@ class ErrorHandler:
         error = self.error
 
         if isinstance(error, discord.errors.NotFound):
-            self.logger.error(f"NotfoundError: CODE: {self.time_code}")
+            self.logger.error(f"NotfoundError: CODE: {self.time_code=}")
             return error
         elif isinstance(error, (commands.errors.CommandInvokeError, app_commands.errors.CommandInvokeError)):
             self.logger.error(f"CommandInvokeError: {self.time_code=}")
@@ -223,4 +223,6 @@ class Error(commands.Cog):
 
 async def setup(bot: commands.Bot) -> None:
     # sourcery skip: instance-method-first-arg-name
-	await bot.add_cog(Error(bot))
+    if config["main"]["log_level"] == "DEBUG":
+        return
+    await bot.add_cog(Error(bot))
