@@ -72,8 +72,6 @@ class AutoAssign(commands.GroupCog):
             session.commit()
 
 
-    # on member join, give role selected in AutoAssign
-    # TODO: test
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         with Session(engine) as session:
