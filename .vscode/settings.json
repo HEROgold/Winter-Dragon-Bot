@@ -21,6 +21,7 @@
         "apppage",
         "AUTOCHANNEL",
         "autochannels",
+        "AUTOMOD",
         "autopct",
         "craiyon",
         "CREATEDCHANNELS",
@@ -29,6 +30,7 @@
         "creationflags",
         "Cryptopolis",
         "DELETEDCHANNELS",
+        "DELETEDINVITES",
         "DELETEDMESSAGES",
         "DELETEDROLES",
         "EDITEDMESSAGES",
@@ -58,6 +60,7 @@
         "steampowered",
         "suptitle",
         "UPDATEDCHANNELS",
+        "UPDATEDINVITES",
         "UPDATEDROLES",
         "uvloop"
     ],
