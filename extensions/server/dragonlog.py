@@ -458,202 +458,202 @@ class DragonLog(GroupCog):
 
     async def on_overwrite_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.OVERWRITE_CREATE, entry.guild, discord.Embed(title="overwrite create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.OVERWRITE_CREATE, entry.guild, discord.Embed(title="overwrite create", description=f"{entry}"))
 
 
     async def on_overwrite_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.OVERWRITE_UPDATE, entry.guild, discord.Embed(title="overwrite update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.OVERWRITE_UPDATE, entry.guild, discord.Embed(title="overwrite update", description=f"{entry}"))
 
 
     async def on_overwrite_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.OVERWRITE_DELETE, entry.guild, discord.Embed(title="overwrite delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.OVERWRITE_DELETE, entry.guild, discord.Embed(title="overwrite delete", description=f"{entry}"))
 
 
     async def on_kick(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on kick: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.KICK, entry.guild, discord.Embed(title="kick", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.KICK, entry.guild, discord.Embed(title="kick", description=f"{entry}"))
 
 
     async def on_member_prune(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on member_prune: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MEMBER_PRUNE, entry.guild, discord.Embed(title="member_prune", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.MEMBER_PRUNE, entry.guild, discord.Embed(title="member_prune", description=f"{entry}"))
 
 
     async def on_ban(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on ban: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.BAN, entry.guild, discord.Embed(title="ban", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.BAN, entry.guild, discord.Embed(title="ban", description=f"{entry}"))
 
 
     async def on_unban(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on unban: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.UNBAN, entry.guild, discord.Embed(title="unban", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.UNBAN, entry.guild, discord.Embed(title="unban", description=f"{entry}"))
 
 
     async def on_member_disconnect(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on member_disconnect: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MEMBER_DISCONNECT, entry.guild, discord.Embed(title="member_disconnect", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.MEMBER_DISCONNECT, entry.guild, discord.Embed(title="member_disconnect", description=f"{entry}"))
 
 
     async def on_bot_add(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on bot_add: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(title="bot_add", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(title="bot_add", description=f"{entry}"))
 
 
     async def on_invite_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on invite_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(title="invite_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(title="invite_update", description=f"{entry}"))
 
 
     async def on_webhook_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on webhook_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.WEBHOOK_CREATE, entry.guild, discord.Embed(title="webhook_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.WEBHOOK_CREATE, entry.guild, discord.Embed(title="webhook_create", description=f"{entry}"))
 
 
     async def on_webhook_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on webhook_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.WEBHOOK_UPDATE, entry.guild, discord.Embed(title="webhook_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.WEBHOOK_UPDATE, entry.guild, discord.Embed(title="webhook_update", description=f"{entry}"))
 
 
     async def on_webhook_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on webhook_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.WEBHOOK_DELETE, entry.guild, discord.Embed(title="webhook_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.WEBHOOK_DELETE, entry.guild, discord.Embed(title="webhook_delete", description=f"{entry}"))
 
 
     async def on_emoji_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on emoji_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.EMOJI_CREATE, entry.guild, discord.Embed(title="emoji_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.EMOJI_CREATE, entry.guild, discord.Embed(title="emoji_create", description=f"{entry}"))
 
 
     async def on_emoji_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on emoji_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.EMOJI_UPDATE, entry.guild, discord.Embed(title="emoji_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.EMOJI_UPDATE, entry.guild, discord.Embed(title="emoji_update", description=f"{entry}"))
 
 
     async def on_emoji_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on emoji_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.EMOJI_DELETE, entry.guild, discord.Embed(title="emoji_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.EMOJI_DELETE, entry.guild, discord.Embed(title="emoji_delete", description=f"{entry}"))
 
 
     async def on_message_pin(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on message_pin: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(title="message_pin", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(title="message_pin", description=f"{entry}"))
 
 
     async def on_message_unpin(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on message_unpin: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(title="message_unpin", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(title="message_unpin", description=f"{entry}"))
 
 
     async def on_integration_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on integration_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INTEGRATION_CREATE, entry.guild, discord.Embed(title="integration_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.INTEGRATION_CREATE, entry.guild, discord.Embed(title="integration_create", description=f"{entry}"))
 
 
     async def on_integration_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on integration_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INTEGRATION_UPDATE, entry.guild, discord.Embed(title="integration_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.INTEGRATION_UPDATE, entry.guild, discord.Embed(title="integration_update", description=f"{entry}"))
 
 
     async def on_integration_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on integration_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INTEGRATION_DELETE, entry.guild, discord.Embed(title="integration_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.INTEGRATION_DELETE, entry.guild, discord.Embed(title="integration_delete", description=f"{entry}"))
 
 
     async def on_stage_instance_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on stage_instance_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_CREATE, entry.guild, discord.Embed(title="stage_instance_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_CREATE, entry.guild, discord.Embed(title="stage_instance_create", description=f"{entry}"))
 
 
     async def on_stage_instance_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on stage_instance_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_UPDATE, entry.guild, discord.Embed(title="stage_instance_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_UPDATE, entry.guild, discord.Embed(title="stage_instance_update", description=f"{entry}"))
 
 
     async def on_stage_instance_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on stage_instance_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_DELETE, entry.guild, discord.Embed(title="stage_instance_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_DELETE, entry.guild, discord.Embed(title="stage_instance_delete", description=f"{entry}"))
 
 
     async def on_sticker_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on sticker_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STICKER_CREATE, entry.guild, discord.Embed(title="sticker_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.STICKER_CREATE, entry.guild, discord.Embed(title="sticker_create", description=f"{entry}"))
 
 
     async def on_sticker_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on sticker_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STICKER_UPDATE, entry.guild, discord.Embed(title="sticker_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.STICKER_UPDATE, entry.guild, discord.Embed(title="sticker_update", description=f"{entry}"))
 
 
     async def on_sticker_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on sticker_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STICKER_DELETE, entry.guild, discord.Embed(title="sticker_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.STICKER_DELETE, entry.guild, discord.Embed(title="sticker_delete", description=f"{entry}"))
 
 
     async def on_scheduled_event_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on scheduled_event_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_CREATE, entry.guild, discord.Embed(title="scheduled_event_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_CREATE, entry.guild, discord.Embed(title="scheduled_event_create", description=f"{entry}"))
 
 
     async def on_scheduled_event_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on scheduled_event_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_UPDATE, entry.guild, discord.Embed(title="scheduled_event_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_UPDATE, entry.guild, discord.Embed(title="scheduled_event_update", description=f"{entry}"))
 
 
     async def on_scheduled_event_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on scheduled_event_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_DELETE, entry.guild, discord.Embed(title="scheduled_event_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_DELETE, entry.guild, discord.Embed(title="scheduled_event_delete", description=f"{entry}"))
 
 
     async def on_thread_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on thread_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.THREAD_CREATE, entry.guild, discord.Embed(title="thread_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.THREAD_CREATE, entry.guild, discord.Embed(title="thread_create", description=f"{entry}"))
 
 
     async def on_thread_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on thread_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.THREAD_UPDATE, entry.guild, discord.Embed(title="thread_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.THREAD_UPDATE, entry.guild, discord.Embed(title="thread_update", description=f"{entry}"))
 
 
     async def on_thread_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on thread_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.THREAD_DELETE, entry.guild, discord.Embed(title="thread_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.THREAD_DELETE, entry.guild, discord.Embed(title="thread_delete", description=f"{entry}"))
 
 
     async def on_app_command_permission_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on app_command_permission_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.APP_COMMAND_PERMISSION_UPDATE, entry.guild, discord.Embed(title="app_command_permission_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.APP_COMMAND_PERMISSION_UPDATE, entry.guild, discord.Embed(title="app_command_permission_update", description=f"{entry}"))
 
 
     async def on_automod_rule_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_rule_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_CREATE, entry.guild, discord.Embed(title="automod_rule_create", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_CREATE, entry.guild, discord.Embed(title="automod_rule_create", description=f"{entry}"))
 
 
     async def on_automod_rule_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_rule_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_UPDATE, entry.guild, discord.Embed(title="automod_rule_update", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_UPDATE, entry.guild, discord.Embed(title="automod_rule_update", description=f"{entry}"))
 
 
     async def on_automod_rule_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_rule_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_DELETE, entry.guild, discord.Embed(title="automod_rule_delete", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_DELETE, entry.guild, discord.Embed(title="automod_rule_delete", description=f"{entry}"))
 
 
     async def on_automod_block_message(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_block_message: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_BLOCK_MESSAGE, entry.guild, discord.Embed(title="automod_block_message", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_BLOCK_MESSAGE, entry.guild, discord.Embed(title="automod_block_message", description=f"{entry}"))
 
 
     async def on_automod_flag_message(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_flag_message: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_FLAG_MESSAGE, entry.guild, discord.Embed(title="automod_flag_message", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_FLAG_MESSAGE, entry.guild, discord.Embed(title="automod_flag_message", description=f"{entry}"))
 
 
     async def on_automod_timeout_member(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_timeout_member: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_TIMEOUT_MEMBER, entry.guild, discord.Embed(title="automod_timeout_member", description=f"{entry.reason}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_TIMEOUT_MEMBER, entry.guild, discord.Embed(title="automod_timeout_member", description=f"{entry}"))
 
 
     async def generic_change(self, entry: discord.AuditLogEntry) -> None:
@@ -720,7 +720,12 @@ class DragonLog(GroupCog):
             category_count = div + (1 if mod > 0 else 0)
 
             for i in range(category_count):
-                category_channel = await guild.create_category(name=f"Dragon DragonLog {i}", overwrites=overwrites, position=99, reason="Adding DragonLog channels")
+                category_channel = await guild.create_category(
+                    name=f"Dragon DragonLog {i+1}",
+                    overwrites=overwrites,
+                    position=99,
+                    reason="Adding DragonLog channels"
+                )
                 category_channels.append(category_channel)
                 Channel.update(Channel(
                     id = category_channel.id,
@@ -732,12 +737,12 @@ class DragonLog(GroupCog):
             for i, log_category in enumerate(LogCategories):
                 log_category_name = log_category.value
 
-                x, y = divmod(i, MAX_CATEGORY_SIZE)
-                channel_locator = x # + (1 if y > 0 else 0)
-                category_channel = category_channels[channel_locator]
-                self.logger.debug(f"{category_channels=}, {channel_locator=}")
+                category_channel = self.get_log_category(category_channels, i)
 
-                text_channel = await category_channel.create_text_channel(name=f"{log_category_name.lower()}", reason="Adding DragonLog channels")
+                text_channel = await category_channel.create_text_channel(
+                    name=f"{log_category_name.lower()}",
+                    reason="Adding DragonLog channels"
+                )
                 Channel.update(Channel(
                     id = text_channel.id,
                     name = log_category_name,
@@ -746,7 +751,7 @@ class DragonLog(GroupCog):
                 ))
             session.commit()
 
-        await interaction.followup.send(f"Set up DragonLog category and channels under {[', '.join(i.mention for i in category_channels)]}")
+        await interaction.followup.send(f"Set up DragonLog category and channels under {', '.join(i.mention for i in category_channels)}")
         self.logger.info(f"Setup DragonLog for {interaction.guild}")
 
 
@@ -754,10 +759,7 @@ class DragonLog(GroupCog):
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
-    @app_commands.command(
-        name = "remove",
-        description = "Disables automatic moderation for this server, and removes the log channels.",
-    )
+    @app_commands.command(name="remove", description="Disables automatic moderation for this server, and removes the log channels.")
     async def slash_DragonLog_remove(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
             result = session.query(Channel).where(
@@ -772,6 +774,19 @@ class DragonLog(GroupCog):
 
             # Defer to avoid timeout
             await interaction.response.defer(ephemeral=True)
+
+            # filter category channels to be last in list
+            for channel in list(channels):
+                if (
+                    isinstance(
+                        discord.utils.get(interaction.guild.channels, id=channel.id),
+                        CategoryChannel
+                    ) and
+                    len(channels) > 1
+                ):
+                    channels.remove(channel)
+                    channels.append(channel)
+
             for channel in channels:
                 try:
                     dc_channel = self.bot.get_channel(channel.id)
@@ -792,15 +807,11 @@ class DragonLog(GroupCog):
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     @app_commands.command(name = "update", description = "Update DragonLog channels")
-    async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: str = None) -> None:
+    async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: int = None) -> None:
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
 
-        if guild_id:
-            guild = discord.utils.get(self.bot.guilds, id=int(guild_id))
-        else:
-            guild = None
-
+        guild = discord.utils.get(self.bot.guilds, id=guild_id) if guild_id else None
         await self.update_DragonLog(guild=guild)
         await interaction.followup.send("Updated DragonLog channels on all servers!")
 
@@ -809,26 +820,22 @@ class DragonLog(GroupCog):
         self.logger.debug(f"Updating DragonLog for {guild=}")
         if guild is None:
             with Session(engine) as session:
-                result = session.query(Channel.guild_id).where(Channel.type == LOGS).distinct().group_by(Channel.guild_id)
-                guild_ids = result.all()
+                guild_ids = session.query(Channel.guild_id).where(Channel.type == LOGS).distinct().group_by(Channel.guild_id).all()
             for guild_id in guild_ids[0]:
-                guild = discord.utils.get(self.bot.guilds, id=guild_id)
-                await self.update_DragonLog(guild=guild)
+                return await self.update_DragonLog(guild=discord.utils.get(self.bot.guilds, id=guild_id))
 
         with Session(engine) as session:
-            result = session.query(Channel).where(
+            channels = session.query(Channel).where(
                 Channel.type == LOGS,
                 Channel.guild_id == guild.id
-            )
-            channels = result.all()
-            category = session.query(Channel).where(
-                Channel.name == LOG_CATEGORY,
-                Channel.type == LOGS,
-                Channel.guild_id == guild.id
-            ).first()
+            ).all()
 
-        category_channel = discord.utils.get(guild.categories, id=category.id)
-        difference = []
+        div, mod = divmod(len(LogCategories), MAX_CATEGORY_SIZE)
+        required_category_count = div + (1 if mod > 0 else 0)
+
+        category_channels = await self.update_required_category_count(guild, required_category_count)
+
+        difference: list[str] = []
         known_names = [channel.name.lower() for channel in channels]
 
         difference.extend(
@@ -836,17 +843,65 @@ class DragonLog(GroupCog):
             if j not in known_names
         )
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
+
         with Session(engine) as session:
-            for channel_diff in difference:
-                new_log_channel = await category_channel.create_text_channel(channel_diff, reason="DragonLog update")
+            for i, channel_name in enumerate(difference):
+                category_channel = self.get_log_category(category_channels, i)
+
+                new_log_channel = await category_channel.create_text_channel(channel_name, reason="DragonLog update")
                 self.logger.info(f"Updated DragonLog for {guild=} with {new_log_channel=}")
                 Channel.update(Channel(
                     id = new_log_channel.id,
-                    name = channel_diff,
+                    name = channel_name,
                     type = LOGS,
                     guild_id = category_channel.guild.id,
                 ))
             session.commit()
+
+
+    async def update_required_category_count(self, guild: discord.Guild, required_category_count) -> list[CategoryChannel]:
+        with Session(engine) as session:
+            categories = session.query(Channel).where(
+                Channel.name == LOG_CATEGORY,
+                Channel.type == LOGS,
+                Channel.guild_id == guild.id
+            ).all()
+            category_channels: list[CategoryChannel] = [
+                discord.utils.get(guild.categories, id=category.id) for category in categories
+            ]
+            current_category_count = len(category_channels) or len(categories) 
+
+            if current_category_count < required_category_count:
+                for i in range(current_category_count, required_category_count):
+                    category_channel = await guild.create_category(
+                        name=f"Dragon DragonLog {i+1}",
+                        overwrites= {
+                            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+                            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none())
+                        },
+                        position=99,
+                        reason="Adding DragonLog channels"
+                    )
+                    category_channels.append(category_channel)
+                    Channel.update(Channel(
+                        id = category_channel.id,
+                        name = LOG_CATEGORY,
+                        type = LOGS,
+                        guild_id = category_channel.guild.id
+                    ))
+            session.commit()
+        return category_channels
+
+
+    def get_log_category(self, category_channels: list[CategoryChannel], current_count: int) -> CategoryChannel:
+        channel_locator, _ = divmod(current_count, MAX_CATEGORY_SIZE)
+        category_channel = category_channels[channel_locator]
+        self.logger.debug(f"{category_channels=}, {channel_locator=}")
+
+        if channel_locator + len(category_channel.channels) > 50:
+            channel_location = (len(category_channel.channels) + channel_locator)
+            return self.get_log_category(category_channels, channel_location)
+        return category_channel
 
 
 # COMMANDS END
