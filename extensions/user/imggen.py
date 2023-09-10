@@ -13,7 +13,7 @@ from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 
 
-# FIXME: Find out what doesn't work
+# FIXME: Find out what doesn't work: Module is broken
 class Image(GroupCog):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
