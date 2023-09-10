@@ -13,7 +13,7 @@ from tools.config_reader import config
 from tools.config_reader import is_valid as config_validator
 from tools.config_reader import get_invalid as get_invalid_configs
 from tools.main_log import Logs
-from tools.bot import WinterDragon
+from _types.bot import WinterDragon
 
 if not config_validator():
     raise ValueError(f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}")

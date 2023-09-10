@@ -1,4 +1,3 @@
-import logging
 import random
 from math import ceil
 from typing import overload
@@ -10,15 +9,13 @@ from discord import app_commands
 
 from tools.config_reader import config
 import tools.rainbow as rainbow
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
 # TODO: Rewrite/cleanup
-class Help(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+# Rewrite using paginator modals
+class Help(Cog):
     @overload
     async def CreateHelpEmbed(
         self,
@@ -238,13 +235,11 @@ class HelpView(discord.ui.View):
         self.add_item(Dropdown(group_list))
 
     @discord.ui.button(label="Back", emoji="⬅️", style=discord.ButtonStyle.secondary, row=1)
-    async def backbutton(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.edit_message(embed=self.embed)
 
-class CopiedDropdownHelp(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+class CopiedDropdownHelp(Cog):
+
 
     # @app_commands.describe(group = "The specific group you want help on.")
     @app_commands.command(name="helpcopied", description="Gives a brief description of all features.")
@@ -290,6 +285,6 @@ class Dropdown(discord.ui.Select):
         await interaction.response.edit_message(embed=command_list_embed)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Help(bot))
     # await bot.add_cog(CopiedDropdownHelp(bot))

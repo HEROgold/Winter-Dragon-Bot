@@ -1,18 +1,19 @@
 import datetime
-import logging
 import os
+from typing import Any
 
 import discord
 from discord import NotFound, app_commands
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
 
 
-class AutoCogReloader(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+class AutoCogReloader(Cog):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         self.data = {
             "timestamp": datetime.datetime.now().timestamp(),
             "files": {},
@@ -76,12 +77,7 @@ class AutoCogReloader(commands.Cog):
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
-class CogsC(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot: commands.Bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.DATABASE_NAME = self.__class__.__name__
-
+class CogsC(GroupCog):
 
     @staticmethod
     def get_extensions() -> list[str]:
@@ -256,6 +252,6 @@ class CogsC(commands.GroupCog):
         ]
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(AutoCogReloader(bot))
     await bot.add_cog(CogsC(bot))

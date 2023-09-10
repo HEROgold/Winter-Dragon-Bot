@@ -1,21 +1,17 @@
-import logging
-
+from typing import Any
 import discord  # type: ignore
 from discord import app_commands
-from discord.ext import commands
 
-from tools.config_reader import config
-from tools import app_command_tools
 from tools.database_tables import Session, engine, Game, Suggestion
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
-class Games(commands.GroupCog):
+class Games(GroupCog):
     games: list[Game]
 
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.converter = app_command_tools.Converter(bot)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         with Session(engine) as session:
             self.games = session.query(Game).all()
 
@@ -40,5 +36,5 @@ class Games(commands.GroupCog):
         await interaction.response.send_message(f"Added {name} for review", ephemeral=True)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Games(bot))

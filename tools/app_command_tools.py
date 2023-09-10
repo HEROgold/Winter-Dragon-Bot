@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from tools.config_reader import config
 from tools.caching import memoize
+from _types.bot import WinterDragon
 
 
 class CommandNotFound(Exception):
@@ -14,18 +15,18 @@ class CommandNotFound(Exception):
 
 
 class Converter:
-    bot: commands.Bot
+    bot: WinterDragon
     tree: app_commands.CommandTree
     logger: logging.Logger
     parameter_args = None # Not implemented
     _instance = None
 
-    def __new__(cls, bot: commands.Bot) -> Self:
+    def __new__(cls, bot: WinterDragon) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, bot: commands.Bot) -> Self:
+    def __init__(self, bot: WinterDragon) -> Self:
         self.bot = bot
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")

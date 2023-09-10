@@ -2,7 +2,6 @@ import datetime
 import itertools
 import logging
 import random
-from datetime import datetime
 from typing import Optional
 
 import discord
@@ -11,10 +10,12 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sqlalchemy.orm import joinedload
 
-from tools import app_command_tools
 from tools.config_reader import config
 from tools.database_tables import Channel,User, Transaction, Ticket
 from tools.database_tables import Session, engine
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
+
 
 date_format = "%m/%d/%Y at %H:%M:%S"
 DB_CHANNEL_TYPE = "tickets"
@@ -126,14 +127,7 @@ class TicketView(discord.ui.View):
 # TODO: Add dynamic cooldown between adding/removing ticket channels
 # TODO: Add Similar TODO for autochannel, logChannels etc
 
-class Tickets(commands.GroupCog):
-
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.act = app_command_tools.Converter(bot=bot)
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+class Tickets(GroupCog):
     async def cog_load(self) -> None:
         self.database_cleanup.start()
 
@@ -238,7 +232,7 @@ class Tickets(commands.GroupCog):
         return
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Tickets(bot))
 
 

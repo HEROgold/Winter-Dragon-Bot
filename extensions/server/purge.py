@@ -1,19 +1,14 @@
-import logging
-
 import discord
 from discord import app_commands
-from discord.ext import commands
 
 from tools.config_reader import config
+from _types.cogs import Cog
+from _types.bot import WinterDragon
+
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(manage_messages=True)
-class Purge(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+class Purge(Cog):
     @app_commands.command(name="purge", description="Purge X amount of messages, use history to delete older messages.")
     @app_commands.checks.has_permissions(manage_messages=True)
     @app_commands.checks.bot_has_permissions(manage_messages=True)
@@ -51,5 +46,5 @@ class Purge(commands.Cog):
         return messages
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
 	await bot.add_cog(Purge(bot))

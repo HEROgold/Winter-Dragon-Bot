@@ -1,23 +1,18 @@
-import logging
 from typing import Optional
 
 import discord
 from discord import app_commands
-from discord.ext import commands
 
-from tools.config_reader import config
 from tools.database_tables import Session, engine
 from tools.database_tables import AutoChannel as AC
 from tools.database_tables import AutoChannelSettings as ACS
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
 
 
-class AutomaticChannels(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
-    @commands.Cog.listener()
+class AutomaticChannels(GroupCog):
+    # FIXME: doesn't display debug msg on channel join/leave
+    @Cog.listener()
     async def on_voice_state_update(
         self,
         member: discord.Member,
@@ -106,21 +101,22 @@ class AutomaticChannels(commands.GroupCog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="setup", description="Start the AutoChannel setup")
     async def slash_setup(self, interaction: discord.Interaction, category_name: str, voice_channel_name: str) -> None:
-        channel = await interaction.guild.create_voice_channel(
-            voice_channel_name,
-            category=(
-                await interaction.guild.create_category(category_name)
-            )
-        )
-
         with Session(engine) as session:
             if session.query(AC).where(AC.id == interaction.guild.id).first() is not None:
                 await interaction.response.send_message("You are already set up", ephemeral=True)
-            else:
-                session.add(AC(
-                    id = interaction.guild.id,
-                    channel_id = channel.id
-                ))
+                return
+
+            channel = await interaction.guild.create_voice_channel(
+                voice_channel_name,
+                category=(
+                    await interaction.guild.create_category(category_name)
+                )
+            )
+
+            session.add(AC(
+                id = interaction.guild.id,
+                channel_id = channel.id
+            ))
             session.commit()
         await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
 
@@ -256,5 +252,5 @@ class AutomaticChannels(commands.GroupCog):
             session.commit()
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(AutomaticChannels(bot))

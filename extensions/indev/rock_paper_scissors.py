@@ -2,11 +2,12 @@ import logging
 
 import discord  # type: ignore
 from discord import app_commands
-from discord.ext import commands
 from discord.ui import Button
 
 from tools.config_reader import config
 from tools.database_tables import ResultDuels, Session, engine
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 # TODO: change command /rps new
 # dont dm user
@@ -121,12 +122,8 @@ class RPSView(discord.ui.View):
 
 
 
-class RockPaperScissors(commands.GroupCog):
+class RockPaperScissors(GroupCog):
     CHOICES = ["rock", "paper", "scissor"]
-
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @app_commands.checks.cooldown(1, 30)
@@ -170,5 +167,5 @@ class RockPaperScissors(commands.GroupCog):
         ]
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(RockPaperScissors(bot)) # type: ignore

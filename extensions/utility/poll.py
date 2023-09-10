@@ -6,16 +6,17 @@ from textwrap import dedent
 import discord
 import num2words
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
 from discord.interactions import Interaction
 
 import tools.rainbow as rainbow
-from tools import app_command_tools
 from tools.config_reader import config
 from tools.database_tables import AssociationUserPoll as AUP
 from tools.database_tables import Channel
 from tools.database_tables import Poll as PollDb
 from tools.database_tables import Session, engine
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 POLL_TYPE = "poll"
 
@@ -84,13 +85,7 @@ class PollModal(discord.ui.Modal):
             session.commit()
 
 
-class Poll(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot)
-
-
+class Poll(GroupCog):
     @staticmethod
     def get_polls() -> list[PollDb]:
         with Session(engine) as session:
@@ -250,5 +245,5 @@ class Poll(commands.GroupCog):
                 )
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
 	await bot.add_cog(Poll(bot))

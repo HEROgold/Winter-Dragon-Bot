@@ -1,21 +1,12 @@
-import logging
-
 import discord  # type: ignore
 from discord import app_commands
-from discord.ext import commands
 
-from tools.config_reader import config
-from tools import app_command_tools
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
 @app_commands.guild_only()
-class ChannelUtils(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
-
-
+class ChannelUtils(GroupCog):
     categories = app_commands.Group(name="categories", description="Manage your categories")
 
     @app_commands.checks.has_permissions(manage_channels=True)
@@ -32,5 +23,5 @@ class ChannelUtils(commands.GroupCog):
             pass
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(ChannelUtils(bot)) # type: ignore

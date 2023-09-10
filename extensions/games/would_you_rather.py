@@ -1,5 +1,5 @@
-import logging
 import random
+from typing import Any
 
 import discord
 from discord import app_commands
@@ -8,15 +8,17 @@ from discord.ext import commands
 from tools.config_reader import config
 import tools.rainbow as rainbow
 from tools.database_tables import WyrQuestion, Suggestion, engine, Session
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 WYR = "wyr"
 
 
-class WouldYouRather(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+class WouldYouRather(GroupCog):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         self.set_default_data()
+
 
     def set_default_data(self) -> None:
         with Session(engine) as session:
@@ -89,7 +91,7 @@ class WouldYouRather(commands.GroupCog):
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(WouldYouRather(bot))
 
 

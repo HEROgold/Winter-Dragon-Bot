@@ -1,20 +1,16 @@
 import datetime
-import logging
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
 
-from tools.config_reader import config
 from tools.database_tables import Reminder as ReminderDb
 from tools.database_tables import engine, Session
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
-class Reminder(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
+class Reminder(Cog):
     def get_seconds(self, seconds:int=0, minutes:int=0, hours:int=0, days:int=0) -> int:
         hours += days * 24
         minutes += hours * 60
@@ -79,5 +75,5 @@ class Reminder(commands.Cog):
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
 	await bot.add_cog(Reminder(bot))

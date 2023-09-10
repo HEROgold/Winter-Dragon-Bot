@@ -1,5 +1,4 @@
 import itertools
-import logging
 from typing import Optional
 
 import discord
@@ -7,10 +6,11 @@ from discord import app_commands
 from discord.ext import commands
 
 from tools.config_reader import config
-from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 from enums.dragonlog import LogCategories
 from tools.msg_checks import is_tic_tac_toe
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
 
 
 LOGS = "logs"
@@ -18,12 +18,7 @@ LOG_CATEGORY = "LOG-CATEGORY"
 
 # TODO: Remove all listeners in favor for the on_guild_entry_create
 # instead, of above line, keep both separate
-class DragonLog(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
-
+class DragonLog(GroupCog):
 
     async def send_dragon_logs(
         self,
@@ -123,7 +118,7 @@ class DragonLog(commands.GroupCog):
 
 # ENTRIES START
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
@@ -258,7 +253,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.DELETEDROLES, entry.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         member = before or after
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
@@ -305,7 +300,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.MEMBERMOVED, entry.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
         embed = discord.Embed(
@@ -316,7 +311,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.MEMBERJOINED, member.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:
         self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
         embed=None
@@ -327,7 +322,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.MEMBERLEFT, member.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         if not before.clean_content:
             self.logger.debug(f"Empty content on {before=}")
@@ -350,7 +345,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.EDITEDMESSAGES, before.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         if isinstance(message, discord.Message):
             message = message
@@ -524,12 +519,9 @@ class DragonLog(commands.GroupCog):
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
 
-    @app_commands.command(
-        name = "update",
-        description = "Update DragonLog channels"
-        )
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
+    @app_commands.command(name = "update", description = "Update DragonLog channels")
     async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: str = None) -> None:
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
@@ -589,5 +581,5 @@ class DragonLog(commands.GroupCog):
 
 # COMMANDS END
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(DragonLog(bot))

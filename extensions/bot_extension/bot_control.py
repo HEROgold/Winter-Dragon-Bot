@@ -1,9 +1,9 @@
 import datetime
-import logging
 import os
 import random
 import time
 from collections import namedtuple
+from typing import Any
 
 import discord
 import psutil
@@ -12,10 +12,14 @@ from discord.ext import commands, tasks
 from matplotlib import pyplot as plt
 
 from tools.config_reader import config
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
+
 
 IMG_DIR = "./database/img/"
 METRICS_FILE = f"{IMG_DIR}system_metrics.png"
 END_CODEBLOCK = "```"
+
 
 STATUS = [
     "dnd",
@@ -81,7 +85,7 @@ Snetio = namedtuple(
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
-class BotC(commands.GroupCog):
+class BotC(GroupCog):
     timestamps: list[float]
     cpu_percentages: list[float]
     net_io_counters: list[Snetio]
@@ -92,9 +96,8 @@ class BotC(commands.GroupCog):
     packets_received: list[int]
 
 
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot: commands.Bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         self.timestamps = []
         self.cpu_percentages = []
         self.net_io_counters = []
@@ -478,5 +481,5 @@ class BotC(commands.GroupCog):
 
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(BotC(bot))

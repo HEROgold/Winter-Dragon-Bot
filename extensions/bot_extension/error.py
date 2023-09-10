@@ -9,10 +9,12 @@ from discord.ext import commands, tasks
 
 from tools import app_command_tools
 from tools.config_reader import config
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
 class ErrorHandler:
-    bot: commands.Bot
+    bot: WinterDragon
     interface: commands.Context | discord.Interaction
     error: app_commands.AppCommandError | commands.CommandError
     logger: logging.Logger
@@ -22,7 +24,7 @@ class ErrorHandler:
 
     def __init__(
         self,
-        bot: commands.Bot,
+        bot: WinterDragon,
         interface: commands.Context | discord.Interaction,
         error: app_commands.AppCommandError | commands.CommandError
     ) -> None:
@@ -171,15 +173,16 @@ class ErrorHandler:
             await interface.send(message)
 
 
+# TODO: Might needs to be removed, since in _types.cogs it adds ErrorHandler directly
 # FIXME: Doesn't work when a listener() raises an error.
 # Fixable by adding a piece of code too all listeners
 # preferably in a wrapper from this module/file
-class Error(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
+class Error(Cog):
+    help_msg: str
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         self.help_msg = ""
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
 
 
     # -> --- Change on_error to self.on_error on load
@@ -210,7 +213,7 @@ class Error(commands.Cog):
         ErrorHandler(self.bot, interaction, error)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_command_error(
         self,
         ctx: commands.Context,
@@ -221,7 +224,7 @@ class Error(commands.Cog):
         ErrorHandler(self.bot, ctx, error)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     # sourcery skip: instance-method-first-arg-name
     if config["Main"]["log_level"] == "DEBUG":
         return
