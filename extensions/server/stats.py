@@ -252,5 +252,6 @@ class Stats(GroupCog):
                 self.logger.info(f"Reset stats for: {guild}")
         await interaction.response.send_message("Reset all server stat channels", ephemeral=True)
 
+
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Stats(bot))
