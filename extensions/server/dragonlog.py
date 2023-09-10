@@ -458,6 +458,9 @@ class DragonLog(GroupCog):
             # likely removed own message
             self.logger.debug(f"else: {message}")
 
+# -----------------------------------------
+# TODO: Add Unique msg for each function
+# -----------------------------------------
 
     async def on_overwrite_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite create: {entry.guild=}, {entry=}")
@@ -816,6 +819,10 @@ class DragonLog(GroupCog):
             description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
             color=DELETED_COLOR
         ))
+
+# -----------------------------------------
+# END: Add Unique msg for each function
+# -----------------------------------------
 
 
     async def generic_change(self, entry: discord.AuditLogEntry) -> None:
