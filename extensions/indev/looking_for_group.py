@@ -3,22 +3,32 @@ import discord  # type: ignore
 from discord import app_commands
 
 from tools.config_reader import config
-from tools.database_tables import Session, engine, Game, LookingForGroup
+from tools.database_tables import (
+    Session,
+    engine,
+    Game as GameDB,
+    LookingForGroup
+)
 from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 
 
-# TODO: Allow requests for adding new game types, see games.py
+# TODO: Allow requests for adding new game types, see games.py, 
+# maybe copy command from there > needs testing
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Lfg(GroupCog):
-    games: list[Game] = ["League of Legends"]
+    games: list[GameDB] = ["League of Legends"]
+
+    # Test if this works
+    from extensions.indev.games import Games
+    slash_suggest = Games.slash_suggest
 
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         with Session(engine) as session:
-            self.games = session.query(Game).all()
+            self.games = session.query(GameDB).all()
 
     # lfg_GROUP = app_commands.Group(name="lfgGroup", description="lfg")
     # @lfg_GROUP.command()
@@ -30,7 +40,7 @@ class Lfg(GroupCog):
             await interaction.response.send_message("This game is not supported", ephemeral=True)
             return
         with Session(engine) as session:
-            game_db = session.query(Game).where(Game.name == game).first()
+            game_db = session.query(GameDB).where(GameDB.name == game).first()
             total = session.query(LookingForGroup).where(LookingForGroup.game_id == game).all()
             session.add(LookingForGroup(
                 user_id = interaction.user.id,
