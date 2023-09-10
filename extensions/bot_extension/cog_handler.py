@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import Any
+from typing import Any, TypedDict
 
 import discord
 from discord import NotFound, app_commands
@@ -11,7 +11,22 @@ from _types.cogs import Cog, GroupCog
 from _types.bot import WinterDragon
 
 
+class FileData(TypedDict):
+    filepath: str
+    cog_path: str
+    edit_time: float
+
+
+class CogData(TypedDict):
+    timestamp: float
+    files: dict[str, FileData]
+    edited: dict[str, FileData]
+
+
 class AutoCogReloader(Cog):
+    data: CogData
+
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.data = {
@@ -37,7 +52,7 @@ class AutoCogReloader(Cog):
                     continue
                 # self.logger.debug(f"Getting data from {file}")
                 file_path = os.path.join(root, file)
-                cog_path = os.path.join(root, file)
+                cog_path = os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
                 with open(file_path, "r") as f:
                     edit_timestamp = os.path.getmtime(file_path)
                     self.data["files"][file] = {
@@ -65,15 +80,15 @@ class AutoCogReloader(Cog):
     async def auto_reload(self) -> None:
         if not self.data["edited"]:
             self.check_edits()
-        for file_data in list(self.data["edited"]):
+        for file_name, file_data in list(self.data["edited"].items()):
             try:
-                await self.bot.reload_extension(self.data["edited"][file_data]["cog_path"])
-                self.logger.info(f"Automatically reloaded {file_data}")
+                self.logger.debug(f"before reloading: {file_data=}")
+                await self.bot.reload_extension(file_data["cog_path"])
+                self.logger.info(f"Automatically reloaded {file_name}")
             except commands.errors.ExtensionNotLoaded:
-                self.logger.warning(f"Cannot reload {file_data}, it's not loaded")
-            del self.data["edited"][file_data]
+                self.logger.warning(f"Cannot reload {file_name}, it's not loaded")
+            del self.data["edited"][file_name]
         self.data["timestamp"] = datetime.datetime.now().timestamp()
-
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
