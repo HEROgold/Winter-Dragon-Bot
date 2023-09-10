@@ -21,14 +21,14 @@ from _types.bot import WinterDragon
 POLL_TYPE = "poll"
 
 
-# TODO: Needs testing!
+# FIXME: Doesn't post in set channel
 class PollModal(discord.ui.Modal):
     place_holder = "Empty Answer"
-    q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder)
-    q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder)
-    q3 = discord.ui.TextInput(label="Answer #3", placeholder=place_holder)
-    q4 = discord.ui.TextInput(label="Answer #4", placeholder=place_holder)
-    q5 = discord.ui.TextInput(label="Answer #5", placeholder=place_holder)
+    q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder, required=True)
+    q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=False)
+    q3 = discord.ui.TextInput(label="Answer #3", placeholder=place_holder, required=False)
+    q4 = discord.ui.TextInput(label="Answer #4", placeholder=place_holder, required=False)
+    q5 = discord.ui.TextInput(label="Answer #5", placeholder=place_holder, required=False)
 
 
     def __init__(self, end_epoch: datetime.datetime, content: str, poll_channel: discord.TextChannel) -> None:
