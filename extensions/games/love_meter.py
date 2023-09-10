@@ -1,17 +1,13 @@
-import discord
 import random
-from discord.ext import commands
+
+import discord
 from discord import app_commands
 
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
-class Love(commands.Cog):
-    def __init__(self, bot) -> None:
-        self.bot: commands.Bot = bot
-
-    @app_commands.command(
-        name = "love",
-        description = "Find out if another person is compatible with you"
-    )
+class Love(Cog):
+    @app_commands.command(name = "love", description = "Find out if another person is compatible with you")
     async def love(self, interaction: discord.Interaction, member: discord.Member) -> None:
         user = interaction.user
         emb = discord.Embed(
@@ -28,5 +24,5 @@ class Love(commands.Cog):
         await interaction.response.send_message(embed=emb)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Love(bot))

@@ -1,5 +1,4 @@
 import itertools
-import logging
 from typing import Optional
 
 import discord
@@ -7,21 +6,19 @@ from discord import app_commands
 from discord.ext import commands
 
 from tools.config_reader import config
-from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 from enums.dragonlog import LogCategories
+from tools.msg_checks import is_tic_tac_toe
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
 
 
 LOGS = "logs"
 LOG_CATEGORY = "LOG-CATEGORY"
 
 # TODO: Remove all listeners in favor for the on_guild_entry_create
-class DragonLog(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
-
+# instead, of above line, keep both separate
+class DragonLog(GroupCog):
 
     async def send_dragon_logs(
         self,
@@ -37,8 +34,8 @@ class DragonLog(commands.GroupCog):
 
         if log_category is not None:
             await self.send_log_to_category(log_category, guild, embed)
-        else:
-            await self.send_log_to_global(guild, embed)
+
+        await self.send_log_to_global(guild, embed)
 
 
     async def send_log_to_global(
@@ -78,6 +75,10 @@ class DragonLog(commands.GroupCog):
                     Channel.guild_id == guild.id,
                     Channel.name == log_channel_name
                 ).first()
+        
+        if channel is None:
+            self.logger.warning(f"Found no logs channel! {channel=}, {guild=}, {embed=}")
+            return
 
         if mod_channel := discord.utils.get(guild.channels, id=channel.id):
             await mod_channel.send(embed=embed)
@@ -117,7 +118,7 @@ class DragonLog(commands.GroupCog):
 
 # ENTRIES START
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target=}, {entry.__dict__=}")
@@ -138,6 +139,7 @@ class DragonLog(commands.GroupCog):
                     enum.member_update: self.audit_member_update,
                     enum.member_role_update: self.audit_member_update,
                     enum.message_delete: self.audit_message_delete,
+                    enum.message_bulk_delete: self.audit_message_delete,
                 }
             await actions[action](entry)
 
@@ -182,12 +184,13 @@ class DragonLog(commands.GroupCog):
 
 
     async def on_guild_channel_delete(self, entry: discord.AuditLogEntry) -> None:
-        self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
         channel = entry.target
+        self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
+        channel_type = channel.type if channel.type != discord.object.Object else ''
 
         embed = discord.Embed(
             title="Channel Deleted",
-            description=f"{entry.user.mention} deleted {channel.type} `{channel.name}` with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} deleted {channel_type} `{channel.id}` with reason: {entry.reason or None}",
             color=0xff0000
             )
         await self.send_dragon_logs(LogCategories.DELETEDCHANNELS, entry.guild, embed)
@@ -250,7 +253,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.DELETEDROLES, entry.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         member = before or after
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
@@ -297,7 +300,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.MEMBERMOVED, entry.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
         embed = discord.Embed(
@@ -308,7 +311,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.MEMBERJOINED, member.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:
         self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
         embed=None
@@ -319,7 +322,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.MEMBERLEFT, member.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         if not before.clean_content:
             self.logger.debug(f"Empty content on {before=}")
@@ -327,6 +330,10 @@ class DragonLog(commands.GroupCog):
         if before.clean_content == after.clean_content:
             self.logger.debug(f"Message content is the same: {before}")
             return
+        if is_tic_tac_toe(before.clean_content):
+            self.logger.debug(f"Edited message was tic-tac-toe game: {before}")
+            return
+
         self.logger.debug(f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}")
         embed = discord.Embed(
             title="Message Edited",
@@ -338,7 +345,7 @@ class DragonLog(commands.GroupCog):
         await self.send_dragon_logs(LogCategories.EDITEDMESSAGES, before.guild, embed)
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         if isinstance(message, discord.Message):
             message = message
@@ -442,11 +449,10 @@ class DragonLog(commands.GroupCog):
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none())
         }
         with Session(engine) as session:
-            result = session.query(Channel).where(
+            channels = session.query(Channel).where(
                 Channel.type == LOGS,
                 Channel.guild_id == interaction.guild.id
-            )
-            channels = result.all()
+            ).all()
             if len(channels) > 0:
                 await interaction.response.send_message("DragonLog channels are already set up.")
                 return
@@ -454,11 +460,16 @@ class DragonLog(commands.GroupCog):
         await interaction.response.defer(ephemeral=True)
         with Session(engine) as session:
             category_channel = await guild.create_category(name="Dragon DragonLog", overwrites=overwrites, position=99, reason="Adding DragonLog channels")
-            session.add(Channel(id = category_channel.id, name=LOG_CATEGORY, type=LOGS, guild_id=category_channel.guild.id))
+            Channel.update(Channel(
+                id = category_channel.id,
+                name = LOG_CATEGORY,
+                type = LOGS,
+                guild_id = category_channel.guild.id
+            ))
             for log_category in LogCategories:
                 log_category_name = log_category.value
                 text_channel = await category_channel.create_text_channel(name=f"{log_category_name.lower()}", reason="Adding DragonLog channels")
-                session.add(Channel(
+                Channel.update(Channel(
                     id = text_channel.id,
                     name = log_category_name,
                     type = LOGS,
@@ -508,12 +519,9 @@ class DragonLog(commands.GroupCog):
         self.logger.info(f"Removed DragonLog for {interaction.guild}")
 
 
-    @app_commands.command(
-        name = "update",
-        description = "Update DragonLog channels"
-        )
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
+    @app_commands.command(name = "update", description = "Update DragonLog channels")
     async def slash_DragonLog_update(self, interaction: discord.Interaction, guild_id: str = None) -> None:
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
@@ -556,13 +564,13 @@ class DragonLog(commands.GroupCog):
         difference.extend(
             j for j in [i.value.lower() for i in LogCategories]
             if j not in known_names
-            )
+        )
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
         with Session(engine) as session:
             for channel_diff in difference:
                 new_log_channel = await category_channel.create_text_channel(channel_diff, reason="DragonLog update")
                 self.logger.info(f"Updated DragonLog for {guild=} with {new_log_channel=}")
-                session.add(Channel(
+                Channel.update(Channel(
                     id = new_log_channel.id,
                     name = channel_diff,
                     type = LOGS,
@@ -573,5 +581,5 @@ class DragonLog(commands.GroupCog):
 
 # COMMANDS END
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(DragonLog(bot))

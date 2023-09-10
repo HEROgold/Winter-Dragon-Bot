@@ -1,25 +1,19 @@
-import logging
-
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
 from tools.config_reader import config
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
-class Sync(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
+class Sync(Cog):
     async def cog_load(self) -> None:
         self.update.start()
 
 
-    # TODO: Extensive testing for edge cases
     # Seems to work properly
-    # TODO: Rewrite, figure out what is synced, what is loaded in memory
-    @tasks.loop(count = 1)
+    @tasks.loop(count=1)
     async def update(self) -> None:
         # sourcery skip: useless-else-on-loop
         app_commands = await self.bot.tree.fetch_commands()
@@ -101,5 +95,5 @@ class Sync(commands.Cog):
 
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Sync(bot))

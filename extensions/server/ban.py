@@ -1,19 +1,15 @@
 import datetime
-import logging
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
 
 from tools.config_reader import config# from tools.database_tables Session, engine
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
-class TempBan(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+class TempBan(Cog):
     @tasks.loop(seconds=3600)
     async def unban_check(self) -> None:
         if not self.data:
@@ -112,7 +108,7 @@ class TempBan(commands.Cog):
         ]
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     pass
     # await bot.add_cog(TempBan(bot))
     # Removed since normal ban exist.

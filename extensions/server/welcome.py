@@ -1,24 +1,18 @@
-import logging
-
 import discord
 from discord import app_commands
-from discord.ext import commands
 
 from tools.config_reader import config
 from tools import app_command_tools
 from tools.database_tables import Welcome as WelcomeDb
 from tools.database_tables import Session, engine
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
 
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(administrator=True)
-class Welcome(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
-    @commands.Cog.listener()
+class Welcome(GroupCog):
+    @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         self.logger.debug(f"{member} joined {member.guild}")
         with Session(engine) as session:
@@ -102,5 +96,5 @@ class Welcome(commands.GroupCog):
             session.commit()
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
 	await bot.add_cog(Welcome(bot))

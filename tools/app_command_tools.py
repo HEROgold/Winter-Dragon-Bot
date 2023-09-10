@@ -7,6 +7,7 @@ from discord.ext import commands
 
 from tools.config_reader import config
 from tools.caching import memoize
+from _types.bot import WinterDragon
 
 
 class CommandNotFound(Exception):
@@ -14,19 +15,18 @@ class CommandNotFound(Exception):
 
 
 class Converter:
-    bot: commands.Bot
+    bot: WinterDragon
     tree: app_commands.CommandTree
     logger: logging.Logger
     parameter_args = None # Not implemented
     _instance = None
 
-    # TODO: test, does singleton work, keep it. (for caching)
-    def __new__(cls, bot: commands.Bot) -> Self:
+    def __new__(cls, bot: WinterDragon) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, bot: commands.Bot) -> Self:
+    def __init__(self, bot: WinterDragon) -> Self:
         self.bot = bot
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
@@ -57,7 +57,21 @@ class Converter:
         guild: discord.Guild = None,
         app_command: app_commands.AppCommand = None
     ) -> tuple[app_commands.AppCommand, str] | None:
-        """Returns a AppCommand and a string that can be used to mention the subcommand"""
+        """
+        Retrieves the sub-command of an app.
+    
+        Args:
+            self: The instance of the class.
+            sub_command (app_commands.Command): The sub-command to retrieve.
+            guild (discord.Guild, optional): The guild to retrieve the sub-command from. Defaults to None.
+            app_command (app_commands.AppCommand, optional): The app command to retrieve the sub-command from. Defaults to None.
+    
+        Returns:
+            tuple[app_commands.AppCommand, str] | None: A tuple containing the app command and a custom mention string, or None if the sub-command is not found.
+    
+        Raises:
+            CommandNotFound: Raised when the sub-command is not found.
+        """
         if not sub_command:
             raise CommandNotFound
         if not app_command or app_command is None:

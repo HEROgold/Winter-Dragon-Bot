@@ -1,21 +1,20 @@
-import logging
-
+from typing import Any
 import discord
 import flag
 import openai
-from discord.ext import commands
 
 from tools.config_reader import config
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
-class Translate(commands.Cog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
+class Translate(Cog):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         openai.api_key = config["Tokens"]["open_api_key"]
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member | discord.User) -> None:
         if member.bot == True:
             return
@@ -64,5 +63,5 @@ class Translate(commands.Cog):
         return emb
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
 	await bot.add_cog(Translate(bot))

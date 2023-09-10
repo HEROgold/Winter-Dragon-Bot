@@ -1,23 +1,16 @@
-import logging
-
 import discord
 from discord import app_commands
-from discord.ext import commands
 
-from tools.config_reader import config
 from tools.database_tables import Session, engine, AutoAssignRole
 from tools.database_tables import Role as DbRole
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
 
 # move this and other static messages to messages config?
 AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
 
 
-class AutoAssign(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+class AutoAssign(GroupCog):
     @app_commands.command(name="add", description="Automatically give a new user the selected role when they join")
     async def slash_assign_add(self, interaction: discord.Interaction, role: discord.Role) -> None:
         self.logger.info(f"Adding AutoAssign role {role} to database")
@@ -72,9 +65,7 @@ class AutoAssign(commands.GroupCog):
             session.commit()
 
 
-    # on member join, give role selected in AutoAssign
-    # TODO: test
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         with Session(engine) as session:
             for auto_assign in session.query(AutoAssignRole).where(AutoAssignRole.guild_id == member.guild.id).all():
@@ -83,5 +74,5 @@ class AutoAssign(commands.GroupCog):
         self.logger.debug(f"Added AutoAssign role {role} to new member {member.mention}")
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(AutoAssign(bot))

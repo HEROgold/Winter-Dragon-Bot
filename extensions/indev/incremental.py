@@ -1,19 +1,18 @@
 import datetime
-import logging
 import math
 from typing import List
 
 import discord
 from discord import app_commands
 from discord.components import SelectOption
-from discord.ext import commands
 from discord.ui import View, Select
 
-from tools.config_reader import config
 from tools.database_tables import Session, engine
 from tools.database_tables import IncrementalGen as DbGen
 from tools.database_tables import Incremental as DbIncremental
 from enums.incremental import Generators
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
 def update_balance(incremental: DbIncremental) -> None:
@@ -75,7 +74,7 @@ class ShopItems(Select):
                 generator_id = gen.value,
                 name = gen.name,
                 price = gen.value << 2,
-                generating = gen.gen_rate
+                generating = gen.generation_rate
             ))
             session.commit()
         await interaction.response.send_message(f"Successfully bought {self.values[0]} for {Generators[self.values[0]].value}", ephemeral=True)
@@ -95,17 +94,12 @@ class Shop(View):
         self.add_item(ShopItems())
 
 
-class Incremental(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+class Incremental(GroupCog):
     @app_commands.command(name="shop", description="Show the shopping menu")
     async def fetch_account(self, interaction: discord.Interaction) -> None:
         """Send a message, containing the shop view"""
         await interaction.response.send_message(view=Shop(), delete_after=Shop.timeout)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Incremental(bot))

@@ -1,23 +1,23 @@
 import asyncio
-import logging
 import os
 import random
+from typing import Any
 
 import discord
 from craiyon import Craiyon
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
 
-from tools.config_reader import config
 import tools.rainbow as rainbow
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
 # FIXME: Find out what doesn't work
-class Image(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
+class Image(GroupCog):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
         self.CrAIyonDataBase = "./database/crAIyon/"
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     @tasks.loop(seconds=10)
@@ -65,5 +65,5 @@ class Image(commands.GroupCog):
         asyncio.ensure_future(loop.run_in_executor(None, self.generate_images, interaction, dm, query))
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Image(bot))

@@ -1,29 +1,22 @@
 import datetime
-import logging
 
 import discord  # type: ignore
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
 
 from tools.config_reader import config
 from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
+from _types.cogs import Cog
+from _types.bot import WinterDragon
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
-class DatabaseSetup(commands.Cog):
-    bot: commands.Bot
-    logger: logging.Logger
-
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
+class DatabaseSetup(Cog):
     async def cog_load(self) -> None:
         self.update.start()
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
         with Session(engine) as session:
             db_msg = session.query(Message).where(Message.id == message.id).first()
@@ -34,7 +27,7 @@ class DatabaseSetup(commands.Cog):
 
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     # @event_errors.event_logger
     async def on_message(self, message: discord.Message) -> None:
         user = message.author
@@ -64,7 +57,7 @@ class DatabaseSetup(commands.Cog):
                 session.add(Channel(
                     id = channel.id,
                     name = f"{channel.name}",
-                    type = f"{channel.type}",
+                    type = None,
                     guild_id = guild.id,
                 ))
 
@@ -113,7 +106,7 @@ class DatabaseSetup(commands.Cog):
             session.commit()
 
 
-    @commands.Cog.listener()
+    @Cog.listener()
     async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
         member = before or after
         status = member.status.name
@@ -127,5 +120,5 @@ class DatabaseSetup(commands.Cog):
             session.commit()
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(DatabaseSetup(bot))  # type: ignore

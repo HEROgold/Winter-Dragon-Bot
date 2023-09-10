@@ -1,24 +1,30 @@
 import datetime
 import logging
 from textwrap import dedent
-from typing import Any, Coroutine
 
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
 
-from tools import app_command_tools
-from tools.config_reader import config
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from tools.app_command_tools import Converter
+from tools.config_reader import config
 
 
 class ErrorHandler:
-    bot: WinterDragon
+    """
+    ErrorHandler is a class that handles errors encountered during command execution in the WinterDragon bot.
+    
+    Args:
+        bot (WinterDragon): The instance of the WinterDragon bot.
+        interface (commands.Context | discord.Interaction): The context or interaction where the error occurred.
+        error (app_commands.AppCommandError | commands.CommandError): The error that occurred.
+    """
+
     interface: commands.Context | discord.Interaction
     error: app_commands.AppCommandError | commands.CommandError
     logger: logging.Logger
-    act: app_command_tools.Converter
+    act: Converter
     time_code: float
 
 
@@ -33,14 +39,14 @@ class ErrorHandler:
         self.error = error
         self.help_msg = ""
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
+        self.act = Converter(bot=self.bot)
         self.time_code = datetime.datetime.now(datetime.timezone.utc).timestamp()
         
         self._async_init.start()
 
 
     @tasks.loop(count = 1)
-    async def _async_init(self) -> Coroutine[Any, Any, None]:
+    async def _async_init(self) -> None:
         self.help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
         self.invite_command = await self.act.get_app_command(self.bot.tree.get_command("invite"))
         self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
@@ -150,7 +156,7 @@ class ErrorHandler:
     async def send_message(
         self,
         message: str
-    ) -> Coroutine[Any, Any, None]:
+    ) -> None:
         interface = self.interface
 
         if isinstance(interface, discord.Interaction):
@@ -171,61 +177,3 @@ class ErrorHandler:
                 self.logger.warning("Not allowed to remove message from dm")
             
             await interface.send(message)
-
-
-# TODO: Might needs to be removed, since in _types.cogs it adds ErrorHandler directly
-# FIXME: Doesn't work when a listener() raises an error.
-# Fixable by adding a piece of code too all listeners
-# preferably in a wrapper from this module/file
-class Error(Cog):
-    help_msg: str
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.help_msg = ""
-
-
-    # -> --- Change on_error to self.on_error on load
-    def cog_load(self) -> None: # type: ignore
-        tree = self.bot.tree
-        tree.on_error = self.on_app_command_error
-
-
-    # -> --- Change back to default on_error on unload
-    def cog_unload(self) -> None: # type: ignore
-        tree = self.bot.tree
-        tree.on_error = tree.__class__.on_error
-
-
-    async def on_app_command_error(
-        self,
-        interaction: discord.Interaction,
-        error: app_commands.AppCommandError
-    ) -> None:
-        if not interaction:
-            self.logger.critical(f"No interaction on interaction: {error=}")
-            return
-        # Issue with typing /command and spamming dm about cmd not found.
-        # Leave handle_error inside if
-        if type(error) != app_commands.errors.CommandNotFound and interaction.command.name == "shutdown":
-            self.logger.exception(error)
-            return
-        ErrorHandler(self.bot, interaction, error)
-
-
-    @Cog.listener()
-    async def on_command_error(
-        self,
-        ctx: commands.Context,
-        error: commands.CommandError
-    ) -> None:
-        if type(error) != app_commands.errors.CommandNotFound:
-            self.logger.debug(f"Error from ctx: {ctx.command.name}")
-        ErrorHandler(self.bot, ctx, error)
-
-
-async def setup(bot: WinterDragon) -> None:
-    # sourcery skip: instance-method-first-arg-name
-    if config["Main"]["log_level"] == "DEBUG":
-        return
-    await bot.add_cog(Error(bot))

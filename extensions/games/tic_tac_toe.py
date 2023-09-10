@@ -7,13 +7,14 @@ import discord
 import matplotlib.pyplot as plt
 import sqlalchemy
 from discord import app_commands
-from discord.ext import commands
 from discord.ui import Button, View
-from extras.ttt_ai import TicTacToeAi
+from tools.ttt_ai import TicTacToeAi
 
 from tools.config_reader import config
 from tools.database_tables import AssociationUserLobby as AUL
 from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 # TODO: Add ai if bot is challenged?
 
@@ -27,7 +28,7 @@ class GameData(TypedDict):
 
 
 @app_commands.guild_only()
-class TicTacToe(commands.GroupCog):
+class TicTacToe(GroupCog):
     PLAYER1 = "Player 1"
     PLAYER1_JOINED = "Player 1 Join"
     PLAYER1_LEFT = "Player 1 Leave"
@@ -37,11 +38,6 @@ class TicTacToe(commands.GroupCog):
     PLAYER2_LEFT = "Player 2 Leave"
 
     PIECHART_PATH = "./database/piechart/ttt"
-
-
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     async def update_view(self, view: discord.ui.View, *items) -> discord.ui.View:
@@ -633,5 +629,5 @@ class TicTacToeGame(discord.ui.View):
         return self.Tie
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(TicTacToe(bot)) # type: ignore

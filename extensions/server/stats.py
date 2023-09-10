@@ -1,4 +1,3 @@
-import logging
 import random
 
 import discord
@@ -10,18 +9,16 @@ from tools.config_reader import config
 import tools.rainbow as rainbow
 from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
+from _types.cogs import Cog, GroupCog
+from _types.bot import WinterDragon
+
 
 STATS = "stats"
 
 
 @app_commands.guild_only()
-class Stats(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-
-
-    @commands.Cog.listener()
+class Stats(GroupCog):
+    @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
         member = before or after
         self.logger.debug(f"Member update: {member.guild=}, {member=}")
@@ -72,12 +69,12 @@ class Stats(commands.GroupCog):
 
         with Session(engine) as session:
             for k, v in channels.items():
-                session.add(Channel(
+                Channel.update(Channel(
                     id = v.id,
                     guild_id = guild.id,
                     type = STATS,
                     name = k
-                    ))
+                ))
             session.commit()
         self.logger.info(f"Created stats channels for: guild='{guild}'")
 
@@ -255,5 +252,5 @@ class Stats(commands.GroupCog):
                 self.logger.info(f"Reset stats for: {guild}")
         await interaction.response.send_message("Reset all server stat channels", ephemeral=True)
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Stats(bot))

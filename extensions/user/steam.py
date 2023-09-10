@@ -1,5 +1,4 @@
 import datetime
-import logging
 import re
 from textwrap import dedent
 from typing import TypedDict, overload
@@ -8,12 +7,13 @@ import bs4
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import tasks
 import requests
-from tools import app_command_tools
 
 from tools.config_reader import config
 from tools.database_tables import SteamSale, SteamUser, User, engine, Session
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
 # Constant vars that contain tag names to look for
@@ -49,13 +49,7 @@ class Sale(TypedDict):
     update_datetime: datetime.datetime
 
 
-class Steam(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = app_command_tools.Converter(bot=self.bot)
-
-
+class Steam(GroupCog):
     @app_commands.command(name="add", description="Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
@@ -559,5 +553,5 @@ class Steam(commands.GroupCog):
         return self.db_to_dict(sale)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Steam(bot))

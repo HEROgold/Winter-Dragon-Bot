@@ -1,10 +1,9 @@
 import logging
 import random
-from typing import Callable
+from typing import Any, Callable
 
 import discord  # type: ignore
 from discord import app_commands
-from discord.ext import commands
 import requests
 
 from tools.config_reader import config
@@ -12,6 +11,8 @@ from tools.database_tables import ResultMassiveMultiplayer as ResultMM
 from tools.database_tables import AssociationUserHangman as AUH
 from tools.database_tables import Hangman as HangmanDb
 from tools.database_tables import Game, Session, engine
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
 HANGMEN = [
@@ -296,10 +297,9 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
             session.commit()
 
 
-class Hangman(commands.GroupCog):
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+class Hangman(GroupCog):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         with Session(engine) as session:
             self.game = session.query(Game).where(Game.name == "hangman").first()
@@ -323,5 +323,5 @@ class Hangman(commands.GroupCog):
         await interaction.response.send_message(f"{HANGMEN[0]}", view=view)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Hangman(bot))  # type: ignore

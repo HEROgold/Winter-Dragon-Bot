@@ -1,23 +1,22 @@
-import logging
-
+from typing import Any
 import discord  # type: ignore
 from discord import app_commands
-from discord.ext import commands
 
 from tools.config_reader import config
-from tools import app_command_tools
 from tools.database_tables import Session, engine, Game, LookingForGroup
+from _types.cogs import GroupCog
+from _types.bot import WinterDragon
 
 
-# TODO: Allow requests for adding new game types
+# TODO: Allow requests for adding new game types, see games.py
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
-class Lfg(commands.GroupCog):
+class Lfg(GroupCog):
     games: list[Game] = ["League of Legends"]
 
-    def __init__(self, bot: commands.Bot) -> None:
-        self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.converter = app_command_tools.Converter(bot)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
         with Session(engine) as session:
             self.games = session.query(Game).all()
 
@@ -79,5 +78,5 @@ class Lfg(commands.GroupCog):
                 self.logger.debug(f"{user_game=}, {lfg_game=}")
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Lfg(bot))  # type: ignore
