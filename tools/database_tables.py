@@ -40,13 +40,6 @@ handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 # logger.addHandler(logging.StreamHandler())
 
-# TODO: Change association tables to the following format:
-# 
-# ticket_helpers = Table('ticket_helpers', Base.metadata,
-#     Column('ticket_id', Integer, ForeignKey('tickets.id'), primary_key=True),
-#     Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
-# )
-# 
 
 db_name = "db" # Defined in docker-compose.yml
 match config["Database"]["db"]:
@@ -76,6 +69,7 @@ ROLE_ID = "roles.id"
 INCREMENTAL_ID = "incremental_data.id"
 AUTOCHANNEL_ID = "autochannels.id"
 POLLS_ID = "polls.id"
+TICKETS_ID = "tickets.id"
 
 
 class Base(DeclarativeBase):
@@ -107,15 +101,13 @@ class Channel(Base):
     def update(cls, channel: Self):
         with Session(engine) as session:
             if db_channel := session.query(Channel).where(Channel.id == channel.id).first():
-                if db_channel.type is None:
-                    db_channel.id = channel.id
-                    db_channel.name = channel.name
-                    db_channel.type = channel.type
-                    db_channel.guild_id = channel.guild_id
-                    session.commit()
+                db_channel.id = channel.id
+                db_channel.name = channel.name
+                db_channel.type = channel.type
+                db_channel.guild_id = channel.guild_id
             else:
                 session.add(channel)
-
+            session.commit()
 
 
 class User(Base):
@@ -124,6 +116,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
+    tickets: Mapped[List["Ticket"]] = relationship(back_populates="user")
 
     @classmethod
     def fetch_user(cls, id: int) -> Self:
@@ -304,22 +297,6 @@ class AssociationUserPoll(Base):
     voted_value: Mapped[int] = mapped_column(Integer)
 
 
-class Team(Base):
-    __tablename__ = "teams"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    # members: Mapped[list["User"]] = mapped_column(ForeignKey(USERS_ID))
-
-
-class AssociationUserTeam(Base):
-    __tablename__ = "association_users_teams"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    team_id: Mapped["Lobby"] = mapped_column(ForeignKey(TEAMS_ID))
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    voted: Mapped[bool] = mapped_column(Boolean)
-
-
 class Server(Base):
     __tablename__ = "servers"
 
@@ -379,9 +356,10 @@ class AutoChannelSettings(Base):
     channel_limit: Mapped[int] = mapped_column(Integer)
 
 
-ticket_helpers = Table("ticket_helpers", Base.metadata,
-    Column("ticket_id", Integer, ForeignKey("tickets.id"), primary_key=True),
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True)
+# TODO: Change association tables to the following format:
+team_users = Table("ticket_helpers", Base.metadata,
+    Column("ticket_id", Integer, ForeignKey(TICKETS_ID), primary_key=True),
+    Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True)
 )
 
 class Ticket(Base):
@@ -395,14 +373,14 @@ class Ticket(Base):
     closed_at: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
     is_closed: Mapped[bool] = mapped_column(Boolean)
     
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(USERS_ID))
     user: Mapped[User] = relationship("User")
     
-    channel_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("channels.id"))
+    channel_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(CHANNELS_ID))
     channel: Mapped["Channel"] = relationship("Channel")
 
     transactions: Mapped[list["Transaction"]] = relationship("Transaction", back_populates="ticket")
-    helpers: Mapped[list["User"]] = relationship("User", secondary=ticket_helpers, back_populates="tickets")
+    helpers: Mapped[list["User"]] = relationship("User", secondary=team_users, back_populates="tickets")
 
     @classmethod    
     def close(cls) -> None:
@@ -410,6 +388,24 @@ class Ticket(Base):
             cls.is_closed = True
             cls.closed_at = datetime.datetime.now()
             session.commit()
+
+# # TODO: Change association tables to the following format:
+# team_users = Table("team_users", Base.metadata,
+#     Column("team_id", Integer, ForeignKey(TEAMS_ID), primary_key=True),
+#     Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True)
+# )
+
+# team_channels = Table("team_channels", Base.metadata,
+#     Column("team_id", Integer, ForeignKey(TEAMS_ID), primary_key=True),
+#     Column("channel_id", Integer, ForeignKey(CHANNELS_ID), primary_key=True)
+# )
+
+# class Team(Base):
+#     __tablename__ = "teams"
+
+#     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+#     members: Mapped[list["User"]] = relationship("User", secondary=team_users, back_populates="teams")
+#     channel: Mapped[Channel] = relationship("Channel", secondary=team_channels, back_populates="team")
 
 
 class Transaction(Base):
