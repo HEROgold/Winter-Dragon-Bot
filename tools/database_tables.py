@@ -47,6 +47,7 @@ match config["Database"]["db"]:
         username = config["Database"]["username"]
         password = config["Database"]["password"]
         logger.info(f"Connecting to postgres {db_name=}, as {username=}")
+        # Add +asyncpg to postgres?
         engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"postgresql://{username}:{password}@{db_name}:5432", echo=False)
     case "sqlite":
         logger.info(f"Connecting to sqlite {db_name=}")
