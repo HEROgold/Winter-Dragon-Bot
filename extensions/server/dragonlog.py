@@ -490,7 +490,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on kick: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.KICK, entry.guild, discord.Embed(
             title="Kick",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
@@ -498,7 +499,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on member_prune: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MEMBER_PRUNE, entry.guild, discord.Embed(
             title="Member Prune",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
@@ -506,7 +508,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on ban: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.BAN, entry.guild, discord.Embed(
             title="Ban",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
@@ -514,7 +517,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on unban: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.UNBAN, entry.guild, discord.Embed(
             title="Unban",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
         ))
 
 
@@ -522,7 +526,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on member_disconnect: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MEMBER_DISCONNECT, entry.guild, discord.Embed(
             title="Member Disconnect",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
@@ -530,7 +535,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on bot_add: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(
             title="Bot Add",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
         ))
 
 
@@ -538,7 +544,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on invite_update: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(
             title="Invite Update",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
         ))
 
 
@@ -600,7 +607,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on message_pin: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(
             title="Message Pin",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
         ))
 
 
@@ -608,7 +616,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on message_unpin: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(
             title="Message Unpin",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
@@ -786,7 +795,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on automod_block_message: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.AUTOMOD_BLOCK_MESSAGE, entry.guild, discord.Embed(
             title="Automod Block Message",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
@@ -794,7 +804,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on automod_flag_message: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.AUTOMOD_FLAG_MESSAGE, entry.guild, discord.Embed(
             title="Automod Flag Message",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
         ))
 
 
@@ -802,7 +813,8 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on automod_timeout_member: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.AUTOMOD_TIMEOUT_MEMBER, entry.guild, discord.Embed(
             title="Automod Timeout Member",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
         ))
 
 
