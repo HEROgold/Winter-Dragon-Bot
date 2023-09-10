@@ -458,15 +458,12 @@ class DragonLog(GroupCog):
             # likely removed own message
             self.logger.debug(f"else: {message}")
 
-# -----------------------------------------
-# TODO: Add Unique msg for each function
-# -----------------------------------------
 
     async def on_overwrite_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite create: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.OVERWRITE_CREATE, entry.guild, discord.Embed(
             title="Overwrite Create",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} added permissions to {entry.target.type} {entry.extra} for {entry.target} with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
@@ -475,7 +472,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"On overwrite update: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.OVERWRITE_UPDATE, entry.guild, discord.Embed(
             title="Overwrite Update",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} changed permissions of {entry.target.type} {entry.target} for {entry.extra} with reason {entry.reason or None}",
             color=CHANGED_COLOR
         ))
 
@@ -484,7 +481,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"On overwrite delete: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.OVERWRITE_DELETE, entry.guild, discord.Embed(
             title="Overwrite Delete",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} removed permissions from {entry.target.type} {entry.target} for {entry.extra} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
@@ -493,7 +490,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on kick: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.KICK, entry.guild, discord.Embed(
             title="Kick",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} Kicked {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
@@ -502,7 +499,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on member_prune: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MEMBER_PRUNE, entry.guild, discord.Embed(
             title="Member Prune",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} pruned {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
@@ -511,7 +508,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on ban: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.BAN, entry.guild, discord.Embed(
             title="Ban",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} banned {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
@@ -520,7 +517,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on unban: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.UNBAN, entry.guild, discord.Embed(
             title="Unban",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} un-banned {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
@@ -529,7 +526,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on member_disconnect: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MEMBER_DISCONNECT, entry.guild, discord.Embed(
             title="Member Disconnect",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} disconnected {entry.target.type} {entry.target} from {entry.extra} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
@@ -538,7 +535,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on bot_add: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(
             title="Bot Add",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} added {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
@@ -547,7 +544,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on invite_update: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(
             title="Invite Update",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} updated {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=CHANGED_COLOR
         ))
 
@@ -556,7 +553,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on webhook_create: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.WEBHOOK_CREATE, entry.guild, discord.Embed(
             title="Webhook Create",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} created Webhook with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
@@ -565,7 +562,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on webhook_update: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.WEBHOOK_UPDATE, entry.guild, discord.Embed(
             title="Webhook Update",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} updated Webhook with reason {entry.reason or None}",
             color=CHANGED_COLOR
         ))
 
@@ -574,7 +571,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on webhook_delete: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.WEBHOOK_DELETE, entry.guild, discord.Embed(
             title="Webhook Delete",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} deleted Webhook with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
@@ -583,7 +580,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on emoji_create: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.EMOJI_CREATE, entry.guild, discord.Embed(
             title="Emoji Create",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} Created emoji with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
@@ -592,7 +589,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on emoji_update: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.EMOJI_UPDATE, entry.guild, discord.Embed(
             title="Emoji Update",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} Updated emoji with reason {entry.reason or None}",
             color=CHANGED_COLOR
         ))
 
@@ -601,27 +598,35 @@ class DragonLog(GroupCog):
         self.logger.debug(f"on emoji_delete: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.EMOJI_DELETE, entry.guild, discord.Embed(
             title="Emoji Delete",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} Deleted emoji with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
 
     async def on_message_pin(self, entry: discord.AuditLogEntry) -> None:
+        # TODO: remove entry.target and entry.target.type from pins
+        # find out other way to mention/show pinned message
         self.logger.debug(f"on message_pin: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(
             title="Message Pin",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} Pinned {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
 
     async def on_message_unpin(self, entry: discord.AuditLogEntry) -> None:
+        # TODO: remove entry.target and entry.target.type from pins
+        # find out other way to mention/show pinned message
         self.logger.debug(f"on message_unpin: {entry.guild=}, {entry=}")
         await self.send_dragon_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(
             title="Message Unpin",
-            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            description=f"{entry.user.mention} Unpinned {entry.target.type} {entry.target} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
+
+# -----------------------------------------
+# TODO: Add Unique msg for each function
+# -----------------------------------------
 
 
     async def on_integration_create(self, entry: discord.AuditLogEntry) -> None:
