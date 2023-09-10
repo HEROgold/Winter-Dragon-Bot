@@ -16,6 +16,9 @@ from _types.bot import WinterDragon
 LOGS = "logs"
 LOG_CATEGORY = "LOG-CATEGORY"
 MAX_CATEGORY_SIZE = 50
+CREATED_COLOR = 0x00FF00
+CHANGED_COLOR = 0xFFFF00
+DELETED_COLOR = 0xff0000
 
 # TODO: Remove all listeners in favor for the on_guild_entry_create
 # instead, of above line, keep both separate
@@ -102,19 +105,19 @@ class DragonLog(GroupCog):
             return discord.Embed(
                 title="Member Banned",
                 description=f"{entry.user.mention} Banned {member.mention} with reason: {entry.reason or None}",
-                color=0xFF0000,
+                color=DELETED_COLOR,
             )
         elif entry.action == discord.AuditLogAction.kick:
             return discord.Embed(
                 title="Member Kicked",
                 description=f"{entry.user.mention} Kicked {member.mention} with reason: {entry.reason or None}",
-                color=0xFF0000,
+                color=DELETED_COLOR,
             )
         else:
             return discord.Embed(
                 title="Member Left",
                 description=f"{member.mention} Left the server",
-                color=0xFF0000,
+                color=DELETED_COLOR,
             )
 
 # ENTRIES START
@@ -199,7 +202,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Channel Created",
             description=f"{entry.user.mention} created {channel.type} {mention} with reason: {entry.reason or None}",
-            color=0x00FF00
+            color= CREATED_COLOR
         )
         await self.send_dragon_logs(LogCategories.CHANNEL_CREATE, entry.guild, embed)
 
@@ -222,8 +225,8 @@ class DragonLog(GroupCog):
             embed = discord.Embed(
                 title="Channel Changed",
                 description=f"{entry.user.mention} changed {differences} of channel {name_change or after.mention} with reason: {entry.reason or None}",
-                color=0xFFFF00
-                )
+                color=CHANGED_COLOR
+            )
         if not embed:
             return
         await self.send_dragon_logs(LogCategories.CHANNEL_UPDATE, entry.guild, embed)
@@ -237,7 +240,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Channel Deleted",
             description=f"{entry.user.mention} deleted {channel_type} `{channel.id}` with reason: {entry.reason or None}",
-            color=0xff0000
+            color=DELETED_COLOR
             )
         await self.send_dragon_logs(LogCategories.CHANNEL_DELETE, entry.guild, embed)
 
@@ -248,7 +251,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Created Invite",
             description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
-            color=0x00ff00
+            color= CREATED_COLOR
             )
         await self.send_dragon_logs(LogCategories.INVITE_CREATE, invite.guild, embed)
 
@@ -258,7 +261,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Created Invite",
             description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
-            color=0x00ff00
+            color= CREATED_COLOR
             )
         await self.send_dragon_logs(LogCategories.INVITE_UPDATE, invite.guild, embed)
 
@@ -270,7 +273,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Removed Invite",
             description=f"{entry.user} Removed invite {invite} with reason: {entry.reason or None}",
-            color=0xff0000
+            color=DELETED_COLOR
             )
         await self.send_dragon_logs(LogCategories.INVITE_DELETE, invite.guild, embed)
 
@@ -281,7 +284,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Role Created",
             description=f"{entry.user.mention} created {role.mention or entry.target.mention} with permissions {role.permissions} with reason: {entry.reason or None}",
-            color=0x00FF00
+            color= CREATED_COLOR
             )
         await self.send_dragon_logs(LogCategories.ROLE_CREATE, entry.guild, embed)
 
@@ -293,7 +296,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Role Updated",
             description=f"{entry.user.mention} created {role.mention or entry.target.mention} with reason: {entry.reason or None}",
-            color=0xFFFF00
+            color=CHANGED_COLOR
             )
         await self.send_dragon_logs(LogCategories.ROLE_UPDATE, entry.guild, embed)
 
@@ -304,7 +307,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Role Removed",
             description=f"{entry.user.mention} created {role or entry.target} with reason: {entry.reason or None}",
-            color=0xFF0000
+            color=DELETED_COLOR
             )
         await self.send_dragon_logs(LogCategories.ROLE_DELETE, entry.guild, embed)
 
@@ -322,7 +325,7 @@ class DragonLog(GroupCog):
             embed = discord.Embed(
                 title="Member Update",
                 description=f"{member} got updated with {differences} {diffs}",
-                color=0xFFFF00
+                color=CHANGED_COLOR
             )
         if not embed:
             return
@@ -340,7 +343,7 @@ class DragonLog(GroupCog):
             embed = discord.Embed(
                 title="Member Update",
                 description=f"{member} got updated with {differences} {diffs}",
-                color=0xFFFF00
+                color=CHANGED_COLOR
             )
         if not embed:
             return
@@ -351,7 +354,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Member Moved",
             description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
-            color=0xFFFF00
+            color=CHANGED_COLOR
             )
         await self.send_dragon_logs(LogCategories.MEMBER_MOVE, entry.guild, embed)
 
@@ -362,7 +365,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Member Joined",
             description=f"{member.mention} Joined the server",
-            color=0x00FF00
+            color= CREATED_COLOR
             )
         await self.send_dragon_logs(LogCategories.MEMBER_JOINED, member.guild, embed)
 
@@ -394,7 +397,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Message Edited",
             description=f"{before.author.mention} Edited a message",
-            color=0xFFFF00
+            color=CHANGED_COLOR
         )
         embed.add_field(name="Old", value=f"`{before.clean_content}`")
         embed.add_field(name="New", value=f"`{after.clean_content}`")
@@ -417,7 +420,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
-            color=0xFF0000
+            color=DELETED_COLOR
         )
 
         await self.send_dragon_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
@@ -438,7 +441,7 @@ class DragonLog(GroupCog):
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
-            color=0xFF0000
+            color=DELETED_COLOR
         )
 
         await self.send_dragon_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
@@ -458,202 +461,349 @@ class DragonLog(GroupCog):
 
     async def on_overwrite_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.OVERWRITE_CREATE, entry.guild, discord.Embed(title="overwrite create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.OVERWRITE_CREATE, entry.guild, discord.Embed(
+            title="Overwrite Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_overwrite_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.OVERWRITE_UPDATE, entry.guild, discord.Embed(title="overwrite update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.OVERWRITE_UPDATE, entry.guild, discord.Embed(
+            title="Overwrite Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_overwrite_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"On overwrite delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.OVERWRITE_DELETE, entry.guild, discord.Embed(title="overwrite delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.OVERWRITE_DELETE, entry.guild, discord.Embed(
+            title="Overwrite Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_kick(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on kick: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.KICK, entry.guild, discord.Embed(title="kick", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.KICK, entry.guild, discord.Embed(
+            title="Kick",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_member_prune(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on member_prune: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MEMBER_PRUNE, entry.guild, discord.Embed(title="member_prune", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.MEMBER_PRUNE, entry.guild, discord.Embed(
+            title="Member Prune",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_ban(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on ban: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.BAN, entry.guild, discord.Embed(title="ban", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.BAN, entry.guild, discord.Embed(
+            title="Ban",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_unban(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on unban: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.UNBAN, entry.guild, discord.Embed(title="unban", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.UNBAN, entry.guild, discord.Embed(
+            title="Unban",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_member_disconnect(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on member_disconnect: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MEMBER_DISCONNECT, entry.guild, discord.Embed(title="member_disconnect", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.MEMBER_DISCONNECT, entry.guild, discord.Embed(
+            title="Member Disconnect",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_bot_add(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on bot_add: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(title="bot_add", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(
+            title="Bot Add",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_invite_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on invite_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(title="invite_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(
+            title="Invite Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_webhook_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on webhook_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.WEBHOOK_CREATE, entry.guild, discord.Embed(title="webhook_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.WEBHOOK_CREATE, entry.guild, discord.Embed(
+            title="Webhook Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_webhook_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on webhook_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.WEBHOOK_UPDATE, entry.guild, discord.Embed(title="webhook_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.WEBHOOK_UPDATE, entry.guild, discord.Embed(
+            title="Webhook Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_webhook_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on webhook_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.WEBHOOK_DELETE, entry.guild, discord.Embed(title="webhook_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.WEBHOOK_DELETE, entry.guild, discord.Embed(
+            title="Webhook Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_emoji_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on emoji_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.EMOJI_CREATE, entry.guild, discord.Embed(title="emoji_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.EMOJI_CREATE, entry.guild, discord.Embed(
+            title="Emoji Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_emoji_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on emoji_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.EMOJI_UPDATE, entry.guild, discord.Embed(title="emoji_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.EMOJI_UPDATE, entry.guild, discord.Embed(
+            title="Emoji Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_emoji_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on emoji_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.EMOJI_DELETE, entry.guild, discord.Embed(title="emoji_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.EMOJI_DELETE, entry.guild, discord.Embed(
+            title="Emoji Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_message_pin(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on message_pin: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(title="message_pin", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(
+            title="Message Pin",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_message_unpin(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on message_unpin: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(title="message_unpin", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(
+            title="Message Unpin",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_integration_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on integration_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INTEGRATION_CREATE, entry.guild, discord.Embed(title="integration_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.INTEGRATION_CREATE, entry.guild, discord.Embed(
+            title="Integration Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_integration_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on integration_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INTEGRATION_UPDATE, entry.guild, discord.Embed(title="integration_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.INTEGRATION_UPDATE, entry.guild, discord.Embed(
+            title="Integration Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_integration_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on integration_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.INTEGRATION_DELETE, entry.guild, discord.Embed(title="integration_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.INTEGRATION_DELETE, entry.guild, discord.Embed(
+            title="Integration Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_stage_instance_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on stage_instance_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_CREATE, entry.guild, discord.Embed(title="stage_instance_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_CREATE, entry.guild, discord.Embed(
+            title="Stage Instance Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_stage_instance_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on stage_instance_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_UPDATE, entry.guild, discord.Embed(title="stage_instance_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_UPDATE, entry.guild, discord.Embed(
+            title="Stage Instance Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_stage_instance_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on stage_instance_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_DELETE, entry.guild, discord.Embed(title="stage_instance_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.STAGE_INSTANCE_DELETE, entry.guild, discord.Embed(
+            title="Stage Instance Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_sticker_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on sticker_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STICKER_CREATE, entry.guild, discord.Embed(title="sticker_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.STICKER_CREATE, entry.guild, discord.Embed(
+            title="Sticker Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_sticker_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on sticker_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STICKER_UPDATE, entry.guild, discord.Embed(title="sticker_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.STICKER_UPDATE, entry.guild, discord.Embed(
+            title="Sticker Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_sticker_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on sticker_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.STICKER_DELETE, entry.guild, discord.Embed(title="sticker_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.STICKER_DELETE, entry.guild, discord.Embed(
+            title="Sticker Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_scheduled_event_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on scheduled_event_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_CREATE, entry.guild, discord.Embed(title="scheduled_event_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_CREATE, entry.guild, discord.Embed(
+            title="Scheduled Event Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_scheduled_event_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on scheduled_event_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_UPDATE, entry.guild, discord.Embed(title="scheduled_event_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_UPDATE, entry.guild, discord.Embed(
+            title="Scheduled Event Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_scheduled_event_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on scheduled_event_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_DELETE, entry.guild, discord.Embed(title="scheduled_event_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.SCHEDULED_EVENT_DELETE, entry.guild, discord.Embed(
+            title="Scheduled Event Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_thread_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on thread_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.THREAD_CREATE, entry.guild, discord.Embed(title="thread_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.THREAD_CREATE, entry.guild, discord.Embed(
+            title="Thread Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_thread_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on thread_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.THREAD_UPDATE, entry.guild, discord.Embed(title="thread_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.THREAD_UPDATE, entry.guild, discord.Embed(
+            title="Thread Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_thread_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on thread_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.THREAD_DELETE, entry.guild, discord.Embed(title="thread_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.THREAD_DELETE, entry.guild, discord.Embed(
+            title="Thread Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_app_command_permission_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on app_command_permission_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.APP_COMMAND_PERMISSION_UPDATE, entry.guild, discord.Embed(title="app_command_permission_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.APP_COMMAND_PERMISSION_UPDATE, entry.guild, discord.Embed(
+            title="App Command Permission Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_automod_rule_create(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_rule_create: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_CREATE, entry.guild, discord.Embed(title="automod_rule_create", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_CREATE, entry.guild, discord.Embed(
+            title="Automod Rule Create",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CREATED_COLOR
+        ))
 
 
     async def on_automod_rule_update(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_rule_update: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_UPDATE, entry.guild, discord.Embed(title="automod_rule_update", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_UPDATE, entry.guild, discord.Embed(
+            title="Automod Rule Update",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=CHANGED_COLOR
+        ))
 
 
     async def on_automod_rule_delete(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_rule_delete: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_DELETE, entry.guild, discord.Embed(title="automod_rule_delete", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_RULE_DELETE, entry.guild, discord.Embed(
+            title="Automod Rule Delete",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
+            color=DELETED_COLOR
+        ))
 
 
     async def on_automod_block_message(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_block_message: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_BLOCK_MESSAGE, entry.guild, discord.Embed(title="automod_block_message", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_BLOCK_MESSAGE, entry.guild, discord.Embed(
+            title="Automod Block Message",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_automod_flag_message(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_flag_message: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_FLAG_MESSAGE, entry.guild, discord.Embed(title="automod_flag_message", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_FLAG_MESSAGE, entry.guild, discord.Embed(
+            title="Automod Flag Message",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def on_automod_timeout_member(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on automod_timeout_member: {entry.guild=}, {entry=}")
-        await self.send_dragon_logs(LogCategories.AUTOMOD_TIMEOUT_MEMBER, entry.guild, discord.Embed(title="automod_timeout_member", description=f"{entry}"))
+        await self.send_dragon_logs(LogCategories.AUTOMOD_TIMEOUT_MEMBER, entry.guild, discord.Embed(
+            title="Automod Timeout Member",
+            description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}"
+        ))
 
 
     async def generic_change(self, entry: discord.AuditLogEntry) -> None:
