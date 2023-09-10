@@ -18,7 +18,8 @@ from _types.bot import WinterDragon
 
 
 # TODO: Rewrite/cleanup
-# Rewrite using paginator modals
+# Rewrite using paginator modals, see https://github.com/Soheab/modal-paginator/blob/main/examples/verify_command.py
+
 class Help(Cog):
     @overload
     async def CreateHelpEmbed(
