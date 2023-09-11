@@ -4,6 +4,10 @@ from typing import overload
 
 import discord
 from discord.ext import commands
+from discord.ext.modal_paginator import (
+    PaginatorModal,
+    ModalPaginator as PageView
+)
 from discord.ui import Button, View
 from discord import app_commands
 
@@ -14,7 +18,8 @@ from _types.bot import WinterDragon
 
 
 # TODO: Rewrite/cleanup
-# Rewrite using paginator modals
+# Rewrite using paginator modals, see https://github.com/Soheab/modal-paginator/blob/main/examples/verify_command.py
+
 class Help(Cog):
     @overload
     async def CreateHelpEmbed(

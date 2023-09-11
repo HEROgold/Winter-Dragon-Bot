@@ -198,12 +198,9 @@ class Stats(GroupCog):
         await interaction.response.send_message(embed=embed)
 
 
-    @app_commands.command(
-        name="add",
-        description="This command will create the Stats category which will show some stats about the server."
-    )
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.command(name="add", description="This command will create the Stats category which will show some stats about the server.")
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
         _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_add)
         with Session(engine) as session:
@@ -216,10 +213,7 @@ class Stats(GroupCog):
                 await interaction.followup.send("Stats channels are set up")
 
 
-    @app_commands.command(
-        name="remove",
-        description="This command removes the stat channels. Including the Category and all channels in there."
-    )
+    @app_commands.command(name="remove", description="This command removes the stat channels. Including the Category and all channels in there.")
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
@@ -251,6 +245,7 @@ class Stats(GroupCog):
                 await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
                 self.logger.info(f"Reset stats for: {guild}")
         await interaction.response.send_message("Reset all server stat channels", ephemeral=True)
+
 
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Stats(bot))

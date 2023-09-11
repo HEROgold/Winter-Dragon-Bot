@@ -13,7 +13,7 @@ from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 
 
-# FIXME: Find out what doesn't work
+# FIXME: Find out what doesn't work: Module is broken
 class Image(GroupCog):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -57,7 +57,10 @@ class Image(GroupCog):
 
     @app_commands.checks.cooldown(3, 360)
     @app_commands.command(name = "generate",description = "Request an AI to make an image, and when its done get it send to you")
-    async def slash_image_generate(self, interaction:discord.Interaction, *, query:str) -> None:
+    async def slash_image_generate(self, interaction: discord.Interaction, *, query: str) -> None:
+        await interaction.response.send_message("This functionality is currently broken.", ephemeral=True)
+        return
+
         dm = await interaction.user.create_dm()
         await interaction.response.send_message("Creating images, please be patient.", ephemeral=True)
         self.logger.debug(f"Requesting images for {interaction.user} with query {query}")
