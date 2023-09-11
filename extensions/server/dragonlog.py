@@ -354,21 +354,18 @@ class DragonLog(GroupCog):
         if before.voice != after.voice:
             self.logger.critical(f"{before.voice=}, {after.voice=}")
 
-        update_message = f"{member.mention} got updated with {differences} "
-        update_message += self.get_member_role_difference(before, after)
-        update_message += self.get_username_difference(before, after)
-
-        embed = None
         properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
         if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
+            update_message = f"{member.mention} got updated with {differences} "
+            update_message += self.get_member_role_difference(before, after)
+            update_message += self.get_username_difference(before, after)
+
             embed = discord.Embed(
                 title="Member Update",
                 description=update_message,
                 color=CHANGED_COLOR
             )
-        if not embed:
-            return
-        await self.send_dragon_logs(LogCategories.MEMBER_UPDATE, member.guild, embed)
+            await self.send_dragon_logs(LogCategories.MEMBER_UPDATE, member.guild, embed)
 
 
     async def audit_member_update(self, entry: discord.AuditLogEntry) -> None:
