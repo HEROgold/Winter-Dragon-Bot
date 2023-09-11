@@ -4,10 +4,10 @@ from typing import overload
 
 import discord
 from discord.ext import commands
-from discord.ext.modal_paginator import (
-    PaginatorModal,
-    ModalPaginator as PageView
-)
+# from discord.ext.modal_paginator import (
+#     PaginatorModal,
+#     ModalPaginator as PageView
+# )
 from discord.ui import Button, View
 from discord import app_commands
 
