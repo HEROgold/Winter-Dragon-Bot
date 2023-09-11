@@ -355,7 +355,7 @@ class DragonLog(GroupCog):
             self.logger.critical(f"{before.voice=}, {after.voice=}")
 
         changed_msg = f"{member.mention} got updated with {differences} "
-        changed_msg += self.get_memberrole_difference(before, after)
+        changed_msg += self.get_member_role_difference(before, after)
         changed_msg += self.get_username_difference(before, after)
 
         embed = None
