@@ -27,8 +27,7 @@ CREATED_COLOR = 0x00FF00
 CHANGED_COLOR = 0xFFFF00
 DELETED_COLOR = 0xff0000
 
-# TODO: Remove all listeners in favor for the on_guild_entry_create
-# instead, of above line, keep both separate
+
 class LogChannels(GroupCog):
 
 # ----------------------
