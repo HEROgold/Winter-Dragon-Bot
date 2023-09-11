@@ -410,7 +410,7 @@ class DragonLog(GroupCog):
             title="Member Moved",
             description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
             color=CHANGED_COLOR
-            )
+        )
         await self.send_dragon_logs(LogCategories.MEMBER_MOVE, entry.guild, embed)
 
 
@@ -421,7 +421,7 @@ class DragonLog(GroupCog):
             title="Member Joined",
             description=f"{member.mention} Joined the server",
             color= CREATED_COLOR
-            )
+        )
         await self.send_dragon_logs(LogCategories.MEMBER_JOINED, member.guild, embed)
 
 
