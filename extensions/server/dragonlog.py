@@ -24,6 +24,35 @@ DELETED_COLOR = 0xff0000
 # instead, of above line, keep both separate
 class DragonLog(GroupCog):
 
+# ----------------------
+# Helper Functions Start
+# ----------------------
+
+    def get_log_category(self, category_channels: list[CategoryChannel], current_count: int) -> CategoryChannel:
+        channel_locator, _ = divmod(current_count, MAX_CATEGORY_SIZE)
+        category_channel = category_channels[channel_locator]
+        self.logger.debug(f"{category_channels=}, {channel_locator=}")
+
+        if channel_locator + len(category_channel.channels) > 50:
+            channel_location = (len(category_channel.channels) + channel_locator)
+            return self.get_log_category(category_channels, channel_location)
+        return category_channel
+
+
+    def get_member_role_difference(self, before: discord.Member, after: discord.Member) -> list[str]:
+        role_diff_add = [role.mention for role in after.roles if role not in before.roles]
+        role_diff_rem = [role.mention for role in after.roles if role in before.roles]
+        return role_diff_add + role_diff_rem
+
+
+    def get_username_difference(self, before: discord.Member, after: discord.Member) -> str | None:
+        return (
+            after.display_name
+            if after.display_name != before.display_name
+            else None
+        )
+
+
     async def send_dragon_logs(
         self,
         log_category: Optional[LogCategories],
@@ -90,7 +119,7 @@ class DragonLog(GroupCog):
         self.logger.debug(f"Send logs to {log_channel_name=}")
 
 
-    def get_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
+    def get_entry_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
         diffs = []
         for change1, change2 in zip(entry.changes.before, entry.changes.after):
             diff = [c1 or c2 for c1, c2 in itertools.zip_longest(change1[1], change2[1])]
@@ -120,7 +149,13 @@ class DragonLog(GroupCog):
                 color=DELETED_COLOR,
             )
 
-# ENTRIES START
+# ----------------------
+# Helper Functions End
+# ----------------------
+
+# -------------
+# Entries Start
+# -------------
 
     @Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
@@ -314,17 +349,21 @@ class DragonLog(GroupCog):
 
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
-        member = before or after
+        member = after or before
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
         if before.voice != after.voice:
             self.logger.critical(f"{before.voice=}, {after.voice=}")
-        diffs = [role.mention for role in after.roles if role not in before.roles]
+
+        changed_msg = f"{member.mention} got updated with {differences} "
+        changed_msg += self.get_memberrole_difference(before, after)
+        changed_msg += self.get_username_difference(before, after)
+
         embed = None
         properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
         if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
             embed = discord.Embed(
                 title="Member Update",
-                description=f"{member} got updated with {differences} {diffs}",
+                description=changed_msg,
                 color=CHANGED_COLOR
             )
         if not embed:
@@ -336,7 +375,7 @@ class DragonLog(GroupCog):
         member: discord.Member = entry.target
         self.logger.debug(f"On member update: guild='{member.guild}', member='{member}'")
         
-        diffs = self.get_role_difference(entry)
+        diffs = self.get_entry_role_difference(entry)
         embed = None
         properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
         if differences := [prop for prop in properties if getattr(entry, prop) != getattr(entry, prop)]:
@@ -860,9 +899,13 @@ class DragonLog(GroupCog):
             embed.add_field(name="\u200b", value="\u200b", inline=False)
         await self.send_dragon_logs(None, entry.guild, embed)
 
+# ------------
+# Entries End
+# ------------
 
-# ENTRIES END
-# COMMANDS START
+# ---------------
+# Commands Start
+# ---------------
 
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
@@ -1066,19 +1109,9 @@ class DragonLog(GroupCog):
             session.commit()
         return category_channels
 
-
-    def get_log_category(self, category_channels: list[CategoryChannel], current_count: int) -> CategoryChannel:
-        channel_locator, _ = divmod(current_count, MAX_CATEGORY_SIZE)
-        category_channel = category_channels[channel_locator]
-        self.logger.debug(f"{category_channels=}, {channel_locator=}")
-
-        if channel_locator + len(category_channel.channels) > 50:
-            channel_location = (len(category_channel.channels) + channel_locator)
-            return self.get_log_category(category_channels, channel_location)
-        return category_channel
-
-
-# COMMANDS END
+# ------------
+# Commands End
+# ------------
 
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(DragonLog(bot))
