@@ -362,8 +362,10 @@ class DragonLog(GroupCog):
             ]
         ):
             update_message = f"{member.mention} got updated with {differences} "
-            update_message += self.get_member_role_difference(before, after)
-            update_message += self.get_username_difference(before, after)
+            if "nick" in differences:
+                update_message += self.get_username_difference(before, after)
+            if "roles" in differences:
+                update_message += self.get_member_role_difference(before, after)
 
             embed = discord.Embed(
                 title="Member Update",
