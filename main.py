@@ -43,10 +43,6 @@ def setup_logging(logger: logging.Logger, filename: str) -> None:
     logger.addHandler(handler)
 
 
-# if config["Main"]["custom_help"]:
-    # bot.remove_command("help")
-
-
 @bot.event
 async def on_ready() -> None:
     print("Bot is running!")

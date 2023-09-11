@@ -291,5 +291,8 @@ class Dropdown(discord.ui.Select):
 
 
 async def setup(bot: WinterDragon) -> None:
+    if config["Main"]["custom_help"]:
+        bot.remove_command("help")
+
     await bot.add_cog(Help(bot))
     # await bot.add_cog(CopiedDropdownHelp(bot))
