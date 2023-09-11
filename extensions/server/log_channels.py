@@ -7,7 +7,7 @@ from discord.ext import commands
 
 from tools.config_reader import config
 from tools.database_tables import Channel, engine, Session
-from enums.dragonlog import LogCategories
+from enums.log_channels import LogCategories
 from tools.msg_checks import is_tic_tac_toe
 from _types.cogs import Cog, GroupCog
 from _types.bot import WinterDragon
