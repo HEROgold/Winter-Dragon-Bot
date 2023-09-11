@@ -53,7 +53,7 @@ class LogChannels(GroupCog):
 
     def get_username_difference(self, before: discord.Member, after: discord.Member) -> str | None:
         return (
-            after.display_name
+            f"from {before.display_name} to {after.display_name}"
             if after.display_name != before.display_name
             else None
         )
