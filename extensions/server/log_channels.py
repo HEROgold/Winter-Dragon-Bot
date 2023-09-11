@@ -1025,7 +1025,10 @@ class LogChannels(GroupCog):
                     if dc_channel is None:
                         dc_channel = discord.utils.get(interaction.guild.channels, id=channel.id)
                         self.logger.debug(f"utils.get {dc_channel=}")
-                    await dc_channel.delete()
+                    try:
+                        await dc_channel.delete()
+                    except AttributeError:
+                        pass
                     session.delete(channel)
                 except AttributeError as e:
                     self.logger.debug(f"{dc_channel=}")
