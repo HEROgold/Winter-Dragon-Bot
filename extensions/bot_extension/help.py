@@ -4,10 +4,10 @@ from typing import overload
 
 import discord
 from discord.ext import commands
-from discord.ext.modal_paginator import (
-    PaginatorModal,
-    ModalPaginator as PageView
-)
+# from discord.ext.modal_paginator import (
+#     PaginatorModal,
+#     ModalPaginator as PageView
+# )
 from discord.ui import Button, View
 from discord import app_commands
 
@@ -54,14 +54,14 @@ class Help(Cog):
                 description="Description and explanation of all commands",
                 color=random.choice(rainbow.RAINBOW),)
 
-            min_per_page = help_input * config.Help.PAGE_MAX - config.Help.PAGE_MAX
-            max_per_page = min_per_page + config.Help.PAGE_MAX
+            min_per_page = help_input * config["Help"]["PAGE_MAX"] - config["Help"]["PAGE_MAX"]
+            max_per_page = min_per_page + config["Help"]["PAGE_MAX"]
 
             for i, command in enumerate(commands_list):
                 if i > min_per_page and i <= max_per_page:
                     embed.add_field(name=command.name, value=command.description, inline=True)
                 elif i <= max_per_page:
-                    last_page = ceil((i + 1) / config.Help.PAGE_MAX)
+                    last_page = ceil((i + 1) / config["Help"]["PAGE_MAX"])
                     embed.set_footer(text=f"No more commands to display. Last page is: Help {last_page}")
                 else:
                     embed.set_footer(text=f"More commands on other pages. Try: Help {page_number+1}")
@@ -109,8 +109,22 @@ class Help(Cog):
         return view
 
 
-    @app_commands.command(name="help", description="Get information about commands!")
+    async def cog_load(self) -> None:
+        if config["Main"]["custom_help"]:
+            self.bot.remove_command("help")
+            # self.bot.add_command(self.slash_help)
+        return await super().cog_load()
+
+
+    async def cog_unload(self) -> None:
+        if config["Main"]["custom_help"]:
+            # self.bot.remove_command(self.slash_help)
+            self.bot.add_command("help")
+        return await super().cog_unload()
+
+
     @app_commands.checks.cooldown(1, 5)
+    @app_commands.command(name="help", description="Get information about commands!")
     async def slash_help(
         self,
         interaction: discord.Interaction,
@@ -185,7 +199,7 @@ class Help(Cog):
             embed, view = await self.CreateHelpEmbed(help_input=help_input, commands_list=commands_list)
             button_left.label = f"Help {help_input-1}"
             button_right.label = f"Help {help_input+1}"
-            more_than_max = (help_input * config.Help.PAGE_MAX) >= len(commands_list)
+            more_than_max = (help_input * config["Help"]["PAGE_MAX"]) >= len(commands_list)
             self.logger.debug(f"Checking HelpInput values: {help_input}")
             if help_input > 1 and not more_than_max:
                 new_view = await self.UpdateView(view, button_left, button_right)
@@ -291,8 +305,5 @@ class Dropdown(discord.ui.Select):
 
 
 async def setup(bot: WinterDragon) -> None:
-    if config["Main"]["custom_help"]:
-        bot.remove_command("help")
-
     await bot.add_cog(Help(bot))
     # await bot.add_cog(CopiedDropdownHelp(bot))
