@@ -15,6 +15,13 @@ from _types.bot import WinterDragon
 
 LOGS = "logs"
 LOG_CATEGORY = "LOG-CATEGORY"
+MEMBER_UPDATE_PROPERTIES = [
+    "nick",
+    "roles",
+    "pending",
+    "guild_avatar",
+    "guild_permissions",
+]
 MAX_CATEGORY_SIZE = 50
 CREATED_COLOR = 0x00FF00
 CHANGED_COLOR = 0xFFFF00
@@ -354,10 +361,9 @@ class DragonLog(GroupCog):
         if before.voice != after.voice:
             self.logger.critical(f"{before.voice=}, {after.voice=}")
 
-        properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
         if (
             differences := [
-                prop for prop in properties 
+                prop for prop in MEMBER_UPDATE_PROPERTIES 
                 if getattr(before, prop) != getattr(after, prop)
             ]
         ):
@@ -379,18 +385,24 @@ class DragonLog(GroupCog):
         member: discord.Member = entry.target
         self.logger.debug(f"On member update: guild='{member.guild}', member='{member}'")
         
-        diffs = self.get_entry_role_difference(entry)
-        embed = None
-        properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
-        if differences := [prop for prop in properties if getattr(entry, prop) != getattr(entry, prop)]:
+        if (
+            differences := [
+                prop for prop in MEMBER_UPDATE_PROPERTIES
+                if getattr(entry, prop) != getattr(entry, prop)
+            ]
+        ):
+            update_message = f"{member.mention} got updated with {differences} "
+            if "nick" in differences:
+                update_message += member.display_name
+            if "roles" in differences:
+                update_message += self.get_entry_role_difference(entry)
+
             embed = discord.Embed(
                 title="Member Update",
-                description=f"{member} got updated with {differences} {diffs}",
+                description=update_message,
                 color=CHANGED_COLOR
             )
-        if not embed:
-            return
-        await self.send_dragon_logs(LogCategories.MEMBER_UPDATE, member.guild, embed)
+            await self.send_dragon_logs(LogCategories.MEMBER_UPDATE, member.guild, embed)
 
 
     async def on_member_move(self, entry: discord.AuditLogEntry) -> None:
