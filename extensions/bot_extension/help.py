@@ -109,6 +109,20 @@ class Help(Cog):
         return view
 
 
+    async def cog_load(self) -> None:
+        if config["Main"]["custom_help"]:
+            self.bot.remove_command("help")
+            self.bot.add_command(self.slash_help)
+        return await super().cog_load()
+
+
+    async def cog_unload(self) -> None:
+        if config["Main"]["custom_help"]:
+            self.bot.remove_command(self.slash_help)
+            self.bot.add_command("help")
+        return await super().cog_unload()
+
+
     @app_commands.command(name="help", description="Get information about commands!")
     @app_commands.checks.cooldown(1, 5)
     async def slash_help(
@@ -291,8 +305,5 @@ class Dropdown(discord.ui.Select):
 
 
 async def setup(bot: WinterDragon) -> None:
-    if config["Main"]["custom_help"]:
-        bot.remove_command("help")
-
     await bot.add_cog(Help(bot))
     # await bot.add_cog(CopiedDropdownHelp(bot))
