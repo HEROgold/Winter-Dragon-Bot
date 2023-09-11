@@ -355,7 +355,12 @@ class DragonLog(GroupCog):
             self.logger.critical(f"{before.voice=}, {after.voice=}")
 
         properties = "nick", "roles", "pending", "guild_avatar", "guild_permissions"
-        if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
+        if (
+            differences := [
+                prop for prop in properties 
+                if getattr(before, prop) != getattr(after, prop)
+            ]
+        ):
             update_message = f"{member.mention} got updated with {differences} "
             update_message += self.get_member_role_difference(before, after)
             update_message += self.get_username_difference(before, after)
