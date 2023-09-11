@@ -132,6 +132,12 @@ class CogsC(GroupCog):
                     ephemeral=True
                 )
                 self.logger.exception(e)
+            except ModuleNotFoundError as e:
+                await interaction.response.send_message(
+                    f"Could not find {extension}, {e}",
+                    ephemeral=True
+                )
+                self.logger.warning(e)
             except Exception as e:
                 self.logger.exception(f"unable to unload {extension}, {e}")
                 await interaction.response.send_message(
