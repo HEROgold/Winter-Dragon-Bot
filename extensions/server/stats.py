@@ -248,18 +248,28 @@ class Stats(GroupCog):
     @commands.is_owner()
     async def reset_stats(self, interaction:discord.Interaction) -> None:
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
+        await interaction.response.defer(ephemeral=True)
+        
         with Session(engine) as session:
-            result = session.query(Channel).where(Channel.guild_id == interaction.guild.id and Channel.type == STATS)
-            for channel in result.all():
+            channels = session.query(Channel).where(
+                Channel.guild_id == interaction.guild.id,
+                Channel.type == STATS
+            ).all()
+
+            seen = []
+
+            for channel in channels:
                 guild_id = channel.guild_id
-                guild = discord.utils.get(self.bot.guilds, id=guild_id)
-                if not guild:
-                    self.logger.debug(f"skipping reset of {guild_id}")
+                if guild_id in seen:
+                    self.logger.debug(f"already updated {guild_id}")
                     continue
+
+                guild = discord.utils.get(self.bot.guilds, id=guild_id)
+                seen.append(guild_id)
                 await self.remove_stats_channels(guild=guild, reason="Resetting all stats channels")
                 await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
                 self.logger.info(f"Reset stats for: {guild}")
-        await interaction.response.send_message("Reset all server stat channels", ephemeral=True)
+        await interaction.followup.send("Reset all server stat channels")
 
 
 async def setup(bot: WinterDragon) -> None:
