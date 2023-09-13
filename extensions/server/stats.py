@@ -151,7 +151,6 @@ class Stats(GroupCog):
             self.logger.info(f"Updated stat channels: guild='{guild}'")
 
 
-    # TODO: transform to fetch sql
     async def get_guild_stats_channels(
         self, guild: discord.Guild
     ) -> tuple[
