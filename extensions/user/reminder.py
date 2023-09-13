@@ -44,10 +44,7 @@ class Reminder(Cog):
         await self.bot.wait_until_ready()
 
 
-    @app_commands.command(
-        name="remind",
-        description = "Set a reminder for yourself!",
-        )
+    @app_commands.command(name="remind", description = "Set a reminder for yourself!",)
     async def slash_reminder(
         self,
         interaction: discord.Interaction,
