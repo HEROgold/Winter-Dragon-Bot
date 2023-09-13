@@ -41,8 +41,8 @@ class WinterDragon(AutoShardedBot):
 
     # TODO: on_error, and on_command_error might need to log errors to own log
     async def on_error(self, event_method: str, /, *args: Any, **kwargs: Any) -> None:
-        return super().on_error(event_method, *args, **kwargs)
+        return await super().on_error(event_method, *args, **kwargs)
     
     async def on_command_error(self, context: Context[BotT], exception: CommandError) -> None:
-        return super().on_command_error(context, exception)
+        return await super().on_command_error(context, exception)
 
