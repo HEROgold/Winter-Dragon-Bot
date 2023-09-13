@@ -131,7 +131,7 @@ class Stats(GroupCog):
             except ValueError:
                 peak_count = 0
 
-            reason_update = "Stats update"
+            reason_update = "Updating Stats channels"
             online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
             if ((new_name := f"Online Users: {online}") != online_channel.name):
                 await online_channel.edit(name=new_name, reason=reason_update)
