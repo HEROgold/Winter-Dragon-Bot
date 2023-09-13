@@ -141,7 +141,7 @@ class Stats(GroupCog):
                 await user_channel.edit(name=new_name, reason=reason_update)
 
             bots = sum(member.bot == True for member in guild.members)
-            if ((new_name := f"Online Bots: {bots}") != bot_channel.name):
+            if ((new_name := f"Total Bots: {bots}") != bot_channel.name):
                 await bot_channel.edit(name=new_name, reason=reason_update)
 
             age = guild.created_at.strftime("%Y-%m-%d")
