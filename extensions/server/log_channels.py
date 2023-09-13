@@ -495,11 +495,15 @@ class LogChannels(GroupCog):
         if message.clean_content == "":
             return
 
-        description = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
+        description = f"Deleted message send by {message.author.mention} with reason {entry.reason or None}"
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
             color=DELETED_COLOR
+        )
+        embed.add_field(
+            name="Content",
+            value=f"`{message.clean_content}`"
         )
 
         await self.send_channel_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
