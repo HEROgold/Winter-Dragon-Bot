@@ -407,7 +407,7 @@ class LogChannels(GroupCog):
     async def on_member_move(self, entry: discord.AuditLogEntry) -> None:
         embed = discord.Embed(
             title="Member Moved",
-            description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
+            description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel.mention}",
             color=CHANGED_COLOR
         )
         await self.send_channel_logs(LogCategories.MEMBER_MOVE, entry.guild, embed)
@@ -470,11 +470,15 @@ class LogChannels(GroupCog):
         if message.clean_content == "":
             return
 
-        description = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
+        description = f"Deleted message send by {message.author.mention}" # with reason {message.reason or None}
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
             color=DELETED_COLOR
+        )
+        embed.add_field(
+            name="Content",
+            value=f"`{message.clean_content}`"
         )
 
         await self.send_channel_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
