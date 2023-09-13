@@ -9,6 +9,8 @@ from discord.ext.commands.context import Context
 from discord.ext.commands.help import HelpCommand
 
 
+# TODO: add explicit connector see:
+# FIXME: https://discord.com/channels/336642139381301249/1150903023091060746/1150919294864072784
 class WinterDragon(AutoShardedBot):
     """
     WinterDragon is a subclass of AutoShardedBot that represents a bot with additional attributes and methods specific to the Winter Dragon bot.
@@ -39,8 +41,8 @@ class WinterDragon(AutoShardedBot):
 
     # TODO: on_error, and on_command_error might need to log errors to own log
     async def on_error(self, event_method: str, /, *args: Any, **kwargs: Any) -> None:
-        return super().on_error(event_method, *args, **kwargs)
+        return await super().on_error(event_method, *args, **kwargs)
     
     async def on_command_error(self, context: Context[BotT], exception: CommandError) -> None:
-        return super().on_command_error(context, exception)
+        return await super().on_command_error(context, exception)
 

@@ -174,8 +174,8 @@ class LogChannels(GroupCog):
             actions = {
                     enum.guild_update: self.on_guild_update,
                     enum.channel_create: self.on_guild_channel_create,
-                    enum.channel_update: self.on_guild_channel_delete,
-                    enum.channel_delete: self.on_guild_channel_update,
+                    enum.channel_update: self.on_guild_channel_update,
+                    enum.channel_delete: self.on_guild_channel_delete,
                     enum.overwrite_create: self.on_overwrite_create,
                     enum.overwrite_update: self.on_overwrite_update,
                     enum.overwrite_delete: self.on_overwrite_delete,
@@ -407,7 +407,7 @@ class LogChannels(GroupCog):
     async def on_member_move(self, entry: discord.AuditLogEntry) -> None:
         embed = discord.Embed(
             title="Member Moved",
-            description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel}",
+            description=f"{entry.user.mention} Moved {entry.target.mention} to {entry.target.channel.mention}",
             color=CHANGED_COLOR
         )
         await self.send_channel_logs(LogCategories.MEMBER_MOVE, entry.guild, embed)
@@ -459,22 +459,26 @@ class LogChannels(GroupCog):
 
 
     @Cog.listener()
-    async def on_message_delete(self, message: discord.Message) -> None:
+    async def on_message_delete(self, message: discord.Message, reason: str = None) -> None:
         if isinstance(message, discord.Message):
             message = message
         else:
-            self.logger.warning(f"got {type(message)} from {message}, where expected discord.AuditLogEntry.")
+            self.logger.warning(f"got {type(message)} from {message}, where expected discord.Message.")
             return
 
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
             return
 
-        description = f"Deleted message `{message.clean_content}`, send by {message.author.mention}" # with reason {message.reason or None}
+        description = f"Deleted message send by {message.author.mention} with reason {reason}"
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
             color=DELETED_COLOR
+        )
+        embed.add_field(
+            name="Content",
+            value=f"`{message.clean_content}`"
         )
 
         await self.send_channel_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
@@ -484,21 +488,9 @@ class LogChannels(GroupCog):
         if entry != discord.AuditLogEntry:
             self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry.")
             return
-
+        
         message: discord.Message = entry.target
-
-        self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
-        if message.clean_content == "":
-            return
-
-        description = f"{entry.user.mention or None} Deleted message `{message.clean_content}`, send by {message.author.mention} with reason {entry.reason or None}"
-        embed = discord.Embed(
-            title="Message Deleted",
-            description=description,
-            color=DELETED_COLOR
-        )
-
-        await self.send_channel_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
+        await self.on_message_delete(message, entry.reason)
 
         # artifacts from audit log
         if entry.action == entry.action.message_delete:
@@ -658,25 +650,41 @@ class LogChannels(GroupCog):
 
 
     async def on_message_pin(self, entry: discord.AuditLogEntry) -> None:
-        # TODO: remove entry.target and entry.target.type from pins
-        # find out other way to mention/show pinned message
         self.logger.debug(f"on message_pin: {entry.guild=}, {entry=}")
-        await self.send_channel_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(
+        channel = entry.extra.channel
+        embed = discord.Embed(
             title="Message Pin",
-            description=f"{entry.user.mention} Pinned {entry.target.type} {entry.target} with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Pinned {entry.target.mention}`s message with reason {entry.reason or None}",
             color=CREATED_COLOR
-        ))
+        )
+        embed.add_field(
+            name="Channel",
+            value=channel.mention
+        )
+        embed.add_field(
+            name="Message",
+            value=channel.get_partial_message(entry.extra.message_id).jump_url
+        )
+        await self.send_channel_logs(LogCategories.MESSAGE_PIN, entry.guild, embed)
 
 
     async def on_message_unpin(self, entry: discord.AuditLogEntry) -> None:
-        # TODO: remove entry.target and entry.target.type from pins
-        # find out other way to mention/show pinned message
         self.logger.debug(f"on message_unpin: {entry.guild=}, {entry=}")
-        await self.send_channel_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(
+        channel = entry.extra.channel
+        embed = discord.Embed(
             title="Message Unpin",
-            description=f"{entry.user.mention} Unpinned {entry.target.type} {entry.target} with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Un-Pinned {entry.target.mention}`s message with reason {entry.reason or None}",
             color=DELETED_COLOR
-        ))
+        )
+        embed.add_field(
+            name="Channel",
+            value=channel.mention
+        )
+        embed.add_field(
+            name="Message",
+            value=channel.get_partial_message(entry.extra.message_id).jump_url
+        )
+        await self.send_channel_logs(LogCategories.MESSAGE_UNPIN, entry.guild, embed)
 
 # -----------------------------------------
 # TODO: Add Unique msg for each function
