@@ -1,7 +1,6 @@
 import random
 
 import discord
-import sqlalchemy
 from discord import app_commands
 from discord.ext import commands, tasks
 
@@ -85,22 +84,21 @@ class Stats(GroupCog):
         reason: str = None
     ) -> None:
         with Session(engine) as session:
-            results = session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == STATS)
-            channels = results.all()
-            self.logger.debug(f"{channels=}, {results=}")
+            channels = session.query(Channel).where(
+                Channel.guild_id == guild.id,
+                Channel.type == STATS
+            ).all()
+            self.logger.debug(f"{channels=}")
             self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
             for db_channel in channels:
-                self.logger.debug(f"{db_channel}")
+                self.logger.debug(f"removing {db_channel}")
                 try:
                     channel = discord.utils.get(guild.channels, id=db_channel.id)
                     await channel.delete(reason=reason)
                 except AttributeError as e:
                     self.logger.exception(e)
                 finally:
-                    session.execute(sqlalchemy.delete(Channel).where(
-                        Channel.guild_id == guild.id,
-                        Channel.type == STATS
-                    ))
+                    session.delete(db_channel)
             session.commit()
 
 
@@ -163,19 +161,19 @@ class Stats(GroupCog):
         discord.VoiceChannel,
         discord.VoiceChannel,
     ]:
-        guild_id: dict = self.data[str(guild.id)]
-        category: dict = list(guild_id.values())[0]
-        channels = list(category.values())[0]
-        user_channel_id = channels["user_channel"]
-        online_channel_id = channels["online_channel"]
-        bot_channel_id = channels["bot_channel"]
-        peak_channel_id = channels["peak_online"]
-        guild_channel_id = channels["guild_channel"]
-        peak_channel = guild.get_channel(peak_channel_id) or await guild.fetch_channel(peak_channel_id)
-        guild_channel = guild.get_channel(guild_channel_id) or await guild.fetch_channel(guild_channel_id)
-        bot_channel = guild.get_channel(bot_channel_id) or await guild.fetch_channel(bot_channel_id)
-        user_channel = guild.get_channel(user_channel_id) or await guild.fetch_channel(user_channel_id)
-        online_channel = guild.get_channel(online_channel_id) or await guild.fetch_channel(online_channel_id)
+        with Session(engine) as session:
+            channels = session.query(Channel).where(
+                Channel.type == STATS,
+                Channel.guild_id == guild.id
+            ).all()
+            for channel in channels:
+                match channel.name:
+                    case "user_channel": user_channel = guild.get_channel(channel.id)
+                    case "online_channel": online_channel = guild.get_channel(channel.id)
+                    case "bot_channel": bot_channel = guild.get_channel(channel.id)
+                    case "peak_online": peak_channel = guild.get_channel(channel.id)
+                    case "guild_channel": guild_channel = guild.get_channel(channel.id)
+                    case _: raise ValueError(f"Unexpected channel {channel}")
         return peak_channel, guild_channel, bot_channel, user_channel, online_channel
 
 
@@ -204,13 +202,18 @@ class Stats(GroupCog):
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
         _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_add)
         with Session(engine) as session:
-            result = session.execute(sqlalchemy.select(Channel).where(Channel.guild_id == interaction.guild.id, Channel.type == STATS))
-            if result.all():
+            if (
+                session.query(Channel).where(
+                    Channel.guild_id == interaction.guild.id,
+                    Channel.type == STATS
+                ).all()
+            ):
                 await interaction.response.send_message("Stats channels already set up", ephemeral=True)
-            else:
-                await interaction.response.defer(ephemeral=True)
-                await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
-                await interaction.followup.send("Stats channels are set up")
+                return
+
+            await interaction.response.defer(ephemeral=True)
+            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
+            await interaction.followup.send("Stats channels are set up")
 
 
     @app_commands.command(name="remove", description="This command removes the stat channels. Including the Category and all channels in there.")
@@ -218,8 +221,11 @@ class Stats(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
-            result = session.execute(sqlalchemy.select(Channel).where(Channel.guild_id == interaction.guild.id, Channel.type == STATS))
-            if not result.all():
+            channels = session.query(Channel).where(
+                Channel.guild_id == interaction.guild.id,
+                Channel.type == STATS
+            ).all()
+            if not channels:
                 await interaction.response.send_message("No stats channels found to remove.", ephemeral=True)
                 return
         _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_remove)
