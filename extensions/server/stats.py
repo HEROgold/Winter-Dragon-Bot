@@ -58,12 +58,12 @@ class Stats(GroupCog):
         guild_channel = await category.create_voice_channel(name="Created On:", reason=reason)
 
         channels: dict[str, discord.abc.GuildChannel] = {
-            "category_channel": category,
             "online_channel": online_channel,
             "user_channel": user_channel,
             "bot_channel": bot_channel,
             "guild_channel": guild_channel,
-            "peak_channel" : peak_channel
+            "peak_channel" : peak_channel,
+            "category_channel": category
         }
 
         with Session(engine) as session:
