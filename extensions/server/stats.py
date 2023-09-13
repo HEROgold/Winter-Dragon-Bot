@@ -102,10 +102,15 @@ class Stats(GroupCog):
             session.commit()
 
 
+    async def cog_load(self) -> None:
+        self.update.start()
+
+
     @tasks.loop(seconds=3600)
     async def update(self) -> None:  # sourcery skip: low-code-quality
         # Note: keep for loop with if.
         # because fetching guild won't let the bot get members from guild.
+        self.logger.info("Updating all stat channels")
         guilds = self.bot.guilds
         for guild in guilds:
             with Session(engine) as session:
@@ -147,7 +152,7 @@ class Stats(GroupCog):
             if ((new_name := f"Peak Online: {peak_online}") != peak_channel.name):
                 await peak_channel.edit(name=new_name, reason=reason_update)
 
-            self.logger.debug(f"Channels Stats: {peak_online},{users}, {bots}, {online},  {age}, {list(guild.members)}")
+            self.logger.debug(f"Channels Stats: {peak_online},{users}, {bots}, {online},  {age}, {len(list(guild.members))}")
             self.logger.info(f"Updated stat channels: guild='{guild}'")
 
 
@@ -166,13 +171,18 @@ class Stats(GroupCog):
                 Channel.guild_id == guild.id
             ).all()
             for channel in channels:
+                self.logger.debug(f"check if stats channel: {channel=}")
                 match channel.name:
                     case "user_channel": user_channel = guild.get_channel(channel.id)
                     case "online_channel": online_channel = guild.get_channel(channel.id)
                     case "bot_channel": bot_channel = guild.get_channel(channel.id)
-                    case "peak_online": peak_channel = guild.get_channel(channel.id)
+                    case "peak_channel": peak_channel = guild.get_channel(channel.id)
                     case "guild_channel": guild_channel = guild.get_channel(channel.id)
-                    case _: raise ValueError(f"Unexpected channel {channel}")
+                    case "category_channel": continue
+                    case _: 
+                        self.logger.debug(f"not a stats channel: {channel}")
+                        raise ValueError(f"Unexpected channel {channel.name}")
+        self.logger.debug(f"Returning stat channels, {peak_channel, guild_channel, bot_channel, user_channel, online_channel}")
         return peak_channel, guild_channel, bot_channel, user_channel, online_channel
 
 
