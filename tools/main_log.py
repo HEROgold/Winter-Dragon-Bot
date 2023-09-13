@@ -27,6 +27,7 @@ class Logs:
         self.setup_logging(self.bot_logger, "bot.log")
         self.setup_logging(self.discord_logger, "discord.log")
         self.bot_logger.addHandler(logging.StreamHandler())
+        self.daily_save_logs.start()
 
 
     @classmethod
@@ -41,8 +42,10 @@ class Logs:
 
     @tasks.loop(hours=24)
     async def daily_save_logs(self) -> None:
+        self.bot_logger.debug("Daily saving...")
         self.save_logs()
         self.logging_rollover()
+        self._delete_top_level_logs()
 
 
     @daily_save_logs.before_loop
@@ -141,7 +144,10 @@ class Logs:
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 print(f"Removing {file}")
-                os.remove(file)
+                try:
+                    os.remove(file)
+                except Exception as e:
+                    print(e)
 
 
     def shutdown(self) -> None:
