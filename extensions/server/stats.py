@@ -189,18 +189,39 @@ class Stats(GroupCog):
     @app_commands.command(name="show", description="Get some information about the server!")
     async def slash_stats_show(self, interaction:discord.Interaction) -> None:
         guild = interaction.guild
-        bots = sum(member.bot == True for member in guild.members)
-        online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
-        creation_date = guild.created_at.strftime("%Y-%m-%d")
-        embed=discord.Embed(title=f"{guild.name} Stats", description=f"Information about {guild.name}", color=random.choice(rainbow.RAINBOW))
-        embed.add_field(name="Users", value=guild.member_count, inline=True)
-        embed.add_field(name="Bots", value=bots, inline=True)
-        embed.add_field(name="Online", value=online, inline=True)
-        embed.add_field(name="Created on", value=creation_date, inline=True)
+        embed = discord.Embed(
+            title=f"{guild.name} Stats",
+            description=f"Information about {guild.name}",
+            color=random.choice(rainbow.RAINBOW)
+        )
+        embed.add_field(
+            name="Users",
+            value=sum(member.bot == False for member in guild.members),
+            inline=True
+        )
+        embed.add_field(
+            name="Bots",
+            value=sum(member.bot == True for member in guild.members),
+            inline=True
+        )
+        embed.add_field(
+            name="Online",
+            value=sum(member.status != discord.Status.offline and not member.bot for member in guild.members),
+            inline=True
+        )
+        embed.add_field(
+            name="Created on",
+            value=guild.created_at.strftime("%Y-%m-%d"),
+            inline=True
+        )
         try:
-            embed.add_field(name="Afk channel", value=guild.afk_channel.mention, inline=True)
+            embed.add_field(
+                name="Afk channel",
+                value=guild.afk_channel.mention,
+                inline=True
+            )
         except AttributeError as e:
-            self.logger.warning(f"Error caused by non-existing AFK channel: {e}")
+            self.logger.debug(f"Error caused by non-existing AFK channel: {e}")
         self.logger.debug(f"Showing guild stats: {interaction.guild=}, {interaction.user=}")
         await interaction.response.send_message(embed=embed)
 
