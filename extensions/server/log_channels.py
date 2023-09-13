@@ -459,18 +459,18 @@ class LogChannels(GroupCog):
 
 
     @Cog.listener()
-    async def on_message_delete(self, message: discord.Message) -> None:
+    async def on_message_delete(self, message: discord.Message, reason: str = None) -> None:
         if isinstance(message, discord.Message):
             message = message
         else:
-            self.logger.warning(f"got {type(message)} from {message}, where expected discord.AuditLogEntry.")
+            self.logger.warning(f"got {type(message)} from {message}, where expected discord.Message.")
             return
 
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
         if message.clean_content == "":
             return
 
-        description = f"Deleted message send by {message.author.mention}" # with reason {message.reason or None}
+        description = f"Deleted message send by {message.author.mention} with reason {reason}"
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
@@ -488,25 +488,9 @@ class LogChannels(GroupCog):
         if entry != discord.AuditLogEntry:
             self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry.")
             return
-
+        
         message: discord.Message = entry.target
-
-        self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
-        if message.clean_content == "":
-            return
-
-        description = f"Deleted message send by {message.author.mention} with reason {entry.reason or None}"
-        embed = discord.Embed(
-            title="Message Deleted",
-            description=description,
-            color=DELETED_COLOR
-        )
-        embed.add_field(
-            name="Content",
-            value=f"`{message.clean_content}`"
-        )
-
-        await self.send_channel_logs(LogCategories.MESSAGE_DELETE, message.guild, embed)
+        await self.on_message_delete(message, entry.reason)
 
         # artifacts from audit log
         if entry.action == entry.action.message_delete:
