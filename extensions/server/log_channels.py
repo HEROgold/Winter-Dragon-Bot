@@ -658,25 +658,41 @@ class LogChannels(GroupCog):
 
 
     async def on_message_pin(self, entry: discord.AuditLogEntry) -> None:
-        # TODO: remove entry.target and entry.target.type from pins
-        # find out other way to mention/show pinned message
         self.logger.debug(f"on message_pin: {entry.guild=}, {entry=}")
-        await self.send_channel_logs(LogCategories.MESSAGE_PIN, entry.guild, discord.Embed(
+        channel = entry.extra.channel
+        embed = discord.Embed(
             title="Message Pin",
-            description=f"{entry.user.mention} Pinned {entry.target.type} {entry.target} with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Pinned {entry.target.mention}`s message with reason {entry.reason or None}",
             color=CREATED_COLOR
-        ))
+        )
+        embed.add_field(
+            name="Channel",
+            value=channel.mention
+        )
+        embed.add_field(
+            name="Message",
+            value=channel.get_partial_message(entry.extra.message_id).jump_url
+        )
+        await self.send_channel_logs(LogCategories.MESSAGE_PIN, entry.guild, embed)
 
 
     async def on_message_unpin(self, entry: discord.AuditLogEntry) -> None:
-        # TODO: remove entry.target and entry.target.type from pins
-        # find out other way to mention/show pinned message
         self.logger.debug(f"on message_unpin: {entry.guild=}, {entry=}")
-        await self.send_channel_logs(LogCategories.MESSAGE_UNPIN, entry.guild, discord.Embed(
+        channel = entry.extra.channel
+        embed = discord.Embed(
             title="Message Unpin",
-            description=f"{entry.user.mention} Unpinned {entry.target.type} {entry.target} with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Un-Pinned {entry.target.mention}`s message with reason {entry.reason or None}",
             color=DELETED_COLOR
-        ))
+        )
+        embed.add_field(
+            name="Channel",
+            value=channel.mention
+        )
+        embed.add_field(
+            name="Message",
+            value=channel.get_partial_message(entry.extra.message_id).jump_url
+        )
+        await self.send_channel_logs(LogCategories.MESSAGE_UNPIN, entry.guild, embed)
 
 # -----------------------------------------
 # TODO: Add Unique msg for each function
