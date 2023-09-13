@@ -174,8 +174,8 @@ class LogChannels(GroupCog):
             actions = {
                     enum.guild_update: self.on_guild_update,
                     enum.channel_create: self.on_guild_channel_create,
-                    enum.channel_update: self.on_guild_channel_delete,
-                    enum.channel_delete: self.on_guild_channel_update,
+                    enum.channel_update: self.on_guild_channel_update,
+                    enum.channel_delete: self.on_guild_channel_delete,
                     enum.overwrite_create: self.on_overwrite_create,
                     enum.overwrite_update: self.on_overwrite_update,
                     enum.overwrite_delete: self.on_overwrite_delete,
