@@ -626,7 +626,7 @@ class LogChannels(GroupCog):
         self.logger.debug(f"on emoji_create: {entry.guild=}, {entry=}")
         await self.send_channel_logs(LogCategories.EMOJI_CREATE, entry.guild, discord.Embed(
             title="Emoji Create",
-            description=f"{entry.user.mention} Created emoji with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Created emoji {entry.target} with reason {entry.reason or None}",
             color=CREATED_COLOR
         ))
 
@@ -635,7 +635,7 @@ class LogChannels(GroupCog):
         self.logger.debug(f"on emoji_update: {entry.guild=}, {entry=}")
         await self.send_channel_logs(LogCategories.EMOJI_UPDATE, entry.guild, discord.Embed(
             title="Emoji Update",
-            description=f"{entry.user.mention} Updated emoji with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Updated emoji {entry.target.url} with reason {entry.reason or None}",
             color=CHANGED_COLOR
         ))
 
@@ -644,7 +644,7 @@ class LogChannels(GroupCog):
         self.logger.debug(f"on emoji_delete: {entry.guild=}, {entry=}")
         await self.send_channel_logs(LogCategories.EMOJI_DELETE, entry.guild, discord.Embed(
             title="Emoji Delete",
-            description=f"{entry.user.mention} Deleted emoji with reason {entry.reason or None}",
+            description=f"{entry.user.mention} Deleted emoji {entry.target} with reason {entry.reason or None}",
             color=DELETED_COLOR
         ))
 
