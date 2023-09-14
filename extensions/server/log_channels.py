@@ -964,7 +964,7 @@ class LogChannels(GroupCog):
             title="Generic Change (WIP)",
             description=f"{entry.user.mention} Changed `{e_type}` {e_mention} with reason: {entry.reason or None}",
             color=0x123456
-            )
+        )
         self.logger.debug(f"Triggered generic_change:\nENTRY: {entry}\nENTRY CHANGES: {entry.changes}\n")
         embed.add_field(name="Old", value="\u200b", inline=True)
         embed.add_field(name="New", value="\u200b", inline=True)
