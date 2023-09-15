@@ -50,6 +50,9 @@ class Logs:
 
     @daily_save_logs.before_loop
     async def before_async_init(self) -> None:
+        if not self.first_rollover:
+            self.first_rollover = True
+            return
         self.bot_logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
