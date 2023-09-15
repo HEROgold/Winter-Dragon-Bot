@@ -102,7 +102,7 @@ class Converter:
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
         # app_commands_list = await self._get_commands(guild)
         app_commands_list = await self.tree.fetch_commands(guild=guild)
-        self.logger.debug(f"cmd list: {app_commands_list}")
+        self.logger.debug(f"cmd list: {[i.name for i in app_commands_list]}")
         for app_command in app_commands_list:
             # self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
             if command.name == app_command.name:
