@@ -47,7 +47,7 @@ class Lfg(GroupCog):
                 game_id = game_db.id
             ))
             session.commit()
-        _, c_mention = await self.converter.get_app_sub_command(self.slash_lfg_leave)
+        _, c_mention = await self.act.get_app_sub_command(self.slash_lfg_leave)
         msg = f"Adding you to the search queue for {game}, currently there are {len(total)} in the same queue. Use {c_mention} to leave all queues."
         await interaction.response.send_message(msg, ephemeral=True)
 
@@ -59,7 +59,7 @@ class Lfg(GroupCog):
             for i in lfg:
                 session.delete(i)
             session.commit()
-        _, c_mention = await self.converter.get_app_sub_command(self.slash_lfg_join)
+        _, c_mention = await self.act.get_app_sub_command(self.slash_lfg_join)
         await interaction.response.send_message(f"Removed you from all lfg queues, use {c_mention} to join one again.", ephemeral=True)
 
 
