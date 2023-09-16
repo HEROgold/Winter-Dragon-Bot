@@ -25,7 +25,6 @@ class Translate(Cog):
             self.logger.critical(f"land code longer then 2: {land_code=}")
             return
 
-        dm = member.dm_channel or await member.create_dm()
         clean_content = reaction.message.clean_content
 
         self.logger.debug(f"translating message for {member}: {reaction.message}")
@@ -35,7 +34,7 @@ class Translate(Cog):
             emb = self.get_response(member, land_code, clean_content)
 
         if config["Translate"]["dm_instead"] == True:
-            await dm.send(embed=emb)
+            await member.send(embed=emb)
         else:
             await reaction.message.reply(embed=emb)
 

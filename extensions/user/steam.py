@@ -134,11 +134,10 @@ class Steam(GroupCog):
                 except discord.errors.NotFound:
                     self.logger.warning(f"Not showing {db_user.id=} sales, discord.errors.NotFound")
                     continue
-                dm = user.dm_channel or await user.create_dm()
 
                 if len(embed.fields) > 0:
                     self.logger.debug(f"Showing {user}, {embed}")
-                    await dm.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
+                    await user.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
                 else:
                     self.logger.debug(f"Not showing sales, empty embed fields: {user}, {embed}")
 
