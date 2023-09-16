@@ -103,7 +103,7 @@ class DatabaseSetup(Cog):
         with Session(engine) as session:
             db_presences = session.query(Presence).where(Presence.user_id == member.id).all()
             for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=1)) >= datetime.datetime.now(datetime.timezone.utc):
+                if (presence.date_time + datetime.timedelta(days=365)) >= datetime.datetime.now(datetime.timezone.utc):
                     self.logger.debug(f"Removing year old presence {presence.id=}")
                     session.delete(presence)
                 else:
@@ -116,8 +116,7 @@ class DatabaseSetup(Cog):
         member = after or before
         date_time = datetime.datetime.now()
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
-        self.logger.debug(f"presence update for {member}, at {date_time=}, {ten_sec_ago=}")
-        self.logger.debug(f"{date_time >= ten_sec_ago=}")
+        self.logger.debug(f"presence update for {member}, at {date_time}")
         with Session(engine) as session:
             # Every guild a member is in calls this event.
             # Filter out updates from <10 seconds ago
@@ -128,10 +127,11 @@ class DatabaseSetup(Cog):
                 ).all()
             ):
                 for presence in presences:
-                    if presence.status == presences[0].status:
+                    self.logger.debug(f"{member.status.name == presence.status=}")
+                    if member.status.name == presence.status:
                         return
 
-            self.logger.debug(f"presence update for {member}, at {date_time} to database")
+            self.logger.debug(f"adding presence update to database for {member}")
             session.add(Presence(
                 user_id = member.id,
                 status = member.status.name,
@@ -142,6 +142,7 @@ class DatabaseSetup(Cog):
 
     @Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
+        self.logger.debug(f"on interaction: {interaction=}")
         if interaction.type not in [
             InteractionType.ping,
             InteractionType.application_command
