@@ -28,11 +28,10 @@ class Welcome(GroupCog):
                 await channel.send(default_message)
         elif channel is not None and config.Welcome.DM == True and member.bot == False:
             self.logger.warning("sending welcome to user's dm")
-            dm = member.dm_channel or await member.create_dm()
             if message:
-                await dm.send(message)
+                await member.send(message)
             else:
-                await dm.send(default_message)
+                await member.send(default_message)
         else:
             self.logger.warning("No system_channel to welcome user to, and dm is disabled.")
 
