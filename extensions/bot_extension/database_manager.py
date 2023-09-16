@@ -11,7 +11,7 @@ from _types.bot import WinterDragon
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
-class DatabaseSetup(Cog):
+class DatabaseManager(Cog):
     async def cog_load(self) -> None:
         self.update.start()
 
@@ -116,7 +116,7 @@ class DatabaseSetup(Cog):
         member = after or before
         date_time = datetime.datetime.now()
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
-        self.logger.debug(f"presence update for {member}, at {date_time}")
+        # self.logger.debug(f"presence update for {member}, at {date_time}")
         with Session(engine) as session:
             # Every guild a member is in calls this event.
             # Filter out updates from <10 seconds ago
@@ -127,11 +127,10 @@ class DatabaseSetup(Cog):
                 ).all()
             ):
                 for presence in presences:
-                    self.logger.debug(f"{member.status.name == presence.status=}")
                     if member.status.name == presence.status:
                         return
 
-            self.logger.debug(f"adding presence update to database for {member}")
+            # self.logger.debug(f"adding presence update to database for {member}")
             session.add(Presence(
                 user_id = member.id,
                 status = member.status.name,
@@ -163,4 +162,4 @@ class DatabaseSetup(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(DatabaseSetup(bot))  # type: ignore
+    await bot.add_cog(DatabaseManager(bot))  # type: ignore
