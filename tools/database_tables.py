@@ -495,6 +495,14 @@ class IncrementalGen(Base):
     generating : Mapped[float] = mapped_column(Float)
 
 
+class Command(Base):
+    __tablename__ = "commands"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(15))
+    call_count: Mapped[int] = mapped_column(Integer, default=0)
+
+
 all_tables = Base.__subclasses__()
 
 try:

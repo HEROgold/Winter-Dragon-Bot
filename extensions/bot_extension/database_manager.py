@@ -5,7 +5,7 @@ from discord import InteractionType, app_commands
 from discord.ext import tasks
 
 from tools.config_reader import config
-from tools.database_tables import Session, engine, Channel, Guild, Message, User, Presence
+from tools.database_tables import Command, Session, engine, Channel, Guild, Message, User, Presence
 from _types.cogs import Cog
 from _types.bot import WinterDragon
 
@@ -149,6 +149,7 @@ class DatabaseManager(Cog):
             return
         
         self._add_db_user(interaction.user)
+        self._add_db_command(interaction.command)
 
         user = interaction.user
         command = interaction.command
@@ -159,6 +160,16 @@ class DatabaseManager(Cog):
         # https://discordpy.readthedocs.io/en/latest/api.html#discord.on_interaction
 
 
+    def _add_db_command(self, command: app_commands.Command):
+        with Session(engine) as session:
+            if db_command := session.query(Command).where(Command.name == command.name).first():
+                if command.parent:
+                    self.logger.debug(f"{command.parent=}")
+                self.logger.debug(f"{command}")
+                db_command.call_count += 1
+            else:
+                session.add(Command(name=command.name, call_count=1))
+            session.commit()
 
 
 async def setup(bot: WinterDragon) -> None:
