@@ -36,17 +36,13 @@ class DatabaseSetup(Cog):
             self.logger.warning(f"No guild found: {message=}")
             return
 
+        self._add_db_guild(message.guild)
         self._add_db_user(message.author)
-
         self._add_db_channel(message.channel)
-
         self._add_db_message(message)
 
 
-    def _add_db_message(
-        self,
-        message: discord.Message
-    ) -> None:
+    def _add_db_message(self, message: discord.Message) -> None:
         with Session(engine) as session:
             if session.query(Message).where(Message.id == message.id).first() is None:
                 self.logger.debug(f"Adding new {message=} to Messages table")
@@ -58,13 +54,10 @@ class DatabaseSetup(Cog):
                     channel_id = message.channel.id,
                     guild_id = message.guild.id if message.guild else None
                 ))
-            session.commit()
+                session.commit()
 
 
-    def _add_db_channel(
-        self,
-        channel: discord.abc.GuildChannel
-    ) -> None:
+    def _add_db_channel(self, channel: discord.abc.GuildChannel) -> None:
         with Session(engine) as session:
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")
@@ -74,37 +67,31 @@ class DatabaseSetup(Cog):
                     type = None,
                     guild_id = channel.guild.id,
                 ))
-            session.commit()
+                session.commit()
 
 
-    def _add_db_user(
-        self,
-        user: discord.Member
-    ) -> None:
+    def _add_db_user(self, user: discord.Member) -> None:
         with Session(engine) as session:
-            if session.query(Guild).where(Guild.id == user.guild.id).first() is None:
-                self.logger.info(f"Adding new {user.guild=} to Guild table")
-                session.add(Guild(id = user.guild.id))
-
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
                 session.add(User(id = user.id))
-            session.commit()
+                session.commit()
+
+
+    def _add_db_guild(self, guild: discord.Guild) -> None:
+        with Session(engine) as session:
+            if session.query(Guild).where(Guild.id == guild.id).first() is None:
+                self.logger.info(f"Adding new {guild=} to Guild table")
+                session.add(Guild(id = guild.id))
+                session.commit()
 
 
     @tasks.loop(hours=1)
     async def update(self) -> None:
-        with Session(engine) as session:
-            for user in self.bot.users:
-                if session.query(User).where(User.id == user.id).first() is None:
-                    self.logger.info(f"Adding new {user=} to Users table")
-                    session.add(User(id = user.id))
-            for guild in self.bot.guilds:
-                if session.query(Guild).where(Guild.id == guild.id).first() is None:
-                    self.logger.info(f"Adding new {guild=} to Guild table")
-                    session.add(Guild(id = guild.id))
-
-            session.commit()
+        for user in self.bot.users:
+            self._add_db_user(user)
+        for guild in self.bot.guilds:
+            self._add_db_guild(guild)
 
     @update.before_loop # type: ignore
     async def before_update(self) -> None:
@@ -126,13 +113,28 @@ class DatabaseSetup(Cog):
 
     @Cog.listener()
     async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
-        member = before or after
-        status = member.status.name
-        date_time = datetime.datetime.now(datetime.timezone.utc)
+        member = after or before
+        date_time = datetime.datetime.now()
+        ten_sec_ago = date_time - datetime.timedelta(seconds=10)
+        self.logger.debug(f"presence update for {member}, at {date_time=}, {ten_sec_ago=}")
+        self.logger.debug(f"{date_time >= ten_sec_ago=}")
         with Session(engine) as session:
+            # Every guild a member is in calls this event.
+            # Filter out updates from <10 seconds ago
+            if (
+                presences := session.query(Presence).where(
+                    Presence.user_id == member.id,
+                    Presence.date_time >= ten_sec_ago
+                ).all()
+            ):
+                for presence in presences:
+                    if presence.status == presences[0].status:
+                        return
+
+            self.logger.debug(f"presence update for {member}, at {date_time} to database")
             session.add(Presence(
                 user_id = member.id,
-                status = status,
+                status = member.status.name,
                 date_time = date_time
             ))
             session.commit()
@@ -145,6 +147,8 @@ class DatabaseSetup(Cog):
             InteractionType.application_command
         ]:
             return
+        
+        self._add_db_user(interaction.user)
 
         user = interaction.user
         command = interaction.command
