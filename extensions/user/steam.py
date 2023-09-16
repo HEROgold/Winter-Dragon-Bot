@@ -186,8 +186,7 @@ class Steam(GroupCog):
 
         # embed size above 6000 characters.
         while len(str(embed.to_dict())) >= 6000:
-            self.logger.debug(f"{len(str(embed.to_dict()))=}")
-            self.logger.debug(f"removing to decrease size: {embed.fields[-1]=}")
+            self.logger.debug(f"size: {len(str(embed.to_dict()))}, removing to decrease size: {embed.fields[-1]=}")
             embed.remove_field(-1)
         
         self.logger.debug(f"Returning {embed}")
