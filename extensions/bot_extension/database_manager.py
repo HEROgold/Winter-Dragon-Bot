@@ -1,7 +1,7 @@
 import datetime
 
 import discord  # type: ignore
-from discord import app_commands
+from discord import InteractionType, app_commands
 from discord.ext import tasks
 
 from tools.config_reader import config
@@ -28,29 +28,43 @@ class DatabaseSetup(Cog):
 
 
     @Cog.listener()
-    # @event_errors.event_logger
     async def on_message(self, message: discord.Message) -> None:
-        user = message.author
-        guild = message.guild
-        channel = message.channel
-
-        if isinstance(channel, discord.DMChannel):
+        if isinstance(message.channel, discord.DMChannel):
             return
 
-        if not guild:
+        if not message.guild:
             self.logger.warning(f"No guild found: {message=}")
             return
 
-        with Session(engine) as session:
-            if session.query(Guild).where(Guild.id == guild.id).first() is None:
-                self.logger.info(f"Adding new {guild=} to Guild table")
-                session.add(Guild(id = guild.id))
+        self._add_db_user(message.author)
 
-            if session.query(User).where(User.id == user.id).first() is None:
-                self.logger.debug(f"Adding new {user=} to User table")
-                session.add(User(id = user.id))
+        self._add_db_channel(message.channel)
+
+        self._add_db_message(message)
+
+
+    def _add_db_message(
+        self,
+        message: discord.Message
+    ) -> None:
+        with Session(engine) as session:
+            if session.query(Message).where(Message.id == message.id).first() is None:
+                self.logger.debug(f"Adding new {message=} to Messages table")
+                
+                session.add(Message(
+                    id = message.id,
+                    content = message.clean_content,
+                    user_id = message.author.id,
+                    channel_id = message.channel.id,
+                    guild_id = message.guild.id if message.guild else None
+                ))
             session.commit()
 
+
+    def _add_db_channel(
+        self,
+        channel: discord.abc.GuildChannel
+    ) -> None:
         with Session(engine) as session:
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")
@@ -58,21 +72,24 @@ class DatabaseSetup(Cog):
                     id = channel.id,
                     name = f"{channel.name}",
                     type = None,
-                    guild_id = guild.id,
-                ))
-
-            if session.query(Message).where(Message.id == message.id).first() is None:
-                self.logger.debug(f"Adding new {message=} to Messages table")
-                
-                session.add(Message(
-                    id = message.id,
-                    content = message.clean_content,
-                    user_id = user.id,
-                    channel_id = channel.id,
-                    guild_id = guild.id if guild else None
+                    guild_id = channel.guild.id,
                 ))
             session.commit()
 
+
+    def _add_db_user(
+        self,
+        user: discord.Member
+    ) -> None:
+        with Session(engine) as session:
+            if session.query(Guild).where(Guild.id == user.guild.id).first() is None:
+                self.logger.info(f"Adding new {user.guild=} to Guild table")
+                session.add(Guild(id = user.guild.id))
+
+            if session.query(User).where(User.id == user.id).first() is None:
+                self.logger.debug(f"Adding new {user=} to User table")
+                session.add(User(id = user.id))
+            session.commit()
 
 
     @tasks.loop(hours=1)
@@ -93,6 +110,7 @@ class DatabaseSetup(Cog):
     async def before_update(self) -> None:
         self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
+
 
     async def remove_old_presences(self, member: discord.Member) -> None:
         with Session(engine) as session:
@@ -118,6 +136,24 @@ class DatabaseSetup(Cog):
                 date_time = date_time
             ))
             session.commit()
+
+
+    @Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type not in [
+            InteractionType.ping,
+            InteractionType.application_command
+        ]:
+            return
+
+        user = interaction.user
+        command = interaction.command
+        channel = interaction.channel
+        extras = interaction.extras
+        # Track command used data in database
+        # https://discordpy.readthedocs.io/en/latest/api.html#discord.on_interaction
+
+
 
 
 async def setup(bot: WinterDragon) -> None:
