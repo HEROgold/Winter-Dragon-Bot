@@ -155,6 +155,7 @@ class DatabaseSetup(Cog):
         command = interaction.command
         channel = interaction.channel
         extras = interaction.extras
+        self.logger.debug(f"{user}, {command}, {channel}, {extras}")
         # Track command used data in database
         # https://discordpy.readthedocs.io/en/latest/api.html#discord.on_interaction
 
