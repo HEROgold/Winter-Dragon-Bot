@@ -34,7 +34,7 @@ class Games(GroupCog):
                 content = name,
             ))
             session.commit()
-        await interaction.response.send_message(f"Added {name} for review", ephemeral=True)
+        await interaction.response.send_message(f"Added `{name}` for review", ephemeral=True)
 
 
 async def setup(bot: WinterDragon) -> None:
