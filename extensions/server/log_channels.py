@@ -480,7 +480,7 @@ class LogChannels(GroupCog):
             return
 
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
-        if message.clean_content == "":
+        if message.clean_content in ["", "Unexpected Error..."]:
             return
 
         description = f"Deleted message send by {message.author.mention} with reason {reason}"
