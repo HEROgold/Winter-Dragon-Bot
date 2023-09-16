@@ -13,13 +13,10 @@ from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 
 
-# TODO: Allow requests for adding new game types, see games.py, 
-# maybe copy command from there > needs testing
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Lfg(GroupCog):
     games: list[GameDB] = ["League of Legends"]
 
-    # Test if this works
     from extensions.indev.games import Games
     slash_suggest = Games.slash_suggest
 
