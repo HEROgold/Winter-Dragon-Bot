@@ -30,7 +30,8 @@ class Games(GroupCog):
 
             session.add(Suggestion(
                 type = "game",
-                content = name
+                is_verified = False,
+                content = name,
             ))
             session.commit()
         await interaction.response.send_message(f"Added {name} for review", ephemeral=True)
