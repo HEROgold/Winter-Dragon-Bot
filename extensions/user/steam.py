@@ -182,7 +182,7 @@ class Steam(GroupCog):
                 value = dedent(embed_text),
                 inline = False
             )
-            self.logger.debug(f"Populated embed with:\n{sale=}")
+            self.logger.debug(f"Populated embed with: {sale=}")
 
         # embed size above 6000 characters.
         while len(str(embed.to_dict())) >= 6000:
