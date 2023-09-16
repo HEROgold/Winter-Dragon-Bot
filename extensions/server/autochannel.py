@@ -12,6 +12,7 @@ from _types.bot import WinterDragon
 
 class AutomaticChannels(GroupCog):
     # FIXME: doesn't display debug msg on channel join/leave
+    # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
     @Cog.listener()
     async def on_voice_state_update(
         self,
