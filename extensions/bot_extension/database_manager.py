@@ -173,6 +173,19 @@ class DatabaseManager(Cog):
 
 
     def _fetch_db_command(self, command: app_commands.Command) -> Command:
+        """
+        Returns a command if it can find one, otherwise it creates one
+        and then returns it
+        
+        Parameters
+        -----------
+        :param:`command`: :class:`app_commands.Command`
+            The app command to get from the database
+
+        Returns:
+        --------
+            :class:`Command`: The database version of a command
+        """
         with Session(engine) as session:
             if db_command := session.query(Command).where(Command.name == command.name).first():
                 if command.parent:
@@ -187,6 +200,16 @@ class DatabaseManager(Cog):
 
 
     def _link_db_user_command(self, user: discord.Member, command: Command) -> None:
+        """
+        Links a database user to a command when used
+        
+        Parameters
+        -----------
+        :param:`user`: :class:`discord.Member`
+            The member to link a command to
+        :param:`command`: :class:`Command`
+            The command to link a member to
+        """
         with Session(engine) as session:
             session.add(
                 AUC(
