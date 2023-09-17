@@ -9,6 +9,7 @@ from tools.database_tables import AutoChannelSettings as ACS
 from _types.cogs import Cog, GroupCog
 from _types.bot import WinterDragon
 
+CREATE_REASON = "Creating AutomaticChannel"
 
 class AutomaticChannels(GroupCog):
     # FIXME: doesn't display debug msg on channel join/leave
@@ -22,14 +23,14 @@ class AutomaticChannels(GroupCog):
     ) -> None:
         self.logger.debug(f"{member} moved from {before} to {after}")
         with Session(engine) as session:
-            if voice_create := session.query(AC).where(AC.id == after.channel.guild.id).first():
+            if voice_create := session.query(AC).where(AC.id == member.guild.id).first():
                 self.logger.debug(f"{voice_create}")
                 # ignore when already moved from "Join Me"
                 if before.channel is not None:
                     if before.channel.id == voice_create.channel_id:
                         return
 
-                    if len(before.channel.members > 0):
+                    if len(before.channel.members) > 0:
                         await before.channel.delete(reason="removing empty voice")
                         session.delete(session.query(AC).where(AC.channel_id == before.channel.id).first())
 
@@ -59,20 +60,21 @@ class AutomaticChannels(GroupCog):
                 session.query(ACS).where(ACS.id == member.id).first(),
                 session.query(ACS).where(ACS.id == guild.id).first()
             )
-
+            
             voice_channel = await member.guild.create_voice_channel(
                 name,
-                category=guild.get_channel(session.query(AC).where(AC.id == guild.id).first().id).category,
-                overwrites=overwrites
+                category=guild.get_channel(session.query(AC).where(AC.id == guild.id).first().channel_id).category,
+                overwrites=overwrites,
+                reason=CREATE_REASON
             )
-            channel_id = voice_channel.id
+
             await member.move_to(voice_channel)
             # await voice_channel.set_permissions(self.bot.user, connect=True, read_messages=True)
             # await voice_channel.set_permissions(member, connect=True, read_messages=True)
             await voice_channel.edit(name=name, user_limit=limit)
             session.add(AC(
                 id=member.id,
-                channel_id=channel_id
+                channel_id=voice_channel.id
             ))
             session.commit()
         else:
@@ -111,7 +113,8 @@ class AutomaticChannels(GroupCog):
                 voice_channel_name,
                 category=(
                     await interaction.guild.create_category(category_name)
-                )
+                ),
+                reason=CREATE_REASON
             )
 
             session.add(AC(
@@ -241,7 +244,7 @@ class AutomaticChannels(GroupCog):
                 await channel.edit(name=name)
 
             await interaction.response.send_message(f"{interaction.user.mention} You have changed the channel name to {name}!", ephemeral=True)
-            
+
             if voice_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 voice_settings.channel_name = name
             else:
