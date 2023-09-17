@@ -85,19 +85,19 @@ class AutomaticChannels(GroupCog):
     def get_final_settings(
             self,
             member: discord.Member,
-            setting: Optional[tuple[str, int]],
-            guild_setting: Optional[tuple[str, int]]
+            setting: ACS,
+            guild_setting: ACS
         ) -> tuple[str, int]:
         print(f"transform settings: {member}, {setting=}, {guild_setting=}")
-        name = f"{member.name}'s channel" if setting is None else setting[0]
+        name = f"{member.name}'s channel" if setting is None else setting.channel_name
         if (
             setting is None 
             or guild_setting is None 
-            or setting[1] == 0
+            or setting.channel_limit == 0
         ):
             limit = 0
         else:
-            limit = setting[1]
+            limit = setting.channel_limit
         return name, limit
 
 
@@ -125,9 +125,12 @@ class AutomaticChannels(GroupCog):
         await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
 
 
+    # FIXME: both limits seem to lock db!?
     @app_commands.checks.has_permissions(manage_guild=True)
-    @app_commands.command(name="guild_limit", description="Set a default limit for AutoChannels")
+    @app_commands.command(name="guild_limit", description="Set a limit for AutoChannels")
     async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
+        await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
+        return
         with Session(engine) as session:
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
@@ -138,11 +141,13 @@ class AutomaticChannels(GroupCog):
                     channel_limit = 0
                 ))
             session.commit()
-        await interaction.response.send_message("You have changed the default channel limit for your server!", ephemeral=True)
+        await interaction.response.send_message(f"You have changed the channel limit for your server to `{limit}`!", ephemeral=True)
 
 
     @app_commands.command(name="limit", description="Set a limit for your channel")
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
+        await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
+        return
         with Session(engine) as session:
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
@@ -155,9 +160,11 @@ class AutomaticChannels(GroupCog):
 
             if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
-                await channel.edit(user_limit=limit)
+                if channel is not None:
+                    await channel.edit(user_limit=limit)
+
                 await interaction.response.send_message(
-                    f"{interaction.user.mention} You have set the channel limit to be {limit}!, settings are saved",
+                    f"{interaction.user.mention} You have set the channel limit to be `{limit}`!, settings are saved",
                     ephemeral=True
                 )
             else:
@@ -244,9 +251,10 @@ class AutomaticChannels(GroupCog):
         with Session(engine) as session:
             if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
-                await channel.edit(name=name)
+                if channel is not None:
+                    await channel.edit(name=name)
 
-            await interaction.response.send_message(f"{interaction.user.mention} You have changed the channel name to {name}!", ephemeral=True)
+            await interaction.response.send_message(f"{interaction.user.mention} You have changed your channel name to `{name}`!", ephemeral=True)
 
             if voice_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 voice_settings.channel_name = name
