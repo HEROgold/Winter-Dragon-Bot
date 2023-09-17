@@ -2,7 +2,6 @@ import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 from typing import List, Optional, Self
-from numpy import delete
 
 import sqlalchemy
 from sqlalchemy import (
