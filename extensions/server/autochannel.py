@@ -28,7 +28,7 @@ class AutomaticChannels(GroupCog):
                     if before.channel.id == voice_create.channel_id:
                         return
 
-                    if len(before.channel.members) > 0:
+                    if len(before.channel.members) == 0:
                         await before.channel.delete(reason="removing empty voice")
                         session.delete(session.query(AC).where(AC.channel_id == before.channel.id).first())
 
