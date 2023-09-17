@@ -33,7 +33,7 @@ class AutomaticChannels(GroupCog):
                         session.delete(session.query(AC).where(AC.channel_id == before.channel.id).first())
 
                 if after.channel is not None and after.channel.id == voice_create.channel_id:
-                    return await self.create_user_channel(member, after, session, after.channel.guild)
+                    await self.create_user_channel(member, after, session, after.channel.guild)
                 session.commit()
 
 
