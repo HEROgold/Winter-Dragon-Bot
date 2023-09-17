@@ -29,21 +29,26 @@ class AutomaticChannels(GroupCog):
                         return
 
                     if len(before.channel.members) == 0:
-                        await before.channel.delete(reason="removing empty voice")
-                        session.delete(session.query(AC).where(AC.channel_id == before.channel.id).first())
+                        db_channel = session.query(AC).where(AC.channel_id == before.channel.id).first()
+                        dc_channel = member.guild.get_channel(db_channel.channel_id)
+                        await dc_channel.delete(reason="removing empty voice")
+                        session.delete(db_channel)
 
-                if after.channel is not None and after.channel.id == voice_create.channel_id:
+                if (
+                    after.channel is not None and
+                    after.channel.id == voice_create.channel_id
+                ):
                     await self.create_user_channel(member, after, session, after.channel.guild)
                 session.commit()
 
 
     async def create_user_channel(
-            self,
-            member: discord.Member,
-            after: discord.VoiceState,
-            session: Session,
-            guild: discord.Guild
-        ) -> None:
+        self,
+        member: discord.Member,
+        after: discord.VoiceState,
+        session: Session,
+        guild: discord.Guild
+    ) -> None:
         overwrites = {
             member.guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             member.guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
