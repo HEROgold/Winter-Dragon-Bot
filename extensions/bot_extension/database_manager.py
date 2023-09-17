@@ -84,7 +84,7 @@ class DatabaseManager(Cog):
         with Session(engine) as session:
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
-                session.add(User(id = user.id))
+                session.add(User(id=user.id))
                 session.commit()
 
 
@@ -92,7 +92,7 @@ class DatabaseManager(Cog):
         with Session(engine) as session:
             if session.query(Guild).where(Guild.id == guild.id).first() is None:
                 self.logger.info(f"Adding new {guild=} to Guild table")
-                session.add(Guild(id = guild.id))
+                session.add(Guild(id=guild.id))
                 session.commit()
 
 
@@ -158,11 +158,13 @@ class DatabaseManager(Cog):
         ]:
             return
         
-        self._add_db_user(interaction.user)
-        self._add_db_command(interaction.command)
-
         user = interaction.user
         command = interaction.command
+
+        self._add_db_user(user)
+        db_cmd = self._fetch_db_command(command)
+        self._link_db_user_command(user, db_cmd)
+
         channel = interaction.channel
         extras = interaction.extras
         self.logger.debug(f"{user}, {command}, {channel}, {extras}")
@@ -170,7 +172,7 @@ class DatabaseManager(Cog):
         # https://discordpy.readthedocs.io/en/latest/api.html#discord.on_interaction
 
 
-    def _add_db_command(self, command: app_commands.Command):
+    def _fetch_db_command(self, command: app_commands.Command) -> Command:
         with Session(engine) as session:
             if db_command := session.query(Command).where(Command.name == command.name).first():
                 if command.parent:
@@ -178,7 +180,20 @@ class DatabaseManager(Cog):
                 self.logger.debug(f"{command}")
                 db_command.call_count += 1
             else:
-                session.add(Command(name=command.name, call_count=1))
+                db_command = Command(name=command.name, call_count=1)
+                session.add(db_command)
+            session.commit()
+        return db_command
+
+
+    def _link_db_user_command(self, user: discord.Member, command: Command) -> None:
+        with Session(engine) as session:
+            session.add(
+                AUC(
+                    user_id=user.id,
+                    command_id=command.id
+                )
+            )
             session.commit()
 
 
