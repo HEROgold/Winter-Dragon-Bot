@@ -71,6 +71,7 @@ INCREMENTAL_ID = "incremental_data.id"
 AUTOCHANNEL_ID = "autochannels.id"
 POLLS_ID = "polls.id"
 TICKETS_ID = "tickets.id"
+COMMANDS_ID = "commands.id"
 
 
 class Base(DeclarativeBase):
@@ -118,7 +119,6 @@ class User(Base):
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
     tickets: Mapped[List["Ticket"]] = relationship(back_populates="user")
-    used_commands: Mapped[List["Command"]] = relationship(back_populates="user")
 
     @classmethod
     def fetch_user(cls, id: int) -> Self:
@@ -502,8 +502,13 @@ class Command(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(15))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class AssociationUserCommand(Base):
+    __tablename__ = "association_user_command"
+
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    user: Mapped[List["User"]] = relationship(back_populates="used_commands", foreign_keys=[user_id])
+    command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID))
 
 
 all_tables = Base.__subclasses__()
