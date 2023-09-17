@@ -4,10 +4,20 @@ import discord  # type: ignore
 from discord import InteractionType, app_commands
 from discord.ext import tasks
 
-from tools.config_reader import config
-from tools.database_tables import Command, Session, engine, Channel, Guild, Message, User, Presence
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+from tools.config_reader import config
+from tools.database_tables import AssociationUserCommand as AUC
+from tools.database_tables import (
+    Channel,
+    Command,
+    Guild,
+    Message,
+    Presence,
+    Session,
+    User,
+    engine
+)
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
