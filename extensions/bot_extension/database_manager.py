@@ -110,6 +110,15 @@ class DatabaseManager(Cog):
 
 
     async def remove_old_presences(self, member: discord.Member) -> None:
+        """
+        Removes old presences present in the database, if they are older then a year
+        
+        Parameters
+        -----------
+        :param:`member`: :class:`discord.Member`
+            The Member to clean for
+        """
+        # TODO: move to database_tables.py
         with Session(engine) as session:
             db_presences = session.query(Presence).where(Presence.user_id == member.id).all()
             for presence in db_presences:
@@ -123,6 +132,17 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
+        """
+        Code to run whenever a presence is updated, to keep track of a users online status.
+        This only updates once every 10 seconds, and only tracks online status.
+        
+        Parameters
+        -----------
+        :param:`before`: :class:`discord.Member`
+            The Member before the update
+        :param:`after`: :class:`discord.Member`
+            The Member after the update
+        """
         member = after or before
         date_time = datetime.datetime.now()
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
@@ -151,6 +171,19 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
+        """
+        Code to run whenever a interaction happens,
+        This adds users and command to the database,
+        and links both of them for tracking stats.
+        Only tracks
+        :class:`discord.InteractionType.ping` and
+        :class:`discord.InteractionType.application_command`
+        
+        Parameters
+        -----------
+        :param:`interaction`: :class:`discord.Interaction`
+            The interaction that happened
+        """
         self.logger.debug(f"on interaction: {interaction=}")
         if interaction.type not in [
             InteractionType.ping,
