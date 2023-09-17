@@ -144,13 +144,6 @@ class AutomaticChannels(GroupCog):
     @app_commands.command(name="limit", description="Set a limit for your channel")
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
         with Session(engine) as session:
-            if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
-                channel = self.bot.get_channel(autochannel.channel_id)
-                await channel.edit(user_limit=limit)
-                await interaction.response.send_message(f"{interaction.user.mention} You have set the channel limit to be {limit}!", ephemeral=True)
-            else:
-                await interaction.response.send_message(f"{interaction.user.mention} You don't own a channel.", ephemeral=True)
-
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
             else:
@@ -159,6 +152,16 @@ class AutomaticChannels(GroupCog):
                     channel_name = interaction.user.name,
                     channel_limit = 0
                 ))
+
+            if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
+                channel = self.bot.get_channel(autochannel.channel_id)
+                await channel.edit(user_limit=limit)
+                await interaction.response.send_message(
+                    f"{interaction.user.mention} You have set the channel limit to be {limit}!, settings are saved",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(f"{interaction.user.mention} You don't own a channel, settings are saved.", ephemeral=True)
             session.commit()
 
 
