@@ -284,9 +284,9 @@ class LogChannels(GroupCog):
 
         embed = discord.Embed(
             title="Channel Deleted",
-            description=f"{entry.user.mention} deleted {channel_type} `{channel.id}` with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} deleted {channel_type} `{channel.name}` `{channel.id}` with reason: {entry.reason or None}",
             color=DELETED_COLOR
-            )
+        )
         await self.send_channel_logs(LogCategories.CHANNEL_DELETE, entry.guild, embed)
 
 
