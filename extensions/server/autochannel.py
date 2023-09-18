@@ -10,7 +10,7 @@ from _types.bot import WinterDragon
 CREATE_REASON = "Creating AutomaticChannel"
 
 class AutomaticChannels(GroupCog):
-    # FIXME: doesn't display debug msg on channel join/leave
+    # FIXME: weird behavior sometimes on join/leave
     # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
     @Cog.listener()
     async def on_voice_state_update(
@@ -29,10 +29,10 @@ class AutomaticChannels(GroupCog):
                         return
 
                     if len(before.channel.members) == 0:
-                        db_channel = session.query(AC).where(AC.channel_id == before.channel.id).first()
-                        dc_channel = member.guild.get_channel(db_channel.channel_id)
-                        await dc_channel.delete(reason="removing empty voice")
-                        session.delete(db_channel)
+                        if db_channel := session.query(AC).where(AC.channel_id == before.channel.id).first():
+                            if dc_channel := member.guild.get_channel(db_channel.channel_id):
+                                await dc_channel.delete(reason="removing empty voice")
+                            session.delete(db_channel)
 
                 if (
                     after.channel is not None and
@@ -57,13 +57,19 @@ class AutomaticChannels(GroupCog):
         if after.channel is None:
             return
 
-        if user_channel := session.query(AC).where(AC.channel_id == after.channel.id).first():
+        if user_channel := session.query(AC).where(AC.id == member.id).first():
+            if dc_channel := member.guild.get_channel(user_channel.channel_id):
+                await member.send(f"You already have a channel at {dc_channel.mention}")
+                return
+
+        # check if user that joined "Create Vc" channel is in db
+        if session.query(AC).where(AC.channel_id == after.channel.id).first():
             name, limit = self.get_final_settings(
                 member,
                 session.query(ACS).where(ACS.id == member.id).first(),
                 session.query(ACS).where(ACS.id == guild.id).first()
             )
-            
+
             voice_channel = await member.guild.create_voice_channel(
                 name,
                 category=guild.get_channel(session.query(AC).where(AC.id == guild.id).first().channel_id).category,
@@ -80,9 +86,6 @@ class AutomaticChannels(GroupCog):
                 channel_id=voice_channel.id
             ))
             session.commit()
-        else:
-            await member.send(f"You already have a channel at {self.bot.get_channel(user_channel[1]).mention}")
-            return
 
 
     def get_final_settings(
