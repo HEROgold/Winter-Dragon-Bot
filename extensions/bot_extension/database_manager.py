@@ -228,6 +228,7 @@ class DatabaseManager(Cog):
             else:
                 db_command = Command(name=command.name, call_count=1)
                 session.add(db_command)
+            session.expire_on_commit = False
             session.commit()
         return db_command
 
