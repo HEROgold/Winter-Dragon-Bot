@@ -66,8 +66,8 @@ class PollModal(discord.ui.Modal):
         # # Add epoch relative time left after adding options. Discord <t:0000:R> doesn't work on footer.
         emb.add_field(name="Time Left", value=f"<t:{self.end_epoch}:R>", inline=False)
 
-        await interaction.response.send_message("Poll created", ephemeral=True, delete_after=10)
         msg = await self.poll_channel.send(embed=emb)
+        await interaction.response.send_message(f"Poll created at {msg.jump_url}", ephemeral=True, delete_after=10)
 
         ALLOWED_EMOJIS = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣"]
         for i, answer in enumerate(answers):
