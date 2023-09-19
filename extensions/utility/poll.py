@@ -25,7 +25,7 @@ POLL_TYPE = "poll"
 class PollModal(discord.ui.Modal):
     place_holder = "Empty Answer"
     q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder, required=True)
-    q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=False)
+    q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=True)
     q3 = discord.ui.TextInput(label="Answer #3", placeholder=place_holder, required=False)
     q4 = discord.ui.TextInput(label="Answer #4", placeholder=place_holder, required=False)
     q5 = discord.ui.TextInput(label="Answer #5", placeholder=place_holder, required=False)
