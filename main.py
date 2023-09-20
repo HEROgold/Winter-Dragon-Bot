@@ -29,6 +29,7 @@ Intents.moderation = True
 Intents.message_content = True
 Intents.auto_moderation_configuration = True
 Intents.auto_moderation_execution = True
+Intents.voice_states = True
 
 bot = WinterDragon(intents=Intents, command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), case_insensitive=True)
 bot.launch_time = datetime.now(timezone.utc)

@@ -25,7 +25,7 @@ POLL_TYPE = "poll"
 class PollModal(discord.ui.Modal):
     place_holder = "Empty Answer"
     q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder, required=True)
-    q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=False)
+    q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=True)
     q3 = discord.ui.TextInput(label="Answer #3", placeholder=place_holder, required=False)
     q4 = discord.ui.TextInput(label="Answer #4", placeholder=place_holder, required=False)
     q5 = discord.ui.TextInput(label="Answer #5", placeholder=place_holder, required=False)
@@ -66,8 +66,8 @@ class PollModal(discord.ui.Modal):
         # # Add epoch relative time left after adding options. Discord <t:0000:R> doesn't work on footer.
         emb.add_field(name="Time Left", value=f"<t:{self.end_epoch}:R>", inline=False)
 
-        await interaction.response.send_message("Poll created", ephemeral=True, delete_after=10)
         msg = await self.poll_channel.send(embed=emb)
+        await interaction.response.send_message(f"Poll created at {msg.jump_url}", ephemeral=True, delete_after=10)
 
         ALLOWED_EMOJIS = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣"]
         for i, answer in enumerate(answers):
@@ -231,6 +231,9 @@ class Poll(GroupCog):
                 ))
                 return
 
+            # FIXME: error on self.act.get_app_sub_command: type(error)=<class 'discord.app_commands.errors.CommandInvokeError'>, error.args=("Command 'create' raised an exception: AttributeError: 'NoneType' object has no attribute 'name'",)
+            # Weird interaction with app_commands.Group()
+            self.logger.debug(f"Getting {self.slash_set_poll_channel}")
             _, custom_mention = await self.act.get_app_sub_command(self.slash_set_poll_channel)
 
             if interaction.user.guild_permissions.manage_channels:

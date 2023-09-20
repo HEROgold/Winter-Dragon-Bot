@@ -9,6 +9,11 @@ from _types.cogs import Cog
 from _types.bot import WinterDragon
 
 
+# TODO: add sync ban option,
+# banning every member from every guild this bot is in if it's banned in one
+# allow opt-in
+
+
 class TempBan(Cog):
     @tasks.loop(seconds=3600)
     async def unban_check(self) -> None:

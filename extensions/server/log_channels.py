@@ -172,61 +172,61 @@ class LogChannels(GroupCog):
             await self.generic_change(entry)
         else:
             actions = {
-                    enum.guild_update: self.on_guild_update,
-                    enum.channel_create: self.on_guild_channel_create,
-                    enum.channel_update: self.on_guild_channel_update,
-                    enum.channel_delete: self.on_guild_channel_delete,
-                    enum.overwrite_create: self.on_overwrite_create,
-                    enum.overwrite_update: self.on_overwrite_update,
-                    enum.overwrite_delete: self.on_overwrite_delete,
-                    enum.kick: self.on_kick,
-                    enum.member_prune: self.on_member_prune,
-                    enum.ban: self.on_ban,
-                    enum.unban: self.on_unban,
-                    enum.member_update: self.audit_member_update,
-                    enum.member_role_update: self.audit_member_update,
-                    enum.member_move: self.on_member_move,
-                    enum.member_disconnect: self.on_member_disconnect,
-                    enum.bot_add: self.on_bot_add,
-                    enum.role_create: self.on_role_create,
-                    enum.role_update: self.on_role_update,
-                    enum.role_delete: self.on_role_delete,
-                    enum.invite_create: self.on_invite_create,
-                    enum.invite_update: self.on_invite_update,
-                    enum.invite_delete: self.on_invite_delete,
-                    enum.webhook_create: self.on_webhook_create,
-                    enum.webhook_update: self.on_webhook_update,
-                    enum.webhook_delete: self.on_webhook_delete,
-                    enum.emoji_create: self.on_emoji_create,
-                    enum.emoji_update: self.on_emoji_update,
-                    enum.emoji_delete: self.on_emoji_delete,
-                    enum.message_delete: self.audit_message_delete,
-                    enum.message_bulk_delete: self.audit_message_delete,
-                    enum.message_pin: self.on_message_pin,
-                    enum.message_unpin: self.on_message_unpin,
-                    enum.integration_create: self.on_integration_create,
-                    enum.integration_update: self.on_integration_update,
-                    enum.integration_delete: self.on_integration_delete,
-                    enum.stage_instance_create: self.on_stage_instance_create,
-                    enum.stage_instance_update: self.on_stage_instance_update,
-                    enum.stage_instance_delete: self.on_stage_instance_delete,
-                    enum.sticker_create: self.on_sticker_create,
-                    enum.sticker_update: self.on_sticker_update,
-                    enum.sticker_delete: self.on_sticker_delete,
-                    enum.scheduled_event_create: self.on_scheduled_event_create,
-                    enum.scheduled_event_update: self.on_scheduled_event_update,
-                    enum.scheduled_event_delete: self.on_scheduled_event_delete,
-                    enum.thread_create: self.on_thread_create,
-                    enum.thread_update: self.on_thread_update,
-                    enum.thread_delete: self.on_thread_delete,
-                    enum.app_command_permission_update: self.on_app_command_permission_update,
-                    enum.automod_rule_create: self.on_automod_rule_create,
-                    enum.automod_rule_update: self.on_automod_rule_update,
-                    enum.automod_rule_delete: self.on_automod_rule_delete,
-                    enum.automod_block_message: self.on_automod_block_message,
-                    enum.automod_flag_message: self.on_automod_flag_message,
-                    enum.automod_timeout_member: self.on_automod_timeout_member,
-                    }
+                enum.guild_update: self.on_guild_update,
+                enum.channel_create: self.on_guild_channel_create,
+                enum.channel_update: self.on_guild_channel_update,
+                enum.channel_delete: self.on_guild_channel_delete,
+                enum.overwrite_create: self.on_overwrite_create,
+                enum.overwrite_update: self.on_overwrite_update,
+                enum.overwrite_delete: self.on_overwrite_delete,
+                enum.kick: self.on_kick,
+                enum.member_prune: self.on_member_prune,
+                enum.ban: self.on_ban,
+                enum.unban: self.on_unban,
+                enum.member_update: self.audit_member_update,
+                enum.member_role_update: self.audit_member_update,
+                enum.member_move: self.on_member_move,
+                enum.member_disconnect: self.on_member_disconnect,
+                enum.bot_add: self.on_bot_add,
+                enum.role_create: self.on_role_create,
+                enum.role_update: self.on_role_update,
+                enum.role_delete: self.on_role_delete,
+                enum.invite_create: self.on_invite_create,
+                enum.invite_update: self.on_invite_update,
+                enum.invite_delete: self.on_invite_delete,
+                enum.webhook_create: self.on_webhook_create,
+                enum.webhook_update: self.on_webhook_update,
+                enum.webhook_delete: self.on_webhook_delete,
+                enum.emoji_create: self.on_emoji_create,
+                enum.emoji_update: self.on_emoji_update,
+                enum.emoji_delete: self.on_emoji_delete,
+                enum.message_delete: self.audit_message_delete,
+                enum.message_bulk_delete: self.audit_message_delete,
+                enum.message_pin: self.on_message_pin,
+                enum.message_unpin: self.on_message_unpin,
+                enum.integration_create: self.on_integration_create,
+                enum.integration_update: self.on_integration_update,
+                enum.integration_delete: self.on_integration_delete,
+                enum.stage_instance_create: self.on_stage_instance_create,
+                enum.stage_instance_update: self.on_stage_instance_update,
+                enum.stage_instance_delete: self.on_stage_instance_delete,
+                enum.sticker_create: self.on_sticker_create,
+                enum.sticker_update: self.on_sticker_update,
+                enum.sticker_delete: self.on_sticker_delete,
+                enum.scheduled_event_create: self.on_scheduled_event_create,
+                enum.scheduled_event_update: self.on_scheduled_event_update,
+                enum.scheduled_event_delete: self.on_scheduled_event_delete,
+                enum.thread_create: self.on_thread_create,
+                enum.thread_update: self.on_thread_update,
+                enum.thread_delete: self.on_thread_delete,
+                enum.app_command_permission_update: self.on_app_command_permission_update,
+                enum.automod_rule_create: self.on_automod_rule_create,
+                enum.automod_rule_update: self.on_automod_rule_update,
+                enum.automod_rule_delete: self.on_automod_rule_delete,
+                enum.automod_block_message: self.on_automod_block_message,
+                enum.automod_flag_message: self.on_automod_flag_message,
+                enum.automod_timeout_member: self.on_automod_timeout_member,
+            }
             await actions[action](entry)
 
 
@@ -284,9 +284,9 @@ class LogChannels(GroupCog):
 
         embed = discord.Embed(
             title="Channel Deleted",
-            description=f"{entry.user.mention} deleted {channel_type} `{channel.id}` with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} deleted {channel_type}  `{channel.id}` with reason: {entry.reason or None}", # `{channel.name}`, channel has not attrib, name
             color=DELETED_COLOR
-            )
+        )
         await self.send_channel_logs(LogCategories.CHANNEL_DELETE, entry.guild, embed)
 
 
@@ -480,7 +480,7 @@ class LogChannels(GroupCog):
             return
 
         self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
-        if message.clean_content == "":
+        if message.clean_content in ["", "Unexpected Error..."]:
             return
 
         description = f"Deleted message send by {message.author.mention} with reason {reason}"

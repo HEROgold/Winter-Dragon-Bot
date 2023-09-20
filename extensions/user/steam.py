@@ -134,11 +134,10 @@ class Steam(GroupCog):
                 except discord.errors.NotFound:
                     self.logger.warning(f"Not showing {db_user.id=} sales, discord.errors.NotFound")
                     continue
-                dm = user.dm_channel or await user.create_dm()
 
                 if len(embed.fields) > 0:
                     self.logger.debug(f"Showing {user}, {embed}")
-                    await dm.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
+                    await user.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
                 else:
                     self.logger.debug(f"Not showing sales, empty embed fields: {user}, {embed}")
 
@@ -183,12 +182,11 @@ class Steam(GroupCog):
                 value = dedent(embed_text),
                 inline = False
             )
-            self.logger.debug(f"Populated embed with:\n{sale=}")
+            self.logger.debug(f"Populated embed with: {sale=}")
 
         # embed size above 6000 characters.
         while len(str(embed.to_dict())) >= 6000:
-            self.logger.debug(f"{len(str(embed.to_dict()))=}")
-            self.logger.debug(f"removing to decrease size: {embed.fields[-1]=}")
+            self.logger.debug(f"size: {len(str(embed.to_dict()))}, removing to decrease size: {embed.fields[-1]=}")
             embed.remove_field(-1)
         
         self.logger.debug(f"Returning {embed}")

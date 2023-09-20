@@ -48,10 +48,7 @@ class TicTacToe(GroupCog):
 
 
     @app_commands.checks.cooldown(2, 120)
-    @app_commands.command(
-        name="stats",
-        description="view tic-tac-toe stats"
-    )
+    @app_commands.command(name="leaderboard", description="view tic-tac-toe stats")
     async def slash_leader_board(self, interaction: discord.Interaction) -> None:
         game_results = self.calculate_game_results(
             interaction.user.id,

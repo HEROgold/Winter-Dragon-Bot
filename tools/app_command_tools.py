@@ -32,8 +32,15 @@ class Converter:
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     def is_group(self, app_command: app_commands.AppCommand) -> bool:
-        self.logger.debug(f"Checking is_group: {app_command.name}")
-        return any(type(i) == app_commands.AppCommandGroup for i in app_command.options)
+        self.logger.debug(f"Checking is_group: {app_command}")
+        return any(
+            type(i) in [
+                app_commands.AppCommandGroup,
+                app_commands.Group,
+                app_commands.commands.Group
+            ]
+            for i in app_command.options
+        )
 
     def is_subcommand(
         self,
@@ -74,8 +81,12 @@ class Converter:
         """
         if not sub_command:
             raise CommandNotFound
+
+        self.logger.debug(f"Trying to get sub AppCommand: {sub_command.name}, {guild}, {app_command}")
+
         if not app_command or app_command is None:
             app_command = await self.get_app_command(sub_command.parent, guild)
+
         if self.is_group(app_command):
             self.logger.debug(f"{app_command.name} is a group")
             if self.is_subcommand(app_command, sub_command):
@@ -83,6 +94,7 @@ class Converter:
         else:
             self.logger.debug(f"Subcommand {sub_command.name} not found")
             return None
+
         self.logger.debug(f"Returning {app_command=} {sub_command=}")
         return app_command, custom_mention
 
@@ -97,12 +109,18 @@ class Converter:
         if type(command) == app_commands.AppCommand:
             self.logger.debug(f"Quick return for {command.name}, already an AppCommand")
             return command
+
         if not command:
             raise CommandNotFound
+
+        if self.is_group(command):
+            self.logger.debug("command is group! when not expected")
+
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
         # app_commands_list = await self._get_commands(guild)
         app_commands_list = await self.tree.fetch_commands(guild=guild)
-        self.logger.debug(f"cmd list: {app_commands_list}")
+        self.logger.debug(f"cmd list: {[i.name for i in app_commands_list]}")
+
         for app_command in app_commands_list:
             # self.logger.debug(f"Checking for match: {command.name}, {app_command.name}")
             if command.name == app_command.name:
@@ -110,8 +128,8 @@ class Converter:
                 break
         else:
             if guild:
-                self.logger.debug(f"Command {command.name} not found in {app_commands_list}, trying global commands.")
-                await self.get_app_command(command, guild=None)
+                self.logger.warning(f"Command {command.name} not found, trying global commands.") # {app_commands_list}
+                return await self.get_app_command(command, guild=None)
             else:
                 self.logger.debug(f"Command {command.name} not found")
             return None
