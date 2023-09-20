@@ -66,6 +66,7 @@ STATUS_MSG = [
     "Sniffing wedding cakes",
     "Touching a wedding cake",
     "Magically spawning a wedding cake",
+    "Wanting to eat a wedding cake and have one too"
 ]
 
 # copied from the library, this fixes type-hint
