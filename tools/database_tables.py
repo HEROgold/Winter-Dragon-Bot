@@ -343,6 +343,25 @@ class Presence(Base):
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
+    def remove_old_presences(self, member_id: int, days: int = 265) -> None:
+        """
+        Removes old presences present in the database, if they are older then a year
+        
+        Parameters
+        -----------
+        :param:`member`: :class:`int`
+            The Member_id to clean
+        
+        :param:`days`: :class:`int`
+            The amount of days ago to remove, defaults to (256)
+        """
+        with Session(engine) as session:
+            db_presences = session.query(Presence).where(Presence.user_id == member_id).all()
+            for presence in db_presences:
+                if (presence.date_time + datetime.timedelta(days=days)) >= datetime.datetime.now(datetime.timezone.utc):
+                    session.delete(presence)
+            session.commit()
+
 class AutoChannel(Base):
     __tablename__ = "autochannels"
 
