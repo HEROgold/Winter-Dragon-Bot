@@ -118,7 +118,9 @@ class TempBan(Cog):
     async def on_ban(self, member: discord.Member):
         await self.synced_ban_sync(member)
 
+    sync = app_commands.Group(name="sync")
 
+    @sync.command(name="join")
     async def slash_synced_ban_join(self, interaction: discord.Interaction):
         guild = interaction.guild
 
@@ -131,6 +133,7 @@ class TempBan(Cog):
         await interaction.response.send_message("This guild will have ban's synced across this bot.", ephemeral=True)
 
 
+    @sync.command(name="leave")
     async def slash_synced_ban_leave(self, interaction: discord.Interaction):
         guild = interaction.guild
 
