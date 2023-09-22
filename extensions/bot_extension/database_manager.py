@@ -109,27 +109,6 @@ class DatabaseManager(Cog):
         await self.bot.wait_until_ready()
 
 
-    async def remove_old_presences(self, member: discord.Member) -> None:
-        """
-        Removes old presences present in the database, if they are older then a year
-        
-        Parameters
-        -----------
-        :param:`member`: :class:`discord.Member`
-            The Member to clean for
-        """
-        # TODO: move to database_tables.py
-        with Session(engine) as session:
-            db_presences = session.query(Presence).where(Presence.user_id == member.id).all()
-            for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=365)) >= datetime.datetime.now(datetime.timezone.utc):
-                    self.logger.debug(f"Removing year old presence {presence.id=}")
-                    session.delete(presence)
-                else:
-                    self.logger.debug(f"Presence data not older then a year {presence.id=}")
-            session.commit()
-
-
     @Cog.listener()
     async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
         """
@@ -144,6 +123,7 @@ class DatabaseManager(Cog):
             The Member after the update
         """
         member = after or before
+        Presence.remove_old_presences(member.id)
         date_time = datetime.datetime.now()
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
         # self.logger.debug(f"presence update for {member}, at {date_time}")
