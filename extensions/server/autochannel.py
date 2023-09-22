@@ -11,6 +11,7 @@ CREATE_REASON = "Creating AutomaticChannel"
 
 class AutomaticChannels(GroupCog):
     # FIXME: weird behavior sometimes on join/leave
+    # TODO: add autmatic naming, when a name is not specified in settings > get current activity name
     # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
     @Cog.listener()
     async def on_voice_state_update(
