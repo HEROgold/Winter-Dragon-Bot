@@ -550,6 +550,17 @@ class AssociationUserCommand(Base):
             session.commit()
 
 
+class SyncBan(Base):
+    __tablename__ = "synced_bans"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
+
+
+class SyncBanGuild(Base):
+    __tablename__ = "sync_ban_guilds"
+
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+
 
 all_tables = Base.__subclasses__()
 
