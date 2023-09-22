@@ -543,3 +543,8 @@ except Exception as e:
     logger.exception(f"Error getting all tables: {e}")
     """Should only run max once per startup, creating missing tables"""
     Base().metadata.create_all(engine)
+
+# Test using Hypothesis
+# https://youtu.be/dsBitCcWWf4
+
+# TODO: Use more joins etc.
