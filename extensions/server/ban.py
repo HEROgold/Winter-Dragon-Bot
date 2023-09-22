@@ -7,11 +7,7 @@ from discord.ext import tasks
 from tools.config_reader import config# from tools.database_tables Session, engine
 from _types.cogs import Cog
 from _types.bot import WinterDragon
-
-
-# TODO: add sync ban option,
-# banning every member from every guild this bot is in if it's banned in one
-# allow opt-in
+from tools.database_tables import Session, engine, SyncBan, SyncBanGuild
 
 
 class TempBan(Cog):
@@ -113,7 +109,50 @@ class TempBan(Cog):
         ]
 
 
+    @Cog.listener()
+    async def on_ban(self, member: discord.Member):
+        await self.synced_ban_sync(member)
+
+    sync = app_commands.Group(name="sync")
+
+    @sync.command(name="join")
+    async def slash_synced_ban_join(self, interaction: discord.Interaction):
+        guild = interaction.guild
+
+        with Session(engine) as session:
+            session.add(SyncBanGuild(
+                guild_id = guild.id
+            ))
+            session.commit()
+
+        await interaction.response.send_message("This guild will have ban's synced across this bot.", ephemeral=True)
+
+
+    @sync.command(name="leave")
+    async def slash_synced_ban_leave(self, interaction: discord.Interaction):
+        guild = interaction.guild
+
+        with Session(engine) as session:
+            session.delete(session.query(SyncBanGuild).where(SyncBanGuild.guild_id == guild.id).first())
+            session.commit()
+
+        await interaction.response.send_message("This guild will no longer have ban's synced across this bot.", ephemeral=True)
+
+
+    async def synced_ban_sync(self, member: discord.Member):
+        with Session(engine) as session:
+            session.add(SyncBan(
+                user_id = member.id
+            ))
+
+            for db_guild in session.query(SyncBanGuild).all():
+                guild = self.bot.get_guild(db_guild.guild_id)
+                await guild.ban(member, reason="Syncing bans")
+            session.commit()
+
+
 async def setup(bot: WinterDragon) -> None:
     pass
-    # await bot.add_cog(TempBan(bot))
+    await bot.add_cog(TempBan(bot))
     # Removed since normal ban exist.
+    # added since synced ban
