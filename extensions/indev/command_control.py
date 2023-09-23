@@ -19,6 +19,7 @@ from tools.database_tables import Session, engine, Command, GuildCommands, Comma
 
 # TODO: test
 # TODO: allow command groups to be disabled
+# TODO: add and manage commands / command groups > Database
 
 
 class CommandControl(GroupCog):
