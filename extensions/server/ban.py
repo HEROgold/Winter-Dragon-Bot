@@ -66,7 +66,7 @@ class TempBan(Cog):
         reason:str=None
     ) -> None:
         if (seconds and minutes and hours and days) == 0:
-            seconds = config.Ban.DEFAULT_BANTIME
+            seconds = config["Ban"]["DEFAULT_BANTIME"]
         if not self.data:
             self.data = self.get_data()
         member_id = str(member.id)
@@ -113,9 +113,9 @@ class TempBan(Cog):
     async def on_ban(self, member: discord.Member):
         await self.synced_ban_sync(member)
 
-    sync = app_commands.Group(name="sync")
+    sync = app_commands.Group(name="sync", description="Synchronize bans across other servers")
 
-    @sync.command(name="join")
+    @sync.command(name="join", description="Start syncing ban's with this server")
     async def slash_synced_ban_join(self, interaction: discord.Interaction):
         guild = interaction.guild
 
@@ -128,7 +128,7 @@ class TempBan(Cog):
         await interaction.response.send_message("This guild will have ban's synced across this bot.", ephemeral=True)
 
 
-    @sync.command(name="leave")
+    @sync.command(name="leave", description="Stop syncing ban's with this server")
     async def slash_synced_ban_leave(self, interaction: discord.Interaction):
         guild = interaction.guild
 
@@ -152,7 +152,7 @@ class TempBan(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    pass
+    return
     await bot.add_cog(TempBan(bot))
     # Removed since normal ban exist.
     # added since synced ban
