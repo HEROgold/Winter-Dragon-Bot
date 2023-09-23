@@ -522,16 +522,16 @@ class Command(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(15))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
-    # parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
-    # parent = relationship(back_populates="commands", foreign_keys=[parent_id])
+    parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
+    parent: Mapped["CommandGroup"] = relationship(back_populates="commands", foreign_keys=[parent_id])
 
 
-# class CommandGroup(Base):
-#     __tablename__ = "command_groups"
+class CommandGroup(Base):
+    __tablename__ = "command_groups"
 
-#     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-#     name: Mapped[str] = mapped_column(String(15))
-#     commands: Mapped[list["Command"]] = relationship(back_populates="parent")
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(15))
+    commands: Mapped[list["Command"]] = relationship(back_populates="parent")
 
 
 class AssociationUserCommand(Base):
