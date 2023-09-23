@@ -72,6 +72,7 @@ AUTOCHANNEL_ID = "autochannels.id"
 POLLS_ID = "polls.id"
 TICKETS_ID = "tickets.id"
 COMMANDS_ID = "commands.id"
+COMMAND_GROUPS_ID = "command_groups.id"
 
 
 class Base(DeclarativeBase):
@@ -521,6 +522,16 @@ class Command(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(15))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
+    # parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
+    # parent = relationship(back_populates="commands", foreign_keys=[parent_id])
+
+
+# class CommandGroup(Base):
+#     __tablename__ = "command_groups"
+
+#     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+#     name: Mapped[str] = mapped_column(String(15))
+#     commands: Mapped[list["Command"]] = relationship(back_populates="parent")
 
 
 class AssociationUserCommand(Base):
@@ -560,6 +571,15 @@ class SyncBanGuild(Base):
     __tablename__ = "sync_ban_guilds"
 
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+
+
+class GuildCommands(Base):
+    __tablename__ = "guild_commands"
+
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID))
+    # group_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUPS_ID))
+    # commands: Mapped[list["Command", "CommandGroup"]] = relationship(foreign_keys=[command_id, group_id])
 
 
 all_tables = Base.__subclasses__()
