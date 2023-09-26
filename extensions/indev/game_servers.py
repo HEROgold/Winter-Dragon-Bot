@@ -14,10 +14,12 @@ from tools.config_reader import config
 from _types.cogs import GroupCog #, Cog
 from _types.bot import WinterDragon
 
+
 STEAM_CMD_DIR = "./steam_cmd"
 INSTALLED_SERVERS = f"{STEAM_CMD_DIR}/steamapps/common"
 STEAM_SERVER_STORAGE = f"{STEAM_CMD_DIR}/steam_cmd/steamapps"
 STEAM_DB_LIST = "SteamDb Servers.txt"
+
 
 if os.name == "nt":
     WINGET_SteamCMD = "Valve.SteamCMD"
@@ -31,11 +33,13 @@ elif os.name == "posix":
     Find possible package managers installed on system, download using that
     """
 
+
 class Server(TypedDict):
     id: int
     name: str
     type: str
     last_update: str
+
 
 os.makedirs(STEAM_CMD_DIR, exist_ok=True)
 
@@ -79,7 +83,7 @@ class SteamServers(GroupCog):
         self.test_steamcmd.start()
 
 
-    def get_installed_server(self) -> list[str]:
+    def get_installed_servers(self) -> list[str]:
         servers = os.listdir(INSTALLED_SERVERS)
         self.logger.debug(f"{servers=}")
         return servers
@@ -165,8 +169,8 @@ class SteamServers(GroupCog):
 
 
     @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.command(name="update", description="Install or update steam server")
-    async def slash_server_update(self, interaction: discord.Interaction, server_name: str) -> None:
+    @app_commands.command(name="install", description="Install a steam server")
+    async def slash_server_install(self, interaction: discord.Interaction, server_name: str) -> None:
         await interaction.response.defer()
 
         for server in self.server_list:
@@ -180,21 +184,24 @@ class SteamServers(GroupCog):
             await interaction.followup.edit_message(f"{server_name} could not be found")
 
 
-    @slash_server_update.autocomplete("server_name")
-    async def activity_autocomplete_server(
-        self, interaction: discord.Interaction, current: str
-    ) -> list[app_commands.Choice[str]]:
-        options = [
-            app_commands.Choice(name=server["name"], value=server["name"]) 
-            for server in self.server_list
-            if current.lower() in server["name"].lower()
-        ]
-        self.logger.debug(len(options))
-        if len(options) >= 24:
-            randomized = random.choices(options, k=25)
-            self.logger.debug(f"{randomized=}")
-            return randomized
-        return options
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="update", description="Update a steam server")
+    async def slash_server_update(self, interaction: discord.Interaction, server_name: str) -> None:
+        await interaction.response.defer()
+
+        for server in self.server_list:
+            if server["name"] == server_name:
+                if server_name in self.get_installed_servers():
+                    self.logger.debug("Server is installed")
+
+                # TODO: find out if server is installed, change message based on that
+                await interaction.followup.send(f"Updating {server_name}...")
+                await self.update_steamcmd_server(server["id"], interaction)
+                await interaction.followup.edit_message(f"{server_name} has started")
+                break
+        else:
+            await interaction.followup.edit_message(f"{server_name} could not be found")
+
 
 
     async def start_steamcmd_server(self, server_name: str, interaction: discord.Interaction):
@@ -218,6 +225,41 @@ class SteamServers(GroupCog):
                 break
         else:
             await interaction.followup.edit_message(f"{server_name} could not be found")
+
+#
+# AutoCompletes
+#
+
+    @slash_server_start.autocomplete("server_name")
+    @slash_server_update.autocomplete("server_name")
+    async def start_autocomplete_server(
+        self, interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        options = self.get_installed_servers()
+        self.logger.debug(len(options))
+        if len(options) >= 24:
+            randomized = random.choices(options, k=25)
+            self.logger.debug(f"{randomized=}")
+            return randomized
+        return options
+
+
+    @slash_server_install.autocomplete("server_name")
+    async def install_autocomplete_server(
+        self, interaction: discord.Interaction, current: str
+    ) -> list[app_commands.Choice[str]]:
+        options = [
+            app_commands.Choice(name=server["name"], value=server["name"]) 
+            for server in self.server_list
+            if current.lower() in server["name"].lower()
+        ]
+        self.logger.debug(len(options))
+        if len(options) >= 24:
+            randomized = random.choices(options, k=25)
+            self.logger.debug(f"{randomized=}")
+            return randomized
+        return options
+
 
 ## STEAM USAGE
 # Usage:  steamcmd ["+COMMAND [ARG]..."]...
