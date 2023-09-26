@@ -5,14 +5,16 @@ Using SteamCmd allow users/admins to create/manage servers from SteamCmd
 import os
 import random
 import subprocess
+from signal import SIGINT
 from typing import Any, TypedDict
+
 import discord
 from discord import app_commands
 from discord.ext import tasks
 
-from tools.config_reader import config
-from _types.cogs import GroupCog #, Cog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog  # , Cog
+from tools.config_reader import config
 
 
 STEAM_CMD_DIR = "./steam_cmd"
@@ -40,8 +42,6 @@ class Server(TypedDict):
     type: str
     last_update: str
 
-
-os.makedirs(STEAM_CMD_DIR, exist_ok=True)
 
 class DisabledError(Exception):
     pass
@@ -93,6 +93,9 @@ class SteamServers(GroupCog):
         # TODO: find the "Winget" download, and wait for it, or cancel it
         
         monitor = subprocess.Popen(["bitsadmin"], ["/monitor"])
+        monitor.send_signal(SIGINT)
+        output = monitor.stdout.read()
+        self.logger.debug(f"{output=}")
         # Send ctrl + c, read output as strings
         # monitor.communicate()
         # find "Winget"
@@ -278,5 +281,10 @@ class SteamServers(GroupCog):
 # You can also type "find <string>" to see a list of all commands and convars that contain or reference <string>.
 
 
+def main() -> None:
+    os.makedirs(STEAM_CMD_DIR, exist_ok=True)
+
+
 async def setup(bot: WinterDragon) -> None:
+    main()
     await bot.add_cog(SteamServers(bot))
