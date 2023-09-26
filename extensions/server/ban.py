@@ -5,12 +5,12 @@ from discord import app_commands
 from discord.ext import tasks
 
 from tools.config_reader import config# from tools.database_tables Session, engine
-from _types.cogs import Cog
+from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 from tools.database_tables import Session, engine, SyncBan, SyncBanGuild
 
 
-class TempBan(Cog):
+class TempBan(GroupCog):
     @tasks.loop(seconds=3600)
     async def unban_check(self) -> None:
         if not self.data:
