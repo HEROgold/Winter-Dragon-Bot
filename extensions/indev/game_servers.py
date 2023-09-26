@@ -15,6 +15,7 @@ from _types.cogs import GroupCog #, Cog
 from _types.bot import WinterDragon
 
 STEAM_CMD_DIR = "./steam_cmd"
+INSTALLED_SERVERS = f"{STEAM_CMD_DIR}/steamapps/common"
 STEAM_SERVER_STORAGE = f"{STEAM_CMD_DIR}/steam_cmd/steamapps"
 STEAM_DB_LIST = "SteamDb Servers.txt"
 
@@ -37,6 +38,10 @@ class Server(TypedDict):
     last_update: str
 
 os.makedirs(STEAM_CMD_DIR, exist_ok=True)
+
+class DisabledError(Exception):
+    pass
+
 
 def get_all_servers() -> list[Server]:
     """
@@ -63,6 +68,7 @@ def get_all_servers() -> list[Server]:
 
 class SteamServers(GroupCog):
     server_list: list[Server]
+    processes: list[subprocess.Popen]
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -73,22 +79,29 @@ class SteamServers(GroupCog):
         self.test_steamcmd.start()
 
 
+    def get_installed_server(self) -> list[str]:
+        servers = os.listdir(INSTALLED_SERVERS)
+        self.logger.debug(f"{servers=}")
+        return servers
+
+
     def find_download_job(self):
         # TODO: find the "Winget" download, and wait for it, or cancel it
         
-        subprocess.Popen(["bitsadmin"], ["/monitor"])
+        monitor = subprocess.Popen(["bitsadmin"], ["/monitor"])
         # Send ctrl + c, read output as strings
+        # monitor.communicate()
         # find "Winget"
 
 
     def download_winget(self):
         self.logger.debug("Downloading Winget")
         if not config.getboolean("SteamCMD", "download_winget"):
-            raise ValueError("download_winget is set to False.")
+            raise DisabledError("download_winget is set to False.")
         
         try:
             subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]).wait()
-            subprocess.Popen(["cmd", INSTALLER_CMD])
+            subprocess.Popen(["cmd", INSTALLER_CMD]).wait()
         except Exception as e:
             self.logger.exception(f"error when downloading Winget {e}")
             return None
@@ -97,7 +110,7 @@ class SteamServers(GroupCog):
     def download_steamcmd(self):
         self.logger.debug("Downloading SteamCMD")
         if not config.getboolean("SteamCMD", "download_steamcmd"):
-            raise ValueError("download_steamcmd is set to False.")
+            raise DisabledError("download_steamcmd is set to False.")
         
         try:
             subprocess.Popen([
@@ -123,6 +136,9 @@ class SteamServers(GroupCog):
         except FileNotFoundError as e:
             self.logger.exception(f"error when opening SteamCmd {e}")
             self.download_steamcmd()
+        except DisabledError as e:
+            self.logger.warning(f"User has disabled downloading: {e}")
+
 
     @test_steamcmd.before_loop
     async def before_test(self) -> None:
@@ -155,7 +171,8 @@ class SteamServers(GroupCog):
 
         for server in self.server_list:
             if server["name"] == server_name:
-                await interaction.followup.send(f"Starting {server_name}...")
+                # TODO: find out if server is installed, change message based on that
+                await interaction.followup.send(f"Updating {server_name}...")
                 await self.update_steamcmd_server(server["id"], interaction)
                 await interaction.followup.edit_message(f"{server_name} has started")
                 break
