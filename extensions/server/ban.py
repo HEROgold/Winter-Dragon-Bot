@@ -5,7 +5,7 @@ from discord import app_commands
 from discord.ext import tasks
 
 from tools.config_reader import config# from tools.database_tables Session, engine
-from _types.cogs import GroupCog
+from _types.cogs import GroupCog, Cog
 from _types.bot import WinterDragon
 from tools.database_tables import Session, engine, SyncBan, SyncBanGuild
 
