@@ -21,8 +21,11 @@ from sqlalchemy.orm import (
     Mapped,
     Session,
     mapped_column,
-    relationship
+    relationship,
 )
+
+# Potential upgrade for db
+# from sqlalchemy.ext.asyncio import create_async_engine
 
 from tools.config_reader import config
 
