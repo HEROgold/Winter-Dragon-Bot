@@ -100,7 +100,11 @@ class SteamServers(GroupCog):
             raise ValueError("download_steamcmd is set to False.")
         
         try:
-            subprocess.Popen(["winget", "install", WINGET_SteamCMD, "--location", os.path.abspath(STEAM_CMD_DIR)]).wait()
+            subprocess.Popen([
+                "winget", "install", WINGET_SteamCMD,
+                "--location", os.path.abspath(STEAM_CMD_DIR),
+                "--force"]
+            ).wait()
         except Exception as e:
             self.logger.exception(f"error when downloading SteamCMD {e}")
             self.download_winget()
