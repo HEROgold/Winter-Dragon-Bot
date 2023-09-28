@@ -76,6 +76,7 @@ POLLS_ID = "polls.id"
 TICKETS_ID = "tickets.id"
 COMMANDS_ID = "commands.id"
 COMMAND_GROUPS_ID = "command_groups.id"
+ROLES_ID = "roles.id"
 
 
 class Base(DeclarativeBase):
@@ -583,6 +584,20 @@ class GuildCommands(Base):
     command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID))
     # group_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUPS_ID))
     # commands: Mapped[list["Command", "CommandGroup"]] = relationship(foreign_keys=[command_id, group_id])
+
+
+class Roles(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(String)
+
+
+class GuildRoles(Base):
+    __tablename__ = "guild_roles"
+
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey(ROLES_ID), primary_key=True)
 
 
 all_tables = Base.__subclasses__()
