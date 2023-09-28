@@ -205,14 +205,18 @@ class SteamServers(GroupCog):
         else:
             await interaction.followup.edit_message(f"{server_name} could not be found")
 
+    def get_server_executable_path(self) -> str:
+        # TODO: find if servers file contains .bat, .exe or any other executables.
+        pass
 
 
     async def start_steamcmd_server(self, server_name: str, interaction: discord.Interaction):
-        # TODO: find server in STEAM_SERVER_STORAGE, find / execute exe.
+        servers = self.get_installed_servers()
+        if server_name in servers:
+            self.get_server_executable_path()
         # TODO: create script that adds a easy interface to run steam servers
         # TODO: send warning when not found
         # Add auto_complete
-        pass
 
 
     @app_commands.checks.has_permissions(administrator=True)
