@@ -100,6 +100,7 @@ class Channel(Base):
     name: Mapped[str] = mapped_column(String(50))
     type: Mapped[str] = mapped_column(String(15), nullable=True)
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
+
     messages: Mapped[List["Message"]] = relationship(back_populates="channel")
     guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
 
@@ -121,6 +122,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
+
     messages: Mapped[List["Message"]] = relationship(back_populates="user")
     reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
     tickets: Mapped[List["Ticket"]] = relationship(back_populates="user")
@@ -150,11 +152,14 @@ class Message(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     content: Mapped[str] = mapped_column(String(2000))
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    user: Mapped["User"] = relationship(back_populates="messages", foreign_keys=[user_id])
     channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID), nullable=True)
+    # TODO: remove column, as channel contains guild_id
+    # guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True) # actually should reference to the guild from channel.guild
+
+    user: Mapped["User"] = relationship(back_populates="messages", foreign_keys=[user_id])
     channel: Mapped["Channel"] = relationship(back_populates="messages", foreign_keys=[channel_id])
-    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True) # actually should reference to the guild from channel.guild
-    guild: Mapped["Guild"] = relationship(foreign_keys=[guild_id]) # back_populates="messages"
+    # TODO: remove relationship, as channel already has guild relationships
+    # guild: Mapped["Guild"] = relationship(foreign_keys=[guild_id]) # back_populates="messages"
 
 
 class Reminder(Base):
@@ -163,8 +168,9 @@ class Reminder(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     content: Mapped[str] = mapped_column(String(2000))
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    user: Mapped["User"] = relationship(back_populates="reminders", foreign_keys=[user_id])
     timestamp: Mapped[datetime.datetime] = mapped_column(DateTime)
+
+    user: Mapped["User"] = relationship(back_populates="reminders", foreign_keys=[user_id])
 
 
 class Welcome(Base):
@@ -242,7 +248,7 @@ class ResultMassiveMultiplayer(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    placement: Mapped[Optional[int]] = mapped_column()
+    placement: Mapped[Optional[int]] = mapped_column(nullable=True)
 
 
 # This only works for 1v1 games.
@@ -367,6 +373,7 @@ class Presence(Base):
                     session.delete(presence)
             session.commit()
 
+
 class AutoChannel(Base):
     __tablename__ = "autochannels"
 
@@ -382,8 +389,16 @@ class AutoChannelSettings(Base):
     channel_limit: Mapped[int] = mapped_column(Integer)
 
 
-# TODO: Change association tables to the following format:
-team_users = Table("ticket_helpers", Base.metadata,
+# class TicketHelpers(Base):
+#     __tablename__ = "ticket_helpers"
+
+#     ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey(TICKETS_ID), primary_key=True)
+#     user_id: Mapped[int] = mapped_column(Integer, ForeignKey(USERS_ID), primary_key=True)
+
+# TODO: test if class above can replace Table below
+# Doesn't seem to be the case.
+
+ticket_helpers = Table("ticket_helpers", Base.metadata,
     Column("ticket_id", Integer, ForeignKey(TICKETS_ID), primary_key=True),
     Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True)
 )
@@ -400,13 +415,12 @@ class Ticket(Base):
     is_closed: Mapped[bool] = mapped_column(Boolean)
     
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(USERS_ID))
-    user: Mapped[User] = relationship("User")
-    
     channel_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(CHANNELS_ID))
-    channel: Mapped["Channel"] = relationship("Channel")
 
-    transactions: Mapped[list["Transaction"]] = relationship("Transaction", back_populates="ticket")
-    helpers: Mapped[list["User"]] = relationship("User", secondary=team_users, back_populates="tickets")
+    user: Mapped[User] = relationship("User")
+    channel: Mapped["Channel"] = relationship("Channel")
+    transactions: Mapped[list["Transaction"]] = relationship(back_populates="ticket")
+    helpers: Mapped[list["User"]] = relationship(back_populates="tickets", secondary=ticket_helpers)
 
     @classmethod    
     def close(cls) -> None:
@@ -414,24 +428,6 @@ class Ticket(Base):
             cls.is_closed = True
             cls.closed_at = datetime.datetime.now()
             session.commit()
-
-# # TODO: Change association tables to the following format:
-# team_users = Table("team_users", Base.metadata,
-#     Column("team_id", Integer, ForeignKey(TEAMS_ID), primary_key=True),
-#     Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True)
-# )
-
-# team_channels = Table("team_channels", Base.metadata,
-#     Column("team_id", Integer, ForeignKey(TEAMS_ID), primary_key=True),
-#     Column("channel_id", Integer, ForeignKey(CHANNELS_ID), primary_key=True)
-# )
-
-# class Team(Base):
-#     __tablename__ = "teams"
-
-#     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-#     members: Mapped[list["User"]] = relationship("User", secondary=team_users, back_populates="teams")
-#     channel: Mapped[Channel] = relationship("Channel", secondary=team_channels, back_populates="team")
 
 
 class Transaction(Base):
@@ -441,18 +437,18 @@ class Transaction(Base):
     timestamp: Mapped[DateTime] = mapped_column(DateTime)
     action: Mapped[str] = mapped_column(String)
     details: Mapped[str] = mapped_column(String)
-    
     ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey("tickets.id"))
-    ticket: Mapped[Ticket] = relationship("Ticket", back_populates="transactions")
-    
     responder_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    responder: Mapped[User] = relationship("User")
+
+    ticket: Mapped["Ticket"] = relationship(back_populates="transactions")
+    responder: Mapped["User"] = relationship()
 
 
 class Role(Base):
     __tablename__ = "roles"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
+    name: Mapped[str] = mapped_column(String)
 
 
 class AutoAssignRole(Base):
@@ -470,6 +466,7 @@ class Incremental(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     balance: Mapped[int] = mapped_column(BigInteger)
     last_update: Mapped[datetime.datetime] = mapped_column(DateTime)
+
     generators: Mapped[List["IncrementalGen"]] = relationship(back_populates="incremental")
 
     @classmethod
@@ -513,11 +510,12 @@ class IncrementalGen(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     incremental_id: Mapped[int] = mapped_column(ForeignKey(INCREMENTAL_ID))
-    incremental: Mapped["Incremental"] = relationship(back_populates="generators", foreign_keys=[incremental_id])
     generator_id: Mapped[int] = mapped_column(Integer)
     name : Mapped[str] = mapped_column(String(15))
     price : Mapped[str] = mapped_column(Integer)
     generating : Mapped[float] = mapped_column(Float)
+
+    incremental: Mapped["Incremental"] = relationship(back_populates="generators", foreign_keys=[incremental_id])
 
 
 class Command(Base):
@@ -527,6 +525,7 @@ class Command(Base):
     name: Mapped[str] = mapped_column(String(15))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
     parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
+
     parent: Mapped["CommandGroup"] = relationship(back_populates="commands", foreign_keys=[parent_id])
 
 
@@ -535,6 +534,7 @@ class CommandGroup(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(15))
+
     commands: Mapped[list["Command"]] = relationship(back_populates="parent")
 
 
@@ -586,13 +586,6 @@ class GuildCommands(Base):
     # commands: Mapped[list["Command", "CommandGroup"]] = relationship(foreign_keys=[command_id, group_id])
 
 
-class Roles(Base):
-    __tablename__ = "roles"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
-    name: Mapped[str] = mapped_column(String)
-
-
 class GuildRoles(Base):
     __tablename__ = "guild_roles"
 
@@ -603,7 +596,7 @@ class GuildRoles(Base):
 class Infractions(Base):
     __tablename__ = "infractions"
 
-
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
 
 
 all_tables = Base.__subclasses__()
