@@ -600,6 +600,12 @@ class GuildRoles(Base):
     role_id: Mapped[int] = mapped_column(ForeignKey(ROLES_ID), primary_key=True)
 
 
+class Infractions(Base):
+    __tablename__ = "infractions"
+
+
+
+
 all_tables = Base.__subclasses__()
 
 try:
