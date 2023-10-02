@@ -16,8 +16,8 @@ from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 
 
-IMG_DIR = "./database/img/"
-METRICS_FILE = f"{IMG_DIR}system_metrics.png"
+IMG_DIR = "./database/img"
+METRICS_FILE = f"{IMG_DIR}/system_metrics.png"
 END_CODEBLOCK = "```"
 
 
