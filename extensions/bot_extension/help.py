@@ -305,5 +305,6 @@ class Dropdown(discord.ui.Select):
 
 
 async def setup(bot: WinterDragon) -> None:
+    return # return to disable help cog. We using slash commands, help is less useful then
     await bot.add_cog(Help(bot))
     # await bot.add_cog(CopiedDropdownHelp(bot))
