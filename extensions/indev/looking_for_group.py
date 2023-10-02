@@ -27,6 +27,10 @@ class Lfg(GroupCog):
         with Session(engine) as session:
             self.games = session.query(GameDB).all()
 
+
+    def check_match(self):
+        pass
+
     # lfg_GROUP = app_commands.Group(name="lfgGroup", description="lfg")
     # @lfg_GROUP.command()
 
