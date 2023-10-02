@@ -11,6 +11,7 @@ CREATE_REASON = "Creating AutomaticChannel"
 
 class AutomaticChannels(GroupCog):
     # FIXME: weird behavior sometimes on join/leave
+    # TODO: add automatic naming, when a name is not specified in settings > get current activity name
     # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
     @Cog.listener()
     async def on_voice_state_update(
@@ -23,16 +24,18 @@ class AutomaticChannels(GroupCog):
         with Session(engine) as session:
             if voice_create := session.query(AC).where(AC.id == member.guild.id).first():
                 self.logger.debug(f"{voice_create}")
-                # ignore when already moved from "Join Me"
-                if before.channel is not None:
-                    if before.channel.id == voice_create.channel_id:
-                        return
 
-                    if len(before.channel.members) == 0:
-                        if db_channel := session.query(AC).where(AC.channel_id == before.channel.id).first():
-                            if dc_channel := member.guild.get_channel(db_channel.channel_id):
-                                await dc_channel.delete(reason="removing empty voice")
-                            session.delete(db_channel)
+                # Handle before.channel things
+                if before.channel is None:
+                    pass
+                elif before.channel.id == voice_create.channel_id:
+                    # ignore when already moved from "Join Me"
+                    return
+                elif len(before.channel.members) == 0:
+                    if db_channel := session.query(AC).where(AC.channel_id == before.channel.id).first():
+                        if dc_channel := member.guild.get_channel(db_channel.channel_id):
+                            await dc_channel.delete(reason="removing empty voice")
+                        session.delete(db_channel)
 
                 if (
                     after.channel is not None and
@@ -54,6 +57,7 @@ class AutomaticChannels(GroupCog):
             member.guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
             member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none())
         }
+
         if after.channel is None:
             return
 
@@ -69,6 +73,10 @@ class AutomaticChannels(GroupCog):
                 session.query(ACS).where(ACS.id == member.id).first(),
                 session.query(ACS).where(ACS.id == guild.id).first()
             )
+
+            # Set a default name if no custom one is set in settings
+            if name is None:
+                name = member.activity.name or f"{member.name}'s channel"
 
             voice_channel = await member.guild.create_voice_channel(
                 name,
@@ -95,7 +103,7 @@ class AutomaticChannels(GroupCog):
             guild_setting: ACS
         ) -> tuple[str, int]:
         print(f"transform settings: {member}, {setting=}, {guild_setting=}")
-        name = f"{member.name}'s channel" if setting is None else setting.channel_name
+        name = None if setting is None else setting.channel_name
         if (
             setting is None 
             or guild_setting is None 

@@ -166,5 +166,4 @@ database/img
 database/db
 logon.txt
 readme/
-discord.py broken after pip upgrade.txt
-discord.py broken after pip upgrade, and fixed when downgrading.txt
+steam_cmd/

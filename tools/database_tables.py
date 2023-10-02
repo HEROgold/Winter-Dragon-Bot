@@ -21,8 +21,11 @@ from sqlalchemy.orm import (
     Mapped,
     Session,
     mapped_column,
-    relationship
+    relationship,
 )
+
+# Potential upgrade for db
+# from sqlalchemy.ext.asyncio import create_async_engine
 
 from tools.config_reader import config
 
@@ -72,6 +75,8 @@ AUTOCHANNEL_ID = "autochannels.id"
 POLLS_ID = "polls.id"
 TICKETS_ID = "tickets.id"
 COMMANDS_ID = "commands.id"
+COMMAND_GROUPS_ID = "command_groups.id"
+ROLES_ID = "roles.id"
 
 
 class Base(DeclarativeBase):
@@ -521,6 +526,16 @@ class Command(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(15))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
+    parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
+    parent: Mapped["CommandGroup"] = relationship(back_populates="commands", foreign_keys=[parent_id])
+
+
+class CommandGroup(Base):
+    __tablename__ = "command_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(15))
+    commands: Mapped[list["Command"]] = relationship(back_populates="parent")
 
 
 class AssociationUserCommand(Base):
@@ -562,6 +577,35 @@ class SyncBanGuild(Base):
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
 
 
+class GuildCommands(Base):
+    __tablename__ = "guild_commands"
+
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID))
+    # group_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUPS_ID))
+    # commands: Mapped[list["Command", "CommandGroup"]] = relationship(foreign_keys=[command_id, group_id])
+
+
+class Roles(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    name: Mapped[str] = mapped_column(String)
+
+
+class GuildRoles(Base):
+    __tablename__ = "guild_roles"
+
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey(ROLES_ID), primary_key=True)
+
+
+class Infractions(Base):
+    __tablename__ = "infractions"
+
+
+
+
 all_tables = Base.__subclasses__()
 
 try:
@@ -573,3 +617,8 @@ except Exception as e:
     logger.exception(f"Error getting all tables: {e}")
     """Should only run max once per startup, creating missing tables"""
     Base().metadata.create_all(engine)
+
+# Test using Hypothesis
+# https://youtu.be/dsBitCcWWf4
+
+# TODO: Use more joins etc.

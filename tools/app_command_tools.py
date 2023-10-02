@@ -32,6 +32,7 @@ class Converter:
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     def is_group(self, app_command: app_commands.AppCommand) -> bool:
+        self.logger.debug(f"{type(app_command)=}")
         self.logger.debug(f"Checking is_group: {app_command}")
         return any(
             type(i) in [
