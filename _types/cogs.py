@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, Sequence
 
 import discord
 from discord import app_commands
@@ -11,6 +11,11 @@ from _types.bot import WinterDragon
 from tools.app_command_tools import Converter
 from tools.config_reader import config
 from tools.error_handler import ErrorHandler
+
+def get_arg(args: Sequence[Any], target: type) -> Any | None:
+    for arg in args:
+        if isinstance(arg, target):
+            return arg
 
 
 class Cog(commands.Cog):
@@ -29,13 +34,7 @@ class Cog(commands.Cog):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.ErrorHandler = ErrorHandler
-
-        for arg in args:
-            if isinstance(arg, WinterDragon):
-                self.bot = arg
-                break
-        else:
-            self.bot = kwargs.get("bot")
+        self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.act = Converter(bot=self.bot)
 
