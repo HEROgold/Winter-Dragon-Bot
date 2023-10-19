@@ -47,7 +47,7 @@ class ErrorHandler:
 
     @tasks.loop(count = 1)
     async def _async_init(self) -> None:
-        self.help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
+        # self.help_command = await self.act.get_app_command(self.bot.get_command("help")) # bot.tree.get_command()
         self.invite_command = await self.act.get_app_command(self.bot.tree.get_command("invite"))
         self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
 
@@ -89,8 +89,8 @@ class ErrorHandler:
             commands.errors.BotMissingAnyRole: "This bot is missing a required role",
             app_commands.errors.MissingAnyRole: "You are missing the required Role",
             commands.errors.MissingAnyRole: "You are missing the required Role",
-            commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
-            app_commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
+            # commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
+            # app_commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
             commands.errors.MessageNotFound: error,
             commands.errors.MemberNotFound: error,
             commands.errors.UserNotFound: error,
