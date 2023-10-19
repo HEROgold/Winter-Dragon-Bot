@@ -11,12 +11,7 @@ from _types.bot import WinterDragon
 from tools.app_command_tools import Converter
 from tools.config_reader import config
 from tools.error_handler import ErrorHandler
-
-def get_arg(args: Sequence[Any], target: type) -> Any | None:
-    for arg in args:
-        if isinstance(arg, target):
-            return arg
-
+from tools.utils import get_arg
 
 class Cog(commands.Cog):
     """
