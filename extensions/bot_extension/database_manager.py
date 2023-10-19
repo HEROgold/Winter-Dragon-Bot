@@ -62,7 +62,7 @@ class DatabaseManager(Cog):
                     content = message.clean_content,
                     user_id = message.author.id,
                     channel_id = message.channel.id,
-                    guild_id = message.guild.id if message.guild else None
+                    # guild_id = message.guild.id if message.guild else None
                 ))
                 session.commit()
 
