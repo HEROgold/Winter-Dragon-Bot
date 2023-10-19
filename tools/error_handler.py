@@ -37,7 +37,7 @@ class ErrorHandler:
         self.bot = bot
         self.interface = interface
         self.error = error
-        self.help_msg = ""
+        self.help_msg = "`help`"
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.act = Converter(bot=self.bot)
         self.time_code = datetime.datetime.now(datetime.timezone.utc).timestamp()
@@ -143,7 +143,7 @@ class ErrorHandler:
         self.logger.debug(f"{type(error)=}, {error.args=}")
         
         if config.getboolean("Error", "always_log_errors"):
-            self.logger.error("Always log error:")
+            self.logger.error(f"Always log error: {self.time_code}")
             self.logger.exception(error)
         if config.getboolean("Error", "ignore_errors"):
             return
