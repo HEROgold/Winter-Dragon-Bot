@@ -174,7 +174,6 @@ class ErrorHandler:
 
 
 # TODO: Might needs to be removed, since in _types.cogs it adds ErrorHandler directly
-# FIXME: Doesn't work when a listener() raises an error.
 # Fixable by adding a piece of code too all listeners
 # preferably in a wrapper from this module/file
 class Error(Cog):
@@ -225,7 +224,7 @@ class Error(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    # sourcery skip: instance-method-first-arg-name
+    return # Return early to stop using cog.
     if config["Main"]["log_level"] == "DEBUG":
         return
     await bot.add_cog(Error(bot))

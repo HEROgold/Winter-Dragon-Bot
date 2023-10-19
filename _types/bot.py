@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import Any
 
 import discord
@@ -7,6 +8,8 @@ from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import HelpCommand
+
+from tools.config_reader import config
 
 
 # TODO: add explicit connector see:
@@ -25,6 +28,7 @@ class WinterDragon(AutoShardedBot):
     """
 
     launch_time: datetime.datetime
+    logger: logging.Logger
 
     def __init__(
         self,
@@ -36,13 +40,15 @@ class WinterDragon(AutoShardedBot):
         intents: discord.Intents,
         **options: Any
     ) -> None:
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
         super().__init__(command_prefix, help_command=help_command, tree_cls=tree_cls, description=description, intents=intents, **options)
 
 
-    # TODO: on_error, and on_command_error might need to log errors to own log
     async def on_error(self, event_method: str, /, *args: Any, **kwargs: Any) -> None:
+        self.logger.exception(f"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
     async def on_command_error(self, context: Context[BotT], exception: CommandError) -> None:
+        self.logger.exception(f"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 

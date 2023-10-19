@@ -458,9 +458,8 @@ class Role(Base):
 class AutoAssignRole(Base):
     __tablename__ = "auto_assign"
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID))
-    guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID))
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID), primary_key=True)
+    guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
 
 
 class Incremental(Base):

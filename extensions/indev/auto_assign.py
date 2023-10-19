@@ -11,6 +11,12 @@ AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
 
 
 class AutoAssign(GroupCog):
+    @app_commands.command(name="show", description="Show the current auto assign role")
+    async def slash_assign_show(self, interaction: discord.Interaction):
+        with Session(engine) as session:
+            aar = session.query(AutoAssignRole).where(AutoAssignRole.guild_id == interaction.guild.id).first()
+        await interaction.response.send_message(interaction.guild.get_role(aar.role_id).mention, ephemeral=True)
+
     @app_commands.command(name="add", description="Automatically give a new user the selected role when they join")
     async def slash_assign_add(self, interaction: discord.Interaction, role: discord.Role) -> None:
         self.logger.info(f"Adding AutoAssign role {role} to database")
