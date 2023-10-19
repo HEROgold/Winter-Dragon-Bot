@@ -354,7 +354,8 @@ class Presence(Base):
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
-    def remove_old_presences(self, member_id: int, days: int = 265) -> None:
+    @staticmethod
+    def remove_old_presences(member_id: int, days: int = 265) -> None:
         """
         Removes old presences present in the database, if they are older then a year
         
