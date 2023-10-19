@@ -13,6 +13,7 @@ from tools.config_reader import config
 from tools.error_handler import ErrorHandler
 from tools.utils import get_arg
 
+
 class Cog(commands.Cog):
     """
     Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
