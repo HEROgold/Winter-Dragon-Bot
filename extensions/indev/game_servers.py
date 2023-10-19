@@ -6,6 +6,7 @@ import os
 import random
 import subprocess
 from signal import SIGINT
+from time import sleep
 from typing import Any, TypedDict
 
 import discord
@@ -77,6 +78,7 @@ class SteamServers(GroupCog):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.server_list = get_all_servers()
+        self.is_already_downloading()
 
 
     async def cog_load(self) -> None:
@@ -89,23 +91,27 @@ class SteamServers(GroupCog):
         return servers
 
 
-    def find_download_job(self):
-        # TODO: find the "Winget" download, and wait for it, or cancel it
-        
-        monitor = subprocess.Popen(["bitsadmin"], ["/monitor"])
-        monitor.send_signal(SIGINT)
-        output = monitor.stdout.read()
+    def is_already_downloading(self) -> bool:
+        monitor = subprocess.check_output(["powershell.exe", "bitstransfer"])
+        output = monitor.decode()
         self.logger.debug(f"{output=}")
-        # Send ctrl + c, read output as strings
-        # monitor.communicate()
-        # find "Winget"
+
+        if "Winget" in output:
+            self.logger.warning("Found Winget in bitsadmin monitor")
+            return True
+        return False
 
 
     def download_winget(self):
         self.logger.debug("Downloading Winget")
+        
         if not config.getboolean("SteamCMD", "download_winget"):
             raise DisabledError("download_winget is set to False.")
         
+        if self.is_already_downloading():
+            # TODO: wait to finish
+            return None
+
         try:
             subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]).wait()
             subprocess.Popen(["cmd", INSTALLER_CMD]).wait()
