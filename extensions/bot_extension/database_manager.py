@@ -200,13 +200,13 @@ class DatabaseManager(Cog):
             :class:`Command`: The database version of a command
         """
         with Session(engine) as session:
-            if db_command := session.query(Command).where(Command.name == command.name).first():
+            if db_command := session.query(Command).where(Command.qual_name == command.name).first():
                 if command.parent:
                     self.logger.debug(f"{command.parent=}")
                 self.logger.debug(f"{command}")
                 db_command.call_count += 1
             else:
-                db_command = Command(name=command.name, call_count=1)
+                db_command = Command(qual_name=command.qualified_name, call_count=1)
                 session.add(db_command)
             session.expire_on_commit = False
             session.commit()

@@ -521,7 +521,7 @@ class Command(Base):
     __tablename__ = "commands"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(15))
+    qual_name: Mapped[str] = mapped_column(String(30))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
     parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
 
@@ -532,7 +532,7 @@ class CommandGroup(Base):
     __tablename__ = "command_groups"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(15))
+    name: Mapped[str] = mapped_column(String(30))
 
     commands: Mapped[list["Command"]] = relationship(back_populates="parent")
 
