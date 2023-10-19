@@ -370,7 +370,7 @@ class Presence(Base):
         with Session(engine) as session:
             db_presences = session.query(Presence).where(Presence.user_id == member_id).all()
             for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=days)) >= datetime.datetime.now(datetime.timezone.utc):
+                if (presence.date_time + datetime.timedelta(days=days)) >= datetime.datetime.now():
                     session.delete(presence)
             session.commit()
 
