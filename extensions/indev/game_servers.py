@@ -5,8 +5,6 @@ Using SteamCmd allow users/admins to create/manage servers from SteamCmd
 import os
 import random
 import subprocess
-from signal import SIGINT
-from time import sleep
 from typing import Any, TypedDict
 
 import discord
