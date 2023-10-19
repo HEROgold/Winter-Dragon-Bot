@@ -2,10 +2,12 @@
 Using SteamCmd allow users/admins to create/manage servers from SteamCmd
 """
 
+import asyncio
+from datetime import datetime
 import os
 import random
 import subprocess
-from typing import Any, TypedDict
+from typing import Any, Generator, TypedDict
 
 import discord
 from discord import app_commands
@@ -157,17 +159,64 @@ class SteamServers(GroupCog):
         await self.bot.wait_until_ready()
 
 
-    async def update_steamcmd_server(self, server_id: int, interaction: discord.Interaction) -> None:
+    async def live_output(self, process: subprocess.Popen) -> Generator[str, str, None]:
+        for line in iter(process.stdout.readline, ""):
+            self.logger.debug(f"{line=}")
+            yield line
+
+
+    async def uninstall_steamcmd_server(self, server_id: int, interaction: discord.Interaction):
+        self.logger.debug(f"starting SteamCMD server {server_id}")
+
+        try:
+            subprocess.Popen(
+                [
+                    f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
+                    "+login anonymous",
+                    f"+app_uninstall {server_id}",
+                    "+quit"
+                ]
+            ).wait()
+        except FileNotFoundError as e:
+            self.logger.exception(f"error when uninstalling {server_id} {e}")
+        except Exception as e:
+            self.logger.exception(f"error when uninstalling {server_id} {e}")
+            await interaction.followup.edit_message("Could not uninstall server")
+
+
+    async def update_steamcmd_server(
+        self,
+        server_id: int,
+        interaction: discord.Interaction,
+        install: bool=False
+    ) -> None:
         self.logger.debug(f"starting SteamCMD server {server_id}")
 
         # TODO: catch steamcmd warnings, and push those to the message when it fails
         try:
-            subprocess.Popen([
-                f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
-                "+login anonymous",
-                f"+app_update {server_id}",
-                "+quit"
-            ]).wait()
+            process = subprocess.Popen(
+                [
+                    f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
+                    "+login anonymous",
+                    f"+app_update {server_id}",
+                    "+quit"
+                ],
+                stdout=subprocess.PIPE,
+                universal_newlines=True
+            )
+
+            status = "installing" if install else "updating"
+            last_update = datetime.now()
+
+            async for line in self.live_output(process):
+                if "progress" in line:
+                    l_index = line.index("progress")
+
+                    if last_update < datetime.now() - 15:
+                        await interaction.followup.edit_message(f"{status} {line[l_index:]}")
+                if "already up to date" in line:
+                    await interaction.followup.edit_message("Already up to date.")
+
         except FileNotFoundError as e:
             self.logger.exception(f"error when starting {server_id} {e}")
         except Exception as e:
@@ -183,9 +232,24 @@ class SteamServers(GroupCog):
         for server in self.server_list:
             if server["name"] == server_name:
                 # TODO: find out if server is installed, change message based on that
-                await interaction.followup.send(f"Updating {server_name}...")
+                await interaction.followup.send(f"Installing {server_name}...")
                 await self.update_steamcmd_server(server["id"], interaction)
                 await interaction.followup.edit_message(f"{server_name} has started")
+                break
+        else:
+            await interaction.followup.edit_message(f"{server_name} could not be found")
+
+
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.command(name="uninstall", description="UnInstall a installed steam server")
+    async def slash_server_uninstall(self, interaction: discord.Interaction, server_name: str) -> None:
+        await interaction.response.defer()
+
+        for server in self.server_list:
+            if server["name"] == server_name:
+                await interaction.followup.send(f"UnInstalling {server_name}...")
+                await self.update_steamcmd_server(server["id"], interaction)
+                await interaction.followup.edit_message(f"{server_name} has been removed")
                 break
         else:
             await interaction.followup.edit_message(f"{server_name} could not be found")
@@ -243,6 +307,7 @@ class SteamServers(GroupCog):
 
     @slash_server_start.autocomplete("server_name")
     @slash_server_update.autocomplete("server_name")
+    @slash_server_uninstall.autocomplete("server_name")
     async def start_autocomplete_server(
         self, interaction: discord.Interaction, current: str
     ) -> list[app_commands.Choice[str]]:
