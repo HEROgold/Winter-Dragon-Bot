@@ -1,5 +1,5 @@
 import logging
-from typing import Self
+from typing import Any, Self
 
 import discord  # type: ignore
 from discord import app_commands
@@ -31,17 +31,15 @@ class Converter:
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
-    def is_group(self, app_command: app_commands.AppCommand) -> bool:
+    def is_group(self, app_command: Any) -> bool:
         self.logger.debug(f"{type(app_command)=}")
         self.logger.debug(f"Checking is_group: {app_command}")
-        return any(
-            type(i) in [
-                app_commands.AppCommandGroup,
-                app_commands.Group,
-                app_commands.commands.Group
-            ]
-            for i in app_command.options
-        )
+        return type(app_command) in [
+            app_commands.AppCommandGroup,
+            app_commands.Group,
+            app_commands.commands.Group
+        ]
+
 
     def is_subcommand(
         self,
@@ -80,6 +78,8 @@ class Converter:
         Raises:
             CommandNotFound: Raised when the sub-command is not found.
         """
+        custom_mention = ""
+
         if not sub_command:
             raise CommandNotFound
 

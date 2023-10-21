@@ -37,7 +37,7 @@ class ErrorHandler:
         self.bot = bot
         self.interface = interface
         self.error = error
-        self.help_msg = ""
+        self.help_msg = "`help`"
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.act = Converter(bot=self.bot)
         self.time_code = datetime.datetime.now(datetime.timezone.utc).timestamp()
@@ -47,7 +47,7 @@ class ErrorHandler:
 
     @tasks.loop(count = 1)
     async def _async_init(self) -> None:
-        self.help_command = await self.act.get_app_command(self.bot.tree.get_command("help"))
+        # self.help_command = await self.act.get_app_command(self.bot.get_command("help")) # bot.tree.get_command()
         self.invite_command = await self.act.get_app_command(self.bot.tree.get_command("invite"))
         self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
 
@@ -89,8 +89,8 @@ class ErrorHandler:
             commands.errors.BotMissingAnyRole: "This bot is missing a required role",
             app_commands.errors.MissingAnyRole: "You are missing the required Role",
             commands.errors.MissingAnyRole: "You are missing the required Role",
-            commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
-            app_commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
+            # commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
+            # app_commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
             commands.errors.MessageNotFound: error,
             commands.errors.MemberNotFound: error,
             commands.errors.UserNotFound: error,
@@ -143,7 +143,7 @@ class ErrorHandler:
         self.logger.debug(f"{type(error)=}, {error.args=}")
         
         if config.getboolean("Error", "always_log_errors"):
-            self.logger.error("Always log error:")
+            self.logger.error(f"Always log error: {self.time_code}")
             self.logger.exception(error)
         if config.getboolean("Error", "ignore_errors"):
             return

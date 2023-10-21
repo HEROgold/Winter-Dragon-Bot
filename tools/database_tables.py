@@ -354,7 +354,8 @@ class Presence(Base):
     date_time: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
-    def remove_old_presences(self, member_id: int, days: int = 265) -> None:
+    @staticmethod
+    def remove_old_presences(member_id: int, days: int = 265) -> None:
         """
         Removes old presences present in the database, if they are older then a year
         
@@ -369,7 +370,7 @@ class Presence(Base):
         with Session(engine) as session:
             db_presences = session.query(Presence).where(Presence.user_id == member_id).all()
             for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=days)) >= datetime.datetime.now(datetime.timezone.utc):
+                if (presence.date_time + datetime.timedelta(days=days)) >= datetime.datetime.now():
                     session.delete(presence)
             session.commit()
 
@@ -521,7 +522,7 @@ class Command(Base):
     __tablename__ = "commands"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(15))
+    qual_name: Mapped[str] = mapped_column(String(30))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
     parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
 
@@ -532,7 +533,7 @@ class CommandGroup(Base):
     __tablename__ = "command_groups"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(15))
+    name: Mapped[str] = mapped_column(String(30))
 
     commands: Mapped[list["Command"]] = relationship(back_populates="parent")
 

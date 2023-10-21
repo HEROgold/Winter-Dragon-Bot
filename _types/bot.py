@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
-from discord.ext.commands.help import HelpCommand
+from discord.ext.commands.help import HelpCommand, DefaultHelpCommand
 
 from tools.config_reader import config
 
@@ -41,6 +41,10 @@ class WinterDragon(AutoShardedBot):
         **options: Any
     ) -> None:
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
+
+        if help_command is None:
+            help_command = DefaultHelpCommand()
+
         super().__init__(command_prefix, help_command=help_command, tree_cls=tree_cls, description=description, intents=intents, **options)
 
 
