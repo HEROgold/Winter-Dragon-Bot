@@ -175,8 +175,8 @@ class DatabaseManager(Cog):
         command = interaction.command
 
         self._add_db_user(user)
-        db_cmd = self._fetch_db_command(command)
-        self._link_db_user_command(user, db_cmd)
+        # db_cmd = self._fetch_db_command(command)
+        # self._link_db_user_command(user, db_cmd)
 
         channel = interaction.channel
         extras = interaction.extras
