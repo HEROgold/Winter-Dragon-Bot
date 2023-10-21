@@ -83,4 +83,5 @@ class CommandControl(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    return
     await bot.add_cog(CommandControl(bot))
