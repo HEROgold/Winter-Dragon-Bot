@@ -411,6 +411,9 @@ class Steam(GroupCog):
         sales: list[Sale] = []
         with Session(engine) as session:
             for sale_tag in soup.find_all(class_=DISCOUNT_PERCENT):
+                if sale_tag is None:
+                    continue
+
                 sale_tag: bs4.element.Tag
                 # strip the - and % from the tag
                 discount = int(sale_tag.text[1:-1])
