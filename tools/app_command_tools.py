@@ -2,7 +2,7 @@ import logging
 from typing import Any, Self
 
 import discord  # type: ignore
-from discord import AppCommandType, app_commands
+from discord import app_commands
 from discord.ext import commands
 
 from tools.config_reader import config
@@ -114,8 +114,7 @@ class Converter:
             raise CommandNotFound
 
         if self.is_group(command):
-            command.commands
-            self.logger.debug("command is group! when not expected") # Can be group, is expected.
+            self.logger.debug(f"{command.commands=}")
 
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
         # app_commands_list = await self._get_commands(guild)
