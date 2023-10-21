@@ -496,22 +496,22 @@ class Steam(GroupCog):
         regex = r"btn_add_to_cart_\d+"
 
         title = soup.find(class_=SINGLE_GAME_TITLE).text
-        add_to_cart = soup.find("a", href=re.compile(regex))
-        buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA)
+        if add_to_cart := soup.find("a", href=re.compile(regex)):
+            buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA)
 
         with Session(engine) as session:
-            price = buy_area.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
-            sale = SteamSale(
-                id = self.get_id_from_game_url(url),
-                title = title,
-                url = sale["href"],
-                sale_percent = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1], # strip - and % from sale tag
-                final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
-                is_dlc = (buy_area.find(class_=GAME_RELEVANT).text == IS_DLC_RELEVANT_TO_YOU), # boolean, match 2 texts to check dlc
-                is_bundle = False,
-                update_datetime = datetime.datetime.now(),
-            )
-            return self.add_sale(session, sale, "game")
+            if price := buy_area.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", "."):
+                sale = SteamSale(
+                    id = self.get_id_from_game_url(url),
+                    title = title,
+                    url = sale["href"],
+                    sale_percent = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1], # strip - and % from sale tag
+                    final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
+                    is_dlc = (buy_area.find(class_=GAME_RELEVANT).text == IS_DLC_RELEVANT_TO_YOU), # boolean, match 2 texts to check dlc
+                    is_bundle = False,
+                    update_datetime = datetime.datetime.now(),
+                )
+                return self.add_sale(session, sale, "game")
 
 
     def update_sale(self, session: Session, sale: SteamSale) -> bool:
