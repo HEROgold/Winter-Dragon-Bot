@@ -225,7 +225,7 @@ class Poll(GroupCog):
                 await interaction.response.send_modal(PollModal(
                     end_epoch = self.get_future_epoch(minutes, hours, days),
                     content = question,
-                    poll_channel = channel
+                    poll_channel = self.bot.get_channel(channel.id)
                 ))
                 return
             else:
