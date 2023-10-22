@@ -153,13 +153,9 @@ class Message(Base):
     content: Mapped[str] = mapped_column(String(2000))
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID), nullable=True)
-    # TODO: remove column, as channel contains guild_id
-    # guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True) # actually should reference to the guild from channel.guild
 
     user: Mapped["User"] = relationship(back_populates="messages", foreign_keys=[user_id])
     channel: Mapped["Channel"] = relationship(back_populates="messages", foreign_keys=[channel_id])
-    # TODO: remove relationship, as channel already has guild relationships
-    # guild: Mapped["Guild"] = relationship(foreign_keys=[guild_id]) # back_populates="messages"
 
 
 class Reminder(Base):
@@ -390,15 +386,6 @@ class AutoChannelSettings(Base):
     channel_limit: Mapped[int] = mapped_column(Integer)
 
 
-# class TicketHelpers(Base):
-#     __tablename__ = "ticket_helpers"
-
-#     ticket_id: Mapped[int] = mapped_column(Integer, ForeignKey(TICKETS_ID), primary_key=True)
-#     user_id: Mapped[int] = mapped_column(Integer, ForeignKey(USERS_ID), primary_key=True)
-
-# TODO: test if class above can replace Table below
-# Doesn't seem to be the case.
-
 ticket_helpers = Table("ticket_helpers", Base.metadata,
     Column("ticket_id", Integer, ForeignKey(TICKETS_ID), primary_key=True),
     Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True)
@@ -615,3 +602,4 @@ except Exception as e:
 # https://youtu.be/dsBitCcWWf4
 
 # TODO: Use more joins etc.
+# TODO: Use knowledge from databases lessons for update this file
