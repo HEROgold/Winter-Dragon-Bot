@@ -13,6 +13,7 @@ from tools.database_tables import Hangman as HangmanDb
 from tools.database_tables import Game, Session, engine
 from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.button import Button
 
 
 HANGMEN = [
@@ -144,13 +145,7 @@ def create_hangman(guess_amount: int) -> str:
     return HANGMEN[guess_amount]
 
 
-class HangmanButton(discord.ui.Button):
-    def __init__(self, label: str, style: discord.ButtonStyle) -> None:
-        super().__init__(label=label, style=style)
-        self.logger = logging.getLogger(
-            f"{config['Main']['bot_name']}.{self.__class__.__name__}"
-        )
-
+class HangmanButton(Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         try:
             await interaction.response.send_modal(SubmitLetter())
