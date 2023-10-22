@@ -10,6 +10,7 @@ from _types.bot import WinterDragon
 from tools.app_command_tools import Converter
 from tools.config_reader import config
 
+# TODO: delete this cog.
 
 class ErrorHandler:
     """
