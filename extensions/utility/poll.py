@@ -17,12 +17,13 @@ from tools.database_tables import Poll as PollDb
 from tools.database_tables import Session, engine
 from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.modal import Modal
 
 POLL_TYPE = "poll"
 
 
 # FIXME: Doesn't post in set channel
-class PollModal(discord.ui.Modal):
+class PollModal(Modal):
     place_holder = "Empty Answer"
     q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder, required=True)
     q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=True)
@@ -36,7 +37,6 @@ class PollModal(discord.ui.Modal):
         self.content = content
         self.poll_channel = poll_channel
         super().__init__(title=f"{content}", timeout=180)
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     async def on_submit(self, interaction: Interaction) -> None:
