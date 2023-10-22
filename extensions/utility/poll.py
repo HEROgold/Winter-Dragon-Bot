@@ -1,5 +1,4 @@
 import datetime
-import logging
 import random
 from textwrap import dedent
 
@@ -10,7 +9,6 @@ from discord.ext import tasks
 from discord.interactions import Interaction
 
 import tools.rainbow as rainbow
-from tools.config_reader import config
 from tools.database_tables import AssociationUserPoll as AUP
 from tools.database_tables import Channel
 from tools.database_tables import Poll as PollDb
