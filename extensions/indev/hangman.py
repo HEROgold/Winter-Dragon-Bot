@@ -15,7 +15,7 @@ from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 from _types.button import Button
 
-
+# Hang Man Stages
 HANGMEN = [
     """
  ------
@@ -151,9 +151,6 @@ class HangmanButton(Button):
             await interaction.response.send_modal(SubmitLetter())
         except Exception as e:
             self.logger.exception(e)
-
-
-# TODO: Cleanup code
 
 
 class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
