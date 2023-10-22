@@ -20,7 +20,6 @@ from _types.modal import Modal
 POLL_TYPE = "poll"
 
 
-# FIXME: Doesn't post in set channel
 class PollModal(Modal):
     place_holder = "Empty Answer"
     q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder, required=True)
