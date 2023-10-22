@@ -9,6 +9,12 @@ from tools.config_reader import config
 from tools.caching import memoize
 from _types.bot import WinterDragon
 
+# TODO: fix issues or rewrite
+
+# Fom poll.py
+# FIXME: error on self.act.get_app_sub_command: type(error)=<class 'discord.app_commands.errors.CommandInvokeError'>, error.args=("Command 'create' raised an exception: AttributeError: 'NoneType' object has no attribute 'name'",)
+# Weird interaction with app_commands.Group()
+
 
 class CommandNotFound(Exception):
     pass

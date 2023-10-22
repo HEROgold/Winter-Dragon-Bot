@@ -231,8 +231,6 @@ class Poll(GroupCog):
             else:
                 self.logger.warning(f"No poll channel found to send poll to for {interaction.guild=}")
 
-            # FIXME: error on self.act.get_app_sub_command: type(error)=<class 'discord.app_commands.errors.CommandInvokeError'>, error.args=("Command 'create' raised an exception: AttributeError: 'NoneType' object has no attribute 'name'",)
-            # Weird interaction with app_commands.Group()
             self.logger.debug(f"Getting {self.slash_set_poll_channel}")
             _, custom_mention = await self.act.get_app_sub_command(self.slash_set_poll_channel)
 
