@@ -15,5 +15,4 @@ pymongo==4.3.3
 requests==2.31.0
 SQLAlchemy==2.0.15
 psycopg2-binary==2.9.6
-craiyon.py==0.2.0
 matplotlib==3.7.1
