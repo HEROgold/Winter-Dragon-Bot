@@ -8,9 +8,8 @@ from tools.config_reader import config
 # Look into alpha beta, min max.
 
 
-
 class TicTacToeAi:
-    board: list[list[int, int, int]]
+    board: list[list[int]]
 
     def __init__(self, o: int, x: int, board = None) -> None:
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
@@ -65,6 +64,57 @@ class TicTacToeAi:
             return False
         else:
             return True
+
+
+    def check_winner(self, board: list[list[int]] = None) -> Literal[-1, 1, 0] | None:
+        """
+        Check winner,
+        -1 for x,
+        0 for draw,
+        1 for o
+        """
+        # Check horizontal
+        for row in self.board:
+            value = sum(row)
+            if value == (self.x*3):
+                return -1
+            elif value == (self.o*3):
+                return 1
+
+        # Check vertical
+        for line in range(3):
+            value = self.board[0][line] + self.board[1][line] + self.board[2][line]
+            if value == (self.x*3):
+                return -1
+            elif value == (self.o*3):
+                return 1
+
+        # Check diagonals
+        diag = self.board[0][2] + self.board[1][1] + self.board[2][0] # /
+        if diag == (self.x*3):
+            return -1
+        elif diag == (self.o*3):
+            return 1
+
+        diag = self.board[0][0] + self.board[1][1] + self.board[2][2] # \
+        if diag == (self.x*3):
+            return -1
+        elif diag == (self.o*3):
+            return 1
+
+        # Check for empty spots, if filled, draw.
+        for i, row in enumerate(self.board):
+            for j, _ in enumerate(row):
+                if self.board[i][j] == 0:
+                    break
+            else:
+                continue
+            break
+        else:
+            return 0
+        
+        self.logger.debug("Can't determine winner, board not filled yet")
+        return None
 
 
     # Player 'O' is max
@@ -159,57 +209,6 @@ class TicTacToeAi:
                     beta = min_score
 
         return (min_score, final_min_row, final_min_column)
-
-
-    def check_winner(self, board: list[list[int]] = None) -> Literal[-1, 1, 0] | None:
-        """
-        Check winner,
-        -1 for x,
-        0 for draw,
-        1 for o
-        """
-        # Check horizontal
-        for row in self.board:
-            value = sum(row)
-            if value == (self.x*3):
-                return -1
-            elif value == (self.o*3):
-                return 1
-
-        # Check vertical
-        for line in range(3):
-            value = self.board[0][line] + self.board[1][line] + self.board[2][line]
-            if value == (self.x*3):
-                return -1
-            elif value == (self.o*3):
-                return 1
-
-        # Check diagonals
-        diag = self.board[0][2] + self.board[1][1] + self.board[2][0] # /
-        if diag == (self.x*3):
-            return -1
-        elif diag == (self.o*3):
-            return 1
-
-        diag = self.board[0][0] + self.board[1][1] + self.board[2][2] # \
-        if diag == (self.x*3):
-            return -1
-        elif diag == (self.o*3):
-            return 1
-
-        # Check for empty spots, if filled, draw.
-        for i, row in enumerate(self.board):
-            for j, _ in enumerate(row):
-                if self.board[i][j] == 0:
-                    break
-            else:
-                continue
-            break
-        else:
-            return 0
-        
-        self.logger.debug("Can't determine winner, board not filled yet")
-        return None
 
 
     def minimax(
