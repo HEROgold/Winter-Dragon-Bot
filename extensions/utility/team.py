@@ -574,7 +574,7 @@ class Team(GroupCog):
         for _, channel in await self.create_team_channels(teams, category):
             await self.move_from_category(teams, channel)
 
-        await interaction.followup.edit_message("Users from your voice split among teams")
+        await interaction.edit_original_response("Users from your voice split among teams")
 
 
     # FIXME: dc_member is None
