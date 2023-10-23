@@ -430,7 +430,10 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         else:
             await interaction.response.edit_message(content=content, view=view)
 
-        if view.is_vs_bot and not from_ai:
+        if (
+            view.is_vs_bot
+            and not from_ai
+        ):
             self.logger.debug("Before TTT AI Move")
             await view.make_bot_move(interaction)
             self.logger.debug("After TTT AI Move")
@@ -471,17 +474,13 @@ class TicTacToeGame(discord.ui.View):
 
         for button in self.children:
             if button.y == row and button.x == column:
+                if button.disabled:
+                    self.logger.warning("Button is disabled!")
+                    return
                 await button.callback(interaction, from_ai=True)
                 break
 
-        # button_nr = ai.get_button_location(row, column)
-        # await self.children[button_nr].callback(interaction, from_ai=True)
-
         self.logger.debug("After button callback ai")
-        # if interaction.user.id != self.current_player and self.is_vs_bot:
-        #     # switch player and player2/ switch current_player to human.
-        #     # Player O is always 2nd joined player/Bot
-        #     self.current_player = self.player_x.id
 
 
 
