@@ -181,7 +181,7 @@ class SteamServers(GroupCog):
             self.logger.exception(f"error when uninstalling {server_id} {e}")
         except Exception as e:
             self.logger.exception(f"error when uninstalling {server_id} {e}")
-            await interaction.followup.edit_message(content="Could not uninstall server")
+            await interaction.edit_original_response(content="Could not uninstall server")
 
 
     async def update_steamcmd_server(
@@ -213,15 +213,15 @@ class SteamServers(GroupCog):
                     l_index = line.index("progress")
 
                     if last_update < datetime.now() - timedelta(seconds=15):
-                        await interaction.followup.edit_message(content=f"{status} {line[l_index:]}")
+                        await interaction.edit_original_response(content=f"{status} {line[l_index:]}")
                 if "already up to date" in line:
-                    await interaction.followup.edit_message(content="Already up to date.")
+                    await interaction.edit_original_response(content="Already up to date.")
 
         except FileNotFoundError as e:
             self.logger.exception(f"error when starting {server_id} {e}")
         except Exception as e:
             self.logger.exception(f"error when starting {server_id} {e}")
-            await interaction.followup.edit_message(content="Could not start server")
+            await interaction.edit_original_response(content="Could not start server")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -234,10 +234,10 @@ class SteamServers(GroupCog):
                 # TODO: find out if server is installed, change message based on that
                 await interaction.followup.send(f"Installing {server_name}...")
                 await self.update_steamcmd_server(server["id"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has started")
+                await interaction.edit_original_response(content=f"{server_name} has started")
                 break
         else:
-            await interaction.followup.edit_message(content=f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -249,10 +249,10 @@ class SteamServers(GroupCog):
             if server["name"] == server_name:
                 await interaction.followup.send(f"UnInstalling {server_name}...")
                 await self.uninstall_steamcmd_server(server["id"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has been removed")
+                await interaction.edit_original_response(content=f"{server_name} has been removed")
                 break
         else:
-            await interaction.followup.edit_message(f"{server_name} could not be found")
+            await interaction.edit_original_response(f"{server_name} could not be found")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -268,10 +268,10 @@ class SteamServers(GroupCog):
                 # TODO: find out if server is installed, change message based on that
                 await interaction.followup.send(f"Updating {server_name}...")
                 await self.update_steamcmd_server(server["id"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has started")
+                await interaction.edit_original_response(content=f"{server_name} has started")
                 break
         else:
-            await interaction.followup.edit_message(content=f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
     def get_server_executable_path(self) -> str:
         # TODO: find if servers file contains .bat, .exe or any other executables.
@@ -296,10 +296,10 @@ class SteamServers(GroupCog):
             if server["name"] == server_name:
                 await interaction.followup.send(f"Starting {server_name}...")
                 await self.start_steamcmd_server(server["name"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has started")
+                await interaction.edit_original_response(content=f"{server_name} has started")
                 break
         else:
-            await interaction.followup.edit_message(content=f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
 #
 # AutoCompletes
