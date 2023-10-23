@@ -1,3 +1,4 @@
+import asyncio
 import itertools
 import logging
 import os
@@ -378,18 +379,19 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         self.y = y
 
     # This function is called whenever this button is pressed
-    async def callback(self, interaction: discord.Interaction) -> None:
+    async def callback(self, interaction: discord.Interaction, from_ai: bool=False) -> None:
         view: TicTacToeGame = self.view
         if interaction.user.id not in [view.player_x.id, view.player_o.id]:
             await interaction.response.send_message("You may not play in this game", ephemeral=True)
             return
-        elif interaction.user.id != view.current_player and not view.is_vs_bot:
+        elif interaction.user.id != view.current_player and not from_ai:
             await interaction.response.send_message("It's not your turn", ephemeral=True)
             return
 
         assert self.view is not None
         state = view.board[self.y][self.x]
-        if state in [view.player_x.id, view.player_o.id]:
+        if state in [view.player_x.id, view.player_o.id] and from_ai:
+            await view.make_bot_move(interaction)
             return
 
         if view.current_player == view.player_x.id:
@@ -422,17 +424,16 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
             view.stop()
 
-        if view.is_vs_bot:
+        if from_ai:
+            await asyncio.sleep(1)
+            await interaction.edit_original_response(content=content, view=view)
+        else:
+            await interaction.response.edit_message(content=content, view=view)
+
+        if view.is_vs_bot and not from_ai:
             self.logger.debug("Before TTT AI Move")
             await view.make_bot_move(interaction)
             self.logger.debug("After TTT AI Move")
-
-        # if interaction.user.id != view.current_player and view.is_vs_bot:
-        #     # switch player and player2/ switch current_player to human.
-        #     # Player O is always 2nd joined player/Bot
-        #     view.current_player = view.player_x.id
-
-        await interaction.response.edit_message(content=content, view=view)
 
 
 
@@ -451,8 +452,6 @@ class TicTacToeGame(discord.ui.View):
 
     async def make_bot_move(self, interaction: discord.Interaction) -> None:
         """Make the bot/ai do a move!"""
-        print("TTT AI Turn!")
-
         ai = TicTacToeAi(
             o=self.player_o.id,
             x=self.player_x.id,
@@ -461,21 +460,28 @@ class TicTacToeGame(discord.ui.View):
 
         if self.player_o.bot:
             row, column = ai.get_best_move(self.player_o.id)
-            self.current_player = self.player_x
+            self.logger.debug(f"best move for {self.player_o} = {row, column}")
+            # self.current_player = self.player_x.id
         elif self.player_x.bot:
             row, column = ai.get_best_move(self.player_x.id)
-            self.current_player = self.player_o
+            self.logger.debug(f"best move for {self.player_x} = {row, column}")
+            # self.current_player = self.player_o.id
         else:
             raise ValueError(f"HOW DID WE GET HERE?: Expected Bot User, but got {self.player_o} and {self.player_x}")
 
-        button_nr = ai.get_button_location(row, column)
-        # FIXME: callback keeps looping!
-        await self.children[button_nr].callback(interaction)
-        
-        if interaction.user.id != self.current_player and self.is_vs_bot:
-            # switch player and player2/ switch current_player to human.
-            # Player O is always 2nd joined player/Bot
-            self.current_player = self.player_x.id
+        for button in self.children:
+            if button.y == row and button.x == column:
+                await button.callback(interaction, from_ai=True)
+                break
+
+        # button_nr = ai.get_button_location(row, column)
+        # await self.children[button_nr].callback(interaction, from_ai=True)
+
+        self.logger.debug("After button callback ai")
+        # if interaction.user.id != self.current_player and self.is_vs_bot:
+        #     # switch player and player2/ switch current_player to human.
+        #     # Player O is always 2nd joined player/Bot
+        #     self.current_player = self.player_x.id
 
 
 
