@@ -398,6 +398,7 @@ class Team(GroupCog):
         # find divide and module by desired team size,
         # and found amount of users
         divide, modulo = divmod(len(members), team_count)
+        members_count = math.ceil(divide+modulo)
 
         # create teams, and fill members with amount of users
         # (evenly split among each team)
@@ -405,12 +406,12 @@ class Team(GroupCog):
             {
                 "id": i+1,
                 "members": [
-                    members.pop() for _ in range(math.ceil(divide))
-                ].extend(members.pop() for _ in range(math.ceil(modulo))),
+                    members[j+i*members_count] for j in range(members_count)
+                ],
             }
             for i in range(team_count)
         ]
-        
+
         self.logger.debug(f"created teams: {teams}")
         return teams
 
@@ -558,7 +559,7 @@ class Team(GroupCog):
         team_count: int = 2
     ) -> None:
         try:
-            voice_members = interaction.user.voice.channel.members
+            interaction.user.voice.channel.members
         except AttributeError:
             await interaction.response.send_message(
                 "Could not get users from your voice channel, are you in one?",
@@ -569,9 +570,9 @@ class Team(GroupCog):
         await interaction.response.defer()
 
         category = await self.fetch_teams_category(interaction.guild)
-        teams = self.split_teams(team_count, voice_members)
+        teams = self.split_teams(team_count, interaction.user.voice.channel.members)
 
-        for _, channel in await self.create_team_channels(teams, category):
+        for channel in await self.create_team_channels(teams, category):
             await self.move_from_category(teams, channel)
 
         await interaction.edit_original_response("Users from your voice split among teams")
