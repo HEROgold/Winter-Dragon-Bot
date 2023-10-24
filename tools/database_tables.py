@@ -59,13 +59,15 @@ match config["Database"]["db"]:
         logger.critical("No database selected to use!")
         raise AttributeError("No database selected")
 
+# DB string refs
+CASCADE = "CASCADE"
 
 # DB reference constants
 USERS_ID = "users.id"
 GUILDS_ID = "guilds.id"
 CHANNELS_ID = "channels.id"
 MESSAGES_ID = "messages.id"
-GAMES_ID = "games.id"
+GAMES_NAME = "games.name"
 LOBBIES_ID = "lobbies.id"
 TEAMS_ID = "teams.id"
 HANGMAN_ID = "hangman.id"
@@ -77,6 +79,7 @@ TICKETS_ID = "tickets.id"
 COMMANDS_ID = "commands.id"
 COMMAND_GROUPS_ID = "command_groups.id"
 ROLES_ID = "roles.id"
+LOBBY_STATUS = "lobby_status.status"
 
 
 class Base(DeclarativeBase):
@@ -195,15 +198,13 @@ class WyrQuestion(Base):
 class Game(Base):
     __tablename__ = "games"
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    name: Mapped[str] = mapped_column(String(15))
+    name: Mapped[str] = mapped_column(String(15), primary_key=True, unique=True)
 
     @classmethod
-    def fetch_game_by_name(cls, name: str = None) -> Self:
+    def fetch_game_by_name(cls, name: str=None) -> Self:
         """Find existing or create new game, and return it
 
         Args:
-            id (int): Identifier for the game.
             name (str): Name for the game
         """
         if not name:
@@ -219,22 +220,39 @@ class Game(Base):
             logger.debug(f"Returning game {name=}")
             return game
 
+class LobbyStatus(Base):
+    __tablename__ = "lobby_status"
+
+    status: Mapped[str] = mapped_column(String(10))
+
+    @classmethod
+    def create_default_values(cls):
+        with Session(engine) as session:
+            for status in [
+                "waiting",
+                "running",
+            ]:
+                if session.query(cls.status).where(cls.status == status).first():
+                    continue
+                session.add(cls(
+                    status=status
+                ))
+            session.commit()
+
 
 class Lobby(Base):
     __tablename__ = "lobbies"
 
-    id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID), primary_key=True, unique=True)
-    game: Mapped[str] = mapped_column(ForeignKey(GAMES_ID))
-    status: Mapped[str] = mapped_column(String(10))
-    # players: Mapped[List["User"]] = relationship(back_populates="lobby")
+    id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID, ondelete=CASCADE), primary_key=True, unique=True)
+    game: Mapped[str] = mapped_column(ForeignKey(GAMES_NAME))
+    status: Mapped[str] = mapped_column(ForeignKey(LOBBY_STATUS))
 
 
 class AssociationUserLobby(Base):
     __tablename__ = "association_users_lobbies"
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    lobby_id: Mapped["Lobby"] = mapped_column(ForeignKey(LOBBIES_ID))
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
+    lobby_id: Mapped["Lobby"] = mapped_column(ForeignKey(LOBBIES_ID, ondelete=CASCADE), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
 
 
 # Should work for any player count.
@@ -242,7 +260,7 @@ class ResultMassiveMultiplayer(Base):
     __tablename__ = "results_mp"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
+    game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_NAME))
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     placement: Mapped[Optional[int]] = mapped_column(nullable=True)
 
@@ -252,7 +270,7 @@ class ResultDuels(Base):
     __tablename__ = "results_1v1"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
+    game: Mapped["Game"] = mapped_column(ForeignKey(GAMES_NAME))
     player_1: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     player_2: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     winner: Mapped[Optional[int]] = mapped_column(ForeignKey(USERS_ID))
@@ -338,7 +356,7 @@ class LookingForGroup(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_ID))
+    game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_NAME))
 
 
 class Presence(Base):
@@ -597,6 +615,7 @@ except Exception as e:
     logger.exception(f"Error getting all tables: {e}")
     """Should only run max once per startup, creating missing tables"""
     Base().metadata.create_all(engine)
+    LobbyStatus.create_default_values()
 
 # Test using Hypothesis
 # https://youtu.be/dsBitCcWWf4
