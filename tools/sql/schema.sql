@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS
     channels (
         id BIGINT PRIMARY KEY,
         name VARCHAR(50),
-        type VARCHAR(15),
+        type VARCHAR(50) REFERENCES channel_types (name),
         guild_id BIGINT REFERENCES guilds (id)
     );
 
