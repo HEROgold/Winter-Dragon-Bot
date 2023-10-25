@@ -21,6 +21,7 @@
         "apppage",
         "AUTOCHANNEL",
         "autochannels",
+        "AUTOINCREMENT",
         "AUTOMOD",
         "autopct",
         "bitsadmin",
@@ -72,5 +73,14 @@
         "uvloop"
     ],
     "todo-tree.tree.showCountsInTree": true,
-    "editor.acceptSuggestionOnEnter": "on"
+    "editor.acceptSuggestionOnEnter": "on",
+    "sqltools.useNodeRuntime": true,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "database": "${workspaceFolder:Winter-Dragon-Bot}/database/db",
+            "name": "WinterDragon"
+        }
+    ]
 }
