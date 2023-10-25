@@ -81,6 +81,7 @@ COMMAND_GROUPS_ID = "command_groups.id"
 ROLES_ID = "roles.id"
 LOBBY_STATUS = "lobby_status.status"
 CHANNEL_TYPES = "channel_types.type"
+SUGGESTIONS_TYPES = "suggestions_types.type"
 
 
 class Base(DeclarativeBase):
@@ -303,11 +304,16 @@ class SteamSale(Base):
     update_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
+class SuggestionTypes(Base):
+    __tablename__ = "suggestions_types"
+
+    type: Mapped[str] = mapped_column(String(50))
+
 class Suggestion(Base):
     __tablename__ = "suggestions"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    type: Mapped[str] = mapped_column(String(50))
+    type: Mapped[str] = mapped_column(ForeignKey(SUGGESTIONS_TYPES))
     is_verified: Mapped[bool] = mapped_column(Boolean)
     content: Mapped[str] = mapped_column(String(2048))
 
