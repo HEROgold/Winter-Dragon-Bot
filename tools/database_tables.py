@@ -80,6 +80,7 @@ COMMANDS_ID = "commands.id"
 COMMAND_GROUPS_ID = "command_groups.id"
 ROLES_ID = "roles.id"
 LOBBY_STATUS = "lobby_status.status"
+CHANNEL_TYPES = "channel_types.type"
 
 
 class Base(DeclarativeBase):
@@ -96,12 +97,18 @@ class Guild(Base):
     channels: Mapped[List["Channel"]] = relationship(back_populates="guild")
 
 
+class ChannelTypes(Base):
+    __tablename__ = "channel_types"
+
+    type: Mapped[str] = mapped_column(String(15))
+
+
 class Channel(Base):
     __tablename__ = "channels"
     
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
-    type: Mapped[str] = mapped_column(String(15), nullable=True)
+    type: Mapped[str] = mapped_column(ForeignKey(CHANNEL_TYPES), nullable=True)
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
 
     messages: Mapped[List["Message"]] = relationship(back_populates="channel")
@@ -177,7 +184,7 @@ class Welcome(Base):
 
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
     channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
-    message: Mapped[Optional[str]] = mapped_column(String(2048))
+    message: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean)
 
 
