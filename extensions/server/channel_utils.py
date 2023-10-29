@@ -22,6 +22,10 @@ class ChannelUtils(GroupCog):
         except discord.NotFound:
             pass
 
+    @app_commands.command(name="lock", description="Lock a channel")
+    async def slash_lock(self, interaction: discord.Integration):
+        """Lock a channel"""
+
 
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(ChannelUtils(bot)) # type: ignore
