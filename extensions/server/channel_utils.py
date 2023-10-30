@@ -15,6 +15,7 @@ class ChannelUtils(GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @categories.command(name="delete", description="Delete a category and ALL channels inside.")
     async def slash_cat_delete(self, interaction: discord.Interaction, category: discord.CategoryChannel) -> None:
+        """Delete a discord category with all channels inside"""
         await interaction.response.defer(ephemeral=True)
         # _, cmd_mention = await self.act.get_app_sub_command(self.slash_cat_delete)
         for channel in category.channels:
