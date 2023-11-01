@@ -1,3 +1,4 @@
+from typing import reveal_type
 import discord  # type: ignore
 from discord import app_commands
 
@@ -18,6 +19,17 @@ class ChannelUtils(GroupCog):
         """Delete a discord category with all channels inside"""
         await interaction.response.defer(ephemeral=True)
         # _, cmd_mention = await self.act.get_app_sub_command(self.slash_cat_delete)
+        
+        # if this works, push this to ACT
+        reveal_type(self.slash_cat_delete)
+        for cmd in await self.bot.tree.fetch_commands():
+            # cmd.mention
+            # cmd.name
+            # cmd.options
+
+            if cmd.qualified_name == self.slash_cat_delete.qualified_name:
+                self.logger.critical(f"{cmd.qualified_name=}, {self.slash_cat_delete.qualified_name=}")
+
         for channel in category.channels:
             await channel.delete(reason=f"Deleted by {interaction.user.mention} using /channel-utils categories delete") # {cmd_mention}
         await category.delete(reason=f"Deleted by {interaction.user.mention} using /channel-utils categories delete") # {cmd_mention}
@@ -25,6 +37,7 @@ class ChannelUtils(GroupCog):
             await interaction.followup.send("Channel's removed", ephemeral=True)
         except discord.NotFound:
             pass
+
 
     @app_commands.command(name="lock", description="Lock a channel")
     @app_commands.describe(target="Optional role or member to lock out of this channel")
