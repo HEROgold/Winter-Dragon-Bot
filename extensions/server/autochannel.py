@@ -102,7 +102,7 @@ class AutomaticChannels(GroupCog):
             setting: ACS,
             guild_setting: ACS
         ) -> tuple[str, int]:
-        print(f"transform settings: {member}, {setting=}, {guild_setting=}")
+        self.logger.debug(f"transform settings: {member}, {setting=}, {guild_setting=}")
         name = None if setting is None else setting.channel_name
         if (
             setting is None 
@@ -188,7 +188,7 @@ class AutomaticChannels(GroupCog):
 
     @slash_setup.error
     async def info_error(self, interaction: discord.Interaction, error: Exception) -> None:
-        print(error)
+        self.logger.exception(error)
 
 
     @app_commands.command(name="name", description="Change the name of your channels")
