@@ -7,8 +7,10 @@ from discord import app_commands
 from discord.ext import commands, tasks
 
 from _types.bot import WinterDragon
+from _types.error_types import AllErrors
 from tools.app_command_tools import Converter
 from tools.config_reader import config
+
 
 class ErrorHandler:
     """
@@ -21,7 +23,7 @@ class ErrorHandler:
     """
 
     interface: commands.Context | discord.Interaction
-    error: app_commands.AppCommandError | commands.CommandError
+    error: AllErrors
     logger: logging.Logger
     act: Converter
     time_code: float
@@ -31,7 +33,7 @@ class ErrorHandler:
         self,
         bot: WinterDragon,
         interface: commands.Context | discord.Interaction,
-        error: app_commands.AppCommandError | commands.CommandError
+        error: AllErrors
     ) -> None:
         self.bot = bot
         self.interface = interface
@@ -59,7 +61,7 @@ class ErrorHandler:
         await self.bot.wait_until_ready()
 
 
-    def _get_message_from_error(self) -> str | app_commands.AppCommandError | commands.CommandError:
+    def _get_message_from_error(self) -> str | AllErrors:
         error = self.error
 
         if isinstance(error, discord.errors.NotFound):
@@ -69,11 +71,11 @@ class ErrorHandler:
             self.logger.error(f"CommandInvokeError: {self.time_code=}")
 
         error_messages = {
-            commands.errors.MissingRequiredArgument: f"Missing a required argument, use {self.help_msg} for more information.",
-            commands.errors.BotMissingPermissions: "I do not have enough permissions to use this command!",
-            app_commands.errors.BotMissingPermissions: "I do not have enough permissions to use this command!",
-            commands.errors.MissingPermissions: "You do not have enough permission to use this command.",
-            app_commands.errors.MissingPermissions: "You do not have enough permission to use this command.",
+            commands.errors.MissingRequiredArgument: f"Missing a required argument, {error.param}.",
+            commands.errors.BotMissingPermissions: f"I do not have enough permissions to use this command! {error.missing_permissions}",
+            app_commands.errors.BotMissingPermissions: f"I do not have enough permissions to use this command! {error.missing_permissions}",
+            commands.errors.MissingPermissions: f"You do not have enough permission to use this command! {error.missing_permissions}",
+            app_commands.errors.MissingPermissions: f"You do not have enough permission to use this command! {error.missing_permissions}",
             commands.errors.TooManyArguments: f"Too many arguments given. use {self.help_msg} for more information",
             commands.errors.PrivateMessageOnly: "This command may only be used in a private messages.",
             commands.errors.NoPrivateMessage: "This command does not work in private messages.",
