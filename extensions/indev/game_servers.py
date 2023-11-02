@@ -89,8 +89,8 @@ class SteamServers(GroupCog):
 
 
     async def wait_on_process_finish(self, process: subprocess.Popen) -> None:
-        while process.poll() is not None:
-            await asyncio.sleep(1)
+        while process.poll() is None:
+            await asyncio.sleep(5)
         return
 
 
@@ -261,6 +261,9 @@ class SteamServers(GroupCog):
             last_update = datetime.now()
 
             async for line in self.live_output(process):
+                if "ERROR!" in line:
+                    await interaction.edit_original_response(content=line)
+                    return
                 if "downloading" in line:
                     status = "downloading"
                 if "progress" in line:
