@@ -282,7 +282,7 @@ class SteamServers(GroupCog):
                     await interaction.followup.send("Server already installed, please update instead.")
                     break
                 await interaction.followup.send(f"Installing {server_name}...")
-                await self.update_steamcmd_server(server["id"], interaction)
+                await self.update_steamcmd_server(server["id"], interaction, install=True)
                 await interaction.edit_original_response(content=f"{server_name} has been installed")
                 break
         else:
