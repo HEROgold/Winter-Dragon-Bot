@@ -372,10 +372,10 @@ class Team(GroupCog):
         with Session(engine) as session:
             channels = session.query(Channel).where(Channel.type == TEAM_VOICE_TYPE).all()
             for channel in channels:
-                discord_channel = self.bot.get_channel(channel.id)
-                if discord_channel.members == 0:
-                    await discord_channel.delete()
-                    session.delete(channel)
+                if discord_channel := self.bot.get_channel(channel.id):
+                    if discord_channel.members == 0:
+                        await discord_channel.delete()
+                        session.delete(channel)
         session.commit()
 
     @delete_empty_team_channels.before_loop
