@@ -41,7 +41,7 @@ class Cog(commands.Cog):
         if not self.has_error_handler():
             self.logger.warning(f"{self.__class__} has no error handler!")
         if not self.has_app_command_error_handler():
-            self.logger.warning(f"{self.__class__} has no error handler!")
+            self.logger.warning(f"{self.__class__} has no app command error handler!")
         
         for listener in self.get_listeners():
             self.logger.debug(f"{listener=}")
