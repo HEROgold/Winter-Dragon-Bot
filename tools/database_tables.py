@@ -307,7 +307,7 @@ class SteamSale(Base):
 class SuggestionTypes(Base):
     __tablename__ = "suggestions_types"
 
-    type: Mapped[str] = mapped_column(String(50))
+    type: Mapped[str] = mapped_column(String(50), primary_key=True)
 
 class Suggestion(Base):
     __tablename__ = "suggestions"
