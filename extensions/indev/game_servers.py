@@ -1,8 +1,10 @@
 """
 Using SteamCmd allow users/admins to create/manage servers from SteamCmd
+# TODO
+Currently this code is blocking, when installing, updating, uninstalling etc.
+the whole bot waits for it to complete. find and implement a way to have it not block
 """
 
-import asyncio
 from datetime import datetime, timedelta
 import os
 import random
@@ -89,9 +91,9 @@ class SteamServers(GroupCog):
 
 
     async def wait_on_process_finish(self, process: subprocess.Popen) -> None:
-        while process.poll() is None:
-            await asyncio.sleep(0)
-        return
+        process.wait()
+        # while process.poll() is not None:
+        #     await asyncio.sleep(0)
 
 
     def find_server(self, target: str | int) -> Server | None:
@@ -219,14 +221,14 @@ class SteamServers(GroupCog):
             return
 
         try:
-            await self.wait_on_process_finish(subprocess.Popen(
+            subprocess.Popen(
                 [
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                     "+login anonymous",
                     f"+app_uninstall {server['id']}",
                     "+quit"
                 ]
-            ))
+            ).wait()
 
             os.rmdir(f"""{os.path.abspath(f'{INSTALLED_SERVERS}/{server["name"]}')}""")
         except FileNotFoundError as e:
@@ -234,6 +236,8 @@ class SteamServers(GroupCog):
         except Exception as e:
             self.logger.exception(f"error when uninstalling {server} {e}")
             await interaction.edit_original_response(content="Could not uninstall server")
+        
+        await interaction.edit_original_response(content=f"{server['name']} has been removed")
 
 
     async def update_steamcmd_server(
@@ -242,10 +246,18 @@ class SteamServers(GroupCog):
         interaction: discord.Interaction,
         install: bool=False
     ) -> None:
-        self.logger.debug(f"starting SteamCMD server {server_id}")
+        server = self.find_server(server_id)
+        self.logger.debug(f"starting SteamCMD server {server}")
 
-        # TODO: catch steamcmd warnings, and push those to the message when it fails
         try:
+            # await asyncio.create_subprocess_shell(
+            #     cmd = "".join([
+            #         f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
+            #         "+login anonymous",
+            #         f"+app_update {server_id}",
+            #         "+quit"
+            #     ]),
+            # )
             process = subprocess.Popen(
                 [
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
@@ -286,10 +298,12 @@ class SteamServers(GroupCog):
                     last_update = datetime.now()
 
         except FileNotFoundError as e:
-            self.logger.exception(f"error when starting {server_id} {e}")
+            self.logger.exception(f"error when starting {server} {e}")
         except Exception as e:
-            self.logger.exception(f"error when starting {server_id} {e}")
+            self.logger.exception(f"error when starting {server} {e}")
             await interaction.edit_original_response(content="Could not start server")
+        
+        await interaction.edit_original_response(content=f"{server['name']} has been {'installed' if install else 'updated'}")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -304,7 +318,6 @@ class SteamServers(GroupCog):
                     break
                 await interaction.followup.send(f"Installing {server_name}...")
                 await self.update_steamcmd_server(server["id"], interaction, install=True)
-                await interaction.edit_original_response(content=f"{server_name} has been installed")
                 break
         else:
             await interaction.edit_original_response(content=f"{server_name} could not be found")
@@ -336,14 +349,13 @@ class SteamServers(GroupCog):
                     self.logger.debug("Server is installed")
                     await interaction.followup.send(f"Updating {server_name}...")
                     await self.update_steamcmd_server(server["id"], interaction)
-                    await interaction.edit_original_response(content=f"{server_name} has been updated")
                 else:
                     await interaction.followup.send(f"Installing {server_name}...")
                     await self.update_steamcmd_server(server["id"], interaction, install=True)
-                    await interaction.edit_original_response(content=f"{server_name} has been installed")
             break
         else:
             await interaction.edit_original_response(content=f"{server_name} could not be found")
+
 
     def get_server_executable_path(self) -> str:
         # TODO: find if servers file contains .bat, .exe or any other executables.
@@ -357,6 +369,7 @@ class SteamServers(GroupCog):
         # TODO: create script that adds a easy interface to run steam servers
         # TODO: send warning when not found
         # Add auto_complete
+        await interaction.edit_original_response(content=f"{server_name} has started")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -368,7 +381,6 @@ class SteamServers(GroupCog):
             if server["name"] == server_name:
                 await interaction.followup.send(f"Starting {server_name}...")
                 await self.start_steamcmd_server(server["name"], interaction)
-                await interaction.edit_original_response(content=f"{server_name} has started")
                 break
         else:
             await interaction.edit_original_response(content=f"{server_name} could not be found")

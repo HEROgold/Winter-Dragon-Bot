@@ -80,6 +80,7 @@ class Lobby:
 
 
     def update_message(self, interaction: Interaction, reason: str):
+        # will give error since we have an asyncio loop already
         asyncio.run(asyncio.ensure_future(interaction.message.edit(self.lobby_msg)))
 
 
