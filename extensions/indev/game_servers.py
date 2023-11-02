@@ -255,11 +255,13 @@ class SteamServers(GroupCog):
             last_update = datetime.now()
 
             async for line in self.live_output(process):
+                if "downloading" in line:
+                    status = "downloading"
                 if "progress" in line:
                     l_index = line.index("progress")
 
                     if last_update < datetime.now() - timedelta(seconds=15):
-                        await interaction.edit_original_response(content=f"{status}% {line[l_index:]}")
+                        await interaction.edit_original_response(content=f"{status} {line[l_index:]}")
                         last_update = datetime.now()
                 if "already up to date" in line:
                     await interaction.edit_original_response(content="Already up to date.")
