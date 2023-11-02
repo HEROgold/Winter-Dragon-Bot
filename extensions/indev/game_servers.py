@@ -208,7 +208,9 @@ class SteamServers(GroupCog):
         self.logger.debug(f"starting SteamCMD server {server}")
 
         if server is None:
-            raise ServerNotFound
+            self.logger.warning(f"Server not found when uninstalling {target=}")
+            await interaction.edit_original_response("Server not found")
+            return
 
         try:
             subprocess.Popen(
