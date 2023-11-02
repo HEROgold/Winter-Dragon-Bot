@@ -101,7 +101,7 @@ class Guild(Base):
 class ChannelTypes(Base):
     __tablename__ = "channel_types"
 
-    type: Mapped[str] = mapped_column(String(15))
+    type: Mapped[str] = mapped_column(String(15), primary_key=True)
 
 
 class Channel(Base):
