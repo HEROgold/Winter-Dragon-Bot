@@ -90,7 +90,7 @@ class SteamServers(GroupCog):
 
     async def wait_on_process_finish(self, process: subprocess.Popen) -> None:
         while process.poll() is None:
-            await asyncio.sleep(5)
+            await asyncio.sleep(0)
         return
 
 
@@ -270,7 +270,7 @@ class SteamServers(GroupCog):
                     progress_len = len("progress: ")
                     l_index = line.index("progress")
                     percent = line[l_index+progress_len:l_index+progress_len+3]
-                    bits = line[line[l_index:].index("(")+l_index:-2]
+                    bits = line[line[l_index:].index("(")+l_index:-1]
 
                     if last_update < datetime.now() - timedelta(seconds=15):
                         await interaction.edit_original_response(content=f"{status} {percent}% {bits} bytes") # {line[l_index:]}
