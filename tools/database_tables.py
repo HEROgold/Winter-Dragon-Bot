@@ -231,7 +231,7 @@ class Game(Base):
 class LobbyStatus(Base):
     __tablename__ = "lobby_status"
 
-    status: Mapped[str] = mapped_column(String(10))
+    status: Mapped[str] = mapped_column(String(10), primary_key=True)
 
     @classmethod
     def create_default_values(cls):
