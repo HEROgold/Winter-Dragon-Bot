@@ -76,16 +76,22 @@ def get_all_servers() -> list[Server]:
 
 class SteamServers(GroupCog):
     server_list: list[Server]
-    processes: list[subprocess.Popen]
+
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.server_list = get_all_servers()
-        self.is_already_downloading()
+        # self.is_already_downloading()
 
 
     async def cog_load(self) -> None:
         self.test_steamcmd.start()
+
+
+    async def wait_on_process_finish(self, process: subprocess.Popen) -> None:
+        while process.poll() is not None:
+            await asyncio.sleep(1)
+        return
 
 
     def find_server(self, target: str | int) -> Server | None:
@@ -139,7 +145,7 @@ class SteamServers(GroupCog):
         return False
 
 
-    def download_winget(self):
+    async def download_winget(self):
         self.logger.debug("Downloading Winget")
         
         if not config.getboolean("SteamCMD", "download_winget"):
@@ -151,27 +157,27 @@ class SteamServers(GroupCog):
             return None
 
         try:
-            subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]).wait()
-            subprocess.Popen(["cmd", INSTALLER_CMD]).wait()
+            await self.wait_on_process_finish(subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]))
+            await self.wait_on_process_finish(subprocess.Popen(["cmd", INSTALLER_CMD]))
         except Exception as e:
             self.logger.exception(f"error when downloading Winget {e}")
             return None
 
 
-    def download_steamcmd(self):
+    async def download_steamcmd(self):
         self.logger.debug("Downloading SteamCMD")
         if not config.getboolean("SteamCMD", "download_steamcmd"):
             raise DisabledError("download_steamcmd is set to False.")
         
         try:
-            subprocess.Popen([
+            await self.wait_on_process_finish(subprocess.Popen([
                 "winget", "install", WINGET_SteamCMD,
                 "--location", os.path.abspath(STEAM_CMD_DIR),
                 "--force"]
-            ).wait()
+            ))
         except Exception as e:
             self.logger.exception(f"error when downloading SteamCMD {e}")
-            self.download_winget()
+            await self.download_winget()
 
 
     @tasks.loop(count=1)
@@ -179,14 +185,14 @@ class SteamServers(GroupCog):
         self.logger.debug("starting SteamCMD")
 
         try:
-            subprocess.Popen([
+            await self.wait_on_process_finish(subprocess.Popen([
                 f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                 # "+login anonymous",
                 "+quit"
-            ]).wait()
+            ]))
         except FileNotFoundError as e:
             self.logger.exception(f"error when opening SteamCmd {e}")
-            self.download_steamcmd()
+            await self.download_steamcmd()
         except DisabledError as e:
             self.logger.warning(f"User has disabled downloading: {e}")
 
@@ -213,14 +219,14 @@ class SteamServers(GroupCog):
             return
 
         try:
-            subprocess.Popen(
+            await self.wait_on_process_finish(subprocess.Popen(
                 [
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                     "+login anonymous",
                     f"+app_uninstall {server['id']}",
                     "+quit"
                 ]
-            ).wait()
+            ))
 
             os.rmdir(f"""{os.path.abspath(f'{INSTALLED_SERVERS}/{server["name"]}')}""")
         except FileNotFoundError as e:
@@ -258,10 +264,13 @@ class SteamServers(GroupCog):
                 if "downloading" in line:
                     status = "downloading"
                 if "progress" in line:
+                    progress_len = len("progress: ")
                     l_index = line.index("progress")
+                    percent = line[l_index+progress_len:l_index+progress_len+3]
+                    bits = line[line[l_index:].index("(")+l_index:-2]
 
                     if last_update < datetime.now() - timedelta(seconds=15):
-                        await interaction.edit_original_response(content=f"{status} {line[l_index:]}")
+                        await interaction.edit_original_response(content=f"{status} {percent}% {bits} bytes") # {line[l_index:]}
                         last_update = datetime.now()
                 if "already up to date" in line:
                     await interaction.edit_original_response(content="Already up to date.")
