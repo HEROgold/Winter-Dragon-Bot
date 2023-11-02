@@ -257,26 +257,33 @@ class SteamServers(GroupCog):
                 universal_newlines=True
             )
 
-            status = "installing" if install else "updating"
+            status = "unknown"
             last_update = datetime.now()
 
             async for line in self.live_output(process):
                 if "ERROR!" in line:
                     await interaction.edit_original_response(content=line)
                     return
+                if "already up to date" in line:
+                    await interaction.edit_original_response(content="Already up to date.")
+                    return
                 if "downloading" in line:
                     status = "downloading"
-                if "progress" in line:
+                if "installing" in line:
+                    status = "installing"
+                if "updating" in line:
+                    status = "updating"
+                if (
+                    "progress" in line
+                    and last_update < datetime.now() - timedelta(seconds=15)
+                ):
                     progress_len = len("progress: ")
                     l_index = line.index("progress")
                     percent = line[l_index+progress_len:l_index+progress_len+3]
                     bits = line[line[l_index:].index("(")+l_index:-1]
 
-                    if last_update < datetime.now() - timedelta(seconds=15):
-                        await interaction.edit_original_response(content=f"{status} {percent}% {bits} bytes") # {line[l_index:]}
-                        last_update = datetime.now()
-                if "already up to date" in line:
-                    await interaction.edit_original_response(content="Already up to date.")
+                    await interaction.edit_original_response(content=f"{status} {percent}% {bits} bytes") # {line[l_index:]}
+                    last_update = datetime.now()
 
         except FileNotFoundError as e:
             self.logger.exception(f"error when starting {server_id} {e}")
