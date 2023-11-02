@@ -253,7 +253,7 @@ class SteamServers(GroupCog):
                 await interaction.edit_original_response(content=f"{server_name} has been removed")
                 break
         else:
-            await interaction.edit_original_response(f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -366,6 +366,5 @@ def main() -> None:
 
 
 async def setup(bot: WinterDragon) -> None:
-    return
     main()
     await bot.add_cog(SteamServers(bot))
