@@ -110,6 +110,7 @@ class SteamServers(GroupCog):
         
         if self.is_already_downloading():
             # TODO: wait to finish
+            self.logger.debug("winget not finished downloading.")
             return None
 
         try:
