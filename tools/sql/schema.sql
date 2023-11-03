@@ -8,8 +8,10 @@ CREATE TABLE IF NOT EXISTS
     channels (
         id BIGINT PRIMARY KEY,
         name VARCHAR(50),
-        type VARCHAR(50) REFERENCES channel_types (name),
-        guild_id BIGINT REFERENCES guilds (id)
+        type VARCHAR(50),
+        guild_id BIGINT,
+        FOREIGN KEY (name) REFERENCES guilds (id),
+        FOREIGN KEY (type) REFERENCES channel_types (name)
     );
 
 CREATE TABLE IF NOT EXISTS
@@ -19,24 +21,29 @@ CREATE TABLE IF NOT EXISTS
     messages (
         id BIGINT PRIMARY KEY,
         content VARCHAR(2000),
-        user_id BIGINT REFERENCES users (id),
-        channel_id BIGINT REFERENCES channels (id)
+        user_id BIGINT, 
+        channel_id BIGINT,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (channel_id) REFERENCES channels (id)
     );
 
 CREATE TABLE IF NOT EXISTS
     reminders (
         id INTEGER PRIMARY KEY,
         content VARCHAR(2000),
-        user_id BIGINT REFERENCES users (id),
-        timestamp TIMESTAMP
+        user_id BIGINT,
+        timestamp TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
     );
 
 CREATE TABLE IF NOT EXISTS
     welcome (
-        guild_id BIGINT PRIMARY KEY REFERENCES guilds (id),
-        channel_id BIGINT REFERENCES channels (id),
+        guild_id BIGINT PRIMARY KEY,
+        channel_id BIGINT,
         message VARCHAR(2048),
-        enabled BOOLEAN
+        enabled BOOLEAN,
+        FOREIGN KEY (guild_id) REFERENCES guilds (id),
+        FOREIGN KEY (channel_id) REFERENCES channels (id)
     );
 
 CREATE TABLE IF NOT EXISTS
@@ -50,6 +57,8 @@ CREATE TABLE IF NOT EXISTS
 
 CREATE TABLE IF NOT EXISTS
     lobby_status (status VARCHAR(10) PRIMARY KEY);
+
+-- TODO fix references with proper foreign key statements.
 
 CREATE TABLE IF NOT EXISTS
     lobbies (
