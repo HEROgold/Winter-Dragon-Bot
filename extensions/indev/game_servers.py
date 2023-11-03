@@ -211,6 +211,15 @@ class SteamServers(GroupCog):
             yield line
 
 
+    async def login(self, process: subprocess.Popen, username: str, password: str):
+        # TODO add processes with user logins at install, update. optionally uninstall?
+        # wait for process to prompt password
+        async for line in self.live_output(process):
+            if line == f"Logging in user '{username}' to Steam Public...":
+                process.communicate(password)
+                break
+
+
     async def uninstall_steamcmd_server(self, target: int | str, interaction: discord.Interaction):
         server = self.find_server(target)
         self.logger.debug(f"starting SteamCMD server {server}")
