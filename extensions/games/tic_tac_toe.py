@@ -17,7 +17,6 @@ from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
 from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 
-# TODO: Add ai if bot is challenged?
 
 GAME_NAME = "ttt"
 
@@ -344,7 +343,6 @@ class TicTacToe(GroupCog):
 
 # LOBBY end
 
-# TODO: test db result on win/loss/tie
 # GAME start
 
     async def start_game(self, interaction: discord.Interaction, game_data: GameData = None) -> None:
