@@ -321,7 +321,7 @@ from _types.bot import WinterDragon
 #             category_id:int = self.data[guild_id]["Category"]["id"]
 #         except KeyError:
 #             self.logger.info(f"Creating Teams category for {guild}")
-#             category_channel:CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
+#             category_channel:CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites)
 #             category_id = category_channel.id
 #             self.data[guild_id] = {"Category":{"id":category_id}}
 #         category_channel = discord.utils.get(guild.categories, id=category_id)
