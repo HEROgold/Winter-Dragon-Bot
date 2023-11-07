@@ -104,15 +104,15 @@ def terminate(*args, **kwargs) -> None:
     log.shutdown()
     try:
         asyncio.ensure_future(bot.close())
-    except Exception:
-        pass
+    except Exception as e:
+        print(e)
     sys.exit()
 
 
 async def main() -> None:
     async with bot:
         # global here, since they should be accessible module wide,
-        # but they require a running even loop
+        # but they require a running event loop
         global log
         log = Logs(bot=bot)
 
