@@ -139,19 +139,19 @@ class LogChannels(GroupCog):
         if entry.action == discord.AuditLogAction.ban:
             return discord.Embed(
                 title="Member Banned",
-                description=f"{entry.user.mention} Banned {member.mention} with reason: {entry.reason or None}",
+                description=f"{entry.user.mention} Banned {member.mention} {member.name} with reason: {entry.reason or None}",
                 color=DELETED_COLOR,
             )
         elif entry.action == discord.AuditLogAction.kick:
             return discord.Embed(
                 title="Member Kicked",
-                description=f"{entry.user.mention} Kicked {member.mention} with reason: {entry.reason or None}",
+                description=f"{entry.user.mention} Kicked {member.mention} {member.name} with reason: {entry.reason or None}",
                 color=DELETED_COLOR,
             )
         else:
             return discord.Embed(
                 title="Member Left",
-                description=f"{member.mention} Left the server",
+                description=f"{member.mention} {member.name} Left the server",
                 color=DELETED_COLOR,
             )
 
