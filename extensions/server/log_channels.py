@@ -296,7 +296,7 @@ class LogChannels(GroupCog):
         self.logger.debug(f"On invite create: {invite.guild=}, {invite=}")
         embed = discord.Embed(
             title="Created Invite",
-            description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} Created invite {invite} with reason: {entry.reason or None}",
             color= CREATED_COLOR
             )
         await self.send_channel_logs(LogCategories.INVITE_CREATE, invite.guild, embed)
@@ -307,8 +307,8 @@ class LogChannels(GroupCog):
         invite = entry.target
         self.logger.debug(f"On invite update: {invite.guild=}, {invite=}")
         embed = discord.Embed(
-            title="Created Invite",
-            description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
+            title="Updated Invite",
+            description=f"{entry.user.mention} Updated invite {invite} with reason: {entry.reason or None}",
             color= CREATED_COLOR
             )
         await self.send_channel_logs(LogCategories.INVITE_UPDATE, invite.guild, embed)
@@ -321,7 +321,7 @@ class LogChannels(GroupCog):
         embed = None
         embed = discord.Embed(
             title="Removed Invite",
-            description=f"{entry.user} Removed invite {invite} with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} Removed invite {invite} with reason: {entry.reason or None}",
             color=DELETED_COLOR
             )
         await self.send_channel_logs(LogCategories.INVITE_DELETE, invite.guild, embed)
