@@ -67,69 +67,61 @@ class ErrorHandler:
         elif isinstance(error, (commands.errors.CommandInvokeError, app_commands.errors.CommandInvokeError)):
             self.logger.error(f"CommandInvokeError: {self.time_code=}")
 
-        error_messages = {
-            # error.param gives attribute error, but should be able to be used here.
-            commands.errors.MissingRequiredArgument: f"Missing a required argument, {error}.", 
-            commands.errors.BotMissingPermissions: f"I do not have enough permissions to use this command! {error.missing_permissions}",
-            app_commands.errors.BotMissingPermissions: f"I do not have enough permissions to use this command! {error.missing_permissions}",
-            commands.errors.MissingPermissions: f"You do not have enough permission to use this command! {error.missing_permissions}",
-            app_commands.errors.MissingPermissions: f"You do not have enough permission to use this command! {error.missing_permissions}",
-            commands.errors.TooManyArguments: f"Too many arguments given. use {self.help_msg} for more information",
-            commands.errors.PrivateMessageOnly: "This command may only be used in a private messages.",
-            commands.errors.NoPrivateMessage: "This command does not work in private messages.",
-            app_commands.errors.NoPrivateMessage: "This command does not work in private messages.",
-            discord.HTTPException: f"There is a HTTPException {error.status, error.code, error.text}",
-            commands.errors.CommandOnCooldown: error,
-            app_commands.errors.CommandOnCooldown: error,
-            commands.errors.DisabledCommand: error,
-            commands.errors.MissingRole: f"You are missing a required role, {error.missing_role}",
-            app_commands.errors.MissingRole: f"You are missing a required role, {error.missing_role}",
-            commands.errors.BotMissingRole: f"This bot is missing a required role, {error.missing_role}",
-            commands.errors.BotMissingAnyRole: f"This bot is missing a required role, {error.missing_roles}",
-            app_commands.errors.MissingAnyRole: f"You are missing the required Role, {error.missing_roles}",
-            commands.errors.MissingAnyRole: f"You are missing the required Role, {error.missing_roles}",
-            # commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
-            # app_commands.errors.CommandNotFound: f"Command not found, try {self.help_command.mention} to find all available commands",
-            commands.errors.MessageNotFound: error,
-            commands.errors.MemberNotFound: error,
-            commands.errors.UserNotFound: error,
-            commands.errors.ChannelNotFound: error,
-            commands.errors.RoleNotFound: error,
-            commands.errors.EmojiNotFound: error,
-            commands.errors.ChannelNotReadable: error,
-            commands.errors.BadColourArgument: error,
-            commands.errors.BadInviteArgument: error,
-            commands.errors.BadBoolArgument: error,
-            commands.errors.BadUnionArgument: error,
-            commands.errors.NSFWChannelRequired: error,
-            commands.errors.ArgumentParsingError: error,
-            commands.errors.UserInputError: error,
-            commands.errors.ExtensionError: error,
-            commands.errors.ExtensionAlreadyLoaded: error,
-            commands.errors.ExtensionNotLoaded: error,
-            commands.errors.ExtensionFailed: error,
-            commands.errors.ExtensionNotFound: error,
+        match type(error):
+            case commands.errors.MissingRequiredArgument: return f"Missing a required argument, {error.param}.", 
+            case commands.errors.BotMissingPermissions: return f"I do not have enough permissions to use this command! {error.missing_permissions}",
+            case app_commands.errors.BotMissingPermissions: return f"I do not have enough permissions to use this command! {error.missing_permissions}",
+            case commands.errors.MissingPermissions: return f"You do not have enough permission to use this command! {error.missing_permissions}",
+            case app_commands.errors.MissingPermissions: return f"You do not have enough permission to use this command! {error.missing_permissions}",
+            case commands.errors.TooManyArguments: return f"Too many arguments given. use {self.help_msg} for more information",
+            case commands.errors.PrivateMessageOnly: return "This command may only be used in a private messages.",
+            case commands.errors.NoPrivateMessage: return "This command does not work in private messages.",
+            case app_commands.errors.NoPrivateMessage: return "This command does not work in private messages.",
+            case discord.HTTPException: return f"There is a HTTPException {error.status, error.code, error.text}",
+            case commands.errors.CommandOnCooldown: return error,
+            case app_commands.errors.CommandOnCooldown: return error,
+            case commands.errors.DisabledCommand: return error,
+            case commands.errors.MissingRole: return f"You are missing a required role, {error.missing_role}",
+            case app_commands.errors.MissingRole: return f"You are missing a required role, {error.missing_role}",
+            case commands.errors.BotMissingRole: return f"This bot is missing a required role, {error.missing_role}",
+            case commands.errors.BotMissingAnyRole: return f"This bot is missing a required role, {error.missing_roles}",
+            case app_commands.errors.MissingAnyRole: return f"You are missing the required Role, {error.missing_roles}",
+            case commands.errors.MissingAnyRole: return f"You are missing the required Role, {error.missing_roles}",
+            # case commands.errors.CommandNotFound: return f"Command not found, try {self.help_command.mention} to find all available commands",
+            # case app_commands.errors.CommandNotFound: return f"Command not found, try {self.help_command.mention} to find all available commands",
+            case commands.errors.MessageNotFound: return error,
+            case commands.errors.MemberNotFound: return error,
+            case commands.errors.UserNotFound: return error,
+            case commands.errors.ChannelNotFound: return error,
+            case commands.errors.RoleNotFound: return error,
+            case commands.errors.EmojiNotFound: return error,
+            case commands.errors.ChannelNotReadable: return error,
+            case commands.errors.BadColourArgument: return error,
+            case commands.errors.BadInviteArgument: return error,
+            case commands.errors.BadBoolArgument: return error,
+            case commands.errors.BadUnionArgument: return error,
+            case commands.errors.NSFWChannelRequired: return error,
+            case commands.errors.ArgumentParsingError: return error,
+            case commands.errors.UserInputError: return error,
+            case commands.errors.ExtensionError: return error,
+            case commands.errors.ExtensionAlreadyLoaded: return error,
+            case commands.errors.ExtensionNotLoaded: return error,
+            case commands.errors.ExtensionFailed: return error,
+            case commands.errors.ExtensionNotFound: return error,
             # Errors below need reviewing, might not want to show to users
-            commands.errors.CheckAnyFailure: error,
-            commands.errors.ConversionError: error,
-            commands.errors.NoEntryPointError: error,
-            commands.errors.UnexpectedQuoteError: error,
-            commands.errors.ExpectedClosingQuoteError: error,
-            commands.errors.InvalidEndOfQuotedStringError: error,
-            commands.errors.CommandRegistrationError: error,
-            commands.errors.PartialEmojiConversionFailure: error,
-            commands.errors.MaxConcurrencyReached: error,
-        }
-
-        default_message = f"""
-            Unexpected error, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
-            Use {self.server_invite} to join the official bot server, and submit the error code in the forums channel.
-            """
-
-        return error_messages.get(
-            type(error),
-            dedent(default_message)
-        )
+            case commands.errors.CheckAnyFailure: return error,
+            case commands.errors.ConversionError: return error,
+            case commands.errors.NoEntryPointError: return error,
+            case commands.errors.UnexpectedQuoteError: return error,
+            case commands.errors.ExpectedClosingQuoteError: return error,
+            case commands.errors.InvalidEndOfQuotedStringError: return error,
+            case commands.errors.CommandRegistrationError: return error,
+            case commands.errors.PartialEmojiConversionFailure: return error,
+            case commands.errors.MaxConcurrencyReached: return error,
+            case _: return dedent(f"""
+                Unexpected error, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
+                Use {self.server_invite} to join the official bot server, and submit the error code in the forums channel.
+            """)
 
 
     async def get_dm(self, ctx: commands.Context) -> discord.DMChannel:
