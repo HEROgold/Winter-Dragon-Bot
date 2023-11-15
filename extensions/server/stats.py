@@ -14,6 +14,12 @@ from _types.bot import WinterDragon
 
 STATS = "stats"
 
+def get_peak_count(channel: Channel | discord.abc.GuildChannel):
+    try:
+        return int(channel.name[13:])
+    except ValueError:
+        return 0
+
 
 @app_commands.guild_only()
 class Stats(GroupCog):
@@ -31,10 +37,7 @@ class Stats(GroupCog):
         peak_channel_id = peak_online.id
         peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
 
-        try:
-            peak_count = int(peak_channel.name[13:])
-        except ValueError:
-            peak_count = 0
+        peak_count = get_peak_count(peak_channel)
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
         if online > peak_count:
             await peak_channel.edit(name=f"Peak Online: {peak_count}", reason="Reached new peak of online members")
@@ -50,6 +53,7 @@ class Stats(GroupCog):
             guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=True),
             guild.me: discord.PermissionOverwrite(connect=True),
         }
+        
         category = await guild.create_category(name=STATS, overwrites=overwrite, position=0)
         user_channel = await category.create_voice_channel(name="Total Users:", reason=reason)
         online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
@@ -88,8 +92,10 @@ class Stats(GroupCog):
                 Channel.guild_id == guild.id,
                 Channel.type == STATS
             ).all()
+
             self.logger.debug(f"{channels=}")
             self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
+
             for db_channel in channels:
                 self.logger.debug(f"removing {db_channel}")
                 try:
@@ -107,7 +113,7 @@ class Stats(GroupCog):
 
 
     @tasks.loop(seconds=3600)
-    async def update(self) -> None:  # sourcery skip: low-code-quality
+    async def update(self) -> None:
         # Note: keep for loop with if.
         # because fetching guild won't let the bot get members from guild.
         self.logger.info("Updating all stat channels")
@@ -123,32 +129,28 @@ class Stats(GroupCog):
             bot_channel, \
             user_channel, \
             online_channel = await self.get_guild_stats_channels(guild)
-
             self.logger.debug(f"Channels list: {peak_channel}, {user_channel}, {bot_channel}, {online_channel}, {guild_channel}")
 
-            try:
-                peak_count = int(peak_channel.name[13:])
-            except ValueError:
-                peak_count = 0
-
+            peak_count = get_peak_count(peak_channel)
             reason_update = "Updating Stats channels"
             online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
+            users = sum(member.bot == False for member in guild.members)
+            bots = sum(member.bot == True for member in guild.members)
+            age = guild.created_at.strftime("%Y-%m-%d")
+            peak_online = max(online, peak_count)
+
             if ((new_name := f"Online Users: {online}") != online_channel.name):
                 await online_channel.edit(name=new_name, reason=reason_update)
 
-            users = sum(member.bot == False for member in guild.members)
             if ((new_name := f"Total Users: {users}") != user_channel.name):
                 await user_channel.edit(name=new_name, reason=reason_update)
 
-            bots = sum(member.bot == True for member in guild.members)
             if ((new_name := f"Total Bots: {bots}") != bot_channel.name):
                 await bot_channel.edit(name=new_name, reason=reason_update)
 
-            age = guild.created_at.strftime("%Y-%m-%d")
             if ((new_name := f"Created On: {age}") != guild_channel.name):
                 await guild_channel.edit(name=new_name, reason=reason_update)
 
-            peak_online = max(online, peak_count)
             if ((new_name := f"Peak Online: {peak_online}") != peak_channel.name):
                 await peak_channel.edit(name=new_name, reason=reason_update)
 
@@ -170,15 +172,22 @@ class Stats(GroupCog):
                 Channel.type == STATS,
                 Channel.guild_id == guild.id
             ).all()
+
             for channel in channels:
                 self.logger.debug(f"check if stats channel: {channel=}")
                 match channel.name:
-                    case "user_channel": user_channel = guild.get_channel(channel.id)
-                    case "online_channel": online_channel = guild.get_channel(channel.id)
-                    case "bot_channel": bot_channel = guild.get_channel(channel.id)
-                    case "peak_channel": peak_channel = guild.get_channel(channel.id)
-                    case "guild_channel": guild_channel = guild.get_channel(channel.id)
-                    case "category_channel": continue
+                    case "user_channel":
+                        user_channel = guild.get_channel(channel.id)
+                    case "online_channel":
+                        online_channel = guild.get_channel(channel.id)
+                    case "bot_channel":
+                        bot_channel = guild.get_channel(channel.id)
+                    case "peak_channel":
+                        peak_channel = guild.get_channel(channel.id)
+                    case "guild_channel":
+                        guild_channel = guild.get_channel(channel.id)
+                    case "category_channel" | "stats":
+                        continue
                     case _: 
                         self.logger.debug(f"not a stats channel: {channel}")
                         raise ValueError(f"Unexpected channel {channel.name}")
@@ -194,26 +203,31 @@ class Stats(GroupCog):
             description=f"Information about {guild.name}",
             color=random.choice(rainbow.RAINBOW)
         )
+
         embed.add_field(
             name="Users",
             value=sum(member.bot == False for member in guild.members),
             inline=True
         )
+
         embed.add_field(
             name="Bots",
             value=sum(member.bot == True for member in guild.members),
             inline=True
         )
+
         embed.add_field(
             name="Online",
             value=sum(member.status != discord.Status.offline and not member.bot for member in guild.members),
             inline=True
         )
+
         embed.add_field(
             name="Created on",
             value=guild.created_at.strftime("%Y-%m-%d"),
             inline=True
         )
+
         try:
             embed.add_field(
                 name="Afk channel",
@@ -221,8 +235,9 @@ class Stats(GroupCog):
                 inline=True
             )
         except AttributeError as e:
-            self.logger.debug(f"Error caused by non-existing AFK channel: {e}")
-        self.logger.debug(f"Showing guild stats: {interaction.guild=}, {interaction.user=}")
+            self.logger.warning(f"No afk-channel found: {e}")
+
+        self.logger.debug(f"Showing guild stats to {interaction.user}: {interaction.guild=}, {interaction.user=}")
         await interaction.response.send_message(embed=embed)
 
 
@@ -230,14 +245,14 @@ class Stats(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command(name="add", description="This command will create the Stats category which will show some stats about the server.")
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
-        _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_add)
+        _, c_mention = self.act.get_app_sub_command(self.slash_stats_category_add)
+
         with Session(engine) as session:
-            if (
-                session.query(Channel).where(
-                    Channel.guild_id == interaction.guild.id,
-                    Channel.type == STATS
-                ).all()
-            ):
+            if session.query(Channel).where(
+                Channel.guild_id == interaction.guild.id,
+                Channel.type == STATS
+            ).all():
+                # TODO: Add mention to slash stats remove
                 await interaction.response.send_message("Stats channels already set up", ephemeral=True)
                 return
 
@@ -258,7 +273,9 @@ class Stats(GroupCog):
             if not channels:
                 await interaction.response.send_message("No stats channels found to remove.", ephemeral=True)
                 return
-        _, c_mention = await app_command_tools.Converter(bot=self.bot).get_app_sub_command(self.slash_stats_category_remove)
+
+        _, c_mention = self.act.get_app_sub_command(self.slash_stats_category_remove)
+
         await interaction.response.defer(ephemeral=True)
         await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
         await interaction.followup.send("Removed stats channels")
