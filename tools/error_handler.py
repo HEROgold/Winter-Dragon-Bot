@@ -8,7 +8,6 @@ from discord.ext import commands, tasks
 
 from _types.bot import WinterDragon
 from _types.error_types import AllErrors
-from tools.app_command_tools import Converter
 from tools.config_reader import config
 
 
@@ -25,7 +24,6 @@ class ErrorHandler:
     interface: commands.Context | discord.Interaction
     error: AllErrors
     logger: logging.Logger
-    act: Converter
     time_code: float
 
 
@@ -40,7 +38,6 @@ class ErrorHandler:
         self.error = error
         self.help_msg = "`help`"
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = Converter(bot=self.bot)
         self.time_code = datetime.datetime.now(datetime.timezone.utc).timestamp()
         
         self._async_init.start()
@@ -48,8 +45,8 @@ class ErrorHandler:
 
     @tasks.loop(count = 1)
     async def _async_init(self) -> None:
-        # self.help_command = await self.act.get_app_command(self.bot.get_command("help")) # bot.tree.get_command()
-        self.invite_command = await self.act.get_app_command(self.bot.tree.get_command("invite"))
+        # self.help_command = self.bot.get_app_command("help")
+        self.invite_command = self.bot.get_app_command("invite")
         self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
 
         await self.handle_error()

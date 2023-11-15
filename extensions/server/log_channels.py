@@ -1088,7 +1088,7 @@ class LogChannels(GroupCog):
             )
             channels = result.all()
             if len(channels) == 0:
-                _, c_mention = await self.act.get_app_sub_command(self.slash_DragonLog_add)
+                c_mention = await self.get_command_mention(self.slash_DragonLog_add)
                 await interaction.followup.send(f"Can't find DragonLogChannels Consider using {c_mention}")
                 return
 

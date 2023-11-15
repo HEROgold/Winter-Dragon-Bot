@@ -63,7 +63,8 @@ class Steam(GroupCog):
                 return
             session.add(SteamUser(id = interaction.user.id))
             session.commit()
-        _, sub_mention = await self.act.get_app_sub_command(self.slash_show)
+        # _, sub_mention = self.get_command_mention(self.slash_show)
+        sub_mention = self.get_command_mention(self.slash_show)
         await interaction.response.send_message(f"I will notify you of new steam games!\nUse {sub_mention} to view current sales.", ephemeral=True)
 
 
@@ -118,8 +119,8 @@ class Steam(GroupCog):
             self.logger.warning("Got no populated embed, skipping sale sending.")
             return
 
-        _, sub_mention_remove = await self.act.get_app_sub_command(self.slash_remove)
-        _, sub_mention_show = await self.act.get_app_sub_command(self.slash_show)
+        sub_mention_remove = self.get_command_mention(self.slash_remove)
+        sub_mention_show = self.get_command_mention(self.slash_show)
         disable_message = f"You can disable this message by using {sub_mention_remove}"
         all_sale_message = f"You can see other sales by using {sub_mention_show}, followed by a percentage"
 

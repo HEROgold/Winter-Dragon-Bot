@@ -273,7 +273,7 @@ from _types.bot import WinterDragon
 #             self.data = self.get_data()
 #         guild = interaction.guild
 #         guild_id = str(guild.id)
-#         cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_team_voice)
+#         cmd = self.get_app_command(self.slash_team_voice.qualified_name)
 #         vote_txt = f"{interaction.user.mention} used {cmd.mention}\nThe following users need to vote:"
 #         for team, team_members in teams.items():
 #             vote_txt += f"\nTeam {int(team) + 1}"

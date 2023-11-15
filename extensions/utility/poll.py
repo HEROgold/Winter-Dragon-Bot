@@ -187,7 +187,7 @@ class Poll(GroupCog):
                     Channel.guild_id == interaction.guild.id
                 ).first()
             ):
-                _, remove_channel_command = self.act.get_app_sub_command(self.slash_remove_poll_channel)
+                _, remove_channel_command = self.get_command_mention(self.slash_remove_poll_channel)
 
                 self.bot.get_channel(found.id).delete(
                     reason=f"Removed by {interaction.user.mention} because of {remove_channel_command}"
@@ -198,7 +198,7 @@ class Poll(GroupCog):
                 session.commit()
                 return
 
-            _, add_channel_command = self.act.get_app_sub_command(self.slash_set_poll_channel)
+            _, add_channel_command = self.get_command_mention(self.slash_set_poll_channel)
             await interaction.response.send_message(f"Channel not found, Please add by using {add_channel_command}")
 
 
@@ -231,7 +231,7 @@ class Poll(GroupCog):
                 self.logger.warning(f"No poll channel found to send poll to for {interaction.guild=}")
 
             self.logger.debug(f"Getting {self.slash_set_poll_channel}")
-            _, custom_mention = await self.act.get_app_sub_command(self.slash_set_poll_channel)
+            _, custom_mention = await self.get_command_mention(self.slash_set_poll_channel)
 
             if interaction.user.guild_permissions.manage_channels:
                 await interaction.response.send_message(

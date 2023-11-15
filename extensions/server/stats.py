@@ -245,7 +245,7 @@ class Stats(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command(name="add", description="This command will create the Stats category which will show some stats about the server.")
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
-        _, c_mention = self.act.get_app_sub_command(self.slash_stats_category_add)
+        c_mention = self.get_command_mention(self.slash_stats_category_add)
 
         with Session(engine) as session:
             if session.query(Channel).where(
@@ -274,7 +274,7 @@ class Stats(GroupCog):
                 await interaction.response.send_message("No stats channels found to remove.", ephemeral=True)
                 return
 
-        _, c_mention = self.act.get_app_sub_command(self.slash_stats_category_remove)
+        c_mention = self.get_command_mention(self.slash_stats_category_remove)
 
         await interaction.response.defer(ephemeral=True)
         await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")

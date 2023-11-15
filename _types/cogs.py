@@ -8,16 +8,14 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
 from _types.bot import WinterDragon
-from tools.app_command_tools import Converter
-from tools.caching import memoize
 from tools.config_reader import config
 from tools.error_handler import ErrorHandler
+
 
 def get_arg(args: Sequence[Any], target: type) -> Any | None:
     for arg in args:
         if isinstance(arg, target):
             return arg
-
 
 
 class Cog(commands.Cog):
@@ -27,19 +25,16 @@ class Cog(commands.Cog):
     Args:
         bot (WinterDragon): The instance of the WinterDragon bot.
         logger (logging.Logger): The logger for the cog.
-        act (Converter): The commands converter for the cog.
     """
 
     bot: WinterDragon
     logger: logging.Logger
-    act: Converter
 
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.ErrorHandler = ErrorHandler
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.act = Converter(bot=self.bot)
 
         if not self.has_error_handler():
             self.logger.warning(f"{self.__class__} has no error handler!")
@@ -77,7 +72,7 @@ class Cog(commands.Cog):
         self.ErrorHandler(self.bot, interaction, error)
 
 
-    async def get_command_mention(self, command: app_commands.commands.Command):
+    def get_command_mention(self, command: app_commands.commands.Command):
         if not isinstance(command, app_commands.commands.Command): # type:ignore
             raise TypeError(f"Expected app_commands.commands.Command but got {type(command)} instead")
 
