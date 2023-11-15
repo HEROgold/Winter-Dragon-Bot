@@ -72,8 +72,8 @@ class Cog(commands.Cog):
         self.ErrorHandler(self.bot, interaction, error)
 
 
-    def get_command_mention(self, command: app_commands.commands.Command):
-        if not isinstance(command, app_commands.commands.Command): # type:ignore
+    def get_command_mention(self, command: app_commands.Command):
+        if not isinstance(command, app_commands.Command): # type:ignore
             raise TypeError(f"Expected app_commands.commands.Command but got {type(command)} instead")
 
         return self.bot.get_app_command(command.qualified_name).mention
