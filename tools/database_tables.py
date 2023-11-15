@@ -633,5 +633,4 @@ except Exception as e:
 # Test using Hypothesis
 # https://youtu.be/dsBitCcWWf4
 
-# TODO: Use more joins etc.
 # TODO: Use knowledge from databases lessons for update this file
