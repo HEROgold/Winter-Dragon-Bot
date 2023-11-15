@@ -68,7 +68,8 @@ class ErrorHandler:
             self.logger.error(f"CommandInvokeError: {self.time_code=}")
 
         error_messages = {
-            commands.errors.MissingRequiredArgument: f"Missing a required argument, {error.param}.",
+            # error.param gives attribute error, but should be able to be used here.
+            commands.errors.MissingRequiredArgument: f"Missing a required argument, {error}.", 
             commands.errors.BotMissingPermissions: f"I do not have enough permissions to use this command! {error.missing_permissions}",
             app_commands.errors.BotMissingPermissions: f"I do not have enough permissions to use this command! {error.missing_permissions}",
             commands.errors.MissingPermissions: f"You do not have enough permission to use this command! {error.missing_permissions}",
