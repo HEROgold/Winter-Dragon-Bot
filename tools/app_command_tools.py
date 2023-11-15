@@ -1,3 +1,9 @@
+"""
+LEGACY CODE
+
+Unused but exists to improve or take snippets from for future use.
+
+"""
 import logging
 from typing import Any, Self
 
@@ -8,12 +14,6 @@ from discord.ext import commands
 from tools.config_reader import config
 from tools.caching import memoize
 from _types.bot import WinterDragon
-
-# TODO: fix issues or rewrite
-
-# Fom poll.py
-# FIXME: error on self.act.get_app_sub_command: type(error)=<class 'discord.app_commands.errors.CommandInvokeError'>, error.args=("Command 'create' raised an exception: AttributeError: 'NoneType' object has no attribute 'name'",)
-# Weird interaction with app_commands.Group()
 
 
 class CommandNotFound(Exception):
@@ -143,7 +143,7 @@ class Converter:
         return app_command
 
 
-    # TODO, return pre-filled arguments for a given command
+    # TO DO, return pre-filled arguments for a given command
     # Needs to work both with and without sub commands.
     # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
     # Doesn't work with discord's api (yet?)!!
