@@ -262,9 +262,7 @@ class LogChannels(GroupCog):
         # X = "category", "permissions_synced"
 
         self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
-        found_properties = [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]
-
-        if differences := found_properties:
+        if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
             if "name" in differences or before.name != after.name:
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
