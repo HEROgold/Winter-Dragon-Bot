@@ -3,12 +3,13 @@ from typing import Any, Sequence
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
 from _types.bot import WinterDragon
 from tools.app_command_tools import Converter
+from tools.caching import memoize
 from tools.config_reader import config
 from tools.error_handler import ErrorHandler
 
@@ -16,6 +17,7 @@ def get_arg(args: Sequence[Any], target: type) -> Any | None:
     for arg in args:
         if isinstance(arg, target):
             return arg
+
 
 
 class Cog(commands.Cog):
@@ -31,6 +33,7 @@ class Cog(commands.Cog):
     bot: WinterDragon
     logger: logging.Logger
     act: Converter
+
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.ErrorHandler = ErrorHandler
@@ -50,12 +53,37 @@ class Cog(commands.Cog):
     async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
         self.ErrorHandler(self.bot, ctx, error)
 
+
+    async def cog_load(self) -> None:
+        self.add_mentions.start()
+
+    @tasks.loop(count=1)
+    async def add_mentions(self):
+        # await self.add_command_mentions()
+        if not self.bot.has_app_command_mentions:
+            await self.bot.update_app_commands_cache()
+            self.bot.has_app_command_mentions = True
+
+    @add_mentions.before_loop
+    async def before_add_mentions(self):
+        await self.bot.wait_until_ready()
+
+
     async def cog_app_command_error(
         self,
         interaction: discord.Interaction,
         error: app_commands.AppCommandError
     ) -> None:
         self.ErrorHandler(self.bot, interaction, error)
+
+
+    @memoize
+    async def get_command_mention(self, command: app_commands.commands.Command):
+        if not isinstance(command, app_commands.commands.Command): # type:ignore
+            raise TypeError(f"Expected app_commands.commands.Command but got {type(command)} instead")
+
+        return self.bot.get_app_command(command.qualified_name).mention
+
 
 
 class GroupCog(Cog):
