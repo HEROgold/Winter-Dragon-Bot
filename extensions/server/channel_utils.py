@@ -1,5 +1,4 @@
-from typing import reveal_type
-import discord  # type: ignore
+import discord
 from discord import app_commands
 
 from _types.cogs import GroupCog
@@ -18,23 +17,14 @@ class ChannelUtils(GroupCog):
     async def slash_cat_delete(self, interaction: discord.Interaction, category: discord.CategoryChannel) -> None:
         """Delete a discord category with all channels inside"""
         await interaction.response.defer(ephemeral=True)
-        # _, cmd_mention = await self.act.get_app_sub_command(self.slash_cat_delete)
-        
-        # if this works, push this to ACT
-        reveal_type(self.slash_cat_delete)
-        for cmd in await self.bot.tree.fetch_commands():
-            # cmd.mention
-            # cmd.name
-            # cmd.options
-
-            if cmd.qualified_name == self.slash_cat_delete.qualified_name:
-                self.logger.critical(f"{cmd.qualified_name=}, {self.slash_cat_delete.qualified_name=}")
+        cmd_mention = self.get_command_mention(self.slash_cat_delete)
 
         for channel in category.channels:
-            await channel.delete(reason=f"Deleted by {interaction.user.mention} using /channel-utils categories delete") # {cmd_mention}
-        await category.delete(reason=f"Deleted by {interaction.user.mention} using /channel-utils categories delete") # {cmd_mention}
+            await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
+        await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
+
         try:
-            await interaction.followup.send("Channel's removed", ephemeral=True)
+            await interaction.followup.send("Channels removed", ephemeral=True)
         except discord.NotFound:
             pass
 
