@@ -245,16 +245,16 @@ class Stats(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command(name="add", description="This command will create the Stats category which will show some stats about the server.")
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
-        c_mention = self.get_command_mention(self.slash_stats_category_add)
-
         with Session(engine) as session:
             if session.query(Channel).where(
                 Channel.guild_id == interaction.guild.id,
                 Channel.type == STATS
             ).all():
-                # TODO: Add mention to slash stats remove
-                await interaction.response.send_message("Stats channels already set up", ephemeral=True)
+                rem_mention = self.get_command_mention(self.slash_stats_category_remove)
+                await interaction.response.send_message(f"Stats channels already set up use {rem_mention} to remove them", ephemeral=True)
                 return
+
+            c_mention = self.get_command_mention(self.slash_stats_category_add)
 
             await interaction.response.defer(ephemeral=True)
             await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
@@ -271,7 +271,8 @@ class Stats(GroupCog):
                 Channel.type == STATS
             ).all()
             if not channels:
-                await interaction.response.send_message("No stats channels found to remove.", ephemeral=True)
+                add_mention = self.get_command_mention(self.slash_stats_category_add)
+                await interaction.response.send_message(f"No stats channels found to remove, use {add_mention} to add them", ephemeral=True)
                 return
 
         c_mention = self.get_command_mention(self.slash_stats_category_remove)
