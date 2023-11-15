@@ -6,7 +6,6 @@ from discord.ext import commands, tasks
 
 from tools.config_reader import config
 import tools.rainbow as rainbow
-from tools import app_command_tools
 from tools.database_tables import Channel, engine, Session
 from _types.cogs import Cog, GroupCog
 from _types.bot import WinterDragon
