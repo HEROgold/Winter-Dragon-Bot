@@ -256,7 +256,8 @@ class LogChannels(GroupCog):
         after: discord.abc.GuildChannel = entry.after
         channel = after or before
         embed = None
-        properties = "overwrites", "name", "position", "type" 
+        # FIXME: AttributeError: 'AuditLogDiff' object has no attribute 'overwrites'. Documentation suggests it does.
+        properties = "name", "position", "type" # "overwrites", 
         # remove X since AuditLogDiff doesn't have them
         # X = "category", "permissions_synced"
 
