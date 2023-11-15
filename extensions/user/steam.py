@@ -497,7 +497,7 @@ class Steam(GroupCog):
         regex = r"btn_add_to_cart_\d+"
 
         title = soup.find(class_=SINGLE_GAME_TITLE).text
-        if add_to_cart := soup.find("a", href=re.compile(regex)):
+        if add_to_cart := soup.find("a", href=re.compile(regex)): # what does href = re.compile do here?
             buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA)
 
             with Session(engine) as session:
