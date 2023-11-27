@@ -7,31 +7,44 @@ from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 
 import discord
-from discord.ext import commands
-
-from tools.config_reader import config
-from tools.config_reader import is_valid as config_validator
-from tools.config_reader import get_invalid as get_invalid_configs
-from tools.main_log import Logs
 from _types.bot import WinterDragon
 
+from discord.ext import commands
+
+
+from tools.config_reader import (
+    config,
+    get_invalid as get_invalid_configs,
+    is_valid as config_validator,
+)
+
+from tools.main_log import Logs
+
 if not config_validator():
-    raise ValueError(f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}")
+    raise ValueError(
+        f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}"
+    )
 
 
-Intents = discord.Intents.none()
-Intents.members = True
-Intents.guilds = True
-Intents.presences = True
-Intents.guild_messages = True
-Intents.dm_messages = True
-Intents.moderation = True
-Intents.message_content = True
-Intents.auto_moderation_configuration = True
-Intents.auto_moderation_execution = True
-Intents.voice_states = True
 
-bot = WinterDragon(intents=Intents, command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), case_insensitive=True)
+INTENTS = discord.Intents.none()
+INTENTS.members = True
+INTENTS.guilds = True
+INTENTS.presences = True
+INTENTS.guild_messages = True
+INTENTS.dm_messages = True
+INTENTS.moderation = True
+INTENTS.message_content = True
+INTENTS.auto_moderation_configuration = True
+INTENTS.auto_moderation_execution = True
+INTENTS.voice_states = True
+
+bot = WinterDragon(
+    intents=INTENTS,
+    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),
+    case_insensitive=True,
+)
+
 bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
 
@@ -75,30 +88,31 @@ async def mass_load() -> None:
 
 
 @commands.is_owner()
-@tree.command(name = "shutdown", description = "(For bot developer only)")
+@tree.command(name="shutdown", description="(For bot developer only)")
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
         log.bot_logger.info("shutdown by command.")
-    except Exception: pass
+    except Exception:
+        pass
     raise KeyboardInterrupt
 
 
-def terminate(*args, **kwargs) -> None: 
+def terminate(*args, **kwargs) -> None:
     log.bot_logger.warning(f"{args=}, {kwargs=}")
     log.bot_logger.info("terminated")
     log.shutdown()
     try:
         asyncio.ensure_future(bot.close())
-        # asyncio.run(bot.close())
-    except Exception: pass
+    except Exception as e:
+        print(e)
     sys.exit()
 
 
 async def main() -> None:
     async with bot:
         # global here, since they should be accessible module wide,
-        # but they require a running even loop
+        # but they require a running event loop
         global log
         log = Logs(bot=bot)
 

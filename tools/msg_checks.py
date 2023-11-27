@@ -24,8 +24,8 @@ def is_tic_tac_toe(msg: str) -> bool:
     regex = generate_ttt_regex()
 
     find_all = re.findall(regex, msg)
-    print(regex)
-    print(find_all)
+    # print(regex)
+    # print(find_all)
 
     # filter out empty matches
     total = [
@@ -35,7 +35,7 @@ def is_tic_tac_toe(msg: str) -> bool:
         if j
     ]
 
-    print(total)
+    # print(total)
     return len(total) > 0
 
 

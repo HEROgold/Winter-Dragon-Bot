@@ -1,7 +1,13 @@
-import logging
-from typing import Self
+"""
+LEGACY CODE
 
-import discord  # type: ignore
+Unused but exists to improve or take snippets from for future use.
+
+"""
+import logging
+from typing import Any, Self
+
+import discord
 from discord import app_commands
 from discord.ext import commands
 
@@ -31,17 +37,14 @@ class Converter:
         self.tree = self.bot.tree
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
-    def is_group(self, app_command: app_commands.AppCommand) -> bool:
+    def is_group(self, app_command: Any) -> bool:
         self.logger.debug(f"{type(app_command)=}")
         self.logger.debug(f"Checking is_group: {app_command}")
-        return any(
-            type(i) in [
-                app_commands.AppCommandGroup,
-                app_commands.Group,
-                app_commands.commands.Group
-            ]
-            for i in app_command.options
-        )
+        return type(app_command) in [
+            app_commands.AppCommandGroup,
+            app_commands.Group,
+        ]
+
 
     def is_subcommand(
         self,
@@ -80,6 +83,8 @@ class Converter:
         Raises:
             CommandNotFound: Raised when the sub-command is not found.
         """
+        custom_mention = ""
+
         if not sub_command:
             raise CommandNotFound
 
@@ -115,7 +120,7 @@ class Converter:
             raise CommandNotFound
 
         if self.is_group(command):
-            self.logger.debug("command is group! when not expected")
+            self.logger.debug(f"{command.commands=}")
 
         self.logger.debug(f"Trying to get AppCommand: {command.name}")
         # app_commands_list = await self._get_commands(guild)
@@ -138,7 +143,7 @@ class Converter:
         return app_command
 
 
-    # TODO, return pre-filled arguments for a given command
+    # TO DO, return pre-filled arguments for a given command
     # Needs to work both with and without sub commands.
     # Chat bar: /steam show percent:100, Clickable: </steam show:1064592221204140132>
     # Doesn't work with discord's api (yet?)!!

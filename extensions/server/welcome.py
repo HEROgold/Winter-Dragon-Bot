@@ -2,7 +2,6 @@ import discord
 from discord import app_commands
 
 from tools.config_reader import config
-from tools import app_command_tools
 from tools.database_tables import Welcome as WelcomeDb
 from tools.database_tables import Session, engine
 from _types.cogs import Cog, GroupCog
@@ -18,15 +17,15 @@ class Welcome(GroupCog):
         with Session(engine) as session:
             message = session.query(WelcomeDb).where(WelcomeDb.guild_id == member.guild.id).first().message
         channel = member.guild.system_channel
-        cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.bot.get_command("help"))
+        cmd = self.bot.get_app_command("help")
         default_message = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
-        if channel is not None and config.Welcome.DM == False:
+        if channel is not None and config["Welcome"]["DM"] == False:
             self.logger.warning("sending welcome to guilds system_channel")
             if message:
                 await channel.send(message)
             else:
                 await channel.send(default_message)
-        elif channel is not None and config.Welcome.DM == True and member.bot == False:
+        elif channel is not None and config["Welcome"]["DM"] == True and member.bot == False:
             self.logger.warning("sending welcome to user's dm")
             if message:
                 await member.send(message)

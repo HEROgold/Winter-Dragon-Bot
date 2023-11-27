@@ -9,11 +9,10 @@ discord-ext-prometheus
 Flag==0.1.1
 num2words==0.5.12
 openai==0.26.5
-Pillow==9.4.0
+Pillow==10.0.1
 psutil==5.9.5
 pymongo==4.3.3
 requests==2.31.0
 SQLAlchemy==2.0.15
 psycopg2-binary==2.9.6
-craiyon.py==0.2.0
 matplotlib==3.7.1

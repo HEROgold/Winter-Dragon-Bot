@@ -273,7 +273,7 @@ from _types.bot import WinterDragon
 #             self.data = self.get_data()
 #         guild = interaction.guild
 #         guild_id = str(guild.id)
-#         cmd = await app_command_tools.Converter(bot=self.bot).get_app_command(self.slash_team_voice)
+#         cmd = self.get_app_command(self.slash_team_voice.qualified_name)
 #         vote_txt = f"{interaction.user.mention} used {cmd.mention}\nThe following users need to vote:"
 #         for team, team_members in teams.items():
 #             vote_txt += f"\nTeam {int(team) + 1}"
@@ -321,7 +321,7 @@ from _types.bot import WinterDragon
 #             category_id:int = self.data[guild_id]["Category"]["id"]
 #         except KeyError:
 #             self.logger.info(f"Creating Teams category for {guild}")
-#             category_channel:CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites, position=80)
+#             category_channel:CategoryChannel = await guild.create_category(name="Teams", overwrites=overwrites)
 #             category_id = category_channel.id
 #             self.data[guild_id] = {"Category":{"id":category_id}}
 #         category_channel = discord.utils.get(guild.categories, id=category_id)
@@ -372,10 +372,10 @@ class Team(GroupCog):
         with Session(engine) as session:
             channels = session.query(Channel).where(Channel.type == TEAM_VOICE_TYPE).all()
             for channel in channels:
-                discord_channel = self.bot.get_channel(channel.id)
-                if discord_channel.members == 0:
-                    await discord_channel.delete()
-                    session.delete(channel)
+                if discord_channel := self.bot.get_channel(channel.id):
+                    if discord_channel.members == 0:
+                        await discord_channel.delete()
+                        session.delete(channel)
         session.commit()
 
     @delete_empty_team_channels.before_loop
@@ -398,6 +398,7 @@ class Team(GroupCog):
         # find divide and module by desired team size,
         # and found amount of users
         divide, modulo = divmod(len(members), team_count)
+        members_count = math.ceil(divide+modulo)
 
         # create teams, and fill members with amount of users
         # (evenly split among each team)
@@ -405,12 +406,12 @@ class Team(GroupCog):
             {
                 "id": i+1,
                 "members": [
-                    members.pop() for _ in range(math.ceil(divide))
-                ].extend(members.pop() for _ in range(math.ceil(modulo))),
+                    members[j+i*members_count] for j in range(members_count)
+                ],
             }
             for i in range(team_count)
         ]
-        
+
         self.logger.debug(f"created teams: {teams}")
         return teams
 
@@ -558,7 +559,7 @@ class Team(GroupCog):
         team_count: int = 2
     ) -> None:
         try:
-            voice_members = interaction.user.voice.channel.members
+            interaction.user.voice.channel.members
         except AttributeError:
             await interaction.response.send_message(
                 "Could not get users from your voice channel, are you in one?",
@@ -569,12 +570,12 @@ class Team(GroupCog):
         await interaction.response.defer()
 
         category = await self.fetch_teams_category(interaction.guild)
-        teams = self.split_teams(team_count, voice_members)
+        teams = self.split_teams(team_count, interaction.user.voice.channel.members)
 
-        for _, channel in await self.create_team_channels(teams, category):
+        for channel in await self.create_team_channels(teams, category):
             await self.move_from_category(teams, channel)
 
-        await interaction.followup.edit_message("Users from your voice split among teams")
+        await interaction.edit_original_response("Users from your voice split among teams")
 
 
     # FIXME: dc_member is None

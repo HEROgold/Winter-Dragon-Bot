@@ -4,7 +4,6 @@
 
 	// List of extensions which should be recommended for users of this workspace.
 	"recommendations": [
-		"cweijan.vscode-postgresql-client2",
 		"eamodio.gitlens",
 		"donjayamanne.githistory",
 		"mhutchie.git-graph",
@@ -16,7 +15,11 @@
 		"sourcery.sourcery",
 		"gruntfuggly.todo-tree",
 		"streetsidesoftware.code-spell-checker",
-		"pejmannikram.vscode-auto-scroll"
+		"pejmannikram.vscode-auto-scroll",
+		"mtxr.sqltools",
+		"mtxr.sqltools-driver-sqlite",
+		"qwtel.sqlite-viewer",
+		"inferrinizzard.prettier-sql-vscode"
 	],
 	// List of extensions recommended by VS Code that should not be recommended for users of this workspace.
 	"unwantedRecommendations": [
