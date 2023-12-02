@@ -366,5 +366,3 @@ def main() -> None:
 
 async def setup(bot: WinterDragon) -> None:
     return
-    main()
-    await bot.add_cog(SteamServers(bot))

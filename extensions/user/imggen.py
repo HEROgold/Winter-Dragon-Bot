@@ -61,12 +61,6 @@ class Image(GroupCog):
         await interaction.response.send_message("This functionality is currently broken.", ephemeral=True)
         return
 
-        dm = await interaction.user.create_dm()
-        await interaction.response.send_message("Creating images, please be patient.", ephemeral=True)
-        self.logger.debug(f"Requesting images for {interaction.user} with query {query}")
-        loop = asyncio.get_event_loop()
-        asyncio.ensure_future(loop.run_in_executor(None, self.generate_images, interaction, dm, query))
-
 
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(Image(bot))

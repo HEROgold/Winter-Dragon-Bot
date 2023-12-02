@@ -153,6 +153,5 @@ class TempBan(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     return
-    await bot.add_cog(TempBan(bot))
     # Removed since normal ban exist.
     # added since synced ban

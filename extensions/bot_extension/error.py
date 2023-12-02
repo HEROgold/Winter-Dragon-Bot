@@ -225,6 +225,3 @@ class Error(Cog):
 
 async def setup(bot: WinterDragon) -> None:
     return # Return early to stop using cog.
-    if config["Main"]["log_level"] == "DEBUG":
-        return
-    await bot.add_cog(Error(bot))

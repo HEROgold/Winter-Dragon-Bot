@@ -145,45 +145,12 @@ class AutomaticChannels(GroupCog):
     async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
         await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
         return
-        with Session(engine) as session:
-            if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
-                autochannel_settings.channel_limit = limit
-            else:
-                session.add(ACS(
-                    id = interaction.user.id,
-                    channel_name = interaction.user.name,
-                    channel_limit = 0
-                ))
-            session.commit()
-        await interaction.response.send_message(f"You have changed the channel limit for your server to `{limit}`!", ephemeral=True)
 
 
     @app_commands.command(name="limit", description="Set a limit for your channel")
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
         await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
         return
-        with Session(engine) as session:
-            if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
-                autochannel_settings.channel_limit = limit
-            else:
-                session.add(ACS(
-                    id = interaction.user.id,
-                    channel_name = interaction.user.name,
-                    channel_limit = 0
-                ))
-
-            if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
-                channel = self.bot.get_channel(autochannel.channel_id)
-                if channel is not None:
-                    await channel.edit(user_limit=limit)
-
-                await interaction.response.send_message(
-                    f"{interaction.user.mention} You have set the channel limit to be `{limit}`!, settings are saved",
-                    ephemeral=True
-                )
-            else:
-                await interaction.response.send_message(f"{interaction.user.mention} You don't own a channel, settings are saved.", ephemeral=True)
-            session.commit()
 
 
     @slash_setup.error
