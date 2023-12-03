@@ -85,3 +85,54 @@ class CommandControl(GroupCog):
 async def setup(bot: WinterDragon) -> None:
     return
     await bot.add_cog(CommandControl(bot))
+
+# Ai example code for inspiration
+
+# from sqlalchemy import create_engine, Column, Integer, String, Boolean
+# from sqlalchemy.orm import sessionmaker
+# from sqlalchemy.ext.declarative import declarative_base
+
+# Base = declarative_base()
+
+# class CommandControl(Base):
+#     __tablename__ = 'command_control'
+
+#     id = Column(Integer, primary_key=True)
+#     guild_id = Column(Integer)
+#     command_name = Column(String)
+#     enabled = Column(Boolean)
+
+#     def __init__(self, guild_id, command_name, enabled):
+#         self.guild_id = guild_id
+#         self.command_name = command_name
+#         self.enabled = enabled
+
+# # Create the database engine and session
+# engine = create_engine('sqlite:///command_control.db')
+# Session = sessionmaker(bind=engine)
+
+
+# class CombinedCommand:
+#     dc_command: DcCommand
+#     db_command: DbCommand
+
+#     def __init__(self, dc_command: DcCommand) -> None:
+#         self.dc_command = dc_command
+#         with Session() as session:
+#             db_command = session.query(CommandControl).filter_by(guild_id=guild_id, command_name=dc_command.qualified_name).first()
+#             if db_command and not db_command.enabled:
+#                 self.dc_command.enabled = False
+
+
+# @bot.command()
+# async def my_command(ctx):
+#     guild_id = ctx.guild.id
+#     command_name = "my_command"
+    
+#     with Session() as session:
+#         db_command = session.query(CommandControl).filter_by(guild_id=guild_id, command_name=command_name).first()
+#         if db_command and not db_command.enabled:
+#             await ctx.send("This command is disabled for this guild.")
+#             return
+
+#     # Command logic goes here
