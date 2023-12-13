@@ -64,6 +64,8 @@ class TicTacToe(GroupCog):
         chart.close()
         os.remove(f"{self.PIECHART_PATH}/{interaction.user.id}.png")
 
+
+# Make own module for making graphs
     def make_autopct(self, values) -> Callable[..., str]:
         def my_autopct(pct) -> str:
             total = sum(values)
@@ -85,7 +87,7 @@ class TicTacToe(GroupCog):
         plt.pie(values, labels=labels, autopct=self.make_autopct(values))
         plt.savefig(f"{self.PIECHART_PATH}/{interaction.user.id}.png")
         plt.close(interaction.user.id)
-
+## /\
 
     def get_sql_leader_board(self, interaction_user_id: int) -> list[ResultDuels]:
         with Session(engine) as session:
