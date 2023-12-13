@@ -241,7 +241,7 @@ class TicTacToe(GroupCog):
         except Exception as e:
             self.logger.exception(e)
 
-    # FIXME: bugfix, lobby reset bug
+    # FIXME: bugfix, lobby reset bug, should be fixed with lobby code from _types
     async def join_association_handler(
         self,
         interaction: discord.Interaction,
