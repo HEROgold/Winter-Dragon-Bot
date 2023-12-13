@@ -509,7 +509,6 @@ class LogChannels(GroupCog):
         if entry.action == entry.action.message_delete:
             # 99% other persons message
             self.logger.debug(f"message delete: {message}")
-        # TODO: Test and if needs switching to discord.enums
         elif entry.action == entry.action.message_bulk_delete:
             # figure out what to send here
             self.logger.debug(f"bulk delete: {message}")
