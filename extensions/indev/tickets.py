@@ -191,7 +191,7 @@ class Tickets(GroupCog):
                 Channel.type == DB_CHANNEL_TYPE,
                 Channel.guild_id == interaction.guild.id
             ).first()
-            _, c_mention = await self.act.get_app_sub_command(self.slash_ticket_remove)
+            c_mention = await self.get_command_mention(self.slash_ticket_remove)
 
             if channel:
                 await interaction.response.send_message(f"Ticket channel already set up, use {c_mention} to remove and disable it.", ephemeral=True)

@@ -1,8 +1,10 @@
 """
 Using SteamCmd allow users/admins to create/manage servers from SteamCmd
+# TODO
+Currently this code is blocking, when installing, updating, uninstalling etc.
+the whole bot waits for it to complete. find and implement a way to have it not block
 """
 
-import asyncio
 from datetime import datetime, timedelta
 import os
 import random
@@ -47,6 +49,9 @@ class Server(TypedDict):
 class DisabledError(Exception):
     pass
 
+class ServerNotFound(Exception):
+    pass
+
 
 def get_all_servers() -> list[Server]:
     """
@@ -73,16 +78,56 @@ def get_all_servers() -> list[Server]:
 
 class SteamServers(GroupCog):
     server_list: list[Server]
-    processes: list[subprocess.Popen]
+
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.server_list = get_all_servers()
-        self.is_already_downloading()
+        # self.is_already_downloading()
 
 
     async def cog_load(self) -> None:
         self.test_steamcmd.start()
+
+
+    async def wait_on_process_finish(self, process: subprocess.Popen) -> None:
+        process.wait()
+        # while process.poll() is not None:
+        #     await asyncio.sleep(0)
+
+
+    def find_server(self, target: str | int) -> Server | None:
+        """
+        Find a server by name or id
+        
+        Parameters
+        -----------
+        :param:`target`: :class:`str` | :class:`int`
+            Target server name
+        
+        Returns
+        -------
+        :class:`Server`
+            Dict containing server info
+        """
+        if type(target) == str:
+            return next(
+                (
+                    server
+                    for server in self.server_list
+                    if target.lower() in server["name"].lower()
+                ),
+                None,
+            )
+        elif type(target) == int:
+            return next(
+                (
+                    server
+                    for server in self.server_list
+                    if target == server["id"]
+                ),
+                None,
+            )
 
 
     def get_installed_servers(self) -> list[str]:
@@ -102,7 +147,7 @@ class SteamServers(GroupCog):
         return False
 
 
-    def download_winget(self):
+    async def download_winget(self):
         self.logger.debug("Downloading Winget")
         
         if not config.getboolean("SteamCMD", "download_winget"):
@@ -110,30 +155,31 @@ class SteamServers(GroupCog):
         
         if self.is_already_downloading():
             # TODO: wait to finish
+            self.logger.debug("winget not finished downloading.")
             return None
 
         try:
-            subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]).wait()
-            subprocess.Popen(["cmd", INSTALLER_CMD]).wait()
+            await self.wait_on_process_finish(subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]))
+            await self.wait_on_process_finish(subprocess.Popen(["cmd", INSTALLER_CMD]))
         except Exception as e:
             self.logger.exception(f"error when downloading Winget {e}")
             return None
 
 
-    def download_steamcmd(self):
+    async def download_steamcmd(self):
         self.logger.debug("Downloading SteamCMD")
         if not config.getboolean("SteamCMD", "download_steamcmd"):
             raise DisabledError("download_steamcmd is set to False.")
         
         try:
-            subprocess.Popen([
+            await self.wait_on_process_finish(subprocess.Popen([
                 "winget", "install", WINGET_SteamCMD,
                 "--location", os.path.abspath(STEAM_CMD_DIR),
                 "--force"]
-            ).wait()
+            ))
         except Exception as e:
             self.logger.exception(f"error when downloading SteamCMD {e}")
-            self.download_winget()
+            await self.download_winget()
 
 
     @tasks.loop(count=1)
@@ -141,14 +187,14 @@ class SteamServers(GroupCog):
         self.logger.debug("starting SteamCMD")
 
         try:
-            subprocess.Popen([
+            await self.wait_on_process_finish(subprocess.Popen([
                 f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                 # "+login anonymous",
                 "+quit"
-            ]).wait()
+            ]))
         except FileNotFoundError as e:
             self.logger.exception(f"error when opening SteamCmd {e}")
-            self.download_steamcmd()
+            await self.download_steamcmd()
         except DisabledError as e:
             self.logger.warning(f"User has disabled downloading: {e}")
 
@@ -165,23 +211,42 @@ class SteamServers(GroupCog):
             yield line
 
 
-    async def uninstall_steamcmd_server(self, server_id: int, interaction: discord.Interaction):
-        self.logger.debug(f"starting SteamCMD server {server_id}")
+    async def login(self, process: subprocess.Popen, username: str, password: str):
+        # TODO add processes with user logins at install, update. optionally uninstall?
+        # wait for process to prompt password
+        async for line in self.live_output(process):
+            if line == f"Logging in user '{username}' to Steam Public...":
+                process.communicate(password)
+                break
+
+
+    async def uninstall_steamcmd_server(self, target: int | str, interaction: discord.Interaction):
+        server = self.find_server(target)
+        self.logger.debug(f"starting SteamCMD server {server}")
+
+        if server is None:
+            self.logger.warning(f"Server not found when uninstalling {target=}")
+            await interaction.edit_original_response("Server not found")
+            return
 
         try:
             subprocess.Popen(
                 [
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                     "+login anonymous",
-                    f"+app_uninstall {server_id}",
+                    f"+app_uninstall {server['id']}",
                     "+quit"
                 ]
             ).wait()
+
+            os.rmdir(f"""{os.path.abspath(f'{INSTALLED_SERVERS}/{server["name"]}')}""")
         except FileNotFoundError as e:
-            self.logger.exception(f"error when uninstalling {server_id} {e}")
+            self.logger.exception(f"error when uninstalling {server} {e}")
         except Exception as e:
-            self.logger.exception(f"error when uninstalling {server_id} {e}")
-            await interaction.followup.edit_message(content="Could not uninstall server")
+            self.logger.exception(f"error when uninstalling {server} {e}")
+            await interaction.edit_original_response(content="Could not uninstall server")
+        
+        await interaction.edit_original_response(content=f"{server['name']} has been removed")
 
 
     async def update_steamcmd_server(
@@ -190,10 +255,18 @@ class SteamServers(GroupCog):
         interaction: discord.Interaction,
         install: bool=False
     ) -> None:
-        self.logger.debug(f"starting SteamCMD server {server_id}")
+        server = self.find_server(server_id)
+        self.logger.debug(f"starting SteamCMD server {server}")
 
-        # TODO: catch steamcmd warnings, and push those to the message when it fails
         try:
+            # await asyncio.create_subprocess_shell(
+            #     cmd = "".join([
+            #         f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
+            #         "+login anonymous",
+            #         f"+app_update {server_id}",
+            #         "+quit"
+            #     ]),
+            # )
             process = subprocess.Popen(
                 [
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
@@ -205,23 +278,41 @@ class SteamServers(GroupCog):
                 universal_newlines=True
             )
 
-            status = "installing" if install else "updating"
+            status = "unknown"
             last_update = datetime.now()
 
             async for line in self.live_output(process):
-                if "progress" in line:
-                    l_index = line.index("progress")
-
-                    if last_update < datetime.now() - timedelta(seconds=15):
-                        await interaction.followup.edit_message(content=f"{status} {line[l_index:]}")
+                if "ERROR!" in line:
+                    await interaction.edit_original_response(content=line)
+                    return
                 if "already up to date" in line:
-                    await interaction.followup.edit_message(content="Already up to date.")
+                    await interaction.edit_original_response(content="Already up to date.")
+                    return
+                if "downloading" in line:
+                    status = "downloading"
+                if "installing" in line:
+                    status = "installing"
+                if "updating" in line:
+                    status = "updating"
+                if (
+                    "progress" in line
+                    and last_update < datetime.now() - timedelta(seconds=15)
+                ):
+                    progress_len = len("progress: ")
+                    l_index = line.index("progress")
+                    percent = line[l_index+progress_len:l_index+progress_len+3]
+                    bits = line[line[l_index:].index("(")+l_index:-1]
+
+                    await interaction.edit_original_response(content=f"{status} {percent}% {bits} bytes") # {line[l_index:]}
+                    last_update = datetime.now()
 
         except FileNotFoundError as e:
-            self.logger.exception(f"error when starting {server_id} {e}")
+            self.logger.exception(f"error when starting {server} {e}")
         except Exception as e:
-            self.logger.exception(f"error when starting {server_id} {e}")
-            await interaction.followup.edit_message(content="Could not start server")
+            self.logger.exception(f"error when starting {server} {e}")
+            await interaction.edit_original_response(content="Could not start server")
+        
+        await interaction.edit_original_response(content=f"{server['name']} has been {'installed' if install else 'updated'}")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -231,13 +322,14 @@ class SteamServers(GroupCog):
 
         for server in self.server_list:
             if server["name"] == server_name:
-                # TODO: find out if server is installed, change message based on that
+                if server_name in self.get_installed_servers():
+                    await interaction.followup.send("Server already installed, please update instead.")
+                    break
                 await interaction.followup.send(f"Installing {server_name}...")
-                await self.update_steamcmd_server(server["id"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has started")
+                await self.update_steamcmd_server(server["id"], interaction, install=True)
                 break
         else:
-            await interaction.followup.edit_message(content=f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -245,18 +337,18 @@ class SteamServers(GroupCog):
     async def slash_server_uninstall(self, interaction: discord.Interaction, server_name: str) -> None:
         await interaction.response.defer()
 
-        for server in self.server_list:
-            if server["name"] == server_name:
+        for server in self.get_installed_servers():
+            if server == server_name:
                 await interaction.followup.send(f"UnInstalling {server_name}...")
-                await self.uninstall_steamcmd_server(server["id"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has been removed")
+                await self.uninstall_steamcmd_server(server, interaction)
+                await interaction.edit_original_response(content=f"{server_name} has been removed")
                 break
         else:
-            await interaction.followup.edit_message(f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
 
     @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.command(name="update", description="Update a steam server")
+    @app_commands.command(name="update", description="Update or install a steam server")
     async def slash_server_update(self, interaction: discord.Interaction, server_name: str) -> None:
         await interaction.response.defer()
 
@@ -264,14 +356,15 @@ class SteamServers(GroupCog):
             if server["name"] == server_name:
                 if server_name in self.get_installed_servers():
                     self.logger.debug("Server is installed")
-
-                # TODO: find out if server is installed, change message based on that
-                await interaction.followup.send(f"Updating {server_name}...")
-                await self.update_steamcmd_server(server["id"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has started")
-                break
+                    await interaction.followup.send(f"Updating {server_name}...")
+                    await self.update_steamcmd_server(server["id"], interaction)
+                else:
+                    await interaction.followup.send(f"Installing {server_name}...")
+                    await self.update_steamcmd_server(server["id"], interaction, install=True)
+            break
         else:
-            await interaction.followup.edit_message(content=f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
+
 
     def get_server_executable_path(self) -> str:
         # TODO: find if servers file contains .bat, .exe or any other executables.
@@ -285,6 +378,7 @@ class SteamServers(GroupCog):
         # TODO: create script that adds a easy interface to run steam servers
         # TODO: send warning when not found
         # Add auto_complete
+        await interaction.edit_original_response(content=f"{server_name} has started")
 
 
     @app_commands.checks.has_permissions(administrator=True)
@@ -296,10 +390,9 @@ class SteamServers(GroupCog):
             if server["name"] == server_name:
                 await interaction.followup.send(f"Starting {server_name}...")
                 await self.start_steamcmd_server(server["name"], interaction)
-                await interaction.followup.edit_message(content=f"{server_name} has started")
                 break
         else:
-            await interaction.followup.edit_message(content=f"{server_name} could not be found")
+            await interaction.edit_original_response(content=f"{server_name} could not be found")
 
 #
 # AutoCompletes
@@ -365,6 +458,5 @@ def main() -> None:
 
 
 async def setup(bot: WinterDragon) -> None:
-    return
     main()
     await bot.add_cog(SteamServers(bot))

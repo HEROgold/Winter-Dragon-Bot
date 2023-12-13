@@ -3,7 +3,7 @@
 beautifulsoup4==4.12.2
 # Editable install with no version control (craiyon.py==0.2.0)
 # -e c:\users\marti\appdata\local\packages\pythonsoftwarefoundation.python.3.11_qbz5n2kfra8p0\localcache\local-packages\python311\site-packages\craiyon.py-0.2.0-py3.11.egg-info
-discord.py==2.2.3
+discord.py==2.3.2
 discord-ext-modal-paginator>=0.0.1
 discord-ext-prometheus
 Flag==0.1.1
@@ -15,5 +15,4 @@ pymongo==4.3.3
 requests==2.31.0
 SQLAlchemy==2.0.15
 psycopg2-binary==2.9.6
-craiyon.py==0.2.0
 matplotlib==3.7.1

@@ -28,7 +28,7 @@ class CombinedCommand:
     def __init__(self, dc_command: DcCommand) -> None:
         self.dc_command = dc_command
         with Session(engine) as engine:
-            self.db_command = engine.query(DbCommand).where(DbCommand.qual_name == dc_command.qualified_name)
+            self.db_command = engine.query(DbCommand).where(DbCommand.qual_name == dc_command.qualified_name).first()
 
 
 class CommandControl(GroupCog):

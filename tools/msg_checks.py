@@ -35,7 +35,7 @@ def is_tic_tac_toe(msg: str) -> bool:
         if j
     ]
 
-    print(total)
+    # print(total)
     return len(total) > 0
 
 

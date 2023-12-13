@@ -139,19 +139,19 @@ class LogChannels(GroupCog):
         if entry.action == discord.AuditLogAction.ban:
             return discord.Embed(
                 title="Member Banned",
-                description=f"{entry.user.mention} Banned {member.mention} with reason: {entry.reason or None}",
+                description=f"{entry.user.mention} Banned {member.mention} {member.name} with reason: {entry.reason or None}",
                 color=DELETED_COLOR,
             )
         elif entry.action == discord.AuditLogAction.kick:
             return discord.Embed(
                 title="Member Kicked",
-                description=f"{entry.user.mention} Kicked {member.mention} with reason: {entry.reason or None}",
+                description=f"{entry.user.mention} Kicked {member.mention} {member.name} with reason: {entry.reason or None}",
                 color=DELETED_COLOR,
             )
         else:
             return discord.Embed(
                 title="Member Left",
-                description=f"{member.mention} Left the server",
+                description=f"{member.mention} {member.name} Left the server",
                 color=DELETED_COLOR,
             )
 
@@ -256,14 +256,13 @@ class LogChannels(GroupCog):
         after: discord.abc.GuildChannel = entry.after
         channel = after or before
         embed = None
-        properties = "overwrites", "name", "position", "type" 
+        # FIXME: AttributeError: 'AuditLogDiff' object has no attribute 'overwrites'. Documentation suggests it does.
+        properties = "name", "position", "type" # "overwrites", 
         # remove X since AuditLogDiff doesn't have them
         # X = "category", "permissions_synced"
 
         self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
-        found_properties = [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]
-
-        if differences := found_properties:
+        if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
             if "name" in differences or before.name != after.name:
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
@@ -296,7 +295,7 @@ class LogChannels(GroupCog):
         self.logger.debug(f"On invite create: {invite.guild=}, {invite=}")
         embed = discord.Embed(
             title="Created Invite",
-            description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} Created invite {invite} with reason: {entry.reason or None}",
             color= CREATED_COLOR
             )
         await self.send_channel_logs(LogCategories.INVITE_CREATE, invite.guild, embed)
@@ -307,8 +306,8 @@ class LogChannels(GroupCog):
         invite = entry.target
         self.logger.debug(f"On invite update: {invite.guild=}, {invite=}")
         embed = discord.Embed(
-            title="Created Invite",
-            description=f"{entry.user} Created invite {invite} with reason: {entry.reason or None}",
+            title="Updated Invite",
+            description=f"{entry.user.mention} Updated invite {invite} with reason: {entry.reason or None}",
             color= CREATED_COLOR
             )
         await self.send_channel_logs(LogCategories.INVITE_UPDATE, invite.guild, embed)
@@ -321,7 +320,7 @@ class LogChannels(GroupCog):
         embed = None
         embed = discord.Embed(
             title="Removed Invite",
-            description=f"{entry.user} Removed invite {invite} with reason: {entry.reason or None}",
+            description=f"{entry.user.mention} Removed invite {invite} with reason: {entry.reason or None}",
             color=DELETED_COLOR
             )
         await self.send_channel_logs(LogCategories.INVITE_DELETE, invite.guild, embed)
@@ -510,7 +509,6 @@ class LogChannels(GroupCog):
         if entry.action == entry.action.message_delete:
             # 99% other persons message
             self.logger.debug(f"message delete: {message}")
-        # TODO: Test and if needs switching to discord.enums
         elif entry.action == entry.action.message_bulk_delete:
             # figure out what to send here
             self.logger.debug(f"bulk delete: {message}")
@@ -1088,7 +1086,7 @@ class LogChannels(GroupCog):
             )
             channels = result.all()
             if len(channels) == 0:
-                _, c_mention = await self.act.get_app_sub_command(self.slash_DragonLog_add)
+                c_mention = await self.get_command_mention(self.slash_DragonLog_add)
                 await interaction.followup.send(f"Can't find DragonLogChannels Consider using {c_mention}")
                 return
 

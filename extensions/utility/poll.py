@@ -1,5 +1,4 @@
 import datetime
-import logging
 import random
 from textwrap import dedent
 
@@ -10,19 +9,18 @@ from discord.ext import tasks
 from discord.interactions import Interaction
 
 import tools.rainbow as rainbow
-from tools.config_reader import config
 from tools.database_tables import AssociationUserPoll as AUP
 from tools.database_tables import Channel
 from tools.database_tables import Poll as PollDb
 from tools.database_tables import Session, engine
 from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.modal import Modal
 
 POLL_TYPE = "poll"
 
 
-# FIXME: Doesn't post in set channel
-class PollModal(discord.ui.Modal):
+class PollModal(Modal):
     place_holder = "Empty Answer"
     q1 = discord.ui.TextInput(label="Answer #1", placeholder=place_holder, required=True)
     q2 = discord.ui.TextInput(label="Answer #2", placeholder=place_holder, required=True)
@@ -36,7 +34,6 @@ class PollModal(discord.ui.Modal):
         self.content = content
         self.poll_channel = poll_channel
         super().__init__(title=f"{content}", timeout=180)
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
 
     async def on_submit(self, interaction: Interaction) -> None:
@@ -190,7 +187,7 @@ class Poll(GroupCog):
                     Channel.guild_id == interaction.guild.id
                 ).first()
             ):
-                _, remove_channel_command = self.act.get_app_sub_command(self.slash_remove_poll_channel)
+                _, remove_channel_command = self.get_command_mention(self.slash_remove_poll_channel)
 
                 self.bot.get_channel(found.id).delete(
                     reason=f"Removed by {interaction.user.mention} because of {remove_channel_command}"
@@ -201,7 +198,7 @@ class Poll(GroupCog):
                 session.commit()
                 return
 
-            _, add_channel_command = self.act.get_app_sub_command(self.slash_set_poll_channel)
+            _, add_channel_command = self.get_command_mention(self.slash_set_poll_channel)
             await interaction.response.send_message(f"Channel not found, Please add by using {add_channel_command}")
 
 
@@ -227,16 +224,14 @@ class Poll(GroupCog):
                 await interaction.response.send_modal(PollModal(
                     end_epoch = self.get_future_epoch(minutes, hours, days),
                     content = question,
-                    poll_channel = channel
+                    poll_channel = self.bot.get_channel(channel.id)
                 ))
                 return
             else:
                 self.logger.warning(f"No poll channel found to send poll to for {interaction.guild=}")
 
-            # FIXME: error on self.act.get_app_sub_command: type(error)=<class 'discord.app_commands.errors.CommandInvokeError'>, error.args=("Command 'create' raised an exception: AttributeError: 'NoneType' object has no attribute 'name'",)
-            # Weird interaction with app_commands.Group()
             self.logger.debug(f"Getting {self.slash_set_poll_channel}")
-            _, custom_mention = await self.act.get_app_sub_command(self.slash_set_poll_channel)
+            _, custom_mention = await self.get_command_mention(self.slash_set_poll_channel)
 
             if interaction.user.guild_permissions.manage_channels:
                 await interaction.response.send_message(
