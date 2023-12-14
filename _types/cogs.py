@@ -3,7 +3,7 @@ from typing import Any
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands # , tasks
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
@@ -11,6 +11,7 @@ from _types.bot import WinterDragon
 from tools.config_reader import config
 from tools.error_handler import ErrorHandler
 from tools.utils import get_arg
+from .tasks import tasks
 
 
 class Cog(commands.Cog):
