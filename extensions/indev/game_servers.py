@@ -184,6 +184,10 @@ class SteamServers(GroupCog):
 
     @tasks.loop(count=1)
     async def test_steamcmd(self) -> None:
+        if os.name == "posix":
+            self.logger.debug(f"{self.__class__.__name__} Disabled on Posix!")
+            return
+
         self.logger.debug("starting SteamCMD")
 
         try:
