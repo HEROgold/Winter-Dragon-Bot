@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Sequence
+from typing import Any
 
 import discord
 from discord import app_commands
@@ -10,12 +10,7 @@ from discord.ext.commands.context import Context
 from _types.bot import WinterDragon
 from tools.config_reader import config
 from tools.error_handler import ErrorHandler
-
-
-def get_arg(args: Sequence[Any], target: type) -> Any | None:
-    for arg in args:
-        if isinstance(arg, target):
-            return arg
+from tools.utils import get_arg
 
 
 class Cog(commands.Cog):

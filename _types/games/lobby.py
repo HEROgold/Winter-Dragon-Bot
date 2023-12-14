@@ -2,6 +2,7 @@
 This file contains a class which represents a 'lobby'
 This 'lobby' will be a message and have a join and leave button
 # TODO: expand on this
+# TODO: Use in TTT
 """
 
 import asyncio
