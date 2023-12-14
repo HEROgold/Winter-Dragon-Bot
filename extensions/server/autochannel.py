@@ -14,6 +14,9 @@ class AutomaticChannels(GroupCog):
     # FIXME: weird behavior sometimes on join/leave
     # TODO: add automatic naming, when a name is not specified in settings > get current activity name
     # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
+    # TODO: add kick/ban commands per user to (temp)ban specific users from a user's voice channel
+    # TODO: add a silent kick command, which adds a blacklist for the user's voice channel on the given user, but doesn't kick them
+
     @Cog.listener()
     async def on_voice_state_update(
         self,
