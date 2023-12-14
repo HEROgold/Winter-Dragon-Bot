@@ -17,6 +17,7 @@ class Logs:
     bot_logger: logging.Logger
     discord_logger: logging.Logger
     sql_logger: logging.Logger
+    first_rollover: bool = False
 
     def __init__(self, bot: WinterDragon) -> None:
         self.bot = bot
