@@ -457,6 +457,9 @@ def main() -> None:
     os.makedirs(STEAM_CMD_DIR, exist_ok=True)
 
 
-async def setup(bot: WinterDragon) -> None:
-    main()
-    await bot.add_cog(SteamServers(bot))
+async def setup(bot: WinterDragon) -> None:  # sourcery skip: switch
+    if os.name == "posix":
+        return
+    elif os.name == "nt":
+        main()
+        await bot.add_cog(SteamServers(bot))
