@@ -27,7 +27,7 @@ class Loop(tasks.Loop):
         reconnect: bool
     ) -> None:
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.tasks")
-        self.get_task().add_done_callback(self._handle_task_result)
+        # self.get_task().add_done_callback(self._handle_task_result) # doesn't seem to do anything
         super().__init__(coro, seconds, hours, minutes, time, count, reconnect)
 
 
