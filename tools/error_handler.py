@@ -123,7 +123,7 @@ class ErrorHandler:
                 if "403 Forbidden" in error.args:
                     pass
             case _: return dedent(f"""
-                Unexpected error, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
+                Unexpected error {error.type}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
                 Use {self.server_invite} to join the official bot server, and submit the error code in the forums channel.
             """)
 
