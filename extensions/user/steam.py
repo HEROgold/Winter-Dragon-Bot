@@ -225,6 +225,7 @@ class Steam(GroupCog):
         return updated_sales
 
 
+    # Use functools dispatch for overloading
     @overload
     def is_outdated(self, sale: SteamSale) -> bool: ...
     @overload
