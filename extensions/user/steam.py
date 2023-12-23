@@ -532,7 +532,7 @@ class Steam(GroupCog):
         try:
             return float(s)
         except ValueError:
-            self.price_to_num(s.strip("-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰"))
+            return float(s.strip("-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰"))
 
 
     def update_sale(self, sale: SteamSale, session: Session) -> bool:
