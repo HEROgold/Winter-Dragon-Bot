@@ -389,15 +389,16 @@ class Steam(GroupCog):
         Returns:
             Sale: TypedDict containing the same items as Db object
         """
-        return {
-            "title": sale.title,
-            "url": sale.url,
-            "sale_percent": sale.sale_percent,
-            "final_price": sale.final_price,
-            "is_dlc": sale.is_dlc,
-            "is_bundle": sale.is_bundle,
-            "update_datetime": sale.update_datetime
-        }
+        with Session(engine):
+            return {
+                "title": sale.title,
+                "url": sale.url,
+                "sale_percent": sale.sale_percent,
+                "final_price": sale.final_price,
+                "is_dlc": sale.is_dlc,
+                "is_bundle": sale.is_bundle,
+                "update_datetime": sale.update_datetime
+            }
 
 
     def get_sales_from_steam(self, percent: int) -> Generator[Sale, Any, None]:
