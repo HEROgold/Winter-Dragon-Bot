@@ -36,7 +36,27 @@ if os.name == "nt":
 elif os.name == "posix":
     """
     Find possible package managers installed on system, download using that
+    TODO: Test code and find issues with this
     """
+    def install_package(package_name):
+        distributions = {
+            "debian": "apt-get install -y",
+            "ubuntu": "apt-get install -y",
+            "centos": "yum install -y",
+            "fedora": "dnf install -y",
+            "opensuse": "zypper install",
+            "arch": "pacman -S --noconfirm",
+            "alpine": "apk add --no-cache"
+        }
+
+        distro = os.popen('awk -F= "/^NAME/{print $2}" /etc/os-release').read().strip().lower()
+
+        for key in distributions:
+            if key in distro:
+                os.system(f"{distributions[key]} {package_name}")
+                break
+        else:
+            print("Distro not supported")
 
 
 class Server(TypedDict):
