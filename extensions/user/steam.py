@@ -1,13 +1,14 @@
 import datetime
 import re
 from textwrap import dedent
-from typing import TypedDict, overload
+from typing import Generator, TypedDict, overload
 from bs4 import BeautifulSoup
 import bs4
 
 import discord
 from discord import app_commands
 from discord.ext import tasks
+from pyparsing import Any
 import requests
 
 from tools.config_reader import config
@@ -320,8 +321,8 @@ class Steam(GroupCog):
             list[Sale]: List of TypedDict Sale
         """
         known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales(percent)]
-        steam_sales = self.get_sales_from_steam(percent)
-        
+        steam_sales = list(self.get_sales_from_steam(percent))
+
         self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
 
         outdated = [
@@ -399,7 +400,7 @@ class Steam(GroupCog):
         }
 
 
-    def get_sales_from_steam(self, percent: int) -> list[Sale]:
+    def get_sales_from_steam(self, percent: int) -> Generator[Sale, Any, None]:
         """Scrape sales from https://store.steampowered.com/search/
         With the search options: Ascending price, Special deals, English
 
@@ -412,36 +413,38 @@ class Steam(GroupCog):
         html = requests.get(config["Steam"]["url"]).text
         soup = BeautifulSoup(html, "html.parser")
 
-        for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
-            if sale_tag is None:
-                continue
+        with Session(engine) as session:
+            for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
+                if sale_tag is None:
+                    continue
 
-            sale_tag: bs4.element.Tag
-            discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
-            a_tag = sale_tag.find_parent("a", href=True)
+                sale_tag: bs4.element.Tag
+                discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
+                a_tag = sale_tag.find_parent("a", href=True)
 
-            if discount_perc is None: # Check game's page
-                yield from self.get_game_sale(a_tag["href"])
-                continue
+                if discount_perc is None: # Check game's page
+                    yield self.get_game_sale(a_tag["href"])
+                    continue
 
-            discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
+                discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
 
-            if a_tag is None:
-                self.logger.warning(f"Got empty sale: {sale_tag=}, {a_tag=}")
+                if a_tag is None:
+                    self.logger.warning(f"Got empty sale: {sale_tag=}, {a_tag=}")
 
-            if discount >= percent:
-                price = a_tag.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
-                sale = SteamSale(
-                    id = a_tag[DATA_APPID],
-                    title = a_tag.find(class_=SEARCH_GAME_TITLE).text,
-                    url = a_tag["href"],
-                    sale_percent = discount,
-                    final_price = self.price_to_num(price),
-                    is_dlc = False,
-                    is_bundle = False,
-                    update_datetime = datetime.datetime.now(),
-                )
-                yield self.add_sale(sale, "steam search")
+                if discount >= percent:
+                    price = a_tag.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
+                    sale = SteamSale(
+                        id = a_tag[DATA_APPID],
+                        title = a_tag.find(class_=SEARCH_GAME_TITLE).text,
+                        url = a_tag["href"],
+                        sale_percent = discount,
+                        final_price = self.price_to_num(price),
+                        is_dlc = False,
+                        is_bundle = False,
+                        update_datetime = datetime.datetime.now(),
+                    )
+                    yield self.add_sale(sale, "steam search", session)
+        session.commit()
 
 
     def get_bundle_sale(self, url: str) -> Sale:
