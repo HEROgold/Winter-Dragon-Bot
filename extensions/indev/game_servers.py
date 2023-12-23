@@ -56,7 +56,7 @@ elif os.name == "posix":
                 os.system(f"{distributions[key]} {package_name}")
                 break
         else:
-            print("Distro not supported")
+            print(f"Distro not supported, supported distro's: {list(distributions)}")
 
 
 class Server(TypedDict):
