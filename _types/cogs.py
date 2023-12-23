@@ -72,8 +72,8 @@ class Cog(commands.Cog):
         if not isinstance(command, app_commands.Command): # type:ignore
             raise TypeError(f"Expected app_commands.commands.Command but got {type(command)} instead")
 
-        return self.bot.get_app_command(command.qualified_name).mention
-
+        if cmd := self.bot.get_app_command(command.qualified_name):
+            return cmd.mention
 
 
 class GroupCog(Cog):
