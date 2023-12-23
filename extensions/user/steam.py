@@ -1,14 +1,13 @@
 import datetime
 import re
 from textwrap import dedent
-from typing import Generator, TypedDict, overload
+from typing import Any, Generator, TypedDict
 from bs4 import BeautifulSoup
 import bs4
 
 import discord
 from discord import app_commands
 from discord.ext import tasks
-from pyparsing import Any
 import requests
 
 from tools.config_reader import config
@@ -384,7 +383,7 @@ class Steam(GroupCog):
         Returns:
             Sale: TypedDict containing the same items as Db object
         """
-        with Session(engine):
+        with Session(engine, expire_on_commit=False):
             return {
                 "title": sale.title,
                 "url": sale.url,
