@@ -349,7 +349,7 @@ class Steam(GroupCog):
         updated_sales = self.get_updated_sales(self.get_saved_sales(percent))
         if updated_sales == []:
             self.logger.debug("getting sales from steam")
-            return self.get_sales_from_steam(percent)
+            return list(self.get_sales_from_steam(percent))
         else:
             self.logger.debug("returning known sales")
             return updated_sales
@@ -467,17 +467,20 @@ class Steam(GroupCog):
         soup = BeautifulSoup(html, "html.parser")
 
         price = soup.find(class_=BUNDLE_FINAL_PRICE).text[:-1].replace(",", ".")
-        sale = SteamSale(
-            id = self.get_id_from_game_url(url),
-            title = soup.find(class_=BUNDLE_TITLE).text,
-            url = url,
-            sale_percent = soup.find(class_=BUNDLE_DISCOUNT).text[:-1], # strip %
-            final_price = self.price_to_num(price),
-            is_dlc = False,
-            is_bundle = True,
-            update_datetime = datetime.datetime.now(),
-        )
-        return self.add_sale(sale, "bundle")
+        with Session(engine) as session:
+            sale = SteamSale(
+                id = self.get_id_from_game_url(url),
+                title = soup.find(class_=BUNDLE_TITLE).text,
+                url = url,
+                sale_percent = soup.find(class_=BUNDLE_DISCOUNT).text[:-1], # strip %
+                final_price = self.price_to_num(price),
+                is_dlc = False,
+                is_bundle = True,
+                update_datetime = datetime.datetime.now(),
+            )
+            sale = self.add_sale(sale, "bundle", session)
+            session.commit()
+            return sale
 
 
     def get_game_sale(self, url: str) -> Sale:
