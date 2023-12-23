@@ -207,7 +207,7 @@ class Steam(GroupCog):
         """
         # convert to Sale for each element that is SteamSale
         sales: list[Sale] = [
-            self.db_to_dict(i)
+            self.SteamSale_to_dict(i)
             if isinstance(i, SteamSale)
             else i
             for i in sales
@@ -319,7 +319,7 @@ class Steam(GroupCog):
         Returns:
             list[Sale]: List of TypedDict Sale
         """
-        known_sales = [self.db_to_dict(i) for i in self.get_saved_sales(percent)]
+        known_sales = [self.SteamSale_to_dict(i) for i in self.get_saved_sales(percent)]
         steam_sales = self.get_sales_from_steam(percent)
         
         self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
@@ -379,7 +379,7 @@ class Steam(GroupCog):
         return game_sales
 
 
-    def db_to_dict(self, sale: SteamSale) -> Sale:
+    def SteamSale_to_dict(self, sale: SteamSale) -> Sale:
         """Convert a SteamSale db object to TypedDict Sale
 
         Args:
@@ -571,7 +571,7 @@ class Steam(GroupCog):
             session.commit()
 
         self.logger.debug(f"Found {category} {sale=}")
-        return self.db_to_dict(sale)
+        return self.SteamSale_to_dict(sale)
 
 
 async def setup(bot: WinterDragon) -> None:
