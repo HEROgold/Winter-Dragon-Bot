@@ -252,14 +252,14 @@ class Steam(GroupCog):
         )
 
 
-    def get_saved_sales(self, percent: int) -> list[SteamSale]:
+    def get_saved_sales(self) -> list[SteamSale]:
         """get saved/known sales from database
 
         Returns:
             list[SteamSale]: List of SteamSale database objects
         """
         with Session(engine) as session:
-            sales = session.query(SteamSale).where(SteamSale.sale_percent >= percent).all()
+            sales = session.query(SteamSale).where(SteamSale).all()
         self.logger.debug(f"saved {sales=}")
         return sales
 
@@ -320,7 +320,7 @@ class Steam(GroupCog):
         Returns:
             list[Sale]: List of TypedDict Sale
         """
-        known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales(percent)]
+        known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales()]
         steam_sales = list(self.get_sales_from_steam(percent))
 
         self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
@@ -346,7 +346,7 @@ class Steam(GroupCog):
         """
         # return self.get_updated_sales(self.get_saved_sales(percent)) or self.get_sales_from_steam(percent)
 
-        updated_sales = self.get_updated_sales(self.get_saved_sales(percent))
+        updated_sales = self.get_updated_sales(self.get_saved_sales())
         if updated_sales == []:
             self.logger.debug("getting sales from steam")
             return list(self.get_sales_from_steam(percent))
