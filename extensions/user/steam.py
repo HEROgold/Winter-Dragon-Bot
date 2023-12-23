@@ -207,7 +207,7 @@ class Steam(GroupCog):
         """
         # convert to Sale for each element that is SteamSale
         sales: list[Sale] = [
-            self.SteamSale_to_dict(i)
+            self.SteamSale_to_Sale(i)
             if isinstance(i, SteamSale)
             else i
             for i in sales
@@ -319,7 +319,7 @@ class Steam(GroupCog):
         Returns:
             list[Sale]: List of TypedDict Sale
         """
-        known_sales = [self.SteamSale_to_dict(i) for i in self.get_saved_sales(percent)]
+        known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales(percent)]
         steam_sales = self.get_sales_from_steam(percent)
         
         self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
@@ -379,7 +379,7 @@ class Steam(GroupCog):
         return game_sales
 
 
-    def SteamSale_to_dict(self, sale: SteamSale) -> Sale:
+    def SteamSale_to_Sale(self, sale: SteamSale) -> Sale:
         """Convert a SteamSale db object to TypedDict Sale
 
         Args:
@@ -412,6 +412,7 @@ class Steam(GroupCog):
         html = requests.get(config["Steam"]["url"]).text
         soup = BeautifulSoup(html, "html.parser")
         sales: list[Sale] = []
+
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
             if sale_tag is None:
                 continue
@@ -429,9 +430,6 @@ class Steam(GroupCog):
             if a_tag is None:
                 self.logger.warning(f"Got empty sale: {sale_tag=}, {a_tag=}")
 
-            if not discount and discount_perc:
-                self.logger.debug(f"{discount_perc=}")
-
             if discount >= percent:
                 price = a_tag.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
                 sale = SteamSale(
@@ -439,7 +437,7 @@ class Steam(GroupCog):
                     title = a_tag.find(class_=SEARCH_GAME_TITLE).text,
                     url = a_tag["href"],
                     sale_percent = discount,
-                    final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
+                    final_price = self.price_to_num(price),
                     is_dlc = False,
                     is_bundle = False,
                     update_datetime = datetime.datetime.now(),
@@ -473,7 +471,7 @@ class Steam(GroupCog):
             title = soup.find(class_=BUNDLE_TITLE).text,
             url = url,
             sale_percent = soup.find(class_=BUNDLE_DISCOUNT).text[:-1], # strip %
-            final_price = float(price), # strip €. TODO: might cause bugs when it isn't shown as €
+            final_price = self.price_to_num(price),
             is_dlc = False,
             is_bundle = True,
             update_datetime = datetime.datetime.now(),
@@ -509,17 +507,22 @@ class Steam(GroupCog):
             sale_perc = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1], # strip - and % from sale tag
             final_price = self.price_to_num(price)
             is_dlc = bool(soup.find("div", class_="content"))
-            sale = SteamSale(
-                game_id,
-                title,
-                url,
-                sale_perc,
-                final_price,
-                is_dlc,
-                is_bundle = False,
-                update_datetime = datetime.datetime.now(),
-            )
-            return self.add_sale(sale, "game")
+
+            with Session(engine) as session:
+                # FIXME: closes session when creating SteamSale
+                sale = SteamSale(
+                    id = game_id,
+                    title = title,
+                    url = url,
+                    sale_percent = sale_perc,
+                    final_price = final_price,
+                    is_dlc = is_dlc,
+                    is_bundle = False,
+                    update_datetime = datetime.datetime.now(),
+                )
+                sale = self.add_sale(sale, "game", session)
+                session.commit()
+                return sale
 
 
     def price_to_num(self, s: str):
@@ -529,17 +532,17 @@ class Steam(GroupCog):
             self.price_to_num(s.strip("-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰"))
 
 
-    def update_sale(self, session: Session, sale: SteamSale) -> bool:
-        """Update a sale record in Database, if successful return True
+    def update_sale(self, sale: SteamSale, session: Session) -> bool:
+        """Update/override or add a sale record in Database
 
         Args:
             session (Session): Session to connect to DataBase
             sale (SteamSale): Sale to update
 
         Returns:
-            bool: True, False
+            bool: True when updated, False when newly created
         """
-        if known:= session.query(SteamSale).where(SteamSale.id == sale.id).first():
+        if known := session.query(SteamSale).where(SteamSale.id == sale.id).first():
             known.title = sale.title
             known.url = sale.url
             known.sale_percent = sale.sale_percent
@@ -548,11 +551,13 @@ class Steam(GroupCog):
             known.is_bundle = sale.is_bundle
             known.update_datetime = sale.update_datetime
             return True
-        return False
+        else:
+            session.add(sale)
+            return False
 
 
-    def add_sale(self, sale: SteamSale, category: str, session: Session=None) -> Sale:
-        """Add a sale to db, and return presentable TypedDict
+    def add_sale(self, sale: SteamSale | Sale, category: str, session: Session=None) -> Sale:
+        """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session.
 
         Args:
             session (Session): Session for database connection
@@ -564,14 +569,32 @@ class Steam(GroupCog):
         """
         if not session:
             session = Session(engine)
+            commit = True
+        else:
+            commit = False
         
         with session:
-            if not self.update_sale(session, sale):
-                session.add(sale)
-            session.commit()
+            if isinstance(sale, dict): # Assume Sale typeddict
+                sale = self.Sale_to_SteamSale(sale)
+            self.update_sale(sale, session)
+            if commit:
+                session.commit()
 
         self.logger.debug(f"Found {category} {sale=}")
-        return self.SteamSale_to_dict(sale)
+        return self.SteamSale_to_Sale(sale)
+
+
+    def Sale_to_SteamSale(self, sale: Sale):
+        return SteamSale(
+            id = self.get_id_from_game_url(sale["url"]),
+            title = sale["title"],
+            url = sale["url"],
+            sale_percent = sale["sale_percent"],
+            final_price = sale["final_price"],
+            is_dlc = sale["is_dlc"],
+            is_bundle = sale["is_bundle"],
+            update_datetime = sale["update_datetime"],
+        )
 
 
 async def setup(bot: WinterDragon) -> None:
