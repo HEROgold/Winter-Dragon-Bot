@@ -37,7 +37,7 @@ BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
 
 DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
 
-# 3 hour cooldown on html updates
+# 3 hour cooldown on updates
 UPDATE_PERIOD = 3600 * 3 
 
 
@@ -413,38 +413,36 @@ class Steam(GroupCog):
         html = requests.get(config["Steam"]["url"]).text
         soup = BeautifulSoup(html, "html.parser")
 
-        with Session(engine) as session:
-            for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
-                if sale_tag is None:
-                    continue
+        for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
+            if sale_tag is None:
+                continue
 
-                sale_tag: bs4.element.Tag
-                discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
-                a_tag = sale_tag.find_parent("a", href=True)
+            sale_tag: bs4.element.Tag
+            discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
+            a_tag = sale_tag.find_parent("a", href=True)
 
-                if discount_perc is None: # Check game's page
-                    yield self.get_game_sale(a_tag["href"])
-                    continue
+            if discount_perc is None: # Check game's page
+                yield self.get_game_sale(a_tag["href"])
+                continue
 
-                discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
+            discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
 
-                if a_tag is None:
-                    self.logger.warning(f"Got empty sale: {sale_tag=}, {a_tag=}")
+            if a_tag is None:
+                self.logger.warning(f"Got empty sale: {sale_tag=}, {a_tag=}")
 
-                if discount >= percent:
-                    price = a_tag.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
-                    sale = SteamSale(
-                        id = a_tag[DATA_APPID],
-                        title = a_tag.find(class_=SEARCH_GAME_TITLE).text,
-                        url = a_tag["href"],
-                        sale_percent = discount,
-                        final_price = self.price_to_num(price),
-                        is_dlc = False,
-                        is_bundle = False,
-                        update_datetime = datetime.datetime.now(),
-                    )
-                    yield self.add_sale(sale, "steam search", session)
-        session.commit()
+            if discount >= percent:
+                price = a_tag.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", ".")
+                sale = SteamSale(
+                    id = a_tag[DATA_APPID],
+                    title = a_tag.find(class_=SEARCH_GAME_TITLE).text,
+                    url = a_tag["href"],
+                    sale_percent = discount,
+                    final_price = self.price_to_num(price),
+                    is_dlc = False,
+                    is_bundle = False,
+                    update_datetime = datetime.datetime.now(),
+                )
+                yield self.add_sale(sale, "steam search")
 
 
     def get_bundle_sale(self, url: str) -> Sale:
@@ -467,20 +465,17 @@ class Steam(GroupCog):
         soup = BeautifulSoup(html, "html.parser")
 
         price = soup.find(class_=BUNDLE_FINAL_PRICE).text[:-1].replace(",", ".")
-        with Session(engine) as session:
-            sale = SteamSale(
-                id = self.get_id_from_game_url(url),
-                title = soup.find(class_=BUNDLE_TITLE).text,
-                url = url,
-                sale_percent = soup.find(class_=BUNDLE_DISCOUNT).text[:-1], # strip %
-                final_price = self.price_to_num(price),
-                is_dlc = False,
-                is_bundle = True,
-                update_datetime = datetime.datetime.now(),
-            )
-            sale = self.add_sale(sale, "bundle", session)
-            session.commit()
-            return sale
+        sale = SteamSale(
+            id = self.get_id_from_game_url(url),
+            title = soup.find(class_=BUNDLE_TITLE).text,
+            url = url,
+            sale_percent = soup.find(class_=BUNDLE_DISCOUNT).text[:-1], # strip %
+            final_price = self.price_to_num(price),
+            is_dlc = False,
+            is_bundle = True,
+            update_datetime = datetime.datetime.now(),
+        )
+        return self.add_sale(sale, "bundle")
 
 
     def get_game_sale(self, url: str) -> Sale:
@@ -508,42 +503,39 @@ class Steam(GroupCog):
         if price := buy_area.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", "."):
             title = soup.find(class_=SINGLE_GAME_TITLE).text
             game_id = self.get_id_from_game_url(url)
-            sale_perc = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1], # strip - and % from sale tag
+            sale_perc = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1] # strip - and % from sale tag
             final_price = self.price_to_num(price)
             is_dlc = bool(soup.find("div", class_="content"))
 
-            with Session(engine) as session:
-                sale = SteamSale(
-                    id = game_id,
-                    title = title,
-                    url = url,
-                    sale_percent = sale_perc,
-                    final_price = final_price,
-                    is_dlc = is_dlc,
-                    is_bundle = False,
-                    update_datetime = datetime.datetime.now(),
-                )
-                sale = self.add_sale(sale, "game", session)
-                session.commit()
-                return sale
+            sale = SteamSale(
+                id = game_id,
+                title = title,
+                url = url,
+                sale_percent = sale_perc,
+                final_price = final_price,
+                is_dlc = is_dlc,
+                is_bundle = False,
+                update_datetime = datetime.datetime.now(),
+            )
+            return self.add_sale(sale, "game")
 
 
     def price_to_num(self, s: str):
         try:
             return float(s)
         except ValueError:
-            return float(s.strip("-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰"))
+            return float(s.strip("-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰()"))
 
 
     def update_sale(self, sale: SteamSale, session: Session) -> bool:
-        """Update/override or add a sale record in Database
+        """Update/override a sale record in Database
 
         Args:
             session (Session): Session to connect to DataBase
             sale (SteamSale): Sale to update
 
         Returns:
-            bool: True when updated, False when newly created
+            bool: True when updated, False when not updated
         """
         if known := session.query(SteamSale).where(SteamSale.id == sale.id).first():
             known.title = sale.title
@@ -554,9 +546,7 @@ class Steam(GroupCog):
             known.is_bundle = sale.is_bundle
             known.update_datetime = sale.update_datetime
             return True
-        else:
-            session.add(sale)
-            return False
+        return False
 
 
     def add_sale(self, sale: SteamSale | Sale, category: str, session: Session=None) -> Sale:
@@ -579,7 +569,8 @@ class Steam(GroupCog):
         with session:
             if isinstance(sale, dict): # Assume Sale typeddict
                 sale = self.Sale_to_SteamSale(sale)
-            self.update_sale(sale, session)
+            if not self.update_sale(sale, session):
+                session.add(sale)
             if commit:
                 session.commit()
 
