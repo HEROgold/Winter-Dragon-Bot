@@ -259,7 +259,7 @@ class Steam(GroupCog):
             list[SteamSale]: List of SteamSale database objects
         """
         with Session(engine) as session:
-            sales = session.query(SteamSale).where(SteamSale).all()
+            sales = session.query(SteamSale).all()
         self.logger.debug(f"saved {sales=}")
         return sales
 
