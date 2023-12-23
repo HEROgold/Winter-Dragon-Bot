@@ -74,6 +74,7 @@ class Cog(commands.Cog):
 
         if cmd := self.bot.get_app_command(command.qualified_name):
             return cmd.mention
+        self.logger.warning(f"Can't find {command}")
 
 
 class GroupCog(Cog):
