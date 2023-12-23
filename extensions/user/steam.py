@@ -37,7 +37,7 @@ BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
 
 DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
 
-# 3 hour cooldown on updates
+# 3 hour cooldown on updates in seconds
 UPDATE_PERIOD = 3600 * 3 
 
 
@@ -151,7 +151,7 @@ class Steam(GroupCog):
         await self.bot.wait_until_ready()
 
 
-    def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed:
+    def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed | None:
         """Fills a given embed with sales, and then returns the populated embed
 
         Args:
@@ -161,8 +161,8 @@ class Steam(GroupCog):
         Returns:
             discord.Embed
         """
-        if sales is None:
-            return embed
+        if not sales:
+            return None
 
         try:
             # Sort on sale percentage (int), so reverse to get highest first
@@ -227,11 +227,6 @@ class Steam(GroupCog):
         return updated_sales
 
 
-    # Use functools dispatch for overloading
-    @overload
-    def is_outdated(self, sale: SteamSale) -> bool: ...
-    @overload
-    def is_outdated(self, sale: Sale) -> bool: ...
     def is_outdated(self, sale: SteamSale | Sale) -> bool:
         """Check if a sale has recently been updated
 
@@ -242,9 +237,9 @@ class Steam(GroupCog):
             bool: True, False
         """
         if isinstance(sale, SteamSale): # type: ignore
-            update_period_date = sale.update_datetime + datetime.timedelta(minutes=UPDATE_PERIOD)
+            update_period_date = sale.update_datetime + datetime.timedelta(seconds=UPDATE_PERIOD)
         else:
-            update_period_date = sale["update_datetime"] + datetime.timedelta(minutes=UPDATE_PERIOD)
+            update_period_date = sale["update_datetime"] + datetime.timedelta(seconds=UPDATE_PERIOD)
 
         return (
             update_period_date
@@ -334,7 +329,7 @@ class Steam(GroupCog):
         return [
             sale
             for sale in steam_sales
-            if sale["title"] not in outdated
+            if sale["title"] in outdated
         ]
 
 
