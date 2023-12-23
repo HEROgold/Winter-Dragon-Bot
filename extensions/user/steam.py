@@ -196,7 +196,7 @@ class Steam(GroupCog):
         return embed
 
 
-    def get_updated_sales(self, sales: list[SteamSale | Sale]) -> list[Sale]:
+    def get_updated_sales(self, known_sales: list[SteamSale | Sale]) -> list[Sale]:
         # sourcery skip: assign-if-exp, reintroduce-else
         """Return a new list of sales, based of a given list of sales
 
@@ -207,23 +207,23 @@ class Steam(GroupCog):
             list[SteamSale]: New list that gets returned
         """
         # convert to Sale for each element that is SteamSale
-        sales: list[Sale] = [
+        known_sales: list[Sale] = [
             self.SteamSale_to_Sale(i)
             if isinstance(i, SteamSale)
             else i
-            for i in sales
+            for i in known_sales
         ]
 
         updated_sales: list[Sale] = []
-        for sale in sales:
+        for sale in known_sales:
             if self.is_outdated(sale):
                 updated_sales.append(self.get_game_sale(sale["url"]))
             else:
                 updated_sales.append(sale)
 
         self.logger.debug(f"{updated_sales=}")
-        if sales == updated_sales:
-            return sales
+        if known_sales == updated_sales:
+            return known_sales
         return updated_sales
 
 
