@@ -411,7 +411,6 @@ class Steam(GroupCog):
         """
         html = requests.get(config["Steam"]["url"]).text
         soup = BeautifulSoup(html, "html.parser")
-        sales: list[Sale] = []
 
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
             if sale_tag is None:
@@ -422,7 +421,7 @@ class Steam(GroupCog):
             a_tag = sale_tag.find_parent("a", href=True)
 
             if discount_perc is None: # Check game's page
-                self.get_game_sale(a_tag["href"])
+                yield from self.get_game_sale(a_tag["href"])
                 continue
 
             discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
@@ -442,8 +441,7 @@ class Steam(GroupCog):
                     is_bundle = False,
                     update_datetime = datetime.datetime.now(),
                 )
-                sales.append(self.add_sale(sale, "steam search"))
-        return sales
+                yield self.add_sale(sale, "steam search")
 
 
     def get_bundle_sale(self, url: str) -> Sale:
@@ -509,7 +507,6 @@ class Steam(GroupCog):
             is_dlc = bool(soup.find("div", class_="content"))
 
             with Session(engine) as session:
-                # FIXME: closes session when creating SteamSale
                 sale = SteamSale(
                     id = game_id,
                     title = title,
