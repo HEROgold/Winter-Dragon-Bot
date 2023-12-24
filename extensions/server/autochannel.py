@@ -1,5 +1,6 @@
+from textwrap import dedent
 import discord
-from discord import app_commands
+from discord import VoiceChannel, app_commands
 
 from tools.database_tables import Session, engine
 from tools.database_tables import AutoChannel as AC
@@ -13,6 +14,9 @@ class AutomaticChannels(GroupCog):
     # FIXME: weird behavior sometimes on join/leave
     # TODO: add automatic naming, when a name is not specified in settings > get current activity name
     # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
+    # TODO: add kick/ban commands per user to (temp)ban specific users from a user's voice channel
+    # TODO: add a silent kick command, which adds a blacklist for the user's voice channel on the given user, but doesn't kick them
+
     @Cog.listener()
     async def on_voice_state_update(
         self,
@@ -137,6 +141,28 @@ class AutomaticChannels(GroupCog):
             ))
             session.commit()
         await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
+
+
+    @app_commands.checks.has_permissions(manage_guild=True)
+    @app_commands.command(name="mark", description="Mark the current channel or a given channel to be the main AutoChannel")
+    async def slash_mark(self, interaction: discord.Interaction, channel: discord.VoiceChannel=None):
+        if channel is None:
+            channel = interaction.channel
+
+        if channel != VoiceChannel:
+            await interaction.response.send_message(dedent(f"""{channel.mention} is not a voice channel!
+                use {self.get_command_mention(self.slash_mark)} with the `channel` option to mark another channel"""
+            ))
+            return
+
+        with Session(engine) as session:
+            session.add(AC(
+                id = interaction.guild.id,
+                channel_id = channel.id
+            ))
+            session.commit()
+
+        await interaction.response.send_message(f"Successfully set {channel.mention} as this server's creation channel")
 
 
     # FIXME: both limits seem to lock db!?

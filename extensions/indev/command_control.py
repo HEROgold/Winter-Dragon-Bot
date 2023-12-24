@@ -86,7 +86,7 @@ async def setup(bot: WinterDragon) -> None:
     return
     await bot.add_cog(CommandControl(bot))
 
-# Ai example code for inspiration
+# Ai example code for inspiration AI1
 
 # from sqlalchemy import create_engine, Column, Integer, String, Boolean
 # from sqlalchemy.orm import sessionmaker
@@ -136,3 +136,46 @@ async def setup(bot: WinterDragon) -> None:
 #             return
 
 #     # Command logic goes here
+
+
+
+
+# You.com Code ai inspiration AI2
+
+# import discord
+# from discord.ext import commands
+
+# Assume you have a database connection and cursor already established
+
+# # Function to check if a command is enabled for a server
+# def is_command_enabled(server_id, command_name):
+#     # Query the Commands Table to check if the command is enabled for the server
+#     # Return True if enabled, False if disabled
+
+# # Function to check if a subcommand is enabled for a server
+# def is_subcommand_enabled(server_id, parent_command, subcommand):
+#     # Query the Commands Table to check if the subcommand is enabled for the server
+#     # Return True if enabled, False if disabled
+
+# # Your bot code
+# bot = commands.Bot(command_prefix='!')
+
+# @bot.command()
+# async def greet(ctx):
+#     if is_command_enabled(ctx.guild.id, "greet"):
+#         await ctx.send('Hello!')
+
+# @bot.group()
+# async def music(ctx):
+#     pass
+
+# @music.command()
+# async def play(ctx):
+#     if is_subcommand_enabled(ctx.guild.id, "music", "play"):
+#         # Play music logic
+#     else:
+#         await ctx.send('The play command is disabled.')
+
+# # Other commands and subcommands follow the same pattern
+
+# bot.run('your_token')
