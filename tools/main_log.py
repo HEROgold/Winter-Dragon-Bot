@@ -10,8 +10,10 @@ from discord.ext import tasks
 from tools.config_reader import config
 from _types.bot import WinterDragon
 
+
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
+# FIXME: linux doesn't get a log file
 class Logs:
     bot: WinterDragon
     bot_logger: logging.Logger
