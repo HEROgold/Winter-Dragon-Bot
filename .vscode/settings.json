@@ -21,6 +21,7 @@
         "apppage",
         "AUTOCHANNEL",
         "autochannels",
+        "autoflush",
         "AUTOINCREMENT",
         "AUTOMOD",
         "autopct",
