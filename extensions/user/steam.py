@@ -37,7 +37,8 @@ BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
 DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
 
 # 3 hour cooldown on updates in seconds
-UPDATE_PERIOD = 3600 * 3 
+MSG_SEND_PERIOD = 3600 * 3
+UPDATE_PERIOD = MSG_SEND_PERIOD * 10
 
 
 class Sale(TypedDict):
@@ -103,7 +104,7 @@ class Steam(GroupCog):
         self.update.start()
 
 
-    @tasks.loop(seconds=UPDATE_PERIOD)
+    @tasks.loop(seconds=MSG_SEND_PERIOD)
     async def update(self) -> None:
         """
         creates a discord Embed object to send and notify users of new 100% sales.
