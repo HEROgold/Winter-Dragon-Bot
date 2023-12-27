@@ -49,7 +49,7 @@ class WinterDragon(AutoShardedBot):
         **options: Any
     ) -> None:
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
-
+        self.launch_time = datetime.datetime.now(datetime.timezone.utc)
 
         if help_command is None:
             help_command = DefaultHelpCommand()

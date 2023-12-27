@@ -45,7 +45,6 @@ bot = WinterDragon(
     case_insensitive=True,
 )
 
-bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
 
 
