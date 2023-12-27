@@ -2,7 +2,7 @@ import logging
 import os
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from logging.handlers import RotatingFileHandler
 
 from discord.ext import tasks
@@ -13,7 +13,7 @@ from _types.bot import WinterDragon
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
-# FIXME: linux doesn't get a log file
+
 class Logs:
     bot: WinterDragon
     bot_logger: logging.Logger
@@ -45,6 +45,8 @@ class Logs:
 
     @tasks.loop(hours=24)
     async def daily_save_logs(self) -> None:
+        if self.bot.launch_time < datetime.now(timezone.utc) + timedelta(hours=1):
+            return
         self.bot_logger.debug("Daily saving...")
         self.save_logs()
         self.logging_rollover()
@@ -55,6 +57,7 @@ class Logs:
     async def before_async_init(self) -> None:
         if not self.first_rollover:
             self.first_rollover = True
+            self.bot_logger.info("Skipping first rollover")
             return
         self.bot_logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
