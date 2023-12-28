@@ -8,6 +8,7 @@ This 'lobby' will be a message and have a join and leave button
 
 import asyncio
 from datetime import datetime, timedelta
+from textwrap import dedent
 from types import FunctionType
 from typing import TYPE_CHECKING, Optional
 from discord import Interaction, User
@@ -21,18 +22,19 @@ from tools.database_tables import (
 )
 
 
+# TODO: Add updating message system
 class Lobby:
     if TYPE_CHECKING:
-        message_id: int
-        players: list[User]
+        message: discord.Message
         join_button: Button
         leave_button: Button
         lobby_msg: str
         start_function: FunctionType
         start_button: Optional[Button]
-        max_players: Optional[int]
         timeout_timestamp: int
         view: discord.ui.View
+    max_players: int = 0
+    players: list[User] = []
 
 
     join_button = Button(
@@ -67,12 +69,12 @@ class Lobby:
     def __init__(
         self,
         message: discord.Message,
-        start_function: Optional[FunctionType],
-        max_players: Optional[int],
+        max_players: Optional[int] = 0,
+        start_function: Optional[FunctionType] = None,
         timeout: Optional[int] = 300,
         game: Optional[str] = None
     ) -> None:
-        self.message_id = message
+        self.message = message
         self.start_function = start_function
         self.max_players = max_players
         self._session = Session(engine, autoflush=False)
@@ -84,24 +86,41 @@ class Lobby:
             status="waiting",
         ))
 
+        self.join_button.callback = self.join_callback
+        self.leave_button.callback = self.leave_callback
+        self.start_button.callback = self.start_callback
         self.view = discord.ui.View()
+        self.view.add_item(self.start_button)
         self.view.add_item(self.join_button)
         self.view.add_item(self.leave_button)
-        self.view.add_item(self.start_button)
+        self.update_message(reason="Turning message into a lobby")
 
 
     def __del__(self):
         self._session.close()
 
 
-    def update_message(self, interaction: Interaction, reason: str):
-        # FIXME: will give error since we have an asyncio loop already
-        asyncio.run(interaction.message.edit(self.lobby_msg, view=self.view, reason=reason))
+    def update_msg_text(self):
+        if len(self.players) != 0:
+            self.message.content = dedent(f"""Join here to start playing!
+            Total: {100*self.max_players/len(self.players)}% {len(self.players)}/{self.max_players},
+            Players: {','.join(player.display_name for player in self.players)}
+            """)
+
+
+    def update_message(self, reason: str):
+        self.update_msg_text()
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.message.edit(
+            content=self.message.content,
+            view=self.view,
+            # reason=reason
+        ))
 
 
     def join_callback(self, interaction: Interaction) -> None:
         self._session.add(AUL(
-            lobby_id=self.message_id,
+            lobby_id=self.message,
             user_id=interaction.user.id
         ))
         self._session.commit()
@@ -112,7 +131,7 @@ class Lobby:
         self._session.delete(
                 self._session.query(AUL)
                 .where(
-                    AUL.lobby_id == self.message_id,
+                    AUL.lobby_id == self.message,
                     AUL.user_id == interaction.user.id
                 ))
         self._session.commit()
@@ -125,10 +144,7 @@ class Lobby:
         self._session.close()
         self.start_function()
 
+
     def on_timeout(self, interaction: Interaction) -> None:
-        self._session.close()
-
-
-    join_button.callback = join_callback
-    leave_button.callback = leave_callback
-    start_button.callback = start_callback
+        del self
+        # self._session.close()
