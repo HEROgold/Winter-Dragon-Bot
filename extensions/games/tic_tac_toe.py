@@ -9,11 +9,9 @@ import discord
 import matplotlib.pyplot as plt
 import sqlalchemy
 from discord import app_commands
-from discord.ui import Button, View
 from tools.ttt_ai import TicTacToeAi
 
 from tools.config_reader import config
-from tools.database_tables import AssociationUserLobby as AUL
 from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
 from _types.cogs import GroupCog
 from _types.bot import WinterDragon
