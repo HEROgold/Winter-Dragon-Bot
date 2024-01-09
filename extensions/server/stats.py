@@ -133,8 +133,8 @@ class Stats(GroupCog):
             peak_count = get_peak_count(peak_channel)
             reason_update = "Updating Stats channels"
             online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
-            users = sum(member.bot == False for member in guild.members)
-            bots = sum(member.bot == True for member in guild.members)
+            users = sum(member.bot is False for member in guild.members)
+            bots = sum(member.bot is True for member in guild.members)
             age = guild.created_at.strftime("%Y-%m-%d")
             peak_online = max(online, peak_count)
 
@@ -205,13 +205,13 @@ class Stats(GroupCog):
 
         embed.add_field(
             name="Users",
-            value=sum(member.bot == False for member in guild.members),
+            value=sum(member.bot is False for member in guild.members),
             inline=True
         )
 
         embed.add_field(
             name="Bots",
-            value=sum(member.bot == True for member in guild.members),
+            value=sum(member.bot is True for member in guild.members),
             inline=True
         )
 
