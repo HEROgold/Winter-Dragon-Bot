@@ -41,7 +41,8 @@ class Purge(Cog):
             message: discord.Message
             try:
                 await message.delete()
-            except discord.NotFound: pass
+            except discord.NotFound:
+                pass
             messages.append(message)
         return messages
 
