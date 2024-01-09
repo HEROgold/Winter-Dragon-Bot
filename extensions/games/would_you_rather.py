@@ -79,7 +79,7 @@ class WouldYouRather(GroupCog):
     @commands.is_owner()
     async def slash_add_verified(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
-            result = session.query(Suggestion).where(Suggestion.type == WYR, Suggestion.is_verified == True)
+            result = session.query(Suggestion).where(Suggestion.type == WYR, Suggestion.is_verified == True)  # noqa: E712
             questions = result.all()
             if not questions:
                 await interaction.response.send_message("No questions to add", ephemeral=True)
