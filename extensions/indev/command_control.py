@@ -27,7 +27,7 @@ class CombinedCommand:
 
     def __init__(self, dc_command: DcCommand) -> None:
         self.dc_command = dc_command
-        with Session(engine) as engine:
+        with Session(engine) as engine:  # noqa: F823
             self.db_command = engine.query(DbCommand).where(DbCommand.qual_name == dc_command.qualified_name).first()
 
 
