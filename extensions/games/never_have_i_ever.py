@@ -79,7 +79,7 @@ class NeverHaveIEver(GroupCog):
     @commands.is_owner()
     async def slash_nhie_add_verified(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
-            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)
+            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)  # noqa: E712
             questions = result.all()
             if not questions:
                 await interaction.response.send_message("No questions to add", ephemeral=True)
@@ -167,4 +167,4 @@ nhie_base_questions = [
 "Never have I ever flirted just to get something I wanted.",
 "Never have I ever tried guessing someone`s password.",
 "Never have I ever been caught lying.",
-    ];
+]
