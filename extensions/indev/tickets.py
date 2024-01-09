@@ -81,7 +81,7 @@ class TicketView(discord.ui.View):
                 ticket := session.query(Ticket).where(
                     Ticket.user_id == interaction.user.id,
                     # Ticket.channel_id == interaction.channel.id,
-                    Ticket.is_closed == False  # noqa: E712
+                    Ticket.is_closed == False # noqa: E712
                 ).first()
             ):
                 dc_channel = discord.utils.get(self.channel.threads, id=ticket.channel.id)
@@ -138,7 +138,7 @@ class Tickets(GroupCog):
         with Session(engine) as session:
             seven_days_before_today = datetime.datetime.now() - datetime.timedelta(days=7)
             tickets = session.query(Ticket).where(
-                Ticket.is_closed == False,
+                Ticket.is_closed == False, # noqa: E712
                 Ticket.opened_at <= seven_days_before_today
             ).options(joinedload(Ticket.transactions)).all()
 

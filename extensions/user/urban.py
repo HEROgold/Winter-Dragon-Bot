@@ -21,7 +21,7 @@ class Urban(GroupCog):
         description="get random definitions"
     )
     async def slash_urban_random(self, interaction: discord.Interaction) -> None:
-        if config.Urban.ALLOW_RANDOM == True:
+        if config["Urban"]["ALLOW_RANDOM"] is True:
             UD_RANDOM_URL = 'http://api.urbandictionary.com/v0/random'
             response = requests.get(UD_RANDOM_URL)
             json = response.json()

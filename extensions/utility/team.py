@@ -540,7 +540,7 @@ class Team(GroupCog):
         self,
         interaction: discord.Interaction,
     ) -> None:
-        if interaction.user.resolved_permissions.manage_channels == False:
+        if interaction.user.resolved_permissions.manage_channels is False:
             lobby = self.get_teams_lobby(interaction.guild)
             if lobby is None:
                 raise app_commands.errors.MissingPermissions(["manage_channels"])

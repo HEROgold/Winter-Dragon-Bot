@@ -19,13 +19,13 @@ class Welcome(GroupCog):
         channel = member.guild.system_channel
         cmd = self.bot.get_app_command("help")
         default_message = f"Welcome {member.mention} to {member.guild},\nyou may use {cmd.mention} to see what commands I have!"
-        if channel is not None and config["Welcome"]["DM"] == False:
+        if channel is not None and config["Welcome"]["DM"] is False:
             self.logger.warning("sending welcome to guilds system_channel")
             if message:
                 await channel.send(message)
             else:
                 await channel.send(default_message)
-        elif channel is not None and config["Welcome"]["DM"] == True and member.bot == False:
+        elif channel is not None and config["Welcome"]["DM"] is True and member.bot is False:
             self.logger.warning("sending welcome to user's dm")
             if message:
                 await member.send(message)
