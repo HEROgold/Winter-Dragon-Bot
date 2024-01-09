@@ -1,8 +1,12 @@
 """
 Using SteamCmd allow users/admins to create/manage servers from SteamCmd
 # TODO
+# TODO: move to docker!
 Currently this code is blocking, when installing, updating, uninstalling etc.
 the whole bot waits for it to complete. find and implement a way to have it not block
+
+Should not be used seriously, this file is only for getting experience with programming
+and learning skills with integration !!!!
 """
 
 from datetime import datetime, timedelta
@@ -24,6 +28,7 @@ STEAM_CMD_DIR = "./steam_cmd"
 INSTALLED_SERVERS = f"{STEAM_CMD_DIR}/steamapps/common"
 STEAM_SERVER_STORAGE = f"{STEAM_CMD_DIR}/steam_cmd/steamapps"
 STEAM_DB_LIST = "SteamDb Servers.txt"
+CONTAINER_NAME = "steamcmd"
 
 
 if os.name == "nt":
@@ -57,6 +62,21 @@ elif os.name == "posix":
                 break
         else:
             print(f"Distro not supported, supported distro's: {list(distributions)}")
+
+
+async def install_steamcmd_docker():
+    # TODO: See https://github.com/Danixu/project-zomboid-server-docker for references.
+    # Use subprocess.Popen for blocking terminal calls:
+    # See https://github.com/steamcmd/docker for docker usage
+    # https://stackoverflow.com/questions/16071866/non-blocking-subprocess-call
+    subprocess.Popen(["docker pull cm2network/steamcmd"])
+    subprocess.Popen([f"docker run -d --name={CONTAINER_NAME} cm2network/steamcmd bash"])
+    subprocess.Popen([f"docker start {CONTAINER_NAME}"])
+
+
+async def steamcmd_install_server(server_name: str, server_id: int):
+    install_cmd = f'./steamcmd.sh +force_install_dir "/home/steam/{server_name}" +login anonymous +app_update {server_id} +quit'
+    subprocess.Popen([f'docker exec -d {CONTAINER_NAME} sh -c "{install_cmd}"'])
 
 
 class Server(TypedDict):
@@ -130,7 +150,7 @@ class SteamServers(GroupCog):
         :class:`Server`
             Dict containing server info
         """
-        if type(target) == str:
+        if isinstance(target, str):
             return next(
                 (
                     server
@@ -139,7 +159,7 @@ class SteamServers(GroupCog):
                 ),
                 None,
             )
-        elif type(target) == int:
+        else:
             return next(
                 (
                     server
