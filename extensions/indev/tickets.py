@@ -81,7 +81,7 @@ class TicketView(discord.ui.View):
                 ticket := session.query(Ticket).where(
                     Ticket.user_id == interaction.user.id,
                     # Ticket.channel_id == interaction.channel.id,
-                    Ticket.is_closed == False
+                    Ticket.is_closed == False  # noqa: E712
                 ).first()
             ):
                 dc_channel = discord.utils.get(self.channel.threads, id=ticket.channel.id)
