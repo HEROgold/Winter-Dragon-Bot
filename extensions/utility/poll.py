@@ -180,6 +180,8 @@ class Poll(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @poll_channel.command(name="remove", description="Remove the poll channel")
     async def slash_remove_poll_channel(self, interaction: discord.Interaction):
+        _, add_channel_command = self.get_command_mention(self.slash_set_poll_channel)
+
         with Session(engine) as session:
             if (
                 found := session.query(Channel).where(
@@ -198,7 +200,6 @@ class Poll(GroupCog):
                 session.commit()
                 return
 
-            _, add_channel_command = self.get_command_mention(self.slash_set_poll_channel)
             await interaction.response.send_message(f"Channel not found, Please add by using {add_channel_command}")
 
 

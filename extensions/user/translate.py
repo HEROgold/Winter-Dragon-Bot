@@ -16,7 +16,7 @@ class Translate(Cog):
 
     @Cog.listener()
     async def on_reaction_add(self, reaction: discord.Reaction, member: discord.Member | discord.User) -> None:
-        if member.bot == True:
+        if member.bot is True:
             return
 
         land_code = flag.dflagize(reaction.emoji)[1:-1]
@@ -33,7 +33,7 @@ class Translate(Cog):
         else:
             emb = self.get_response(member, land_code, clean_content)
 
-        if config["Translate"]["dm_instead"] == True:
+        if config["Translate"]["dm_instead"] is True:
             await member.send(embed=emb)
         else:
             await reaction.message.reply(embed=emb)
