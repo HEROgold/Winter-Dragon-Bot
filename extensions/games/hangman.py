@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Any, Callable
+from typing import Any
 
 import discord  # type: ignore
 from discord import app_commands
@@ -227,6 +227,8 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
                 i if i in hangman_db.letters else "-" for i in hangman_db.word
             )
 
+            hangman = create_hangman(guess_amount=len(wrong_after))
+
             # Stop early and lose after 10 faulty guesses
             if len(wrong_after) >= 10:
                 await interaction.response.edit_message(
@@ -249,8 +251,6 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
                     checks.append(False)
             logger.debug(f"{checks=}")
 
-            hangman = create_hangman(guess_amount=len(wrong_after))
-
             if not all(checks):
                 await interaction.response.edit_message(
                     content=f"Word: {hidden_word}\n{hangman}\nLetters: {hangman_db.letters}"
@@ -266,7 +266,8 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
             )
             logger.debug(f"{hangman_players=}")
             try:
-                sort_key: Callable[[AUH]] = lambda x: x.score
+                def sort_key(x: AUH):
+                    return x.score
                 hangman_players.sort(key=sort_key)
             except AttributeError as e:
                 logger.exception(f"{e}")
