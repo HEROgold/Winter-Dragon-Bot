@@ -606,16 +606,6 @@ class LogChannels(GroupCog):
         ))
 
 
-    async def on_invite_update(self, entry: discord.AuditLogEntry) -> None:
-        # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.invite_update
-        self.logger.debug(f"on invite_update: {entry.guild=}, {entry=}")
-        await self.send_channel_logs(LogCategories.INVITE_UPDATE, entry.guild, discord.Embed(
-            title="Invite Update",
-            description=f"{entry.user.mention} updated {entry.target.type} {entry.target} with reason {entry.reason or None}",
-            color=CHANGED_COLOR
-        ))
-
-
     async def on_webhook_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.webhook_create
         self.logger.debug(f"on webhook_create: {entry.guild=}, {entry=}")
