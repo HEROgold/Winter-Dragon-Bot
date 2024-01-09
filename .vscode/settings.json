@@ -15,7 +15,6 @@
         "reportOptionalSubscript": "none",
         // "reportUnnecessaryIsInstance": "none"
     },
-    "ruff.args": ["--ignore E501"],
     "cSpell.words": [
         "apphub",
         "apppage",
