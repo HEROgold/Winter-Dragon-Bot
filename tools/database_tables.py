@@ -469,6 +469,12 @@ class Role(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     name: Mapped[str] = mapped_column(String)
 
+class UserRoles(Base):
+    __tablename__ = "user_roles"
+
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLES_ID), primary_key=True)
+    guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
 
 class AutoAssignRole(Base):
     __tablename__ = "auto_assign"
