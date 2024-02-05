@@ -1,5 +1,11 @@
+[project]
+name = "Winter-Dragon-Bot"
+# authors = [{name = "name", email = "name@address.com"}]
+version = "0.1.0"
+requires-python = ">=3.11"
+
 [tool.ruff]
-ignore = ["ANN002", "ANN003", "ANN101", "ANN102", "D", "D100", "E501", "ERA001", "FBT", "FIX", "G004", "INP001", "PGH003", "PTH", "S101", "S311", "T201", "TD", "TRY301", "UP035"]
+ignore = ["ANN002", "ANN003", "ANN101", "ANN102", "D", "D100", "E501", "ERA001", "FBT", "FIX", "G004", "INP001", "PGH003", "PTH", "S101", "S311", "SIM105", "T201", "TD", "TRY301", "UP035"]
 indent-width = 4
 line-length = 88
 select = ["ALL"]
