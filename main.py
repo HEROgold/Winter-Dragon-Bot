@@ -94,8 +94,8 @@ async def mass_load() -> None:
         try:
             await bot.load_extension(extension)
             log.bot_logger.info(f"Loaded {extension}")
-        except Exception as e:
-            log.bot_logger.exception(e)
+        except Exception:
+            log.bot_logger.exception("")
 
 
 @commands.is_owner()
@@ -104,8 +104,8 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
         log.bot_logger.info("shutdown by command.")
-    except Exception as e:
-        log.bot_logger.exception(e)
+    except Exception:
+        log.bot_logger.exception("")
     raise KeyboardInterrupt
 
 
