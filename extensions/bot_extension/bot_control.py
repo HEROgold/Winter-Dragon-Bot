@@ -2,18 +2,17 @@ import datetime
 import os
 import random
 import time
-from collections import namedtuple
-from typing import Any
 
 import discord
 import psutil
 from discord import app_commands
 from discord.ext import commands, tasks
 from matplotlib import pyplot as plt
+from psutil._common import snetio
 
-from tools.config_reader import config
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools.config_reader import config
 
 
 IMG_DIR = "./database/img"
@@ -27,7 +26,7 @@ STATUS = [
     "idle", "invisible",
     "offline",
     "online",
-    "random"
+    "random",
 ]
 STATUS_TYPE = [
     discord.Status.dnd,
@@ -66,30 +65,15 @@ STATUS_MSG = [
     "Sniffing wedding cakes",
     "Touching a wedding cake",
     "Magically spawning a wedding cake",
-    "Wanting to eat a wedding cake and have one too"
+    "Wanting to eat a wedding cake and have one too",
 ]
-
-# copied from the library, this fixes type-hint
-Snetio = namedtuple(
-    "snetio",
-    [
-        "bytes_sent",
-        "bytes_recv",
-        "packets_sent",
-        "packets_recv",
-        "errin",
-        "errout",
-        "dropin",
-        "dropout",
-    ],
-) # type: ignore
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class BotC(GroupCog):
     timestamps: list[float]
     cpu_percentages: list[float]
-    net_io_counters: list[Snetio]
+    net_io_counters: list[snetio]
     ram_percentages: list[float]
     bytes_sent: list[int]
     bytes_received: list[int]
@@ -97,7 +81,7 @@ class BotC(GroupCog):
     packets_received: list[int]
 
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.timestamps = []
         self.cpu_percentages = []
@@ -140,7 +124,7 @@ class BotC(GroupCog):
 
         activity = discord.Activity(
             type=activity_type,
-            name=random.choice(STATUS_MSG)
+            name=random.choice(STATUS_MSG),
         )
         return status, activity
 
@@ -152,29 +136,29 @@ class BotC(GroupCog):
         interaction: discord.Interaction,
         status: str,
         activity: str,
-        msg: str = ""
+        msg: str = "",
     ) -> None:
         if status.lower() not in STATUS:
             await interaction.response.send_message(
-                f"Status not found, can only be\n{STATUS}", ephemeral=True
+                f"Status not found, can only be\n{STATUS}", ephemeral=True,
             )
             return
         if activity.lower() not in ACTIVITIES:
             await interaction.response.send_message(
-                f"Activity not found, can only be\n{ACTIVITIES}", ephemeral=True
+                f"Activity not found, can only be\n{ACTIVITIES}", ephemeral=True,
             )
             return
         if status.lower() == "random" and activity.lower() == "random":
-            config["Activity"]["PERIODIC_CHANGE"] = True
+            config["Activity"]["PERIODIC_CHANGE"] = "True"
             self.logger.info(f"Turned on periodic activity change by {interaction.user}")
             await interaction.response.send_message(
-                "I will randomly change my status and activity", ephemeral=True
+                "I will randomly change my status and activity", ephemeral=True,
             )
             self.activity_switch.start()
             return
         if status.lower() == "random" or activity.lower() == "random":
             await interaction.response.send_message(
-                "Both status and activity need to be random or not chosen.", ephemeral=True
+                "Both status and activity need to be random or not chosen.", ephemeral=True,
             )
             return
         status_attr = getattr(discord.Status, status, discord.Status.online)
@@ -190,7 +174,9 @@ class BotC(GroupCog):
 
     @slash_bot_activity.autocomplete("status")
     async def activity_autocomplete_status(
-        self, interaction: discord.Interaction, current: str
+        self,
+        interaction: discord.Interaction,  # noqa: ARG002
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=stat, value=stat)
@@ -201,7 +187,9 @@ class BotC(GroupCog):
 
     @slash_bot_activity.autocomplete("activity")
     async def activity_autocomplete_activity(
-        self, interaction: discord.Interaction, current: str
+        self,
+        interaction: discord.Interaction,  # noqa: ARG002
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=activity, value=activity)
@@ -219,7 +207,7 @@ class BotC(GroupCog):
 
         await interaction.response.send_message(
             "Message send to all update channels on all servers!",
-            ephemeral=True
+            ephemeral=True,
         )
 
 
@@ -257,16 +245,16 @@ class BotC(GroupCog):
         embed = discord.Embed(
             title=":ping_pong: Pong!",
             color=color,
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
+            timestamp=datetime.datetime.now(datetime.UTC),
         ).add_field(
             name="Websocket", value=f"{colored_websocket}{latency} ms {END_CODEBLOCK}",
-            inline=False
+            inline=False,
         ).add_field(
             name="Response", value=f"{colored_api_response}{response} ms {END_CODEBLOCK}",
-            inline=False
+            inline=False,
         ).add_field(
             name="Database", value=f"{colored_database}{database} ms {END_CODEBLOCK}",
-            inline=False
+            inline=False,
         )
 
         await interaction.followup.send(embed=embed)
@@ -277,7 +265,7 @@ class BotC(GroupCog):
         embed = discord.Embed(
             title="Performance",
             color=0,
-            timestamp=datetime.datetime.now(datetime.timezone.utc),
+            timestamp=datetime.datetime.now(datetime.UTC),
         )
 
         worst_color = 0
@@ -293,6 +281,10 @@ class BotC(GroupCog):
 
         net_counters = psutil.net_io_counters()
 
+        cpu_and_ram_idx = 2
+        bytes_idx = 4
+        packets_idx = 6
+
         for i, value in enumerate([
             psutil.cpu_percent(),
             psutil.virtual_memory().percent,
@@ -302,11 +294,11 @@ class BotC(GroupCog):
             net_counters.packets_recv,
         ]):
             self.logger.debug(f"{i=}, {value=}")
-            if i < 2:
+            if i < cpu_and_ram_idx:
                 ansi_color, color = self.get_colors(value, max_amount=100)
-            elif i < 4:
+            elif i < bytes_idx:
                 ansi_color, color = self.get_colors(value, max_amount=10_000_000_000)
-            elif i < 6:
+            elif i < packets_idx:
                 ansi_color, color = self.get_colors(value, max_amount=1_000_000_000)
 
             # get worst color (highest int)
@@ -316,7 +308,7 @@ class BotC(GroupCog):
 
             embed.add_field(
                 name=f"{field_names[i]}", value=f"{ansi_color} {value} {END_CODEBLOCK}",
-                inline=False
+                inline=False,
             )
         embed.color = worst_color
         await interaction.response.send_message(embed=embed)
@@ -330,12 +322,15 @@ class BotC(GroupCog):
 
         try:
             file = discord.File(METRICS_FILE)
+            await interaction.response.send_message(file=file)  # embed=embed,
         except Exception:
+            self.logger.exception("Error when creating a graph.")
             file = None
-        await interaction.response.send_message(file=file)  # embed=embed,
+            await interaction.response.send_message("Could not make a graph to show.")
+
 
     @staticmethod
-    def get_colors(value: int, max_amount: int) -> tuple[str, int]:
+    def get_colors(value: float, max_amount: int) -> tuple[str, int]:
         """Get colors based on given max value, with predefined percentages"""
         if value < max_amount * 0.4:
             ansi_start = "```ansi\n\x1b[2;32m"
@@ -355,19 +350,19 @@ class BotC(GroupCog):
         return (ansi_start, color)
 
     @classmethod
-    def get_latency_colors(cls, latency) -> tuple[str, int]:
+    def get_latency_colors(cls, latency: int) -> tuple[str, int]:
         return cls.get_colors(latency, 1000)
 
     @classmethod
-    def get_percentage_colors(cls, percentage) -> tuple[str, int]:
+    def get_percentage_colors(cls, percentage: int) -> tuple[str, int]:
         return cls.get_colors(percentage, 100)
 
     @classmethod
-    def get_bytes_colors(cls, bytes_count) -> tuple[str, int]:
+    def get_bytes_colors(cls, bytes_count: int) -> tuple[str, int]:
         return cls.get_colors(bytes_count, 10000000000)
 
     @classmethod
-    def get_packets_colors(cls, packets_count) -> tuple[str, int]:
+    def get_packets_colors(cls, packets_count: int) -> tuple[str, int]:
         return cls.get_colors(packets_count, 1000000000)
 
 
@@ -408,7 +403,8 @@ class BotC(GroupCog):
         self.packets_received.append(packets_received_value)
 
         # Check if an hour has passed and update the data for the last hour
-        if timestamp - self.timestamps[0] > 3600:
+        hour = 3600
+        if timestamp - self.timestamps[0] > hour:
             self._remove_oldest_system_metrics()
 
 
@@ -477,7 +473,6 @@ class BotC(GroupCog):
     @gather_metrics_loop.before_loop
     @activity_switch.before_loop
     async def before_update(self) -> None:
-        self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 

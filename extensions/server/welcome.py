@@ -1,11 +1,11 @@
 import discord
 from discord import app_commands
 
-from tools.config_reader import config
-from tools.database_tables import Welcome as WelcomeDb
-from tools.database_tables import Session, engine
-from _types.cogs import Cog, GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import Cog, GroupCog
+from tools.config_reader import config
+from tools.database_tables import Session, engine
+from tools.database_tables import Welcome as WelcomeDb
 
 
 @app_commands.guild_only()
@@ -46,7 +46,7 @@ class Welcome(GroupCog):
 
     @app_commands.command(
         name="disable",
-        description="Disable welcome message"
+        description="Disable welcome message",
     )
     async def slash_disable(self, interaction: discord.Interaction) -> None:
         self.update_data(interaction, enabled=False)
@@ -65,9 +65,9 @@ class Welcome(GroupCog):
     def update_data(
         self,
         interaction: discord.Interaction,
-        message: str = None,
-        enabled: bool = None,
-        channel_id: int = None
+        message: str | None = None,
+        enabled: bool | None = None,
+        channel_id: int | None = None,
     ) -> None:
 
         self.logger.debug(f"updating {WelcomeDb} for {interaction.guild} to {message=}, {enabled=}, {channel_id=}")
@@ -75,7 +75,7 @@ class Welcome(GroupCog):
             channel_id = interaction.guild.system_channel.id
 
         with Session(engine) as session:
-            data = session.query(WelcomeDb).get(interaction.guild.id)
+            data = session.query(WelcomeDb).where(WelcomeDb.guild_id == interaction.guild.id).first()
             if enabled is None:
                 enabled = data.enabled
             if message is None:
@@ -85,7 +85,7 @@ class Welcome(GroupCog):
                     guild_id = interaction.guild.id,
                     channel_id = channel_id,
                     message = message,
-                    enabled = enabled
+                    enabled = enabled,
                     ))
             else:
                 data.channel_id = channel_id
@@ -95,4 +95,4 @@ class Welcome(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
-	await bot.add_cog(Welcome(bot))
+    await bot.add_cog(Welcome(bot))

@@ -2,9 +2,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from tools.config_reader import config
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+from tools.config_reader import config
 
 
 class Sync(Cog):

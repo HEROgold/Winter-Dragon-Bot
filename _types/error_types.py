@@ -1,6 +1,11 @@
-from discord import HTTPException, DiscordException, ClientException, DiscordServerError
+from discord import (
+    ClientException,
+    DiscordException,
+    DiscordServerError,
+    HTTPException,
+    app_commands,
+)
 from discord.ext import commands
-from discord import app_commands
 
 
 CommandErrors = \

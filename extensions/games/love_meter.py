@@ -3,8 +3,9 @@ import random
 import discord
 from discord import app_commands
 
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+
 
 class Love(Cog):
     @app_commands.command(name = "love", description = "Find out if another person is compatible with you")
@@ -15,7 +16,7 @@ class Love(Cog):
             description = " ",
             color = 0xFF0000,
         )
-        random.seed((user.id + member.id))
+        random.seed(user.id + member.id)
         emb.add_field(
             name = f"{member.display_name}",
             value = f"Your compatibility with {member.display_name} is {random.randint(0,100)}%",

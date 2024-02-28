@@ -1,7 +1,8 @@
 
 import configparser
 import shutil
-from typing import Self, Generator, Any
+from collections.abc import Generator
+from typing import Any, Self
 
 
 TEMPLATE_PATH = "./templates/config_template.ini"
@@ -20,20 +21,18 @@ class ConfigParserSingleton:
 
     def __init__(self) -> None:
         try:
-            with open(CONFIG_PATH, "r"):
+            with open(CONFIG_PATH):
                 pass
         except FileNotFoundError as e:
             shutil.copy(TEMPLATE_PATH, CONFIG_PATH)
             to_edit = ["discord_token", "open_api_key", "bot_name", "support_guild_id"]
-            raise ValueError(
-                f"First time launch detected, please edit the following settings in {CONFIG_PATH}:\n{', '.join(to_edit)}"
-            ) from e
-        
+            msg = f"First time launch detected, please edit the following settings in {CONFIG_PATH}:\n{', '.join(to_edit)}"
+            raise ValueError(msg) from e
         self.config.read(CONFIG_PATH)
 
 config = ConfigParserSingleton().config
 
-def is_valid() -> None:
+def is_valid() -> bool:
     for section in config.sections():
         for setting in config.options(section):
             if config[section][setting] == "!!":

@@ -1,13 +1,15 @@
 import logging
+from typing import ClassVar
 
 import discord  # type: ignore
 from discord import app_commands
 from discord.ui import Button
 
+from _types.bot import WinterDragon
+from _types.cogs import GroupCog
 from tools.config_reader import config
 from tools.database_tables import ResultDuels, Session, engine
-from _types.cogs import GroupCog
-from _types.bot import WinterDragon
+
 
 # TODO: change command /rps new
 # dont dm user
@@ -15,7 +17,7 @@ from _types.bot import WinterDragon
 # add logic for winning
 
 
-class RpsButton(Button['RPSView']):
+class RpsButton(Button["RPSView"]):
     def __init__(self, label: str, style: discord.ButtonStyle) -> None:
         super().__init__(label=label, style=style)
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
@@ -41,7 +43,7 @@ class RpsButton(Button['RPSView']):
 
 
 # TODO: add 3 buttons, look at ticket system.
-# Each button adds the player's choice, 
+# Each button adds the player's choice,
 # Set's player_1, and player_2 variable
 # calcs results and posts them
 class RPSView(discord.ui.View):
@@ -54,11 +56,11 @@ class RPSView(discord.ui.View):
 
 
     def __init__(
-        self, 
-        first_choice: str = None,
-        second_choice: str = None,
-        player_1: discord.Member = None,
-        player_2: discord.Member = None
+        self,
+        first_choice: str,
+        second_choice: str,
+        player_1: discord.Member,
+        player_2: discord.Member,
     ) -> None:
         super().__init__()
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
@@ -81,7 +83,7 @@ class RPSView(discord.ui.View):
             return
 
         original = await interaction.original_response()
-        original.edit(f"{self.p1_choice=}, {self.p2_choice=}")
+        await original.edit(content=f"{self.p1_choice=}, {self.p2_choice=}")
 
         if self.p1_choice == self.p2_choice:
             winner = None
@@ -123,13 +125,13 @@ class RPSView(discord.ui.View):
 
 
 class RockPaperScissors(GroupCog):
-    CHOICES = ["rock", "paper", "scissor"]
+    choices: ClassVar = ["rock", "paper", "scissor"]
 
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="new",
-        description="Start a rock paper, scissors game, which player can join"
+        description="Start a rock paper, scissors game, which player can join",
     )
     async def slash_rps_new(
         self,
@@ -141,28 +143,29 @@ class RockPaperScissors(GroupCog):
 
     @app_commands.command(
         name="duel",
-        description="Start a rock paper, scissors game, against specified player"
+        description="Start a rock paper, scissors game, against specified player",
     )
     async def slash_rps_duel(
         self,
         interaction: discord.Interaction,
         choice: str,
-        opponent: discord.Member
+        opponent: discord.Member,
     ) -> None:
-        if choice not in self.CHOICES:
-            await interaction.response.send_message(f"Thats not a valid choice, must be one of {self.CHOICES}", ephemeral=True)
-        await interaction.response.send_message(f"{interaction.user.mention} dueled {opponent.mention} in Rock, Paper, Scissors. What's your choice?", view=RPSView(
-            first_choice=choice, player_1=interaction.user, player_2=opponent
-        ))
+        if choice not in self.choices:
+            await interaction.response.send_message(f"Thats not a valid choice, must be one of {self.choices}", ephemeral=True)
+        await interaction.response.send_message(
+            content=f"{interaction.user.mention} dueled {opponent.mention} in Rock, Paper, Scissors. What's your choice?",
+            view=RPSView(first_choice=choice, player_1=interaction.user, player_2=opponent)
+        )
         # await interaction.response.send_message(f"{interaction.user.mention} started Rock, Paper, Scissors, what's your choice?", view=RPSView(first_choice=choice))
         # self.set_data(self.data)
 
 
     @slash_rps_duel.autocomplete("choice")
-    async def rock_paper_scissors_autocomplete_choice(self, interaction:discord.Interaction, current:str) -> list[app_commands.Choice[str]]:
+    async def rock_paper_scissors_autocomplete_choice(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:  # noqa: ARG002
         return [
             app_commands.Choice(name=i, value=i)
-            for i in self.CHOICES
+            for i in self.choices
             if current.lower() in i.lower()
         ]
 

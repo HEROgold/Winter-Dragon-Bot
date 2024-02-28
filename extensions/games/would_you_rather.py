@@ -1,21 +1,21 @@
 import random
-from typing import Any
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from tools.config_reader import config
-import tools.rainbow as rainbow
-from tools.database_tables import WyrQuestion, Suggestion, engine, Session
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools import rainbow
+from tools.config_reader import config
+from tools.database_tables import Session, Suggestion, WyrQuestion, engine
+
 
 WYR = "wyr"
 
 
 class WouldYouRather(GroupCog):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.set_default_data()
 
@@ -25,7 +25,6 @@ class WouldYouRather(GroupCog):
             questions = session.query(WyrQuestion).all()
             if len(questions) > 0:
                 self.logger.debug("Questions already present in table.")
-                # self.logger.debug(f"{questions=}")
                 return
             for question_id, _ in enumerate(wyr_base_questions):
                 self.logger.debug(f"adding question to database {question_id=}, value={wyr_base_questions[question_id]}")
@@ -41,7 +40,7 @@ class WouldYouRather(GroupCog):
 
     @app_commands.command(
         name="show",
-        description = "Use this to get a Would you rather, that you can reply to"
+        description = "Use this to get a Would you rather, that you can reply to",
     )
     @app_commands.checks.cooldown(1, 10)
     async def slash_wyr(self, interaction: discord.Interaction) -> None:
@@ -58,14 +57,14 @@ class WouldYouRather(GroupCog):
 
     @app_commands.command(
         name = "add",
-        description="Lets you add a Would you rather question"
+        description="Lets you add a Would you rather question",
         )
     async def slash_wyr_add(self, interaction: discord.Interaction, wyr_question: str) -> None:
         with Session(engine) as session:
             session.add(Suggestion(
                 id = None,
                 type = WYR,
-                content = wyr_question
+                content = wyr_question,
             ))
             session.commit()
         await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified later.", ephemeral=True)
@@ -73,7 +72,7 @@ class WouldYouRather(GroupCog):
 
     @app_commands.command(
         name = "add_verified",
-        description = "Add all questions stored in the WYR database file, to the questions data section."
+        description = "Add all questions stored in the WYR database file, to the questions data section.",
         )
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
@@ -210,5 +209,5 @@ wyr_base_questions = [
     "Would you rather have no hair or be completely hairy?",
     "Would you rather wake up in the morning looking like a giraffe or a kangaroo?",
     "Would you rather have a booger hanging from your nose for the rest of your life or earwax planted on your earlobes?",
-    "Would you rather have a sumo wrestler on top of you or yourself on top of him?"
+    "Would you rather have a sumo wrestler on top of you or yourself on top of him?",
 ]

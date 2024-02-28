@@ -2,13 +2,13 @@ import logging
 import os
 import re
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
 from discord.ext import tasks
 
-from tools.config_reader import config
 from _types.bot import WinterDragon
+from tools.config_reader import config
 
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
@@ -36,7 +36,7 @@ class Logs:
     @classmethod
     def _add_sql_logger(cls) -> None:
         try:
-            cls.sql_logger
+            cls.sql_logger  # noqa: B018
         except AttributeError:
             from tools.database_tables import logger as sql_logger
 
@@ -45,7 +45,7 @@ class Logs:
 
     @tasks.loop(hours=24)
     async def daily_save_logs(self) -> None:
-        if self.bot.launch_time < datetime.now(timezone.utc) + timedelta(hours=1):
+        if self.bot.launch_time < datetime.now(UTC) + timedelta(hours=1):
             return
         self.bot_logger.debug("Daily saving...")
         self.save_logs()
@@ -59,7 +59,6 @@ class Logs:
             self.first_rollover = True
             self.bot_logger.info("Skipping first rollover")
             return
-        self.bot_logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
@@ -116,12 +115,12 @@ class Logs:
         while self.logs_size_limit_check(size_limit):
             self.delete_oldest_saved_logs()
 
-        log_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        log_time = datetime.now(tz=UTC).strftime("%Y-%m-%d-%H-%M-%S")
 
         os.makedirs(f"{config['Main']['log_path']}/{log_time}", exist_ok=True)
 
         self.bot_logger.info("Saving log files")
-        self.bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - self.bot.launch_time}")
+        self.bot_logger.info(f"Bot uptime: {datetime.now(UTC) - self.bot.launch_time}")
 
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
@@ -130,7 +129,7 @@ class Logs:
 
 
     def logging_rollover(self) -> None:
-        """Rolls over bot, discord and sql log handlers."""
+        """Roll over bot, discord and sql log handlers."""
         for handler in [
             *self.sql_logger.handlers,
             *self.discord_logger.handlers,
@@ -147,16 +146,15 @@ class Logs:
         self._delete_top_level_logs()
 
 
-    @staticmethod
-    def _delete_top_level_logs() -> None:
+    def _delete_top_level_logs(self) -> None:
         """Deletes the top level logs (not in logs directory)"""
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 print(f"Removing {file}")
                 try:
                     os.remove(file)
-                except Exception as e:
-                    print(e)
+                except Exception:
+                    self.bot_logger.exception(f"Error removing file {file}")
 
 
     def shutdown(self) -> None:

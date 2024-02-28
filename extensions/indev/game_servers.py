@@ -9,11 +9,11 @@ Should not be used seriously, this file is only for getting experience with prog
 and learning skills with integration !!!!
 """
 
-from datetime import datetime, timedelta
 import os
 import random
 import subprocess
-from typing import Any, Generator, TypedDict
+from datetime import datetime, timedelta
+from typing import Generator, TypedDict
 
 import discord
 from discord import app_commands
@@ -29,6 +29,7 @@ INSTALLED_SERVERS = f"{STEAM_CMD_DIR}/steamapps/common"
 STEAM_SERVER_STORAGE = f"{STEAM_CMD_DIR}/steam_cmd/steamapps"
 STEAM_DB_LIST = "SteamDb Servers.txt"
 CONTAINER_NAME = "steamcmd"
+CHOICE_LIMIT = 25
 
 
 if os.name == "nt":
@@ -51,7 +52,7 @@ elif os.name == "posix":
             "fedora": "dnf install -y",
             "opensuse": "zypper install",
             "arch": "pacman -S --noconfirm",
-            "alpine": "apk add --no-cache"
+            "alpine": "apk add --no-cache",
         }
 
         distro = os.popen('awk -F= "/^NAME/{print $2}" /etc/os-release').read().strip().lower()
@@ -96,21 +97,21 @@ class ServerNotFound(Exception):
 def get_all_servers() -> list[Server]:
     """
     Creates a :class:`TypedDict` form a list of servers from a txt file
-    
-    
+
+
     Returns
     -------
     :class:`Servers`
         a :class:`dict` with iteration numbers and a :class:`TypedDict` that contains server info
     """
-    with open(STEAM_DB_LIST, "r", encoding="utf8") as f:
+    with open(STEAM_DB_LIST, encoding="utf8") as f:
         servers: list[Server] = []
         for line in f:
             server = {}
             for pairs in [i.split(":") for i in line.split(",")]:
                 name = pairs[0]
                 # join values when names are separated with `,`
-                value = "".join(pairs[1:]) 
+                value = "".join(pairs[1:])
                 server[f"{name}"] = value
             servers.append(server)
         return servers
@@ -120,7 +121,7 @@ class SteamServers(GroupCog):
     server_list: list[Server]
 
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.server_list = get_all_servers()
         # self.is_already_downloading()
@@ -139,12 +140,12 @@ class SteamServers(GroupCog):
     def find_server(self, target: str | int) -> Server | None:
         """
         Find a server by name or id
-        
+
         Parameters
         -----------
         :param:`target`: :class:`str` | :class:`int`
             Target server name
-        
+
         Returns
         -------
         :class:`Server`
@@ -189,33 +190,33 @@ class SteamServers(GroupCog):
 
     async def download_winget(self):
         self.logger.debug("Downloading Winget")
-        
+
         if not config.getboolean("SteamCMD", "download_winget"):
             raise DisabledError("download_winget is set to False.")
-        
+
         if self.is_already_downloading():
             # TODO: wait to finish
             self.logger.debug("winget not finished downloading.")
-            return None
+            return
 
         try:
             await self.wait_on_process_finish(subprocess.Popen(["bitsadmin", BITSADMIN_ARGS_WINGET]))
             await self.wait_on_process_finish(subprocess.Popen(["cmd", INSTALLER_CMD]))
         except Exception as e:
             self.logger.exception(f"error when downloading Winget {e}")
-            return None
+            return
 
 
     async def download_steamcmd(self):
         self.logger.debug("Downloading SteamCMD")
         if not config.getboolean("SteamCMD", "download_steamcmd"):
             raise DisabledError("download_steamcmd is set to False.")
-        
+
         try:
             await self.wait_on_process_finish(subprocess.Popen([
                 "winget", "install", WINGET_SteamCMD,
                 "--location", os.path.abspath(STEAM_CMD_DIR),
-                "--force"]
+                "--force"],
             ))
         except Exception as e:
             self.logger.exception(f"error when downloading SteamCMD {e}")
@@ -234,7 +235,7 @@ class SteamServers(GroupCog):
             await self.wait_on_process_finish(subprocess.Popen([
                 f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                 # "+login anonymous",
-                "+quit"
+                "+quit",
             ]))
         except FileNotFoundError as e:
             self.logger.exception(f"error when opening SteamCmd {e}")
@@ -245,7 +246,6 @@ class SteamServers(GroupCog):
 
     @test_steamcmd.before_loop
     async def before_test(self) -> None:
-        self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
@@ -279,8 +279,8 @@ class SteamServers(GroupCog):
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                     "+login anonymous",
                     f"+app_uninstall {server['id']}",
-                    "+quit"
-                ]
+                    "+quit",
+                ],
             ).wait()
 
             os.rmdir(f"""{os.path.abspath(f'{INSTALLED_SERVERS}/{server["name"]}')}""")
@@ -289,7 +289,7 @@ class SteamServers(GroupCog):
         except Exception as e:
             self.logger.exception(f"error when uninstalling {server} {e}")
             await interaction.edit_original_response(content="Could not uninstall server")
-        
+
         await interaction.edit_original_response(content=f"{server['name']} has been removed")
 
 
@@ -297,7 +297,7 @@ class SteamServers(GroupCog):
         self,
         server_id: int,
         interaction: discord.Interaction,
-        install: bool=False
+        install: bool=False,
     ) -> None:
         server = self.find_server(server_id)
         self.logger.debug(f"starting SteamCMD server {server}")
@@ -316,10 +316,10 @@ class SteamServers(GroupCog):
                     f"{os.path.abspath(f'{STEAM_CMD_DIR}/steamcmd.exe')}",
                     "+login anonymous",
                     f"+app_update {server_id}",
-                    "+quit"
+                    "+quit",
                 ],
                 stdout=subprocess.PIPE,
-                universal_newlines=True
+                universal_newlines=True,
             )
 
             status = "unknown"
@@ -355,7 +355,7 @@ class SteamServers(GroupCog):
         except Exception as e:
             self.logger.exception(f"error when starting {server} {e}")
             await interaction.edit_original_response(content="Could not start server")
-        
+
         await interaction.edit_original_response(content=f"{server['name']} has been {'installed' if install else 'updated'}")
 
 
@@ -448,7 +448,7 @@ class SteamServers(GroupCog):
     async def start_autocomplete_server(
         self,
         interaction: discord.Interaction,
-        current: str
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         options = [
             app_commands.Choice(name=i, value=i)
@@ -456,7 +456,7 @@ class SteamServers(GroupCog):
             in self.get_installed_servers()
         ]
 
-        if len(options) >= 24:
+        if len(options) >= CHOICE_LIMIT:
             randomized = random.choices(options, k=25)
             self.logger.debug(f"{randomized=}")
             return randomized
@@ -465,15 +465,17 @@ class SteamServers(GroupCog):
 
     @slash_server_install.autocomplete("server_name")
     async def install_autocomplete_server(
-        self, interaction: discord.Interaction, current: str
+        self,
+        interaction: discord.Interaction,  # noqa: ARG002
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         options = [
-            app_commands.Choice(name=server["name"], value=server["name"]) 
+            app_commands.Choice(name=server["name"], value=server["name"])
             for server in self.server_list
             if current.lower() in server["name"].lower()
         ]
         self.logger.debug(len(options))
-        if len(options) >= 24:
+        if len(options) >= CHOICE_LIMIT:
             randomized = random.choices(options, k=25)
             self.logger.debug(f"{randomized=}")
             return randomized

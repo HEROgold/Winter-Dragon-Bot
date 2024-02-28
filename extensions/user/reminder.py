@@ -4,10 +4,10 @@ import discord
 from discord import app_commands
 from discord.ext import tasks
 
-from tools.database_tables import Reminder as ReminderDb
-from tools.database_tables import engine, Session
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+from tools.database_tables import Reminder as ReminderDb
+from tools.database_tables import Session, engine
 
 
 class Reminder(Cog):
@@ -40,18 +40,17 @@ class Reminder(Cog):
 
     @send_reminder.before_loop # type: ignore
     async def before_send_reminder(self) -> None:
-        self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
-    @app_commands.command(name="remind", description = "Set a reminder for yourself!",)
+    @app_commands.command(name="remind", description = "Set a reminder for yourself!")
     async def slash_reminder(
         self,
         interaction: discord.Interaction,
         reminder: str,
         minutes: int = 0,
         hours: int = 0,
-        days: int = 0
+        days: int = 0,
     ) -> None:
         if minutes == 0 and hours == 0 and days == 0:
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
@@ -59,7 +58,7 @@ class Reminder(Cog):
         else:
             seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
         member = interaction.user
-        time = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=seconds))
+        time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
         with Session(engine) as session:
             session.add(ReminderDb(
                 # id = None,

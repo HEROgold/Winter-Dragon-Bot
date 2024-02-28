@@ -1,3 +1,6 @@
+
+"""Main file for the bot."""
+
 import asyncio
 import logging
 import os
@@ -6,22 +9,32 @@ import sys
 from logging.handlers import RotatingFileHandler
 
 import discord
-from _types.bot import WinterDragon
-
 from discord.ext import commands
 
-
+from _types.bot import WinterDragon
 from tools.config_reader import (
     config,
+)
+from tools.config_reader import (
     get_invalid as get_invalid_configs,
+)
+from tools.config_reader import (
     is_valid as config_validator,
 )
-
 from tools.main_log import Logs
 
+
+class ConfigError(Exception):
+    pass
+
+
 if not config_validator():
-    raise ValueError(
-        f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}"
+    msg = (
+        f"""Config is not yet updated!, update the following:
+        {', '.join(get_invalid_configs())}"""
+    )
+    raise ConfigError(
+        msg,
     )
 
 
@@ -40,7 +53,7 @@ INTENTS.voice_states = True
 
 bot = WinterDragon(
     intents=INTENTS,
-    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),
+    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), # type: ignore
     case_insensitive=True,
 )
 
@@ -91,8 +104,8 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
         log.bot_logger.info("shutdown by command.")
-    except Exception:
-        pass
+    except Exception as e:
+        log.bot_logger.exception(e)
     raise KeyboardInterrupt
 
 
@@ -101,8 +114,8 @@ def terminate(*args, **kwargs) -> None:
     log.bot_logger.info("terminated")
     log.shutdown()
     try:
-        asyncio.ensure_future(bot.close())
-    except Exception as e:
+        asyncio.ensure_future(bot.close())  # noqa: RUF006
+    except Exception as e:  # noqa: BLE001
         print(e)
     sys.exit()
 
@@ -111,11 +124,10 @@ async def main() -> None:
     async with bot:
         # global here, since they should be accessible module wide,
         # but they require a running event loop
-        global log
+        global log  # noqa: PLW0603
         log = Logs(bot=bot)
 
         await mass_load()
-        # await bot.load_extension("jishaku")
         await bot.start(config["Tokens"]["discord_token"])
         log.daily_save_logs.start()
 

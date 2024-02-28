@@ -1,9 +1,9 @@
 import discord
 from discord import app_commands
 
-from tools.config_reader import config
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools.config_reader import config
 
 
 class Invite(GroupCog):
@@ -12,7 +12,7 @@ class Invite(GroupCog):
         self.logger.debug(f"Invite created for: {interaction.user.id=}")
         await interaction.response.send_message(
             "https://discord.com/api/oauth2/authorize?client_id=742777596734996582&permissions=4398046511095&scope=bot",
-            ephemeral=True
+            ephemeral=True,
         )
 
 
@@ -26,4 +26,4 @@ class Invite(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
-	await bot.add_cog(Invite(bot))
+    await bot.add_cog(Invite(bot))

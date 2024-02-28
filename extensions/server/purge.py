@@ -1,9 +1,9 @@
 import discord
 from discord import app_commands
 
-from tools.config_reader import config
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+from tools.config_reader import config
 
 
 @app_commands.guild_only()
@@ -39,7 +39,7 @@ class Purge(Cog):
         messages = []
         async for message in interaction.channel.history(limit=count):
             message: discord.Message
-            try:
+            try:  # noqa: SIM105
                 await message.delete()
             except discord.NotFound:
                 pass
@@ -48,4 +48,4 @@ class Purge(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-	await bot.add_cog(Purge(bot))
+    await bot.add_cog(Purge(bot))

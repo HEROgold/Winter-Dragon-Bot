@@ -29,8 +29,8 @@ def is_tic_tac_toe(msg: str) -> bool:
 
     # filter out empty matches
     total = [
-        j 
-        for i in find_all 
+        j
+        for i in find_all
         for j in i
         if j
     ]

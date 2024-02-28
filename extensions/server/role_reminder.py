@@ -15,7 +15,7 @@ class AutoReAssign(GroupCog):
         async for entry in member.guild.audit_logs(limit=1):
             self.remember_roles(member, entry)
 
-    def remember_roles(self, member: discord.Member, entry: discord.AuditLogEntry) -> discord.Embed:
+    def remember_roles(self, member: discord.Member, entry: discord.AuditLogEntry) -> None:
         if entry.action in [
             discord.AuditLogAction.ban,
             discord.AuditLogAction.kick,
@@ -31,7 +31,7 @@ class AutoReAssign(GroupCog):
                 UserRoles.user_id == member.id,
                 UserRoles.guild_id == member.guild.id,
             ).all():
-                role = member.guild.get_role(role_id=auto_assign.role_id)
+                role = member.guild.get_role(role_id=auto_assign.role_id) # type: ignore
                 await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
         self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
 

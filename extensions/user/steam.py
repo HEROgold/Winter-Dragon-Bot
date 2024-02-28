@@ -1,19 +1,20 @@
+import asyncio
 import datetime
 import re
 from textwrap import dedent
-from typing import Any, Generator, TypedDict
-from bs4 import BeautifulSoup
-import bs4
+from typing import Any, AsyncGenerator, TypedDict
 
+import bs4
 import discord
+import requests
+from bs4 import BeautifulSoup
 from discord import app_commands
 from discord.ext import tasks
-import requests
 
-from tools.config_reader import config
-from tools.database_tables import SteamSale, SteamUser, User, engine, Session
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools.config_reader import config
+from tools.database_tables import Session, SteamSale, SteamUser, User, engine
 
 
 # Constant vars that contain tag names to look for
@@ -35,6 +36,7 @@ BUNDLE_DISCOUNT = "price bundle_discount"
 BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
 
 DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
+CURRENCY_LABELS = "-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰()"
 
 # 3 hour cooldown on updates in seconds
 MSG_SEND_PERIOD = 3600 * 3
@@ -51,7 +53,16 @@ class Sale(TypedDict):
     update_datetime: datetime.datetime
 
 
+
 class Steam(GroupCog):
+    async def cog_load(self) -> None:
+        self.update.start()
+        self.loop = asyncio.get_event_loop()
+
+    async def get_htl(self, url: str) -> requests.Response:
+        return await self.loop.run_in_executor(None, requests.get, url)
+
+
     @app_commands.command(name="add", description="Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
@@ -85,11 +96,11 @@ class Steam(GroupCog):
 
     # @app_commands.checks.cooldown(1, UPDATE_PERIOD)
     @app_commands.command(name="show", description="Get a list of steam games that are on sale for the given percentage or higher")
-    async def slash_show(self, interaction: discord.Interaction, percent: int = 100,) -> None:
+    async def slash_show(self, interaction: discord.Interaction, percent: int = 100) -> None:
         await interaction.response.defer()
 
         embed = discord.Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
-        embed = self.populate_embed(embed, self.get_steam_sales(percent))
+        embed = self.populate_embed(embed, await self.get_steam_sales(percent))
         self.logger.debug(f"{embed.to_dict()}")
 
         if len(embed.fields) > 0:
@@ -98,10 +109,6 @@ class Steam(GroupCog):
         else:
             # await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
             await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
-
-
-    async def cog_load(self) -> None:
-        self.update.start()
 
 
     @tasks.loop(seconds=MSG_SEND_PERIOD)
@@ -113,7 +120,7 @@ class Steam(GroupCog):
         self.logger.info("updating sales")
 
         embed = discord.Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=0x094d7f)
-        new_sales = self.get_new_steam_sales(percent=100)
+        new_sales = await self.get_new_steam_sales(percent=100)
         self.logger.debug(f"{new_sales=}")
         embed = self.populate_embed(embed, new_sales)
 
@@ -132,7 +139,7 @@ class Steam(GroupCog):
 
             for db_user in users:
                 self.logger.debug(f"Trying to show new sales to {db_user.id=}")
-                try:    
+                try:
                     user = self.bot.get_user(db_user.id) or await self.bot.fetch_user(db_user.id)
                 except discord.errors.NotFound:
                     self.logger.warning(f"Not showing {db_user.id=} sales, discord.errors.NotFound")
@@ -147,11 +154,10 @@ class Steam(GroupCog):
 
     @update.before_loop
     async def before_update(self) -> None:
-        self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
-    def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed | None:
+    def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed:
         """Fills a given embed with sales, and then returns the populated embed
 
         Args:
@@ -162,7 +168,7 @@ class Steam(GroupCog):
             discord.Embed
         """
         if not sales:
-            return None
+            return embed
 
         try:
             # Sort on sale percentage (int), so reverse to get highest first
@@ -183,20 +189,21 @@ class Steam(GroupCog):
             embed.add_field(
                 name = sale["title"],
                 value = dedent(embed_text),
-                inline = False
+                inline = False,
             )
             self.logger.debug(f"Populated embed with: {sale=}")
 
         # embed size above 6000 characters.
-        while len(str(embed.to_dict())) >= 6000:
+        max_embed_length = 6000
+        while len(str(embed.to_dict())) >= max_embed_length:
             self.logger.debug(f"size: {len(str(embed.to_dict()))}, removing to decrease size: {embed.fields[-1]=}")
             embed.remove_field(-1)
-        
+
         self.logger.debug(f"Returning {embed}")
         return embed
 
 
-    def get_updated_sales(self, known_sales: list[SteamSale | Sale]) -> list[Sale]:
+    async def get_updated_sales(self, sales: list[SteamSale | Sale]) -> list[Sale]:
         # sourcery skip: assign-if-exp, reintroduce-else
         """Return a new list of sales, based of a given list of sales
 
@@ -211,13 +218,13 @@ class Steam(GroupCog):
             self.SteamSale_to_Sale(i)
             if isinstance(i, SteamSale)
             else i
-            for i in known_sales
+            for i in sales
         ]
 
         updated_sales: list[Sale] = []
         for sale in known_sales:
             if self.is_outdated(sale):
-                updated_sales.append(self.get_game_sale(sale["url"]))
+                updated_sales.append(await self.get_game_sale(sale["url"]))
             else:
                 updated_sales.append(sale)
 
@@ -243,7 +250,7 @@ class Steam(GroupCog):
 
         return (
             update_period_date
-            <= datetime.datetime.now()
+            <= datetime.datetime.now()  # noqa: DTZ005
         )
 
 
@@ -306,7 +313,7 @@ class Steam(GroupCog):
         return bool(self.get_id_from_game_url(url))
 
 
-    def get_new_steam_sales(self, percent: int) -> list[Sale]:
+    async def get_new_steam_sales(self, percent: int) -> list[Sale]:
         """Get only unknown/new sales
 
         Args:
@@ -316,7 +323,7 @@ class Steam(GroupCog):
             list[Sale]: List of TypedDict Sale
         """
         known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales()]
-        steam_sales = list(self.get_sales_from_steam(percent))
+        steam_sales = [x async for x in self.get_sales_from_steam(percent)]
 
         self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
 
@@ -333,7 +340,7 @@ class Steam(GroupCog):
         ]
 
 
-    def get_steam_sales(self, percent: int) -> list[Sale]:
+    async def get_steam_sales(self, percent: int) -> list[Sale]:
         """get sales from database or from website depending on `UPDATE_PERIOD`
 
         Returns:
@@ -341,16 +348,15 @@ class Steam(GroupCog):
         """
         # return self.get_updated_sales(self.get_saved_sales(percent)) or self.get_sales_from_steam(percent)
 
-        updated_sales = self.get_updated_sales(self.get_saved_sales())
+        updated_sales = await self.get_updated_sales(await self.get_saved_sales())
         if updated_sales == []:
             self.logger.debug("getting sales from steam")
-            return list(self.get_sales_from_steam(percent))
-        else:
-            self.logger.debug("returning known sales")
-            return updated_sales
+            return list(await self.get_sales_from_steam(percent))
+        self.logger.debug("returning known sales")
+        return updated_sales
 
 
-    def get_games_from_bundle(self, url: str) -> list[Sale]:
+    async def get_games_from_bundle(self, url: str) -> list[Sale]:
         """Get the sales from a bundle
 
         Args:
@@ -363,19 +369,20 @@ class Steam(GroupCog):
             SteamSale: SteamSale database object
         """
         if not self.is_bundle(url):
-            raise ValueError("Invalid Steam Bundle URL")
+            msg = "Invalid Steam Bundle URL"
+            raise ValueError(msg)
 
-        html = requests.get(url).text
-        soup = BeautifulSoup(html, "html.parser")
+        html = await self.get_htl(url)
+        soup = BeautifulSoup(html.text, "html.parser")
 
         game_sales = []
         for sale_tag in soup.find_all("a", class_=BUNDLE_LINK):
             sale_tag: bs4.element.Tag
-            game_sales.append(self.get_game_sale(sale_tag["href"]))
+            game_sales.append(await self.get_game_sale(sale_tag["href"])) # type: ignore
         return game_sales
 
 
-    def SteamSale_to_Sale(self, sale: SteamSale) -> Sale:
+    def SteamSale_to_Sale(self, sale: SteamSale) -> Sale:  # noqa: N802
         """Convert a SteamSale db object to TypedDict Sale
 
         Args:
@@ -392,11 +399,11 @@ class Steam(GroupCog):
                 "final_price": sale.final_price,
                 "is_dlc": sale.is_dlc,
                 "is_bundle": sale.is_bundle,
-                "update_datetime": sale.update_datetime
+                "update_datetime": sale.update_datetime,
             }
 
 
-    def get_sales_from_steam(self, percent: int) -> Generator[Sale, Any, None]:
+    async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[Sale, Any]:
         """Scrape sales from https://store.steampowered.com/search/
         With the search options: Ascending price, Special deals, English
 
@@ -406,8 +413,8 @@ class Steam(GroupCog):
         Returns:
             list[Sale]: List of SteamSale database objects
         """
-        html = requests.get(config["Steam"]["url"]).text
-        soup = BeautifulSoup(html, "html.parser")
+        html = await self.get_htl(config["Steam"]["url"])
+        soup = BeautifulSoup(html.text, "html.parser")
 
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
             if sale_tag is None:
@@ -418,7 +425,7 @@ class Steam(GroupCog):
             a_tag = sale_tag.find_parent("a", href=True)
 
             if discount_perc is None: # Check game's page
-                yield self.get_game_sale(a_tag["href"])
+                yield await self.get_game_sale(a_tag["href"]) # type: ignore
                 continue
 
             discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
@@ -436,12 +443,12 @@ class Steam(GroupCog):
                     final_price = self.price_to_num(price),
                     is_dlc = False,
                     is_bundle = False,
-                    update_datetime = datetime.datetime.now(),
+                    update_datetime = datetime.datetime.now(),  # noqa: DTZ005
                 )
                 yield self.add_sale(sale, "steam search")
 
 
-    def get_bundle_sale(self, url: str) -> Sale:
+    async def get_bundle_sale(self, url: str) -> Sale:
         # sourcery skip: extract-method
         """Get sale for a bundle
 
@@ -455,10 +462,11 @@ class Steam(GroupCog):
             SteamSale: SteamSale database object
         """
         if not self.is_bundle(url):
-            raise ValueError("Invalid Steam Bundle URL")
+            msg = "Invalid Steam Bundle URL"
+            raise ValueError(msg)
 
-        html = requests.get(url).text
-        soup = BeautifulSoup(html, "html.parser")
+        html = await self.get_htl(url)
+        soup = BeautifulSoup(html.text, "html.parser")
 
         price = soup.find(class_=BUNDLE_FINAL_PRICE).text[:-1].replace(",", ".")
         sale = SteamSale(
@@ -469,12 +477,12 @@ class Steam(GroupCog):
             final_price = self.price_to_num(price),
             is_dlc = False,
             is_bundle = True,
-            update_datetime = datetime.datetime.now(),
+            update_datetime = datetime.datetime.now(),  # noqa: DTZ005
         )
         return self.add_sale(sale, "bundle")
 
 
-    def get_game_sale(self, url: str) -> Sale:
+    async def get_game_sale(self, url: str) -> Sale:
         # sourcery skip: extract-method
         """get a single game sale from specific url
 
@@ -488,18 +496,19 @@ class Steam(GroupCog):
             SteamSale: SteamSale database object
         """
         if not self.is_valid_game_url(url):
-            raise ValueError("Invalid Steam Game URL")
+            msg = "Invalid Steam Game URL"
+            raise ValueError(msg)
 
-        html = requests.get(url).text
-        soup = BeautifulSoup(html, "html.parser")
+        html = await self.get_htl(url)
+        soup = BeautifulSoup(html.text, "html.parser")
 
-        add_to_cart = soup.find(class_="btn_addtocart") # what does href = re.compile do here?
+        add_to_cart = soup.find(class_="btn_addtocart")
         buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA)
 
         if price := buy_area.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", "."):
             title = soup.find(class_=SINGLE_GAME_TITLE).text
             game_id = self.get_id_from_game_url(url)
-            sale_perc = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1] # strip - and % from sale tag
+            sale_perc = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1] # strip '-' and '%' from sale tag
             final_price = self.price_to_num(price)
             is_dlc = bool(soup.find("div", class_="content"))
 
@@ -511,16 +520,20 @@ class Steam(GroupCog):
                 final_price = final_price,
                 is_dlc = is_dlc,
                 is_bundle = False,
-                update_datetime = datetime.datetime.now(),
+                update_datetime = datetime.datetime.now(),  # noqa: DTZ005
             )
             return self.add_sale(sale, "game")
 
+        msg = "Should not be reached"
+        raise NotImplementedError(msg)
+        # return None
 
-    def price_to_num(self, s: str):
+
+    def price_to_num(self, s: str) -> float:
         try:
             return float(s)
         except ValueError:
-            return float(s.strip("-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰()"))
+            return float(s.strip(CURRENCY_LABELS))
 
 
     def update_sale(self, sale: SteamSale, session: Session) -> bool:
@@ -545,7 +558,12 @@ class Steam(GroupCog):
         return False
 
 
-    def add_sale(self, sale: SteamSale | Sale, category: str, session: Session=None) -> Sale:
+    def add_sale(
+        self,
+        sale: SteamSale | Sale,
+        category: str,
+        session: Session=None, # type: ignore
+    ) -> Sale:
         """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session.
 
         Args:
@@ -561,7 +579,7 @@ class Steam(GroupCog):
             commit = True
         else:
             commit = False
-        
+
         with session:
             if isinstance(sale, dict): # Assume Sale typeddict
                 sale = self.Sale_to_SteamSale(sale)
@@ -574,7 +592,7 @@ class Steam(GroupCog):
         return self.SteamSale_to_Sale(sale)
 
 
-    def Sale_to_SteamSale(self, sale: Sale):
+    def Sale_to_SteamSale(self, sale: Sale) -> SteamSale:  # noqa: N802
         return SteamSale(
             id = self.get_id_from_game_url(sale["url"]),
             title = sale["title"],

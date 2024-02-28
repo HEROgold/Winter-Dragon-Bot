@@ -1,16 +1,12 @@
-from typing import Any
+
 import discord  # type: ignore
 from discord import app_commands
 
-from tools.config_reader import config
-from tools.database_tables import (
-    Session,
-    engine,
-    Game as GameDB,
-    LookingForGroup
-)
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools.config_reader import config
+from tools.database_tables import Game as GameDB
+from tools.database_tables import LookingForGroup, Session, engine
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
@@ -21,7 +17,7 @@ class Lfg(GroupCog):
     slash_suggest = Games.slash_suggest
 
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         with Session(engine) as session:
@@ -45,7 +41,7 @@ class Lfg(GroupCog):
             total = session.query(LookingForGroup).where(LookingForGroup.game_id == game).all()
             session.add(LookingForGroup(
                 user_id = interaction.user.id,
-                game_id = game_db.id
+                game_id = game_db.id,
             ))
             session.commit()
         c_mention = self.get_command_mention(self.slash_lfg_leave)
@@ -69,7 +65,7 @@ class Lfg(GroupCog):
         self,
         interaction:
         discord.Interaction,
-        current: str
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=i, value=i)

@@ -1,16 +1,16 @@
-from typing import Any
+
 import discord  # type: ignore
 from discord import app_commands
 
-from tools.database_tables import Session, engine, Game, Suggestion
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools.database_tables import Game, Session, Suggestion, engine
 
 
 class Games(GroupCog):
     games: list[Game]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with Session(engine) as session:
             self.games = session.query(Game).all()

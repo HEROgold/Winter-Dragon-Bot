@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Self
 
+
 class Generators(Enum):
     Candy = 1
     Ferrari = 2
@@ -29,10 +30,7 @@ class Generators(Enum):
     Cornflower = 25
 
 
-    @property
+    @classmethod
     def generation_rate(cls, generator: Self) -> float:
-        if generator.value >> 2 == 0:
-            val = generator.value / 2
-        else:
-            val = generator.value >> 2
+        val = generator.value / 2 if generator.value >> 2 == 0 else generator.value >> 2
         return val / 2

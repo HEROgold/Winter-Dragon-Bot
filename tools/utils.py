@@ -1,7 +1,18 @@
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any, TypeVar
 
 
-def get_arg(args: Sequence[Any], target: type) -> Any | None:
-    for arg in args:
-        if isinstance(arg, target):
-            return arg
+T = TypeVar("T")
+
+def get_arg(args: Sequence[Any], target: T) -> T | None:
+    return next(
+    (
+        arg
+        for arg in args
+        if isinstance(
+            arg,
+            target, # type: ignore
+        )
+    ),
+    None,
+    )

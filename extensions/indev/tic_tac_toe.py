@@ -1,21 +1,21 @@
 import asyncio
-from functools import partial
 import itertools
 import logging
 import os
-from typing import Callable, Dict, List, TypedDict
+from functools import partial
+from typing import Callable, TypedDict
 
 import discord
 import matplotlib.pyplot as plt
 import sqlalchemy
 from discord import app_commands
-from tools.ttt_ai import TicTacToeAi
 
+from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from _types.games.lobby import Lobby as GLobby
 from tools.config_reader import config
 from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
-from _types.cogs import GroupCog
-from _types.bot import WinterDragon
-from _types.games.lobby import Lobby as GLobby
+from tools.ttt_ai import TicTacToeAi
 
 
 GAME_NAME = "ttt"
@@ -23,8 +23,8 @@ GAME_NAME = "ttt"
 
 class GameData(TypedDict):
     status: str
-    member1: Dict[str, int]
-    member2: Dict[str, int]
+    member1: dict[str, int]
+    member2: dict[str, int]
 
 
 @app_commands.guild_only()
@@ -52,7 +52,7 @@ class TicTacToe(GroupCog):
     async def slash_leader_board(self, interaction: discord.Interaction) -> None:
         game_results = self.calculate_game_results(
             interaction.user.id,
-            self.get_sql_leader_board(interaction.user.id)
+            self.get_sql_leader_board(interaction.user.id),
         )
         if game_results is None:
             await interaction.response.send_message("No games found to display.", ephemeral=True)
@@ -66,11 +66,11 @@ class TicTacToe(GroupCog):
 
 
 # Make own module for making graphs
-    def make_autopct(self, values) -> Callable[..., str]:
-        def my_autopct(pct) -> str:
+    def make_autopct(self, values: list[float]) -> Callable[..., str]:
+        def my_autopct(pct: float) -> str:
             total = sum(values)
             val = int(round(pct*total/100.0))
-            return "{v:d}  ({p:.2f}%)".format(p=pct,v=val)
+            return f"{val:d}  ({pct:.2f}%)"
         return my_autopct
 
     def create_pie_chart(self, game_results: dict[str, int], interaction: discord.Interaction) -> None:
@@ -95,7 +95,7 @@ class TicTacToe(GroupCog):
                 ResultDuels.game == GAME_NAME,
                 sqlalchemy.or_(
                     ResultDuels.player_1 == interaction_user_id,
-                    ResultDuels.player_2 == interaction_user_id
+                    ResultDuels.player_2 == interaction_user_id,
             ))
             self.logger.debug(f"{result.all()=}")
             session.commit()
@@ -105,12 +105,16 @@ class TicTacToe(GroupCog):
     def calculate_game_results(
         self,
         interaction_user_id: int,
-        results: list[ResultDuels] = None
+        results: list[ResultDuels] | None = None,
     ) -> dict[str, int] | None:
         self.logger.debug(f"Calculating stats for {interaction_user_id}")
         # BASE_GAME_RESULTS = {"total": 0, "abandoned": 0, "wins": 0, "losses": 0, "draws": 0}
-        BASE_GAME_RESULTS = {"wins": 0, "losses": 0, "draws": 0}
-        game_results = BASE_GAME_RESULTS.copy()
+        base_game_results = {"wins": 0, "losses": 0, "draws": 0}
+        game_results = base_game_results.copy()
+
+        if results is None:
+            results = []
+
         for result in results:
             # game_results["total"] += 1
             if result.winner == interaction_user_id:
@@ -123,13 +127,13 @@ class TicTacToe(GroupCog):
                 # game_results["abandoned"] += 1
 
         self.logger.debug(f"{game_results=}, {results=}")
-        return game_results if game_results != BASE_GAME_RESULTS else None
+        return game_results if game_results != base_game_results else None
 
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="new",
-        description="Start a tic tac toe game/lobby, which players can join"
+        description="Start a tic tac toe game/lobby, which players can join",
     )
     async def slash_new(self, interaction: discord.Interaction) -> None:
         await interaction.response.send_message("Lobby created!\nJoin here to start playing!")
@@ -138,14 +142,14 @@ class TicTacToe(GroupCog):
         lobby = GLobby(message=response_message, max_players=2)
         lobby.start_function = partial(
             self.start_game,
-            interaction=interaction
+            interaction=interaction,
         )
 
         with Session(engine) as session:
             session.add(Lobby(
                 id = response_message.id,
                 game = GAME_NAME,
-                status = "waiting"
+                status = "waiting",
             ))
             session.commit()
 
@@ -153,7 +157,7 @@ class TicTacToe(GroupCog):
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="challenge",
-        description="Start a tic tac toe game, challenging a specific member/user"
+        description="Start a tic tac toe game, challenging a specific member/user",
     )
     async def slash_challenge(self, interaction: discord.Interaction, member: discord.Member) -> None:
         await interaction.response.send_message(f"{interaction.user.mention} challenged {member.mention} in tic tac toe!")
@@ -363,7 +367,7 @@ class TicTacToe(GroupCog):
             view=TicTacToeGame(
                 player_one = p1,
                 player_two = p2,
-            )
+            ),
         )
 
 
@@ -371,13 +375,13 @@ class TicTacToe(GroupCog):
 # To avoid other players intervening
 
 
-class TicTacToeButton(discord.ui.Button['TicTacToe']):
+class TicTacToeButton(discord.ui.Button["TicTacToe"]):
     def __init__(self, x: int, y: int) -> None:
         # A label is required, but we don't need one so a zero-width space is used, '\u200b'
         # The row parameter tells the View which row to place the button under.
         # A View can only contain up to 5 rows -- each row can only have 5 buttons.
         # Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
-        super().__init__(style=discord.ButtonStyle.secondary, label='\u200b', row=y)
+        super().__init__(style=discord.ButtonStyle.secondary, label="\u200b", row=y)
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.x = x
         self.y = y
@@ -388,7 +392,8 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         if interaction.user.id not in [view.player_x.id, view.player_o.id]:
             await interaction.response.send_message("You may not play in this game", ephemeral=True)
             return
-        elif interaction.user.id != view.current_player and not from_ai:
+
+        if interaction.user.id != view.current_player and not from_ai:
             await interaction.response.send_message("It's not your turn", ephemeral=True)
             return
 
@@ -400,13 +405,13 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
         if view.current_player == view.player_x.id:
             self.style = discord.ButtonStyle.danger
-            self.label = 'X'
+            self.label = "X"
             view.board[self.y][self.x] = view.player_x.id
             view.current_player = view.player_o.id
             content = f"It is now {view.player_o.mention or 'O'}'s turn"
         elif view.current_player == view.player_o.id:
             self.style = discord.ButtonStyle.success
-            self.label = 'O'
+            self.label = "O"
             view.board[self.y][self.x] = view.player_o.id
             view.current_player = view.player_x.id
             content = f"It is now {view.player_x.mention or 'X'}'s turn"
@@ -450,7 +455,7 @@ class TicTacToeGame(discord.ui.View):
     player_x: discord.Member
     player_o: discord.Member
     Tie = 2
-    children: List[TicTacToeButton] # type: ignore
+    children: list[TicTacToeButton] # type: ignore
 
 
     def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: GameData) -> None:
@@ -483,7 +488,7 @@ class TicTacToeGame(discord.ui.View):
         ai = TicTacToeAi(
             o=self.player_o.id,
             x=self.player_x.id,
-            board=self.board
+            board=self.board,
         )
 
         if self.player_o.bot:
@@ -522,7 +527,7 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_x.id,
                     player_2 = self.player_o.id,
                     winner = self.player_x.id,
-                    loser = self.player_o.id
+                    loser = self.player_o.id,
                 )
                 # self.game_data["status"] = "finished-player1"
                 game_result = self.player_x.id
@@ -532,7 +537,7 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_o.id,
                     player_2 = self.player_x.id,
                     winner = self.player_o.id,
-                    loser = self.player_x.id
+                    loser = self.player_x.id,
                 )
                 # self.game_data["status"] = "finished-player2"
                 game_result = self.player_o.id
@@ -546,7 +551,7 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_x.id,
                     player_2 = self.player_o.id,
                     winner = self.player_x.id,
-                    loser = self.player_o.id
+                    loser = self.player_o.id,
                 )
                 # self.game_data["status"] = "finished-player1"
                 game_result = self.player_x.id
@@ -556,7 +561,7 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_o.id,
                     player_2 = self.player_x.id,
                     winner = self.player_o.id,
-                    loser = self.player_x.id
+                    loser = self.player_x.id,
                 )
                 # self.game_data["status"] = "finished-player2"
                 game_result = self.player_o.id
@@ -569,7 +574,7 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_x.id,
                 player_2 = self.player_o.id,
                 winner = self.player_x.id,
-                loser = self.player_o.id
+                loser = self.player_o.id,
             )
             # self.game_data["status"] = "finished-player1"
             game_result = self.player_x.id
@@ -579,7 +584,7 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = self.player_o.id,
-                loser = self.player_x.id
+                loser = self.player_x.id,
             )
             # self.game_data["status"] = "finished-player2"
             game_result = self.player_o.id
@@ -591,7 +596,7 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_x.id,
                 player_2 = self.player_o.id,
                 winner = self.player_x.id,
-                loser = self.player_o.id
+                loser = self.player_o.id,
             )
             # self.game_data["status"] = "finished-player1"
             game_result = self.player_x.id
@@ -601,7 +606,7 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = self.player_o.id,
-                loser = self.player_x.id
+                loser = self.player_x.id,
             )
             # self.game_data["status"] = "finished-player2"
             game_result = self.player_o.id
@@ -630,7 +635,7 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = 0,
-                loser = 0
+                loser = 0,
             ))
             session.commit()
         return self.Tie
