@@ -30,7 +30,7 @@ class TicketView(discord.ui.View):
     def __init__(self, *, timeout: float | None = 180, channel: discord.TextChannel) -> None:
         super().__init__(timeout=timeout)
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.cooldown = commands.CooldownMapping.from_cooldown(1, config["Tickets"]["MAX_COOLDOWN"], commands.BucketType.member)
+        self.cooldown = commands.CooldownMapping.from_cooldown(1, config.getint("Tickets", "MAX_COOLDOWN"), commands.BucketType.member)
         self.channel = channel
 
 
@@ -38,8 +38,8 @@ class TicketView(discord.ui.View):
     async def close_ticket(
         self,
         interaction: discord.Interaction,
-        button: discord.ui.Button,
-        support_role: Optional[discord.Role] = None,
+        button: discord.ui.Button,  # noqa: ARG002
+        support_role: discord.Role | None = None,  # noqa: ARG002
     ) -> None:
         self.logger.info(f"{interaction.user} closed a ticket")
 
@@ -62,14 +62,14 @@ class TicketView(discord.ui.View):
     async def create_ticket(
         self,
         interaction: discord.Interaction,
-        button: discord.ui.Button,
-        support_role: Optional[discord.Role] = None,
+        button: discord.ui.Button,  # noqa: ARG002
+        support_role: discord.Role | None = None,
     ) -> None:
         "https://discordpy.readthedocs.io/en/stable/api.html?highlight=thread#discord.Thread"
         # TODO: Create a thread in self.channel, add button presser, and add support role
         self.logger.info(f"{interaction.user} created a ticket")
 
-        if retry := self.cooldown.get_bucket(interaction.message).update_rate_limit():
+        if retry := self.cooldown.get_bucket(interaction.message).update_rate_limit(): # type: ignore
             await interaction.response.send_message(f"Slow down! Try again in {round(retry, 1)} seconds!", ephemeral=True)
             return
 
@@ -98,7 +98,7 @@ class TicketView(discord.ui.View):
                 id=None,
                 title=f"Ticket for user {interaction.user.id} in channel {thread_channel.id}",
                 description=f"Description for ticket for user {interaction.user.id} in channel {thread_channel.id}",
-                opened_at=datetime.datetime.now(),
+                opened_at=datetime.datetime.now(),  # noqa: DTZ005
                 is_closed=False,
                 user_id=interaction.user.id,
                 channel_id=thread_channel.id,
@@ -135,7 +135,7 @@ class Tickets(GroupCog):
     async def database_cleanup(self) -> None:
         self.logger.info("cleaning tickets")
         with Session(engine) as session:
-            seven_days_before_today = datetime.datetime.now() - datetime.timedelta(days=7)
+            seven_days_before_today = datetime.datetime.now() - datetime.timedelta(days=7)  # noqa: DTZ005
             tickets = session.query(Ticket).where(
                 Ticket.is_closed == False, # noqa: E712
                 Ticket.opened_at <= seven_days_before_today,
