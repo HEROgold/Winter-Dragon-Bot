@@ -39,7 +39,7 @@ class Purge(Cog):
         messages = []
         async for message in interaction.channel.history(limit=count):
             message: discord.Message
-            try:  # noqa: SIM105
+            try:
                 await message.delete()
             except discord.NotFound:
                 pass

@@ -155,7 +155,7 @@ class RockPaperScissors(GroupCog):
             await interaction.response.send_message(f"Thats not a valid choice, must be one of {self.choices}", ephemeral=True)
         await interaction.response.send_message(
             content=f"{interaction.user.mention} dueled {opponent.mention} in Rock, Paper, Scissors. What's your choice?",
-            view=RPSView(first_choice=choice, player_1=interaction.user, player_2=opponent)
+            view=RPSView(first_choice=choice, player_1=interaction.user, player_2=opponent),
         )
         # await interaction.response.send_message(f"{interaction.user.mention} started Rock, Paper, Scissors, what's your choice?", view=RPSView(first_choice=choice))
         # self.set_data(self.data)
