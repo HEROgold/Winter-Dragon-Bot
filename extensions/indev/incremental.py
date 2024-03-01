@@ -20,23 +20,23 @@ def update_balance(incremental: DbIncremental) -> None:
     Args:
         incremental (DbIncremental): Db object holding incremental data
     """
-    difference = incremental.last_update - datetime.datetime.now()
+    difference = incremental.last_update - datetime.datetime.now()  # noqa: DTZ005
     seconds = math.floor(difference.total_seconds())
 
     total_gain_rate = sum(gen.generating for gen in incremental.generators)
     incremental.balance = incremental.balance + total_gain_rate * seconds
-    incremental.last_update = datetime.datetime.now()
+    incremental.last_update = datetime.datetime.now()  # noqa: DTZ005
 
 
 class ShopItems(Select):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         custom_id: str = "shop",
         placeholder: str | None = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: list[SelectOption] = None,
+        options: list[SelectOption] | None = None,
         disabled: bool = False,
         row: int | None = None,
     ) -> None:
@@ -85,7 +85,7 @@ class ShopItems(Select):
 
 
 class Shop(View):
-    timeout = 180
+    timeout_ = 180
 
     def __init__(self) -> None:
         super().__init__(timeout=180)
@@ -97,7 +97,7 @@ class Incremental(GroupCog):
     @app_commands.command(name="shop", description="Show the shopping menu")
     async def fetch_account(self, interaction: discord.Interaction) -> None:
         """Send a message, containing the shop view"""
-        await interaction.response.send_message(view=Shop(), delete_after=Shop.timeout)
+        await interaction.response.send_message(view=Shop(), delete_after=Shop.timeout_)
 
 
 async def setup(bot: WinterDragon) -> None:

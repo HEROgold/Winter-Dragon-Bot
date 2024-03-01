@@ -457,7 +457,8 @@ class LogChannels(GroupCog):
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         if not before.guild:
-            raise ValueError("before.guild not found")
+            msg = "before.guild not found"
+            raise ValueError(msg)
 
         if not before.clean_content:
             self.logger.debug(f"Empty content on {before=}")
@@ -483,7 +484,8 @@ class LogChannels(GroupCog):
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message, reason: Optional[str] = None) -> None:
         if not message.guild:
-            raise ValueError("message.guild not found")
+            msg = "message.guild not found"
+            raise ValueError(msg)
 
         if not isinstance(message, discord.Message):
             self.logger.warning(f"got {type(message)} from {message}, where expected discord.Message.")

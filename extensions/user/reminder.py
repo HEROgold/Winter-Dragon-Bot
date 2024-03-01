@@ -24,7 +24,7 @@ class Reminder(Cog):
     @tasks.loop(seconds=60)
     async def send_reminder(self) -> None:
         # self.logger.debug("checking reminders")
-        is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp
+        is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp  # noqa: DTZ005
         with Session(engine) as session:
             results = session.query(ReminderDb).where(is_past_timestamp)
             if not results.all():
@@ -44,7 +44,7 @@ class Reminder(Cog):
 
 
     @app_commands.command(name="remind", description = "Set a reminder for yourself!")
-    async def slash_reminder(
+    async def slash_reminder(  # noqa: PLR0913
         self,
         interaction: discord.Interaction,
         reminder: str,
@@ -55,8 +55,8 @@ class Reminder(Cog):
         if minutes == 0 and hours == 0 and days == 0:
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
             return
-        else:
-            seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
+
+        seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
         member = interaction.user
         time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
         with Session(engine) as session:
@@ -72,4 +72,4 @@ class Reminder(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-	await bot.add_cog(Reminder(bot))
+    await bot.add_cog(Reminder(bot))

@@ -500,7 +500,8 @@ class TicTacToeGame(discord.ui.View):
             self.logger.debug(f"best move for {self.player_x} = {row, column}")
             # self.current_player = self.player_o.id
         else:
-            raise ValueError(f"HOW DID WE GET HERE?: Expected Bot User, but got {self.player_o} and {self.player_x}")
+            msg = f"HOW DID WE GET HERE?: Expected Bot User, but got {self.player_o} and {self.player_x}"
+            raise ValueError(msg)
 
         for button in self.children:
             if button.y == row and button.x == column:

@@ -2,7 +2,6 @@ import datetime
 import itertools
 import logging
 import random
-from typing import Optional
 
 import discord
 import discord.ui
@@ -249,7 +248,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
 
     # Create multiple instances of tickets
     tickets: list[Ticket] = []
-    allowed = [i for i in range(COUNT, COUNT**2)]
+    allowed = list(range(COUNT, COUNT**2))
     for user, channel in itertools.product(users, channels):
         open_time = datetime.now()
         if random.choice([False, True]):
@@ -295,7 +294,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
         session.commit()
 
 
-def tables_test():
+def tables_test() -> None:
     with Session(engine) as session:
         # Query tickets and their related data
         # is joinedload necessary?
