@@ -623,7 +623,41 @@ class GuildRoles(Base):
 class Infractions(Base):
     __tablename__ = "infractions"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
+    infraction_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    @classmethod
+    def add_infraction_count(cls, user_id: int, amount: int) -> None:
+        """Add an infraction to a user, if it isn't in this table add it"""
+        with Session(engine) as session:
+            infraction = session.query(cls).where(cls.user_id == user_id).first()
+
+            if infraction is None:
+                infraction = cls(user_id=user_id, infraction_count=0)
+                session.add(infraction)
+
+            infraction.infraction_count += amount
+            session.commit()
+
+
+    @classmethod
+    def fetch_user(cls, id: int) -> Self:
+        """Find existing or create new user, and return it
+
+        Args:
+            id (int): Identifier for the user.
+        """
+        with Session(engine) as session:
+            logger.debug(f"Looking for user {id=}")
+
+            if user := session.query(cls).where(cls.id == id).first():
+                logger.debug(f"Returning user {id=}")
+                return user
+
+            logger.debug(f"Creating user {id=}")
+            session.add(cls(id=id))
+            session.commit()
+            return session.query(cls).where(cls.id == id).first() # type: ignore
 
 
 all_tables = Base.__subclasses__()
