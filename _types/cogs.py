@@ -42,6 +42,8 @@ class Cog(commands.Cog):
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot") # type: ignore
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
+        if self.bot:
+            self.bot.default_intents = self.bot.intents
         if not self.has_error_handler():
             self.logger.warning(f"{self.__class__} has no error handler!")
         if not self.has_app_command_error_handler():

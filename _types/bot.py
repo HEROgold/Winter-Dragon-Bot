@@ -3,7 +3,7 @@ import logging
 from typing import Any
 
 import discord
-from discord import app_commands
+from discord import Intents, app_commands
 from discord.abc import Snowflake
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands._types import BotT
@@ -36,6 +36,7 @@ class WinterDragon(AutoShardedBot):
     has_app_command_mentions: bool = False
     _global_app_commands: AppCommandStore
     _guild_app_commands: dict[int, AppCommandStore]
+    default_intents: Intents
 
 
     def __init__(  # noqa: PLR0913
