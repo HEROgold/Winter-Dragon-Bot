@@ -1,4 +1,3 @@
-
 """Main file for the bot."""
 
 import asyncio
@@ -12,31 +11,18 @@ import discord
 from discord.ext import commands
 
 from _types.bot import WinterDragon
-from tools.config_reader import (
-    config,
-)
-from tools.config_reader import (
-    get_invalid as get_invalid_configs,
-)
-from tools.config_reader import (
-    is_valid as config_validator,
-)
+from _types.errors import ConfigError
+from flask_app.app import app
+from tools.config_reader import config
+from tools.config_reader import get_invalid as get_invalid_configs
+from tools.config_reader import is_valid as config_validator
 from tools.main_log import Logs
 
 
-class ConfigError(Exception):
-    pass
-
-
 if not config_validator():
-    msg = (
-        f"""Config is not yet updated!, update the following:
+    msg = f"""Config is not yet updated!, update the following:
         {', '.join(get_invalid_configs())}"""
-    )
-    raise ConfigError(
-        msg,
-    )
-
+    raise ConfigError(msg)
 
 
 INTENTS = discord.Intents.none()
@@ -53,7 +39,7 @@ INTENTS.voice_states = True
 
 bot = WinterDragon(
     intents=INTENTS,
-    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]), # type: ignore
+    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),  # type: ignore
     case_insensitive=True,
 )
 
@@ -129,6 +115,7 @@ async def main() -> None:
 
         await mass_load()
         await bot.start(config["Tokens"]["discord_token"])
+        await app.run(host="0.0.0.0", port=5000, debug=True)  # noqa: S104
         log.daily_save_logs.start()
 
 
