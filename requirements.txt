@@ -11,3 +11,4 @@ Requests==2.31.0
 SQLAlchemy==2.0.25
 discord-ext-modal-paginator>=0.0.1
 discord-ext-prometheus
+flask[async]==3.0.2
