@@ -166,10 +166,7 @@ class ErrorHandler:
                 error_msg = error
             case commands.errors.MaxConcurrencyReached:
                 error_msg = error
-            case (
-                commands.errors.CommandInvokeError
-                | app_commands.errors.CommandInvokeError
-            ):
+            case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
                 # TODO: Add invoke error handling
                 if "403 Forbidden" in error.args:
                     pass
@@ -180,11 +177,9 @@ class ErrorHandler:
                     """)
         return error_msg
 
-
     async def get_dm(self, ctx: commands.Context) -> discord.DMChannel:
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
-
 
     async def handle_error(self) -> None:
         error = self.error
@@ -199,7 +194,6 @@ class ErrorHandler:
         message = self._get_message_from_error()
         self.logger.debug(f"{message=}")
         await self.send_message(f"{message}")
-
 
     async def send_message(self, message: str) -> None:
         interface = self.interface
