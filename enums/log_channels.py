@@ -3,6 +3,7 @@ from enum import Enum
 
 # from discord.enums import AuditLogAction
 
+
 # should reflect all AuditLogAction enums as strings
 # and some extra enums for naming channels.
 class LogCategories(Enum):
@@ -12,7 +13,6 @@ class LogCategories(Enum):
     MEMBER_JOINED = "MEMBER_JOINED"
     MEMBER_LEFT = "MEMBER_LEFT"
     MESSAGE_EDITED = "MESSAGE_EDITED"
-
 
     # Reflected enums
     GUILD_UPDATE = "GUILD_UPDATE"

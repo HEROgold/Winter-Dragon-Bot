@@ -29,7 +29,6 @@ class Generators(Enum):
     Crimson = 24
     Cornflower = 25
 
-
     @classmethod
     def generation_rate(cls, generator: Self) -> float:
         val = generator.value / 2 if generator.value >> 2 == 0 else generator.value >> 2
