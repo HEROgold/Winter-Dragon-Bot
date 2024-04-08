@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request
+
 from tools.database_tables import GuildCommands, Session, UserRoles, engine
 
 
@@ -14,4 +15,4 @@ async def settings() -> str:
     with Session(engine) as session:
         guilds = session.query(GuildCommands).all()
         users = session.query(UserRoles).all()
-    return render_template("settings.html", guilds=guilds, users=users)
+    return render_template("settings.j2", guilds=guilds, users=users)

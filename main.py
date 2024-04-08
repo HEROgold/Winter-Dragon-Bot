@@ -113,10 +113,10 @@ async def main() -> None:
         global log  # noqa: PLW0603
         log = Logs(bot=bot)
 
-        await mass_load()
-        await bot.start(config["Tokens"]["discord_token"])
-        await app.run(host="0.0.0.0", port=5000, debug=True)  # noqa: S104
+        # await mass_load()
+        # await bot.start(config["Tokens"]["discord_token"])
         log.daily_save_logs.start()
+        await app.run(host="0.0.0.0", port=5000, debug=False)  # noqa: S104
 
 
 if __name__ == "__main__":
