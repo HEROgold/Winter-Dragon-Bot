@@ -61,6 +61,7 @@ async def on_ready() -> None:
     print("Bot is running!")
     if config.getboolean("Main", "show_logged_in"):
         log.bot_logger.info(f"Logged on as {bot.user}!")
+        print("invite link: ", bot.get_bot_invite())
 
 
 async def get_extensions() -> list[str]:
