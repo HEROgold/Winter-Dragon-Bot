@@ -11,7 +11,7 @@ num2words==0.5.12
 openai==0.26.5
 Pillow==10.2.0
 psutil==5.9.5
-pymongo==4.3.3
+pymongo==4.6.3
 requests==2.31.0
 SQLAlchemy==2.0.15
 psycopg2-binary==2.9.6
