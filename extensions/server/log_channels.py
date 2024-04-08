@@ -2,14 +2,14 @@ import itertools
 from typing import Optional
 
 import discord
-from discord import CategoryChannel, app_commands
+from discord import CategoryChannel, Member, app_commands
 from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from enums.log_channels import LogCategories
 from tools.config_reader import config
-from tools.database_tables import Channel, Session, engine
+from tools.database_tables import AuditLog, Channel, Session, engine
 from tools.msg_checks import is_tic_tac_toe
 
 
@@ -158,6 +158,10 @@ class LogChannels(GroupCog):
             description=f"{member.mention} {member.name} Left the server",
             color=DELETED_COLOR,
         )
+
+    def entry_to_database(self, entry: discord.AuditLogEntry) -> None:
+        _ = AuditLog.from_audit_log(entry)
+
 
 # ----------------------
 # Helper Functions End
@@ -611,10 +615,11 @@ class LogChannels(GroupCog):
 
     async def on_bot_add(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.bot_add
+        target: Member = entry.target # type: ignore
         self.logger.debug(f"on bot_add: {entry.guild=}, {entry=}")
         await self.send_channel_logs(LogCategories.BOT_ADD, entry.guild, discord.Embed(
             title="Bot Add",
-            description=f"{entry.user.mention} added {entry.target.type} {entry.target} with reason {entry.reason or None}",
+            description=f"{entry.user.mention} added {target.mention} with reason {entry.reason or None}",
             color=CREATED_COLOR,
         ))
 
