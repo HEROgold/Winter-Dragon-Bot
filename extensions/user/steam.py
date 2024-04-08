@@ -203,7 +203,7 @@ class Steam(GroupCog):
         return embed
 
 
-    async def get_updated_sales(self, sales: list[SteamSale | Sale]) -> list[Sale]:
+    async def get_updated_sales(self, sales: list[SteamSale] | list[Sale]) -> list[Sale]:
         # sourcery skip: assign-if-exp, reintroduce-else
         """Return a new list of sales, based of a given list of sales
 
@@ -243,7 +243,7 @@ class Steam(GroupCog):
         Returns:
             bool: True, False
         """
-        if isinstance(sale, SteamSale): # type: ignore
+        if isinstance(sale, SteamSale): # noqa: SIM108
             update_period_date = sale.update_datetime + datetime.timedelta(seconds=UPDATE_PERIOD)
         else:
             update_period_date = sale["update_datetime"] + datetime.timedelta(seconds=UPDATE_PERIOD)
@@ -348,7 +348,7 @@ class Steam(GroupCog):
         """
         # return self.get_updated_sales(self.get_saved_sales(percent)) or self.get_sales_from_steam(percent)
 
-        updated_sales = await self.get_updated_sales(await self.get_saved_sales())
+        updated_sales = await self.get_updated_sales(self.get_saved_sales())
         if updated_sales == []:
             self.logger.debug("getting sales from steam")
             return list(await self.get_sales_from_steam(percent))
