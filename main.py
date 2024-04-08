@@ -123,7 +123,7 @@ async def main() -> None:
         t.start()
 
         await mass_load()
-        # await bot.start(config["Tokens"]["discord_token"])
+        await bot.start(config["Tokens"]["discord_token"])
 
 
 if __name__ == "__main__":
