@@ -47,7 +47,10 @@ class ErrorHandler:
     async def _async_init(self) -> None:
         # self.help_command = self.bot.get_app_command("help")
         self.invite_command = self.bot.get_app_command("invite")
-        self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
+        if self.invite_command is None:
+            self.server_invite = self.bot.get_bot_invite()
+        else:
+            self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
 
         await self.handle_error()
 
@@ -169,13 +172,17 @@ class ErrorHandler:
             case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
                 # TODO: Add invoke error handling
                 if "403 Forbidden" in error.args:
-                    pass
+                    error_msg = error
+            case commands.errors.CheckFailure:
+                error_msg = f"{error}" # TODO: Add check failure handling
+            case app_commands.errors.CommandSyncFailure:
+                error_msg = error
             case _:
                 error_msg = dedent(f"""
-                    Unexpected error {error.type}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
+                    Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
                     Use {self.server_invite} to join the official bot server, and submit the error code in the forums channel.
                     """)
-        return error_msg
+        return error_msg or "An unexpected error occurred."
 
     async def get_dm(self, ctx: commands.Context) -> discord.DMChannel:
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
