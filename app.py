@@ -13,7 +13,7 @@ register_blueprints(app, [ctrl, docs, page])
 def index() -> Response:
     return redirect(
         DISCORD_AUTHORIZE
-        + f"?client_id={config['main']['client_id']}"
+        + f"?client_id={config['Main']['client_id']}"
         + f"&redirect_uri={WEBSITE_URL}"
         + "&response_type=code"
         + "&scope=identify"
