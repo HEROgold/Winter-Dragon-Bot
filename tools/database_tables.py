@@ -3,6 +3,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from typing import Optional, Self
 
+from discord import AuditLogAction, AuditLogActionCategory, AuditLogEntry
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -40,7 +41,7 @@ handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(me
 logger.addHandler(handler)
 # logger.addHandler(logging.StreamHandler())
 
-engine = create_engine("sqlite:///database/db", echo=False)
+engine = create_engine("sqlite:///database/db.sqlite", echo=False)
 
 # DB string refs
 CASCADE = "CASCADE"
@@ -658,6 +659,37 @@ class Infractions(Base):
             session.add(cls(id=id))
             session.commit()
             return session.query(cls).where(cls.id == id).first() # type: ignore
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, unique=True, autoincrement=True)
+    action: Mapped[AuditLogAction] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
+    target_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    category: Mapped[AuditLogActionCategory] = mapped_column(Integer, nullable=True)
+    # # changes: Mapped[AuditLogChanges] = mapped_column(, nullable=True)
+    # before: Mapped[AuditLogDiff] = mapped_column(String, nullable=True)
+    # after: Mapped[AuditLogDiff] = mapped_column(String, nullable=True)
+
+    @classmethod
+    def from_audit_log(cls, entry: AuditLogEntry) -> Self:
+        with Session(engine) as session:
+            audit = cls(
+                id = entry.id,
+                action = entry.action,
+                reason = entry.reason,
+                created_at = entry.created_at,
+                target = entry.target,
+                category = entry.category,
+                changes = entry.changes,
+                before = entry.before,
+                after = entry.after,
+            )
+            session.add(audit)
+            session.commit()
+        return audit
 
 
 all_tables = Base.__subclasses__()
