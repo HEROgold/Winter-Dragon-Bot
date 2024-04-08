@@ -4,6 +4,7 @@ import shutil
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Self
+from urllib import parse
 
 
 PROJECT_DIR = Path(__file__).parent.parent
@@ -13,6 +14,7 @@ TEMPLATE_PATH = PROJECT_DIR / "templates/"
 STATIC_PATH = PROJECT_DIR / "static/"
 
 PERMISSIONS = 70368744177655 # All permissions
+WEBSITE_URL = parse.quote("http://localhost:5000/post_all")
 
 
 class ConfigParserSingleton:
