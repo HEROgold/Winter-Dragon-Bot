@@ -163,7 +163,7 @@ servers/docker-scpsl/
 servers/docker-conanexiles/
 database/steam/
 database/img
-database/db
+*.sqlite
 logon.txt
 readme/
 steam_cmd/
