@@ -25,11 +25,14 @@ class Logs:
         self.bot = bot
         self.bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
         self.discord_logger = logging.getLogger("discord")
+        self.flask_logger = logging.getLogger("werkzeug")
         self._delete_top_level_logs()
         self._add_sql_logger()
         self.setup_logging(self.bot_logger, "bot.log")
         self.setup_logging(self.discord_logger, "discord.log")
+        self.setup_logging(self.flask_logger, "flask.log")
         self.bot_logger.addHandler(logging.StreamHandler())
+        self.flask_logger.addHandler(logging.StreamHandler())
         self.daily_save_logs.start()
 
 
