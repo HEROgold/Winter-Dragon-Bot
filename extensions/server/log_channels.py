@@ -461,9 +461,8 @@ class LogChannels(GroupCog):
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
         if not before.guild:
-            msg = "before.guild not found"
-            raise ValueError(msg)
-
+            self.logger.debug(f"Guild not found on {before=}")
+            return
         if not before.clean_content:
             self.logger.debug(f"Empty content on {before=}")
             return
