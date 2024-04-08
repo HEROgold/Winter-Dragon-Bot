@@ -2,11 +2,13 @@
 import configparser
 import shutil
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any, Self
 
 
-TEMPLATE_PATH = "./templates/config_template.ini"
-CONFIG_PATH = "./config.ini"
+PROJECT_DIR = Path(__file__).parent.parent
+TEMPLATE_PATH = PROJECT_DIR / "templates/config_template.ini"
+CONFIG_PATH = PROJECT_DIR / "config.ini"
 
 
 class ConfigParserSingleton:
@@ -45,13 +47,3 @@ def get_invalid() -> Generator[str, Any, None]:
         for setting in config.options(section):
             if config[section][setting] == "!!":
                 yield f"{section}:{setting}"
-
-
-def main() -> None:
-    is_valid()
-
-
-if __name__ == "__main__":
-    TEMPLATE_PATH = f".{TEMPLATE_PATH}" # type: ignore
-    CONFIG_PATH = f".{CONFIG_PATH}" # type: ignore
-    main()
