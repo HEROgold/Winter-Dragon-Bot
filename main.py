@@ -14,7 +14,7 @@ from discord.ext import commands
 from _types.bot import WinterDragon
 from _types.errors import ConfigError
 from app import app
-from tools.config_reader import config
+from tools.config_reader import CONFIG_PATH, config
 from tools.config_reader import get_invalid as get_invalid_configs
 from tools.config_reader import is_valid as config_validator
 from tools.main_log import Logs
@@ -66,6 +66,9 @@ async def on_ready() -> None:
 
     config.set("Main", "application_id", f"{bot.application_id}")
     config.set("Main", "bot_invite", invite_link)
+
+    with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC101
+        config.write(f)
 
 
 async def get_extensions() -> list[str]:
