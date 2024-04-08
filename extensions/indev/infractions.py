@@ -70,4 +70,5 @@ class Infractions(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    return
     await bot.add_cog(Infractions(bot))
