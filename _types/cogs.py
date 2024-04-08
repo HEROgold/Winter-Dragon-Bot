@@ -53,12 +53,12 @@ class Cog(commands.Cog):
             self.logger.debug(f"{listener=}")
 
 
-    def is_command_disabled(self, interaction: discord.Interaction) -> None:
+    def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         # Get db info and check if command is disabled on guild, channel, or just for this user.
         # TODO: Needs testing
         guild = interaction.guild
         channel = interaction.channel
-        user = interaction.user
+        user = interaction.message.author if isinstance(interaction, commands.Context) else interaction.user
 
         with Session(engine) as session:
             targets: list[GuildCommands | Channel | User | None] = []
@@ -67,15 +67,29 @@ class Cog(commands.Cog):
             if channel:
                 targets.append(session.query(Channel).where(Channel.id == channel.id).first())
             if user:
-                targets.append(session.query(User).where(DbUser.id == user.id).first())
+                targets.append(session.query(DbUser).where(DbUser.id == user.id).first()) # type: ignore
 
-            disabled_ids = session.query(DisabledCommands).join(
+            disabled_ids = [
+                c.command_id
+                for c in session.query(DisabledCommands).join(
                 DbCommand, DisabledCommands.command_id == DbCommand.id,
                 ).where(
                     DbCommand.qual_name == interaction.command.qualified_name,
-            ) # self.id does not exist.
+                ).all()
+            ]
 
-            return next((True for target in targets if target.id in disabled_ids), False) # type: ignore
+        return next(
+            (
+                True
+                for target in targets
+                if target is not None and target.id in disabled_ids
+            ),
+            False,
+        )
+
+
+    def is_command_enabled(self, interaction: discord.Interaction) -> bool:
+        return not self.is_command_disabled(interaction)
 
 
     async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
@@ -102,7 +116,7 @@ class Cog(commands.Cog):
             if isinstance(command, app_commands.Group):
                 continue
             self.logger.debug(f"Adding is command disabled check to {command.qualified_name}")
-            command.add_check(self.is_command_disabled) # type: ignore # TODO: Needs testing
+            command.add_check(self.is_command_enabled) # type: ignore
 
     @add_mentions.before_loop
     @add_disabled_check.before_loop
