@@ -67,7 +67,7 @@ class DatabaseManager(Cog):
                 session.commit()
 
 
-    def _add_db_channel(self, channel: discord.abc.MessageableChannel) -> None:
+    def _add_db_channel(self, channel: discord.abc.Messageable) -> None:
         with Session(engine) as session:
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")

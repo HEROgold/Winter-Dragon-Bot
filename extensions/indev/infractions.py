@@ -26,17 +26,17 @@ class Infractions(GroupCog):
 
 
     @Cog.listener()
-    def on_automod_rule_create(self, rule: AutoModRule) -> None:
+    async def on_automod_rule_create(self, rule: AutoModRule) -> None:
         pass
 
 
     @Cog.listener()
-    def on_automod_rule_update(self, rule: AutoModRule) -> None:
+    async def on_automod_rule_update(self, rule: AutoModRule) -> None:
         pass
 
 
     @Cog.listener()
-    def on_automod_rule_delete(self, rule: AutoModRule) -> None:
+    async def on_automod_rule_delete(self, rule: AutoModRule) -> None:
         pass
 
 
@@ -53,7 +53,7 @@ class Infractions(GroupCog):
 
 
     @Cog.listener()
-    def on_automod_execution(self, execution: AutoModAction) -> None:
+    async def on_automod_execution(self, execution: AutoModAction) -> None:
         action = execution.action
         duration = action.duration
         user = self.bot.get_user(execution.user_id)

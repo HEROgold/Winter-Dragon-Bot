@@ -161,7 +161,7 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: InteractionChannel | None=None,
+        channel: discord.abc.GuildChannel | None=None,
     ) -> None:
         if channel is None:
             channel = interaction.channel

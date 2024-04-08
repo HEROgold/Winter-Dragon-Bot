@@ -3,7 +3,7 @@ import random
 from typing import TypedDict
 
 import discord
-from discord import CategoryChannel, Guild, Member, Thread, VoiceChannel, app_commands
+from discord import CategoryChannel, Guild, Member, Thread, User, VoiceChannel, app_commands
 from discord.abc import GuildChannel, PrivateChannel
 from discord.ext import tasks
 
@@ -20,7 +20,7 @@ GTP = GuildChannel | Thread | PrivateChannel
 
 class TeamDict(TypedDict):
     id: int
-    members: list[discord.User | discord.Member]
+    members: list[User | Member]
 
 
 @app_commands.guild_only()
@@ -243,9 +243,10 @@ class Team(GroupCog):
     async def slash_team_text(
         self,
         interaction: discord.Interaction,
-        members: list[Member],
         team_count: int = 2,
     ) -> None:
+        members = interaction.message.mentions
+
         if members is None:
             try:
                 members = interaction.user.voice.channel.members
@@ -265,7 +266,7 @@ class Team(GroupCog):
             )
             return
 
-        teams = self.split_teams(team_count, members)
+        teams = self.split_teams(team_count, members) # type: ignore
 
         embed = discord.Embed(
             title="Teams",

@@ -1,4 +1,5 @@
 import random
+from typing import Literal
 
 import discord
 from discord import app_commands
@@ -31,7 +32,7 @@ class NeverHaveIEver(GroupCog):
                 session.add(NhieQuestion(id=question_id, value=f"{nhie_base_questions[question_id]}"))
             session.commit()
 
-    def get_questions(self) -> tuple[int, str | 0]:
+    def get_questions(self) -> tuple[Literal[0], list[NhieQuestion]]:
         with Session(engine) as session:
             questions = session.query(NhieQuestion).all()
             game_id = 0
