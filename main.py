@@ -68,7 +68,7 @@ async def on_ready() -> None:
     config.set("Main", "bot_invite", invite_link)
 
     with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC101
-        config.write(f)
+        config.write(f, space_around_delimiters=False)
 
 
 async def get_extensions() -> list[str]:
