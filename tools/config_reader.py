@@ -14,6 +14,7 @@ TEMPLATE_PATH = PROJECT_DIR / "templates/"
 STATIC_PATH = PROJECT_DIR / "static/"
 
 PERMISSIONS = 70368744177655 # All permissions
+DISCORD_AUTHORIZE = "https://discord.com/oauth2/authorize"
 WEBSITE_URL = parse.quote("http://localhost:5000/post_all")
 
 

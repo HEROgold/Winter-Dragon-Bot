@@ -58,10 +58,14 @@ def setup_logging(logger: logging.Logger, filename: str) -> None:
 
 @bot.event
 async def on_ready() -> None:
+    invite_link = bot.get_bot_invite()
+
+    log.bot_logger.info(f"Logged on as {bot.user}!")
     print("Bot is running!")
-    if config.getboolean("Main", "show_logged_in"):
-        log.bot_logger.info(f"Logged on as {bot.user}!")
-        print("invite link: ", bot.get_bot_invite())
+    print("invite link: ", invite_link)
+
+    config.set("Main", "application_id", f"{bot.application_id}")
+    config.set("Main", "bot_invite", invite_link)
 
 
 async def get_extensions() -> list[str]:
