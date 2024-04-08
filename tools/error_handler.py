@@ -71,6 +71,7 @@ class ErrorHandler:
         ):
             self.logger.error(f"CommandInvokeError: {self.time_code=}")
 
+        error_msg = None
         match type(error):
             case commands.errors.MissingRequiredArgument:
                 error_msg = f"Missing a required argument, {error.param}."
