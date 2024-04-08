@@ -6,15 +6,12 @@ from _types.cogs import GroupCog
 from tools.config_reader import config
 
 
-PERMISSIONS = 70368744177655 # All permissions
-
-
 class Invite(GroupCog):
     @app_commands.command(name="bot", description="Invite this bot to your own server!")
     async def slash_invite(self, interaction: discord.Interaction) -> None:
         self.logger.debug(f"Invite created for: {interaction.user.id=}")
         await interaction.response.send_message(
-            f"https://discord.com/oauth2/authorize?client_id={self.bot.application_id}&permissions={PERMISSIONS}&scope=bot",
+            self.bot.get_bot_invite(),
             ephemeral=True,
         )
 

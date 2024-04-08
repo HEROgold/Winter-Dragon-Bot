@@ -10,7 +10,7 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from tools.config_reader import config
+from tools.config_reader import PERMISSIONS, config
 
 
 AppCommandStore = dict[str, app_commands.AppCommand]
@@ -59,6 +59,8 @@ class WinterDragon(AutoShardedBot):
 
         super().__init__(command_prefix, help_command=help_command, tree_cls=tree_cls, description=description, intents=intents, **options)
 
+    def get_bot_invite(self) -> str:
+        return f"https://discord.com/oauth2/authorize?client_id={self.application_id}&permissions={PERMISSIONS}&scope=bot"
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
         self.logger.exception(f"error in: {event_method}")

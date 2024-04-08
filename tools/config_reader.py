@@ -12,6 +12,9 @@ CONFIG_PATH = PROJECT_DIR / "config.ini"
 TEMPLATE_PATH = PROJECT_DIR / "templates/"
 STATIC_PATH = PROJECT_DIR / "static/"
 
+PERMISSIONS = 70368744177655 # All permissions
+
+
 class ConfigParserSingleton:
     _instance = None
     config: configparser.ConfigParser
