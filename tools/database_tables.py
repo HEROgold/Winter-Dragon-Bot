@@ -683,9 +683,9 @@ class AuditLog(Base):
                 created_at = entry.created_at,
                 target = entry.target,
                 category = entry.category,
-                changes = entry.changes,
-                before = entry.before,
-                after = entry.after,
+                # changes = entry.changes,
+                # before = entry.before,
+                # after = entry.after,
             )
             session.add(audit)
             session.commit()
