@@ -45,6 +45,7 @@ bot = WinterDragon(
 )
 
 tree = bot.tree
+threads: list[Thread] = []
 
 
 def setup_logging(logger: logging.Logger, filename: str) -> None:
@@ -104,6 +105,9 @@ def terminate(*args, **kwargs) -> None:
         asyncio.ensure_future(bot.close())  # noqa: RUF006
     except Exception as e:  # noqa: BLE001
         print(e)
+
+    for thread in threads:
+        del thread
     sys.exit()
 
 
@@ -114,12 +118,12 @@ async def main() -> None:
         global log  # noqa: PLW0603
         log = Logs(bot=bot)
 
+        t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000, "debug": False})  # noqa: S104
+        t.daemon = True
+        t.start()
+
         await mass_load()
         # await bot.start(config["Tokens"]["discord_token"])
-
-        t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000, "debug": False})  # noqa: S104
-        t.start()
-        t.join()
 
 
 if __name__ == "__main__":
