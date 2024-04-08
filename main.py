@@ -13,7 +13,7 @@ from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.errors import ConfigError
-from flask_app.app import app
+from app import app
 from tools.config_reader import config
 from tools.config_reader import get_invalid as get_invalid_configs
 from tools.config_reader import is_valid as config_validator
