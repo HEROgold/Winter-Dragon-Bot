@@ -7,9 +7,10 @@ from typing import Any, Self
 
 
 PROJECT_DIR = Path(__file__).parent.parent
-TEMPLATE_PATH = PROJECT_DIR / "templates/config_template.ini"
 CONFIG_PATH = PROJECT_DIR / "config.ini"
 
+TEMPLATE_PATH = PROJECT_DIR / "templates/"
+STATIC_PATH = PROJECT_DIR / "static/"
 
 class ConfigParserSingleton:
     _instance = None

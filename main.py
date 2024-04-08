@@ -115,7 +115,7 @@ async def main() -> None:
         log = Logs(bot=bot)
 
         await mass_load()
-        await bot.start(config["Tokens"]["discord_token"])
+        # await bot.start(config["Tokens"]["discord_token"])
 
         t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000, "debug": False})  # noqa: S104
         t.start()
