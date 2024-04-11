@@ -8,7 +8,7 @@ from tools.database_tables import AuthToken, Session, engine
 from tools.flask_tools import register_blueprints
 
 
-API_ENDPOINT = "https://discord.com/api/v10"
+V10 = "https://discord.com/api/v10"
 
 app = Flask(__name__, template_folder=TEMPLATE_PATH, static_folder=STATIC_PATH)
 register_blueprints(app, [ctrl, docs, page, tokens])
