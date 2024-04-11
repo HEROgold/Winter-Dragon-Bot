@@ -5,14 +5,12 @@ from flask import Blueprint, request
 from flask_login import current_user, login_required, login_user, logout_user
 
 from _types.dicts import AccessToken
-from tools.config_reader import WEBSITE_URL, config
+from tools.config_reader import OAUTH2, V10, WEBSITE_URL, config
 from tools.database_tables import AuthToken, Session, engine
 
 
 bp = Blueprint("tokens", __name__)
 
-
-API_ENDPOINT = "https://discord.com/api/v10"
 CLIENT_ID = config["Main"]["application_id"]
 CLIENT_SECRET = config["Tokens"]["client_secret"]
 
@@ -43,7 +41,7 @@ async def exchange_code() -> AccessToken:
         "Content-Type": "application/x-www-form-urlencoded"
     }
     r = requests.post(  # noqa: ASYNC100
-        f"{API_ENDPOINT}/oauth2/token",
+        f"{V10}/oauth2/token",
         data=data,
         headers=headers,
         auth=(CLIENT_ID, CLIENT_SECRET),
@@ -57,7 +55,7 @@ async def exchange_code() -> AccessToken:
     with Session(engine) as session:
         # TODO: get user id from /users/@me api
         response = requests.post(  # noqa: ASYNC100
-            f"{API_ENDPOINT}/users/@me",
+            f"{V10}/users/@me",
             headers={"Authorization": f"Bearer {j['access_token']}"},
             timeout=5
         ).json()
@@ -89,7 +87,7 @@ async def refresh_token(refresh_token: str) -> AccessToken:
         "Content-Type": "application/x-www-form-urlencoded"
     }
     r = requests.post(  # noqa: ASYNC100
-        f"{API_ENDPOINT}/oauth2/token",
+        f"{V10}/oauth2/token",
         data=data,
         headers=headers,
         auth=(CLIENT_ID, CLIENT_SECRET),
@@ -118,7 +116,7 @@ async def revoke_access_token(access_token: str) -> None:
         "Content-Type": "application/x-www-form-urlencoded"
     }
     requests.post(  # noqa: ASYNC100
-        f"{API_ENDPOINT}/oauth2/token/revoke",
+        f"{V10}/oauth2/token/revoke",
         data=data,
         headers=headers,
         auth=(CLIENT_ID, CLIENT_SECRET),
@@ -129,3 +127,31 @@ async def revoke_access_token(access_token: str) -> None:
         logout_user()
         session.query(AuthToken).where(AuthToken.access_token == access_token).delete()
         session.commit()
+
+
+# TODO Fix 400 error
+@bp.route("/callback")
+def callback() -> str:
+    code = get_token()
+    data = {
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": f"{WEBSITE_URL}",
+        "scope": "identify email"
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    response = requests.post(f"{OAUTH2}/token", data=data, headers=headers, timeout=5)
+    response.raise_for_status()
+    token = response.json()["access_token"]
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    response = requests.get(f"{V10}/users/@me", headers=headers, timeout=5)
+    response.raise_for_status()
+    user = response.json()
+    return f"{user=}"
