@@ -14,8 +14,10 @@ TEMPLATE_PATH = PROJECT_DIR / "templates/"
 STATIC_PATH = PROJECT_DIR / "static/"
 
 PERMISSIONS = 70368744177655 # All permissions
-DISCORD_AUTHORIZE = "https://discord.com/oauth2/authorize"
-DISCORD_OAUTH_TOKEN = "https://discord.com/api/oauth2/token"  # noqa: S105
+V10 = "https://discord.com/api/v10"
+OAUTH2 = "https://discord.com/api/oauth2"
+DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
+DISCORD_OAUTH_TOKEN = f"{OAUTH2}/token"
 WEBSITE_URL = parse.quote("http://localhost:5000/get_token")
 
 
