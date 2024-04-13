@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, request
+from flask_login import login_required
 
 
 bp = Blueprint("control", __name__)
 
 
+@login_required
 @bp.route("/settings", methods=["GET", "POST"])
 async def settings() -> str:
     if request.method == "POST":

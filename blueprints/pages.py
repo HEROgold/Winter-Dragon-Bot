@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template
+from flask_login import login_required
 
 from tools.database_tables import GuildCommands, Session, UserRoles, engine
 
@@ -6,6 +7,7 @@ from tools.database_tables import GuildCommands, Session, UserRoles, engine
 bp = Blueprint("pages", __name__)
 
 
+@login_required
 @bp.route("/dashboard")
 async def dashboard() -> str:
     # Fetch data from your bot and database to display on the dashboard

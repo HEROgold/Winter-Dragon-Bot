@@ -1,7 +1,7 @@
 import os
 
 from flask import Blueprint, jsonify, redirect, request, session, url_for
-from flask_login import login_user, logout_user
+from flask_login import login_required, login_user, logout_user
 from requests_oauthlib import OAuth2Session
 from werkzeug import Response
 
@@ -79,6 +79,7 @@ def callback() -> str | Response:
     return redirect(url_for(".me"))
 
 
+@login_required
 @bp.route("/logout")
 def logout() -> Response:
     logout_user()
@@ -86,6 +87,7 @@ def logout() -> Response:
     return redirect(url_for("/"))
 
 
+@login_required
 @bp.route("/me")
 def me() -> Response:
     oauth = make_session(token=session.get("oauth2_token"))
