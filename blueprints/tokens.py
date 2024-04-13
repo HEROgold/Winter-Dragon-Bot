@@ -16,7 +16,7 @@ OAUTH2_REDIRECT_URI = config["Main"]["redirect_uri"]
 AUTHORIZATION_BASE_URL = f"{V10}/oauth2/authorize"
 TOKEN_URL = f"{V10}/oauth2/token"
 
-bp = Blueprint("login", __name__)
+bp = Blueprint("tokens", __name__)
 
 if "http://" in OAUTH2_REDIRECT_URI:
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "true"
