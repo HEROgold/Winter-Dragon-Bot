@@ -81,7 +81,3 @@ def me() -> Response:
     guilds = oauth.get(f"{V10}/users/@me/guilds").json()
     connections = oauth.get(f"{V10}/users/@me/connections").json()
     return jsonify(user=user, guilds=guilds, connections=connections)
-
-
-if __name__ == "__main__":
-    bp.run()
