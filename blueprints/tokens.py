@@ -1,10 +1,12 @@
 import os
 
 from flask import Blueprint, jsonify, redirect, request, session, url_for
+from flask_login import login_user, logout_user
 from requests_oauthlib import OAuth2Session
 from werkzeug import Response
 
 from tools.config_reader import OAUTH_SCOPE, V10, config
+from tools.database_tables import User
 
 
 OAUTH2_CLIENT_ID = config["Main"]["application_id"]
@@ -64,6 +66,7 @@ def index() -> Response:
 def callback() -> str | Response:
     if request.values.get("error"):
         return request.values["error"]
+
     oauth = make_session(state=session.get("oauth2_state"))
     token = oauth.fetch_token(
         TOKEN_URL,
@@ -71,7 +74,16 @@ def callback() -> str | Response:
         authorization_response=request.url
     )
     session["oauth2_token"] = token
+
+    login_user(User.fetch_user(int(oauth.get(f"{V10}/users/@me").json()["id"])))
     return redirect(url_for(".me"))
+
+
+@bp.route("/logout")
+def logout() -> Response:
+    logout_user()
+    session.clear()
+    return redirect(url_for("/"))
 
 
 @bp.route("/me")
