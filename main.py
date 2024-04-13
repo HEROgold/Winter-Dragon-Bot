@@ -65,7 +65,7 @@ async def on_ready() -> None:
     print("invite link: ", invite_link)
 
     config.set("Main", "application_id", f"{bot.application_id}")
-    config.set("Main", "bot_invite", invite_link)
+    config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
 
     with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC101
         config.write(f, space_around_delimiters=False)

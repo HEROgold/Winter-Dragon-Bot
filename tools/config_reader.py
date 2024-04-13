@@ -28,7 +28,7 @@ OAUTH_SCOPE = [
     "identify",
     "guilds",
     "applications.commands",
-    "applications.commands.permissions.update"
+    "applications.commands.permissions.update",
     "bot",
 ]
 

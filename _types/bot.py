@@ -65,7 +65,7 @@ class WinterDragon(AutoShardedBot):
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
             + f"&permissions={PERMISSIONS}"
-            + f"&scope={quote("+".join(OAUTH_SCOPE))}"
+            + f"&scope={"+".join(OAUTH_SCOPE)}"
             + f"&redirect_uri={config['Main']['redirect_uri']}"
         )
 
