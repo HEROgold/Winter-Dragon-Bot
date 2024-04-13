@@ -115,6 +115,10 @@ def terminate(*args, **kwargs) -> None:
         print(e)
 
     for thread in threads:
+        try:
+            thread.join()
+        except Exception as e:  # noqa: BLE001
+            print(e)
         del thread
     sys.exit()
 
@@ -129,6 +133,7 @@ async def main() -> None:
         t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000, "debug": False})  # noqa: S104
         t.daemon = True
         t.start()
+        threads.append(t)
 
         await mass_load()
         await bot.start(config["Tokens"]["discord_token"])
