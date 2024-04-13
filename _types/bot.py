@@ -1,7 +1,6 @@
 import datetime
 import logging
 from typing import Any
-from urllib.parse import quote
 
 import discord
 from discord import Intents, app_commands
