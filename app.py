@@ -1,26 +1,16 @@
-from flask import Flask, redirect, request
+from flask import Flask, request
 from flask_login import LoginManager
-from werkzeug import Response
 
 from blueprints import ctrl, docs, page, tokens
-from tools.config_reader import DISCORD_AUTHORIZE, GET_TOKEN_WEBSITE_URL, STATIC_PATH, TEMPLATE_PATH, config
-from tools.database_tables import AuthToken, Session, engine
+from tools.config_reader import STATIC_PATH, TEMPLATE_PATH, config
+from tools.database_tables import User
 from tools.flask_tools import register_blueprints
 
 
 app = Flask(__name__, template_folder=TEMPLATE_PATH, static_folder=STATIC_PATH)
+app.config["SECRET_KEY"] = config["Tokens"]["client_secret"]
 register_blueprints(app, [ctrl, docs, page, tokens])
 lm = LoginManager(app)
-
-@app.route("/")
-def index() -> Response:
-    return redirect(
-        DISCORD_AUTHORIZE
-        + f"?client_id={config['Main']['application_id']}"
-        + f"&redirect_uri={GET_TOKEN_WEBSITE_URL}"
-        + "&response_type=code"
-        + "&scope=identify+guilds+guilds.members.read+relationships.read"
-    )
 
 
 @app.route("/post_all", methods=["GET", "POST"])
@@ -32,9 +22,5 @@ def post_all() -> str:
 
 
 @lm.user_loader
-def load_user(user_id: str) -> AuthToken:
-    with Session(engine) as session:
-        if at := session.query(AuthToken).where(AuthToken.user_id == int(user_id)).first():
-            return at
-    # Should not happen
-    return None # type: ignore
+def load_user(user_id: str) -> User:
+    return User.fetch_user(int(user_id))

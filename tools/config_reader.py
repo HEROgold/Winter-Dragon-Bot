@@ -19,6 +19,7 @@ OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
 DISCORD_OAUTH_TOKEN = f"{OAUTH2}/token"
 GET_TOKEN_WEBSITE_URL = parse.quote("http://localhost:5000/get_token")
+OAUTH_SCOPE = ["identify", "email", "connections", "guilds", "guilds.members.read", "relationships.read"]
 
 
 class ConfigParserSingleton:

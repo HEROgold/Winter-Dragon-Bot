@@ -26,7 +26,6 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from _types.dicts import AccessToken
 from tools.config_reader import config
 
 
@@ -115,7 +114,7 @@ class Channel(Base):
             session.commit()
 
 
-class User(Base):
+class User(Base, UserMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
@@ -693,29 +692,6 @@ class AuditLog(Base):
             session.commit()
         return audit
 
-class AuthToken(Base, UserMixin):
-    __tablename__ = "auth_tokens"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, unique=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), nullable=False)
-    access_token: Mapped[str] = mapped_column(String(200), nullable=False)
-    refresh_token: Mapped[str] = mapped_column(String(200), nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
-    expires_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
-    token_type: Mapped[str] = mapped_column(String(10), nullable=False)
-    scope: Mapped[str] = mapped_column(String(200), nullable=False)
-
-
-    def as_json(self) -> AccessToken:
-        return {
-            "user_id": self.user_id,
-            "access_token": self.access_token,
-            "refresh_token": self.refresh_token,
-            "created_at": self.created_at,
-            "expires_at": self.expires_at,
-            "token_type": self.token_type,
-            "scope": self.scope,
-        } # type: ignore
 
 all_tables = Base.__subclasses__()
 
