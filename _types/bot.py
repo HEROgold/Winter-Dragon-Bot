@@ -66,6 +66,7 @@ class WinterDragon(AutoShardedBot):
             + f"?client_id={self.application_id}"
             + f"&permissions={PERMISSIONS}"
             + f"&scope={quote("+".join(OAUTH_SCOPE))}"
+            + f"&redirect_uri={config['Main']['redirect_uri']}"
         )
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:

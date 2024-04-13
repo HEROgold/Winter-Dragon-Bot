@@ -9,7 +9,7 @@ from tools.config_reader import OAUTH_SCOPE, V10, config
 
 OAUTH2_CLIENT_ID = config["Main"]["application_id"]
 OAUTH2_CLIENT_SECRET = config["Tokens"]["client_secret"]
-OAUTH2_REDIRECT_URI = "http://localhost:5000/callback"
+OAUTH2_REDIRECT_URI = config["Main"]["redirect_uri"]
 
 AUTHORIZATION_BASE_URL = f"{V10}/oauth2/authorize"
 TOKEN_URL = f"{V10}/oauth2/token"
