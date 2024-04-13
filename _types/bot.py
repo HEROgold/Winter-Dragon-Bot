@@ -1,6 +1,7 @@
 import datetime
 import logging
 from typing import Any
+from urllib.parse import quote
 
 import discord
 from discord import Intents, app_commands
@@ -10,7 +11,7 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from tools.config_reader import DISCORD_AUTHORIZE, PERMISSIONS, config
+from tools.config_reader import DISCORD_AUTHORIZE, OAUTH_SCOPE, PERMISSIONS, config
 
 
 AppCommandStore = dict[str, app_commands.AppCommand]
@@ -64,7 +65,7 @@ class WinterDragon(AutoShardedBot):
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
             + f"&permissions={PERMISSIONS}"
-            + "&scope=bot"
+            + f"&scope={quote("+".join(OAUTH_SCOPE))}"
         )
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:

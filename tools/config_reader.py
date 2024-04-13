@@ -13,13 +13,24 @@ CONFIG_PATH = PROJECT_DIR / "config.ini"
 TEMPLATE_PATH = PROJECT_DIR / "templates/"
 STATIC_PATH = PROJECT_DIR / "static/"
 
-PERMISSIONS = 70368744177655 # All permissions
+PERMISSIONS = 70368744177655 # All bot permissions
 V10 = "https://discord.com/api/v10"
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
 DISCORD_OAUTH_TOKEN = f"{OAUTH2}/token"
 GET_TOKEN_WEBSITE_URL = parse.quote("http://localhost:5000/get_token")
-OAUTH_SCOPE = ["identify", "email", "connections", "guilds", "guilds.members.read", "relationships.read"]
+OAUTH_SCOPE = [
+    "relationships.read",
+    "guilds.members.read",
+    "connections",
+    "email",
+    "activities.read",
+    "identify",
+    "guilds",
+    "applications.commands",
+    "applications.commands.permissions.update"
+    "bot",
+]
 
 
 class ConfigParserSingleton:
