@@ -3,7 +3,7 @@ from flask_login import LoginManager
 from werkzeug import Response
 
 from blueprints import ctrl, docs, page, tokens
-from tools.config_reader import DISCORD_AUTHORIZE, STATIC_PATH, TEMPLATE_PATH, WEBSITE_URL, config
+from tools.config_reader import DISCORD_AUTHORIZE, GET_TOKEN_WEBSITE_URL, STATIC_PATH, TEMPLATE_PATH, config
 from tools.database_tables import AuthToken, Session, engine
 from tools.flask_tools import register_blueprints
 
@@ -17,10 +17,9 @@ def index() -> Response:
     return redirect(
         DISCORD_AUTHORIZE
         + f"?client_id={config['Main']['application_id']}"
-        + f"&redirect_uri={WEBSITE_URL}"
+        + f"&redirect_uri={GET_TOKEN_WEBSITE_URL}"
         + "&response_type=code"
-        + "&scope=identify+guilds+guilds.members.read"
-        # +relationships.read
+        + "&scope=identify+guilds+guilds.members.read+relationships.read"
     )
 
 

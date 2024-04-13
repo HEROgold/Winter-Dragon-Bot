@@ -18,7 +18,7 @@ V10 = "https://discord.com/api/v10"
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
 DISCORD_OAUTH_TOKEN = f"{OAUTH2}/token"
-WEBSITE_URL = parse.quote("http://localhost:5000/get_token")
+GET_TOKEN_WEBSITE_URL = parse.quote("http://localhost:5000/get_token")
 
 
 class ConfigParserSingleton:
