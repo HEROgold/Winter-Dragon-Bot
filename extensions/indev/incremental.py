@@ -8,7 +8,7 @@ from discord.ui import Select, View
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from enums.incremental import Generators
+from _types.enums import Generators
 from tools.database_tables import Incremental as DbIncremental
 from tools.database_tables import IncrementalGen as DbGen
 from tools.database_tables import Session, engine

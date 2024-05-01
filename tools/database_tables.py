@@ -28,6 +28,7 @@ from sqlalchemy.orm import (
 )
 
 from _types.enums import ChannelTypes as EChannelTypes
+from _types.enums import Generators
 from tools.config_reader import config
 
 
@@ -492,7 +493,6 @@ class Incremental(Base):
             logger.debug(f"Looking for incremental {user_id=}")
             incremental = session.query(cls).where(cls.user_id == user_id).first()
             if incremental is None:
-                from enums.incremental import Generators
                 logger.debug(f"Creating incremental {user_id=}")
                 incremental = cls(
                     user_id = user_id,

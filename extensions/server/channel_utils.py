@@ -3,9 +3,7 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-
-
-MemberRole = discord.Role | discord.Member
+from _types.typing import MemberRole
 
 
 @app_commands.guild_only()

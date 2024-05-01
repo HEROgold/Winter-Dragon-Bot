@@ -7,7 +7,7 @@ from tools.database_tables import AutoAssignRole, Session, engine
 from tools.database_tables import Role as DbRole
 
 
-# move this and other static messages to messages config?
+# TODO move this and other static messages to messages config?
 AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
 
 

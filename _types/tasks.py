@@ -7,14 +7,11 @@ import asyncio
 import datetime
 import logging
 from collections.abc import Sequence
-from typing import Any, Callable, Coroutine
 
 from discord.ext import tasks
 
+from _types.typing import CoroutineFunction
 from tools.config_reader import config
-
-
-_func = Callable[..., Coroutine[Any, Any, Any]]
 
 
 class Loop(tasks.Loop):
@@ -23,7 +20,7 @@ class Loop(tasks.Loop):
 
     def __init__(  # noqa: PLR0913
         self,
-        coro: _func,
+        coro: CoroutineFunction,
         seconds: float,
         hours: float,
         minutes: float,

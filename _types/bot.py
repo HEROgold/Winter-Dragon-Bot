@@ -10,10 +10,8 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
+from _types.typing import AppCommandStore
 from tools.config_reader import DISCORD_AUTHORIZE, OAUTH_SCOPE, PERMISSIONS, config
-
-
-AppCommandStore = dict[str, app_commands.AppCommand]
 
 
 # TODO: add explicit connector see:

@@ -8,11 +8,7 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools.config_reader import config
-
-
-UD_RANDOM_URL = "http://api.urbandictionary.com/v0/random"
-UD_DEFINE_URL = "http://api.urbandictionary.com/v0/define?term="
+from tools.config_reader import UD_DEFINE_URL, UD_RANDOM_URL, config
 
 
 class Urban(GroupCog):

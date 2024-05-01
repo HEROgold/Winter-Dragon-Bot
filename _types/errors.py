@@ -8,7 +8,7 @@ from discord import (
 from discord.ext import commands
 
 
-CommandErrors = (
+type CommandErrors = (
     commands.errors.MissingRequiredArgument
     | commands.errors.BotMissingPermissions
     | commands.errors.MissingPermissions
@@ -52,9 +52,17 @@ CommandErrors = (
     | commands.errors.MaxConcurrencyReached
 )
 
-AppCommandErrors = app_commands.errors.BotMissingPermissions | app_commands.errors.MissingPermissions | app_commands.errors.NoPrivateMessage | app_commands.errors.CommandOnCooldown | app_commands.errors.MissingRole | app_commands.errors.MissingAnyRole | app_commands.errors.CommandNotFound
+type AppCommandErrors = (
+    app_commands.errors.BotMissingPermissions
+    | app_commands.errors.MissingPermissions
+    | app_commands.errors.NoPrivateMessage
+    | app_commands.errors.CommandOnCooldown
+    | app_commands.errors.MissingRole
+    | app_commands.errors.MissingAnyRole
+    | app_commands.errors.CommandNotFound
+)
 
-AllErrors = CommandErrors | AppCommandErrors | HTTPException | DiscordException | ClientException | DiscordServerError
+type AllErrors = CommandErrors | AppCommandErrors | HTTPException | DiscordException | ClientException | DiscordServerError
 
 
 class ConfigError(Exception):

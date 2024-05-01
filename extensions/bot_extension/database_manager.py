@@ -1,3 +1,5 @@
+# TODO: rename file and cog to make be more logical. More descriptive of what it does.
+
 import datetime
 
 import discord  # type: ignore

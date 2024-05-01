@@ -2,26 +2,20 @@ from textwrap import dedent
 
 import discord
 from discord import (
-    CategoryChannel,
-    DMChannel,
-    ForumChannel,
-    GroupChannel,
-    StageChannel,
-    TextChannel,
-    Thread,
     VoiceChannel,
     app_commands,
 )
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
+from _types.typing import InteractionChannel, Optional
 from tools.database_tables import AutoChannel as AC  # noqa: N817
 from tools.database_tables import AutoChannelSettings as ACS  # noqa: N817
 from tools.database_tables import Session, engine
 
 
 CREATE_REASON = "Creating AutomaticChannel"
-InteractionChannel = VoiceChannel | StageChannel | TextChannel | ForumChannel | CategoryChannel | Thread | DMChannel | GroupChannel
+
 
 class AutomaticChannels(GroupCog):
     # FIXME: weird behavior sometimes on join/leave
@@ -121,7 +115,7 @@ class AutomaticChannels(GroupCog):
         ) -> tuple[str | None, int]:
         self.logger.debug(f"transform settings: {member}, {setting=}, {guild_setting=}")
         name = None if setting is None else setting.channel_name
-        if (
+        if (  # noqa: SIM108
             setting is None
             or guild_setting is None
             or setting.channel_limit == 0
@@ -161,10 +155,11 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: discord.abc.GuildChannel | None=None,
+        channel: Optional[InteractionChannel]=None,
     ) -> None:
-        if channel is None:
-            channel = interaction.channel
+        if channel is None and (channel := interaction.channel) is None:
+            msg = "No channel found"
+            raise ValueError(msg)
 
         if channel != VoiceChannel:
             await interaction.response.send_message(dedent(f"""{channel.mention} is not a voice channel!

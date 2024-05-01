@@ -32,6 +32,31 @@ OAUTH_SCOPE = [
     "bot",
 ]
 
+DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
+CURRENCY_LABELS = "-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰()"
+
+# Urban Dictionary API
+UD_RANDOM_URL = "http://api.urbandictionary.com/v0/random"
+UD_DEFINE_URL = "http://api.urbandictionary.com/v0/define?term="
+
+# Steam
+DISCOUNT_FINAL_PRICE = "discount_final_price"
+DISCOUNT_PERCENT = "discount_pct"
+SEARCH_GAME_TITLE = "title"
+DATA_APPID = "data-ds-appid"
+DISCOUNT_PRICES = "discount_prices"
+GAME_BUY_AREA = "game_area_purchase_game_wrapper"
+SINGLE_GAME_TITLE = "apphub_AppName"
+GAME_RELEVANT = "block responsive_apppage_details_right heading responsive_hidden"
+IS_DLC_RELEVANT_TO_YOU = "Is this DLC relevant to you?"
+BUNDLE_TITLE = "pageheader"
+BUNDLE_LINK = "tab_item_overlay"
+BUNDLE_PRICE = "price bundle_final_package_price"
+BUNDLE_DISCOUNT = "price bundle_discount"
+BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
+STEAM_SEND_PERIOD = 3600 * 3 # 3 hour cooldown on updates in seconds
+STEAM_PERIOD = STEAM_SEND_PERIOD * 10
+
 
 class ConfigParserSingleton:
     _instance = None

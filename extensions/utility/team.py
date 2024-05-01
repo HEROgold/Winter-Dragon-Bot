@@ -1,27 +1,21 @@
 import math
 import random
-from typing import TypedDict
 
 import discord
-from discord import CategoryChannel, Guild, Member, Thread, User, VoiceChannel, app_commands
-from discord.abc import GuildChannel, PrivateChannel
+from discord import CategoryChannel, Guild, Member, VoiceChannel, app_commands
 from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.typing import GTPChannel, TeamDict
 from tools import rainbow
 from tools.database_tables import Channel, Session, engine
 
 
+# TODO: move to enums
 TEAM_VOICE_TYPE = "TeamsVoice"
 TEAM_CATEGORY_TYPE = "TeamsCategory"
 TEAM_LOBBY_TYPE = "TeamsLobby"
-GTP = GuildChannel | Thread | PrivateChannel
-
-class TeamDict(TypedDict):
-    id: int
-    members: list[User | Member]
-
 
 @app_commands.guild_only()
 class Team(GroupCog):
@@ -145,7 +139,7 @@ class Team(GroupCog):
         return await self.create_teams_category(guild)
 
 
-    def get_teams_lobby(self, guild: Guild | None) -> GTP | None:
+    def get_teams_lobby(self, guild: Guild | None) -> GTPChannel | None:
         """Find a lobby channel"""
         with Session(engine) as session:
             if channel := session.query(Channel).where(
@@ -156,7 +150,7 @@ class Team(GroupCog):
             return None
 
 
-    async def create_teams_lobby(self, category: GTP | CategoryChannel) -> VoiceChannel:
+    async def create_teams_lobby(self, category: GTPChannel | CategoryChannel) -> VoiceChannel:
         """Create a lobby channel"""
         with Session(engine) as session:
             voice = await category.create_voice_channel(name="Lobby", reason="Creating lobby channel for moving users.")
@@ -170,7 +164,7 @@ class Team(GroupCog):
             return voice
 
 
-    async def fetch_teams_lobby(self, category: GTP | CategoryChannel) -> GTP | VoiceChannel:
+    async def fetch_teams_lobby(self, category: GTPChannel | CategoryChannel) -> GTPChannel | VoiceChannel:
         """Find a lobby channel, if not found create it"""
         if lobby := self.get_teams_lobby(category.guild):
             return lobby

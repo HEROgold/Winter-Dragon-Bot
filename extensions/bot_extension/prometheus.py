@@ -1,4 +1,4 @@
-
+# TODO: combine with the website
 from discord.ext.prometheus import PrometheusCog
 
 from _types.bot import WinterDragon

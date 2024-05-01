@@ -1,6 +1,5 @@
 import datetime
 import os
-from typing import TypedDict
 
 import discord
 from discord import NotFound, app_commands
@@ -8,19 +7,8 @@ from discord.ext import commands, tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
+from _types.typing import CogData
 from tools.config_reader import config
-
-
-class FileData(TypedDict):
-    filepath: str
-    cog_path: str
-    edit_time: float
-
-
-class CogData(TypedDict):
-    timestamp: float
-    files: dict[str, FileData]
-    edited: dict[str, FileData]
 
 
 class AutoCogReloader(Cog):

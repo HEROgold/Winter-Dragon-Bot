@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import re
 from textwrap import dedent
-from typing import Any, AsyncGenerator, TypedDict
+from typing import Any, AsyncGenerator
 
 import bs4
 import discord
@@ -13,45 +13,26 @@ from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools.config_reader import config
+from _types.typing import Sale
+from tools.config_reader import (
+    BUNDLE_DISCOUNT,
+    BUNDLE_FINAL_PRICE,
+    BUNDLE_LINK,
+    BUNDLE_TITLE,
+    CURRENCY_LABELS,
+    DATA_APPID,
+    DATE_FORMAT,
+    DISCOUNT_FINAL_PRICE,
+    DISCOUNT_PERCENT,
+    DISCOUNT_PRICES,
+    GAME_BUY_AREA,
+    SEARCH_GAME_TITLE,
+    SINGLE_GAME_TITLE,
+    STEAM_PERIOD,
+    STEAM_SEND_PERIOD,
+    config,
+)
 from tools.database_tables import Session, SteamSale, SteamUser, User, engine
-
-
-# Constant vars that contain tag names to look for
-DISCOUNT_FINAL_PRICE = "discount_final_price"
-DISCOUNT_PERCENT = "discount_pct"
-SEARCH_GAME_TITLE = "title"
-DATA_APPID = "data-ds-appid"
-DISCOUNT_PRICES = "discount_prices"
-
-GAME_BUY_AREA = "game_area_purchase_game_wrapper"
-SINGLE_GAME_TITLE = "apphub_AppName"
-GAME_RELEVANT = "block responsive_apppage_details_right heading responsive_hidden"
-IS_DLC_RELEVANT_TO_YOU = "Is this DLC relevant to you?"
-
-BUNDLE_TITLE = "pageheader"
-BUNDLE_LINK = "tab_item_overlay"
-BUNDLE_PRICE = "price bundle_final_package_price"
-BUNDLE_DISCOUNT = "price bundle_discount"
-BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
-
-DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
-CURRENCY_LABELS = "-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫₮₯₱₳₵₲₪₰()"
-
-# 3 hour cooldown on updates in seconds
-MSG_SEND_PERIOD = 3600 * 3
-UPDATE_PERIOD = MSG_SEND_PERIOD * 10
-
-
-class Sale(TypedDict):
-    title: str
-    url: str
-    sale_percent: int
-    final_price: int
-    is_dlc: bool
-    is_bundle: bool
-    update_datetime: datetime.datetime
-
 
 
 class Steam(GroupCog):
@@ -111,7 +92,7 @@ class Steam(GroupCog):
             await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
 
 
-    @tasks.loop(seconds=MSG_SEND_PERIOD)
+    @tasks.loop(seconds=STEAM_SEND_PERIOD)
     async def update(self) -> None:
         """
         creates a discord Embed object to send and notify users of new 100% sales.
@@ -244,9 +225,9 @@ class Steam(GroupCog):
             bool: True, False
         """
         if isinstance(sale, SteamSale): # noqa: SIM108
-            update_period_date = sale.update_datetime + datetime.timedelta(seconds=UPDATE_PERIOD)
+            update_period_date = sale.update_datetime + datetime.timedelta(seconds=STEAM_PERIOD)
         else:
-            update_period_date = sale["update_datetime"] + datetime.timedelta(seconds=UPDATE_PERIOD)
+            update_period_date = sale["update_datetime"] + datetime.timedelta(seconds=STEAM_PERIOD)
 
         return (
             update_period_date

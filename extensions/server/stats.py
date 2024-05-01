@@ -1,5 +1,4 @@
 import random
-from typing import Any
 
 import discord
 from discord import app_commands
@@ -8,13 +7,13 @@ from discord.ext import commands, tasks
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes
+from _types.typing import Optional
 from extensions.server.log_channels import NoneTypeError
 from tools import rainbow
 from tools.config_reader import config
 from tools.database_tables import Channel, Session, engine
 
 
-OptionalGuildChannel = discord.abc.GuildChannel | Any | None
 STATS = ChannelTypes.STATS.name
 
 
@@ -172,11 +171,11 @@ class Stats(GroupCog):
     async def get_guild_stats_channels(
         self, guild: discord.Guild,
     ) -> tuple[
-        OptionalGuildChannel,
-        OptionalGuildChannel,
-        OptionalGuildChannel,
-        OptionalGuildChannel,
-        OptionalGuildChannel,
+        Optional[discord.abc.GuildChannel],
+        Optional[discord.abc.GuildChannel],
+        Optional[discord.abc.GuildChannel],
+        Optional[discord.abc.GuildChannel],
+        Optional[discord.abc.GuildChannel],
     ]:
         with Session(engine) as session:
             channels = session.query(Channel).where(

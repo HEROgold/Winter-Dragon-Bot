@@ -5,7 +5,7 @@ from _types.cogs import Cog, GroupCog
 from tools.database_tables import Session, UserRoles, engine
 
 
-# move this and other static messages to messages config?
+# TODO: move this and other static messages to messages config?
 AUTO_ASSIGN_REASON = "Member joined again, AutoAssign roles the user had previously"
 
 

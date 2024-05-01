@@ -20,7 +20,7 @@ METRICS_FILE = f"{IMG_DIR}/system_metrics.png"
 END_CODEBLOCK = "```"
 
 
-STATUS = [
+STATUSES = [
     "dnd",
     "do_not_disturb",
     "idle", "invisible",
@@ -28,7 +28,7 @@ STATUS = [
     "online",
     "random",
 ]
-STATUS_TYPE = [
+STATUS_TYPES = [
     discord.Status.dnd,
     discord.Status.do_not_disturb,
     discord.Status.idle,
@@ -45,7 +45,7 @@ ACTIVITIES = [
     "watching",
     "random",
 ]
-ACTIVITY_TYPE = [
+ACTIVITY_TYPES = [
     discord.ActivityType.competing,
     discord.ActivityType.custom,
     discord.ActivityType.listening,
@@ -53,7 +53,7 @@ ACTIVITY_TYPE = [
     discord.ActivityType.streaming,
     discord.ActivityType.watching,
 ]
-STATUS_MSG = [
+STATUS_MSGS = [
     "Licking a wedding cake",
     "Eating a wedding cake",
     "Comparing wedding cakes",
@@ -117,14 +117,14 @@ class BotC(GroupCog):
         activity_type = None
 
         while status in (discord.Status.invisible, discord.Status.offline, None):
-            status = random.choice(STATUS_TYPE)
+            status = random.choice(STATUS_TYPES)
 
         while activity_type in (discord.ActivityType.custom, None):
-            activity_type = random.choice(ACTIVITY_TYPE)
+            activity_type = random.choice(ACTIVITY_TYPES)
 
         activity = discord.Activity(
             type=activity_type,
-            name=random.choice(STATUS_MSG),
+            name=random.choice(STATUS_MSGS),
         )
         return status, activity
 
@@ -138,9 +138,9 @@ class BotC(GroupCog):
         activity: str,
         msg: str = "",
     ) -> None:
-        if status.lower() not in STATUS:
+        if status.lower() not in STATUSES:
             await interaction.response.send_message(
-                f"Status not found, can only be\n{STATUS}", ephemeral=True,
+                f"Status not found, can only be\n{STATUSES}", ephemeral=True,
             )
             return
         if activity.lower() not in ACTIVITIES:
@@ -180,9 +180,9 @@ class BotC(GroupCog):
     ) -> list[app_commands.Choice[str]]:
         return [
             app_commands.Choice(name=stat, value=stat)
-            for stat in STATUS
+            for stat in STATUSES
             if current.lower() in stat.lower()
-        ] or [app_commands.Choice(name=stat, value=stat) for stat in STATUS]
+        ] or [app_commands.Choice(name=stat, value=stat) for stat in STATUSES]
 
 
     @slash_bot_activity.autocomplete("activity")

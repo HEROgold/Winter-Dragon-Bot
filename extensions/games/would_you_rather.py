@@ -6,12 +6,13 @@ from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.enums import SuggestionTypes
 from tools import rainbow
 from tools.config_reader import config
 from tools.database_tables import Session, Suggestion, WyrQuestion, engine
 
 
-WYR = "wyr"
+WYR = SuggestionTypes.WOULD_YOU_RATHER
 
 
 class WouldYouRather(GroupCog):
