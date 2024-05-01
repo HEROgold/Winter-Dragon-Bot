@@ -105,6 +105,7 @@ class Channel(Base):
 
     @classmethod
     def update(cls, channel: Self) -> None:
+        # TODO: Update whenever the bot hears a discord channel update event > on_channel_update listener
         with Session(engine) as session:
             if db_channel := session.query(Channel).where(Channel.id == channel.id).first():
                 db_channel.id = channel.id
