@@ -7,6 +7,7 @@ from discord.ext import commands, tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
+from _types.enums import ChannelTypes
 from extensions.server.log_channels import NoneTypeError
 from tools import rainbow
 from tools.config_reader import config
@@ -14,7 +15,8 @@ from tools.database_tables import Channel, Session, engine
 
 
 OptionalGuildChannel = discord.abc.GuildChannel | Any | None
-STATS = "stats"
+STATS = ChannelTypes.STATS.name
+
 
 def get_peak_count(channel: Channel | discord.abc.GuildChannel | None) -> int:
     try:

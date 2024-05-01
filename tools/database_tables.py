@@ -10,6 +10,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -26,6 +27,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 
+from _types.enums import ChannelTypes as EChannelTypes
 from tools.config_reader import config
 
 
@@ -86,7 +88,7 @@ class Guild(Base):
 class ChannelTypes(Base):
     __tablename__ = "channel_types"
 
-    type: Mapped[str] = mapped_column(String(15), primary_key=True)
+    type: Mapped[str] = mapped_column(Enum(EChannelTypes), primary_key=True)
 
 
 class Channel(Base):
