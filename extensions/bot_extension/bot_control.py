@@ -12,61 +12,9 @@ from psutil._common import snetio
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools.config_reader import config
-
-
-IMG_DIR = "./database/img"
-METRICS_FILE = f"{IMG_DIR}/system_metrics.png"
-END_CODEBLOCK = "```"
-
-
-STATUSES = [
-    "dnd",
-    "do_not_disturb",
-    "idle", "invisible",
-    "offline",
-    "online",
-    "random",
-]
-STATUS_TYPES = [
-    discord.Status.dnd,
-    discord.Status.do_not_disturb,
-    discord.Status.idle,
-    discord.Status.invisible,
-    discord.Status.offline,
-    discord.Status.online,
-]
-ACTIVITIES = [
-    "competing",
-    # "custom",
-    "listening",
-    "playing",
-    "streaming",
-    "watching",
-    "random",
-]
-ACTIVITY_TYPES = [
-    discord.ActivityType.competing,
-    discord.ActivityType.custom,
-    discord.ActivityType.listening,
-    discord.ActivityType.playing,
-    discord.ActivityType.streaming,
-    discord.ActivityType.watching,
-]
-STATUS_MSGS = [
-    "Licking a wedding cake",
-    "Eating a wedding cake",
-    "Comparing wedding cakes",
-    "Taste testing a wedding cake",
-    "Crashing a wedding to eat their cake",
-    "Getting married to eat a cake",
-    "Throwing a wedding cake",
-    "Devouring a wedding cake",
-    "Sniffing wedding cakes",
-    "Touching a wedding cake",
-    "Magically spawning a wedding cake",
-    "Wanting to eat a wedding cake and have one too",
-]
+from _types.enums import ActivityTypes, StatusTypes
+from tools import codeblock
+from tools.config_reader import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
@@ -117,20 +65,27 @@ class BotC(GroupCog):
         activity_type = None
 
         while status in (discord.Status.invisible, discord.Status.offline, None):
-            status = random.choice(STATUS_TYPES)
+            status = random.choice([i.name for i in StatusTypes])
 
         while activity_type in (discord.ActivityType.custom, None):
-            activity_type = random.choice(ACTIVITY_TYPES)
+            activity_type = random.choice([i.name for i in ActivityTypes])
 
         activity = discord.Activity(
             type=activity_type,
             name=random.choice(STATUS_MSGS),
         )
-        return status, activity
+        return discord.Status[status], activity
 
 
-    @app_commands.command(name="activity", description="change bot activity")
+    async def _start_randomizer(self, interaction: discord.Interaction) -> None:
+        config["Activity"]["PERIODIC_CHANGE"] = "True"
+        self.logger.info(f"Turned on periodic activity change by {interaction.user}")
+        await interaction.response.send_message("I will randomly change my status and activity", ephemeral=True)
+        self.activity_switch.start()
+
+
     @commands.is_owner()
+    @app_commands.command(name="activity", description="change bot activity")
     async def slash_bot_activity(
         self,
         interaction: discord.Interaction,
@@ -138,38 +93,35 @@ class BotC(GroupCog):
         activity: str,
         msg: str = "",
     ) -> None:
-        if status.lower() not in STATUSES:
-            await interaction.response.send_message(
-                f"Status not found, can only be\n{STATUSES}", ephemeral=True,
-            )
-            return
-        if activity.lower() not in ACTIVITIES:
-            await interaction.response.send_message(
-                f"Activity not found, can only be\n{ACTIVITIES}", ephemeral=True,
-            )
-            return
-        if status.lower() == "random" and activity.lower() == "random":
-            config["Activity"]["PERIODIC_CHANGE"] = "True"
-            self.logger.info(f"Turned on periodic activity change by {interaction.user}")
-            await interaction.response.send_message(
-                "I will randomly change my status and activity", ephemeral=True,
-            )
-            self.activity_switch.start()
-            return
-        if status.lower() == "random" or activity.lower() == "random":
-            await interaction.response.send_message(
-                "Both status and activity need to be random or not chosen.", ephemeral=True,
-            )
-            return
-        status_attr = getattr(discord.Status, status, discord.Status.online)
-        activity_type = getattr(discord.ActivityType, activity, discord.ActivityType.playing)
+        status = status.lower()
+        activity = activity.lower()
+        statuses = ", ".join([i.name for i in StatusTypes])
+        activities = ", ".join([i.name for i in ActivityTypes])
+
+        if status not in [i.name.lower() for i in StatusTypes]:
+            return await interaction.response.send_message(f"Status not found, can only be\n{statuses}", ephemeral=True)
+
+        if activity not in activities:
+            return await interaction.response.send_message(f"Activity not found, can only be\n{activities}", ephemeral=True)
+
+        if status == "random" and activity == "random":
+            return await self._start_randomizer(interaction)
+
+        if status == "random" or activity == "random":
+            return await interaction.response.send_message("Both status and activity need to be random or not chosen.", ephemeral=True)
+
+        status_attr = discord.Status[status] or discord.Status.online
+        activity_type = discord.Status[activity] or discord.ActivityType.playing
         activity_obj = discord.Activity(type=activity_type, name=msg)
+
         await self.bot.change_presence(status=status_attr, activity=activity_obj)
         await interaction.response.send_message("Updated my activity!", ephemeral=True)
         self.logger.debug(f"Activity and status set to {activity} by {interaction.user}")
         self.logger.info(f"Turned off periodic activity change by {interaction.user}")
+
         config["Activity"]["PERIODIC_CHANGE"] = "False"
         self.activity_switch.stop()
+        return None
 
 
     @slash_bot_activity.autocomplete("status")
@@ -178,11 +130,12 @@ class BotC(GroupCog):
         interaction: discord.Interaction,  # noqa: ARG002
         current: str,
     ) -> list[app_commands.Choice[str]]:
+        statuses = [i.name for i in StatusTypes]
         return [
             app_commands.Choice(name=stat, value=stat)
-            for stat in STATUSES
+            for stat in statuses
             if current.lower() in stat.lower()
-        ] or [app_commands.Choice(name=stat, value=stat) for stat in STATUSES]
+        ] or [app_commands.Choice(name=stat, value=stat) for stat in statuses]
 
 
     @slash_bot_activity.autocomplete("activity")
@@ -191,11 +144,12 @@ class BotC(GroupCog):
         interaction: discord.Interaction,  # noqa: ARG002
         current: str,
     ) -> list[app_commands.Choice[str]]:
+        activities = [i.name for i in ActivityTypes]
         return [
             app_commands.Choice(name=activity, value=activity)
-            for activity in ACTIVITIES
+            for activity in activities
             if current.lower() in activity.lower()
-        ] or [app_commands.Choice(name=activity, value=activity) for activity in ACTIVITIES]
+        ] or [app_commands.Choice(name=activity, value=activity) for activity in activities]
 
 
     @commands.is_owner()
@@ -247,13 +201,13 @@ class BotC(GroupCog):
             color=color,
             timestamp=datetime.datetime.now(datetime.UTC),
         ).add_field(
-            name="Websocket", value=f"{colored_websocket}{latency} ms {END_CODEBLOCK}",
+            name="Websocket", value=codeblock(colored_websocket, f"{latency} ms"),
             inline=False,
         ).add_field(
-            name="Response", value=f"{colored_api_response}{response} ms {END_CODEBLOCK}",
+            name="Response", value=codeblock(colored_api_response, f"{response} ms"),
             inline=False,
         ).add_field(
-            name="Database", value=f"{colored_database}{database} ms {END_CODEBLOCK}",
+            name="Database", value=codeblock(colored_database, f"{database} ms"),
             inline=False,
         )
 
@@ -307,7 +261,7 @@ class BotC(GroupCog):
             worst_color = colors[0]
 
             embed.add_field(
-                name=f"{field_names[i]}", value=f"{ansi_color} {value} {END_CODEBLOCK}",
+                name=f"{field_names[i]}", value=codeblock(ansi_color, value),
                 inline=False,
             )
         embed.color = worst_color
@@ -333,19 +287,19 @@ class BotC(GroupCog):
     def get_colors(value: float, max_amount: int) -> tuple[str, int]:
         """Get colors based on given max value, with predefined percentages"""
         if value < max_amount * 0.4:
-            ansi_start = "```ansi\n\x1b[2;32m"
+            ansi_start = "ansi\n\x1b[2;32m"
             color = 1179392
         elif value < max_amount * 0.45:
-            ansi_start = "```ansi\n\x1b[2;33m"
+            ansi_start = "ansi\n\x1b[2;33m"
             color = 14548736
         elif value < max_amount * 0.6:
-            ansi_start = "```ansi\n\x1b[2;33m"
+            ansi_start = "ansi\n\x1b[2;33m"
             color = 16746496
         elif value < max_amount * 0.8:
-            ansi_start = "```ansi\n\x1b[2;31m"
+            ansi_start = "ansi\n\x1b[2;31m"
             color = 16729088
         else:
-            ansi_start = "```ansi\n\x1b[2;31m"
+            ansi_start = "ansi\n\x1b[2;31m"
             color = 16711680
         return (ansi_start, color)
 

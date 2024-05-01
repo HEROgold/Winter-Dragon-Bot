@@ -3,12 +3,9 @@ from discord import Role, app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
+from tools.config_reader import AUTO_ASSIGN_REASON
 from tools.database_tables import AutoAssignRole, Session, engine
 from tools.database_tables import Role as DbRole
-
-
-# TODO move this and other static messages to messages config?
-AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
 
 
 class AutoAssign(GroupCog):

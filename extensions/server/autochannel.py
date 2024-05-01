@@ -9,12 +9,10 @@ from discord import (
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.typing import InteractionChannel, Optional
+from tools.config_reader import AUTOCHANNEL_CREATE_REASON
 from tools.database_tables import AutoChannel as AC  # noqa: N817
 from tools.database_tables import AutoChannelSettings as ACS  # noqa: N817
 from tools.database_tables import Session, engine
-
-
-CREATE_REASON = "Creating AutomaticChannel"
 
 
 class AutomaticChannels(GroupCog):
@@ -93,7 +91,7 @@ class AutomaticChannels(GroupCog):
                 name,
                 category=guild.get_channel(session.query(AC).where(AC.id == guild.id).first().channel_id).category,
                 overwrites=overwrites,
-                reason=CREATE_REASON,
+                reason=AUTOCHANNEL_CREATE_REASON,
             )
 
             await member.move_to(voice_channel)
@@ -139,7 +137,7 @@ class AutomaticChannels(GroupCog):
                 category=(
                     await interaction.guild.create_category(category_name)
                 ),
-                reason=CREATE_REASON,
+                reason=AUTOCHANNEL_CREATE_REASON,
             )
 
             session.add(AC(

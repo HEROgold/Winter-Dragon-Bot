@@ -120,3 +120,22 @@ class LogCategories(Enum):
 
     def from_AuditLogAction(self, action: AuditLogAction) -> Self:  # noqa: N802
         return self.__class__[action.name.upper()]
+
+
+class StatusTypes(Enum):
+    DND = auto()
+    DO_NOT_DISTURB = auto()
+    IDLE = auto()
+    INVISIBLE = auto()
+    OFFLINE = auto()
+    ONLINE = auto()
+    RANDOM = auto()
+
+class ActivityTypes(Enum):
+    COMPETING = auto()
+    CUSTOM = auto()
+    LISTENING = auto()
+    PLAYING = auto()
+    STREAMING = auto()
+    WATCHING = auto()
+    RANDOM = auto()

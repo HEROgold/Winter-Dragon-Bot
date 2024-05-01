@@ -15,7 +15,6 @@ from tools.config_reader import config
 from tools.database_tables import Channel, Session, Ticket, Transaction, User, engine
 
 
-date_format = "%m/%d/%Y at %H:%M:%S"
 DB_CHANNEL_TYPE = "tickets"
 CLOSED_USER = "~CLOSED USER~"
 CLOSED_TIMEOUT = "~CLOSED TIMEOUT~"

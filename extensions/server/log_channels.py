@@ -8,24 +8,9 @@ from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import LogCategories
 from _types.typing import Optional
-from tools.config_reader import config
+from tools.config_reader import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CATEGORY, LOGS, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
 from tools.database_tables import AuditLog, Channel, Session, engine
 from tools.msg_checks import is_tic_tac_toe
-
-
-LOGS = "logs"
-LOG_CATEGORY = "LOG-CATEGORY"
-MEMBER_UPDATE_PROPERTIES = [
-    "nick",
-    "roles",
-    "pending",
-    "guild_avatar",
-    "guild_permissions",
-]
-MAX_CATEGORY_SIZE = 50
-CREATED_COLOR = 0x00FF00
-CHANGED_COLOR = 0xFFFF00
-DELETED_COLOR = 0xff0000
 
 
 class NoneTypeError(Exception):

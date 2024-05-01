@@ -1,11 +1,8 @@
 from collections.abc import Sequence
-from typing import Any, TypeVar
+from typing import Any
 
 
-T = TypeVar("T")
-
-
-def get_arg(args: Sequence[Any], target: T) -> T | None:
+def get_arg[T](args: Sequence[Any], target: T) -> T | None:
     return next(
         (
             arg

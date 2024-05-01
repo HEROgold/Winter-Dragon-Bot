@@ -12,8 +12,11 @@ CONFIG_PATH = PROJECT_DIR / "config.ini"
 
 TEMPLATE_PATH = PROJECT_DIR / "templates/"
 STATIC_PATH = PROJECT_DIR / "static/"
+IMG_DIR = PROJECT_DIR / "dynamic/img"
+METRICS_FILE = IMG_DIR / "system_metrics.png"
 
 PERMISSIONS = 70368744177655 # All bot permissions
+
 V10 = "https://discord.com/api/v10"
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
@@ -56,6 +59,41 @@ BUNDLE_DISCOUNT = "price bundle_discount"
 BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
 STEAM_SEND_PERIOD = 3600 * 3 # 3 hour cooldown on updates in seconds
 STEAM_PERIOD = STEAM_SEND_PERIOD * 10
+
+# Bot Status Messages
+STATUS_MSGS = [
+    "Licking a wedding cake",
+    "Eating a wedding cake",
+    "Comparing wedding cakes",
+    "Taste testing a wedding cake",
+    "Crashing a wedding to eat their cake",
+    "Getting married to eat a cake",
+    "Throwing a wedding cake",
+    "Devouring a wedding cake",
+    "Sniffing wedding cakes",
+    "Touching a wedding cake",
+    "Magically spawning a wedding cake",
+    "Wanting to eat a wedding cake and have one too",
+]
+
+# Message Reasons
+AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
+AUTOCHANNEL_CREATE_REASON = "Creating AutomaticChannel"
+
+# Logs channels
+LOGS = "logs"
+LOG_CATEGORY = "LOG-CATEGORY"
+MEMBER_UPDATE_PROPERTIES = [
+    "nick",
+    "roles",
+    "pending",
+    "guild_avatar",
+    "guild_permissions",
+]
+MAX_CATEGORY_SIZE = 50
+CREATED_COLOR = 0x00FF00
+CHANGED_COLOR = 0xFFFF00
+DELETED_COLOR = 0xff0000
 
 
 class ConfigParserSingleton:
