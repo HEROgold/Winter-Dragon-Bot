@@ -32,7 +32,9 @@ OAUTH_SCOPE = [
     "guilds",
     "applications.commands",
     "applications.commands.permissions.update",
-    "bot",
+]
+BOT_SCOPE = [
+    "bot"
 ]
 
 DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"
@@ -81,8 +83,7 @@ AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
 AUTOCHANNEL_CREATE_REASON = "Creating AutomaticChannel"
 
 # Logs channels
-LOGS = "logs"
-LOG_CATEGORY = "LOG-CATEGORY"
+LOG_CHANNEL_NAME = "LOG-CATEGORY"
 MEMBER_UPDATE_PROPERTIES = [
     "nick",
     "roles",

@@ -6,12 +6,14 @@ from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
-from _types.enums import LogCategories
+from _types.enums import ChannelTypes, LogCategories
 from _types.typing import Optional
-from tools.config_reader import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CATEGORY, LOGS, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
+from tools.config_reader import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CHANNEL_NAME, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
 from tools.database_tables import AuditLog, Channel, Session, engine
 from tools.msg_checks import is_tic_tac_toe
 
+
+LOGS = ChannelTypes.LOGS.name
 
 class NoneTypeError(Exception):
     pass
@@ -1065,7 +1067,7 @@ class LogChannels(GroupCog):
                 category_channels.append(category_channel)
                 Channel.update(Channel(
                     id = category_channel.id,
-                    name = LOG_CATEGORY,
+                    name = LOG_CHANNEL_NAME,
                     type = LOGS,
                     guild_id = category_channel.guild.id,
                 ))
@@ -1194,7 +1196,7 @@ class LogChannels(GroupCog):
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
         with Session(engine) as session:
             categories = session.query(Channel).where(
-                Channel.name == LOG_CATEGORY,
+                Channel.name == LOG_CHANNEL_NAME,
                 Channel.type == LOGS,
                 Channel.guild_id == guild.id,
             ).all()
@@ -1218,7 +1220,7 @@ class LogChannels(GroupCog):
                     category_channels.append(category_channel)
                     Channel.update(Channel(
                         id = category_channel.id,
-                        name = LOG_CATEGORY,
+                        name = LOG_CHANNEL_NAME,
                         type = LOGS,
                         guild_id = category_channel.guild.id,
                     ))

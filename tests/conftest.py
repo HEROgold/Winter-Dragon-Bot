@@ -1,7 +1,6 @@
 from typing import Any, Generator
 
 import pytest
-
 from flask import Flask
 from flask.testing import FlaskClient
 

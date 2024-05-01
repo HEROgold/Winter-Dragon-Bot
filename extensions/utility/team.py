@@ -7,15 +7,16 @@ from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.enums import ChannelTypes
 from _types.typing import GTPChannel, TeamDict
 from tools import rainbow
 from tools.database_tables import Channel, Session, engine
 
 
-# TODO: move to enums
-TEAM_VOICE_TYPE = "TeamsVoice"
-TEAM_CATEGORY_TYPE = "TeamsCategory"
-TEAM_LOBBY_TYPE = "TeamsLobby"
+TEAM_VOICE = ChannelTypes.TEAM_VOICE.name
+TEAM_CATEGORY = ChannelTypes.TEAM_CATEGORY.name
+TEAM_LOBBY = ChannelTypes.TEAM_LOBBY.name
+
 
 @app_commands.guild_only()
 class Team(GroupCog):
@@ -24,7 +25,7 @@ class Team(GroupCog):
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel"""
         with Session(engine) as session:
-            channels = session.query(Channel).where(Channel.type == TEAM_VOICE_TYPE).all()
+            channels = session.query(Channel).where(Channel.type == TEAM_VOICE).all()
             for channel in channels:
                 if discord_channel := self.bot.get_channel(channel.id):  # noqa: SIM102
                     if discord_channel.members == 0:
@@ -88,7 +89,7 @@ class Team(GroupCog):
                 db_channels.append(Channel(
                     id = voice.id,
                     name = voice.name,
-                    type = TEAM_VOICE_TYPE,
+                    type = TEAM_VOICE,
                     guild_id = voice.guild.id,
                 ))
 
@@ -101,7 +102,7 @@ class Team(GroupCog):
         """Get all team channels from database"""
         with Session(engine) as session:
             return session.query(Channel).where(
-                Channel.type == TEAM_VOICE_TYPE,
+                Channel.type == TEAM_VOICE,
                 Channel.guild_id == guild.id,
             ).all()
 
@@ -110,7 +111,7 @@ class Team(GroupCog):
         """Find a category channel"""
         with Session(engine) as session:
             if channel := session.query(Channel).where(
-                Channel.type == TEAM_CATEGORY_TYPE,
+                Channel.type == TEAM_CATEGORY,
                 Channel.guild_id == guild.id,
             ).first():
                 return self.bot.get_channel(channel.id) # type: ignore
@@ -124,7 +125,7 @@ class Team(GroupCog):
             session.add(Channel(
                 id = channel.id,
                 name = channel.name,
-                type = TEAM_CATEGORY_TYPE,
+                type = TEAM_CATEGORY,
                 guild_id = guild.id,
             ),
             )
@@ -143,7 +144,7 @@ class Team(GroupCog):
         """Find a lobby channel"""
         with Session(engine) as session:
             if channel := session.query(Channel).where(
-                Channel.type == TEAM_LOBBY_TYPE,
+                Channel.type == TEAM_LOBBY,
                 Channel.guild_id == guild.id,
             ).first():
                 return self.bot.get_channel(channel.id)
@@ -157,7 +158,7 @@ class Team(GroupCog):
             session.add(Channel(
                 id = voice.id,
                 name = voice.name,
-                type = TEAM_LOBBY_TYPE,
+                type = TEAM_LOBBY,
                 guild_id = category.guild.id,
             ))
             session.commit()

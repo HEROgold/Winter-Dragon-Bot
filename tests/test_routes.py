@@ -1,5 +1,4 @@
 from conftest import FlaskClient, get_test_client
-
 from flask import url_for
 
 

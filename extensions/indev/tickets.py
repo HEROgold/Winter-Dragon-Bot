@@ -11,11 +11,12 @@ from sqlalchemy.orm import joinedload
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.enums import ChannelTypes
 from tools.config_reader import config
 from tools.database_tables import Channel, Session, Ticket, Transaction, User, engine
 
 
-DB_CHANNEL_TYPE = "tickets"
+c_type = ChannelTypes.TICKETS.name
 CLOSED_USER = "~CLOSED USER~"
 CLOSED_TIMEOUT = "~CLOSED TIMEOUT~"
 
@@ -184,7 +185,7 @@ class Tickets(GroupCog):
     async def slash_ticket_create(self, interaction: discord.Interaction) -> None:
         with Session(engine) as session:
             channel = session.query(Channel).where(
-                Channel.type == DB_CHANNEL_TYPE,
+                Channel.type == c_type,
                 Channel.guild_id == interaction.guild.id,
             ).first()
             c_mention = await self.get_command_mention(self.slash_ticket_remove)
@@ -197,7 +198,7 @@ class Tickets(GroupCog):
             Channel.update(Channel(
                 id = dc_channel.id,
                 name = f"{dc_channel.name}",
-                type = DB_CHANNEL_TYPE,
+                type = c_type,
                 guild_id = interaction.guild.id,
             ))
             session.commit()
@@ -213,7 +214,7 @@ class Tickets(GroupCog):
         with Session(engine) as session:
             if (
                 channel := session.query(Channel).where(
-                    Channel.type == DB_CHANNEL_TYPE,
+                    Channel.type == c_type,
                     Channel.guild_id == interaction.guild.id,
                 ).first()
             ):

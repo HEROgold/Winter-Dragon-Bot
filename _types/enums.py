@@ -5,15 +5,12 @@ from discord import AuditLogAction
 
 
 class ChannelTypes(Enum):
-    TEXT = auto()
-    DM = auto()
-    VOICE = auto()
-    GROUP_DM = auto()
-    CATEGORY = auto()
-    NEWS = auto()
-    STORE = auto()
-    UNKNOWN = auto()
     STATS = auto()
+    LOGS = auto()
+    TICKETS = auto()
+    TEAM_VOICE = auto()
+    TEAM_CATEGORY = auto()
+    TEAM_LOBBY = auto()
 
 
 class Generators(Enum):
@@ -130,6 +127,7 @@ class StatusTypes(Enum):
     OFFLINE = auto()
     ONLINE = auto()
     RANDOM = auto()
+
 
 class ActivityTypes(Enum):
     COMPETING = auto()
