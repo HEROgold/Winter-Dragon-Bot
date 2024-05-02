@@ -1,5 +1,7 @@
-from flask import Blueprint, render_template
+
+from flask import Blueprint, redirect, render_template, request
 from flask_login import login_required
+from werkzeug import Response
 
 from tools.database_tables import GuildCommands, Session, UserRoles, engine
 
@@ -15,3 +17,7 @@ async def dashboard() -> str:
         guilds = session.query(GuildCommands).all()
         users = session.query(UserRoles).all()
     return render_template("dashboard.j2", guilds=guilds, users=users)
+
+@bp.route("/redirect")
+async def redirect_site() -> Response:
+    return redirect(request.args.get("redirect_url", request.referrer))
