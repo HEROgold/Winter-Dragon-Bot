@@ -21,7 +21,6 @@ from tools.config_reader import (
     BUNDLE_TITLE,
     CURRENCY_LABELS,
     DATA_APPID,
-    DATE_FORMAT,
     DISCOUNT_FINAL_PRICE,
     DISCOUNT_PERCENT,
     DISCOUNT_PRICES,
@@ -30,6 +29,7 @@ from tools.config_reader import (
     SINGLE_GAME_TITLE,
     STEAM_PERIOD,
     STEAM_SEND_PERIOD,
+    WEBSITE_URL,
     config,
 )
 from tools.database_tables import Session, SteamSale, SteamUser, User, engine
@@ -157,18 +157,19 @@ class Steam(GroupCog):
         except AttributeError:
             pass
 
-        for sale in sales:
-            # install_game_uri = f"steam://install/{game_id}"
+        for i, sale in enumerate(sales):
+            install_url = f"{WEBSITE_URL}/redirect?redirect_url=steam://install/{self.get_id_from_game_url(sale['url'])}"
             embed_text = f"""
-                Url: {sale["url"]}
+                [{sale['title']}]({sale["url"]})
                 Sale: {sale["sale_percent"]}%
-                Price {sale["final_price"]}
-                Is dlc: {sale["is_dlc"]}
-                Is bundle: {sale["is_bundle"]}
-                Last Checked: {sale["update_datetime"].strftime(DATE_FORMAT)}
+                Price: {sale["final_price"]}
+                Dlc: {sale["is_dlc"]}
+                Bundle: {sale["is_bundle"]}
+                Last Checked: <t:{int(sale["update_datetime"].timestamp())}:F>
+                Install game: [Click here]({install_url})
             """
             embed.add_field(
-                name = sale["title"],
+                name = f"Game {i+1}",
                 value = dedent(embed_text),
                 inline = False,
             )
