@@ -7,7 +7,6 @@ from discord.ext import commands
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes, LogCategories
-from _types.typing import Optional
 from tools.config_reader import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CHANNEL_NAME, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
 from tools.database_tables import AuditLog, Channel, Session, engine
 from tools.msg_checks import is_tic_tac_toe
@@ -54,7 +53,7 @@ class LogChannels(GroupCog):
         self,
         guild: discord.Guild,
         embed: discord.Embed,
-        log_category: Optional[LogCategories]=None,
+        log_category: LogCategories | None=None,
     ) -> tuple[None, None]:
         if not guild:
             self.logger.debug("No guild during DragonLog channel fetching")
@@ -472,7 +471,7 @@ class LogChannels(GroupCog):
 
 
     @Cog.listener()
-    async def on_message_delete(self, message: discord.Message, reason: Optional[str] = None) -> None:
+    async def on_message_delete(self, message: discord.Message, reason: str | None = None) -> None:
         if not message.guild:
             msg = "message.guild not found"
             raise ValueError(msg)
@@ -1138,7 +1137,7 @@ class LogChannels(GroupCog):
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     @app_commands.command(name = "update", description = "Update DragonLog channels")
-    async def slash_dragon_log_update(self, interaction: discord.Interaction, guild_id: Optional[int]=None) -> None:
+    async def slash_dragon_log_update(self, interaction: discord.Interaction, guild_id: int | None=None) -> None:
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
 

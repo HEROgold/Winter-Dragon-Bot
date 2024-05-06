@@ -7,7 +7,6 @@ from discord.ext import commands, tasks
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes
-from _types.typing import Optional
 from extensions.server.log_channels import NoneTypeError
 from tools import rainbow
 from tools.config_reader import config
@@ -171,11 +170,11 @@ class Stats(GroupCog):
     async def get_guild_stats_channels(
         self, guild: discord.Guild,
     ) -> tuple[
-        Optional[discord.abc.GuildChannel],
-        Optional[discord.abc.GuildChannel],
-        Optional[discord.abc.GuildChannel],
-        Optional[discord.abc.GuildChannel],
-        Optional[discord.abc.GuildChannel],
+        discord.abc.GuildChannel | None,
+        discord.abc.GuildChannel | None,
+        discord.abc.GuildChannel | None,
+        discord.abc.GuildChannel | None,
+        discord.abc.GuildChannel | None,
     ]:
         with Session(engine) as session:
             channels = session.query(Channel).where(

@@ -12,9 +12,43 @@ from psutil._common import snetio
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from _types.enums import ActivityTypes, StatusTypes
 from tools import codeblock
 from tools.config_reader import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
+
+
+STATUSES = [
+    "dnd",
+    "do_not_disturb",
+    "idle", "invisible",
+    "offline",
+    "online",
+    "random",
+]
+STATUS_TYPES = [
+    discord.Status.dnd,
+    discord.Status.do_not_disturb,
+    discord.Status.idle,
+    discord.Status.invisible,
+    discord.Status.offline,
+    discord.Status.online,
+]
+ACTIVITIES = [
+    "competing",
+    # "custom",
+    "listening",
+    "playing",
+    "streaming",
+    "watching",
+    "random",
+]
+ACTIVITY_TYPES = [
+    discord.ActivityType.competing,
+    discord.ActivityType.custom,
+    discord.ActivityType.listening,
+    discord.ActivityType.playing,
+    discord.ActivityType.streaming,
+    discord.ActivityType.watching,
+]
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
@@ -65,16 +99,16 @@ class BotC(GroupCog):
         activity_type = None
 
         while status in (discord.Status.invisible, discord.Status.offline, None):
-            status = random.choice([i.name for i in StatusTypes])
+            status = random.choice(STATUS_TYPES)
 
         while activity_type in (discord.ActivityType.custom, None):
-            activity_type = random.choice([i.name for i in ActivityTypes])
+            activity_type = random.choice(ACTIVITY_TYPES)
 
         activity = discord.Activity(
             type=activity_type,
             name=random.choice(STATUS_MSGS),
         )
-        return discord.Status[status], activity
+        return status, activity
 
 
     async def _start_randomizer(self, interaction: discord.Interaction) -> None:
@@ -95,10 +129,10 @@ class BotC(GroupCog):
     ) -> None:
         status = status.lower()
         activity = activity.lower()
-        statuses = ", ".join([i.name for i in StatusTypes])
-        activities = ", ".join([i.name for i in ActivityTypes])
+        statuses = ", ".join([i.name for i in STATUS_TYPES])
+        activities = ", ".join([i.name for i in ACTIVITY_TYPES])
 
-        if status not in [i.name.lower() for i in StatusTypes]:
+        if status not in [i.name.lower() for i in STATUS_TYPES]:
             return await interaction.response.send_message(f"Status not found, can only be\n{statuses}", ephemeral=True)
 
         if activity not in activities:
@@ -130,7 +164,7 @@ class BotC(GroupCog):
         interaction: discord.Interaction,  # noqa: ARG002
         current: str,
     ) -> list[app_commands.Choice[str]]:
-        statuses = [i.name for i in StatusTypes]
+        statuses = [i.name for i in STATUS_TYPES]
         return [
             app_commands.Choice(name=stat, value=stat)
             for stat in statuses
@@ -144,7 +178,7 @@ class BotC(GroupCog):
         interaction: discord.Interaction,  # noqa: ARG002
         current: str,
     ) -> list[app_commands.Choice[str]]:
-        activities = [i.name for i in ActivityTypes]
+        activities = [i.name for i in ACTIVITY_TYPES]
         return [
             app_commands.Choice(name=activity, value=activity)
             for activity in activities

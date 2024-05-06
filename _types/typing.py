@@ -2,20 +2,24 @@
 from datetime import datetime
 from typing import Any, Callable, Coroutine, TypedDict
 
-from discord import CategoryChannel, DMChannel, ForumChannel, GroupChannel, Member, Role, StageChannel, TextChannel, Thread, User, VoiceChannel
 from discord.abc import GuildChannel, PrivateChannel
 from discord.app_commands import AppCommand
+from discord.channel import CategoryChannel, DMChannel, ForumChannel, GroupChannel, StageChannel, TextChannel, VoiceChannel
+from discord.member import Member
+from discord.role import Role
+from discord.threads import Thread
+from discord.user import User
 
 
 type MISSING[T] = T | None
 type Optional[T] = T | MISSING[T]
 
-type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
-type AppCommandStore = dict[str, AppCommand]
+CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
+AppCommandStore = dict[str, AppCommand]
 
-type MemberRole = Role | Member
+MemberRole = Role | Member
 
-type InteractionChannel = (
+InteractionChannel = (
     VoiceChannel
     | StageChannel
     | TextChannel
@@ -25,7 +29,7 @@ type InteractionChannel = (
     | DMChannel
     | GroupChannel
 )
-type GTPChannel = GuildChannel | Thread | PrivateChannel
+GTPChannel = GuildChannel | Thread | PrivateChannel
 
 
 class FileData(TypedDict):

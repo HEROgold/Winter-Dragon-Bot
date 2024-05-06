@@ -79,6 +79,7 @@ STATUS_MSGS = [
     "Wanting to eat a wedding cake and have one too",
 ]
 
+
 # Message Reasons
 AUTO_ASSIGN_REASON = "Member joined, AutoAssign"
 AUTOCHANNEL_CREATE_REASON = "Creating AutomaticChannel"

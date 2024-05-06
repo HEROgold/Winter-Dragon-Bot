@@ -8,7 +8,6 @@ from discord import (
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
-from _types.typing import InteractionChannel, Optional
 from tools.config_reader import AUTOCHANNEL_CREATE_REASON
 from tools.database_tables import AutoChannel as AC  # noqa: N817
 from tools.database_tables import AutoChannelSettings as ACS  # noqa: N817
@@ -153,9 +152,9 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: Optional[InteractionChannel]=None,
+        channel: discord.abc.GuildChannel | None=None,
     ) -> None:
-        if channel is None and (channel := interaction.channel) is None:
+        if channel is None and (channel := interaction.channel) is None: # type: ignore
             msg = "No channel found"
             raise ValueError(msg)
 
