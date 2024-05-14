@@ -501,7 +501,7 @@ class LogChannels(GroupCog):
     async def audit_message_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.message_delete
         if entry != discord.audit_logs.AuditLogEntry:
-            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.AuditLogEntry.")
+            self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.audit_logs.AuditLogEntry.")
             return
 
         message: discord.Message = entry.target # type: ignore
