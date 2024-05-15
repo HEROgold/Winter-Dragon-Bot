@@ -5,7 +5,7 @@ from discord.emoji import Emoji
 from discord.enums import ButtonStyle
 from discord.partial_emoji import PartialEmoji
 
-from tools.config import config
+from config import config
 
 
 class Button(discord.ui.Button):

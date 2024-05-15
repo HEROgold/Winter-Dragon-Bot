@@ -8,7 +8,7 @@ from discord.ext import commands, tasks
 
 from _types.bot import WinterDragon
 from _types.errors import AllErrors
-from tools.config import config
+from config import config
 
 
 class ErrorHandler:

@@ -14,7 +14,7 @@ from discord.ext import tasks
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.typing import Sale
-from tools.config import (
+from config import (
     BUNDLE_DISCOUNT,
     BUNDLE_FINAL_PRICE,
     BUNDLE_LINK,

@@ -9,7 +9,7 @@ from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.enums import SuggestionTypes
 from tools import rainbow
-from tools.config import config
+from config import config
 from tools.database_tables import NhieQuestion, Session, Suggestion, engine
 
 

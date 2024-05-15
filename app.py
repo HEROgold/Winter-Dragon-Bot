@@ -2,7 +2,7 @@ from flask import Flask, request
 from flask_login import LoginManager
 
 from blueprints import ctrl, docs, page, tokens
-from tools.config import STATIC_PATH, TEMPLATE_PATH, config
+from config import STATIC_PATH, TEMPLATE_PATH, config
 from tools.database_tables import User
 from tools.flask_tools import register_blueprints
 

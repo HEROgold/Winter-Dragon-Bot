@@ -8,7 +8,7 @@ from discord.ext import commands, tasks
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.typing import CogData
-from tools.config import config
+from config import config
 
 
 class AutoCogReloader(Cog):

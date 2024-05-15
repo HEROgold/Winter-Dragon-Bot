@@ -8,7 +8,7 @@ from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog
-from tools.config import config
+from config import config
 from tools.database_tables import AssociationUserCommand as AUC  # noqa: N817
 from tools.database_tables import (
     Channel,

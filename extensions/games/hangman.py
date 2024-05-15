@@ -8,7 +8,7 @@ from discord import app_commands
 from _types.bot import WinterDragon
 from _types.button import Button
 from _types.cogs import GroupCog
-from tools.config import config
+from config import config
 from tools.database_tables import AssociationUserHangman as AUH  # noqa: N817
 from tools.database_tables import Game, Session, engine
 from tools.database_tables import Hangman as HangmanDb

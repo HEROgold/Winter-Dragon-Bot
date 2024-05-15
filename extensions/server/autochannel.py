@@ -8,7 +8,7 @@ from discord import (
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
-from tools.config import AUTOCHANNEL_CREATE_REASON
+from config import AUTOCHANNEL_CREATE_REASON
 from tools.database_tables import AutoChannel as AC  # noqa: N817
 from tools.database_tables import AutoChannelSettings as ACS  # noqa: N817
 from tools.database_tables import Session, engine

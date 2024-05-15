@@ -13,7 +13,7 @@ from discord import app_commands
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.games.lobby import Lobby as GLobby
-from tools.config import config
+from config import config
 from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
 from tools.ttt_ai import TicTacToeAi
 

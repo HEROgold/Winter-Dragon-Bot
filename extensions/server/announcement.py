@@ -7,7 +7,7 @@ from discord import app_commands
 from _types.bot import WinterDragon
 from _types.cogs import Cog
 from tools import rainbow
-from tools.config import config
+from config import config
 
 
 class Announce(Cog):

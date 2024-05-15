@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 from discord.ext import tasks
 
 from _types.bot import WinterDragon
-from tools.config import config
+from config import config
 
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")

@@ -7,7 +7,7 @@ from discord.ext import commands
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes, LogCategories
-from tools.config import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CHANNEL_NAME, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
+from config import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CHANNEL_NAME, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
 from tools.database_tables import AuditLog, Channel, Session, engine
 from tools.msg_checks import is_tic_tac_toe
 

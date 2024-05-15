@@ -7,7 +7,7 @@ from discord.ui import Button
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools.config import config
+from config import config
 from tools.database_tables import ResultDuels, Session, engine
 
 
