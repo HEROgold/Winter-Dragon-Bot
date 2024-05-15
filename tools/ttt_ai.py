@@ -13,7 +13,7 @@ class TicTacToeAi:
     board: Board
 
     def __init__(self, o: int, x: int, board: Board = None) -> None:
-        from .config_reader import config
+        from .config import config
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.logger.debug("Getting TTT AI")
         self.board = (

@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from discord.ext import tasks
 
 from _types.typing import CoroutineFunction
-from tools.config_reader import config
+from tools.config import config
 
 
 class Loop(tasks.Loop):

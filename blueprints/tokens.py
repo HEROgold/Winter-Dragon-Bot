@@ -5,7 +5,7 @@ from flask_login import login_required, login_user, logout_user
 from requests_oauthlib import OAuth2Session
 from werkzeug import Response
 
-from tools.config_reader import OAUTH_SCOPE, V10, config
+from tools.config import OAUTH_SCOPE, V10, config
 from tools.database_tables import User
 
 

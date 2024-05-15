@@ -9,7 +9,7 @@ from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes
 from extensions.server.log_channels import NoneTypeError
 from tools import rainbow
-from tools.config_reader import config
+from tools.config import config
 from tools.database_tables import Channel, Session, engine
 
 

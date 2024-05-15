@@ -3,7 +3,7 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog  #, Cog
-from tools.config_reader import config
+from tools.config import config
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))

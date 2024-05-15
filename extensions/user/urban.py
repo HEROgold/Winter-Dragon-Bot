@@ -8,7 +8,7 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools.config_reader import UD_DEFINE_URL, UD_RANDOM_URL, config
+from tools.config import UD_DEFINE_URL, UD_RANDOM_URL, config
 
 
 class Urban(GroupCog):

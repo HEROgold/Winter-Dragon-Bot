@@ -5,7 +5,7 @@ import openai
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog
-from tools.config_reader import config
+from tools.config import config
 
 
 class Translate(Cog):

@@ -3,7 +3,7 @@ import logging
 import discord
 from discord.utils import MISSING
 
-from tools.config_reader import config
+from tools.config import config
 
 
 class Modal(discord.ui.Modal):

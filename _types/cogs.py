@@ -8,7 +8,7 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
 from _types.bot import WinterDragon
-from tools.config_reader import config
+from tools.config import config
 from tools.database_tables import (
     Channel,
     DisabledCommands,

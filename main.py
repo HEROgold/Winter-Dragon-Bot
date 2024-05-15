@@ -14,9 +14,9 @@ from discord.ext import commands
 from _types.bot import WinterDragon
 from _types.errors import ConfigError
 from app import app
-from tools.config_reader import CONFIG_PATH, INTENTS, config
-from tools.config_reader import get_invalid as get_invalid_configs
-from tools.config_reader import is_valid as config_validator
+from tools.config import CONFIG_PATH, INTENTS, config
+from tools.config import get_invalid as get_invalid_configs
+from tools.config import is_valid as config_validator
 from tools.main_log import Logs
 
 

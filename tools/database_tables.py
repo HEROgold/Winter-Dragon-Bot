@@ -29,7 +29,7 @@ from sqlalchemy.orm import (
 
 from _types.enums import ChannelTypes as EChannelTypes
 from _types.enums import Generators
-from tools.config_reader import config
+from tools.config import config
 
 
 logger: logging.Logger = logging.getLogger("sqlalchemy.engine")

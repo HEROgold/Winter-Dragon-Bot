@@ -8,7 +8,7 @@ from discord import (
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
-from tools.config_reader import config
+from tools.config import config
 from tools.database_tables import Infractions as InfractionsDb
 
 
