@@ -18,7 +18,7 @@ class Games(GroupCog):
 
     @app_commands.command(name="list", description="Get a list of known games")
     async def slash_list(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(", ".join(self.games), ephemeral=True)
+        await interaction.response.send_message(", ".join(map(str, self.games)), ephemeral=True)
 
 
     @app_commands.command(name="suggest", description="Suggest a new game to be added")
