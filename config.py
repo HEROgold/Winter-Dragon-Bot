@@ -100,6 +100,7 @@ CREATED_COLOR = 0x00FF00
 CHANGED_COLOR = 0xFFFF00
 DELETED_COLOR = 0xff0000
 
+# Discord Intents
 INTENTS = discord.Intents.none()
 INTENTS.members = True
 INTENTS.guilds = True
