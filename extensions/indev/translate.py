@@ -32,7 +32,7 @@ class Translate(Cog):
         clean_content = reaction.message.clean_content
 
         self.logger.debug(f"translating message for {member}: {reaction.message}")
-        if len(clean_content) >= config.getint("Translate", "limit"):
+        if len(clean_content) >= config.getint("Translate", "limit"):  # noqa: SIM108
             emb = discord.Embed(title="Cannot Translate", description="The message is too long to translate")
         else:
             emb = self.get_response(member, land_code, clean_content)
