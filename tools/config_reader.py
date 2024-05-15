@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Self
 from urllib import parse
 
+import discord
+
 
 PROJECT_DIR = Path(__file__).parent.parent
 CONFIG_PATH = PROJECT_DIR / "config.ini"
@@ -97,6 +99,18 @@ MAX_CATEGORY_SIZE = 50
 CREATED_COLOR = 0x00FF00
 CHANGED_COLOR = 0xFFFF00
 DELETED_COLOR = 0xff0000
+
+INTENTS = discord.Intents.none()
+INTENTS.members = True
+INTENTS.guilds = True
+INTENTS.presences = True
+INTENTS.guild_messages = True
+INTENTS.dm_messages = True
+INTENTS.moderation = True
+INTENTS.message_content = True
+INTENTS.auto_moderation_configuration = True
+INTENTS.auto_moderation_execution = True
+INTENTS.voice_states = True
 
 
 class ConfigParserSingleton:

@@ -14,7 +14,7 @@ from discord.ext import commands
 from _types.bot import WinterDragon
 from _types.errors import ConfigError
 from app import app
-from tools.config_reader import CONFIG_PATH, config
+from tools.config_reader import CONFIG_PATH, INTENTS, config
 from tools.config_reader import get_invalid as get_invalid_configs
 from tools.config_reader import is_valid as config_validator
 from tools.main_log import Logs
@@ -25,18 +25,6 @@ if not config_validator():
         {', '.join(get_invalid_configs())}"""
     raise ConfigError(msg)
 
-
-INTENTS = discord.Intents.none()
-INTENTS.members = True
-INTENTS.guilds = True
-INTENTS.presences = True
-INTENTS.guild_messages = True
-INTENTS.dm_messages = True
-INTENTS.moderation = True
-INTENTS.message_content = True
-INTENTS.auto_moderation_configuration = True
-INTENTS.auto_moderation_execution = True
-INTENTS.voice_states = True
 
 bot = WinterDragon(
     intents=INTENTS,
