@@ -473,8 +473,8 @@ class LogChannels(GroupCog):
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message, reason: str | None = None) -> None:
         if not message.guild:
-            msg = "message.guild not found"
-            raise ValueError(msg)
+            self.logger.warning(f"Guild not found on {message=}, maybe DM?")
+            return
 
         if not isinstance(message, discord.Message):
             self.logger.warning(f"got {type(message)} from {message}, where expected discord.Message.")
