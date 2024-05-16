@@ -474,6 +474,7 @@ class LogChannels(GroupCog):
     async def on_message_delete(self, message: discord.Message, reason: str | None = None) -> None:
         if not message.guild:
             self.logger.warning(f"Guild not found on {message=}, maybe DM?")
+            self.logger.debug(f"Message deleted: {message.channel=}, {message.clean_content=}")
             return
 
         if not isinstance(message, discord.Message):
