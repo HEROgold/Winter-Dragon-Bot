@@ -11,7 +11,7 @@ from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
 from _types.typing import AppCommandStore
-from config import BOT_SCOPE, DISCORD_AUTHORIZE, OAUTH_SCOPE, PERMISSIONS, config
+from config import BOT_SCOPE, DISCORD_AUTHORIZE, OAUTH_SCOPE, BOT_PERMISSIONS, WEBSITE_URL, config
 
 
 # TODO: add explicit connector see:
@@ -61,9 +61,10 @@ class WinterDragon(AutoShardedBot):
         return (
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
-            + f"&permissions={PERMISSIONS}"
+            + f"&permissions={BOT_PERMISSIONS}"
             + f"&scope={"+".join(OAUTH_SCOPE+BOT_SCOPE)}"
-            + f"&redirect_uri={config['Main']['redirect_uri']}"
+            + f"&scope={"+".join(BOT_SCOPE)}"
+            + f"&redirect_uri={WEBSITE_URL}/callback"
         )
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:

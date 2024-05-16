@@ -18,6 +18,7 @@ from config import CONFIG_PATH, INTENTS, config
 from config import get_invalid as get_invalid_configs
 from config import is_valid as config_validator
 from tools.main_log import Logs
+from tools.port_finder import get_v4_port
 
 
 if not config_validator():
@@ -118,7 +119,7 @@ async def main() -> None:
         global log  # noqa: PLW0603
         log = Logs(bot=bot)
 
-        t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": 5000, "debug": False})  # noqa: S104
+        t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False})  # noqa: S104
         t.daemon = True
         t.start()
         threads.append(t)

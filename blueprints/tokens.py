@@ -5,13 +5,13 @@ from flask_login import login_required, login_user, logout_user
 from requests_oauthlib import OAuth2Session
 from werkzeug import Response
 
-from config import OAUTH_SCOPE, V10, config
+from config import OAUTH_SCOPE, V10, WEBSITE_URL, config
 from tools.database_tables import User
 
 
 OAUTH2_CLIENT_ID = config["Main"]["application_id"]
 OAUTH2_CLIENT_SECRET = config["Tokens"]["client_secret"]
-OAUTH2_REDIRECT_URI = config["Main"]["redirect_uri"]
+OAUTH2_REDIRECT_URI = f"{WEBSITE_URL}/callback"
 
 AUTHORIZATION_BASE_URL = f"{V10}/oauth2/authorize"
 TOKEN_URL = f"{V10}/oauth2/token"

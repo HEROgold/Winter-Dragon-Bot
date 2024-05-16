@@ -8,6 +8,8 @@ from urllib import parse
 
 import discord
 
+from tools.port_finder import get_v4_port
+
 
 PROJECT_DIR = Path(__file__).parent
 CONFIG_PATH = PROJECT_DIR / "config.ini"
@@ -17,13 +19,14 @@ STATIC_PATH = PROJECT_DIR / "static/"
 IMG_DIR = PROJECT_DIR / "dynamic/img"
 METRICS_FILE = IMG_DIR / "system_metrics.png"
 
-PERMISSIONS = 70368744177655 # All bot permissions
+BOT_PERMISSIONS = 70368744177655 # All bot permissions
 
 V10 = "https://discord.com/api/v10"
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
 DISCORD_OAUTH_TOKEN = f"{OAUTH2}/token"
-WEBSITE_URL = "http://localhost:5000"
+SERVER_IP = "localhost"
+WEBSITE_URL = f"http://{SERVER_IP}:{get_v4_port()}"
 GET_TOKEN_WEBSITE_URL = parse.quote(f"{WEBSITE_URL}/get_token")
 OAUTH_SCOPE = [
     "relationships.read",
