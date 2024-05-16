@@ -9,7 +9,7 @@ from urllib import parse
 import discord
 
 
-PROJECT_DIR = Path(__file__).parent.parent
+PROJECT_DIR = Path(__file__).parent
 CONFIG_PATH = PROJECT_DIR / "config.ini"
 
 TEMPLATE_PATH = PROJECT_DIR / "templates/"
@@ -129,7 +129,7 @@ class ConfigParserSingleton:
             with open(CONFIG_PATH):
                 pass
         except FileNotFoundError as e:
-            shutil.copy(TEMPLATE_PATH, CONFIG_PATH)
+            shutil.copy(TEMPLATE_PATH/"config_template.ini", CONFIG_PATH)
             to_edit = ["discord_token", "open_api_key", "bot_name", "support_guild_id"]
             msg = f"First time launch detected, please edit the following settings in {CONFIG_PATH}:\n{', '.join(to_edit)}"
             raise ValueError(msg) from e
