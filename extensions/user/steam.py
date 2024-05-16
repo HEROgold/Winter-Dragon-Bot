@@ -487,7 +487,8 @@ class Steam(GroupCog):
         add_to_cart = soup.find(class_="btn_addtocart")
         buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA)
 
-        if price := buy_area.find(class_=DISCOUNT_FINAL_PRICE).text[:-1].replace(",", "."):
+        if price := buy_area.find(class_=DISCOUNT_FINAL_PRICE):
+            price = price.text[:-1].replace(",", ".")
             title = soup.find(class_=SINGLE_GAME_TITLE).text
             game_id = self.get_id_from_game_url(url)
             sale_perc = buy_area.find(class_=DISCOUNT_PERCENT).text[1:-1] # strip '-' and '%' from sale tag
@@ -504,14 +505,36 @@ class Steam(GroupCog):
                 is_bundle = False,
                 update_datetime = datetime.datetime.now(),  # noqa: DTZ005
             )
-            return self.add_sale(sale, "game")
+            return self.add_sale(sale, "dlc" if is_dlc else "game")
 
+        if price := buy_area.find(class_="game_purchase_price"):
+            self.logger.warning(msg=f"Game not on sale: {url=}")
+
+            price = price.text[:-1].replace(",", ".")
+            title = soup.find(class_=SINGLE_GAME_TITLE).text
+            game_id = self.get_id_from_game_url(url)
+            final_price = self.price_to_num(price)
+            is_dlc = bool(soup.find("div", class_="content"))
+
+            return self.add_sale(SteamSale(
+                id = game_id,
+                title = title,
+                url = url,
+                sale_percent = 0,
+                final_price = final_price,
+                is_dlc = is_dlc,
+                is_bundle = False,
+                update_datetime = datetime.datetime.now(),  # noqa: DTZ005
+            ), "dlc" if is_dlc else "game")
+
+        self.logger.warning(f"Got empty price: {url=}")
         msg = "Should not be reached"
         raise NotImplementedError(msg)
         # return None
 
 
     def price_to_num(self, s: str) -> float:
+        s = s.strip()
         try:
             return float(s)
         except ValueError:
