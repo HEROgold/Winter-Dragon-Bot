@@ -11,7 +11,7 @@ from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
 from _types.typing import AppCommandStore
-from config import BOT_SCOPE, DISCORD_AUTHORIZE, OAUTH_SCOPE, BOT_PERMISSIONS, WEBSITE_URL, config
+from config import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL, config
 
 
 # TODO: add explicit connector see:
