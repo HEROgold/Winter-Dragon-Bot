@@ -133,6 +133,24 @@ class Cog(commands.Cog):
 
 
     def get_command_mention(self, command: app_commands.Command) -> str | None:
+        """
+        Return a command string from a given functiontype. (Decorated with app_commands.command)
+
+        Parameters
+        -----------
+        :param:`command`: :class:`app_commands.Command`
+            The command to convert.
+
+        Returns
+        -------
+        :class:`str | None`
+            The string used to use the command in discord.
+
+        Raises
+        ------
+        :class:`TypeError`
+            If the command is not an instance of app_commands.Command.
+        """
         if not isinstance(command, app_commands.Command): # type:ignore
             msg = f"Expected app_commands.commands.Command but got {type(command)} instead"
             raise TypeError(msg)
