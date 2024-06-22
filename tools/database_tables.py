@@ -1,6 +1,4 @@
 import datetime
-import logging
-from logging.handlers import RotatingFileHandler
 from typing import Optional, Self
 
 from discord import AuditLogAction, AuditLogActionCategory, AuditLogEntry
