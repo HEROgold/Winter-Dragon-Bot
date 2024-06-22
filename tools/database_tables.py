@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 from typing import Optional, Self
 
 from discord import AuditLogAction, AuditLogActionCategory, AuditLogEntry
@@ -30,6 +31,7 @@ from _types.enums import Generators
 from tools.main_log import sql_logger as logger
 
 
+Path("/database").mkdir(exist_ok=True)
 engine = create_engine("sqlite:///database/db.sqlite", echo=False)
 
 # DB string refs
