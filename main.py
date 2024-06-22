@@ -99,7 +99,8 @@ def terminate(*args, **kwargs) -> None:
     logs.logger.info("terminated")
     logs.shutdown()
     try:
-        asyncio.ensure_future(bot.close())  # noqa: RUF006
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(bot.close())
     except Exception as e:  # noqa: BLE001
         print(e)
 
@@ -108,17 +109,19 @@ def terminate(*args, **kwargs) -> None:
             thread.join()
         except Exception as e:  # noqa: BLE001
             print(e)
-        del thread
+        finally:
+            del thread
     sys.exit()
 
 
 async def main() -> None:
     async with bot:
-        t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False})  # noqa: S104
-        t.daemon = True
-        t.name = "flask"
+        t = Thread(
+            target=app.run,
+            kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},  # noqa: S104
+            daemon=True, name="flask"
+        )
         t.start()
-        threads.append(t)
 
         bot.log_saver = asyncio.create_task(logs.daily_save_logs())
         await mass_load()
