@@ -1,11 +1,10 @@
+import asyncio
 import logging
 import os
 import re
 import shutil
 from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
-
-from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from config import config
@@ -35,24 +34,19 @@ class Logs:
     def __setitem__(self, name: str, value: logging.Logger) -> None:
         self.add_logger(name, value)
 
-    @tasks.loop(hours=24)
     async def daily_save_logs(self) -> None:
-        if self.launch_time < datetime.now(UTC) + timedelta(hours=1):
-            return
-        self.logger.debug("Daily saving of logs.")
-        self.save_logs()
-        self.logging_rollover()
-        self._delete_top_level_logs()
-
-
-    @daily_save_logs.before_loop
-    async def before_async_init(self) -> None:
-        if not self.first_rollover:
-            self.first_rollover = True
-            self.logger.info("Skipping first rollover")
-            return
-        # await self.bot.wait_until_ready()
-
+        while True:
+            if not self.first_rollover:
+                self.first_rollover = True
+                self.logger.info("Skipping first rollover")
+                return
+            if self.launch_time < datetime.now(UTC) + timedelta(hours=1):
+                return
+            self.logger.debug("Daily saving of logs.")
+            self.save_logs()
+            self.logging_rollover()
+            self._delete_top_level_logs()
+            await asyncio.sleep(86400)
 
     @staticmethod
     def setup_logging(logger: logging.Logger, filename: str) -> None:

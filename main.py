@@ -120,9 +120,9 @@ async def main() -> None:
         t.start()
         threads.append(t)
 
+        bot.log_saver = asyncio.create_task(logs.daily_save_logs())
         await mass_load()
         await bot.start(config["Tokens"]["discord_token"])
-        await logs.daily_save_logs.start()
 
 
 if __name__ == "__main__":
