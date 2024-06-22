@@ -17,7 +17,7 @@ from app import app
 from config import CONFIG_PATH, INTENTS, config
 from config import get_invalid as get_invalid_configs
 from config import is_valid as config_validator
-from tools.main_log import Logs
+from tools.main_log import logs
 from tools.port_finder import get_v4_port
 
 
@@ -49,7 +49,7 @@ def setup_logging(logger: logging.Logger, filename: str) -> None:
 async def on_ready() -> None:
     invite_link = bot.get_bot_invite()
 
-    log.bot_logger.info(f"Logged on as {bot.user}!")
+    logs["bot"].info(f"Logged on as {bot.user}!")
     print("Bot is running!")
     print("invite link: ", invite_link)
 
@@ -73,14 +73,14 @@ async def get_extensions() -> list[str]:
 
 async def mass_load() -> None:
     if not (os.listdir("./extensions")):
-        log.bot_logger.critical("No extensions Directory To Load!")
+        logs["bot"].critical("No extensions Directory To Load!")
         return
     for extension in await get_extensions():
         try:
             await bot.load_extension(extension)
-            log.bot_logger.info(f"Loaded {extension}")
-        except Exception:
-            log.bot_logger.exception("")
+            logs["bot"].info(f"Loaded {extension}")
+        except Exception:  # noqa: BLE001
+            logs["bot"].exception("")
 
 
 @commands.is_owner()
@@ -88,16 +88,16 @@ async def mass_load() -> None:
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-        log.bot_logger.info("shutdown by command.")
-    except Exception:
-        log.bot_logger.exception("")
+        logs["bot"].info("shutdown by command.")
+    except Exception:  # noqa: BLE001
+        logs["bot"].exception("")
     raise KeyboardInterrupt
 
 
 def terminate(*args, **kwargs) -> None:
-    log.bot_logger.warning(f"{args=}, {kwargs=}")
-    log.bot_logger.info("terminated")
-    log.shutdown()
+    logs.logger.warning(f"{args=}, {kwargs=}")
+    logs.logger.info("terminated")
+    logs.shutdown()
     try:
         asyncio.ensure_future(bot.close())  # noqa: RUF006
     except Exception as e:  # noqa: BLE001
@@ -114,18 +114,15 @@ def terminate(*args, **kwargs) -> None:
 
 async def main() -> None:
     async with bot:
-        # global here, since they should be accessible module wide,
-        # but they require a running event loop
-        global log  # noqa: PLW0603
-        log = Logs(bot=bot)
-
         t = Thread(target=app.run, kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False})  # noqa: S104
         t.daemon = True
+        t.name = "flask"
         t.start()
         threads.append(t)
 
         await mass_load()
         await bot.start(config["Tokens"]["discord_token"])
+        await logs.daily_save_logs.start()
 
 
 if __name__ == "__main__":

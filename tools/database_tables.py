@@ -29,21 +29,8 @@ from sqlalchemy.orm import (
 
 from _types.enums import ChannelTypes as EChannelTypes
 from _types.enums import Generators
-from config import config
+from tools.main_log import sql_logger as logger
 
-
-logger: logging.Logger = logging.getLogger("sqlalchemy.engine")
-
-if "config" in locals():
-    logger.setLevel(config["Main"]["log_level"])
-else:
-    logger.setLevel("DEBUG")
-
-
-handler = RotatingFileHandler(filename="sqlalchemy.log", backupCount=7, encoding="utf-8")
-handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
-logger.addHandler(handler)
-# logger.addHandler(logging.StreamHandler())
 
 engine = create_engine("sqlite:///database/db.sqlite", echo=False)
 
