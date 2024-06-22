@@ -251,7 +251,8 @@ class LogChannels(GroupCog):
         channel = after or before
         embed = None
         # FIXME: AttributeError: 'AuditLogDiff' object has no attribute 'overwrites'. Documentation suggests it does.
-        properties = "name", "position", "type" # "overwrites",
+        # FIXME: AttributeError: 'AuditLogDiff' object has no attribute 'position'. Documentation suggests it does.
+        properties = "name", "type" # "overwrites", "position",
         # remove X since AuditLogDiff doesn't have them
         # X = "category", "permissions_synced"
 
