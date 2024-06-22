@@ -67,3 +67,6 @@ type AllErrors = CommandErrors | AppCommandErrors | HTTPException | DiscordExcep
 
 class ConfigError(Exception):
     pass
+
+class FirstTimeLaunchError(Exception):
+    pass
