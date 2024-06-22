@@ -1,16 +1,16 @@
-from typing import Any
+
 import discord  # type: ignore
 from discord import app_commands
 
-from tools.database_tables import Session, engine, Game, Suggestion
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from tools.database_tables import Game, Session, Suggestion, engine
 
 
 class Games(GroupCog):
     games: list[Game]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with Session(engine) as session:
             self.games = session.query(Game).all()
@@ -18,7 +18,7 @@ class Games(GroupCog):
 
     @app_commands.command(name="list", description="Get a list of known games")
     async def slash_list(self, interaction: discord.Interaction) -> None:
-        await interaction.response.send_message(", ".join(self.games), ephemeral=True)
+        await interaction.response.send_message(", ".join(map(str, self.games)), ephemeral=True)
 
 
     @app_commands.command(name="suggest", description="Suggest a new game to be added")

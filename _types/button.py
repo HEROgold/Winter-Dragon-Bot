@@ -1,16 +1,17 @@
 import logging
+
+import discord.ui.button
 from discord.emoji import Emoji
 from discord.enums import ButtonStyle
 from discord.partial_emoji import PartialEmoji
-import discord.ui.button
 
-from tools.config_reader import config
+from config import config
 
 
 class Button(discord.ui.Button):
     logger: logging.Logger
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         style: ButtonStyle = ButtonStyle.secondary,
@@ -20,7 +21,7 @@ class Button(discord.ui.Button):
         url: str | None = None,
         emoji: str | Emoji | PartialEmoji | None = None,
         row: int | None = None,
-    ):
+    ) -> None:
         super().__init__(
             style=style,
             label=label,
@@ -31,5 +32,5 @@ class Button(discord.ui.Button):
             row=row,
         )
         self.logger = logging.getLogger(
-            f"{config['Main']['bot_name']}.{self.__class__.__qualname__}"
+            f"{config['Main']['bot_name']}.{self.__class__.__qualname__}",
         )

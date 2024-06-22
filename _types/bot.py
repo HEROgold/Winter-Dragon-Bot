@@ -1,19 +1,17 @@
 import datetime
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import discord
-from discord import app_commands
+from discord import Intents, app_commands
+from discord.abc import Snowflake
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
-from discord.ext.commands.help import HelpCommand, DefaultHelpCommand
-from discord.abc import Snowflake
+from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from tools.config_reader import config
-
-
-AppCommandStore = dict[str, app_commands.AppCommand]
+from _types.typing import AppCommandStore
+from config import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL, config
 
 
 # TODO: add explicit connector see:
@@ -34,30 +32,42 @@ class WinterDragon(AutoShardedBot):
     launch_time: datetime.datetime
     logger: logging.Logger
     has_app_command_mentions: bool = False
-    _global_app_commands: AppCommandStore = {}
-    _guild_app_commands: dict[int, AppCommandStore] = {}
+    _global_app_commands: AppCommandStore
+    _guild_app_commands: dict[int, AppCommandStore]
+    default_intents: Intents
 
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
-        command_prefix,
+        command_prefix: str,
         *,
         help_command: HelpCommand | None = None,
         tree_cls: type[app_commands.CommandTree[Any]] = app_commands.CommandTree,
         description: str | None = None,
         intents: discord.Intents,
-        **options: Any
+        **options,
     ) -> None:
+        self._global_app_commands = {}
+        self._guild_app_commands = {}
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
-
+        self.launch_time = datetime.datetime.now(datetime.UTC)
 
         if help_command is None:
             help_command = DefaultHelpCommand()
 
         super().__init__(command_prefix, help_command=help_command, tree_cls=tree_cls, description=description, intents=intents, **options)
 
+    def get_bot_invite(self) -> str:
+        return (
+            DISCORD_AUTHORIZE
+            + f"?client_id={self.application_id}"
+            + f"&permissions={BOT_PERMISSIONS}"
+            + f"&scope={"+".join(OAUTH_SCOPE+BOT_SCOPE)}"
+            + f"&scope={"+".join(BOT_SCOPE)}"
+            + f"&redirect_uri={WEBSITE_URL}/callback"
+        )
 
-    async def on_error(self, event_method: str, /, *args: Any, **kwargs: Any) -> None:
+    async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
         self.logger.exception(f"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
@@ -70,10 +80,10 @@ class WinterDragon(AutoShardedBot):
     def get_app_command(
         self,
         value: str | int,
-        guild: Optional[Snowflake | int] = None,
+        guild: Snowflake | int | None = None,
         fallback_to_global: bool = True,
-    ) -> Optional[app_commands.AppCommand]:
-        def search_dict(d: AppCommandStore) -> Optional[app_commands.AppCommand]:
+    ) -> app_commands.AppCommand | None:
+        def search_dict(d: AppCommandStore) -> app_commands.AppCommand | None:
             for cmd_name, cmd in d.items():
                 if value == cmd_name or (str(value).isdigit() and int(value) == cmd.id):
                     return cmd
@@ -84,21 +94,19 @@ class WinterDragon(AutoShardedBot):
             guild_commands = self._guild_app_commands.get(guild_id, {})
             if not fallback_to_global:
                 return search_dict(guild_commands)
-            else:
-                return search_dict(guild_commands) or search_dict(self._global_app_commands)
-        else:
-            return search_dict(self._global_app_commands)
+            return search_dict(guild_commands) or search_dict(self._global_app_commands)
+        return search_dict(self._global_app_commands)
 
 
     async def update_app_commands_cache(
         self,
-        commands: Optional[list[app_commands.AppCommand]] = None,
-        guild: Optional[Snowflake | int] = None
+        commands: list[app_commands.AppCommand] | None = None,
+        guild: Snowflake | int | None = None,
     ) -> None:
         def unpack_app_commands(commands: list[app_commands.AppCommand]) -> AppCommandStore:
             ret: AppCommandStore = {}
 
-            def unpack_options(options: list[app_commands.AppCommand | app_commands.AppCommandGroup, app_commands.Argument]):
+            def unpack_options(options: list[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument]) -> None:
                 for option in options:
                     if isinstance(option, app_commands.AppCommandGroup):
                         ret[option.qualified_name] = option  # type: ignore
@@ -112,7 +120,7 @@ class WinterDragon(AutoShardedBot):
 
         # because we support both int and Snowflake
         # we need to convert it to a Snowflake like object if it's an int
-        _guild: Optional[Snowflake] = None
+        _guild: Snowflake | None = None
         if guild is not None:
             _guild = discord.Object(guild) if isinstance(guild, int) else guild
 

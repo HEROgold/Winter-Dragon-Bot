@@ -29,8 +29,8 @@ def is_tic_tac_toe(msg: str) -> bool:
 
     # filter out empty matches
     total = [
-        j 
-        for i in find_all 
+        j
+        for i in find_all
         for j in i
         if j
     ]
@@ -72,15 +72,15 @@ def main() -> None:
 
 
 def test_ttt() -> None:
-    assert True == is_tic_tac_toe("It is now @winter dragon's turn")
-    assert True == is_tic_tac_toe("It's a tie!")
-    assert True == is_tic_tac_toe("@winter dragon won!")
-    assert True == is_tic_tac_toe("@winter dragon's turn")
-    assert True == is_tic_tac_toe("Game has started!, It is @winter dragon's Turn")
-    assert True == is_tic_tac_toe("Lobby created!\nJoin here to start playing!")
-    assert True == is_tic_tac_toe("@winter dragon challenged @winter dragon in tic tac toe!")
-    assert False == is_tic_tac_toe("@winter dragon how's your day!?")
-    assert False == is_tic_tac_toe("@winter dragon @herogold @winter dragon")
+    assert True is is_tic_tac_toe("It is now @winter dragon's turn")
+    assert True is is_tic_tac_toe("It's a tie!")
+    assert True is is_tic_tac_toe("@winter dragon won!")
+    assert True is is_tic_tac_toe("@winter dragon's turn")
+    assert True is is_tic_tac_toe("Game has started!, It is @winter dragon's Turn")
+    assert True is is_tic_tac_toe("Lobby created!\nJoin here to start playing!")
+    assert True is is_tic_tac_toe("@winter dragon challenged @winter dragon in tic tac toe!")
+    assert False is is_tic_tac_toe("@winter dragon how's your day!?")
+    assert False is is_tic_tac_toe("@winter dragon @herogold @winter dragon")
 
 
 if __name__ == "__main__":

@@ -1,62 +1,52 @@
+import asyncio
 import logging
 import os
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
-from discord.ext import tasks
-
-from tools.config_reader import config
 from _types.bot import WinterDragon
+from config import config
+
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
 class Logs:
-    bot: WinterDragon
-    bot_logger: logging.Logger
-    discord_logger: logging.Logger
-    sql_logger: logging.Logger
+    bot: WinterDragon | None
     first_rollover: bool = False
 
-    def __init__(self, bot: WinterDragon) -> None:
-        self.bot = bot
-        self.bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
-        self.discord_logger = logging.getLogger("discord")
+    def __init__(self) -> None:
+        self._loggers: dict[str, logging.Logger] = {}
+        self.launch_time = datetime.now(UTC)
+        self.logger = logging.getLogger("logs")
         self._delete_top_level_logs()
-        self._add_sql_logger()
-        self.setup_logging(self.bot_logger, "bot.log")
-        self.setup_logging(self.discord_logger, "discord.log")
-        self.bot_logger.addHandler(logging.StreamHandler())
-        self.daily_save_logs.start()
+        self.add_logger("logs", self.logger)
+        self.logger.addHandler(logging.StreamHandler())
 
+    def add_logger(self, name: str, logger: logging.Logger) -> None:
+        self._loggers[name] = logger
+        self.setup_logging(logger, f"{name}.log")
 
-    @classmethod
-    def _add_sql_logger(cls) -> None:
-        try:
-            cls.sql_logger
-        except AttributeError:
-            from tools.database_tables import logger as sql_logger
+    def __getitem__(self, name: str) -> logging.Logger:
+        return self._loggers[name]
 
-            cls.sql_logger = sql_logger
+    def __setitem__(self, name: str, value: logging.Logger) -> None:
+        self.add_logger(name, value)
 
-
-    @tasks.loop(hours=24)
     async def daily_save_logs(self) -> None:
-        self.bot_logger.debug("Daily saving...")
-        self.save_logs()
-        self.logging_rollover()
-        self._delete_top_level_logs()
-
-
-    @daily_save_logs.before_loop
-    async def before_async_init(self) -> None:
-        if not self.first_rollover:
-            self.first_rollover = True
-            return
-        self.bot_logger.info("Waiting until bot is online")
-        await self.bot.wait_until_ready()
-
+        while True:
+            if not self.first_rollover:
+                self.first_rollover = True
+                self.logger.info("Skipping first rollover")
+                return
+            if self.launch_time < datetime.now(UTC) + timedelta(hours=1):
+                return
+            self.logger.debug("Daily saving of logs.")
+            self.save_logs()
+            self.logging_rollover()
+            self._delete_top_level_logs()
+            await asyncio.sleep(86400)
 
     @staticmethod
     def setup_logging(logger: logging.Logger, filename: str) -> None:
@@ -80,7 +70,7 @@ class Logs:
             for root, _, files in os.walk(config["Main"]["log_path"])
             for file in files
         )
-        self.bot_logger.debug(f"{total_size=} {size_in_kb=}")
+        self.logger.debug(f"{total_size=} {size_in_kb=}")
         return total_size > size_in_kb
 
 
@@ -99,7 +89,7 @@ class Logs:
         regex = r"(\.\/logs)(\/|\\|\d|-|_)+"
 
         folder_path = re.match(regex, oldest_files[0])[0]
-        self.bot_logger.info(f"deleting old logs for space: {folder_path=}")
+        self.logger.info(f"deleting old logs for space: {folder_path=}")
 
         for file in os.listdir(folder_path):
             os.remove(f"{folder_path}{file}")
@@ -111,12 +101,12 @@ class Logs:
         while self.logs_size_limit_check(size_limit):
             self.delete_oldest_saved_logs()
 
-        log_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        log_time = datetime.now(tz=UTC).strftime("%Y-%m-%d-%H-%M-%S")
 
         os.makedirs(f"{config['Main']['log_path']}/{log_time}", exist_ok=True)
 
-        self.bot_logger.info("Saving log files")
-        self.bot_logger.info(f"Bot uptime: {datetime.now(timezone.utc) - self.bot.launch_time}")
+        self.logger.info("Saving log files")
+        self.logger.info(f"uptime: {datetime.now(UTC) - self.launch_time}")
 
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
@@ -125,33 +115,28 @@ class Logs:
 
 
     def logging_rollover(self) -> None:
-        """Rolls over bot, discord and sql log handlers."""
-        for handler in [
-            *self.sql_logger.handlers,
-            *self.discord_logger.handlers,
-            *self.bot_logger.handlers,
-        ]:
-            if isinstance(handler, RotatingFileHandler):
-                handler.doRollover()
-
+        """Rollover all RotatingFileHandlers, for all loggers contained."""
+        for logger in self._loggers.values():
+            for handler in logger.handlers:
+                if isinstance(handler, RotatingFileHandler):
+                    handler.doRollover()
 
     def delete_latest_logs(self) -> None:
         if KEEP_LATEST:
-            self.bot_logger.info("Keeping top level logs.")
+            self.logger.info("Keeping top level logs.")
             return
         self._delete_top_level_logs()
 
 
-    @staticmethod
-    def _delete_top_level_logs() -> None:
+    def _delete_top_level_logs(self) -> None:
         """Deletes the top level logs (not in logs directory)"""
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
-                print(f"Removing {file}")
+                self.logger.info(f"Removing {file}")
                 try:
                     os.remove(file)
-                except Exception as e:
-                    print(e)
+                except Exception:
+                    self.logger.exception(f"Error removing file {file}")
 
 
     def shutdown(self) -> None:
@@ -159,3 +144,18 @@ class Logs:
         self.save_logs()
         self.delete_latest_logs()
         logging.shutdown()
+
+
+bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
+sql_logger = logging.getLogger("sqlalchemy.engine")
+discord_logger = logging.getLogger("discord")
+flask_logger = logging.getLogger("werkzeug")
+
+logs = Logs()
+
+logs.add_logger("bot", bot_logger)
+logs.add_logger("discord", discord_logger)
+logs.add_logger("flask", flask_logger)
+logs.add_logger("sqlalchemy", sql_logger)
+
+bot_logger.addHandler(logging.StreamHandler())

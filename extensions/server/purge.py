@@ -1,9 +1,9 @@
 import discord
 from discord import app_commands
 
-from tools.config_reader import config
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+from config import config
 
 
 @app_commands.guild_only()
@@ -41,10 +41,11 @@ class Purge(Cog):
             message: discord.Message
             try:
                 await message.delete()
-            except discord.NotFound: pass
+            except discord.NotFound:
+                pass
             messages.append(message)
         return messages
 
 
 async def setup(bot: WinterDragon) -> None:
-	await bot.add_cog(Purge(bot))
+    await bot.add_cog(Purge(bot))

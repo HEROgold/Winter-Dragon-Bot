@@ -1,42 +1,42 @@
 import logging
 import random
-from typing import Any, Callable
 
+import aiohttp
 import discord  # type: ignore
 from discord import app_commands
-import requests
 
-from tools.config_reader import config
-from tools.database_tables import ResultMassiveMultiplayer as ResultMM
-from tools.database_tables import AssociationUserHangman as AUH
-from tools.database_tables import Hangman as HangmanDb
-from tools.database_tables import Game, Session, engine
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
 from _types.button import Button
+from _types.cogs import GroupCog
+from config import config
+from tools.database_tables import AssociationUserHangman as AUH  # noqa: N817
+from tools.database_tables import Game, Session, engine
+from tools.database_tables import Hangman as HangmanDb
+from tools.database_tables import ResultMassiveMultiplayer as ResultMM
+
 
 # Hang Man Stages
 HANGMEN = [
     """
  ------
 |        |
-|   
-|   
-|   
-|   
-|   
-|   
+|
+|
+|
+|
+|
+|
 ----------
 """,
     """
  ------
 |       |
 |       0
-|   
-|   
-|   
-|   
-|   
+|
+|
+|
+|
+|
 ----------
 """,
     """
@@ -44,10 +44,10 @@ HANGMEN = [
 |        |
 |        0
 |        +
-|   
-|   
-|   
-|   
+|
+|
+|
+|
 ----------
 """,
     """
@@ -55,10 +55,10 @@ HANGMEN = [
 |        |
 |        0
 |       -+
-|   
-|   
-|   
-|   
+|
+|
+|
+|
 ----------
 """,
     """
@@ -66,10 +66,10 @@ HANGMEN = [
 |        |
 |        0
 |       -+-
-|   
-|   
-|   
-|   
+|
+|
+|
+|
 ----------
 """,
     """
@@ -77,10 +77,10 @@ HANGMEN = [
 |        |
 |        0
 |      /-+-
-|   
-|   
-|   
-|   
+|
+|
+|
+|
 ----------
 """,
     """
@@ -88,21 +88,10 @@ HANGMEN = [
 |        |
 |        0
 |      /-+-/
-|   
-|   
-|   
-|   
-----------
-""",
-    """
- ------
-|        |
-|        0
-|      /-+-/
-|        |
-|   
-|   
-|   
+|
+|
+|
+|
 ----------
 """,
     """
@@ -111,9 +100,20 @@ HANGMEN = [
 |        0
 |      /-+-/
 |        |
+|
+|
+|
+----------
+""",
+    """
+ ------
 |        |
-|   
-|   
+|        0
+|      /-+-/
+|        |
+|        |
+|
+|
 ----------
 """,
     """
@@ -149,17 +149,17 @@ class HangmanButton(Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         try:
             await interaction.response.send_modal(SubmitLetter())
-        except Exception as e:
-            self.logger.exception(e)
+        except Exception:
+            self.logger.exception("Error creating hangman SubmitLetter modal")
 
 
 class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
     letter = discord.ui.TextInput(label="Letter", min_length=1, max_length=1)
 
-    async def on_submit(self, interaction: discord.Interaction) -> None:
+    async def on_submit(self, interaction: discord.Interaction) -> None:  # noqa: PLR0915, C901
         # sourcery skip: low-code-quality
         logger = logging.getLogger(
-            f"{config['Main']['bot_name']}.{self.__class__.__name__}"
+            f"{config['Main']['bot_name']}.{self.__class__.__name__}",
         )
         logger.debug(f"Submitting {self.letter.value=}")
 
@@ -172,16 +172,13 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
             )
             if hangman_db is None:
                 logger.debug("Hangman is empty, creating new one.")
-                r_word = random.choice(
-                    requests.get(
-                        "https://www.mit.edu/~ecprice/wordlist.10000"
-                    ).text.splitlines()
-                )
-                # r_word = "test word"
+                async with aiohttp.ClientSession().get("https://www.mit.edu/~ecprice/wordlist.10000") as res:
+                    t = await res.text()
+                    r_word = random.choice(t.splitlines())
                 logger.debug(f"{r_word=}")
 
                 hangman_db = HangmanDb(
-                    id=interaction.message.id, word=r_word, letters=""
+                    id=interaction.message.id, word=r_word, letters="",
                 )
                 session.add(hangman_db)
             else:
@@ -189,10 +186,10 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
 
             if self.letter.value in hangman_db.letters:
                 logger.debug(
-                    f"Already chosen: {self.letter.value=}, {interaction.user=}"
+                    f"Already chosen: {self.letter.value=}, {interaction.user=}",
                 )
                 await interaction.response.send_message(
-                    "Letter already chosen, please choose another", ephemeral=True
+                    "Letter already chosen, please choose another", ephemeral=True,
                 )
 
             logger.debug(f"Adding {self.letter.value=}")
@@ -227,8 +224,10 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
                 i if i in hangman_db.letters else "-" for i in hangman_db.word
             )
 
-            # Stop early and lose after 10 faulty guesses
-            if len(wrong_after) >= 10:
+            hangman = create_hangman(guess_amount=len(wrong_after))
+
+            wrong_max = 10
+            if len(wrong_after) >= wrong_max:
                 await interaction.response.edit_message(
                     content=f"Game Lost...\nGuesses: {hidden_word}\n Word: {hangman_db.word}\n{hangman}`\nLetters: {hangman_db.letters}",
                     view=None,
@@ -249,11 +248,9 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
                     checks.append(False)
             logger.debug(f"{checks=}")
 
-            hangman = create_hangman(guess_amount=len(wrong_after))
-
             if not all(checks):
                 await interaction.response.edit_message(
-                    content=f"Word: {hidden_word}\n{hangman}\nLetters: {hangman_db.letters}"
+                    content=f"Word: {hidden_word}\n{hangman}\nLetters: {hangman_db.letters}",
                 )
                 session.commit()
                 return
@@ -266,10 +263,11 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
             )
             logger.debug(f"{hangman_players=}")
             try:
-                sort_key: Callable[[AUH]] = lambda x: x.score
+                def sort_key(x: AUH) -> int:
+                    return x.score
                 hangman_players.sort(key=sort_key)
-            except AttributeError as e:
-                logger.exception(f"{e}")
+            except AttributeError:
+                logger.exception("Error sorting hangman players")
 
             placement = 0
             for i, j in enumerate(hangman_players):
@@ -282,7 +280,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
                     game=session.query(Game).where(Game.name == "hangman").first().id,
                     user_id=interaction.user.id,
                     placement=placement,
-                )
+                ),
             )
 
             for i in hangman_players:
@@ -297,7 +295,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
 
 
 class Hangman(GroupCog):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         with Session(engine) as session:
@@ -310,7 +308,7 @@ class Hangman(GroupCog):
     # @Hangman_GROUP.command()
 
     @app_commands.command(name="start", description="Hangman")
-    async def slash_Hangman(self, interaction: discord.Interaction) -> None:
+    async def slash_hangman(self, interaction: discord.Interaction) -> None:
         """Hangman"""
         view = discord.ui.View()
         btn = HangmanButton(label="Add Letter", style=discord.ButtonStyle.primary)

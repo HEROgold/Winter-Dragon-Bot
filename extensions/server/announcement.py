@@ -4,10 +4,10 @@ import random
 import discord
 from discord import app_commands
 
-from tools.config_reader import config
-import tools.rainbow as rainbow
-from _types.cogs import Cog
 from _types.bot import WinterDragon
+from _types.cogs import Cog
+from config import config
+from tools import rainbow
 
 
 class Announce(Cog):
@@ -17,7 +17,7 @@ class Announce(Cog):
         member = interaction.user
         emb = discord.Embed(title="Announcement!", description=f"{message}", color=random.choice(rainbow.RAINBOW))
         emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
-        emb.timestamp = datetime.datetime.now()
+        emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)
         if config.getboolean("Announcement", "MENTION_ALL"):
             mass_ping = await interaction.channel.send("<@everyone>")
@@ -25,4 +25,4 @@ class Announce(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-	await bot.add_cog(Announce(bot))
+    await bot.add_cog(Announce(bot))

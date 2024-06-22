@@ -1,6 +1,6 @@
 """
 Allow admins to enable/disable certain commands,
-also allow them to sync commands to their guild 
+also allow them to sync commands to their guild
 so that disabled commands don't show up
 
 Ratelimit the sync for a guild to once per day
@@ -8,14 +8,15 @@ Ratelimit the sync for a guild to once per day
 Get and store enabled commands per guild in database
 """
 
-from typing import Any
+
 import discord
 from discord import app_commands
 from discord.app_commands import Command as DcCommand
 
-from _types.cogs import GroupCog #, Cog
 from _types.bot import WinterDragon
-from tools.database_tables import Session, engine, Command as DbCommand, GuildCommands, CommandGroup
+from _types.cogs import GroupCog  #, Cog
+from tools.database_tables import Command as DbCommand
+from tools.database_tables import CommandGroup, GuildCommands, Session, engine
 
 
 # TODO: test
@@ -27,14 +28,14 @@ class CombinedCommand:
 
     def __init__(self, dc_command: DcCommand) -> None:
         self.dc_command = dc_command
-        with Session(engine) as engine:
+        with Session(engine) as engine:  # noqa: F823
             self.db_command = engine.query(DbCommand).where(DbCommand.qual_name == dc_command.qualified_name).first()
 
 
 class CommandControl(GroupCog):
     commands: list[DbCommand | CommandGroup]
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         with Session(engine) as session:
             self.commands = session.query(DbCommand).all()
@@ -49,7 +50,7 @@ class CommandControl(GroupCog):
             group = session.query(CommandGroup).where(CommandGroup.name == command).first()
             session.add(GuildCommands(
                 guild_id = interaction.guild.id,
-                command_id = cmd.id
+                command_id = cmd.id,
             ))
             session.commit()
         await interaction.response.send_message(f"Enabled {cmd.qual_name}")
@@ -69,8 +70,9 @@ class CommandControl(GroupCog):
     @slash_command_enable.autocomplete("command")
     @slash_command_disable.autocomplete("command")
     async def activity_autocomplete_status(
-        self, interaction: discord.Interaction, current: str
+        self, interaction: discord.Interaction, current: str,
     ) -> list[app_commands.Choice[str]]:
+        choice_limit = 25
         return [
             app_commands.Choice(name=command.qual_name, value=command.qual_name)
             for command in self.commands
@@ -78,7 +80,7 @@ class CommandControl(GroupCog):
         ] or [
             app_commands.Choice(name=command.qual_name, value=command.qual_name)
             for i, command in enumerate(self.commands)
-            if i < 25
+            if i < choice_limit
         ]
 
 
@@ -128,7 +130,7 @@ async def setup(bot: WinterDragon) -> None:
 # async def my_command(ctx):
 #     guild_id = ctx.guild.id
 #     command_name = "my_command"
-    
+
 #     with Session() as session:
 #         db_command = session.query(CommandControl).filter_by(guild_id=guild_id, command_name=command_name).first()
 #         if db_command and not db_command.enabled:

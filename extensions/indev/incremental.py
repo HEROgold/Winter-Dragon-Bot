@@ -1,18 +1,17 @@
 import datetime
 import math
-from typing import List
 
 import discord
 from discord import app_commands
 from discord.components import SelectOption
-from discord.ui import View, Select
+from discord.ui import Select, View
 
-from tools.database_tables import Session, engine
-from tools.database_tables import IncrementalGen as DbGen
-from tools.database_tables import Incremental as DbIncremental
-from enums.incremental import Generators
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from _types.enums import Generators
+from tools.database_tables import Incremental as DbIncremental
+from tools.database_tables import IncrementalGen as DbGen
+from tools.database_tables import Session, engine
 
 
 def update_balance(incremental: DbIncremental) -> None:
@@ -21,25 +20,25 @@ def update_balance(incremental: DbIncremental) -> None:
     Args:
         incremental (DbIncremental): Db object holding incremental data
     """
-    difference = incremental.last_update - datetime.datetime.now()
+    difference = incremental.last_update - datetime.datetime.now()  # noqa: DTZ005
     seconds = math.floor(difference.total_seconds())
 
     total_gain_rate = sum(gen.generating for gen in incremental.generators)
     incremental.balance = incremental.balance + total_gain_rate * seconds
-    incremental.last_update = datetime.datetime.now()
+    incremental.last_update = datetime.datetime.now()  # noqa: DTZ005
 
 
 class ShopItems(Select):
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         custom_id: str = "shop",
         placeholder: str | None = None,
         min_values: int = 1,
         max_values: int = 1,
-        options: List[SelectOption] = None,
+        options: list[SelectOption] | None = None,
         disabled: bool = False,
-        row: int | None = None
+        row: int | None = None,
     ) -> None:
         placeholder = "Choose generator to buy"
 
@@ -55,7 +54,7 @@ class ShopItems(Select):
             max_values=max_values,
             options=options,
             disabled=disabled,
-            row=row
+            row=row,
         )
 
 
@@ -74,7 +73,7 @@ class ShopItems(Select):
                 generator_id = gen.value,
                 name = gen.name,
                 price = gen.value << 2,
-                generating = gen.generation_rate
+                generating = gen.generation_rate,
             ))
             session.commit()
         await interaction.response.send_message(f"Successfully bought {self.values[0]} for {Generators[self.values[0]].value}", ephemeral=True)
@@ -86,7 +85,7 @@ class ShopItems(Select):
 
 
 class Shop(View):
-    timeout = 180
+    timeout_ = 180
 
     def __init__(self) -> None:
         super().__init__(timeout=180)
@@ -98,7 +97,7 @@ class Incremental(GroupCog):
     @app_commands.command(name="shop", description="Show the shopping menu")
     async def fetch_account(self, interaction: discord.Interaction) -> None:
         """Send a message, containing the shop view"""
-        await interaction.response.send_message(view=Shop(), delete_after=Shop.timeout)
+        await interaction.response.send_message(view=Shop(), delete_after=Shop.timeout_)
 
 
 async def setup(bot: WinterDragon) -> None:

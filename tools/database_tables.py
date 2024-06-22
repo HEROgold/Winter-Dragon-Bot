@@ -1,20 +1,21 @@
 import datetime
-import logging
-from logging.handlers import RotatingFileHandler
-from typing import List, Optional, Self
+from typing import Optional, Self
 
-import sqlalchemy
+from discord import AuditLogAction, AuditLogActionCategory, AuditLogEntry
+from flask_login import UserMixin
 from sqlalchemy import (
+    BigInteger,
     Boolean,
+    Column,
     DateTime,
+    Enum,
     Float,
     ForeignKey,
     Integer,
     String,
-    BigInteger,
-    Text,
     Table,
-    Column
+    Text,
+    create_engine,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -24,40 +25,12 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-# Potential upgrade for db
-# from sqlalchemy.ext.asyncio import create_async_engine
-
-from tools.config_reader import config
-
-
-logger: logging.Logger = logging.getLogger("sqlalchemy.engine")
-
-if "config" in locals():
-    logger.setLevel(config["Main"]["log_level"])
-else:
-    logger.setLevel("DEBUG")
+from _types.enums import ChannelTypes as EChannelTypes
+from _types.enums import Generators
+from tools.main_log import sql_logger as logger
 
 
-handler = RotatingFileHandler(filename='sqlalchemy.log', backupCount=7, encoding="utf-8")
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
-# logger.addHandler(logging.StreamHandler())
-
-
-db_name = "db" # Defined in docker-compose.yml
-match config["Database"]["db"]:
-    case "postgres":
-        username = config["Database"]["username"]
-        password = config["Database"]["password"]
-        logger.info(f"Connecting to postgres {db_name=}, as {username=}")
-        # Add +asyncpg to postgres?
-        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"postgresql://{username}:{password}@{db_name}:5432", echo=False)
-    case "sqlite":
-        logger.info(f"Connecting to sqlite {db_name=}")
-        engine: sqlalchemy.Engine = sqlalchemy.create_engine(f"sqlite:///database/{db_name}", echo=False)
-    case _:
-        logger.critical("No database selected to use!")
-        raise AttributeError("No database selected")
+engine = create_engine("sqlite:///database/db.sqlite", echo=False)
 
 # DB string refs
 CASCADE = "CASCADE"
@@ -95,29 +68,30 @@ class Guild(Base):
     __tablename__ = "guilds"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
-    channels: Mapped[List["Channel"]] = relationship(back_populates="guild")
+    channels: Mapped[list["Channel"]] = relationship(back_populates="guild")
 
 
 class ChannelTypes(Base):
     __tablename__ = "channel_types"
 
-    type: Mapped[str] = mapped_column(String(15), primary_key=True)
+    type: Mapped[str] = mapped_column(Enum(EChannelTypes), primary_key=True)
 
 
 class Channel(Base):
     __tablename__ = "channels"
-    
+
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
     type: Mapped[str] = mapped_column(ForeignKey(CHANNEL_TYPES), nullable=True)
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID))
 
-    messages: Mapped[List["Message"]] = relationship(back_populates="channel")
+    messages: Mapped[list["Message"]] = relationship(back_populates="channel")
     guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
 
 
     @classmethod
-    def update(cls, channel: Self):
+    def update(cls, channel: Self) -> None:
+        # TODO: Update whenever the bot hears a discord channel update event > on_channel_update listener
         with Session(engine) as session:
             if db_channel := session.query(Channel).where(Channel.id == channel.id).first():
                 db_channel.id = channel.id
@@ -129,14 +103,14 @@ class Channel(Base):
             session.commit()
 
 
-class User(Base):
+class User(Base, UserMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
 
-    messages: Mapped[List["Message"]] = relationship(back_populates="user")
-    reminders: Mapped[List["Reminder"]] = relationship(back_populates="user")
-    tickets: Mapped[List["Ticket"]] = relationship(back_populates="user")
+    messages: Mapped[list["Message"]] = relationship(back_populates="user")
+    reminders: Mapped[list["Reminder"]] = relationship(back_populates="user")
+    tickets: Mapped[list["Ticket"]] = relationship(back_populates="user")
 
     @classmethod
     def fetch_user(cls, id: int) -> Self:
@@ -147,14 +121,15 @@ class User(Base):
         """
         with Session(engine) as session:
             logger.debug(f"Looking for user {id=}")
-            user = session.query(cls).where(cls.id == id).first()
-            if user is None:
-                logger.debug(f"Creating user {id=}")
-                session.add(cls(id=id))
-                session.commit()
-                user = session.query(cls).where(cls.id == id).first()
-            logger.debug(f"Returning user {id=}")
-            return user
+
+            if user := session.query(cls).where(cls.id == id).first():
+                logger.debug(f"Returning user {id=}")
+                return user
+
+            logger.debug(f"Creating user {id=}")
+            session.add(cls(id=id))
+            session.commit()
+            return session.query(cls).where(cls.id == id).first() # type: ignore
 
 
 class Message(Base):
@@ -209,24 +184,23 @@ class Game(Base):
     name: Mapped[str] = mapped_column(String(15), primary_key=True, unique=True)
 
     @classmethod
-    def fetch_game_by_name(cls, name: str=None) -> Self:
+    def fetch_game_by_name(cls, name: str) -> Self:
         """Find existing or create new game, and return it
 
         Args:
             name (str): Name for the game
         """
-        if not name:
-            raise AttributeError("Missing name.")
         with Session(engine) as session:
             logger.debug(f"Looking for game {name=}")
-            game = session.query(cls).where(cls.name == name).first()
-            if game is None:
-                logger.debug(f"Creating game {name=}")
-                session.add(cls(name=name))
-                session.commit()
-                game = session.query(cls).where(cls.name == name).first()
-            logger.debug(f"Returning game {name=}")
-            return game
+            if game := session.query(cls).where(cls.name == name).first():
+                logger.debug(f"Returning game {name=}")
+                return game
+
+            logger.debug(f"Creating game {name=}")
+            session.add(cls(name=name))
+            session.commit()
+            return session.query(cls).where(cls.name == name).first() # type: ignore
+
 
 class LobbyStatus(Base):
     __tablename__ = "lobby_status"
@@ -234,7 +208,7 @@ class LobbyStatus(Base):
     status: Mapped[str] = mapped_column(String(10), primary_key=True)
 
     @classmethod
-    def create_default_values(cls):
+    def create_default_values(cls) -> None:
         with Session(engine) as session:
             for status in [
                 "waiting",
@@ -243,7 +217,7 @@ class LobbyStatus(Base):
                 if session.query(cls.status).where(cls.status == status).first():
                     continue
                 session.add(cls(
-                    status=status
+                    status=status,
                 ))
             session.commit()
 
@@ -385,12 +359,12 @@ class Presence(Base):
     def remove_old_presences(member_id: int, days: int = 265) -> None:
         """
         Removes old presences present in the database, if they are older then a year
-        
+
         Parameters
         -----------
         :param:`member`: :class:`int`
             The Member_id to clean
-        
+
         :param:`days`: :class:`int`
             The amount of days ago to remove, defaults to (256)
         """
@@ -419,7 +393,7 @@ class AutoChannelSettings(Base):
 
 ticket_helpers = Table("ticket_helpers", Base.metadata,
     Column("ticket_id", Integer, ForeignKey(TICKETS_ID), primary_key=True),
-    Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True)
+    Column("user_id", Integer, ForeignKey(USERS_ID), primary_key=True),
 )
 
 class Ticket(Base):
@@ -428,11 +402,11 @@ class Ticket(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String)
     description: Mapped[str] = mapped_column(String)
-    
+
     opened_at: Mapped[DateTime] = mapped_column(DateTime)
     closed_at: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
     is_closed: Mapped[bool] = mapped_column(Boolean)
-    
+
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(USERS_ID))
     channel_id: Mapped[int] = mapped_column(BigInteger, ForeignKey(CHANNELS_ID))
 
@@ -441,7 +415,7 @@ class Ticket(Base):
     transactions: Mapped[list["Transaction"]] = relationship(back_populates="ticket")
     helpers: Mapped[list["User"]] = relationship(back_populates="tickets", secondary=ticket_helpers)
 
-    @classmethod    
+    @classmethod
     def close(cls) -> None:
         with Session(engine) as session:
             cls.is_closed = True
@@ -451,7 +425,7 @@ class Ticket(Base):
 
 class Transaction(Base):
     __tablename__ = "ticket_transactions"
-    
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[DateTime] = mapped_column(DateTime)
     action: Mapped[str] = mapped_column(String)
@@ -469,6 +443,12 @@ class Role(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     name: Mapped[str] = mapped_column(String)
 
+class UserRoles(Base):
+    __tablename__ = "user_roles"
+
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLES_ID), primary_key=True)
+    guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
 
 class AutoAssignRole(Base):
     __tablename__ = "auto_assign"
@@ -485,7 +465,7 @@ class Incremental(Base):
     balance: Mapped[int] = mapped_column(BigInteger)
     last_update: Mapped[datetime.datetime] = mapped_column(DateTime)
 
-    generators: Mapped[List["IncrementalGen"]] = relationship(back_populates="incremental")
+    generators: Mapped[list["IncrementalGen"]] = relationship(back_populates="incremental")
 
     @classmethod
     def fetch_user(cls, user_id: int) -> Self:
@@ -498,12 +478,11 @@ class Incremental(Base):
             logger.debug(f"Looking for incremental {user_id=}")
             incremental = session.query(cls).where(cls.user_id == user_id).first()
             if incremental is None:
-                from enums.incremental import Generators
                 logger.debug(f"Creating incremental {user_id=}")
                 incremental = cls(
                     user_id = user_id,
                     balance = 0,
-                    last_update = datetime.datetime.now()
+                    last_update = datetime.datetime.now(),
                 )
                 session.add(incremental)
 
@@ -515,7 +494,7 @@ class Incremental(Base):
                     generator_id = gen.value,
                     name = gen.name,
                     price = gen.value << 2,
-                    generating = gen.generation_rate
+                    generating = gen.generation_rate,
                 ))
             session.commit()
             logger.debug(f"Returning incremental {user_id=}")
@@ -542,7 +521,7 @@ class Command(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     qual_name: Mapped[str] = mapped_column(String(30))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
-    parent_id = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
+    parent_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
 
     parent: Mapped["CommandGroup"] = relationship(back_populates="commands", foreign_keys=[parent_id])
 
@@ -595,6 +574,26 @@ class SyncBanGuild(Base):
     guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
 
 
+class DisabledCommands(Base):
+    __tablename__ = "disabled_commands"
+
+    command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID), primary_key=True)
+    _user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), nullable=True)
+    _channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID), nullable=True)
+    _guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True)
+
+    def __init__(self, **kw: int) -> None:
+        # TODO: needs testing
+        id_limit = 2
+        if len(kw) > id_limit:
+            msg = f"Only 2 arguments expected, got {len(kw)}!"
+            raise ValueError(msg)
+        super().__init__(**kw)
+
+    @property
+    def target_id(self) -> int:
+        return self._user_id or self._channel_id or self._guild_id
+
 class GuildCommands(Base):
     __tablename__ = "guild_commands"
 
@@ -614,7 +613,72 @@ class GuildRoles(Base):
 class Infractions(Base):
     __tablename__ = "infractions"
 
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
+    infraction_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    @classmethod
+    def add_infraction_count(cls, user_id: int, amount: int) -> None:
+        """Add an infraction to a user, if it isn't in this table add it"""
+        with Session(engine) as session:
+            infraction = session.query(cls).where(cls.user_id == user_id).first()
+
+            if infraction is None:
+                infraction = cls(user_id=user_id, infraction_count=0)
+                session.add(infraction)
+
+            infraction.infraction_count += amount
+            session.commit()
+
+
+    @classmethod
+    def fetch_user(cls, id: int) -> Self:
+        """Find existing or create new user, and return it
+
+        Args:
+            id (int): Identifier for the user.
+        """
+        with Session(engine) as session:
+            logger.debug(f"Looking for user {id=}")
+
+            if user := session.query(cls).where(cls.id == id).first():
+                logger.debug(f"Returning user {id=}")
+                return user
+
+            logger.debug(f"Creating user {id=}")
+            session.add(cls(id=id))
+            session.commit()
+            return session.query(cls).where(cls.id == id).first() # type: ignore
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, unique=True, autoincrement=True)
+    action: Mapped[AuditLogAction] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=True)
+    target_id: Mapped[int] = mapped_column(Integer, nullable=True)
+    category: Mapped[AuditLogActionCategory] = mapped_column(Integer, nullable=True)
+    # # changes: Mapped[AuditLogChanges] = mapped_column(, nullable=True)
+    # before: Mapped[AuditLogDiff] = mapped_column(String, nullable=True)
+    # after: Mapped[AuditLogDiff] = mapped_column(String, nullable=True)
+
+    @classmethod
+    def from_audit_log(cls, entry: AuditLogEntry) -> Self:
+        with Session(engine) as session:
+            audit = cls(
+                id = entry.id,
+                action = entry.action,
+                reason = entry.reason,
+                created_at = entry.created_at,
+                target = entry.target,
+                category = entry.category,
+                # changes = entry.changes,
+                # before = entry.before,
+                # after = entry.after,
+            )
+            session.add(audit)
+            session.commit()
+        return audit
 
 
 all_tables = Base.__subclasses__()
@@ -624,8 +688,8 @@ try:
         for i in all_tables:
             logger.debug(f"Checking for existing database table: {i}")
             session.query(i).first()
-except Exception as e:
-    logger.exception(f"Error getting all tables: {e}")
+except Exception:
+    logger.exception("Error getting all tables")
     """Should only run max once per startup, creating missing tables"""
     Base().metadata.create_all(engine)
     LobbyStatus.create_default_values()

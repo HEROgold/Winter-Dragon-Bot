@@ -1,21 +1,23 @@
 import random
-from typing import Any
+from typing import Literal
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from tools.config_reader import config
-import tools.rainbow as rainbow
-from tools.database_tables import NhieQuestion, Suggestion, engine, Session
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from _types.enums import SuggestionTypes
+from tools import rainbow
+from config import config
+from tools.database_tables import NhieQuestion, Session, Suggestion, engine
 
-NHIE = "nhie"
+
+NHIE = SuggestionTypes.NEVER_HAVE_I_EVER
 
 
 class NeverHaveIEver(GroupCog):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.set_default_data()
 
@@ -25,14 +27,13 @@ class NeverHaveIEver(GroupCog):
             questions = session.query(NhieQuestion).all()
             if len(questions) > 0:
                 self.logger.debug("Questions already present in table.")
-                # self.logger.debug(f"{questions=}")
                 return
             for question_id, _ in enumerate(nhie_base_questions):
                 self.logger.debug(f"adding question to database {question_id=}, value={nhie_base_questions[question_id]}")
                 session.add(NhieQuestion(id=question_id, value=f"{nhie_base_questions[question_id]}"))
             session.commit()
 
-    def get_questions(self) -> tuple[int, str]:
+    def get_questions(self) -> tuple[Literal[0], list[NhieQuestion]]:
         with Session(engine) as session:
             questions = session.query(NhieQuestion).all()
             game_id = 0
@@ -41,7 +42,7 @@ class NeverHaveIEver(GroupCog):
 
     @app_commands.command(
         name="show",
-        description = "Use this to get a never have i ever question, that you can reply to"
+        description = "Use this to get a never have i ever question, that you can reply to",
     )
     @app_commands.checks.cooldown(1, 10)
     async def slash_nhie(self, interaction: discord.Interaction) -> None:
@@ -58,14 +59,14 @@ class NeverHaveIEver(GroupCog):
 
     @app_commands.command(
         name = "add",
-        description="Lets you add a Never Have I Ever question"
+        description="Lets you add a Never Have I Ever question",
         )
     async def slash_nhie_add(self, interaction: discord.Interaction, nhie_question: str) -> None:
         with Session(engine) as session:
             session.add(Suggestion(
                 id = None,
                 type = NHIE,
-                content = nhie_question
+                content = nhie_question,
             ))
             session.commit()
         await interaction.response.send_message(f"The question ```{nhie_question}``` is added, it will be verified later.", ephemeral=True)
@@ -73,13 +74,13 @@ class NeverHaveIEver(GroupCog):
 
     @app_commands.command(
         name = "add_verified",
-        description = "Add all questions stored in the NHIE database file, to the questions data section."
+        description = "Add all questions stored in the NHIE database file, to the questions data section.",
         )
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_nhie_add_verified(self, interaction:discord.Interaction) -> None:
         with Session(engine) as session:
-            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)
+            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)  # noqa: E712
             questions = result.all()
             if not questions:
                 await interaction.response.send_message("No questions to add", ephemeral=True)
@@ -167,4 +168,4 @@ nhie_base_questions = [
 "Never have I ever flirted just to get something I wanted.",
 "Never have I ever tried guessing someone`s password.",
 "Never have I ever been caught lying.",
-    ];
+]

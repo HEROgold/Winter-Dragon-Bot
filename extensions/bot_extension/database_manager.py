@@ -1,3 +1,5 @@
+# TODO: rename file and cog to make be more logical. More descriptive of what it does.
+
 import datetime
 
 import discord  # type: ignore
@@ -6,8 +8,8 @@ from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog
-from tools.config_reader import config
-from tools.database_tables import AssociationUserCommand as AUC
+from config import config
+from tools.database_tables import AssociationUserCommand as AUC  # noqa: N817
 from tools.database_tables import (
     Channel,
     Command,
@@ -16,7 +18,7 @@ from tools.database_tables import (
     Presence,
     Session,
     User,
-    engine
+    engine,
 )
 
 
@@ -56,7 +58,7 @@ class DatabaseManager(Cog):
         with Session(engine) as session:
             if session.query(Message).where(Message.id == message.id).first() is None:
                 self.logger.debug(f"Adding new {message=} to Messages table")
-                
+
                 session.add(Message(
                     id = message.id,
                     content = message.clean_content,
@@ -67,7 +69,7 @@ class DatabaseManager(Cog):
                 session.commit()
 
 
-    def _add_db_channel(self, channel: discord.abc.GuildChannel) -> None:
+    def _add_db_channel(self, channel: discord.abc.Messageable) -> None:
         with Session(engine) as session:
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")
@@ -80,7 +82,7 @@ class DatabaseManager(Cog):
                 session.commit()
 
 
-    def _add_db_user(self, user: discord.Member) -> None:
+    def _add_db_user(self, user: discord.Member | discord.User) -> None:
         with Session(engine) as session:
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
@@ -105,7 +107,6 @@ class DatabaseManager(Cog):
 
     @update.before_loop # type: ignore
     async def before_update(self) -> None:
-        self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
@@ -114,7 +115,7 @@ class DatabaseManager(Cog):
         """
         Code to run whenever a presence is updated, to keep track of a users online status.
         This only updates once every 10 seconds, and only tracks online status.
-        
+
         Parameters
         -----------
         :param:`before`: :class:`discord.Member`
@@ -124,7 +125,7 @@ class DatabaseManager(Cog):
         """
         member = after or before
         Presence.remove_old_presences(member.id)
-        date_time = datetime.datetime.now()
+        date_time = datetime.datetime.now(tz=datetime.UTC)
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
         # self.logger.debug(f"presence update for {member}, at {date_time}")
         with Session(engine) as session:
@@ -133,7 +134,7 @@ class DatabaseManager(Cog):
             if (
                 presences := session.query(Presence).where(
                     Presence.user_id == member.id,
-                    Presence.date_time >= ten_sec_ago
+                    Presence.date_time >= ten_sec_ago,
                 ).all()
             ):
                 for presence in presences:
@@ -144,13 +145,13 @@ class DatabaseManager(Cog):
             session.add(Presence(
                 user_id = member.id,
                 status = member.status.name,
-                date_time = date_time
+                date_time = date_time,
             ))
             session.commit()
 
 
     @Cog.listener()
-    async def on_interaction(self, interaction: discord.Interaction):
+    async def on_interaction(self, interaction: discord.Interaction) -> None:
         """
         Code to run whenever a interaction happens,
         This adds users and command to the database,
@@ -158,7 +159,7 @@ class DatabaseManager(Cog):
         Only tracks
         :class:`discord.InteractionType.ping` and
         :class:`discord.InteractionType.application_command`
-        
+
         Parameters
         -----------
         :param:`interaction`: :class:`discord.Interaction`
@@ -167,10 +168,10 @@ class DatabaseManager(Cog):
         self.logger.debug(f"on interaction: {interaction=}")
         if interaction.type not in [
             InteractionType.ping,
-            InteractionType.application_command
+            InteractionType.application_command,
         ]:
             return
-        
+
         user = interaction.user
         command = interaction.command
 
@@ -189,7 +190,7 @@ class DatabaseManager(Cog):
         """
         Returns a command if it can find one, otherwise it creates one
         and then returns it
-        
+
         Parameters
         -----------
         :param:`command`: :class:`app_commands.Command`
@@ -216,7 +217,7 @@ class DatabaseManager(Cog):
     def _link_db_user_command(self, user: discord.Member, command: Command) -> None:
         """
         Links a database user to a command when used
-        
+
         Parameters
         -----------
         :param:`user`: :class:`discord.Member`
@@ -228,8 +229,8 @@ class DatabaseManager(Cog):
             session.add(
                 AUC(
                     user_id=user.id,
-                    command_id=command.id
-                )
+                    command_id=command.id,
+                ),
             )
             session.commit()
 

@@ -1,11 +1,9 @@
 import discord
 from discord import app_commands
 
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
-
-
-MemberRole = discord.Role | discord.Member
+from _types.cogs import GroupCog
+from _types.typing import MemberRole
 
 
 @app_commands.guild_only()
@@ -31,31 +29,31 @@ class ChannelUtils(GroupCog):
 
     @app_commands.command(name="lock", description="Lock a channel")
     @app_commands.describe(target="Optional role or member to lock out of this channel")
-    async def slash_lock(self, interaction: discord.Interaction, target: MemberRole=None):
+    async def slash_lock(self, interaction: discord.Interaction, target: MemberRole) -> None:
         """Lock a channel"""
         role_perms = interaction.channel.permissions_for(target)
         role_perms.send_messages = False
         await interaction.channel.set_permissions(
             target=target,
-            permissions=role_perms,
-            reason=f"Channel locked for {target} by {interaction.user.mention}"
+            permissions=role_perms, # type: ignore
+            reason=f"Channel locked for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(f"Locked this channel for {target.mention}", ephemeral=True)
 
 
     @app_commands.command(name="unlock", description="Lock a channel")
     @app_commands.describe(target="Optional role or member to unlock this channel")
-    async def slash_unlock(self, interaction: discord.Interaction, target: MemberRole=None):
+    async def slash_unlock(self, interaction: discord.Interaction, target: MemberRole) -> None:
         """unLock a channel"""
         role_perms = interaction.channel.permissions_for(target)
         role_perms.send_messages = True
         await interaction.channel.set_permissions(
             target=target,
-            permissions=role_perms,
-            reason=f"Channel locked for {target} by {interaction.user.mention}"
+            permissions=role_perms, # type: ignore
+            reason=f"Channel locked for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(f"UnLocked this channel for {target.mention}", ephemeral=True)
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(ChannelUtils(bot)) # type: ignore
+    await bot.add_cog(ChannelUtils(bot))

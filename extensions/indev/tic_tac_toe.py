@@ -2,20 +2,20 @@ import asyncio
 import itertools
 import logging
 import os
-from typing import Callable, Dict, List, TypedDict
+from functools import partial
+from typing import Callable, TypedDict
 
 import discord
 import matplotlib.pyplot as plt
 import sqlalchemy
 from discord import app_commands
-from discord.ui import Button, View
-from tools.ttt_ai import TicTacToeAi
 
-from tools.config_reader import config
-from tools.database_tables import AssociationUserLobby as AUL
-from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from _types.games.lobby import Lobby as GLobby
+from config import config
+from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
+from tools.ttt_ai import TicTacToeAi
 
 
 GAME_NAME = "ttt"
@@ -23,8 +23,8 @@ GAME_NAME = "ttt"
 
 class GameData(TypedDict):
     status: str
-    member1: Dict[str, int]
-    member2: Dict[str, int]
+    member1: dict[str, int]
+    member2: dict[str, int]
 
 
 @app_commands.guild_only()
@@ -52,7 +52,7 @@ class TicTacToe(GroupCog):
     async def slash_leader_board(self, interaction: discord.Interaction) -> None:
         game_results = self.calculate_game_results(
             interaction.user.id,
-            self.get_sql_leader_board(interaction.user.id)
+            self.get_sql_leader_board(interaction.user.id),
         )
         if game_results is None:
             await interaction.response.send_message("No games found to display.", ephemeral=True)
@@ -66,11 +66,11 @@ class TicTacToe(GroupCog):
 
 
 # Make own module for making graphs
-    def make_autopct(self, values) -> Callable[..., str]:
-        def my_autopct(pct) -> str:
+    def make_autopct(self, values: list[float]) -> Callable[..., str]:
+        def my_autopct(pct: float) -> str:
             total = sum(values)
             val = int(round(pct*total/100.0))
-            return "{v:d}  ({p:.2f}%)".format(p=pct,v=val)
+            return f"{val:d}  ({pct:.2f}%)"
         return my_autopct
 
     def create_pie_chart(self, game_results: dict[str, int], interaction: discord.Interaction) -> None:
@@ -95,7 +95,7 @@ class TicTacToe(GroupCog):
                 ResultDuels.game == GAME_NAME,
                 sqlalchemy.or_(
                     ResultDuels.player_1 == interaction_user_id,
-                    ResultDuels.player_2 == interaction_user_id
+                    ResultDuels.player_2 == interaction_user_id,
             ))
             self.logger.debug(f"{result.all()=}")
             session.commit()
@@ -105,12 +105,16 @@ class TicTacToe(GroupCog):
     def calculate_game_results(
         self,
         interaction_user_id: int,
-        results: list[ResultDuels] = None
+        results: list[ResultDuels] | None = None,
     ) -> dict[str, int] | None:
         self.logger.debug(f"Calculating stats for {interaction_user_id}")
         # BASE_GAME_RESULTS = {"total": 0, "abandoned": 0, "wins": 0, "losses": 0, "draws": 0}
-        BASE_GAME_RESULTS = {"wins": 0, "losses": 0, "draws": 0}
-        game_results = BASE_GAME_RESULTS.copy()
+        base_game_results = {"wins": 0, "losses": 0, "draws": 0}
+        game_results = base_game_results.copy()
+
+        if results is None:
+            results = []
+
         for result in results:
             # game_results["total"] += 1
             if result.winner == interaction_user_id:
@@ -123,27 +127,29 @@ class TicTacToe(GroupCog):
                 # game_results["abandoned"] += 1
 
         self.logger.debug(f"{game_results=}, {results=}")
-        return game_results if game_results != BASE_GAME_RESULTS else None
+        return game_results if game_results != base_game_results else None
 
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="new",
-        description="Start a tic tac toe game/lobby, which players can join"
+        description="Start a tic tac toe game/lobby, which players can join",
     )
     async def slash_new(self, interaction: discord.Interaction) -> None:
-        button1, button2 = await self.button_handler()
-        view = View()
-        view = await self.update_view(view, button1, button2)
-
-        await interaction.response.send_message("Lobby created!\nJoin here to start playing!", view=view)
+        await interaction.response.send_message("Lobby created!\nJoin here to start playing!")
         response_message = await interaction.original_response()
+
+        lobby = GLobby(message=response_message, max_players=2)
+        lobby.start_function = partial(
+            self.start_game,
+            interaction=interaction,
+        )
 
         with Session(engine) as session:
             session.add(Lobby(
                 id = response_message.id,
                 game = GAME_NAME,
-                status = "waiting"
+                status = "waiting",
             ))
             session.commit()
 
@@ -151,215 +157,217 @@ class TicTacToe(GroupCog):
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
         name="challenge",
-        description="Start a tic tac toe game, challenging a specific member/user"
+        description="Start a tic tac toe game, challenging a specific member/user",
     )
     async def slash_challenge(self, interaction: discord.Interaction, member: discord.Member) -> None:
         await interaction.response.send_message(f"{interaction.user.mention} challenged {member.mention} in tic tac toe!")
-        game_data: GameData = {"status":"waiting", "member1":{"id": interaction.user.id}, "member2":{"id": member.id}}
-        await self.start_game(interaction=interaction, game_data=game_data)
+        # game_data: GameData = {"status":"waiting", "member1":{"id": interaction.user.id}, "member2":{"id": member.id}}
+        lobby = GLobby(message=None, max_players=2)
+        lobby.players[0] = interaction.user
+        lobby.players[1] = member
+        await self.start_game(interaction=interaction, lobby=lobby) # , game_data=game_data
 
-# LOBBY start
+# # LOBBY start
 
-    async def button_handler(
-        self,
-        base_button_1: discord.ui.Button = None,
-        base_button_2: discord.ui.Button = None
-    ) -> tuple[discord.ui.Button, discord.ui.Button]:
-        if base_button_1 is None:
-            base_button_1 = Button(
-                label = self.PLAYER1,
-                style = discord.ButtonStyle.primary
-            )
-        if base_button_2 is None:
-            base_button_2 = Button(
-                label = self.PLAYER2,
-                style = discord.ButtonStyle.primary
-            )
+#     async def button_handler(
+#         self,
+#         base_button_1: discord.ui.Button = None,
+#         base_button_2: discord.ui.Button = None
+#     ) -> tuple[discord.ui.Button, discord.ui.Button]:
+#         if base_button_1 is None:
+#             base_button_1 = Button(
+#                 label = self.PLAYER1,
+#                 style = discord.ButtonStyle.primary
+#             )
+#         if base_button_2 is None:
+#             base_button_2 = Button(
+#                 label = self.PLAYER2,
+#                 style = discord.ButtonStyle.primary
+#             )
 
-        button_1, button_2 = await self.button_join_or_leave(base_button_1, base_button_2)
-        return button_1, button_2
-
-
-    async def button_join_or_leave(
-        self,
-        player_1_btn: discord.ui.Button = None,
-        player_2_btn: discord.ui.Button = None
-    ) -> tuple[discord.ui.Button, discord.ui.Button]:
-        """Change button label based on join or leave condition
-
-        Args:
-            player_1_btn (discord.ui.Button): Button
-            player_2_btn (discord.ui.Button): Button
-
-        Returns:
-            tuple[discord.ui.Button, discord.ui.Button]: 2 buttons
-        """
-        if player_1_btn:
-            if player_1_btn.label == self.PLAYER1_JOINED:
-                player_1_btn.label = self.PLAYER1_LEFT
-                player_1_btn.style = discord.ButtonStyle.red
-                player_1_btn.callback = self._leave_game_button_
-            elif player_1_btn.label in [self.PLAYER1_LEFT, self.PLAYER1]:
-                player_1_btn.label = self.PLAYER1_JOINED
-                player_1_btn.style = discord.ButtonStyle.green
-                player_1_btn.callback = self._join_game_button
-
-        if player_2_btn:
-            if player_2_btn.label == self.PLAYER2_JOINED:
-                player_2_btn.label = self.PLAYER2_LEFT
-                player_2_btn.style = discord.ButtonStyle.red
-                player_2_btn.callback = self._leave_game_button_
-            elif player_2_btn.label in [self.PLAYER2_LEFT, self.PLAYER2]:
-                player_2_btn.label = self.PLAYER2_JOINED
-                player_2_btn.style = discord.ButtonStyle.green
-                player_2_btn.callback = self._join_game_button
-
-        return player_1_btn, player_2_btn
+#         button_1, button_2 = await self.button_join_or_leave(base_button_1, base_button_2)
+#         return button_1, button_2
 
 
-    async def _join_game_button(self, interaction: discord.Interaction) -> None:
-        try:
-            # sourcery skip: remove-redundant-if
-            await interaction.response.defer()
-            original_interaction = await interaction.original_response()
-            lobby_msg = interaction.message.content
-            # user = session.query(User).where(User.lobby_id == lobby.id).first()
-            # Create new user when using fetch
-            # user: User = database_tables.User.fetch_user(interaction.user.id)
+#     async def button_join_or_leave(
+#         self,
+#         player_1_btn: discord.ui.Button = None,
+#         player_2_btn: discord.ui.Button = None
+#     ) -> tuple[discord.ui.Button, discord.ui.Button]:
+#         """Change button label based on join or leave condition
 
-            btn1 = Button(label = self.PLAYER1, style = discord.ButtonStyle.primary)
-            btn2 = Button(label = self.PLAYER2, style = discord.ButtonStyle.primary)
+#         Args:
+#             player_1_btn (discord.ui.Button): Button
+#             player_2_btn (discord.ui.Button): Button
 
-            lobby_msg, _ = await self.join_association_handler(interaction, original_interaction, lobby_msg, btn1, btn2)
-            self.logger.debug(f"{lobby_msg=}")
+#         Returns:
+#             tuple[discord.ui.Button, discord.ui.Button]: 2 buttons
+#         """
+#         if player_1_btn:
+#             if player_1_btn.label == self.PLAYER1_JOINED:
+#                 player_1_btn.label = self.PLAYER1_LEFT
+#                 player_1_btn.style = discord.ButtonStyle.red
+#                 player_1_btn.callback = self._leave_game_button_
+#             elif player_1_btn.label in [self.PLAYER1_LEFT, self.PLAYER1]:
+#                 player_1_btn.label = self.PLAYER1_JOINED
+#                 player_1_btn.style = discord.ButtonStyle.green
+#                 player_1_btn.callback = self._join_game_button
 
-            if lobby_msg is None:
-                return
+#         if player_2_btn:
+#             if player_2_btn.label == self.PLAYER2_JOINED:
+#                 player_2_btn.label = self.PLAYER2_LEFT
+#                 player_2_btn.style = discord.ButtonStyle.red
+#                 player_2_btn.callback = self._leave_game_button_
+#             elif player_2_btn.label in [self.PLAYER2_LEFT, self.PLAYER2]:
+#                 player_2_btn.label = self.PLAYER2_JOINED
+#                 player_2_btn.style = discord.ButtonStyle.green
+#                 player_2_btn.callback = self._join_game_button
 
-            button1, button2 = await self.button_handler(btn1, btn2)
-            view = View()
-            view = await self.update_view(view, button1, button2)
-            await interaction.edit_original_response(content=lobby_msg, view=view)
-        except Exception as e:
-            self.logger.exception(e)
-
-    # FIXME: bugfix, lobby reset bug, should be fixed with lobby code from _types
-    async def join_association_handler(
-        self,
-        interaction: discord.Interaction,
-        original_interaction: discord.Interaction,
-        lobby_msg: str,
-        btn1: discord.Button,
-        btn2: discord.Button
-    ) -> tuple[str, AUL]:
-        with Session(engine) as session:
-            lobby = session.query(Lobby).where(Lobby.id == original_interaction.id).first()
-            results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
-            associations = results.all()
-            self.logger.debug(f"User joined a game: {interaction.user=}, {lobby.id=}")
-            self.logger.debug(f"{associations=}, {lobby=}")
-
-            if not associations:
-                self.logger.debug(f"adding first player {interaction.user} to lobby {lobby.id=}")
-                btn1.label = self.PLAYER1_JOINED
-                lobby_msg = f"{lobby_msg}\n{self.PLAYER1}: {interaction.user.mention}"
-                session.add(AUL(
-                    lobby_id = lobby.id,
-                    user_id = interaction.user.id
-                ))
-                session.commit()
-            elif len(associations) == 1:
-                self.logger.debug(f"adding extra player {interaction.user} to lobby {lobby.id=}, {associations=}")
-                btn1.label = self.PLAYER1_JOINED
-                btn2.label = self.PLAYER2_JOINED
-                lobby_msg = f"{lobby_msg}\n{self.PLAYER2}: {interaction.user.mention}"
-                session.add(AUL(
-                    lobby_id = lobby.id,
-                    user_id = interaction.user.id
-                ))
-                session.commit()
-
-            results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
-            associations = results.all()
-
-            if len(associations) == 2:
-                player_1 = associations[0]
-                player_2 = associations[1]
-                self.logger.debug(f"2 players in {lobby.id=}, {associations=}")
-                game_data = {"status": lobby.status, "member1": {"id": player_1.user_id}, "member2": {"id": player_2.user_id}}
-                for i in associations:
-                    session.delete(i)
-                session.delete(lobby)
-                self.logger.debug(f"{game_data=}")
-                lobby.status = "running"
-                await self.start_game(interaction=interaction, game_data=game_data)
-                session.commit()
-                lobby_msg = None
-                associations = None
-
-        self.logger.debug(f"{lobby=},\n {lobby_msg=},\n {associations=} <debug")
-        return lobby_msg, associations
+#         return player_1_btn, player_2_btn
 
 
-    async def leave_association_handler(
-            self,
-            interaction: discord.Interaction,
-            original_interaction: discord.Interaction
-        ) -> None:
-        with Session(engine) as session:
-            session.delete(session.query(AUL).where(AUL.lobby_id == original_interaction.id, AUL.user_id == interaction.user.id).first())
-            session.commit()
+#     async def _join_game_button(self, interaction: discord.Interaction) -> None:
+#         try:
+#             # sourcery skip: remove-redundant-if
+#             await interaction.response.defer()
+#             original_interaction = await interaction.original_response()
+#             lobby_msg = interaction.message.content
+#             # user = session.query(User).where(User.lobby_id == lobby.id).first()
+#             # Create new user when using fetch
+#             # user: User = database_tables.User.fetch_user(interaction.user.id)
+
+#             btn1 = Button(label = self.PLAYER1, style = discord.ButtonStyle.primary)
+#             btn2 = Button(label = self.PLAYER2, style = discord.ButtonStyle.primary)
+
+#             lobby_msg, _ = await self.join_association_handler(interaction, original_interaction, lobby_msg, btn1, btn2)
+#             self.logger.debug(f"{lobby_msg=}")
+
+#             if lobby_msg is None:
+#                 return
+
+#             button1, button2 = await self.button_handler(btn1, btn2)
+#             view = View()
+#             view = await self.update_view(view, button1, button2)
+#             await interaction.edit_original_response(content=lobby_msg, view=view)
+#         except Exception as e:
+#             self.logger.exception(e)
+
+#     # FIXME: bugfix, lobby reset bug, should be fixed with lobby code from _types
+#     async def join_association_handler(
+#         self,
+#         interaction: discord.Interaction,
+#         original_interaction: discord.Interaction,
+#         lobby_msg: str,
+#         btn1: discord.Button,
+#         btn2: discord.Button
+#     ) -> tuple[str, AUL]:
+#         with Session(engine) as session:
+#             lobby = session.query(Lobby).where(Lobby.id == original_interaction.id).first()
+#             results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
+#             associations = results.all()
+#             self.logger.debug(f"User joined a game: {interaction.user=}, {lobby.id=}")
+#             self.logger.debug(f"{associations=}, {lobby=}")
+
+#             if not associations:
+#                 self.logger.debug(f"adding first player {interaction.user} to lobby {lobby.id=}")
+#                 btn1.label = self.PLAYER1_JOINED
+#                 lobby_msg = f"{lobby_msg}\n{self.PLAYER1}: {interaction.user.mention}"
+#                 session.add(AUL(
+#                     lobby_id = lobby.id,
+#                     user_id = interaction.user.id
+#                 ))
+#                 session.commit()
+#             elif len(associations) == 1:
+#                 self.logger.debug(f"adding extra player {interaction.user} to lobby {lobby.id=}, {associations=}")
+#                 btn1.label = self.PLAYER1_JOINED
+#                 btn2.label = self.PLAYER2_JOINED
+#                 lobby_msg = f"{lobby_msg}\n{self.PLAYER2}: {interaction.user.mention}"
+#                 session.add(AUL(
+#                     lobby_id = lobby.id,
+#                     user_id = interaction.user.id
+#                 ))
+#                 session.commit()
+
+#             results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
+#             associations = results.all()
+
+#             if len(associations) == 2:
+#                 player_1 = associations[0]
+#                 player_2 = associations[1]
+#                 self.logger.debug(f"2 players in {lobby.id=}, {associations=}")
+#                 game_data = {"status": lobby.status, "member1": {"id": player_1.user_id}, "member2": {"id": player_2.user_id}}
+#                 for i in associations:
+#                     session.delete(i)
+#                 session.delete(lobby)
+#                 self.logger.debug(f"{game_data=}")
+#                 lobby.status = "running"
+#                 await self.start_game(interaction=interaction, game_data=game_data)
+#                 session.commit()
+#                 lobby_msg = None
+#                 associations = None
+
+#         self.logger.debug(f"{lobby=},\n {lobby_msg=},\n {associations=} <debug")
+#         return lobby_msg, associations
 
 
-    async def _leave_game_button_(self, interaction: discord.Interaction) -> None:
-        await interaction.response.defer()
-        original_interaction = await interaction.original_response()
-        with Session(engine) as session:
-            results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
-            associations = results.all()
+#     async def leave_association_handler(
+#             self,
+#             interaction: discord.Interaction,
+#             original_interaction: discord.Interaction
+#         ) -> None:
+#         with Session(engine) as session:
+#             session.delete(session.query(AUL).where(AUL.lobby_id == original_interaction.id, AUL.user_id == interaction.user.id).first())
+#             session.commit()
 
-        self.logger.debug(f"User left a game: {interaction.user=}, {associations=}")
 
-        btn1 = Button(label=self.PLAYER1, style=discord.ButtonStyle.primary)
-        btn2 = Button(label=self.PLAYER2, style=discord.ButtonStyle.primary)
-        lobby_msg = interaction.message.content
+#     async def _leave_game_button_(self, interaction: discord.Interaction) -> None:
+#         await interaction.response.defer()
+#         original_interaction = await interaction.original_response()
+#         with Session(engine) as session:
+#             results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
+#             associations = results.all()
 
-        if len(associations) == 2:
-        # if game_data["member2"]["id"] == interaction.user.id:
-            await self.leave_association_handler(interaction, original_interaction)
-            # game_data["member2"]["id"] = 0
-            btn1.label = self.PLAYER1_JOINED
-            btn2.label = self.PLAYER2_LEFT
-            lobby_msg = lobby_msg.replace(f"\n{self.PLAYER2}: {interaction.user.mention}", "")
-        elif len(associations) == 1:
-        # elif game_data["member1"]["id"] == interaction.user.id:
-            await self.leave_association_handler(interaction, original_interaction)
-            # game_data["member1"]["id"] = 0
-            btn1.label = self.PLAYER1_LEFT
-            lobby_msg = lobby_msg.replace(f"\n{self.PLAYER1}: {interaction.user.mention}", "")
+#         self.logger.debug(f"User left a game: {interaction.user=}, {associations=}")
 
-        button1, button2 = await self.button_handler(btn1, btn2)
-        view = View()
-        view = await self.update_view(view, button1, button2)
-        await interaction.edit_original_response(content=lobby_msg, view=view)
+#         btn1 = Button(label=self.PLAYER1, style=discord.ButtonStyle.primary)
+#         btn2 = Button(label=self.PLAYER2, style=discord.ButtonStyle.primary)
+#         lobby_msg = interaction.message.content
 
-# LOBBY end
+#         if len(associations) == 2:
+#         # if game_data["member2"]["id"] == interaction.user.id:
+#             await self.leave_association_handler(interaction, original_interaction)
+#             # game_data["member2"]["id"] = 0
+#             btn1.label = self.PLAYER1_JOINED
+#             btn2.label = self.PLAYER2_LEFT
+#             lobby_msg = lobby_msg.replace(f"\n{self.PLAYER2}: {interaction.user.mention}", "")
+#         elif len(associations) == 1:
+#         # elif game_data["member1"]["id"] == interaction.user.id:
+#             await self.leave_association_handler(interaction, original_interaction)
+#             # game_data["member1"]["id"] = 0
+#             btn1.label = self.PLAYER1_LEFT
+#             lobby_msg = lobby_msg.replace(f"\n{self.PLAYER1}: {interaction.user.mention}", "")
+
+#         button1, button2 = await self.button_handler(btn1, btn2)
+#         view = View()
+#         view = await self.update_view(view, button1, button2)
+#         await interaction.edit_original_response(content=lobby_msg, view=view)
+
+# # LOBBY end
+
+
 
 # GAME start
 
-    async def start_game(self, interaction: discord.Interaction, game_data: GameData = None) -> None:
-        game_data["status"] = "running"
-        all_members = self.bot.get_all_members()
-        p1 = discord.utils.get(all_members, id=game_data["member1"]["id"])
-        p2 = discord.utils.get(all_members, id=game_data["member2"]["id"])
+    async def start_game(self, interaction: discord.Interaction, lobby: GLobby) -> None:
+        p1 = lobby.players[0]
+        p2 = lobby.players[1]
         self.logger.debug(f"Starting game between {p1.mention, p2.mention}")
         await interaction.edit_original_response(
             content=f"Game has started!, It is {p1.mention}'s Turn",
             view=TicTacToeGame(
                 player_one = p1,
                 player_two = p2,
-                game_data = game_data
-            )
+            ),
         )
 
 
@@ -367,13 +375,13 @@ class TicTacToe(GroupCog):
 # To avoid other players intervening
 
 
-class TicTacToeButton(discord.ui.Button['TicTacToe']):
+class TicTacToeButton(discord.ui.Button["TicTacToe"]):
     def __init__(self, x: int, y: int) -> None:
         # A label is required, but we don't need one so a zero-width space is used, '\u200b'
         # The row parameter tells the View which row to place the button under.
         # A View can only contain up to 5 rows -- each row can only have 5 buttons.
         # Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
-        super().__init__(style=discord.ButtonStyle.secondary, label='\u200b', row=y)
+        super().__init__(style=discord.ButtonStyle.secondary, label="\u200b", row=y)
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.x = x
         self.y = y
@@ -384,7 +392,8 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
         if interaction.user.id not in [view.player_x.id, view.player_o.id]:
             await interaction.response.send_message("You may not play in this game", ephemeral=True)
             return
-        elif interaction.user.id != view.current_player and not from_ai:
+
+        if interaction.user.id != view.current_player and not from_ai:
             await interaction.response.send_message("It's not your turn", ephemeral=True)
             return
 
@@ -396,13 +405,13 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
         if view.current_player == view.player_x.id:
             self.style = discord.ButtonStyle.danger
-            self.label = 'X'
+            self.label = "X"
             view.board[self.y][self.x] = view.player_x.id
             view.current_player = view.player_o.id
             content = f"It is now {view.player_o.mention or 'O'}'s turn"
         elif view.current_player == view.player_o.id:
             self.style = discord.ButtonStyle.success
-            self.label = 'O'
+            self.label = "O"
             view.board[self.y][self.x] = view.player_o.id
             view.current_player = view.player_x.id
             content = f"It is now {view.player_x.mention or 'X'}'s turn"
@@ -441,47 +450,12 @@ class TicTacToeButton(discord.ui.Button['TicTacToe']):
 
 
 # This is our actual board View
+# TODO: Move game data to database
 class TicTacToeGame(discord.ui.View):
     player_x: discord.Member
     player_o: discord.Member
     Tie = 2
-    children: List[TicTacToeButton] # type: ignore
-
-
-    @property
-    def is_vs_bot(self) -> bool:
-        return any([self.player_o.bot, self.player_x.bot])
-
-
-    async def make_bot_move(self, interaction: discord.Interaction) -> None:
-        """Make the bot/ai do a move!"""
-        ai = TicTacToeAi(
-            o=self.player_o.id,
-            x=self.player_x.id,
-            board=self.board
-        )
-
-        if self.player_o.bot:
-            row, column = ai.get_best_move(self.player_o.id)
-            self.logger.debug(f"best move for {self.player_o} = {row, column}")
-            # self.current_player = self.player_x.id
-        elif self.player_x.bot:
-            row, column = ai.get_best_move(self.player_x.id)
-            self.logger.debug(f"best move for {self.player_x} = {row, column}")
-            # self.current_player = self.player_o.id
-        else:
-            raise ValueError(f"HOW DID WE GET HERE?: Expected Bot User, but got {self.player_o} and {self.player_x}")
-
-        for button in self.children:
-            if button.y == row and button.x == column:
-                if button.disabled:
-                    self.logger.warning("Button is disabled!")
-                    return
-                await button.callback(interaction, from_ai=True)
-                break
-
-        self.logger.debug("After button callback ai")
-
+    children: list[TicTacToeButton] # type: ignore
 
 
     def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: GameData) -> None:
@@ -503,6 +477,43 @@ class TicTacToeGame(discord.ui.View):
         for x, y in itertools.product(range(3), range(3)):
             self.add_item(TicTacToeButton(x, y))
 
+
+    @property
+    def is_vs_bot(self) -> bool:
+        return any([self.player_o.bot, self.player_x.bot])
+
+
+    async def make_bot_move(self, interaction: discord.Interaction) -> None:
+        """Make the bot/ai do a move!"""
+        ai = TicTacToeAi(
+            o=self.player_o.id,
+            x=self.player_x.id,
+            board=self.board,
+        )
+
+        if self.player_o.bot:
+            row, column = ai.get_best_move(self.player_o.id)
+            self.logger.debug(f"best move for {self.player_o} = {row, column}")
+            # self.current_player = self.player_x.id
+        elif self.player_x.bot:
+            row, column = ai.get_best_move(self.player_x.id)
+            self.logger.debug(f"best move for {self.player_x} = {row, column}")
+            # self.current_player = self.player_o.id
+        else:
+            msg = f"HOW DID WE GET HERE?: Expected Bot User, but got {self.player_o} and {self.player_x}"
+            raise ValueError(msg)
+
+        for button in self.children:
+            if button.y == row and button.x == column:
+                if button.disabled:
+                    self.logger.warning("Button is disabled!")
+                    return
+                await button.callback(interaction, from_ai=True)
+                break
+
+        self.logger.debug("After button callback ai")
+
+
     # This method checks for the board winner -- it is used by the TicTacToeButton
     def check_board_winner(self) -> int | None:
         duel_result = None
@@ -517,9 +528,9 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_x.id,
                     player_2 = self.player_o.id,
                     winner = self.player_x.id,
-                    loser = self.player_o.id
+                    loser = self.player_o.id,
                 )
-                self.game_data["status"] = "finished-player1"
+                # self.game_data["status"] = "finished-player1"
                 game_result = self.player_x.id
             elif value == (self.player_o.id*3):
                 self.logger.debug(f"player O: {self.player_o} won straight on {across}")
@@ -527,9 +538,9 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_o.id,
                     player_2 = self.player_x.id,
                     winner = self.player_o.id,
-                    loser = self.player_x.id
+                    loser = self.player_x.id,
                 )
-                self.game_data["status"] = "finished-player2"
+                # self.game_data["status"] = "finished-player2"
                 game_result = self.player_o.id
 
         # Check vertical
@@ -541,9 +552,9 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_x.id,
                     player_2 = self.player_o.id,
                     winner = self.player_x.id,
-                    loser = self.player_o.id
+                    loser = self.player_o.id,
                 )
-                self.game_data["status"] = "finished-player1"
+                # self.game_data["status"] = "finished-player1"
                 game_result = self.player_x.id
             elif value == (self.player_o.id*3):
                 self.logger.debug(f"player O: {self.player_o} won vertical on column {line}")
@@ -551,9 +562,9 @@ class TicTacToeGame(discord.ui.View):
                     player_1 = self.player_o.id,
                     player_2 = self.player_x.id,
                     winner = self.player_o.id,
-                    loser = self.player_x.id
+                    loser = self.player_x.id,
                 )
-                self.game_data["status"] = "finished-player2"
+                # self.game_data["status"] = "finished-player2"
                 game_result = self.player_o.id
 
         # Check diagonals
@@ -564,9 +575,9 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_x.id,
                 player_2 = self.player_o.id,
                 winner = self.player_x.id,
-                loser = self.player_o.id
+                loser = self.player_o.id,
             )
-            self.game_data["status"] = "finished-player1"
+            # self.game_data["status"] = "finished-player1"
             game_result = self.player_x.id
         elif diag == (self.player_o.id*3):
             self.logger.debug(f"player O: {self.player_o} won diagonally /")
@@ -574,9 +585,9 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = self.player_o.id,
-                loser = self.player_x.id
+                loser = self.player_x.id,
             )
-            self.game_data["status"] = "finished-player2"
+            # self.game_data["status"] = "finished-player2"
             game_result = self.player_o.id
 
         diag = self.board[0][0] + self.board[1][1] + self.board[2][2] # \
@@ -586,9 +597,9 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_x.id,
                 player_2 = self.player_o.id,
                 winner = self.player_x.id,
-                loser = self.player_o.id
+                loser = self.player_o.id,
             )
-            self.game_data["status"] = "finished-player1"
+            # self.game_data["status"] = "finished-player1"
             game_result = self.player_x.id
         elif diag == (self.player_o.id*3):
             self.logger.debug(f"player O: {self.player_o} won diagonally \\ ")
@@ -596,9 +607,9 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = self.player_o.id,
-                loser = self.player_x.id
+                loser = self.player_x.id,
             )
-            self.game_data["status"] = "finished-player2"
+            # self.game_data["status"] = "finished-player2"
             game_result = self.player_o.id
 
         game = Game.fetch_game_by_name(GAME_NAME)
@@ -617,7 +628,7 @@ class TicTacToeGame(discord.ui.View):
         if any(i == 0 for row in self.board for i in row):
             return None
 
-        self.game_data["status"] = "finished-draw"
+        # self.game_data["status"] = "finished-draw"
         with Session(engine) as session:
             self.logger.debug("Adding tie to DB")
             session.add(ResultDuels(
@@ -625,7 +636,7 @@ class TicTacToeGame(discord.ui.View):
                 player_1 = self.player_o.id,
                 player_2 = self.player_x.id,
                 winner = 0,
-                loser = 0
+                loser = 0,
             ))
             session.commit()
         return self.Tie

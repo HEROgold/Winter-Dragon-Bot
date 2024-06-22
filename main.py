@@ -1,52 +1,40 @@
+"""Main file for the bot."""
+
 import asyncio
 import logging
 import os
 import signal
 import sys
-from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
+from threading import Thread
 
 import discord
-from _types.bot import WinterDragon
-
 from discord.ext import commands
 
+from _types.bot import WinterDragon
+from _types.errors import ConfigError
+from app import app
+from config import CONFIG_PATH, INTENTS, config
+from config import get_invalid as get_invalid_configs
+from config import is_valid as config_validator
+from tools.main_log import logs
+from tools.port_finder import get_v4_port
 
-from tools.config_reader import (
-    config,
-    get_invalid as get_invalid_configs,
-    is_valid as config_validator,
-)
-
-from tools.main_log import Logs
 
 if not config_validator():
-    raise ValueError(
-        f"Config is not yet updated!, update the following:\n{', '.join(get_invalid_configs())}"
-    )
+    msg = f"""Config is not yet updated!, update the following:
+        {', '.join(get_invalid_configs())}"""
+    raise ConfigError(msg)
 
-
-
-INTENTS = discord.Intents.none()
-INTENTS.members = True
-INTENTS.guilds = True
-INTENTS.presences = True
-INTENTS.guild_messages = True
-INTENTS.dm_messages = True
-INTENTS.moderation = True
-INTENTS.message_content = True
-INTENTS.auto_moderation_configuration = True
-INTENTS.auto_moderation_execution = True
-INTENTS.voice_states = True
 
 bot = WinterDragon(
     intents=INTENTS,
-    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),
+    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),  # type: ignore
     case_insensitive=True,
 )
 
-bot.launch_time = datetime.now(timezone.utc)
 tree = bot.tree
+threads: list[Thread] = []
 
 
 def setup_logging(logger: logging.Logger, filename: str) -> None:
@@ -59,9 +47,17 @@ def setup_logging(logger: logging.Logger, filename: str) -> None:
 
 @bot.event
 async def on_ready() -> None:
+    invite_link = bot.get_bot_invite()
+
+    logs["bot"].info(f"Logged on as {bot.user}!")
     print("Bot is running!")
-    if config.getboolean("Main", "show_logged_in"):
-        log.bot_logger.info(f"Logged on as {bot.user}!")
+    print("invite link: ", invite_link)
+
+    config.set("Main", "application_id", f"{bot.application_id}")
+    config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
+
+    with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC101
+        config.write(f, space_around_delimiters=False)
 
 
 async def get_extensions() -> list[str]:
@@ -77,14 +73,14 @@ async def get_extensions() -> list[str]:
 
 async def mass_load() -> None:
     if not (os.listdir("./extensions")):
-        log.bot_logger.critical("No extensions Directory To Load!")
+        logs["bot"].critical("No extensions Directory To Load!")
         return
     for extension in await get_extensions():
         try:
             await bot.load_extension(extension)
-            log.bot_logger.info(f"Loaded {extension}")
-        except Exception as e:
-            log.bot_logger.exception(e)
+            logs["bot"].info(f"Loaded {extension}")
+        except Exception:  # noqa: BLE001
+            logs["bot"].exception("")
 
 
 @commands.is_owner()
@@ -92,34 +88,44 @@ async def mass_load() -> None:
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-        log.bot_logger.info("shutdown by command.")
-    except Exception:
-        pass
+        logs["bot"].info("shutdown by command.")
+    except Exception:  # noqa: BLE001
+        logs["bot"].exception("")
     raise KeyboardInterrupt
 
 
 def terminate(*args, **kwargs) -> None:
-    log.bot_logger.warning(f"{args=}, {kwargs=}")
-    log.bot_logger.info("terminated")
-    log.shutdown()
+    logs.logger.warning(f"{args=}, {kwargs=}")
+    logs.logger.info("terminated")
+    logs.shutdown()
     try:
-        asyncio.ensure_future(bot.close())
-    except Exception as e:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(bot.close())
+    except Exception as e:  # noqa: BLE001
         print(e)
+
+    for thread in threads:
+        try:
+            thread.join()
+        except Exception as e:  # noqa: BLE001
+            print(e)
+        finally:
+            del thread
     sys.exit()
 
 
 async def main() -> None:
     async with bot:
-        # global here, since they should be accessible module wide,
-        # but they require a running event loop
-        global log
-        log = Logs(bot=bot)
+        t = Thread(
+            target=app.run,
+            kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},  # noqa: S104
+            daemon=True, name="flask"
+        )
+        t.start()
 
+        bot.log_saver = asyncio.create_task(logs.daily_save_logs())
         await mass_load()
-        # await bot.load_extension("jishaku")
         await bot.start(config["Tokens"]["discord_token"])
-        log.daily_save_logs.start()
 
 
 if __name__ == "__main__":

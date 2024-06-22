@@ -2,7 +2,6 @@ import datetime
 import itertools
 import logging
 import random
-from typing import Optional
 
 import discord
 import discord.ui
@@ -10,15 +9,14 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from sqlalchemy.orm import joinedload
 
-from tools.config_reader import config
-from tools.database_tables import Channel,User, Transaction, Ticket
-from tools.database_tables import Session, engine
-from _types.cogs import GroupCog
 from _types.bot import WinterDragon
+from _types.cogs import GroupCog
+from _types.enums import ChannelTypes
+from config import config
+from tools.database_tables import Channel, Session, Ticket, Transaction, User, engine
 
 
-date_format = "%m/%d/%Y at %H:%M:%S"
-DB_CHANNEL_TYPE = "tickets"
+c_type = ChannelTypes.TICKETS.name
 CLOSED_USER = "~CLOSED USER~"
 CLOSED_TIMEOUT = "~CLOSED TIMEOUT~"
 
@@ -31,7 +29,7 @@ class TicketView(discord.ui.View):
     def __init__(self, *, timeout: float | None = 180, channel: discord.TextChannel) -> None:
         super().__init__(timeout=timeout)
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
-        self.cooldown = commands.CooldownMapping.from_cooldown(1, config["Tickets"]["MAX_COOLDOWN"], commands.BucketType.member)
+        self.cooldown = commands.CooldownMapping.from_cooldown(1, config.getint("Tickets", "MAX_COOLDOWN"), commands.BucketType.member)
         self.channel = channel
 
 
@@ -39,15 +37,15 @@ class TicketView(discord.ui.View):
     async def close_ticket(
         self,
         interaction: discord.Interaction,
-        button: discord.ui.Button,
-        support_role: Optional[discord.Role] = None,
+        button: discord.ui.Button,  # noqa: ARG002
+        support_role: discord.Role | None = None,  # noqa: ARG002
     ) -> None:
         self.logger.info(f"{interaction.user} closed a ticket")
 
         with Session(engine) as session:
             ticket = session.query(Ticket).where(
                 Ticket.user_id == interaction.user.id,
-                Ticket.channel_id == interaction.channel.id
+                Ticket.channel_id == interaction.channel.id,
             ).first()
             ticket.close()
 
@@ -55,7 +53,7 @@ class TicketView(discord.ui.View):
         await channel.edit(
             name=f"{channel.name} {CLOSED_USER}",
             locked=True,
-            reason=f"Locked by user {interaction.user.mention}"
+            reason=f"Locked by user {interaction.user.mention}",
         )
 
 
@@ -63,14 +61,14 @@ class TicketView(discord.ui.View):
     async def create_ticket(
         self,
         interaction: discord.Interaction,
-        button: discord.ui.Button,
-        support_role: Optional[discord.Role] = None,
+        button: discord.ui.Button,  # noqa: ARG002
+        support_role: discord.Role | None = None,
     ) -> None:
         "https://discordpy.readthedocs.io/en/stable/api.html?highlight=thread#discord.Thread"
         # TODO: Create a thread in self.channel, add button presser, and add support role
         self.logger.info(f"{interaction.user} created a ticket")
 
-        if retry := self.cooldown.get_bucket(interaction.message).update_rate_limit():
+        if retry := self.cooldown.get_bucket(interaction.message).update_rate_limit(): # type: ignore
             await interaction.response.send_message(f"Slow down! Try again in {round(retry, 1)} seconds!", ephemeral=True)
             return
 
@@ -81,7 +79,7 @@ class TicketView(discord.ui.View):
                 ticket := session.query(Ticket).where(
                     Ticket.user_id == interaction.user.id,
                     # Ticket.channel_id == interaction.channel.id,
-                    Ticket.is_closed == False
+                    Ticket.is_closed == False, # noqa: E712
                 ).first()
             ):
                 dc_channel = discord.utils.get(self.channel.threads, id=ticket.channel.id)
@@ -99,10 +97,10 @@ class TicketView(discord.ui.View):
                 id=None,
                 title=f"Ticket for user {interaction.user.id} in channel {thread_channel.id}",
                 description=f"Description for ticket for user {interaction.user.id} in channel {thread_channel.id}",
-                opened_at=datetime.datetime.now(),
+                opened_at=datetime.datetime.now(),  # noqa: DTZ005
                 is_closed=False,
                 user_id=interaction.user.id,
-                channel_id=thread_channel.id
+                channel_id=thread_channel.id,
             ))
 
         await thread_channel.add_user(interaction.user)
@@ -136,10 +134,10 @@ class Tickets(GroupCog):
     async def database_cleanup(self) -> None:
         self.logger.info("cleaning tickets")
         with Session(engine) as session:
-            seven_days_before_today = datetime.datetime.now() - datetime.timedelta(days=7)
+            seven_days_before_today = datetime.datetime.now() - datetime.timedelta(days=7)  # noqa: DTZ005
             tickets = session.query(Ticket).where(
-                Ticket.is_closed == False,
-                Ticket.opened_at <= seven_days_before_today
+                Ticket.is_closed == False, # noqa: E712
+                Ticket.opened_at <= seven_days_before_today,
             ).options(joinedload(Ticket.transactions)).all()
 
             for ticket in tickets:
@@ -148,8 +146,8 @@ class Tickets(GroupCog):
 
                 # TODO: find out if sorted returns oldest or newest.
                 latest_transactions: list[Transaction] = sorted(
-                    ticket.transactions, 
-                    key=lambda x: x.timestamp
+                    ticket.transactions,
+                    key=lambda x: x.timestamp,
                 )
                 if latest_transactions[0].timestamp <= seven_days_before_today:
                     # if latest response is less then 7 days ago, skip it
@@ -170,7 +168,7 @@ class Tickets(GroupCog):
                     await channel.set_permissions(
                         target=discord.utils.get(found_users, user.id),
                         overwrite=overwrite,
-                        reason="Ticket cleanup"
+                        reason="Ticket cleanup",
                     )
                 # await channel.delete(reason="Ticket cleanup")
             session.commit()
@@ -178,7 +176,6 @@ class Tickets(GroupCog):
 
     @database_cleanup.before_loop
     async def before_update(self) -> None:
-        self.logger.info("Waiting until bot is online")
         await self.bot.wait_until_ready()
 
 
@@ -188,8 +185,8 @@ class Tickets(GroupCog):
     async def slash_ticket_create(self, interaction: discord.Interaction) -> None:
         with Session(engine) as session:
             channel = session.query(Channel).where(
-                Channel.type == DB_CHANNEL_TYPE,
-                Channel.guild_id == interaction.guild.id
+                Channel.type == c_type,
+                Channel.guild_id == interaction.guild.id,
             ).first()
             c_mention = await self.get_command_mention(self.slash_ticket_remove)
 
@@ -201,7 +198,7 @@ class Tickets(GroupCog):
             Channel.update(Channel(
                 id = dc_channel.id,
                 name = f"{dc_channel.name}",
-                type = DB_CHANNEL_TYPE,
+                type = c_type,
                 guild_id = interaction.guild.id,
             ))
             session.commit()
@@ -217,8 +214,8 @@ class Tickets(GroupCog):
         with Session(engine) as session:
             if (
                 channel := session.query(Channel).where(
-                    Channel.type == DB_CHANNEL_TYPE,
-                    Channel.guild_id == interaction.guild.id
+                    Channel.type == c_type,
+                    Channel.guild_id == interaction.guild.id,
                 ).first()
             ):
                 dc_channel: discord.TextChannel = self.bot.get_channel(id=channel.id)
@@ -251,7 +248,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
 
     # Create multiple instances of tickets
     tickets: list[Ticket] = []
-    allowed = [i for i in range(COUNT, COUNT**2)]
+    allowed = list(range(COUNT, COUNT**2))
     for user, channel in itertools.product(users, channels):
         open_time = datetime.now()
         if random.choice([False, True]):
@@ -262,7 +259,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
                 opened_at=open_time,
                 is_closed=False,
                 user_id=user.id,
-                channel_id=channel.id
+                channel_id=channel.id,
             )
         else:
             ticket = Ticket(
@@ -273,7 +270,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
                 is_closed=True,
                 closed_at=datetime.now(),
                 user_id=user.id,
-                channel_id=channel.id
+                channel_id=channel.id,
             )
         tickets.append(ticket)
     print(f"{tickets=}")
@@ -286,7 +283,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
             action=f"Action for ticket {ticket.id} by user {user.id}",
             details=f"Details for transaction for ticket {ticket.id} by user {user.id}",
             ticket_id=ticket.id,
-            responder_id=user.id
+            responder_id=user.id,
         )
         transactions.append(transaction)
     print(f"{transactions=}")
@@ -297,7 +294,7 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
         session.commit()
 
 
-def tables_test():
+def tables_test() -> None:
     with Session(engine) as session:
         # Query tickets and their related data
         # is joinedload necessary?
@@ -305,7 +302,7 @@ def tables_test():
             joinedload(Ticket.user),
             joinedload(Ticket.channel),
             joinedload(Ticket.transactions),
-            joinedload(Ticket.helpers)
+            joinedload(Ticket.helpers),
         ).all()
 
     # Print ticket data and related data
