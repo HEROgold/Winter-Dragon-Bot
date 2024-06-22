@@ -24,7 +24,6 @@ class Logs:
         self._delete_top_level_logs()
         self.add_logger("logs", self.logger)
         self.logger.addHandler(logging.StreamHandler())
-        self.logger.setLevel(logging.DEBUG)
 
     def add_logger(self, name: str, logger: logging.Logger) -> None:
         self._loggers[name] = logger
