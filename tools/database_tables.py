@@ -1,5 +1,4 @@
 import datetime
-from pathlib import Path
 from typing import Optional, Self
 
 from discord import AuditLogAction, AuditLogActionCategory, AuditLogEntry
