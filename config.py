@@ -8,6 +8,7 @@ from urllib import parse
 
 import discord
 
+from _types.errors import FirstTimeLaunchError
 from tools.port_finder import get_v4_port
 
 
@@ -135,7 +136,7 @@ class ConfigParserSingleton:
             shutil.copy(TEMPLATE_PATH/"config_template.ini", CONFIG_PATH)
             to_edit = ["discord_token", "open_api_key", "bot_name", "support_guild_id"]
             msg = f"First time launch detected, please edit the following settings in {CONFIG_PATH}:\n{', '.join(to_edit)}"
-            raise ValueError(msg) from e
+            raise FirstTimeLaunchError(msg) from e
         self.config.read(CONFIG_PATH)
 
 config = ConfigParserSingleton().config
