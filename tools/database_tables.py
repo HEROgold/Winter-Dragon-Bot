@@ -31,7 +31,6 @@ from _types.enums import Generators
 from tools.main_log import sql_logger as logger
 
 
-Path("/database").mkdir(exist_ok=True)
 engine = create_engine("sqlite:///database/db.sqlite", echo=False)
 
 # DB string refs
