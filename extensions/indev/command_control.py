@@ -16,7 +16,7 @@ from discord.app_commands import Command as DcCommand
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog  #, Cog
 from tools.database_tables import Command as DbCommand
-from tools.database_tables import CommandGroup, GuildCommands, Session, engine
+from tools.database_tables import CommandGroup, GuildCommands
 
 
 # TODO: test
@@ -37,7 +37,7 @@ class CommandControl(GroupCog):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        with Session(engine) as session:
+        with self.session as session:
             self.commands = session.query(DbCommand).all()
             self.commands += session.query(CommandGroup).all()
 
@@ -45,7 +45,7 @@ class CommandControl(GroupCog):
     @app_commands.command(name="enable", description="Enable a command")
     async def slash_command_enable(self, interaction: discord.Interaction, command: str) -> None:
         """CommandControl"""
-        with Session(engine) as session:
+        with self.session as session:
             cmd = session.query(DbCommand).where(DbCommand.qual_name == command).first()
             group = session.query(CommandGroup).where(CommandGroup.name == command).first()
             session.add(GuildCommands(
@@ -59,7 +59,7 @@ class CommandControl(GroupCog):
     @app_commands.command(name="disable", description="Disable a command")
     async def slash_command_disable(self, interaction: discord.Interaction, command: str) -> None:
         """CommandControl"""
-        with Session(engine) as session:
+        with self.session as session:
             cmd = session.query(GuildCommands).join(DbCommand).where(DbCommand.qual_name == command).first()
             self.logger.debug(f"{cmd}")
             session.delete(cmd)

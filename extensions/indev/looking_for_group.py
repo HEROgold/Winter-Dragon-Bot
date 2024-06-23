@@ -6,7 +6,7 @@ from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from config import config
 from tools.database_tables import Game as GameDB
-from tools.database_tables import LookingForGroup, Session, engine
+from tools.database_tables import LookingForGroup
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
@@ -20,7 +20,7 @@ class Lfg(GroupCog):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        with Session(engine) as session:
+        with self.session as session:
             self.games = session.query(GameDB).all()
 
 
@@ -36,7 +36,7 @@ class Lfg(GroupCog):
         if game not in [i.name for i in self.games]:
             await interaction.response.send_message("This game is not supported", ephemeral=True)
             return
-        with Session(engine) as session:
+        with self.session as session:
             game_db = session.query(GameDB).where(GameDB.name == game).first()
             total = session.query(LookingForGroup).where(LookingForGroup.game_id == game).all()
             session.add(LookingForGroup(
@@ -51,7 +51,7 @@ class Lfg(GroupCog):
 
     @app_commands.command(name="leave", description="leave all joined search queue")
     async def slash_lfg_leave(self, interaction: discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             lfg = session.query(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id).all()
             for i in lfg:
                 session.delete(i)
@@ -78,7 +78,7 @@ class Lfg(GroupCog):
 
 
     async def search_match(self, interaction: discord.Interaction, game: str) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             user_games = session.query(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id).all()
             for user_game in user_games:
                 lfg_game = session.query(LookingForGroup).where(LookingForGroup.game_id == user_game.id).all()

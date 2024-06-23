@@ -8,7 +8,7 @@ from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes, LogCategories
 from config import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CHANNEL_NAME, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
-from tools.database_tables import AuditLog, Channel, Session, engine
+from tools.database_tables import AuditLog, Channel
 from tools.msg_checks import is_tic_tac_toe
 
 
@@ -73,7 +73,7 @@ class LogChannels(GroupCog):
         guild: discord.Guild,
         embed: discord.Embed,
     ) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             channel = session.query(Channel).where(
                 Channel.guild_id == guild.id,
                 Channel.name == LogCategories.GLOBAL.value,
@@ -100,7 +100,7 @@ class LogChannels(GroupCog):
     ) -> None:
         log_channel_name = log_category.name
 
-        with Session(engine) as session:
+        with self.session as session:
             channel = session.query(Channel).where(
                     Channel.guild_id == guild.id,
                     Channel.name == log_channel_name,
@@ -1043,7 +1043,7 @@ class LogChannels(GroupCog):
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none()),
         }
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(
                 Channel.type == LOGS,
                 Channel.guild_id == interaction.guild.id,
@@ -1053,7 +1053,7 @@ class LogChannels(GroupCog):
                 return
 
         await interaction.response.defer(ephemeral=True)
-        with Session(engine) as session:
+        with self.session as session:
             category_channels: list[CategoryChannel] = []
             div, mod = divmod(len(LogCategories), MAX_CATEGORY_SIZE)
             category_count = div + (1 if mod > 0 else 0)
@@ -1100,7 +1100,7 @@ class LogChannels(GroupCog):
     @app_commands.checks.cooldown(1, 100)
     @app_commands.command(name="remove", description="Disables automatic moderation for this server, and removes the log channels.")
     async def slash_dagon_log_remove(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             result = session.query(Channel).where(
                 Channel.type == LOGS,
                 Channel.guild_id == interaction.guild.id,
@@ -1151,14 +1151,14 @@ class LogChannels(GroupCog):
     async def update_dragon_log(self, guild: discord.Guild | None = None) -> None:
         self.logger.debug(f"Updating DragonLog for {guild=}")
         if guild is None:
-            with Session(engine) as session:
+            with self.session as session:
                 guild_ids = session.query(Channel.guild_id).where(Channel.type == LOGS).distinct().group_by(Channel.guild_id).all()
                 for guild_id in guild_ids[0]:
                     return await self.update_dragon_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
             msg = "How did we get here"
             raise NoneTypeError(msg)
 
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(
                 Channel.type == LOGS,
                 Channel.guild_id == guild.id,
@@ -1178,7 +1178,7 @@ class LogChannels(GroupCog):
         )
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
 
-        with Session(engine) as session:
+        with self.session as session:
             for i, channel_name in enumerate(difference):
                 category_channel = self.get_log_category(category_channels, i)
 
@@ -1195,7 +1195,7 @@ class LogChannels(GroupCog):
 
 
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
-        with Session(engine) as session:
+        with self.session as session:
             categories = session.query(Channel).where(
                 Channel.name == LOG_CHANNEL_NAME,
                 Channel.type == LOGS,

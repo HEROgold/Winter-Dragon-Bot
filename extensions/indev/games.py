@@ -12,7 +12,7 @@ class Games(GroupCog):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        with Session(engine) as session:
+        with self.session as session:
             self.games = session.query(Game).all()
 
 
@@ -23,7 +23,7 @@ class Games(GroupCog):
 
     @app_commands.command(name="suggest", description="Suggest a new game to be added")
     async def slash_suggest(self, interaction: discord.Interaction, name: str) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             for suggestion in session.query(Suggestion).where(Suggestion.type == "game").all():
                 if suggestion.content == name:
                     await interaction.response.send_message("That game is already in review", ephemeral=True)

@@ -14,7 +14,7 @@ class Welcome(GroupCog):
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         self.logger.debug(f"{member} joined {member.guild}")
-        with Session(engine) as session:
+        with self.session as session:
             message = session.query(WelcomeDb).where(WelcomeDb.guild_id == member.guild.id).first().message
         channel = member.guild.system_channel
         cmd = self.bot.get_app_command("help")
@@ -74,7 +74,7 @@ class Welcome(GroupCog):
         if channel_id is None:
             channel_id = interaction.guild.system_channel.id
 
-        with Session(engine) as session:
+        with self.session as session:
             data = session.query(WelcomeDb).where(WelcomeDb.guild_id == interaction.guild.id).first()
             if enabled is None:
                 enabled = data.enabled

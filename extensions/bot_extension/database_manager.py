@@ -30,7 +30,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             db_msg = session.query(Message).where(Message.id == message.id).first()
             if db_msg is not None:
                 self.logger.debug(f"Deleting from Messages table, message was deleted from discord. {message=}")
@@ -55,7 +55,7 @@ class DatabaseManager(Cog):
 
 
     def _add_db_message(self, message: discord.Message) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(Message).where(Message.id == message.id).first() is None:
                 self.logger.debug(f"Adding new {message=} to Messages table")
 
@@ -70,7 +70,7 @@ class DatabaseManager(Cog):
 
 
     def _add_db_channel(self, channel: discord.abc.Messageable) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(Channel).where(Channel.id == channel.id).first() is None:
                 self.logger.info(f"Adding new {channel=} to Channels table")
                 session.add(Channel(
@@ -83,7 +83,7 @@ class DatabaseManager(Cog):
 
 
     def _add_db_user(self, user: discord.Member | discord.User) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(User).where(User.id == user.id).first() is None:
                 self.logger.debug(f"Adding new {user=} to User table")
                 session.add(User(id=user.id))
@@ -91,7 +91,7 @@ class DatabaseManager(Cog):
 
 
     def _add_db_guild(self, guild: discord.Guild) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(Guild).where(Guild.id == guild.id).first() is None:
                 self.logger.info(f"Adding new {guild=} to Guild table")
                 session.add(Guild(id=guild.id))
@@ -128,7 +128,7 @@ class DatabaseManager(Cog):
         date_time = datetime.datetime.now(tz=datetime.UTC)
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
         # self.logger.debug(f"presence update for {member}, at {date_time}")
-        with Session(engine) as session:
+        with self.session as session:
             # Every guild a member is in calls this event.
             # Filter out updates from <10 seconds ago
             if (
@@ -200,7 +200,7 @@ class DatabaseManager(Cog):
         --------
             :class:`Command`: The database version of a command
         """
-        with Session(engine) as session:
+        with self.session as session:
             if db_command := session.query(Command).where(Command.qual_name == command.name).first():
                 if command.parent:
                     self.logger.debug(f"{command.parent=}")
@@ -225,7 +225,7 @@ class DatabaseManager(Cog):
         :param:`command`: :class:`Command`
             The command to link a member to
         """
-        with Session(engine) as session:
+        with self.session as session:
             session.add(
                 AUC(
                     user_id=user.id,

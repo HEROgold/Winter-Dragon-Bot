@@ -22,7 +22,7 @@ class WouldYouRather(GroupCog):
 
 
     def set_default_data(self) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             questions = session.query(WyrQuestion).all()
             if len(questions) > 0:
                 self.logger.debug("Questions already present in table.")
@@ -33,7 +33,7 @@ class WouldYouRather(GroupCog):
             session.commit()
 
     def get_questions(self) -> tuple[int, list[WyrQuestion]]:
-        with Session(engine) as session:
+        with self.session as session:
             questions = session.query(WyrQuestion).all()
             game_id = 0
         return game_id, questions
@@ -61,7 +61,7 @@ class WouldYouRather(GroupCog):
         description="Lets you add a Would you rather question",
         )
     async def slash_wyr_add(self, interaction: discord.Interaction, wyr_question: str) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             session.add(Suggestion(
                 id = None,
                 type = WYR,
@@ -78,7 +78,7 @@ class WouldYouRather(GroupCog):
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_add_verified(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             result = session.query(Suggestion).where(Suggestion.type == WYR, Suggestion.is_verified == True)  # noqa: E712
             questions = result.all()
             if not questions:

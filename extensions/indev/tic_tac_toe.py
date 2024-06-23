@@ -14,7 +14,7 @@ from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.games.lobby import Lobby as GLobby
 from config import config
-from tools.database_tables import Game, Lobby, ResultDuels, Session, engine
+from tools.database_tables import Game, Lobby, ResultDuels
 from tools.ttt_ai import TicTacToeAi
 
 
@@ -90,7 +90,7 @@ class TicTacToe(GroupCog):
 ## /\
 
     def get_sql_leader_board(self, interaction_user_id: int) -> list[ResultDuels]:
-        with Session(engine) as session:
+        with self.session as session:
             result = session.query(ResultDuels).where(
                 ResultDuels.game == GAME_NAME,
                 sqlalchemy.or_(
@@ -145,7 +145,7 @@ class TicTacToe(GroupCog):
             interaction=interaction,
         )
 
-        with Session(engine) as session:
+        with self.session as session:
             session.add(Lobby(
                 id = response_message.id,
                 game = GAME_NAME,
@@ -261,7 +261,7 @@ class TicTacToe(GroupCog):
 #         btn1: discord.Button,
 #         btn2: discord.Button
 #     ) -> tuple[str, AUL]:
-#         with Session(engine) as session:
+#         with self.session as session:
 #             lobby = session.query(Lobby).where(Lobby.id == original_interaction.id).first()
 #             results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
 #             associations = results.all()
@@ -315,7 +315,7 @@ class TicTacToe(GroupCog):
 #             interaction: discord.Interaction,
 #             original_interaction: discord.Interaction
 #         ) -> None:
-#         with Session(engine) as session:
+#         with self.session as session:
 #             session.delete(session.query(AUL).where(AUL.lobby_id == original_interaction.id, AUL.user_id == interaction.user.id).first())
 #             session.commit()
 
@@ -323,7 +323,7 @@ class TicTacToe(GroupCog):
 #     async def _leave_game_button_(self, interaction: discord.Interaction) -> None:
 #         await interaction.response.defer()
 #         original_interaction = await interaction.original_response()
-#         with Session(engine) as session:
+#         with self.session as session:
 #             results = session.query(AUL).where(AUL.lobby_id == original_interaction.id)
 #             associations = results.all()
 
@@ -616,7 +616,7 @@ class TicTacToeGame(discord.ui.View):
 
         self.logger.debug(f"{game_result=}, {duel_result=}")
         if game_result is not None:
-            with Session(engine) as session:
+            with self.session as session:
                 self.logger.debug(f"There is a winner: {game_result=}")
                 duel_result.game = game.id
                 session.add(duel_result)
@@ -629,7 +629,7 @@ class TicTacToeGame(discord.ui.View):
             return None
 
         # self.game_data["status"] = "finished-draw"
-        with Session(engine) as session:
+        with self.session as session:
             self.logger.debug("Adding tie to DB")
             session.add(ResultDuels(
                 game = game.id,

@@ -42,7 +42,7 @@ class TicketView(discord.ui.View):
     ) -> None:
         self.logger.info(f"{interaction.user} closed a ticket")
 
-        with Session(engine) as session:
+        with self.session as session:
             ticket = session.query(Ticket).where(
                 Ticket.user_id == interaction.user.id,
                 Ticket.channel_id == interaction.channel.id,
@@ -74,7 +74,7 @@ class TicketView(discord.ui.View):
 
         channel_name = f"{interaction.user.name}'s ticket"
 
-        with Session(engine) as session:
+        with self.session as session:
             if (
                 ticket := session.query(Ticket).where(
                     Ticket.user_id == interaction.user.id,
@@ -92,7 +92,7 @@ class TicketView(discord.ui.View):
             reason = f"Ticket opened by {interaction.user.name}",
         )
 
-        with Session(engine) as session:
+        with self.session as session:
             session.add(Ticket(
                 id=None,
                 title=f"Ticket for user {interaction.user.id} in channel {thread_channel.id}",
@@ -133,7 +133,7 @@ class Tickets(GroupCog):
     @tasks.loop(seconds=3600)
     async def database_cleanup(self) -> None:
         self.logger.info("cleaning tickets")
-        with Session(engine) as session:
+        with self.session as session:
             seven_days_before_today = datetime.datetime.now() - datetime.timedelta(days=7)  # noqa: DTZ005
             tickets = session.query(Ticket).where(
                 Ticket.is_closed == False, # noqa: E712
@@ -183,7 +183,7 @@ class Tickets(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels = True)
     @app_commands.command(name="create", description="Create a ticket channel and allow users to create new tickets")
     async def slash_ticket_create(self, interaction: discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             channel = session.query(Channel).where(
                 Channel.type == c_type,
                 Channel.guild_id == interaction.guild.id,
@@ -211,7 +211,7 @@ class Tickets(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels = True)
     @app_commands.command(name="remove", description="Remove a ticket channel and current tickets")
     async def slash_ticket_remove(self, interaction: discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if (
                 channel := session.query(Channel).where(
                     Channel.type == c_type,
@@ -289,13 +289,13 @@ def insert_data() -> None:  # sourcery skip: identity-comprehension
     print(f"{transactions=}")
 
     # Insert test data into the database
-    with Session(engine) as session:
+    with self.session as session:
         session.add_all(users + channels + tickets + transactions)
         session.commit()
 
 
 def tables_test() -> None:
-    with Session(engine) as session:
+    with self.session as session:
         # Query tickets and their related data
         # is joinedload necessary?
         tickets = session.query(Ticket).options(

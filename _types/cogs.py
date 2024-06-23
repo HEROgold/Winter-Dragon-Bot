@@ -41,6 +41,7 @@ class Cog(commands.Cog):
         self.ErrorHandler = ErrorHandler
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot") # type: ignore
         self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
+        self.session = Session(engine)
 
         if self.bot:
             self.bot.default_intents = self.bot.intents
@@ -60,7 +61,7 @@ class Cog(commands.Cog):
         channel = interaction.channel
         user = interaction.message.author if isinstance(interaction, commands.Context) else interaction.user
 
-        with Session(engine) as session:
+        with self.session as session:
             targets: list[GuildCommands | Channel | User | None] = []
             if guild:
                 targets.append(session.query(GuildCommands).where(GuildCommands.guild_id == guild.id).first())

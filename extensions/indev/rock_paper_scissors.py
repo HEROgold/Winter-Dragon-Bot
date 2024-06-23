@@ -8,7 +8,7 @@ from discord.ui import Button
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from config import config
-from tools.database_tables import ResultDuels, Session, engine
+from tools.database_tables import ResultDuels
 
 
 # TODO: change command /rps new
@@ -110,7 +110,7 @@ class RPSView(discord.ui.View):
                 winner = self.player_2
                 loser = self.player_1
 
-        with Session(engine) as session:
+        with self.session as session:
             session.add(ResultDuels(
                 # id=,
                 game = "rps",

@@ -25,7 +25,7 @@ class Reminder(Cog):
     async def send_reminder(self) -> None:
         # self.logger.debug("checking reminders")
         is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp  # noqa: DTZ005
-        with Session(engine) as session:
+        with self.session as session:
             results = session.query(ReminderDb).where(is_past_timestamp)
             if not results.all():
                 return
@@ -59,7 +59,7 @@ class Reminder(Cog):
         seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
         member = interaction.user
         time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
-        with Session(engine) as session:
+        with self.session as session:
             session.add(ReminderDb(
                 # id = None,
                 content = reminder,

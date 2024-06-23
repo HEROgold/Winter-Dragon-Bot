@@ -10,7 +10,7 @@ from _types.button import Button
 from _types.cogs import GroupCog
 from config import config
 from tools.database_tables import AssociationUserHangman as AUH  # noqa: N817
-from tools.database_tables import Game, Session, engine
+from tools.database_tables import Game
 from tools.database_tables import Hangman as HangmanDb
 from tools.database_tables import ResultMassiveMultiplayer as ResultMM
 
@@ -164,7 +164,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
         logger.debug(f"Submitting {self.letter.value=}")
 
         # Add full game logic here, and use DB to keep track of chosen letters, progress etc.
-        with Session(engine) as session:
+        with self.session as session:
             hangman_db = (
                 session.query(HangmanDb)
                 .where(HangmanDb.id == interaction.message.id)
@@ -298,7 +298,7 @@ class Hangman(GroupCog):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        with Session(engine) as session:
+        with self.session as session:
             self.game = session.query(Game).where(Game.name == "hangman").first()
             if self.game is None:
                 session.add(Game(name="hangman"))

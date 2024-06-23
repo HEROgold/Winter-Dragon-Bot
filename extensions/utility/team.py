@@ -10,7 +10,7 @@ from _types.cogs import GroupCog
 from _types.enums import ChannelTypes
 from _types.typing import GTPChannel, TeamDict
 from tools import rainbow
-from tools.database_tables import Channel, Session, engine
+from tools.database_tables import Channel
 
 
 TEAM_VOICE = ChannelTypes.TEAM_VOICE.name
@@ -24,7 +24,7 @@ class Team(GroupCog):
     @tasks.loop(seconds=3600)
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel"""
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(Channel.type == TEAM_VOICE).all()
             for channel in channels:
                 if discord_channel := self.bot.get_channel(channel.id):  # noqa: SIM102
@@ -79,7 +79,7 @@ class Team(GroupCog):
 
     async def create_team_channels(self, teams: list[TeamDict], category: CategoryChannel) -> tuple[list[Channel], list[VoiceChannel]]:
         """Create team channels based on a list of teams, adds those channels to database"""
-        with Session(engine) as session:
+        with self.session as session:
             db_channels: list[Channel] = []
             discord_channels: list[VoiceChannel] = []
             for team in teams:
@@ -100,7 +100,7 @@ class Team(GroupCog):
 
     def get_team_channels(self, guild: Guild) -> list[Channel]:
         """Get all team channels from database"""
-        with Session(engine) as session:
+        with self.session as session:
             return session.query(Channel).where(
                 Channel.type == TEAM_VOICE,
                 Channel.guild_id == guild.id,
@@ -109,7 +109,7 @@ class Team(GroupCog):
 
     def get_teams_category(self, guild: Guild | None) -> CategoryChannel | None:
         """Find a category channel"""
-        with Session(engine) as session:
+        with self.session as session:
             if channel := session.query(Channel).where(
                 Channel.type == TEAM_CATEGORY,
                 Channel.guild_id == guild.id,
@@ -121,7 +121,7 @@ class Team(GroupCog):
     async def create_teams_category(self, guild: Guild | None) -> CategoryChannel:
         """Create a category channel, and a lobby voice channel"""
         channel = await guild.create_category(name="teams", reason="Creating team category for splitting into teams")
-        with Session(engine) as session:
+        with self.session as session:
             session.add(Channel(
                 id = channel.id,
                 name = channel.name,
@@ -142,7 +142,7 @@ class Team(GroupCog):
 
     def get_teams_lobby(self, guild: Guild | None) -> GTPChannel | None:
         """Find a lobby channel"""
-        with Session(engine) as session:
+        with self.session as session:
             if channel := session.query(Channel).where(
                 Channel.type == TEAM_LOBBY,
                 Channel.guild_id == guild.id,
@@ -153,7 +153,7 @@ class Team(GroupCog):
 
     async def create_teams_lobby(self, category: GTPChannel | CategoryChannel) -> VoiceChannel:
         """Create a lobby channel"""
-        with Session(engine) as session:
+        with self.session as session:
             voice = await category.create_voice_channel(name="Lobby", reason="Creating lobby channel for moving users.")
             session.add(Channel(
                 id = voice.id,

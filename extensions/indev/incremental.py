@@ -59,7 +59,7 @@ class ShopItems(Select):
 
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             incr = DbIncremental.fetch_user(interaction.user.id)
             selector = self.values[0]
             gen = Generators[selector]

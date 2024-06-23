@@ -31,7 +31,7 @@ class SyncedBans(GroupCog):
     async def slash_synced_ban_join(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
 
-        with Session(engine) as session:
+        with self.session as session:
             session.add(
                 SyncBanGuild(
                     guild_id=guild.id,
@@ -47,7 +47,7 @@ class SyncedBans(GroupCog):
     async def slash_synced_ban_leave(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
 
-        with Session(engine) as session:
+        with self.session as session:
             session.delete(
                 session.query(SyncBanGuild)
                 .where(SyncBanGuild.guild_id == guild.id)
@@ -61,7 +61,7 @@ class SyncedBans(GroupCog):
         )
 
     async def synced_ban_sync(self, member: discord.Member) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             session.add(
                 SyncBan(
                     user_id=member.id,

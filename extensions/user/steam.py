@@ -46,7 +46,7 @@ class Steam(GroupCog):
 
     @app_commands.command(name="add", description="Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(User).where(User.id == interaction.user.id).first() is None:
                 session.add(User(id = interaction.user.id))
                 session.commit()
@@ -64,7 +64,7 @@ class Steam(GroupCog):
 
     @app_commands.command(name="remove", description="No longer get notified of free steam games")
     async def slash_remove(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             result = session.query(SteamUser).where(SteamUser.id == interaction.user.id)
             user = result.first()
             if not user:
@@ -114,7 +114,7 @@ class Steam(GroupCog):
         disable_message = f"You can disable this message by using {sub_mention_remove}"
         all_sale_message = f"You can see other sales by using {sub_mention_show}, followed by a percentage"
 
-        with Session(engine) as session:
+        with self.session as session:
             users = session.query(SteamUser).all()
             self.logger.debug(f"Got embed with sales, {embed}, to send to {users=}")
 
@@ -242,7 +242,7 @@ class Steam(GroupCog):
         Returns:
             list[SteamSale]: List of SteamSale database objects
         """
-        with Session(engine) as session:
+        with self.session as session:
             sales = session.query(SteamSale).all()
         self.logger.debug(f"saved {sales=}")
         return sales

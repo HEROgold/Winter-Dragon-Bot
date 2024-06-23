@@ -10,7 +10,7 @@ from _types.enums import ChannelTypes
 from extensions.server.log_channels import NoneTypeError
 from tools import rainbow
 from config import config
-from tools.database_tables import Channel, Session, engine
+from tools.database_tables import Channel
 
 
 STATS = ChannelTypes.STATS.name
@@ -30,7 +30,7 @@ class Stats(GroupCog):
         member = before or after
         self.logger.debug(f"Member update: {member.guild=}, {member=}")
         guild = member.guild
-        with Session(engine) as session:
+        with self.session as session:
             if peak_online := session.query(Channel).where(Channel.guild_id == guild.id, Channel.name == "peak_channel").first():
                 await self.update_peak(guild, peak_online)
 
@@ -76,7 +76,7 @@ class Stats(GroupCog):
             "category_channel": category,
         }
 
-        with Session(engine) as session:
+        with self.session as session:
             for k, v in channels.items():
                 Channel.update(Channel(
                     id = v.id,
@@ -96,7 +96,7 @@ class Stats(GroupCog):
         if guild is None:
             NoneTypeError("Expected discord.guild")
 
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(
                 Channel.guild_id == guild.id,
                 Channel.type == STATS,
@@ -128,7 +128,7 @@ class Stats(GroupCog):
         self.logger.info("Updating all stat channels")
         guilds = self.bot.guilds
         for guild in guilds:
-            with Session(engine) as session:
+            with self.session as session:
                 if not session.query(Channel).where(Channel.guild_id == guild.id, Channel.type == STATS):
                     continue
             self.logger.info(f"Updating stat channels: guild='{guild}'")
@@ -176,7 +176,7 @@ class Stats(GroupCog):
         discord.abc.GuildChannel | None,
         discord.abc.GuildChannel | None,
     ]:
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(
                 Channel.type == STATS,
                 Channel.guild_id == guild.id,
@@ -255,7 +255,7 @@ class Stats(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command(name="add", description="This command will create the Stats category which will show some stats about the server.")
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(Channel).where(
                 Channel.guild_id == interaction.guild.id,
                 Channel.type == STATS,
@@ -275,7 +275,7 @@ class Stats(GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(
                 Channel.guild_id == interaction.guild.id,
                 Channel.type == STATS,
@@ -299,7 +299,7 @@ class Stats(GroupCog):
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         await interaction.response.defer(ephemeral=True)
 
-        with Session(engine) as session:
+        with self.session as session:
             channels = session.query(Channel).where(
                 Channel.guild_id == interaction.guild.id,
                 Channel.type == STATS,

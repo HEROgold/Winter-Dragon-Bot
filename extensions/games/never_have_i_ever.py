@@ -23,7 +23,7 @@ class NeverHaveIEver(GroupCog):
 
 
     def set_default_data(self) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             questions = session.query(NhieQuestion).all()
             if len(questions) > 0:
                 self.logger.debug("Questions already present in table.")
@@ -34,7 +34,7 @@ class NeverHaveIEver(GroupCog):
             session.commit()
 
     def get_questions(self) -> tuple[Literal[0], list[NhieQuestion]]:
-        with Session(engine) as session:
+        with self.session as session:
             questions = session.query(NhieQuestion).all()
             game_id = 0
         return game_id, questions
@@ -62,7 +62,7 @@ class NeverHaveIEver(GroupCog):
         description="Lets you add a Never Have I Ever question",
         )
     async def slash_nhie_add(self, interaction: discord.Interaction, nhie_question: str) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             session.add(Suggestion(
                 id = None,
                 type = NHIE,
@@ -79,7 +79,7 @@ class NeverHaveIEver(GroupCog):
     @app_commands.guilds(config.getint("Main", "support_guild_id"))
     @commands.is_owner()
     async def slash_nhie_add_verified(self, interaction:discord.Interaction) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)  # noqa: E712
             questions = result.all()
             if not questions:

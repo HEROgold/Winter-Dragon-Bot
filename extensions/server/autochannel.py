@@ -29,7 +29,7 @@ class AutomaticChannels(GroupCog):
         after: discord.VoiceState,
     ) -> None:
         self.logger.debug(f"{member} moved from {before} to {after}")
-        with Session(engine) as session:
+        with self.session as session:
             if voice_create := session.query(AC).where(AC.id == member.guild.id).first():
                 self.logger.debug(f"{voice_create}")
 
@@ -126,7 +126,7 @@ class AutomaticChannels(GroupCog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="setup", description="Start the AutoChannel setup")
     async def slash_setup(self, interaction: discord.Interaction, category_name: str, voice_channel_name: str) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if session.query(AC).where(AC.id == interaction.guild.id).first() is not None:
                 await interaction.response.send_message("You are already set up", ephemeral=True)
                 return
@@ -164,7 +164,7 @@ class AutomaticChannels(GroupCog):
             ))
             return
 
-        with Session(engine) as session:
+        with self.session as session:
             session.add(AC(
                 id = interaction.guild.id,
                 channel_id = channel.id,
@@ -180,7 +180,7 @@ class AutomaticChannels(GroupCog):
     async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
         # await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
         # return
-        with Session(engine) as session:
+        with self.session as session:
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
             else:
@@ -197,7 +197,7 @@ class AutomaticChannels(GroupCog):
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
         # await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
         # return
-        with Session(engine) as session:
+        with self.session as session:
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
             else:
@@ -228,7 +228,7 @@ class AutomaticChannels(GroupCog):
 
     @app_commands.command(name="name", description="Change the name of your channels")
     async def slash_name(self, interaction: discord.Interaction, *, name: str) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
                 if channel is not None:

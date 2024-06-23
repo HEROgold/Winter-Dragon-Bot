@@ -20,13 +20,13 @@ class AutoReAssign(GroupCog):
             discord.AuditLogAction.ban,
             discord.AuditLogAction.kick,
         ]:
-            with Session(engine) as session:
+            with self.session as session:
                 for role in member.roles:
                     session.add(UserRoles(id=role.id, user=member.id))
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
-        with Session(engine) as session:
+        with self.session as session:
             for auto_assign in session.query(UserRoles).where(
                 UserRoles.user_id == member.id,
                 UserRoles.guild_id == member.guild.id,
