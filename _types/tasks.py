@@ -5,33 +5,30 @@ Add error handling from discord tasks
 
 import asyncio
 import datetime
-import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from discord.ext import tasks
+from discord.utils import MISSING
 
+from _types.mixins import LoggerMixin
 from _types.typing import CoroutineFunction
-from config import config
 
 
-class Loop(tasks.Loop):
-    logger: logging.Logger
-
-
+class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
     def __init__(  # noqa: PLR0913
         self,
-        coro: CoroutineFunction,
-        seconds: float,
-        hours: float,
-        minutes: float,
-        time: datetime.time | Sequence[datetime.time],
-        count: int | None,
-        reconnect: bool,
+        coro: FT,
+        seconds: float = 0,
+        minutes: float = 0,
+        hours: float = 0,
+        time: datetime.time | Sequence[datetime.time] = MISSING,
+        count: int | None = None,
+        reconnect: bool = True,
+        name: str | None = None,
     ) -> None:
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.tasks")
         self.coro = coro
         # self.get_task().add_done_callback(self._handle_task_result) # doesn't seem to do anything
-        super().__init__(coro, seconds, hours, minutes, time, count, reconnect, None)
+        super().__init__(coro, seconds, hours, minutes, time, count, reconnect, name)
 
 
     async def _error(self, *args) -> None:
@@ -52,3 +49,27 @@ class Loop(tasks.Loop):
         except Exception:  # pylint: disable=broad-except
             self.logger.exception("Exception raised by task: %r", task)
 
+
+def loop[FT: CoroutineFunction](  # noqa: PLR0913
+    *,
+    seconds: float = 0,
+    minutes: float = 0,
+    hours: float = 0,
+    time: datetime.time | Sequence[datetime.time] = MISSING,
+    count: int | None = None,
+    reconnect: bool = True,
+    name: str | None = None,
+) -> Callable[[FT], Loop[FT]]:
+    def decorator[FT: CoroutineFunction](func: FT) -> Loop[FT]:
+        return Loop[FT](
+            func,
+            seconds=seconds,
+            minutes=minutes,
+            hours=hours,
+            count=count,
+            time=time,
+            reconnect=reconnect,
+            name=name,
+        )
+
+    return decorator
