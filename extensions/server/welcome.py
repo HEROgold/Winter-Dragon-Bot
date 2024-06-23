@@ -4,7 +4,6 @@ from discord import app_commands
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from config import config
-from tools.database_tables import Session, engine
 from tools.database_tables import Welcome as WelcomeDb
 
 

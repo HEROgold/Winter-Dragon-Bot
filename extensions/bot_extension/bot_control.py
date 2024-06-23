@@ -12,8 +12,8 @@ from psutil._common import snetio
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools import codeblock
 from config import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
+from tools import codeblock
 
 
 STATUSES = [

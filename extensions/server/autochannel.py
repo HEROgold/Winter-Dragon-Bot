@@ -11,7 +11,7 @@ from _types.cogs import Cog, GroupCog
 from config import AUTOCHANNEL_CREATE_REASON
 from tools.database_tables import AutoChannel as AC  # noqa: N817
 from tools.database_tables import AutoChannelSettings as ACS  # noqa: N817
-from tools.database_tables import Session, engine
+from tools.database_tables import Session
 
 
 class AutomaticChannels(GroupCog):

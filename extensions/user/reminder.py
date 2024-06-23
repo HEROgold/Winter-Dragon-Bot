@@ -7,7 +7,6 @@ from discord.ext import tasks
 from _types.bot import WinterDragon
 from _types.cogs import Cog
 from tools.database_tables import Reminder as ReminderDb
-from tools.database_tables import Session, engine
 
 
 class Reminder(Cog):

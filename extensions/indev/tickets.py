@@ -13,7 +13,7 @@ from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.enums import ChannelTypes
 from config import config
-from tools.database_tables import Channel, Session, Ticket, Transaction, User, engine
+from tools.database_tables import Channel, Ticket, Transaction, User
 
 
 c_type = ChannelTypes.TICKETS.name

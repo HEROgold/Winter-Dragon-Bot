@@ -16,9 +16,7 @@ from tools.database_tables import (
     Guild,
     Message,
     Presence,
-    Session,
     User,
-    engine,
 )
 
 

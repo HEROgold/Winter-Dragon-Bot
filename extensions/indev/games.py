@@ -4,7 +4,7 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from tools.database_tables import Game, Session, Suggestion, engine
+from tools.database_tables import Game, Suggestion
 
 
 class Games(GroupCog):

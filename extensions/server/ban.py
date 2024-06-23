@@ -4,7 +4,7 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
-from tools.database_tables import Session, SyncBan, SyncBanGuild, engine
+from tools.database_tables import SyncBan, SyncBanGuild
 
 
 class SyncedBans(GroupCog):

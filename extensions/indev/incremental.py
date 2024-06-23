@@ -11,7 +11,6 @@ from _types.cogs import GroupCog
 from _types.enums import Generators
 from tools.database_tables import Incremental as DbIncremental
 from tools.database_tables import IncrementalGen as DbGen
-from tools.database_tables import Session, engine
 
 
 def update_balance(incremental: DbIncremental) -> None:

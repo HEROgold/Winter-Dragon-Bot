@@ -12,11 +12,12 @@ Get and store enabled commands per guild in database
 import discord
 from discord import app_commands
 from discord.app_commands import Command as DcCommand
+from sqlalchemy.orm import Session
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog  #, Cog
 from tools.database_tables import Command as DbCommand
-from tools.database_tables import CommandGroup, GuildCommands
+from tools.database_tables import CommandGroup, GuildCommands, engine
 
 
 # TODO: test
@@ -28,8 +29,8 @@ class CombinedCommand:
 
     def __init__(self, dc_command: DcCommand) -> None:
         self.dc_command = dc_command
-        with Session(engine) as engine:  # noqa: F823
-            self.db_command = engine.query(DbCommand).where(DbCommand.qual_name == dc_command.qualified_name).first()
+        with Session(engine) as session:
+            self.db_command = session.query(DbCommand).where(DbCommand.qual_name == dc_command.qualified_name).first()
 
 
 class CommandControl(GroupCog):
@@ -47,7 +48,7 @@ class CommandControl(GroupCog):
         """CommandControl"""
         with self.session as session:
             cmd = session.query(DbCommand).where(DbCommand.qual_name == command).first()
-            group = session.query(CommandGroup).where(CommandGroup.name == command).first()
+            session.query(CommandGroup).where(CommandGroup.name == command).first()
             session.add(GuildCommands(
                 guild_id = interaction.guild.id,
                 command_id = cmd.id,

@@ -9,7 +9,7 @@ from config import INTENTS, config
 
 @given(text())
 def test_winter_dragon() -> None:
-    bot = WinterDragon(
+    WinterDragon(
         intents=INTENTS,
         command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),  # type: ignore
         case_insensitive=True,

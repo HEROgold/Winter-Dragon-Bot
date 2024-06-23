@@ -2,7 +2,7 @@ import discord
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
-from tools.database_tables import Session, UserRoles, engine
+from tools.database_tables import UserRoles
 
 
 # TODO: move this and other static messages to messages config?
