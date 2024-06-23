@@ -1,5 +1,6 @@
-import logging
 from typing import Literal
+
+from _types.mixins import LoggerMixin
 
 
 # from tools.config_reader import config
@@ -9,12 +10,10 @@ from typing import Literal
 Board = list[list[int]]
 
 
-class TicTacToeAi:
+class TicTacToeAi(LoggerMixin):
     board: Board
 
     def __init__(self, o: int, x: int, board: Board = None) -> None:
-        from ..config import config
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.logger.debug("Getting TTT AI")
         self.board = (
             [[0, 0, 0],[0, 0, 0],[0, 0, 0]]

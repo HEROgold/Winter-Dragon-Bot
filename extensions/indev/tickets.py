@@ -1,6 +1,5 @@
 import datetime
 import itertools
-import logging
 import random
 
 import discord
@@ -12,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.enums import ChannelTypes
+from _types.mixins import LoggerMixin
 from _types.tasks import loop
 from config import config
 from tools.database_tables import Channel, Ticket, Transaction, User
@@ -26,10 +26,9 @@ CLOSED_TIMEOUT = "~CLOSED TIMEOUT~"
 # Test current state
 
 
-class TicketView(discord.ui.View):
+class TicketView(discord.ui.View, LoggerMixin):
     def __init__(self, *, timeout: float | None = 180, channel: discord.TextChannel) -> None:
         super().__init__(timeout=timeout)
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.cooldown = commands.CooldownMapping.from_cooldown(1, config.getint("Tickets", "MAX_COOLDOWN"), commands.BucketType.member)
         self.channel = channel
 

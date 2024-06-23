@@ -1,4 +1,3 @@
-import logging
 from typing import ClassVar
 
 import discord  # type: ignore
@@ -7,7 +6,7 @@ from discord.ui import Button
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
-from config import config
+from _types.mixins import LoggerMixin
 from tools.database_tables import ResultDuels
 
 
@@ -17,10 +16,9 @@ from tools.database_tables import ResultDuels
 # add logic for winning
 
 
-class RpsButton(Button["RPSView"]):
+class RpsButton(Button["RPSView"], LoggerMixin):
     def __init__(self, label: str, style: discord.ButtonStyle) -> None:
         super().__init__(label=label, style=style)
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
 
     async def callback(self, interaction: discord.Interaction) -> None:
         view = self._view
@@ -46,7 +44,7 @@ class RpsButton(Button["RPSView"]):
 # Each button adds the player's choice,
 # Set's player_1, and player_2 variable
 # calcs results and posts them
-class RPSView(discord.ui.View):
+class RPSView(discord.ui.View, LoggerMixin):
     """View created for rock paper scissors. Contains 3 buttons."""
     children: list[RpsButton] # type: ignore
     p1_choice: str
@@ -63,7 +61,6 @@ class RPSView(discord.ui.View):
         player_2: discord.Member,
     ) -> None:
         super().__init__()
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.p1_choice = first_choice
         self.p2_choice = second_choice
         self.player_1 = player_1

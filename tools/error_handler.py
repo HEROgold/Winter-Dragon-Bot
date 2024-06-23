@@ -8,11 +8,12 @@ from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.errors import AllErrors
+from _types.mixins import LoggerMixin
 from _types.tasks import loop
 from config import config
 
 
-class ErrorHandler:
+class ErrorHandler(LoggerMixin):
     """
     ErrorHandler is a class that handles errors encountered during command execution in the WinterDragon bot.
 
@@ -37,9 +38,6 @@ class ErrorHandler:
         self.interface = interface
         self.error = error
         self.help_msg = "`help`"
-        self.logger = logging.getLogger(
-            f"{config['Main']['bot_name']}.{self.__class__.__name__}",
-        )
         self.time_code = datetime.datetime.now(datetime.UTC).timestamp()
 
         self._async_init.start()

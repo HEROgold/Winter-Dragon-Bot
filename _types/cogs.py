@@ -8,7 +8,7 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
 from _types.bot import WinterDragon
-from config import config
+from _types.mixins import LoggerMixin
 from tools.database_tables import (
     Channel,
     DisabledCommands,
@@ -24,7 +24,7 @@ from tools.utils import get_arg
 from .tasks import loop
 
 
-class Cog(commands.Cog):
+class Cog(commands.Cog, LoggerMixin):
     """
     Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
 
@@ -40,7 +40,6 @@ class Cog(commands.Cog):
     def __init__(self, *args, **kwargs) -> None:
         self.ErrorHandler = ErrorHandler
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot") # type: ignore
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.session = Session(engine)
 
         if self.bot:

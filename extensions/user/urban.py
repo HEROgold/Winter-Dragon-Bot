@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import urllib.parse
 
 import discord
@@ -8,13 +7,13 @@ from discord import app_commands
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.mixins import LoggerMixin
 from config import UD_DEFINE_URL, UD_RANDOM_URL, config
 
 
-class Urban(GroupCog):
+class Urban(GroupCog, LoggerMixin):
     def __init__(self, bot: WinterDragon) -> None:
         self.bot = bot
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.loop = asyncio.get_event_loop()
 
 

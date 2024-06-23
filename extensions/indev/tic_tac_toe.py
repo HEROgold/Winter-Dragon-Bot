@@ -1,6 +1,5 @@
 import asyncio
 import itertools
-import logging
 import os
 from functools import partial
 from typing import Callable, TypedDict
@@ -13,7 +12,7 @@ from discord import app_commands
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.games.lobby import Lobby as GLobby
-from config import config
+from _types.mixins import LoggerMixin
 from tools.database_tables import Game, Lobby, ResultDuels
 from tools.ttt_ai import TicTacToeAi
 
@@ -375,14 +374,13 @@ class TicTacToe(GroupCog):
 # To avoid other players intervening
 
 
-class TicTacToeButton(discord.ui.Button["TicTacToe"]):
+class TicTacToeButton(discord.ui.Button["TicTacToe"], LoggerMixin):
     def __init__(self, x: int, y: int) -> None:
         # A label is required, but we don't need one so a zero-width space is used, '\u200b'
         # The row parameter tells the View which row to place the button under.
         # A View can only contain up to 5 rows -- each row can only have 5 buttons.
         # Since a Tic Tac Toe grid is 3x3 that means we have 3 rows and 3 columns.
         super().__init__(style=discord.ButtonStyle.secondary, label="\u200b", row=y)
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.x = x
         self.y = y
 
@@ -451,7 +449,7 @@ class TicTacToeButton(discord.ui.Button["TicTacToe"]):
 
 # This is our actual board View
 # TODO: Move game data to database
-class TicTacToeGame(discord.ui.View):
+class TicTacToeGame(discord.ui.View, LoggerMixin):
     player_x: discord.Member
     player_o: discord.Member
     Tie = 2
@@ -464,7 +462,6 @@ class TicTacToeGame(discord.ui.View):
         self.player_o = player_two
         self.current_player = self.player_x.id
         self.game_data = game_data
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}.{self.__class__.__name__}")
         self.board = [
             [0, 0, 0],
             [0, 0, 0],
