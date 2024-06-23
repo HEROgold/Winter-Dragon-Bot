@@ -19,19 +19,13 @@ class AutoAssign(GroupCog):
     @app_commands.command(name="add", description="Automatically give a new user the selected role when they join")
     async def slash_assign_add(self, interaction: discord.Interaction, role: discord.Role) -> None:
         self.logger.info(f"Adding AutoAssign role {role} to database")
-        with self.session.no_autoflush as session:
-            if db_role := session.query(DbRole).where(DbRole.id == role.id).first():
-                dc_role = interaction.guild.get_role(db_role.id)
-                await interaction.response.send_message(f"Role {dc_role.mention} is already registered.", ephemeral=True)
+        with self.session as session:
+            if session.query(AutoAssignRole).where(AutoAssignRole.role_id == role.id).first():
+                await interaction.response.send_message(f"Role {role.mention} is already registered.", ephemeral=True)
                 return
-
-            session.add(DbRole(id=role.id, name=role.name))
-
-            if not session.query(AutoAssignRole).where(AutoAssignRole.role_id == role.id).first():
-                session.add(AutoAssignRole(
-                    role_id = role.id,
-                    guild_id = role.guild.id,
-                ))
+            if not session.query(DbRole).where(DbRole.id == role.id).first():
+                session.add(DbRole(id=role.id, name=role.name))
+            session.add(AutoAssignRole(role_id=role.id, guild_id=role.guild.id))
             session.commit()
 
         await interaction.response.send_message(f"Adding {role.mention} when a new member joins", ephemeral=True)
