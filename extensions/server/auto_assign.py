@@ -57,8 +57,6 @@ class AutoAssign(GroupCog):
         self.logger.info(f"Removing all AutoAssign roles from {interaction.guild=}")
         with self.session as session:
             for auto_assign in session.query(AutoAssignRole).where(AutoAssignRole.guild_id == interaction.guild.id).all():
-                role = session.query(DbRole).where(DbRole.id == auto_assign.role_id).first()
-                session.delete(role)
                 session.delete(auto_assign)
             session.commit()
 
