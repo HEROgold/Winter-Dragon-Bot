@@ -39,7 +39,7 @@ class DatabaseManager(Cog):
     @Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
         with self.session as session:
-            if session.query(Role).where(Role.id == role.id).first() is None:
+            if not session.query(Role).where(Role.id == role.id).first():
                 self.logger.debug(f"Adding new {role=} to Roles table")
                 session.add(Role(id=role.id, name=role.name))
                 session.commit()
