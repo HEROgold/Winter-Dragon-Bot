@@ -52,6 +52,13 @@ class DatabaseManager(Cog):
                 session.delete(db_role)
                 session.commit()
 
+    @Cog.listener()
+    async def on_guild_role_update(self, before: discord.Role, after: discord.Role) -> None:
+        with self.session as session:
+            if db_role := session.query(Role).where(Role.id == before.id).first():
+                self.logger.debug(f"Updating {before=} to {after=} in Roles table")
+                db_role.name = after.name
+                session.commit()
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
