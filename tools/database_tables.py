@@ -31,6 +31,7 @@ from tools.main_log import sql_logger as logger
 
 
 engine = create_engine("sqlite:///database/db.sqlite", echo=False)
+session = Session(engine)
 
 # DB string refs
 CASCADE = "CASCADE"
@@ -92,7 +93,7 @@ class Channel(Base):
     @classmethod
     def update(cls, channel: Self) -> None:
         # TODO: Update whenever the bot hears a discord channel update event > on_channel_update listener
-        with Session(engine) as session:
+        with session:
             if db_channel := session.query(Channel).where(Channel.id == channel.id).first():
                 db_channel.id = channel.id
                 db_channel.name = channel.name
@@ -119,7 +120,7 @@ class User(Base, UserMixin):
         Args:
             id (int): Identifier for the user.
         """
-        with Session(engine) as session:
+        with session:
             logger.debug(f"Looking for user {id=}")
 
             if user := session.query(cls).where(cls.id == id).first():
@@ -190,7 +191,7 @@ class Game(Base):
         Args:
             name (str): Name for the game
         """
-        with Session(engine) as session:
+        with session:
             logger.debug(f"Looking for game {name=}")
             if game := session.query(cls).where(cls.name == name).first():
                 logger.debug(f"Returning game {name=}")
@@ -209,7 +210,7 @@ class LobbyStatus(Base):
 
     @classmethod
     def create_default_values(cls) -> None:
-        with Session(engine) as session:
+        with session:
             for status in [
                 "waiting",
                 "running",
@@ -368,7 +369,7 @@ class Presence(Base):
         :param:`days`: :class:`int`
             The amount of days ago to remove, defaults to (256)
         """
-        with Session(engine) as session:
+        with session:
             db_presences = session.query(Presence).where(Presence.user_id == member_id).all()
             for presence in db_presences:
                 if (presence.date_time + datetime.timedelta(days=days)) >= datetime.datetime.now():
@@ -417,7 +418,7 @@ class Ticket(Base):
 
     @classmethod
     def close(cls) -> None:
-        with Session(engine) as session:
+        with session:
             cls.is_closed = True
             cls.closed_at = datetime.datetime.now()
             session.commit()
@@ -474,7 +475,7 @@ class Incremental(Base):
         Args:
             user_id (int): Identifier for the incremental.
         """
-        with Session(engine) as session:
+        with session:
             logger.debug(f"Looking for incremental {user_id=}")
             incremental = session.query(cls).where(cls.user_id == user_id).first()
             if incremental is None:
@@ -550,7 +551,7 @@ class AssociationUserCommand(Base):
         TODO: test
         """
         track_amount = 1000
-        with Session(engine) as session:
+        with session:
             data = session.query(cls).all()
             seen_users = []
             for row in data:
@@ -619,7 +620,7 @@ class Infractions(Base):
     @classmethod
     def add_infraction_count(cls, user_id: int, amount: int) -> None:
         """Add an infraction to a user, if it isn't in this table add it"""
-        with Session(engine) as session:
+        with session:
             infraction = session.query(cls).where(cls.user_id == user_id).first()
 
             if infraction is None:
@@ -637,7 +638,7 @@ class Infractions(Base):
         Args:
             id (int): Identifier for the user.
         """
-        with Session(engine) as session:
+        with session:
             logger.debug(f"Looking for user {id=}")
 
             if user := session.query(cls).where(cls.id == id).first():
@@ -664,7 +665,7 @@ class AuditLog(Base):
 
     @classmethod
     def from_audit_log(cls, entry: AuditLogEntry) -> Self:
-        with Session(engine) as session:
+        with session:
             audit = cls(
                 id = entry.id,
                 action = entry.action,
@@ -684,7 +685,7 @@ class AuditLog(Base):
 all_tables = Base.__subclasses__()
 
 try:
-    with Session(engine) as session:
+    with session:
         for i in all_tables:
             logger.debug(f"Checking for existing database table: {i}")
             session.query(i).first()
