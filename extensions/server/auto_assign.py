@@ -49,9 +49,7 @@ class AutoAssign(GroupCog):
                 AutoAssignRole.guild_id == interaction.guild.id,
                 AutoAssignRole.role_id == role.id,
             ).first():
-                db_role = session.query(DbRole).where(DbRole.id == auto_assign.role_id).first()
                 session.delete(auto_assign)
-                session.delete(db_role)
             session.commit()
 
 
