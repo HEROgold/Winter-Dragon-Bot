@@ -26,6 +26,7 @@ class AutoAssign(GroupCog):
                 return
 
             session.add(DbRole(id=role.id, name=role.name))
+            session.commit()
 
             if not session.query(AutoAssignRole).where(AutoAssignRole.role_id == role.id).first():
                 session.add(AutoAssignRole(
