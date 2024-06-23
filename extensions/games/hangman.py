@@ -8,9 +8,10 @@ from discord import app_commands
 from _types.bot import WinterDragon
 from _types.button import Button
 from _types.cogs import GroupCog
+from _types.modal import Modal
 from config import config
 from tools.database_tables import AssociationUserHangman as AUH  # noqa: N817
-from tools.database_tables import Game
+from tools.database_tables import Game, Session, engine
 from tools.database_tables import Hangman as HangmanDb
 from tools.database_tables import ResultMassiveMultiplayer as ResultMM
 
@@ -153,7 +154,7 @@ class HangmanButton(Button):
             self.logger.exception("Error creating hangman SubmitLetter modal")
 
 
-class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
+class SubmitLetter(Modal, title="Submit Letter"):
     letter = discord.ui.TextInput(label="Letter", min_length=1, max_length=1)
 
     async def on_submit(self, interaction: discord.Interaction) -> None:  # noqa: PLR0915, C901
@@ -164,7 +165,7 @@ class SubmitLetter(discord.ui.Modal, title="Submit Letter"):
         logger.debug(f"Submitting {self.letter.value=}")
 
         # Add full game logic here, and use DB to keep track of chosen letters, progress etc.
-        with self.session as session:
+        with Session(engine) as session:
             hangman_db = (
                 session.query(HangmanDb)
                 .where(HangmanDb.id == interaction.message.id)
