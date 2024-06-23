@@ -25,7 +25,7 @@ class AutoAssign(GroupCog):
                 await interaction.response.send_message(f"Role {dc_role.mention} is already registered.", ephemeral=True)
                 return
 
-            session.add(DbRole(id = role.id))
+            session.add(DbRole(id=role.id, name=role.name))
 
             if not session.query(AutoAssignRole).where(AutoAssignRole.role_id == role.id).first():
                 session.add(AutoAssignRole(
