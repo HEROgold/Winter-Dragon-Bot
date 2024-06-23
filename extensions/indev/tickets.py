@@ -6,12 +6,13 @@ import random
 import discord
 import discord.ui
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 from sqlalchemy.orm import joinedload
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.enums import ChannelTypes
+from _types.tasks import loop
 from config import config
 from tools.database_tables import Channel, Ticket, Transaction, User
 
@@ -130,7 +131,7 @@ class Tickets(GroupCog):
         self.database_cleanup.start()
 
 
-    @tasks.loop(seconds=3600)
+    @loop(seconds=3600)
     async def database_cleanup(self) -> None:
         self.logger.info("cleaning tickets")
         with self.session as session:

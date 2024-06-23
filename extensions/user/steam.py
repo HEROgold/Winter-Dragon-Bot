@@ -9,10 +9,10 @@ import discord
 import requests
 from bs4 import BeautifulSoup
 from discord import app_commands
-from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.tasks import loop
 from _types.typing import Sale
 from config import (
     BUNDLE_DISCOUNT,
@@ -92,7 +92,7 @@ class Steam(GroupCog):
             await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
 
 
-    @tasks.loop(seconds=STEAM_SEND_PERIOD)
+    @loop(seconds=STEAM_SEND_PERIOD)
     async def update(self) -> None:
         """
         creates a discord Embed object to send and notify users of new 100% sales.

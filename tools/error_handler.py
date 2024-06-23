@@ -4,10 +4,11 @@ from textwrap import dedent
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.errors import AllErrors
+from _types.tasks import loop
 from config import config
 
 
@@ -43,7 +44,7 @@ class ErrorHandler:
 
         self._async_init.start()
 
-    @tasks.loop(count=1)
+    @loop(count=1)
     async def _async_init(self) -> None:
         # self.help_command = self.bot.get_app_command("help")
         self.invite_command = self.bot.get_app_command("invite")

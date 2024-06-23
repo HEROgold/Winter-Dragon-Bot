@@ -3,11 +3,11 @@ import random
 
 import discord
 from discord import CategoryChannel, Guild, Member, VoiceChannel, app_commands
-from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
 from _types.enums import ChannelTypes
+from _types.tasks import loop
 from _types.typing import GTPChannel, TeamDict
 from tools import rainbow
 from tools.database_tables import Channel
@@ -21,7 +21,7 @@ TEAM_LOBBY = ChannelTypes.TEAM_LOBBY.name
 @app_commands.guild_only()
 class Team(GroupCog):
 
-    @tasks.loop(seconds=3600)
+    @loop(seconds=3600)
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel"""
         with self.session as session:

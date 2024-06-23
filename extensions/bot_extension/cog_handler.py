@@ -3,10 +3,11 @@ import os
 
 import discord
 from discord import NotFound, app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
+from _types.tasks import loop
 from _types.typing import CogData
 from config import config
 
@@ -64,7 +65,7 @@ class AutoCogReloader(Cog):
                 self.data["edited"][file] = self.data["files"][file]
 
 
-    @tasks.loop(seconds=5)
+    @loop(seconds=5)
     async def auto_reload(self) -> None:
         if not self.data["edited"]:
             self.check_edits()

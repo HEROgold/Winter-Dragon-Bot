@@ -2,10 +2,10 @@ import datetime
 
 import discord
 from discord import app_commands
-from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog
+from _types.tasks import loop
 from tools.database_tables import Reminder as ReminderDb
 
 
@@ -20,7 +20,7 @@ class Reminder(Cog):
         self.send_reminder.start()
 
 
-    @tasks.loop(seconds=60)
+    @loop(seconds=60)
     async def send_reminder(self) -> None:
         # self.logger.debug("checking reminders")
         is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp  # noqa: DTZ005

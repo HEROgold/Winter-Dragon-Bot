@@ -6,12 +6,13 @@ import time
 import discord
 import psutil
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
 
 from _types.bot import WinterDragon
 from _types.cogs import GroupCog
+from _types.tasks import loop
 from config import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
 from tools import codeblock
 
@@ -80,7 +81,7 @@ class BotC(GroupCog):
         self.gather_metrics_loop.start()
 
 
-    @tasks.loop(seconds=config.getint("Activity", "periodic_time"))
+    @loop(seconds=config.getint("Activity", "periodic_time"))
     async def activity_switch(self) -> None:
         if not config.getboolean("Activity", "random_activity"):
             self.activity_switch.stop()
@@ -355,8 +356,8 @@ class BotC(GroupCog):
 
 
     # Switch to minutes for production
-    # @tasks.loop(minutes=10)
-    @tasks.loop(seconds=1)
+    # @loop(minutes=10)
+    @loop(seconds=1)
     async def gather_metrics_loop(self) -> None:
         self.gather_system_metrics()
 

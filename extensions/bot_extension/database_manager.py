@@ -4,10 +4,10 @@ import datetime
 
 import discord  # type: ignore
 from discord import InteractionType, app_commands
-from discord.ext import tasks
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog
+from _types.tasks import loop
 from config import config
 from tools.database_tables import AssociationUserCommand as AUC  # noqa: N817
 from tools.database_tables import Channel, Command, Guild, Message, Presence, Role, User
@@ -111,7 +111,7 @@ class DatabaseManager(Cog):
                 session.commit()
 
 
-    @tasks.loop(hours=1)
+    @loop(hours=1)
     async def update(self) -> None:
         for user in self.bot.users:
             self._add_db_user(user)

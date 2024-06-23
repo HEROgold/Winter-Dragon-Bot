@@ -21,7 +21,7 @@ from tools.database_tables import User as DbUser
 from tools.error_handler import ErrorHandler
 from tools.utils import get_arg
 
-from .tasks import tasks
+from .tasks import loop
 
 
 class Cog(commands.Cog):
@@ -102,7 +102,7 @@ class Cog(commands.Cog):
         self.add_disabled_check.start()
 
 
-    @tasks.loop(count=1)
+    @loop(count=1)
     async def add_mentions(self) -> None:
         # await self.add_command_mentions()
         if not self.bot.has_app_command_mentions:
@@ -111,7 +111,7 @@ class Cog(commands.Cog):
             self.bot.has_app_command_mentions = True
 
 
-    @tasks.loop(count=1)
+    @loop(count=1)
     async def add_disabled_check(self) -> None:
         for command in chain(self.walk_commands(), self.walk_app_commands()):
             if isinstance(command, app_commands.Group):

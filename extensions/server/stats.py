@@ -2,11 +2,12 @@ import random
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from _types.bot import WinterDragon
 from _types.cogs import Cog, GroupCog
 from _types.enums import ChannelTypes
+from _types.tasks import loop
 from config import config
 from extensions.server.log_channels import NoneTypeError
 from tools import rainbow
@@ -121,7 +122,7 @@ class Stats(GroupCog):
         self.update.start()
 
 
-    @tasks.loop(seconds=3600)
+    @loop(seconds=3600)
     async def update(self) -> None:
         # Note: keep for loop with if.
         # because fetching guild won't let the bot get members from guild.
