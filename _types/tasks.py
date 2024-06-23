@@ -15,22 +15,6 @@ from _types.typing import CoroutineFunction
 
 
 class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
-    def __init__(  # noqa: PLR0913
-        self,
-        coro: FT,
-        seconds: float = 0,
-        minutes: float = 0,
-        hours: float = 0,
-        time: datetime.time | Sequence[datetime.time] = MISSING,
-        count: int | None = None,
-        reconnect: bool = True,
-        name: str | None = None,
-    ) -> None:
-        self.coro = coro
-        # self.get_task().add_done_callback(self._handle_task_result) # doesn't seem to do anything
-        super().__init__(coro, seconds, hours, minutes, time, count, reconnect, name)
-
-
     async def _error(self, *args) -> None:
         exception: Exception = args[-1]
         self.logger.error(
