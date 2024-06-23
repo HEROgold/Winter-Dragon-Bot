@@ -447,14 +447,14 @@ class Role(Base):
 class UserRoles(Base):
     __tablename__ = "user_roles"
 
-    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLES_ID), primary_key=True)
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLES_ID, ondelete=CASCADE), primary_key=True)
     guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
     user_id: Mapped["User"] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
 
 class AutoAssignRole(Base):
     __tablename__ = "auto_assign"
 
-    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID), primary_key=True)
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID, ondelete=CASCADE), primary_key=True)
     guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
 
 
