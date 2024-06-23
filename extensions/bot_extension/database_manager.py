@@ -10,15 +10,7 @@ from _types.bot import WinterDragon
 from _types.cogs import Cog
 from config import config
 from tools.database_tables import AssociationUserCommand as AUC  # noqa: N817
-from tools.database_tables import (
-    Channel,
-    Command,
-    Guild,
-    Message,
-    Presence,
-    User,
-    Role
-)
+from tools.database_tables import Channel, Command, Guild, Message, Presence, Role, User
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
