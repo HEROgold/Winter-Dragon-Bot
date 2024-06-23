@@ -45,7 +45,6 @@ GAMES_NAME = "games.name"
 LOBBIES_ID = "lobbies.id"
 TEAMS_ID = "teams.id"
 HANGMAN_ID = "hangman.id"
-ROLE_ID = "roles.id"
 INCREMENTAL_ID = "incremental_data.id"
 AUTOCHANNEL_ID = "autochannels.id"
 POLLS_ID = "polls.id"
@@ -454,7 +453,7 @@ class UserRoles(Base):
 class AutoAssignRole(Base):
     __tablename__ = "auto_assign"
 
-    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLE_ID, ondelete=CASCADE), primary_key=True)
+    role_id: Mapped["Role"] = mapped_column(ForeignKey(ROLES_ID, ondelete=CASCADE), primary_key=True)
     guild_id: Mapped["Guild"] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
 
 
