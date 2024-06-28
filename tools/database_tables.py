@@ -343,7 +343,7 @@ class LookingForGroup(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    game_id: Mapped["Game"] = mapped_column(ForeignKey(GAMES_NAME))
+    game_name: Mapped["Game"] = mapped_column(ForeignKey(GAMES_NAME))
 
 
 class Presence(Base):
