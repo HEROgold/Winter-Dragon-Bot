@@ -1,4 +1,3 @@
-
 import discord  # type: ignore
 from discord import app_commands
 
@@ -11,8 +10,6 @@ from tools.database_tables import LookingForGroup
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Lfg(GroupCog):
-    games: list[GameDB] = ["League of Legends"]
-
     from extensions.indev.games import Games
     slash_suggest = Games.slash_suggest
 
@@ -21,7 +18,7 @@ class Lfg(GroupCog):
         super().__init__(*args, **kwargs)
 
         with self.session as session:
-            self.games = session.query(GameDB).all()
+            self.games = [i.name for i in session.query(GameDB).all()]
 
 
     def check_match(self) -> None:
@@ -33,15 +30,15 @@ class Lfg(GroupCog):
     # TODO: add Database table, matching user id and category, every time someone adds, check matches.
     @app_commands.command(name="join", description="Join a search queue for finding people for the same game")
     async def slash_lfg_join(self, interaction: discord.Interaction, game: str) -> None:
-        if game not in [i.name for i in self.games]:
+        if game not in self.games:
             await interaction.response.send_message("This game is not supported", ephemeral=True)
             return
         with self.session as session:
             game_db = session.query(GameDB).where(GameDB.name == game).first()
-            total = session.query(LookingForGroup).where(LookingForGroup.game_id == game).all()
+            total = session.query(LookingForGroup).where(LookingForGroup.game_name == game).all()
             session.add(LookingForGroup(
                 user_id = interaction.user.id,
-                game_id = game_db.id,
+                game_id = game_db.name,
             ))
             session.commit()
         c_mention = self.get_command_mention(self.slash_lfg_leave)
@@ -70,7 +67,7 @@ class Lfg(GroupCog):
         return [
             app_commands.Choice(name=i, value=i)
             for i in self.games
-            if current.lower() in i.name.lower()
+            if current.lower() in i.lower()
         ] or [
             app_commands.Choice(name=i, value=i)
             for i in self.games
@@ -81,7 +78,7 @@ class Lfg(GroupCog):
         with self.session as session:
             user_games = session.query(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id).all()
             for user_game in user_games:
-                lfg_game = session.query(LookingForGroup).where(LookingForGroup.game_id == user_game.id).all()
+                lfg_game = session.query(LookingForGroup).where(LookingForGroup.game_name == user_game.id).all()
                 self.logger.debug(f"{user_game=}, {lfg_game=}")
 
 
