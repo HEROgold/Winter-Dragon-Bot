@@ -63,9 +63,7 @@ class Infractions(GroupCog):
             return
 
         severity = self.get_severity(action)
-
         self.logger.debug(f"{action.type=} {duration=} {user=}")
-
         InfractionsDb.add_infraction_count(user.id, severity)
 
 
