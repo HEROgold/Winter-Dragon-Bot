@@ -1,10 +1,11 @@
-from blueprints import ctrl, docs, page, tokens
 from flask import Flask, request
 from flask_login import LoginManager
 
-from config import STATIC_PATH, TEMPLATE_PATH, config
+from bot.config import STATIC_PATH, TEMPLATE_PATH, config
 from database.tables.users import User
 from tools.flask_tools import register_blueprints
+
+from .blueprints import ctrl, docs, page, tokens
 
 
 app = Flask(__name__, template_folder=TEMPLATE_PATH, static_folder=STATIC_PATH)
