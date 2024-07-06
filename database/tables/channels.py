@@ -1,12 +1,20 @@
-from typing import Self
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Self
 
 from sqlalchemy import BigInteger, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
-from database.tables.definitions import CHANNEL_ID, GUILD_ID
-from database.tables.guilds import Guild  # noqa: TCH001
-from database.tables.messages import Message  # noqa: TCH001
+from database.tables.definitions import CHANNELS_ID, GUILDS_ID
+
+
+if TYPE_CHECKING:
+    from database.tables.guilds import Guild
+    from database.tables.messages import Message
+else:
+    Guild = "guilds"
+    Message = "messages"
 
 
 class Channel(Base):
@@ -15,10 +23,10 @@ class Channel(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
     type: Mapped[str] = mapped_column(String(50), nullable=True) # TODO: Use an enum matching discord's channels.
-    guild_id: Mapped[int | None] = mapped_column(ForeignKey(GUILD_ID), nullable=True)
+    guild_id: Mapped[int | None] = mapped_column(ForeignKey(GUILDS_ID), nullable=True)
 
-    messages: Mapped[list["Message"]] = relationship(back_populates="channel")
-    guild: Mapped["Guild"] = relationship(back_populates="channels", foreign_keys=[guild_id])
+    messages: Mapped[list[Message]] = relationship(back_populates="channel")
+    guild: Mapped[Guild] = relationship(back_populates="channels", foreign_keys=[guild_id])
 
 
     @classmethod
@@ -39,7 +47,7 @@ class AutoChannel(Base):
     __tablename__ = "autochannels"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
-    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNEL_ID))
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
 
 
 class AutoChannelSettings(Base):

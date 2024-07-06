@@ -3,7 +3,7 @@ from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base
-from database.tables.definitions import CHANNEL_ID, COMMAND_GROUP_ID, COMMAND_ID, GUILD_ID, USER_ID
+from database.tables.definitions import CHANNELS_ID, COMMAND_GROUPS_ID, COMMANDS_ID, GUILDS_ID, USERS_ID
 
 
 class Command(Base):
@@ -12,7 +12,7 @@ class Command(Base):
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
     qual_name: Mapped[str] = mapped_column(String(30))
     call_count: Mapped[int] = mapped_column(Integer, default=0)
-    parent_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUP_ID), nullable=True)
+    parent_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
 
     parent: Mapped["CommandGroup"] = relationship(back_populates="commands", foreign_keys=[parent_id])
 
@@ -20,10 +20,10 @@ class Command(Base):
 class DisabledCommands(Base):
     __tablename__ = "disabled_commands"
 
-    command_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_ID), primary_key=True)
-    _user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID), nullable=True)
-    _channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNEL_ID), nullable=True)
-    _guild_id: Mapped[int] = mapped_column(ForeignKey(GUILD_ID), nullable=True)
+    command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID), primary_key=True)
+    _user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), nullable=True)
+    _channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID), nullable=True)
+    _guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True)
 
     def __init__(self, **kw: int) -> None:
         # TODO: needs testing

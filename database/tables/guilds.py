@@ -6,7 +6,7 @@ from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Strin
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
-from database.tables.definitions import CHANNEL_ID, GUILD_ID
+from database.tables.definitions import CHANNELS_ID, GUILDS_ID
 
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ class Guild(Base):
 class SyncBanGuild(Base):
     __tablename__ = "sync_ban_guilds"
 
-    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILD_ID), primary_key=True)
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
 
 
 class AuditLog(Base):
@@ -61,7 +61,7 @@ class AuditLog(Base):
 class Welcome(Base):
     __tablename__ = "welcome"
 
-    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILD_ID), primary_key=True)
-    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNEL_ID))
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), primary_key=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
     message: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean)

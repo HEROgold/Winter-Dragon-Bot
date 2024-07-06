@@ -1,12 +1,19 @@
 import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base
 from database.tables.channels import Channel
+from database.tables.definitions import USERS_ID
 from database.tables.messages import Message
-from database.tables.users import User
+
+
+if TYPE_CHECKING:
+    from database.tables.users import User
+else:
+    User = "users"
 
 
 class Poll(Base):
@@ -47,7 +54,7 @@ class Reminder(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
     content: Mapped[str] = mapped_column(String(2000))
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     timestamp: Mapped[datetime.datetime] = mapped_column(DateTime)
 
     user: Mapped["User"] = relationship(back_populates="reminders", foreign_keys=[user_id])

@@ -6,9 +6,9 @@ from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
-from database.tables.definitions import USER_ID
-from database.tables.messages import Message  # noqa: TCH001
-from database.tables.utility import Reminder  # noqa: TCH001
+from database.tables.definitions import USERS_ID
+from database.tables.messages import Message
+from database.tables.utility import Reminder
 from tools.main_log import sql_logger as logger
 
 
@@ -42,13 +42,13 @@ class User(Base, UserMixin):
 class SyncBan(Base):
     __tablename__ = "synced_bans"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
 
 
 class Infractions(Base):
     __tablename__ = "infractions"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
     infraction_count: Mapped[int] = mapped_column(Integer, default=0)
 
     @classmethod
@@ -89,7 +89,7 @@ class Presence(Base):
     __tablename__ = "presence"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
     status: Mapped[str] = mapped_column(String(15))
     date_time: Mapped[datetime] = mapped_column(DateTime)
 
@@ -118,4 +118,4 @@ class Presence(Base):
 class SteamUser(Base):
     __tablename__ = "steam_users"
 
-    id: Mapped[int] = mapped_column(ForeignKey(USER_ID), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
