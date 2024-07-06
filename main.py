@@ -12,10 +12,10 @@ import discord
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot.config import CONFIG_PATH, INTENTS, config
+from bot.config import get_invalid as get_invalid_configs
+from bot.config import is_valid as config_validator
 from bot.errors.config import ConfigError
-from config import CONFIG_PATH, INTENTS, config
-from config import get_invalid as get_invalid_configs
-from config import is_valid as config_validator
 from tools.main_log import logs
 from tools.port_finder import get_v4_port
 from website.app import app
@@ -72,7 +72,7 @@ async def get_extensions() -> list[str]:
 
 
 async def mass_load() -> None:
-    if not (os.listdir("./extensions")):
+    if not (os.listdir("./bot/extensions")):
         logs["bot"].critical("No extensions Directory To Load!")
         return
     for extension in await get_extensions():
