@@ -7,8 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
 from database.tables.definitions import USERS_ID
-from database.tables.messages import Message
-from database.tables.utility import Reminder
+from database.tables.messages import Message  # noqa: TCH001
+from database.tables.utility import Reminder  # noqa: TCH001
 from tools.main_log import sql_logger as logger
 
 
