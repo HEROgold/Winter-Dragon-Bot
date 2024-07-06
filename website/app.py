@@ -10,7 +10,7 @@ from .blueprints import ctrl, docs, page, tokens
 
 app = Flask(__name__, template_folder=TEMPLATE_PATH, static_folder=STATIC_PATH)
 app.config["SECRET_KEY"] = config["Tokens"]["client_secret"]
-register_blueprints(app, [ctrl, docs, page, tokens])
+register_blueprints(app, ctrl, docs, page, tokens)
 lm = LoginManager(app)
 
 
