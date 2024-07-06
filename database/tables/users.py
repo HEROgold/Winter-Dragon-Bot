@@ -1,17 +1,15 @@
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 from flask_login import UserMixin
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
+from database.tables.definitions import USER_ID
+from database.tables.messages import Message  # noqa: TCH001
+from database.tables.utility import Reminder  # noqa: TCH001
 from tools.main_log import sql_logger as logger
-
-
-if TYPE_CHECKING:
-    from database.tables.messages import Message
-    from database.tables.utility import Reminder
 
 
 class User(Base, UserMixin):
@@ -44,13 +42,13 @@ class User(Base, UserMixin):
 class SyncBan(Base):
     __tablename__ = "synced_bans"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID), primary_key=True)
 
 
 class Infractions(Base):
     __tablename__ = "infractions"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID), primary_key=True)
     infraction_count: Mapped[int] = mapped_column(Integer, default=0)
 
     @classmethod
@@ -91,7 +89,7 @@ class Presence(Base):
     __tablename__ = "presence"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID))
     status: Mapped[str] = mapped_column(String(15))
     date_time: Mapped[datetime] = mapped_column(DateTime)
 
@@ -120,4 +118,4 @@ class Presence(Base):
 class SteamUser(Base):
     __tablename__ = "steam_users"
 
-    id: Mapped[int] = mapped_column(ForeignKey(User.id), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(USER_ID), primary_key=True, unique=True)

@@ -4,15 +4,14 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.tables import CASCADE, Base, session
-from database.tables.messages import Message
-from database.tables.users import User
+from database.tables.definitions import GAME_NAME, LOBBY_STATUS, MESSAGE_ID, USER_ID
 from tools.main_log import sql_logger as logger
 
 
 class Hangman(Base):
     __tablename__ = "hangman"
 
-    id: Mapped[int] = mapped_column(ForeignKey(Message.id), primary_key=True, unique=True)
+    id: Mapped[int] = mapped_column(ForeignKey(MESSAGE_ID), primary_key=True, unique=True)
     word: Mapped[str] = mapped_column(String(24))
     letters: Mapped[str] = mapped_column(String(24), nullable=True)
 
@@ -45,27 +44,27 @@ class LookingForGroup(Base):
     __tablename__ = "looking_for_groups"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id))
-    game_name: Mapped["Game"] = mapped_column(ForeignKey(Game.name))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID))
+    game_name: Mapped["Game"] = mapped_column(ForeignKey(GAME_NAME))
 
 
 class ResultDuels(Base):
     __tablename__ = "results_1v1"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    game: Mapped["Game"] = mapped_column(ForeignKey(Game.name))
-    player_1: Mapped[int] = mapped_column(ForeignKey(User.id))
-    player_2: Mapped[int] = mapped_column(ForeignKey(User.id))
-    winner: Mapped[int | None] = mapped_column(ForeignKey(User.id))
-    loser: Mapped[int | None] = mapped_column(ForeignKey(User.id))
+    game: Mapped["Game"] = mapped_column(ForeignKey(GAME_NAME))
+    player_1: Mapped[int] = mapped_column(ForeignKey(USER_ID))
+    player_2: Mapped[int] = mapped_column(ForeignKey(USER_ID))
+    winner: Mapped[int | None] = mapped_column(ForeignKey(USER_ID))
+    loser: Mapped[int | None] = mapped_column(ForeignKey(USER_ID))
 
 
 class ResultMassiveMultiplayer(Base):
     __tablename__ = "results_mp"
 
     id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    game: Mapped["Game"] = mapped_column(ForeignKey(Game.name))
-    user_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    game: Mapped["Game"] = mapped_column(ForeignKey(GAME_NAME))
+    user_id: Mapped[int] = mapped_column(ForeignKey(USER_ID))
     placement: Mapped[int | None] = mapped_column(nullable=True)
 
 
@@ -91,9 +90,9 @@ LobbyStatus.create_default_values()
 class Lobby(Base):
     __tablename__ = "lobbies"
 
-    id: Mapped[int] = mapped_column(ForeignKey(Message.id, ondelete=CASCADE), primary_key=True, unique=True)
-    game: Mapped[str] = mapped_column(ForeignKey(Game.name))
-    status: Mapped[str] = mapped_column(ForeignKey(LobbyStatus.status))
+    id: Mapped[int] = mapped_column(ForeignKey(MESSAGE_ID, ondelete=CASCADE), primary_key=True, unique=True)
+    game: Mapped[str] = mapped_column(ForeignKey(GAME_NAME))
+    status: Mapped[str] = mapped_column(ForeignKey(LOBBY_STATUS))
 
 
 class WyrQuestion(Base):

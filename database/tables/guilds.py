@@ -1,19 +1,29 @@
 from datetime import datetime
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from discord import AuditLogAction, AuditLogActionCategory, AuditLogEntry
 from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
-from database.tables.channels import Channel
-from database.tables.guilds import Guild
+from database.tables.definitions import CHANNEL_ID, GUILD_ID
+
+
+if TYPE_CHECKING:
+    from database.tables.channels import Channel
+
+
+class Guild(Base):
+    __tablename__ = "guilds"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
+    channels: Mapped[list["Channel"]] = relationship(back_populates="guild")
 
 
 class SyncBanGuild(Base):
     __tablename__ = "sync_ban_guilds"
 
-    guild_id: Mapped[int] = mapped_column(ForeignKey(Guild.id), primary_key=True)
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILD_ID), primary_key=True)
 
 
 class AuditLog(Base):
@@ -51,14 +61,7 @@ class AuditLog(Base):
 class Welcome(Base):
     __tablename__ = "welcome"
 
-    guild_id: Mapped[int] = mapped_column(ForeignKey(Guild.id), primary_key=True)
-    channel_id: Mapped[int] = mapped_column(ForeignKey(Channel.id))
+    guild_id: Mapped[int] = mapped_column(ForeignKey(GUILD_ID), primary_key=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNEL_ID))
     message: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean)
-
-
-class Guild(Base):
-    __tablename__ = "guilds"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
-    channels: Mapped[list["Channel"]] = relationship(back_populates="guild")
