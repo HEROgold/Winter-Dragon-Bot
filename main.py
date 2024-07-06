@@ -11,14 +11,14 @@ from threading import Thread
 import discord
 from discord.ext import commands
 
-from _types.bot import WinterDragon
-from _types.errors import ConfigError
-from app import app
+from bot import WinterDragon
+from bot.errors.config import ConfigError
 from config import CONFIG_PATH, INTENTS, config
 from config import get_invalid as get_invalid_configs
 from config import is_valid as config_validator
 from tools.main_log import logs
 from tools.port_finder import get_v4_port
+from website.app import app
 
 
 if not config_validator():

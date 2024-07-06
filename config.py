@@ -8,7 +8,7 @@ from urllib import parse
 
 import discord
 
-from _types.errors import FirstTimeLaunchError
+from bot.errors import FirstTimeLaunchError
 from tools.port_finder import get_v4_port
 
 

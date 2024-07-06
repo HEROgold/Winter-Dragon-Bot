@@ -6,10 +6,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from _types.bot import WinterDragon
-from _types.errors import AllErrors
-from _types.mixins import LoggerMixin
-from _types.tasks import loop
+from bot import WinterDragon
+from bot.errors.aliases import AllErrors
+from bot.types.mixins import LoggerMixin
+from bot.types.tasks import loop
 from config import config
 
 
@@ -49,7 +49,7 @@ class ErrorHandler(LoggerMixin):
         if self.invite_command is None:
             self.server_invite = self.bot.get_bot_invite()
         else:
-            self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
+            self.server_invite = f"</{self.invite_command} guild:{self.invite_command.id}>"
 
         await self.handle_error()
 
@@ -180,7 +180,7 @@ class ErrorHandler(LoggerMixin):
             case _:
                 error_msg = dedent(f"""
                     Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
-                    Use {self.server_invite} to join the official bot server, and submit the error code in the forums channel.
+                    Use {self.server_invite} to join the official bot guild, and submit the error code in the forums channel.
                     """)
         return error_msg or "An unexpected error occurred."
 

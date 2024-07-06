@@ -6,7 +6,7 @@ import shutil
 from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
-from _types.bot import WinterDragon
+from bot import WinterDragon
 from config import config
 
 

@@ -3,7 +3,7 @@ from discord.ext import commands
 from hypothesis import given
 from hypothesis.strategies import text
 
-from _types.bot import WinterDragon
+from bot import WinterDragon
 from config import INTENTS, config
 
 
