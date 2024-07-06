@@ -11,10 +11,7 @@ from bs4 import BeautifulSoup
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.types.cogs import GroupCog
-from bot.types.dicts import Sale
-from bot.types.tasks import loop
-from config import (
+from bot.config import (
     BUNDLE_DISCOUNT,
     BUNDLE_FINAL_PRICE,
     BUNDLE_LINK,
@@ -32,6 +29,9 @@ from config import (
     WEBSITE_URL,
     config,
 )
+from bot.types.cogs import GroupCog
+from bot.types.dicts import Sale
+from bot.types.tasks import loop
 from database.tables import Session, engine
 from database.tables.users import SteamUser, User
 from database.tables.utility import SteamSale

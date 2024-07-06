@@ -6,10 +6,10 @@ from discord import NotFound, app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot.config import config
 from bot.types.cogs import Cog, GroupCog
-from bot.types.tasks import loop
 from bot.types.dicts import CogData
-from config import config
+from bot.types.tasks import loop
 
 
 class AutoCogReloader(Cog):

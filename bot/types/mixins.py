@@ -1,6 +1,6 @@
 import logging
 
-from config import config
+from bot.config import config
 
 
 class LoggerMixin:

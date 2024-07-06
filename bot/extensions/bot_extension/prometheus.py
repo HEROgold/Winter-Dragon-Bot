@@ -2,7 +2,7 @@
 from discord.ext.prometheus import PrometheusCog
 
 from bot import WinterDragon
-from config import config
+from bot.config import config
 
 
 async def setup(bot: WinterDragon) -> None:

@@ -6,15 +6,15 @@ import discord  # type: ignore
 from discord import InteractionType, app_commands
 
 from bot import WinterDragon
+from bot.config import config
+from bot.types.aliases import GChannel
 from bot.types.cogs import Cog
 from bot.types.tasks import loop
-from bot.types.aliases import GChannel
-from config import config
 from database.tables.associations import AssociationUserCommand as AUC  # noqa: N817
-from database.tables.messages import Message
 from database.tables.channels import Channel
 from database.tables.commands import Command
 from database.tables.guilds import Guild
+from database.tables.messages import Message
 from database.tables.roles import Role
 from database.tables.users import Presence, User
 

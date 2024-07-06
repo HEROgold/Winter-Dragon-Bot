@@ -6,12 +6,12 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot.config import config
 from bot.types.cogs import GroupCog
 from bot.types.enums import SuggestionTypes
-from config import config
+from database.tables.games import NhieQuestion
 from database.tables.utility import Suggestion
 from tools import rainbow
-from database.tables.games import NhieQuestion
 
 
 NHIE = SuggestionTypes.NEVER_HAVE_I_EVER

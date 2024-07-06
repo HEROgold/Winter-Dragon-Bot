@@ -6,13 +6,14 @@ import discord  # type: ignore
 from discord import app_commands
 
 from bot import WinterDragon
+from bot.config import config
 from bot.types.button import Button
 from bot.types.cogs import GroupCog
 from bot.types.modal import Modal
-from config import config
-from database.tables.associations import AssociationUserHangman as AUH  # noqa: N817
 from database.tables import Session, engine
-from database.tables.games import Game, Hangman as HangmanDb
+from database.tables.associations import AssociationUserHangman as AUH  # noqa: N817
+from database.tables.games import Game
+from database.tables.games import Hangman as HangmanDb
 from database.tables.games import ResultMassiveMultiplayer as ResultMM
 
 

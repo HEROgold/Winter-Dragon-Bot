@@ -2,8 +2,8 @@ import discord
 from discord import app_commands
 
 from bot import WinterDragon
+from bot.config import config
 from bot.types.cogs import Cog, GroupCog
-from config import config
 from database.tables.guilds import Welcome as WelcomeDb
 
 

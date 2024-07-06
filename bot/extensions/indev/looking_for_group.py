@@ -2,8 +2,8 @@ import discord  # type: ignore
 from discord import app_commands
 
 from bot import WinterDragon
+from bot.config import config
 from bot.types.cogs import GroupCog
-from config import config
 from database.tables.games import Game as GameDB
 from database.tables.games import LookingForGroup
 

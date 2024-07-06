@@ -11,9 +11,9 @@ from matplotlib import pyplot as plt
 from psutil._common import snetio
 
 from bot import WinterDragon
+from bot.config import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
 from bot.types.cogs import GroupCog
 from bot.types.tasks import loop
-from config import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
 from tools.strings import codeblock
 
 
