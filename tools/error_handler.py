@@ -7,10 +7,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot.config import config
 from bot.errors.aliases import AllErrors
 from bot.types.mixins import LoggerMixin
 from bot.types.tasks import loop
-from config import config
 
 
 class ErrorHandler(LoggerMixin):

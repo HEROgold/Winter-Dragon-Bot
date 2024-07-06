@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
 from bot import WinterDragon
-from config import config
+from bot.config import config
 
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
