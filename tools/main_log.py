@@ -158,4 +158,3 @@ logs.add_logger("discord", discord_logger)
 logs.add_logger("flask", flask_logger)
 logs.add_logger("sqlalchemy", sql_logger)
 
-bot_logger.addHandler(logging.StreamHandler())
