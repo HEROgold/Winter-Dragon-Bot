@@ -53,12 +53,6 @@ async def on_ready() -> None:
     print("Bot is running!")
     print("invite link: ", invite_link)
 
-    config.set("Main", "application_id", f"{bot.application_id}")
-    config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
-
-    with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC101
-        config.write(f, space_around_delimiters=False)
-
 
 async def get_extensions() -> list[str]:
     extensions = []
@@ -122,6 +116,13 @@ async def main() -> None:
             daemon=True, name="flask"
         )
         t.start()
+
+        invite_link = bot.get_bot_invite()
+        config.set("Main", "application_id", f"{bot.application_id}")
+        config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
+
+        with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC230
+            config.write(f, space_around_delimiters=False)
 
         bot.log_saver = asyncio.create_task(logs.daily_save_logs())
         await mass_load()
