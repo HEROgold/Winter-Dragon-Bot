@@ -13,6 +13,39 @@ from bot.types.mixins import LoggerMixin
 from bot.types.tasks import loop
 
 
+type ReturnOriginal = (
+    commands.errors.MessageNotFound |
+    commands.errors.MemberNotFound |
+    commands.errors.UserNotFound |
+    commands.errors.ChannelNotFound |
+    commands.errors.RoleNotFound |
+    commands.errors.EmojiNotFound |
+    commands.errors.ChannelNotReadable |
+    commands.errors.BadColourArgument |
+    commands.errors.BadInviteArgument |
+    commands.errors.BadBoolArgument |
+    commands.errors.BadUnionArgument |
+    commands.errors.NSFWChannelRequired |
+    commands.errors.ArgumentParsingError |
+    commands.errors.UserInputError |
+    commands.errors.ExtensionError |
+    commands.errors.ExtensionAlreadyLoaded |
+    commands.errors.ExtensionNotLoaded |
+    commands.errors.ExtensionFailed |
+    commands.errors.ExtensionNotFound |
+    commands.errors.CheckAnyFailure |
+    commands.errors.ConversionError |
+    commands.errors.NoEntryPointError |
+    commands.errors.UnexpectedQuoteError |
+    commands.errors.ExpectedClosingQuoteError |
+    commands.errors.InvalidEndOfQuotedStringError |
+    commands.errors.CommandRegistrationError |
+    commands.errors.PartialEmojiConversionFailure |
+    commands.errors.MaxConcurrencyReached |
+    app_commands.errors.CommandSyncFailure
+)
+
+
 class ErrorHandler(LoggerMixin):
     """
     ErrorHandler is a class that handles errors encountered during command execution in the WinterDragon bot.
@@ -42,6 +75,7 @@ class ErrorHandler(LoggerMixin):
 
         self._async_init.start()
 
+
     @loop(count=1)
     async def _async_init(self) -> None:
         # self.help_command = self.bot.get_app_command("help")
@@ -53,12 +87,14 @@ class ErrorHandler(LoggerMixin):
 
         await self.handle_error()
 
+
     @_async_init.before_loop
     async def before_async_init(self) -> None:
         self.logger.debug("Setting up error handler")
         await self.bot.wait_until_ready()
 
-    def _get_message_from_error(self) -> str | AllErrors:  # noqa: PLR0915
+
+    def _get_message_from_error(self) -> str | AllErrors:  # noqa: C901, PLR0912
         error = self.error
 
         if isinstance(error, discord.errors.NotFound):
@@ -74,13 +110,9 @@ class ErrorHandler(LoggerMixin):
         match type(error):
             case commands.errors.MissingRequiredArgument:
                 error_msg = f"Missing a required argument, {error.param}."
-            case commands.errors.BotMissingPermissions:
+            case commands.errors.BotMissingPermissions | app_commands.errors.BotMissingPermissions:
                 error_msg = f"I do not have enough permissions to use this command! {error.missing_permissions}"
-            case app_commands.errors.BotMissingPermissions:
-                error_msg = f"I do not have enough permissions to use this command! {error.missing_permissions}"
-            case commands.errors.MissingPermissions:
-                error_msg = f"You do not have enough permission to use this command! {error.missing_permissions}"
-            case app_commands.errors.MissingPermissions:
+            case commands.errors.MissingPermissions | app_commands.errors.MissingPermissions:
                 error_msg = f"You do not have enough permission to use this command! {error.missing_permissions}"
             case commands.errors.TooManyArguments:
                 error_msg = f"Too many arguments given. use {self.help_msg} for more information"
@@ -98,95 +130,35 @@ class ErrorHandler(LoggerMixin):
                 error_msg = error
             case commands.errors.DisabledCommand:
                 error_msg = error
-            case commands.errors.MissingRole:
+            case commands.errors.MissingRole | app_commands.errors.MissingRole:
                 error_msg = f"You are missing a required role, {error.missing_role}"
-            case app_commands.errors.MissingRole:
-                error_msg = f"You are missing a required role, {error.missing_role}"
-            case commands.errors.BotMissingRole:
+            case commands.errors.BotMissingRole | commands.errors.BotMissingAnyRole:
                 error_msg = f"This bot is missing a required role, {error.missing_role}"
-            case commands.errors.BotMissingAnyRole:
-                error_msg = f"This bot is missing a required role, {error.missing_roles}"
-            case app_commands.errors.MissingAnyRole:
-                error_msg = f"You are missing the required Role, {error.missing_roles}"
-            case commands.errors.MissingAnyRole:
+            case app_commands.errors.MissingAnyRole | commands.errors.MissingAnyRole:
                 error_msg = f"You are missing the required Role, {error.missing_roles}"
             # case commands.errors.CommandNotFound: error_msg = f"Command not found, try {self.help_command.mention} to find all available commands",
             # case app_commands.errors.CommandNotFound: error_msg = f"Command not found, try {self.help_command.mention} to find all available commands",
-            case commands.errors.MessageNotFound:
-                error_msg = error
-            case commands.errors.MemberNotFound:
-                error_msg = error
-            case commands.errors.UserNotFound:
-                error_msg = error
-            case commands.errors.ChannelNotFound:
-                error_msg = error
-            case commands.errors.RoleNotFound:
-                error_msg = error
-            case commands.errors.EmojiNotFound:
-                error_msg = error
-            case commands.errors.ChannelNotReadable:
-                error_msg = error
-            case commands.errors.BadColourArgument:
-                error_msg = error
-            case commands.errors.BadInviteArgument:
-                error_msg = error
-            case commands.errors.BadBoolArgument:
-                error_msg = error
-            case commands.errors.BadUnionArgument:
-                error_msg = error
-            case commands.errors.NSFWChannelRequired:
-                error_msg = error
-            case commands.errors.ArgumentParsingError:
-                error_msg = error
-            case commands.errors.UserInputError:
-                error_msg = error
-            case commands.errors.ExtensionError:
-                error_msg = error
-            case commands.errors.ExtensionAlreadyLoaded:
-                error_msg = error
-            case commands.errors.ExtensionNotLoaded:
-                error_msg = error
-            case commands.errors.ExtensionFailed:
-                error_msg = error
-            case commands.errors.ExtensionNotFound:
-                error_msg = error
             # Errors below need reviewing, might not want to show to users
-            case commands.errors.CheckAnyFailure:
-                error_msg = error
-            case commands.errors.ConversionError:
-                error_msg = error
-            case commands.errors.NoEntryPointError:
-                error_msg = error
-            case commands.errors.UnexpectedQuoteError:
-                error_msg = error
-            case commands.errors.ExpectedClosingQuoteError:
-                error_msg = error
-            case commands.errors.InvalidEndOfQuotedStringError:
-                error_msg = error
-            case commands.errors.CommandRegistrationError:
-                error_msg = error
-            case commands.errors.PartialEmojiConversionFailure:
-                error_msg = error
-            case commands.errors.MaxConcurrencyReached:
-                error_msg = error
             case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
                 # TODO: Add invoke error handling
                 if "403 Forbidden" in error.args:
                     error_msg = error
             case commands.errors.CheckFailure:
                 error_msg = f"{error}" # TODO: Add check failure handling
-            case app_commands.errors.CommandSyncFailure:
-                error_msg = error
             case _:
+                if isinstance(error, tuple(i for i in ReturnOriginal)):
+                    error_msg = error
                 error_msg = dedent(f"""
                     Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
                     Use {self.server_invite} to join the official bot guild, and submit the error code in the forums channel.
                     """)
         return error_msg or "An unexpected error occurred."
 
+
     async def get_dm(self, ctx: commands.Context) -> discord.DMChannel:
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
+
 
     async def handle_error(self) -> None:
         error = self.error
@@ -201,6 +173,7 @@ class ErrorHandler(LoggerMixin):
         message = self._get_message_from_error()
         self.logger.debug(f"{message=}")
         await self.send_message(f"{message}")
+
 
     async def send_message(self, message: str) -> None:
         interface = self.interface

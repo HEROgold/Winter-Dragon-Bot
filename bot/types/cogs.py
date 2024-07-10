@@ -8,6 +8,7 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
 from bot import WinterDragon
+from bot.types.error_handler import ErrorHandler
 from bot.types.mixins import LoggerMixin
 from database.tables import (
     Session,
@@ -18,7 +19,6 @@ from database.tables.channels import Channel
 from database.tables.commands import Command as DbCommand
 from database.tables.commands import DisabledCommands
 from database.tables.users import User as DbUser
-from tools.error_handler import ErrorHandler
 from tools.utils import get_arg
 
 from .tasks import loop
