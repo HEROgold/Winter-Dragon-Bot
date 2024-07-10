@@ -8,10 +8,10 @@ from bot import WinterDragon
 from bot.config import CHANGED_COLOR, CREATED_COLOR, DELETED_COLOR, LOG_CHANNEL_NAME, MAX_CATEGORY_SIZE, MEMBER_UPDATE_PROPERTIES, config
 from bot.enums.channels import ChannelTypes, LogCategories
 from bot.errors import NoneTypeError
+from bot.tools.msg_checks import is_tic_tac_toe
 from bot.types.cogs import Cog, GroupCog
 from database.tables.channels import Channel
 from database.tables.guilds import AuditLog
-from tools.msg_checks import is_tic_tac_toe
 
 
 LOGS = ChannelTypes.LOGS.name

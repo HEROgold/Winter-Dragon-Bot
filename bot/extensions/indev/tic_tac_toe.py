@@ -10,11 +10,11 @@ import sqlalchemy
 from discord import app_commands
 
 from bot import WinterDragon
+from bot.tools.ttt_ai import TicTacToeAI
 from bot.types.cogs import GroupCog
 from bot.types.lobby import Lobby as GLobby
 from bot.types.mixins import LoggerMixin
 from database.tables.games import Game, Lobby, ResultDuels
-from tools.ttt_ai import TicTacToeAI
 
 
 GAME_NAME = "ttt"

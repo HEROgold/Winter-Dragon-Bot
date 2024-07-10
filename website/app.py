@@ -3,7 +3,7 @@ from flask_login import LoginManager
 
 from bot.config import STATIC_PATH, TEMPLATE_PATH, config
 from database.tables.users import User
-from tools.flask_tools import register_blueprints
+from website.tools.blueprints import register_blueprints
 
 from .blueprints import ctrl, docs, page, tokens
 
