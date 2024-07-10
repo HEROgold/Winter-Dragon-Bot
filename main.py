@@ -79,8 +79,8 @@ async def mass_load() -> None:
         try:
             await bot.load_extension(extension)
             logs["bot"].info(f"Loaded {extension}")
-        except Exception:  # noqa: BLE001
-            logs["bot"].exception("")
+        except Exception as e:  # noqa: BLE001
+            logs["bot"].exception(e)
 
 
 @commands.is_owner()
