@@ -1,10 +1,15 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.tables import CASCADE, Base
 from database.tables.definitions import GUILDS_ID, ROLES_ID, USERS_ID
-from database.tables.guilds import Guild
-from database.tables.users import User
+
+
+if TYPE_CHECKING:
+    from database.tables.guilds import Guild
+    from database.tables.users import User
 
 
 class Role(Base):
