@@ -8,6 +8,7 @@ version = "0.1.0"
 indent-width = 4
 line-length = 300
 target-version = "py312"
+unsafe-fixes = true
 
 [tool.ruff.lint]
 ignore = [
