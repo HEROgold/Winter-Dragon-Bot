@@ -12,7 +12,7 @@ from bot.errors import FirstTimeLaunchError
 from tools.port_finder import get_v4_port
 
 
-PROJECT_DIR = Path(__file__).parent
+PROJECT_DIR = Path(__file__).parent  # TODO: Needs to be updated to the correct path
 CONFIG_PATH = PROJECT_DIR / "config.ini"
 
 TEMPLATE_PATH = PROJECT_DIR / "templates/"
