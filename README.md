@@ -38,3 +38,14 @@ Contributions to Winter-Dragon-Bot are always welcome, whether it be improvement
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+## Work In Progress
+
+Some parts of the bot might be a work in progress.
+
+The bot itself has a dedicated extension directory for those extensions.
+Extensions inside this directory are not or not fully tested.
+
+There's also the website that needs to be worked on.
+This should contain pages to manage bot settings more easily and might have **all** users be able to log in.
+The website doesn't have any finalized decisions, and is currently in alpha stage. Anything can and will change.
