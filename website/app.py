@@ -5,8 +5,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi_users import FastAPIUsers
+from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
+
 from database.tables.users import FastApiUser
 from website.settings import Settings
+from website.types.user_manager import get_user_manager
 
 
 if TYPE_CHECKING:
@@ -18,6 +21,15 @@ settings = Settings()
 templates = Jinja2Templates(directory="website/templates")
 static = StaticFiles(directory="website/static")
 
+def get_jwt_strategy() -> JWTStrategy:
+    return JWTStrategy(secret=settings.SECRET_KEY, lifetime_seconds=3600)
+
+bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+auth_backend = AuthenticationBackend(
+    name="jwt",
+    transport=bearer_transport,
+    get_strategy=get_jwt_strategy,
+)
 fastapi_users = FastAPIUsers[FastApiUser, int](
     get_user_manager=get_user_manager(),
     auth_backends=[auth_backend],

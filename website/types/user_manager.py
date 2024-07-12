@@ -5,9 +5,11 @@ from fastapi import Depends, Request
 from fastapi_users import BaseUserManager
 
 from database.tables.users import FastApiUser, get_user_db
+from website.settings import Settings
 
 
-SECRET = "SECRET"  # noqa: S105
+settings = Settings()
+SECRET = settings.SECRET_KEY
 
 
 class UserManager(BaseUserManager[FastApiUser, int]):

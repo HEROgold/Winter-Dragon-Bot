@@ -15,3 +15,4 @@ Werkzeug==3.0.3
 fastapi
 pydantic-settings
 fastapi-users[sqlalchemy]
+fastapi-users[authentication]
