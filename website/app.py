@@ -48,6 +48,4 @@ app.include_router(
 
 @app.get("/items/{id_}", response_class=HTMLResponse)
 async def read_item(request: Request, id_: str) -> "_TemplateResponse":
-    return templates.TemplateResponse(
-        request=request, name="item.html", context={"id": id_}
-    )
+    return templates.TemplateResponse(request=request, name="item.html", context={"id": id_})
