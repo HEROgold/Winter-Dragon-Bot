@@ -14,4 +14,4 @@ SQLAlchemy==2.0.31
 Werkzeug==3.0.3
 fastapi
 pydantic-settings
-fastapi-users
+fastapi-users[sqlalchemy]

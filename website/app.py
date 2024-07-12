@@ -4,7 +4,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
+from fastapi_users import FastAPIUsers
+from database.tables.users import FastApiUser
 from website.settings import Settings
 
 
@@ -17,8 +18,17 @@ settings = Settings()
 templates = Jinja2Templates(directory="website/templates")
 static = StaticFiles(directory="website/static")
 
-app.mount("/static", static)
+fastapi_users = FastAPIUsers[FastApiUser, int](
+    get_user_manager=get_user_manager(),
+    auth_backends=[auth_backend],
+)
 
+app.mount("/static", static)
+app.include_router(
+    get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    targs=["auth"]
+)
 
 
 @app.get("/items/{id_}", response_class=HTMLResponse)

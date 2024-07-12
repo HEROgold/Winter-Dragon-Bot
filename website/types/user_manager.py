@@ -26,3 +26,7 @@ class UserManager(BaseUserManager[FastApiUser, int]):
 
     async def on_after_request_verify(self, user: FastApiUser, token: str, request: Request | None = None) -> None:  # noqa: ARG002
         print(f"Verification requested for user {user.id}. Verification token: {token}")
+
+
+async def get_user_manager(user_db=Depends(get_user_db)):
+    yield UserManager(user_db)

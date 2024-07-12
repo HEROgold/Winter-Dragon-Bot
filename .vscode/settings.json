@@ -75,6 +75,7 @@
         "Redeclaration",
         "rungameid",
         "savefig",
+        "sessionmaker",
         "Sharded",
         "singleplayer",
         "snetio",

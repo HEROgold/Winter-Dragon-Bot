@@ -1,18 +1,21 @@
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Self
 
-from flask_login import UserMixin
+from fastapi import Depends
+from fastapi_users.db import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase
 from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database.tables import Base, session
-from database.tables.definitions import USERS_ID
-from database.tables.messages import Message  # noqa: TCH001
-from database.tables.utility import Reminder  # noqa: TCH001
 from tools.main_log import sql_logger as logger
 
+from . import Base, get_async_session, session
+from .definitions import USERS_ID
+from .messages import Message  # noqa: TCH001
+from .utility import Reminder  # noqa: TCH001
 
-class User(Base, UserMixin):
+
+class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
@@ -39,7 +42,7 @@ class User(Base, UserMixin):
             session.commit()
             return session.query(cls).where(cls.id == id_).first() # type: ignore
 
-class FastApiUser(Base):
+class FastApiUser(Base, SQLAlchemyBaseUserTable):
     user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
     _email: Mapped[str] = mapped_column(String(255), unique=True)
     _hashed_password: Mapped[str] = mapped_column(String(255), default="")
@@ -162,3 +165,7 @@ class SteamUser(Base):
     __tablename__ = "steam_users"
 
     id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+
+
+async def get_user_db(session: AsyncSession = Depends(get_async_session)):  # noqa: ANN201, B008
+    yield SQLAlchemyUserDatabase(session, FastApiUser)
