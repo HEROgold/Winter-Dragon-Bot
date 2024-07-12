@@ -38,11 +38,12 @@ fastapi_users = FastAPIUsers[FastApiUser, int](
 )
 
 app.mount("/static", static)
-# app.include_router(
-#     get_auth_router(auth_backend),
-#     prefix="/auth/jwt",
-#     tags=["auth"]
-# )
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    tags=["auth"]
+)
 
 
 @app.get("/items/{id_}", response_class=HTMLResponse)
