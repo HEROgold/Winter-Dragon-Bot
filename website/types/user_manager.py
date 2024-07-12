@@ -1,8 +1,10 @@
 
-from fastapi import Request
+from collections.abc import AsyncGenerator
+
+from fastapi import Depends, Request
 from fastapi_users import BaseUserManager
 
-from database.tables.users import FastApiUser
+from database.tables.users import FastApiUser, get_user_db
 
 
 SECRET = "SECRET"  # noqa: S105
@@ -28,5 +30,5 @@ class UserManager(BaseUserManager[FastApiUser, int]):
         print(f"Verification requested for user {user.id}. Verification token: {token}")
 
 
-async def get_user_manager(user_db=Depends(get_user_db)):
+async def get_user_manager(user_db=Depends(get_user_db)) -> AsyncGenerator[UserManager, None]:  # noqa: ANN001, B008
     yield UserManager(user_db)
