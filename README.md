@@ -2,36 +2,39 @@
 
 ## Description
 
-This is a personal project to learn and improve at python.
+Winter-Dragon-Bot is a versatile Discord bot designed to enhance server management, provide entertainment, and offer a wide range of utilities. Developed with Python 3.11 ( and transitioning to 3.12) and leveraging the power of SQLite for data management, this bot is a project that helps with continuous learning and improvement in software development.
 
-Coding has helped me improve lots, and thus i have rewritten some functionality over time
+## Features
 
-causing a more robust, error-free and secure project!
+- **Comprehensive Slash Commands**: Offers a broad spectrum of slash commands for various functionalities, enhancing user interaction and server management.
+- **Advanced Configuration**: Customizable settings through a config file, allowing for tailored bot behavior to fit specific server needs.
+- **Dynamic Logging**: Separate and dynamic log files for different aspects of the bot's operation (Discord, SQL, etc.), including automatic log rotation to conserve disk space.
+- **Error Handling**: Extensive error handling mechanisms to ensure stability and reliability.
+- **SQLite Integration**: Utilizes SQLite for data storage, management and speed.
+- **Docker Support**: Designed to run in Docker containers for easy deployment and scalability. Includes a Python 3.12 container and a SQLite container.
 
-## How to install:
+## Installation
 
-This project uses a few modules that need to be downloaded, all of which are managed automatically inside the docker environment.
+### Prerequisites
 
-This project runs using docker. With 2 main containers, one for python 3.11 and the other container is running PostgreSQL as the bot's database.
+- Docker and Docker Compose installed on your system.
+- Basic knowledge of Docker and containerization.
 
-Using `docker-compose build`, and `docker-compose up` should suffice to start and run the bot.
+### Steps
 
-On the 1st time, it will fail, because some config settings need to be adjusted. These are marked with `!!`
+1. **Clone the Repository**: Clone this repository to your local machine using `git clone`.
+2. **Docker Setup**: Navigate to the project directory and run `docker-compose build` to build the containers. Then, use `docker-compose up` to start the bot.
+3. **Initial Configuration**: On the first run, the bot will require some configuration adjustments marked with `!!` in the `config.ini` file. Follow the instructions to set up the necessary configurations.
+4. **Running the Bot**: After configuration, restart the bot using Docker Compose. The bot should now be up and running.
 
-Notes: However it can be run on windows, by just running `python main.py` It is not intended to be used this way.
+### Note
 
-## Features:
+While it's possible to run the bot directly using `python main.py`, it's recommended to use Docker for a more streamlined and consistent environment.
 
-PostgreSQL
+## Contributing
 
-Lots of slash commands with lots of features
+Contributions to Winter-Dragon-Bot are always welcome, whether it be improvements to the codebase, bug reports, or new features. Please feel free to fork the repository and submit pull requests.
 
-customizability using a config file
+## License
 
-dynamic seperate log files for the bot, discord, SQL (and potentially more).
-
-Dynamic log saving, automatic removal of old logs to save disk space.
-
-Lots of error handling
-
-And more!
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
