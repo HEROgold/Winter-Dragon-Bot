@@ -42,7 +42,10 @@ type ReturnOriginal = (
     commands.errors.CommandRegistrationError |
     commands.errors.PartialEmojiConversionFailure |
     commands.errors.MaxConcurrencyReached |
-    app_commands.errors.CommandSyncFailure
+    app_commands.errors.CommandSyncFailure |
+    commands.errors.CommandOnCooldown |
+    app_commands.errors.CommandOnCooldown |
+    commands.errors.DisabledCommand
 )
 
 
@@ -124,12 +127,6 @@ class ErrorHandler(LoggerMixin):
                 error_msg = "This command does not work in private messages."
             case discord.HTTPException:
                 error_msg = f"There is a HTTPException {error.status, error.code, error.text}"
-            case commands.errors.CommandOnCooldown:
-                error_msg = error
-            case app_commands.errors.CommandOnCooldown:
-                error_msg = error
-            case commands.errors.DisabledCommand:
-                error_msg = error
             case commands.errors.MissingRole | app_commands.errors.MissingRole:
                 error_msg = f"You are missing a required role, {error.missing_role}"
             case commands.errors.BotMissingRole | commands.errors.BotMissingAnyRole:
@@ -166,7 +163,7 @@ class ErrorHandler(LoggerMixin):
 
         if config.getboolean("Error", "always_log_errors"):
             self.logger.error(f"Always log error: {self.time_code}")
-            self.logger.exception(error)
+            self.logger.exception(error, exc_info=True)
         if config.getboolean("Error", "ignore_errors"):
             return
 
@@ -193,6 +190,6 @@ class ErrorHandler(LoggerMixin):
             try:
                 await interface.message.delete()
             except discord.Forbidden:
-                self.logger.warning("Not allowed to remove message from dm")
+                self.logger.warning("Not allowed to remove message")
 
             await interface.send(message)
