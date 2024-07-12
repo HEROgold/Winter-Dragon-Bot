@@ -7,6 +7,7 @@ from typing import Any, Self
 from urllib import parse
 
 import discord
+from pydantic import BaseModel
 
 from bot.errors import FirstTimeLaunchError
 from tools.port_finder import get_v4_port
@@ -116,6 +117,33 @@ INTENTS.message_content = True
 INTENTS.auto_moderation_configuration = True
 INTENTS.auto_moderation_execution = True
 INTENTS.voice_states = True
+
+
+# TODO: When moving to python 3.13
+# [K: str = str, V: str = str]
+class ConfigEntry[K: str, V: str](BaseModel):
+    key: K
+    value: V
+
+
+class ConfigCategory(BaseModel):
+    Tokens: list[ConfigEntry[str, str]]
+    Main: list[ConfigEntry[str, str]]
+    Activity: list[ConfigEntry[str, str]]
+    Autochannel: list[ConfigEntry[str, str]]
+    SteamCMD: list[ConfigEntry[str, str]]
+    Message: list[ConfigEntry[str, str]]
+    Help: list[ConfigEntry[str, str]]
+    Steam: list[ConfigEntry[str, str]]
+    Translate: list[ConfigEntry[str, str]]
+    Tickets: list[ConfigEntry[str, str]]
+    Team: list[ConfigEntry[str, str]]
+    Error: list[ConfigEntry[str, str]]
+    Purge: list[ConfigEntry[str, str]]
+    Reminder: list[ConfigEntry[str, str]]
+    Welcome: list[ConfigEntry[str, str]]
+    Announcement: list[ConfigEntry[str, str]]
+    Urban: list[ConfigEntry[str, str]]
 
 
 class ConfigParserSingleton:
