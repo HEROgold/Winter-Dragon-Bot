@@ -5,7 +5,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from database.tables.users import User
 from website.settings import Settings
 
 
@@ -20,9 +19,6 @@ static = StaticFiles(directory="website/static")
 
 app.mount("/static", static)
 
-
-def load_user(user_id: str) -> User:
-    return User.fetch_user(int(user_id))
 
 
 @app.get("/items/{id_}", response_class=HTMLResponse)
