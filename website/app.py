@@ -25,7 +25,7 @@ def load_user(user_id: str) -> User:
     return User.fetch_user(int(user_id))
 
 
-@app.get("/items/{id}", response_class=HTMLResponse)
+@app.get("/items/{id_}", response_class=HTMLResponse)
 async def read_item(request: Request, id_: str) -> "_TemplateResponse":
     return templates.TemplateResponse(
         request=request, name="item.html", context={"id": id_}
