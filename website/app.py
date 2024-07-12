@@ -1,27 +1,32 @@
-from flask import Flask, request
-from flask_login import LoginManager
+from typing import TYPE_CHECKING
 
-from bot.config import STATIC_PATH, TEMPLATE_PATH, config
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 from database.tables.users import User
-from website.tools.blueprints import register_blueprints
-
-from .blueprints import ctrl, docs, page, tokens
+from website.settings import Settings
 
 
-app = Flask(__name__, template_folder=TEMPLATE_PATH, static_folder=STATIC_PATH)
-app.config["SECRET_KEY"] = config["Tokens"]["client_secret"]
-register_blueprints(app, ctrl, docs, page, tokens)
-lm = LoginManager(app)
+if TYPE_CHECKING:
+    from starlette.templating import _TemplateResponse  # type: ignore[reportPrivateUsage]
 
 
-@app.route("/post_all", methods=["GET", "POST"])
-def post_all() -> str:
-    """
-    Debug route that prints all request data.
-    """
-    return f"{request.args=}"
+app = FastAPI()
+settings = Settings()
+templates = Jinja2Templates(directory="website/templates")
+static = StaticFiles(directory="website/static")
+
+app.mount("/static", static)
 
 
-@lm.user_loader
 def load_user(user_id: str) -> User:
     return User.fetch_user(int(user_id))
+
+
+@app.get("/items/{id}", response_class=HTMLResponse)
+async def read_item(request: Request, id_: str) -> "_TemplateResponse":
+    return templates.TemplateResponse(
+        request=request, name="item.html", context={"id": id_}
+    )

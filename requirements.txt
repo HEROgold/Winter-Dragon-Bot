@@ -3,7 +3,6 @@ aiohttp==3.9.5
 beautifulsoup4==4.12.3
 discord.py==2.4.0
 Flag==0.1.1
-Flask_Login==0.6.3
 hypothesis==6.103.2
 matplotlib==3.7.1
 openai==0.26.5
@@ -13,3 +12,6 @@ Requests==2.32.3
 requests_oauthlib==2.0.0
 SQLAlchemy==2.0.31
 Werkzeug==3.0.3
+fastapi
+pydantic-settings
+fastapi-users

@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 from flask_login import UserMixin
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base, session
@@ -38,6 +38,49 @@ class User(Base, UserMixin):
             session.add(cls(id=id_))
             session.commit()
             return session.query(cls).where(cls.id == id_).first() # type: ignore
+
+class FastApiUser(Base):
+    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
+    _email: Mapped[str] = mapped_column(String(255), unique=True)
+    _hashed_password: Mapped[str] = mapped_column(String(255), default="")
+    _is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    _is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
+    _is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    @property
+    def id(self) -> int:  # type: ignore[reportRedeclaration]
+        return self.user_id
+    @property
+    def email(self) -> str:  # type: ignore[reportRedeclaration]
+        return self._email
+    @property
+    def hashed_password(self) -> str:  # type: ignore[reportRedeclaration]
+        return self._hashed_password
+    @property
+    def is_active(self) -> bool:  # type: ignore[reportRedeclaration]
+        return self._is_active
+    @property
+    def is_superuser(self) -> bool:  # type: ignore[reportRedeclaration]
+        return self._is_superuser
+    @property
+    def is_verified(self) -> bool:  # type: ignore[reportRedeclaration]
+        return self._is_verified
+
+    # Weird fix for FastAPIUsers, avoids type errors
+    # FastAPIUsers Doesn't work with properties?
+    if TYPE_CHECKING:
+        id: int
+        email: str
+        hashed_password: str
+        is_active: bool
+        is_superuser: bool
+        is_verified: bool
+
+    @classmethod
+    def get_user(cls, id_: int) -> Self | None:
+        with session:
+            return session.query(cls).where(cls.user_id == id_).first()
+
 
 class SyncBan(Base):
     __tablename__ = "synced_bans"
