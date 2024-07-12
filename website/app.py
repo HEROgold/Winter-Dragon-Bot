@@ -41,7 +41,7 @@ app.mount("/static", static)
 # app.include_router(
 #     get_auth_router(auth_backend),
 #     prefix="/auth/jwt",
-#     targs=["auth"]
+#     tags=["auth"]
 # )
 
 
