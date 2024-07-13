@@ -7,8 +7,6 @@ from typing import Any, Self
 from urllib import parse
 
 import discord
-from matplotlib import category
-from pydantic import BaseModel
 
 from bot.errors import FirstTimeLaunchError
 from tools.port_finder import get_v4_port
