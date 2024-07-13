@@ -6,14 +6,12 @@ import shutil
 from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 
-from bot import WinterDragon
 from bot.config import config
 
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
 class Logs:
-    bot: WinterDragon | None
     first_rollover: bool = False
 
     def __init__(self) -> None:
