@@ -29,9 +29,6 @@ class Logs:
     def __getitem__(self, name: str) -> logging.Logger:
         return self._loggers[name]
 
-    def __setitem__(self, name: str, value: logging.Logger) -> None:
-        self.add_logger(name, value)
-
     async def daily_save_logs(self) -> None:
         while True:
             if not self.first_rollover:
