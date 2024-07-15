@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from textwrap import dedent
 
 import discord
 from discord import (
@@ -13,6 +14,9 @@ from discord import (
 )
 
 from bot import WinterDragon
+from bot.extensions.server.log_channels import LogChannels
+from bot.extensions.server.stats import Stats
+from bot.extensions.server.welcome import Welcome
 from bot.types.cogs import GroupCog
 
 
@@ -91,8 +95,21 @@ class Guild(GroupCog):
         if invite_code:
             await guild.edit(vanity_code=invite_code)
         if not disable_widget:
-            await guild.edit(widget_enabled=True, widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel"))
+            await guild.edit(
+                widget_enabled=True,
+                widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel")
+            )
         await interaction.followup.send("Guild initialized!")
+        await system_channel.send(dedent(
+            f"""Guild initialized!
+            Use {self.get_command_mention(LogChannels.slash_log_add)} to setup logging channels.
+            Use {self.get_command_mention(LogChannels.slash_log_remove)} to remove logging channels.
+            Use {self.get_command_mention(Stats.slash_stats_category_add)} to add stat channels (i.e. Member count).
+            Use {self.get_command_mention(Stats.slash_stats_category_remove)} to remove stat channels
+            Use {self.get_command_mention(Welcome.slash_set_msg)} to set a custom welcome message.
+            Use {self.get_command_mention(Welcome.slash_enable)} to enable welcome messages.
+            Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages."""
+        ))
 
 
 async def setup(bot: WinterDragon) -> None:
