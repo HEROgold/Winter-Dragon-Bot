@@ -34,28 +34,19 @@ class Welcome(GroupCog):
             self.logger.warning("No system_channel to welcome user to, and dm is disabled.")
 
 
-    @app_commands.command(
-        name="enable",
-        description="Enable welcome message",
-    )
+    @app_commands.command(name="enable", description="Enable welcome message")
     async def slash_enable(self, interaction: discord.Interaction) -> None:
         self.update_data(interaction, enabled=True)
         await interaction.response.send_message("Enabled welcome message.", ephemeral=True)
 
 
-    @app_commands.command(
-        name="disable",
-        description="Disable welcome message",
-    )
+    @app_commands.command(name="disable", description="Disable welcome message")
     async def slash_disable(self, interaction: discord.Interaction) -> None:
         self.update_data(interaction, enabled=False)
         await interaction.response.send_message("Disabled welcome message.", ephemeral=True)
 
 
-    @app_commands.command(
-        name="message",
-        description="Change the welcome message",
-    )
+    @app_commands.command(name="message", description="Change the welcome message")
     async def slash_set_msg(self, interaction: discord.Interaction, message: str) -> None:
         self.update_data(interaction, message)
         await interaction.response.send_message(f"changed message to {message}")
@@ -85,7 +76,7 @@ class Welcome(GroupCog):
                     channel_id = channel_id,
                     message = message,
                     enabled = enabled,
-                    ))
+                ))
             else:
                 data.channel_id = channel_id
                 data.message = message
