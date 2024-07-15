@@ -1,19 +1,28 @@
 from datetime import UTC, datetime, timedelta
 
 import discord
-from discord import ContentFilter, Locale, MFALevel, NotificationLevel, PermissionOverwrite, SystemChannelFlags, VerificationLevel, app_commands
+from discord import (
+    ContentFilter,
+    Locale,
+    MFALevel,
+    NotificationLevel,
+    PermissionOverwrite,
+    SystemChannelFlags,
+    VerificationLevel,
+    app_commands,
+)
 
 from bot import WinterDragon
-from bot.types.cogs import Cog
+from bot.types.cogs import GroupCog
 
 
-class Initialize(Cog):
+class Guild(GroupCog):
     WEEK = 604_800
 
 
     @app_commands.checks.cooldown(1, WEEK)
-    @app_commands.command(name="create_guild", description="Creates a new guild, and makes you the owner.")
-    async def slash_create_guild(  # noqa: PLR0913
+    @app_commands.command(name="create", description="Creates a new guild, and makes you the owner.")
+    async def slash_create(  # noqa: PLR0913
         self,
         interaction: discord.Interaction,
         name: str,
@@ -87,4 +96,4 @@ class Initialize(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(Initialize(bot))
+    await bot.add_cog(Guild(bot))

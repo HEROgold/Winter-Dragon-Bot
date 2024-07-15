@@ -6,7 +6,7 @@ version = "0.1.0"
 
 [tool.ruff]
 indent-width = 4
-line-length = 300
+line-length = 128
 target-version = "py312"
 unsafe-fixes = true
 
