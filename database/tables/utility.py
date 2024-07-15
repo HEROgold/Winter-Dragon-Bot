@@ -1,30 +1,17 @@
 import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.tables import Base
-from database.tables.channels import Channel
 from database.tables.definitions import USERS_ID
-from database.tables.messages import Message
 
 
 if TYPE_CHECKING:
     from database.tables.users import User
 else:
     User = "users"
-
-
-class Poll(Base):
-    # TODO: use discord's build in poll system
-    __tablename__ = "polls"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    channel_id: Mapped[int] = mapped_column(ForeignKey(Channel.id))
-    message_id: Mapped[int] = mapped_column(ForeignKey(Message.id))
-    content: Mapped[str] = mapped_column(Text)
-    end_date: Mapped[datetime.datetime] = mapped_column(DateTime)
 
 
 class Suggestion(Base):
