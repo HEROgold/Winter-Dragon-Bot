@@ -1,5 +1,3 @@
-# FIXME: A randomized port doesn't work with oath2 requests, as discord requires a static port.
-# This is why the v4_port is set to 5000 manually.
 import socket
 
 
@@ -15,6 +13,8 @@ def get_v4_port() -> int:
     :class:`int`
         the port found, or in use
     """
+    # FIXME: A randomized port doesn't work with oath2 requests, as discord requires a static port.
+    # This is why the v4_port is set to 5000 manually.
     global v4_port
     if v4_port != 0:
         return v4_port
