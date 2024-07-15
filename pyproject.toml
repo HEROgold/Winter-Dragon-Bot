@@ -1,6 +1,6 @@
 [project]
 name = "Winter-Dragon-Bot"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 # authors = [{name = "name", email = "name@address.com"}]
 version = "0.1.0"
 
