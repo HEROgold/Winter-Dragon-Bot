@@ -1105,7 +1105,7 @@ class LogChannels(GroupCog):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     @app_commands.command(name="remove", description="Disables automatic moderation for this guild, and removes the log channels.")
-    async def slash_dagon_log_remove(self, interaction:discord.Interaction) -> None:
+    async def slash_log_remove(self, interaction:discord.Interaction) -> None:
         with self.session as session:
             result = session.query(Channel).where(
                 Channel.type == LOGS,
