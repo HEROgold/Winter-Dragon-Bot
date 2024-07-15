@@ -36,6 +36,7 @@ class AssociationUserCommand(Base):
         cleanup this database to keep track of (at most)
         1k commands for each user
         TODO: test
+        TODO: Use sqlalchemy queries, as it's faster.
         """
         track_amount = 1000
         with session:
