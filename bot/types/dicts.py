@@ -4,7 +4,11 @@ from typing import TypedDict
 from discord.member import Member
 from discord.user import User
 
-from bot.types.dicts import FileData
+
+class FileData(TypedDict):
+    filepath: str
+    cog_path: str
+    edit_time: float
 
 
 class AccessToken(TypedDict):
@@ -38,8 +42,3 @@ class TeamDict(TypedDict):
     id: int
     members: list[User | Member]
 
-
-class FileData(TypedDict):
-    filepath: str
-    cog_path: str
-    edit_time: float
