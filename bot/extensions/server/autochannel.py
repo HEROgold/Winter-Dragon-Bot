@@ -40,6 +40,7 @@ class AutomaticChannels(GroupCog):
                     # ignore when already moved from "Join Me"
                     return
                 elif len(before.channel.members) == 0:  # noqa: SIM102
+                    # TODO: what if before.channel.members is cached, and does not reflect the count for after leaving?
                     if db_channel := session.query(AC).where(AC.channel_id == before.channel.id).first():
                         if dc_channel := member.guild.get_channel(db_channel.channel_id):
                             await dc_channel.delete(reason="removing empty voice")

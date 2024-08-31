@@ -1,3 +1,5 @@
+from asyncio import Task
+from collections.abc import Coroutine
 import datetime
 import logging
 from typing import Any
@@ -30,6 +32,7 @@ class WinterDragon(AutoShardedBot):
     launch_time: datetime.datetime
     logger: logging.Logger
     has_app_command_mentions: bool = False
+    log_saver: Task[Coroutine[Any, Any, None]] | None = None
     _global_app_commands: AppCommandStore
     _guild_app_commands: dict[int, AppCommandStore]
     default_intents: Intents
@@ -60,9 +63,9 @@ class WinterDragon(AutoShardedBot):
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
             + f"&permissions={BOT_PERMISSIONS}"
-            + f"&scope={"+".join(OAUTH_SCOPE+BOT_SCOPE)}"
+            + f"&scope={"+".join(OAUTH_SCOPE)}"
             + f"&scope={"+".join(BOT_SCOPE)}"
-            + f"&redirect_uri={WEBSITE_URL}/callback"
+            # + f"&redirect_uri={WEBSITE_URL}/callback"
         )
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:

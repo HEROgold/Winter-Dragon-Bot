@@ -17,8 +17,8 @@ from bot.config import get_invalid as get_invalid_configs
 from bot.config import is_valid as config_validator
 from bot.errors.config import ConfigError
 from tools.main_log import logs
-from tools.port_finder import get_v4_port
-from website.app import app
+# from tools.port_finder import get_v4_port
+# from website.app import app
 
 
 if not config_validator():
@@ -110,12 +110,12 @@ def terminate(*args, **kwargs) -> None:
 
 async def main() -> None:
     async with bot:
-        t = Thread(
-            target=app.run,
-            kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},  # noqa: S104
-            daemon=True, name="flask"
-        )
-        t.start()
+        # t = Thread(
+        #     target=app.run,
+        #     kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},  # noqa: S104
+        #     daemon=True, name="flask"
+        # )
+        # t.start()
 
         invite_link = bot.get_bot_invite()
         config.set("Main", "application_id", f"{bot.application_id}")
