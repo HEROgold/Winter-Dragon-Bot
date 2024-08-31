@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from pathlib import Path
 import signal
 import sys
 from logging.handlers import RotatingFileHandler
@@ -12,7 +13,7 @@ import discord
 from discord.ext import commands
 
 from bot import WinterDragon
-from bot.config import CONFIG_PATH, INTENTS, config
+from bot.config import CONFIG_PATH, INTENTS, PROJECT_DIR, config
 from bot.config import get_invalid as get_invalid_configs
 from bot.config import is_valid as config_validator
 from bot.errors.config import ConfigError
@@ -56,7 +57,7 @@ async def on_ready() -> None:
 
 async def get_extensions() -> list[str]:
     extensions = []
-    for root, _, files in os.walk("extensions"):
+    for root, _, files in os.walk(f"{PROJECT_DIR.name}/extensions"):
         extensions.extend(
             os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
             for file in files
