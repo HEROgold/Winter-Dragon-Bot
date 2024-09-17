@@ -135,7 +135,7 @@ class ConfigParserSingleton:
             with open(CONFIG_PATH):
                 pass
         except FileNotFoundError as e:
-            shutil.copy(TEMPLATE_PATH/"config_template.ini", CONFIG_PATH)
+            shutil.copy(PROJECT_DIR/"config_template.ini", CONFIG_PATH)
             to_edit = ["discord_token", "open_api_key", "bot_name", "support_guild_id"]
             msg = f"First time launch detected, please edit the following settings in {CONFIG_PATH}:\n{', '.join(to_edit)}"
             raise FirstTimeLaunchError(msg) from e
