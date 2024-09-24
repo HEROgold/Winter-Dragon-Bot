@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database.tables import Base
+from database.tables.Base import Base
 from database.tables.definitions import GUILDS_ID
 
 
