@@ -4,7 +4,8 @@ from hypothesis import given
 from hypothesis.strategies import text
 
 from bot import WinterDragon
-from bot.config import INTENTS, config
+from bot.config import config
+from bot.constants import INTENTS
 
 
 @given(text())
