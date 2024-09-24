@@ -42,3 +42,4 @@ class ConfigParserSingleton(configparser.ConfigParser):
 
 
 config = ConfigParserSingleton()
+# TODO: Split non-bot configs into their owner config files
