@@ -1,20 +1,8 @@
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
-from sqlalchemy import ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from database.tables import Base
-from database.tables.definitions import CHANNELS_ID, COMMAND_GROUPS_ID, COMMANDS_ID, GUILDS_ID, USERS_ID
-
-
-class Command(Base):
-    __tablename__ = "commands"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    qual_name: Mapped[str] = mapped_column(String(30))
-    call_count: Mapped[int] = mapped_column(Integer, default=0)
-    parent_id: Mapped[int] = mapped_column(ForeignKey(COMMAND_GROUPS_ID), nullable=True)
-
-    parent: Mapped["CommandGroup"] = relationship(back_populates="commands", foreign_keys=[parent_id])
+from database.tables.Base import Base
+from database.tables.definitions import CHANNELS_ID, COMMANDS_ID, GUILDS_ID, USERS_ID
 
 
 class DisabledCommands(Base):
@@ -46,12 +34,3 @@ class DisabledCommands(Base):
     @property
     def target_id(self) -> int:
         return self._user_id or self._channel_id or self._guild_id
-
-
-class CommandGroup(Base):
-    __tablename__ = "command_groups"
-
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(30))
-
-    commands: Mapped[list["Command"]] = relationship(back_populates="parent")
