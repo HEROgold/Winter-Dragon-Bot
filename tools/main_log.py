@@ -11,7 +11,7 @@ from bot.config import config
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
 
-class Logs:
+class LogsManager:
     first_rollover: bool = False
 
     def __init__(self) -> None:
@@ -146,7 +146,7 @@ sql_logger = logging.getLogger("sqlalchemy.engine")
 discord_logger = logging.getLogger("discord")
 flask_logger = logging.getLogger("werkzeug")
 
-logs = Logs()
+logs = LogsManager()
 
 logs.add_logger("bot", bot_logger)
 logs.add_logger("discord", discord_logger)
