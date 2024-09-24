@@ -16,9 +16,9 @@ import discord
 from discord import Interaction, User
 from discord.ui import Button
 
-from database.tables import Session, engine
-from database.tables.associations import AssociationUserLobby as AUL  # noqa: N817
-from database.tables.games import Lobby as DbLobby
+from database import Session, engine
+from database.tables import AssociationUserLobby as AUL  # noqa: N817
+from database.tables import Lobby as DbLobby
 
 
 # TODO: Add updating message system

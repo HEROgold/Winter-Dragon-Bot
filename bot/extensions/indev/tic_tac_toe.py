@@ -14,7 +14,7 @@ from bot.tools.ttt_ai import TicTacToeAI
 from bot.types.cogs import GroupCog
 from bot.types.lobby import Lobby as GLobby
 from bot.types.mixins import LoggerMixin
-from database.tables.games import Game, Lobby, ResultDuels
+from database.tables import Game, Lobby, ResultDuels
 
 
 GAME_NAME = "ttt"

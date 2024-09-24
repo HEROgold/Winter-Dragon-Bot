@@ -6,7 +6,8 @@ import requests
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.config import UD_DEFINE_URL, UD_RANDOM_URL, config
+from bot.config import config
+from bot.constants import UD_DEFINE_URL, UD_RANDOM_URL
 from bot.types.cogs import GroupCog
 from bot.types.mixins import LoggerMixin
 
@@ -17,10 +18,7 @@ class Urban(GroupCog, LoggerMixin):
         self.loop = asyncio.get_event_loop()
 
 
-    @app_commands.command(
-        name="random",
-        description="get random definitions",
-    )
+    @app_commands.command(name="random", description="get random definitions")
     async def slash_urban_random(self, interaction: discord.Interaction) -> None:
         if config["Urban"]["ALLOW_RANDOM"] is True:
             response: requests.Response = self.loop.run_in_executor(None, requests.get, UD_RANDOM_URL).result()

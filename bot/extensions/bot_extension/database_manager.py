@@ -10,13 +10,8 @@ from bot.config import config
 from bot.types.aliases import GChannel
 from bot.types.cogs import Cog
 from bot.types.tasks import loop
-from database.tables.associations import AssociationUserCommand as AUC  # noqa: N817
-from database.tables.channels import Channel
-from database.tables.commands import Command
-from database.tables.guilds import Guild
-from database.tables.messages import Message
-from database.tables.roles import Role
-from database.tables.users import Presence, User
+from database.tables import AssociationUserCommand as AUC  # noqa: N817
+from database.tables import Channel, Command, Guild, Message, Presence, Role, User
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))

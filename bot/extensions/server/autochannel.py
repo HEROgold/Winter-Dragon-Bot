@@ -7,11 +7,11 @@ from discord import (
 )
 
 from bot import WinterDragon
-from bot.config import AUTOCHANNEL_CREATE_REASON
+from bot.constants import AUTOCHANNEL_CREATE_REASON
 from bot.types.cogs import Cog, GroupCog
-from database.tables import Session
-from database.tables.channels import AutoChannel as AC  # noqa: N817
-from database.tables.channels import AutoChannelSettings as ACS  # noqa: N817
+from database import Session
+from database.tables import AutoChannel as AC  # noqa: N817
+from database.tables import AutoChannelSettings as ACS  # noqa: N817
 
 
 class AutomaticChannels(GroupCog):

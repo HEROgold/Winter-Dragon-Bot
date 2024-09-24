@@ -7,7 +7,7 @@ from discord.ui import Button
 from bot import WinterDragon
 from bot.types.cogs import GroupCog
 from bot.types.mixins import LoggerMixin
-from database.tables.games import ResultDuels
+from database.tables import ResultDuels
 
 
 # TODO: change command /rps new

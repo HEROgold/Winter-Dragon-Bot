@@ -2,10 +2,10 @@ import discord
 from discord import Role, app_commands
 
 from bot import WinterDragon
-from bot.config import AUTO_ASSIGN_REASON
+from bot.constants import AUTO_ASSIGN_REASON
 from bot.types.cogs import Cog, GroupCog
-from database.tables.roles import AutoAssignRole
-from database.tables.roles import Role as DbRole
+from database.tables import AutoAssignRole
+from database.tables import Role as DbRole
 
 
 class AutoAssign(GroupCog):

@@ -5,21 +5,20 @@ from discord import CategoryChannel, Member, app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
-from bot.config import (
+from bot.config import config
+from bot.constants import (
     CHANGED_COLOR,
     CREATED_COLOR,
     DELETED_COLOR,
     LOG_CHANNEL_NAME,
     MAX_CATEGORY_SIZE,
     MEMBER_UPDATE_PROPERTIES,
-    config,
 )
 from bot.enums.channels import ChannelTypes, LogCategories
 from bot.errors import NoneTypeError
 from bot.tools.msg_checks import is_tic_tac_toe
 from bot.types.cogs import Cog, GroupCog
-from database.tables.channels import Channel
-from database.tables.guilds import AuditLog
+from database.tables import AuditLog, Channel
 
 
 LOGS = ChannelTypes.LOGS.name

@@ -7,18 +7,17 @@ from discord.ext import commands
 from bot import WinterDragon
 from bot.config import config
 from bot.types.cogs import GroupCog
-from bot.types.enums import SuggestionTypes
-from database.tables.games import WyrQuestion
-from database.tables.utility import Suggestion
+from database.tables import Game, Suggestion, WyrQuestion
 from tools import rainbow
 
 
-WYR = SuggestionTypes.WOULD_YOU_RATHER
+WYR = "WOULD_YOU_RATHER"
 
 
 class WouldYouRather(GroupCog):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.game = Game.fetch_game_by_name(WYR)
         self.set_default_data()
 
 

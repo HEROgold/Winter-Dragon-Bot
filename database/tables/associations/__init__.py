@@ -1,8 +1,8 @@
-from .AssociationUserCommand import AssociationUserCommand
-from .AssociationUserHangman import AssociationUserHangman
-from .AssociationUserLobby import AssociationUserLobby
-from .GuildCommands import GuildCommands
-from .GuildRoles import GuildRoles
+from .associationusercommand import AssociationUserCommand
+from .associationuserhangman import AssociationUserHangman
+from .associationuserlobby import AssociationUserLobby
+from .guildcommands import GuildCommands
+from .guildroles import GuildRoles
 
 
 __all__ = [

@@ -16,10 +16,9 @@ from sqlalchemy.orm import Session
 
 from bot import WinterDragon
 from bot.types.cogs import GroupCog  #, Cog
-from database.tables import engine
-from database.tables.associations import GuildCommands
-from database.tables.commands import Command as DbCommand
-from database.tables.commands import CommandGroup
+from database import engine
+from database.tables import Command as DbCommand
+from database.tables import CommandGroup, GuildCommands
 
 
 # TODO: test

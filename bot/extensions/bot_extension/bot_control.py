@@ -11,7 +11,8 @@ from matplotlib import pyplot as plt
 from psutil._common import snetio
 
 from bot import WinterDragon
-from bot.config import IMG_DIR, METRICS_FILE, STATUS_MSGS, config
+from bot.config import config
+from bot.constants import IMG_DIR, METRICS_FILE, STATUS_MSGS
 from bot.types.cogs import GroupCog
 from bot.types.tasks import loop
 from tools.strings import codeblock
@@ -213,7 +214,7 @@ class BotC(GroupCog):
         measured_time = time.time() - start_time
         response = round(measured_time * 1000)
 
-        from database.tables.users import User
+        from database.tables import User
 
         start_time = time.time()
         User.fetch_user(id_=interaction.user.id)

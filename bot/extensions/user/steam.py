@@ -11,7 +11,8 @@ from bs4 import BeautifulSoup
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.config import (
+from bot.config import config
+from bot.constants import (
     BUNDLE_DISCOUNT,
     BUNDLE_FINAL_PRICE,
     BUNDLE_LINK,
@@ -27,14 +28,12 @@ from bot.config import (
     STEAM_PERIOD,
     STEAM_SEND_PERIOD,
     WEBSITE_URL,
-    config,
 )
 from bot.types.cogs import GroupCog
 from bot.types.dicts import Sale
 from bot.types.tasks import loop
-from database.tables import Session, engine
-from database.tables.users import SteamUser, User
-from database.tables.utility import SteamSale
+from database import Session, engine
+from database.tables import SteamSale, SteamUser, User
 
 
 class Steam(GroupCog):
@@ -227,7 +226,7 @@ class Steam(GroupCog):
         Returns:
             bool: True, False
         """
-        if isinstance(sale, SteamSale): # noqa: SIM108
+        if isinstance(sale, SteamSale):
             update_period_date = sale.update_datetime + datetime.timedelta(seconds=STEAM_PERIOD)
         else:
             update_period_date = sale["update_datetime"] + datetime.timedelta(seconds=STEAM_PERIOD)

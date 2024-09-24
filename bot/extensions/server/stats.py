@@ -10,7 +10,7 @@ from bot.enums.channels import ChannelTypes
 from bot.errors import NoneTypeError
 from bot.types.cogs import Cog, GroupCog
 from bot.types.tasks import loop
-from database.tables.channels import Channel
+from database.tables import Channel
 from tools import rainbow
 
 

@@ -4,13 +4,13 @@ from discord import app_commands
 from bot import WinterDragon
 from bot.config import config
 from bot.types.cogs import GroupCog
-from database.tables.games import Game as GameDB
-from database.tables.games import LookingForGroup
+from database.tables import Game as GameDB
+from database.tables import LookingForGroup
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Lfg(GroupCog):
-    from extensions.indev.games import Games
+    from bot.extensions.indev.games import Games
     slash_suggest = Games.slash_suggest
 
 

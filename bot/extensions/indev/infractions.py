@@ -9,7 +9,7 @@ from discord import (
 from bot import WinterDragon
 from bot.config import config
 from bot.types.cogs import Cog, GroupCog
-from database.tables.users import Infractions as InfractionsDb
+from database.tables import Infractions as InfractionsDb
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))

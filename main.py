@@ -2,8 +2,6 @@
 
 import asyncio
 import logging
-import os
-from pathlib import Path
 import signal
 import sys
 from logging.handlers import RotatingFileHandler
@@ -13,18 +11,19 @@ import discord
 from discord.ext import commands
 
 from bot import WinterDragon
-from bot.config import CONFIG_PATH, INTENTS, PROJECT_DIR, config
-from bot.config import get_invalid as get_invalid_configs
-from bot.config import is_valid as config_validator
+from bot.config import config
+from bot.constants import BOT_CONFIG, INTENTS
 from bot.errors.config import ConfigError
 from tools.main_log import logs
+
+
 # from tools.port_finder import get_v4_port
 # from website.app import app
 
 
-if not config_validator():
+if not config.is_valid():
     msg = f"""Config is not yet updated!, update the following:
-        {', '.join(get_invalid_configs())}"""
+        {', '.join(config.get_invalid())}"""
     raise ConfigError(msg)
 
 
@@ -54,28 +53,6 @@ async def on_ready() -> None:
     print("Bot is running!")
     print("invite link: ", invite_link)
 
-
-async def get_extensions() -> list[str]:
-    extensions = []
-    for root, _, files in os.walk(f"{PROJECT_DIR.name}/extensions"):
-        extensions.extend(
-            os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
-            for file in files
-            if file.endswith(".py")
-        )
-    return extensions
-
-
-async def mass_load() -> None:
-    if not (os.listdir("./bot/extensions")):
-        logs["bot"].critical("No extensions Directory To Load!")
-        return
-    for extension in await get_extensions():
-        try:
-            await bot.load_extension(extension)
-            logs["bot"].info(f"Loaded {extension}")
-        except Exception as e:  # noqa: BLE001
-            logs["bot"].exception(e)
 
 
 @commands.is_owner()
@@ -113,7 +90,7 @@ async def main() -> None:
     async with bot:
         # t = Thread(
         #     target=app.run,
-        #     kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},  # noqa: S104
+        #     kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},
         #     daemon=True, name="flask"
         # )
         # t.start()
@@ -122,11 +99,11 @@ async def main() -> None:
         config.set("Main", "application_id", f"{bot.application_id}")
         config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
 
-        with open(CONFIG_PATH, "w") as f:  # noqa: ASYNC230
+        with open(BOT_CONFIG, "w") as f:  # noqa: ASYNC230
             config.write(f, space_around_delimiters=False)
 
         bot.log_saver = asyncio.create_task(logs.daily_save_logs())
-        await mass_load()
+        await bot.load_extensions()
         await bot.start(config["Tokens"]["discord_token"])
 
 

@@ -4,7 +4,7 @@ from discord import app_commands
 from bot import WinterDragon
 from bot.config import config
 from bot.types.cogs import Cog, GroupCog
-from database.tables.guilds import Welcome as WelcomeDb
+from database.tables import Welcome as WelcomeDb
 
 
 @app_commands.guild_only()

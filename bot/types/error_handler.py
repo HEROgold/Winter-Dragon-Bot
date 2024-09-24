@@ -143,12 +143,10 @@ class ErrorHandler(LoggerMixin):
             case commands.errors.CheckFailure:
                 error_msg = f"{error}" # TODO: Add check failure handling
             case _:
-                if isinstance(error, tuple(i for i in ReturnOriginal)):
-                    error_msg = error
                 error_msg = dedent(f"""
                     Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
                     Use {self.server_invite} to join the official bot guild, and submit the error code in the forums channel.
-                    """)
+                """)
         return error_msg or "An unexpected error occurred."
 
 

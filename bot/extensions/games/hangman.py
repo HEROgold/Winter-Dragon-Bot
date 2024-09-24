@@ -10,13 +10,14 @@ from bot.config import config
 from bot.types.button import Button
 from bot.types.cogs import GroupCog
 from bot.types.modal import Modal
-from database.tables import Session, engine
-from database.tables.associations import AssociationUserHangman as AUH  # noqa: N817
-from database.tables.games import Game
-from database.tables.games import Hangman as HangmanDb
-from database.tables.games import ResultMassiveMultiplayer as ResultMM
+from database import Session, engine
+from database.tables import AssociationUserHangman as AUH  # noqa: N817
+from database.tables import Game
+from database.tables import Hangman as HangmanDb
+from database.tables import ResultMassiveMultiplayer as ResultMM
 
 
+HANGMAN = "hangman"
 # Hang Man Stages
 HANGMEN = [
     """
@@ -158,7 +159,7 @@ class HangmanButton(Button):
 class SubmitLetter(Modal, title="Submit Letter"):
     letter = discord.ui.TextInput(label="Letter", min_length=1, max_length=1)
 
-    async def on_submit(self, interaction: discord.Interaction) -> None:  # noqa: PLR0915, C901
+    async def on_submit(self, interaction: discord.Interaction) -> None:  # noqa: C901, PLR0912, PLR0915
         # sourcery skip: low-code-quality
         logger = logging.getLogger(
             f"{config['Main']['bot_name']}.{self.__class__.__name__}",
@@ -299,12 +300,7 @@ class SubmitLetter(Modal, title="Submit Letter"):
 class Hangman(GroupCog):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-
-        with self.session as session:
-            self.game = session.query(Game).where(Game.name == "hangman").first()
-            if self.game is None:
-                session.add(Game(name="hangman"))
-            session.commit()
+        self.game = Game.fetch_game_by_name(HANGMAN)
 
     # Hangman_GROUP = app_commands.Group(name="HangmanGroup", description="Hangman")
     # @Hangman_GROUP.command()

@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 from asyncio import Task
 from collections.abc import Coroutine
 from typing import Any
@@ -12,7 +13,8 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from bot.config import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL, config
+from bot.config import config
+from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, OAUTH_SCOPE
 from bot.types.aliases import AppCommandStore
 
 
@@ -135,3 +137,32 @@ class WinterDragon(AutoShardedBot):
             self._guild_app_commands[_guild.id] = unpack_app_commands(commands)
         else:
             self._global_app_commands = unpack_app_commands(commands)
+
+
+    async def get_extensions(self) -> list[str]:
+        extensions = []
+        for root, _, files in os.walk(EXTENSIONS):
+            extensions.extend(
+                os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
+                for file in files
+                if file.endswith(".py")
+            )
+        return extensions
+
+    @staticmethod
+    def normalize_extension_path(extension: str) -> str:
+            idx = len(os.getcwd()) + 1 # +1 to avoid a leading slash after replacing.
+            return extension[idx:].replace(os.sep, ".")
+
+    async def load_extensions(self) -> None:
+        if not (os.listdir(EXTENSIONS)):
+            self.logger.critical("No extensions Directory To Load!")
+            return
+        for i in await self.get_extensions():
+            extension = self.normalize_extension_path(i)
+            try:
+                await self.load_extension(extension)
+            except Exception:
+                self.logger.exception("")
+            else:
+                self.logger.info(f"Loaded {extension}")

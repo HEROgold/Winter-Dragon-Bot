@@ -8,18 +8,17 @@ from discord.ext import commands
 from bot import WinterDragon
 from bot.config import config
 from bot.types.cogs import GroupCog
-from bot.types.enums import SuggestionTypes
-from database.tables.games import NhieQuestion
-from database.tables.utility import Suggestion
+from database.tables import Game, NhieQuestion, Suggestion
 from tools import rainbow
 
 
-NHIE = SuggestionTypes.NEVER_HAVE_I_EVER
+NHIE = "NEVER_HAVE_I_EVER"
 
 
 class NeverHaveIEver(GroupCog):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.game = Game.fetch_game_by_name(NHIE)
         self.set_default_data()
 
 

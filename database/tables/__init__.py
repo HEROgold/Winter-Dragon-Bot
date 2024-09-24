@@ -5,38 +5,38 @@ from .associations import (
     GuildCommands,
     GuildRoles,
 )
-from .AuditLog import AuditLog
-from .AutoAssignRole import AutoAssignRole
-from .AutoChannel import AutoChannel
-from .AutoChannelSettings import AutoChannelSettings
-from .Channel import Channel
-from .ColorCodes import ColorCodes
-from .Command import Command
-from .CommandGroup import CommandGroup
-from .DisabledCommands import DisabledCommands
-from .Game import Game
-from .Guild import Guild
-from .Hangman import Hangman
-from .Infractions import Infractions
-from .Lobby import Lobby
-from .LobbyStatus import LobbyStatus
-from .LookingForGroup import LookingForGroup
-from .Message import Message
-from .NhieQuestion import NhieQuestion
-from .Presence import Presence
-from .Reminder import Reminder
-from .ResultDuels import ResultDuels
-from .ResultMassiveMultiplayer import ResultMassiveMultiplayer
-from .Role import Role
-from .SteamSale import SteamSale
-from .SteamUser import SteamUser
-from .Suggestion import Suggestion
-from .SyncBan import SyncBan
-from .SyncBanGuild import SyncBanGuild
-from .User import User
-from .UserRoles import UserRoles
-from .Welcome import Welcome
-from .WyrQuestion import WyrQuestion
+from .auditlog import AuditLog
+from .autoassignrole import AutoAssignRole
+from .autochannel import AutoChannel
+from .autochannelsettings import AutoChannelSettings
+from .channel import Channel
+from .colorcodes import ColorCodes
+from .command import Command
+from .commandgroup import CommandGroup
+from .disabledcommands import DisabledCommands
+from .game import Game
+from .guild import Guild
+from .hangman import Hangman
+from .infractions import Infractions
+from .lobby import Lobby
+from .lobbystatus import LobbyStatus
+from .lookingforgroup import LookingForGroup
+from .message import Message
+from .nhiequestion import NhieQuestion
+from .presence import Presence
+from .reminder import Reminder
+from .resultduels import ResultDuels
+from .resultmassivemultiplayer import ResultMassiveMultiplayer
+from .role import Role
+from .steamsale import SteamSale
+from .steamuser import SteamUser
+from .suggestion import Suggestion
+from .syncban import SyncBan
+from .syncbanguild import SyncBanGuild
+from .user import User
+from .userroles import UserRoles
+from .welcome import Welcome
+from .wyrquestion import WyrQuestion
 
 
 __all__ = [
