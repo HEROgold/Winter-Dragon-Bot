@@ -14,5 +14,4 @@ pydantic_settings==2.3.4
 pytest==8.2.2
 Requests==2.32.3
 SQLAlchemy==2.0.31
-# starlette==0.39.0
 discord-ext-prometheus==0.2.0
