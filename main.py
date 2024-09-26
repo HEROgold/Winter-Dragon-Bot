@@ -7,6 +7,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from threading import Thread
 
+import aiofiles
 import discord
 from discord.ext import commands
 
@@ -98,8 +99,6 @@ async def main() -> None:
         invite_link = bot.get_bot_invite()
         config.set("Main", "application_id", f"{bot.application_id}")
         config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
-
-        import aiofiles
 
         async with aiofiles.open(BOT_CONFIG, "w") as f:
             await config.write(f, space_around_delimiters=False)
