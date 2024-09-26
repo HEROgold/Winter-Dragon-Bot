@@ -101,7 +101,7 @@ async def main() -> None:
         config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
 
         async with aiofiles.open(BOT_CONFIG, "w") as f:
-            await config.write(f, space_around_delimiters=False)
+            config.write(f, space_around_delimiters=False)
 
         bot.log_saver = asyncio.create_task(logs.daily_save_logs())
         await bot.load_extensions()
