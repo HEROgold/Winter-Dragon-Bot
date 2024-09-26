@@ -7,13 +7,12 @@ import sys
 from logging.handlers import RotatingFileHandler
 from threading import Thread
 
-import aiofiles
 import discord
 from discord.ext import commands
 
 from bot import WinterDragon
 from bot.config import config
-from bot.constants import BOT_CONFIG, INTENTS
+from bot.constants import INTENTS
 from bot.errors.config import ConfigError
 from tools.main_log import logs
 
@@ -99,9 +98,6 @@ async def main() -> None:
         invite_link = bot.get_bot_invite()
         config.set("Main", "application_id", f"{bot.application_id}")
         config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
-
-        async with aiofiles.open(BOT_CONFIG, "w") as f:
-            config.write(f, space_around_delimiters=False)
 
         bot.log_saver = asyncio.create_task(logs.daily_save_logs())
         await bot.load_extensions()
