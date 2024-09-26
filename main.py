@@ -88,13 +88,6 @@ def terminate(*args, **kwargs) -> None:
 
 async def main() -> None:
     async with bot:
-        # t = Thread(
-        #     target=app.run,
-        #     kwargs={"host": "0.0.0.0", "port": get_v4_port(), "debug": False},
-        #     daemon=True, name="flask"
-        # )
-        # t.start()
-
         invite_link = bot.get_bot_invite()
         config.set("Main", "application_id", f"{bot.application_id}")
         config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
