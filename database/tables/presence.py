@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -33,6 +33,6 @@ class Presence(Base):
         with session:
             db_presences = session.query(Presence).where(Presence.user_id == member_id).all()
             for presence in db_presences:
-                if (presence.date_time + datetime.timedelta(days=days)) >= datetime.now(UTC):
+                if (presence.date_time + timedelta(days=days)) >= datetime.now(UTC):
                     session.delete(presence)
             session.commit()
