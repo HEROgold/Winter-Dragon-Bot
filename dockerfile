@@ -11,8 +11,4 @@ COPY /tools /tools
 COPY main.py main.py
 COPY pyproject.toml pyproject.toml
 
-# Do we want this?
-# We could move to a argparse/config combined setup.
-COPY config.ini config.ini
-
 CMD ["python3", "main.py"]
