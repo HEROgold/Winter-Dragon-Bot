@@ -110,7 +110,7 @@ class Cog(commands.Cog, LoggerMixin):
         for command in chain(self.walk_commands(), self.walk_app_commands()):
             if isinstance(command, app_commands.Group):
                 continue
-            self.logger.debug(f"Adding is command disabled check to {command.qualified_name}")
+            self.logger.debug(f"Adding is_command_disabled check to {command.qualified_name}")
             command.add_check(self.is_command_enabled) # type: ignore
 
     @add_mentions.before_loop
