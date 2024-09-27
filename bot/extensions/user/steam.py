@@ -334,7 +334,8 @@ class Steam(GroupCog):
         updated_sales = await self.get_updated_sales(self.get_saved_sales())
         if updated_sales == []:
             self.logger.debug("getting sales from steam")
-            return list(await self.get_sales_from_steam(percent))
+
+            return [i async for i in self.get_sales_from_steam(percent)]
         self.logger.debug("returning known sales")
         return updated_sales
 
