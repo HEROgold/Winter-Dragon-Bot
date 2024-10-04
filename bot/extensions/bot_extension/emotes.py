@@ -9,6 +9,8 @@ from bot.constants import EMOJI_DIR, GUILD_OWNERSHIP_LIMIT
 from bot.types.cogs import Cog
 
 
+GUILD_NAME = "Emotes"
+
 class EmoteManager(Cog):
     async def show_emotes(self, interaction: Interaction) -> None:
         """Shows all emoji's in one message."""
@@ -24,7 +26,7 @@ class EmoteManager(Cog):
         guild_counter = 0
         EMOJI_DIR.mkdir(parents=True, exist_ok=True)
         for guild in self.bot.guilds:
-            if guild.owner.id == self.bot.user.id:
+            if guild.owner.id == self.bot.user.id and guild.name.startswith(GUILD_NAME):
                 guild_counter += 1
                 if guild.emoji_limit - len(guild.emojis) > 0:
                     await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())
@@ -33,7 +35,7 @@ class EmoteManager(Cog):
                     break
         else:
             if guild_counter < GUILD_OWNERSHIP_LIMIT:
-                await self.bot.create_guild(name=f"Emotes {guild_counter}")
+                await self.bot.create_guild(name=f"{GUILD_NAME} {guild_counter}")
                 guild_counter += 1
         await interaction.response.send_message("All available guilds and emoji's are filled.")
 
