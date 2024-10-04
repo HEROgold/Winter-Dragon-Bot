@@ -16,7 +16,8 @@ class EmoteManager(Cog):
         for guild in self.bot.guilds:
             if guild.owner.id == self.bot.user.id:
                 for emoji in guild.emojis:
-                    msg += emoji
+                    msg += str(emoji)
+        await interaction.response.send_message(msg)
 
     async def add_emote(self, interaction: Interaction, emoji: Attachment) -> None:
         # TODO: Use database to store the guilds and the emojis added to them.
