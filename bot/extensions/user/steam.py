@@ -308,7 +308,7 @@ class Steam(GroupCog):
         known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales()]
         steam_sales = [x async for x in self.get_sales_from_steam(percent)]
 
-        self.logger.debug(f"checking for new sales, \n{known_sales=}, \n{steam_sales=}")
+        self.logger.debug(f"checking for new sales, {known_sales=}, {steam_sales=}")
 
         outdated = [
             i["title"]

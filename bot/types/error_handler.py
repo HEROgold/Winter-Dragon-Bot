@@ -81,12 +81,13 @@ class ErrorHandler(LoggerMixin):
 
     @loop(count=1)
     async def _async_init(self) -> None:
+        # TODO: use cog's get_command_mention method to get and mention invite command
         # self.help_command = self.bot.get_app_command("help")
         self.invite_command = self.bot.get_app_command("invite")
         if self.invite_command is None:
             self.server_invite = self.bot.get_bot_invite()
         else:
-            self.server_invite = f"</{self.invite_command} guild:{self.invite_command.id}>"
+            self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
 
         await self.handle_error()
 
@@ -97,7 +98,7 @@ class ErrorHandler(LoggerMixin):
         await self.bot.wait_until_ready()
 
 
-    def _get_message_from_error(self) -> str | AllErrors:  # noqa: C901, PLR0912
+    def _get_message_from_error(self) -> str | AllErrors:
         error = self.error
 
         if isinstance(error, discord.errors.NotFound):
@@ -109,6 +110,9 @@ class ErrorHandler(LoggerMixin):
         ):
             self.logger.error(f"CommandInvokeError: {self.time_code=}")
 
+        original = getattr(error, "original", error)
+        self.logger.debug(f"{original=}, {error=}")
+        error = original
         error_msg = None
         match type(error):
             case commands.errors.MissingRequiredArgument:
@@ -142,6 +146,8 @@ class ErrorHandler(LoggerMixin):
                     error_msg = error
             case commands.errors.CheckFailure:
                 error_msg = f"{error}" # TODO: Add check failure handling
+            case discord.errors.Forbidden:
+                error_msg = "I do not have enough permissions to do that."
             case _:
                 error_msg = dedent(f"""
                     Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
@@ -178,16 +184,16 @@ class ErrorHandler(LoggerMixin):
                 await interface.response.send_message(message, ephemeral=True)
             except discord.errors.InteractionResponded:
                 original = await interface.original_response()
-                await original.edit(content="Unexpected Error...", delete_after=10)
-                dm = interface.user.dm_channel or await interface.user.create_dm()
-                await dm.send(message)
+                await original.edit(content=message)
+                # dm = interface.user.dm_channel or await interface.user.create_dm()
+                # await dm.send(message)
         else:
             dm = await self.get_dm(interface)
-            self.logger.debug(f"Sending {message=} to {dm=}")
+            # self.logger.debug(f"Sending {message=} to {dm=}")
 
             try:
                 await interface.message.delete()
+                await interface.send(message)
             except discord.Forbidden:
                 self.logger.warning("Not allowed to remove message")
-
-            await interface.send(message)
+                await dm.send(message)
