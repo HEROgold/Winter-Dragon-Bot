@@ -30,7 +30,7 @@ class LogChannels(GroupCog):
 # ----------------------
 
     def get_log_category(self, category_channels: list[CategoryChannel], current_count: int) -> CategoryChannel:
-        channel_locator, _ = divmod(current_count, MAX_CATEGORY_SIZE)
+        channel_locator = current_count // MAX_CATEGORY_SIZE
         category_channel = category_channels[channel_locator]
         self.logger.debug(f"{category_channels=}, {channel_locator=}")
 
