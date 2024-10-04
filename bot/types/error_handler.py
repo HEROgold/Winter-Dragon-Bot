@@ -97,7 +97,7 @@ class ErrorHandler(LoggerMixin):
         await self.bot.wait_until_ready()
 
 
-    def _get_message_from_error(self) -> str | AllErrors:  # noqa: C901, PLR0912
+    def _get_message_from_error(self) -> str | AllErrors:
         error = self.error
 
         if isinstance(error, discord.errors.NotFound):
