@@ -8,7 +8,9 @@ from tools.port_finder import get_v4_port
 
 PROJECT_DIR = Path(__file__).parent.parent
 BOT_DIR = Path(__file__).parent
-IMG_DIR = BOT_DIR / "dynamic/img"
+DYNAMIC_DIR = BOT_DIR / "dynamic"
+IMG_DIR = DYNAMIC_DIR / "img"
+EMOJI_DIR = DYNAMIC_DIR / "emoji"
 
 BOT_CONFIG = BOT_DIR / "config.ini"
 EXTENSIONS = BOT_DIR / "extensions"
@@ -110,3 +112,4 @@ INTENTS.message_content = True
 INTENTS.auto_moderation_configuration = True
 INTENTS.auto_moderation_execution = True
 INTENTS.voice_states = True
+GUILD_OWNERSHIP_LIMIT = 10
