@@ -6,7 +6,7 @@ from database.tables import UserRoles
 
 
 # TODO: move this and other static messages to messages config?
-AUTO_ASSIGN_REASON = "Member joined again, AutoAssign roles the user had previously"
+AUTO_ASSIGN_REASON = "Member joined again, AutoAssigned roles the user had previously"
 
 
 class AutoReAssign(GroupCog):
@@ -33,7 +33,7 @@ class AutoReAssign(GroupCog):
             ).all():
                 role = member.guild.get_role(role_id=auto_assign.role_id) # type: ignore
                 await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
-        self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
+                self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
 
 
 async def setup(bot: WinterDragon) -> None:
