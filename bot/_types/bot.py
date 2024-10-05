@@ -13,9 +13,9 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
+from bot._types.aliases import AppCommandStore
 from bot.config import config
 from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, OAUTH_SCOPE
-from bot._types.aliases import AppCommandStore
 
 
 class WinterDragon(AutoShardedBot):
@@ -151,7 +151,8 @@ class WinterDragon(AutoShardedBot):
 
     @staticmethod
     def normalize_extension_path(extension: str) -> str:
-            idx = len(os.getcwd()) + 1 # +1 to avoid a leading slash after replacing.
+            if os.name == "nt":
+                idx = len(os.getcwd()) + 1 # +1 to avoid a leading slash after replacing.
             return extension[idx:].replace(os.sep, ".")
 
     async def load_extensions(self) -> None:
@@ -160,6 +161,7 @@ class WinterDragon(AutoShardedBot):
             return
         for i in await self.get_extensions():
             extension = self.normalize_extension_path(i)
+            self.logger.info(f"Loading {extension}")
             try:
                 await self.load_extension(extension)
             except Exception:
