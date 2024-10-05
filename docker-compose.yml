@@ -1,10 +1,34 @@
 version: '3'
 services:
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - ./database/postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=aos;idf8p9aoSidUfjAsKdf
+      - POSTGRES_PASSWORD=fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3
+      - POSTGRES_DB=winter_dragon
   bot:
     container_name: discord-bot
-    build: .
+    build:
+      context: .
+      dockerfile: /bot/dockerfile
     volumes:
       - .:/app
     ports:
-      - "5000:5000"
+      - 5000:5000
     restart: unless-stopped # unless-stopped, change to always for auto reboot
+    depends_on:
+      - postgres
+  website:
+    container_name: bot-website
+    build:
+      context: .
+      dockerfile: /website/dockerfile
+    volumes:
+      - ./website:/app
+    restart: unless-stopped
+    depends_on:
+      - postgres
