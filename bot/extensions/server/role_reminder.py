@@ -7,7 +7,6 @@ from database.tables import AutoReAssign as AutoReAssignDb
 from database.tables import UserRoles
 
 
-# TODO: move this and other static messages to messages config?
 AUTO_ASSIGN_REASON = "Member joined again, AutoAssigned roles the user had previously"
 
 
