@@ -16,7 +16,11 @@ class Sync(Cog):
     @app_commands.command(name="sync", description="Sync all commands on this guild")
     async def slash_sync(self, interaction: discord.Interaction | commands.Context) -> None:
         user = interaction.author if isinstance(interaction, commands.Context) else interaction.user
+        is_allowed = await self.bot.is_owner(user)
 
+        if not is_allowed:
+            msg = "You are not allowed to sync commands"
+            raise commands.NotOwner(msg)
         guild = interaction.guild
 
         local_sync = await self.bot.tree.sync(guild=guild)
