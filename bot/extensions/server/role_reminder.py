@@ -22,7 +22,8 @@ class AutoReAssign(GroupCog):
         ]:
             with self.session as session:
                 for role in member.roles:
-                    session.add(UserRoles(id=role.id, user=member.id))
+                    session.add(UserRoles(role_id=role.id, guild_id=member.guild.id, user_id=member.id))
+                session.commit()
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
