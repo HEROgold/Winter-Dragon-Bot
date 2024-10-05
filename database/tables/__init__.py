@@ -44,7 +44,7 @@ __all__ = [
     "AssociationUserCommand",
     "AssociationUserHangman",
     "AssociationUserLobby",
-    "AutoReassign",
+    "AutoReAssign",
     "GuildCommands",
     "GuildRoles",
     "AuditLog",
