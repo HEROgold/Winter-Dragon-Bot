@@ -43,7 +43,7 @@ class Urban(GroupCog, LoggerMixin):
     @app_commands.command(
         name="search",
         description="Look into urban dictionary for a meaning and its definition.",
-        )
+    )
     async def slash_urban(self, interaction: discord.Interaction, query: str) -> None:
         response: requests.Response = self.loop.run_in_executor(None, requests.get, UD_DEFINE_URL + urllib.parse.quote(query)).result()
         json = response.json()
