@@ -10,7 +10,7 @@ from tools.main_log import sql_logger as logger
 class Game(Base):
     __tablename__ = "games"
 
-    name: Mapped[str] = mapped_column(String(15), primary_key=True, unique=True)
+    name: Mapped[str] = mapped_column(String(64), primary_key=True, unique=True)
 
     @classmethod
     def fetch_game_by_name(cls, name: str) -> Self:
