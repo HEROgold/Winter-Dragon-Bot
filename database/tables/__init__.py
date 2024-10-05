@@ -9,6 +9,7 @@ from .auditlog import AuditLog
 from .autoassignrole import AutoAssignRole
 from .autochannel import AutoChannel
 from .autochannelsettings import AutoChannelSettings
+from .autoreassign import AutoReassign
 from .channel import Channel
 from .colorcodes import ColorCodes
 from .command import Command
@@ -43,6 +44,7 @@ __all__ = [
     "AssociationUserCommand",
     "AssociationUserHangman",
     "AssociationUserLobby",
+    "AutoReassign",
     "GuildCommands",
     "GuildRoles",
     "AuditLog",

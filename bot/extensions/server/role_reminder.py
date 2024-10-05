@@ -1,7 +1,9 @@
 import discord
+from discord import app_commands
 
 from bot import WinterDragon
 from bot._types.cogs import Cog, GroupCog
+from database.tables import AutoReAssign as AutoReAssignDb
 from database.tables import UserRoles
 
 
@@ -36,6 +38,17 @@ class AutoReAssign(GroupCog):
                 await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
                 self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
 
+    @app_commands.command(name="enable", description="Enable the AutoReAssign feature")
+    async def slash_enable(self, interaction: discord.Interaction) -> None:
+        with self.session as session:
+            session.add(AutoReAssignDb(guild_id=interaction.guild.id))
+            session.commit()
+
+    @app_commands.command(name="disable", description="Disable the AutoReAssign feature")
+    async def slash_disable(self, interaction: discord.Interaction) -> None:
+        with self.session as session:
+            session.query(AutoReAssignDb).where(AutoReAssignDb.guild_id == interaction.guild.id).delete()
+            session.commit()
 
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(AutoReAssign(bot))
