@@ -1,11 +1,8 @@
 """Main file for the bot."""
 
 import asyncio
-import logging
 import signal
 import sys
-from logging.handlers import RotatingFileHandler
-from threading import Thread
 
 import discord
 from discord.ext import commands
@@ -14,11 +11,7 @@ from bot import WinterDragon
 from bot.config import config
 from bot.constants import INTENTS
 from bot.errors.config import ConfigError
-from tools.main_log import logs
-
-
-# from tools.port_finder import get_v4_port
-# from website.app import app
+from tools.main_log import bot_logger, logs
 
 
 if not config.is_valid():
@@ -34,22 +27,13 @@ bot = WinterDragon(
 )
 
 tree = bot.tree
-threads: list[Thread] = []
-
-
-def setup_logging(logger: logging.Logger, filename: str) -> None:
-    logger.setLevel(config["Main"]["log_level"])
-    # handler = logging.FileHandler(filename=filename, encoding="utf-8", mode="w")
-    handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
-    handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
-    logger.addHandler(handler)
 
 
 @bot.event
 async def on_ready() -> None:
     invite_link = bot.get_bot_invite()
 
-    logs["bot"].info(f"Logged on as {bot.user}!")
+    bot_logger.info(f"Logged on as {bot.user}!")
     print("Bot is running!")
     print("invite link: ", invite_link)
 
@@ -60,9 +44,9 @@ async def on_ready() -> None:
 async def slash_shutdown(interaction: discord.Interaction) -> None:
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-        logs["bot"].info("shutdown by command.")
+        bot_logger.info("shutdown by command.")
     except Exception:  # noqa: BLE001
-        logs["bot"].exception("")
+        bot_logger.exception("")
     raise KeyboardInterrupt
 
 
@@ -75,14 +59,6 @@ def terminate(*args, **kwargs) -> None:
         loop.run_until_complete(bot.close())
     except Exception as e:  # noqa: BLE001
         print(e)
-
-    for thread in threads:
-        try:
-            thread.join()
-        except Exception as e:  # noqa: BLE001
-            print(e)
-        finally:
-            del thread
     sys.exit()
 
 
