@@ -8,7 +8,7 @@ router = APIRouter(prefix="/oauth", tags=["oauth"])
 @router.get("/callback")
 def oath_callback(request: Request):
     # TODO: Respond with the user's home page.
-    return {"message": f"{request.__dict__=}"}
+    return {"message": "Hello, Callback!"}
 
 def get_oath_url(application_id: int) -> str:
     redirect_uri = router.url_path_for("callback")
