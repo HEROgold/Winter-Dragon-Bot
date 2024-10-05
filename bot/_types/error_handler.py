@@ -7,10 +7,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
-from bot.config import config
-from bot.errors.aliases import AllErrors
 from bot._types.mixins import LoggerMixin
 from bot._types.tasks import loop
+from bot.config import config
+from bot.errors.aliases import AllErrors
 
 
 type ReturnOriginal = (
@@ -112,8 +112,11 @@ class ErrorHandler(LoggerMixin):
 
         original = getattr(error, "original", error)
         self.logger.debug(f"{original=}, {error=}")
-        error = original
-        error_msg = None
+        error_msg = self.get_error_message(original)
+        return error_msg or "An unexpected error occurred."
+
+    def get_error_message(self, error: AllErrors) -> str | AllErrors:  # noqa: C901, PLR0912
+        error_msg = ""
         match type(error):
             case commands.errors.MissingRequiredArgument:
                 error_msg = f"Missing a required argument, {error.param}."
@@ -153,7 +156,7 @@ class ErrorHandler(LoggerMixin):
                     Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
                     Use {self.server_invite} to join the official bot guild, and submit the error code in the forums channel.
                 """)
-        return error_msg or "An unexpected error occurred."
+        return error_msg
 
 
     async def get_dm(self, ctx: commands.Context) -> discord.DMChannel:
