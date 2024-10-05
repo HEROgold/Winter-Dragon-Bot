@@ -23,7 +23,7 @@ services:
       context: .
       dockerfile: /bot/dockerfile
     volumes:
-      - .:/app
+      - ./bot:/app
     ports:
       - 5000:5000
     restart: unless-stopped # unless-stopped, change to always for auto reboot

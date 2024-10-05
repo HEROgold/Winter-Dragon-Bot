@@ -1,13 +1,10 @@
 FROM python:3.12-slim
 
-WORKDIR /app
-
-COPY bot/requirements.txt requirements.txt
-RUN pip3.12 install -r requirements.txt
-
 COPY /bot /bot
 COPY /database /database
 COPY /tools /tools
 COPY /bot/main.py main.py
+
+RUN pip3.12 install -r bot/requirements.txt
 
 CMD ["python3", "main.py"]
