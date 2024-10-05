@@ -82,23 +82,10 @@ class AutoCogReloader(Cog):
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class CogsC(GroupCog):
-
-    @staticmethod
-    def get_extensions() -> list[str]:
-        extensions = []
-        for root, _, files in os.walk("extensions"):
-            extensions.extend(
-                os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
-                for file in files
-                if file.endswith(".py")
-            )
-        return extensions
-
-
     async def mass_reload(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
         reload_message = ""
-        for extension in self.get_extensions():
+        for extension in await self.bot.get_extensions():
             try:
                 await self.bot.reload_extension(extension)
             except commands.errors.ExtensionNotLoaded:
@@ -149,7 +136,7 @@ class CogsC(GroupCog):
     @commands.is_owner()
     @app_commands.command(name = "show", description = "Show loaded extensions (For bot developer only)")
     async def slash_show(self, interaction: discord.Interaction) -> None:
-        extensions = self.get_extensions()
+        extensions = await self.bot.get_extensions()
         self.logger.debug(f"Showing {extensions} to {interaction.user}")
         await interaction.response.send_message(f"{extensions}", ephemeral=True)
 
@@ -254,7 +241,7 @@ class CogsC(GroupCog):
         interaction: discord.Interaction,  # noqa: ARG002
         current: str,
     ) -> list[app_commands.Choice[str]]:
-        extensions = self.get_extensions()
+        extensions = await self.bot.get_extensions()
         return [
             app_commands.Choice(name=extension, value=extension)
             for extension in extensions
