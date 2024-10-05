@@ -1,7 +1,7 @@
 
 import discord
 
-from bot.types.mixins import LoggerMixin
+from bot._types.mixins import LoggerMixin
 
 
 # TODO

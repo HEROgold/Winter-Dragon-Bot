@@ -10,8 +10,8 @@ from collections.abc import Callable, Sequence
 from discord.ext import tasks
 from discord.utils import MISSING
 
-from bot.types.aliases import CoroutineFunction
-from bot.types.mixins import LoggerMixin
+from bot._types.aliases import CoroutineFunction
+from bot._types.mixins import LoggerMixin
 
 
 class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):

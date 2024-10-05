@@ -9,8 +9,8 @@ from discord.ext import commands
 from bot import WinterDragon
 from bot.config import config
 from bot.errors.aliases import AllErrors
-from bot.types.mixins import LoggerMixin
-from bot.types.tasks import loop
+from bot._types.mixins import LoggerMixin
+from bot._types.tasks import loop
 
 
 type ReturnOriginal = (

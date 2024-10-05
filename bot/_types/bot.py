@@ -15,7 +15,7 @@ from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
 from bot.config import config
 from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, OAUTH_SCOPE
-from bot.types.aliases import AppCommandStore
+from bot._types.aliases import AppCommandStore
 
 
 class WinterDragon(AutoShardedBot):
