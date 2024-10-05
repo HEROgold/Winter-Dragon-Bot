@@ -6,8 +6,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot._types.cogs import GroupCog
 from bot.config import config
-from bot.types.cogs import GroupCog
 from database.tables import Game, NhieQuestion, Suggestion
 from tools import rainbow
 

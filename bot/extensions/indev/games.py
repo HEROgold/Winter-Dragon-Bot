@@ -3,7 +3,7 @@ import discord  # type: ignore
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.types.cogs import GroupCog
+from bot._types.cogs import GroupCog
 from database.tables import Game, Suggestion
 
 

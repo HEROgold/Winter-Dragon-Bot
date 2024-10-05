@@ -14,10 +14,10 @@ from discord import (
 )
 
 from bot import WinterDragon
+from bot._types.cogs import GroupCog
 from bot.extensions.server.log_channels import LogChannels
 from bot.extensions.server.stats import Stats
 from bot.extensions.server.welcome import Welcome
-from bot.types.cogs import GroupCog
 
 
 class Guild(GroupCog):

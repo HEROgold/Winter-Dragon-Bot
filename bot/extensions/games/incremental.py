@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import discord
 
 from bot import WinterDragon
-from bot.types.cogs import GroupCog
+from bot._types.cogs import GroupCog
 from database.tables.incremental import (
     Player as IncrementalPlayer,
 )

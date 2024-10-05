@@ -6,7 +6,7 @@ from discord import ButtonStyle, Guild, Interaction, Member, Permissions, Role, 
 from discord.ui import Button, View
 
 from bot import WinterDragon
-from bot.types.cogs import Cog, GroupCog
+from bot._types.cogs import Cog, GroupCog
 
 
 @app_commands.guild_only()

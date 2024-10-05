@@ -15,7 +15,7 @@ from discord.app_commands import Command as DcCommand
 from sqlalchemy.orm import Session
 
 from bot import WinterDragon
-from bot.types.cogs import GroupCog  #, Cog
+from bot._types.cogs import GroupCog  #, Cog
 from database import engine
 from database.tables import Command as DbCommand
 from database.tables import CommandGroup, GuildCommands

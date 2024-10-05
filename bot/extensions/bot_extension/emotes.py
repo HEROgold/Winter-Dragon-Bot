@@ -5,8 +5,8 @@
 from discord import Attachment, Interaction
 
 from bot import WinterDragon
+from bot._types.cogs import Cog
 from bot.constants import EMOJI_DIR, GUILD_OWNERSHIP_LIMIT
-from bot.types.cogs import Cog
 
 
 GUILD_NAME = "Emotes"

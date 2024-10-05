@@ -5,11 +5,11 @@ import discord
 from discord import CategoryChannel, Guild, Member, VoiceChannel, app_commands
 
 from bot import WinterDragon
+from bot._types.aliases import GTPChannel
+from bot._types.cogs import GroupCog
+from bot._types.dicts import TeamDict
+from bot._types.tasks import loop
 from bot.enums.channels import ChannelTypes
-from bot.types.aliases import GTPChannel
-from bot.types.cogs import GroupCog
-from bot.types.dicts import TeamDict
-from bot.types.tasks import loop
 from database.tables import Channel
 from tools import rainbow
 

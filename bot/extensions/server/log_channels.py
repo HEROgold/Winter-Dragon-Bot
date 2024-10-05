@@ -5,6 +5,7 @@ from discord import CategoryChannel, Member, app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot._types.cogs import Cog, GroupCog
 from bot.config import config
 from bot.constants import (
     CHANGED_COLOR,
@@ -17,7 +18,6 @@ from bot.constants import (
 from bot.enums.channels import ChannelTypes, LogCategories
 from bot.errors import NoneTypeError
 from bot.tools.msg_checks import is_tic_tac_toe
-from bot.types.cogs import Cog, GroupCog
 from database.tables import AuditLog, Channel
 
 

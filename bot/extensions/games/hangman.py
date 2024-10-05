@@ -6,10 +6,10 @@ import discord  # type: ignore
 from discord import app_commands
 
 from bot import WinterDragon
+from bot._types.button import Button
+from bot._types.cogs import GroupCog
+from bot._types.modal import Modal
 from bot.config import config
-from bot.types.button import Button
-from bot.types.cogs import GroupCog
-from bot.types.modal import Modal
 from database import Session, engine
 from database.tables import AssociationUserHangman as AUH  # noqa: N817
 from database.tables import Game

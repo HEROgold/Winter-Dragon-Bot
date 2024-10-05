@@ -10,10 +10,10 @@ import sqlalchemy
 from discord import app_commands
 
 from bot import WinterDragon
+from bot._types.cogs import GroupCog
+from bot._types.lobby import Lobby as GLobby
+from bot._types.mixins import LoggerMixin
 from bot.tools.ttt_ai import TicTacToeAI
-from bot.types.cogs import GroupCog
-from bot.types.lobby import Lobby as GLobby
-from bot.types.mixins import LoggerMixin
 from database.tables import Game, Lobby, ResultDuels
 
 

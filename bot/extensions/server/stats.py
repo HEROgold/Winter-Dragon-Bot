@@ -5,11 +5,11 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
+from bot._types.cogs import Cog, GroupCog
+from bot._types.tasks import loop
 from bot.config import config
 from bot.enums.channels import ChannelTypes
 from bot.errors import NoneTypeError
-from bot.types.cogs import Cog, GroupCog
-from bot.types.tasks import loop
 from database.tables import Channel
 from tools import rainbow
 

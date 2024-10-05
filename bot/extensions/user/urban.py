@@ -6,10 +6,10 @@ import requests
 from discord import app_commands
 
 from bot import WinterDragon
+from bot._types.cogs import GroupCog
+from bot._types.mixins import LoggerMixin
 from bot.config import config
 from bot.constants import UD_DEFINE_URL, UD_RANDOM_URL
-from bot.types.cogs import GroupCog
-from bot.types.mixins import LoggerMixin
 
 
 class Urban(GroupCog, LoggerMixin):

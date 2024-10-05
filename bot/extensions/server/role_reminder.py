@@ -1,7 +1,7 @@
 import discord
 
 from bot import WinterDragon
-from bot.types.cogs import Cog, GroupCog
+from bot._types.cogs import Cog, GroupCog
 from database.tables import UserRoles
 
 

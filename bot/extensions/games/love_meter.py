@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.types.cogs import Cog
+from bot._types.cogs import Cog
 
 
 class Love(Cog):

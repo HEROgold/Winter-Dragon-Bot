@@ -7,8 +7,8 @@ from discord import (
 )
 
 from bot import WinterDragon
+from bot._types.cogs import Cog, GroupCog
 from bot.config import config
-from bot.types.cogs import Cog, GroupCog
 from database.tables import Infractions as InfractionsDb
 
 

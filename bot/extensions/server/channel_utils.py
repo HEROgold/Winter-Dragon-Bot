@@ -2,8 +2,8 @@ import discord
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.types.aliases import MemberRole
-from bot.types.cogs import GroupCog
+from bot._types.aliases import MemberRole
+from bot._types.cogs import GroupCog
 
 
 @app_commands.guild_only()

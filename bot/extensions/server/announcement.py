@@ -5,8 +5,8 @@ import discord
 from discord import app_commands
 
 from bot import WinterDragon
+from bot._types.cogs import Cog
 from bot.config import config
-from bot.types.cogs import Cog
 from tools import rainbow
 
 

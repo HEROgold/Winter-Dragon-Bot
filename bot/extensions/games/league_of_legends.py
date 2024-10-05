@@ -1,5 +1,5 @@
 from bot import WinterDragon
-from bot.types.cogs import Cog
+from bot._types.cogs import Cog
 
 
 class LeagueOfLegends(Cog):

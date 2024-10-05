@@ -4,8 +4,8 @@ import discord
 from discord import app_commands
 
 from bot import WinterDragon
-from bot.types.cogs import Cog
-from bot.types.tasks import loop
+from bot._types.cogs import Cog
+from bot._types.tasks import loop
 from database.tables import Reminder as ReminderDb
 
 

@@ -4,8 +4,8 @@ import flag
 import openai
 
 from bot import WinterDragon
+from bot._types.cogs import Cog
 from bot.config import config
-from bot.types.cogs import Cog
 
 
 class Translate(Cog):
