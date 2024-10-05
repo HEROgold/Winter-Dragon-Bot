@@ -45,7 +45,7 @@ class Sync(Cog):
             local_sync += await self.bot.tree.sync(guild=guild)
             local_list = [command.name for command in local_sync]
             local_list.sort()
-            msg += f" {local_sync} for {guild}\n"
+            msg += f" {local_list} for {guild}\n"
 
         self.logger.warning(f"{ctx.author} Synced slash commands!")
         self.logger.debug(msg)
