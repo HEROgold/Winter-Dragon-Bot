@@ -151,8 +151,9 @@ class WinterDragon(AutoShardedBot):
 
     @staticmethod
     def normalize_extension_path(extension: str) -> str:
+            idx = len(os.getcwd())
             if os.name == "nt":
-                idx = len(os.getcwd()) + 1 # +1 to avoid a leading slash after replacing.
+                idx += 1 # +1 to avoid a leading slash after replacing.
             return extension[idx:].replace(os.sep, ".")
 
     async def load_extensions(self) -> None:
