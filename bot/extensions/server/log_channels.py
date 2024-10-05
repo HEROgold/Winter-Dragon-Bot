@@ -255,14 +255,24 @@ class LogChannels(GroupCog):
         after: discord.abc.GuildChannel = entry.after # type: ignore
         channel = after or before
         embed = None
-        # FIXME: AttributeError: 'AuditLogDiff' object has no attribute 'overwrites'. Documentation suggests it does.
-        # FIXME: AttributeError: 'AuditLogDiff' object has no attribute 'position'. Documentation suggests it does.
-        properties = "name", "type" # "overwrites", "position",
-        # remove X since AuditLogDiff doesn't have them
-        # X = "category", "permissions_synced"
+
+        properties = {
+            "name",
+            "type",
+            "position",
+            "overwrites",
+            "topic",
+            "bitrate",
+            "rtc_region",
+            "video_quality_mode",
+            "default_auto_archive_duration",
+            "nsfw",
+            "slowmode_delay",
+            "user_limit",
+        }
 
         self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
-        if differences := [prop for prop in properties if getattr(before, prop) != getattr(after, prop)]:
+        if differences := [prop for prop in properties if hasattr(before, prop) and getattr(before, prop) != getattr(after, prop)]:
             if "name" in differences or before.name != after.name:
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
