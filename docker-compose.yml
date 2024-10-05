@@ -7,9 +7,16 @@ services:
     volumes:
       - ./database/postgres:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=aos;idf8p9aoSidUfjAsKdf
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3
       - POSTGRES_DB=winter_dragon
+      - PGUSER=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "postgres", "-d", "winter_dragon"]
+      interval: 5s
+      timeout: 30s
+      retries: 6
+      start_period: 10s
   bot:
     container_name: discord-bot
     build:
@@ -21,7 +28,8 @@ services:
       - 5000:5000
     restart: unless-stopped # unless-stopped, change to always for auto reboot
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
   website:
     container_name: bot-website
     build:
@@ -31,4 +39,5 @@ services:
       - ./website:/app
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
