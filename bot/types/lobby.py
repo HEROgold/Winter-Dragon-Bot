@@ -9,7 +9,6 @@ This 'lobby' will be a message and have a join and leave button
 import asyncio
 from datetime import datetime, timedelta
 from textwrap import dedent
-from types import FunctionType
 from typing import TYPE_CHECKING, ClassVar
 
 import discord
@@ -20,6 +19,9 @@ from database import Session, engine
 from database.tables import AssociationUserLobby as AUL  # noqa: N817
 from database.tables import Lobby as DbLobby
 
+
+def f() -> None:  ...
+type FunctionType = type[f]
 
 # TODO: Add updating message system
 class Lobby:
@@ -65,7 +67,7 @@ class Lobby:
     )
 
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         message: discord.Message,
         max_players: int = 0,
@@ -111,7 +113,7 @@ class Lobby:
     def update_message(self) -> None:
         self.update_msg_text()
         loop = asyncio.get_event_loop()
-        loop.create_task(self.message.edit(
+        loop.create_task(self.message.edit(  # noqa: RUF006
             content=self.message.content,
             view=self.view,
         ))
