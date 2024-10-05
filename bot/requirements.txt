@@ -1,0 +1,12 @@
+aiohttp==3.10.9
+beautifulsoup4==4.12.3
+database==0.6.0
+discord.py==2.4.0
+discord.py==2.4.0
+Flag==0.1.1
+matplotlib==3.9.2
+openai==1.51.0
+psutil==6.0.0
+Requests==2.32.3
+SQLAlchemy==2.0.35
+discord-ext-prometheus==0.2.0
