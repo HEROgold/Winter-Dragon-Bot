@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 import discord
-from discord import app_commands
+from discord import Guild, app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
@@ -32,24 +32,28 @@ class Sync(Cog):
     @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")
     async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
         msg = "Synced commands: "
-
-        global_sync = await self.bot.tree.sync()
-        global_list = [command.name for command in global_sync]
-        global_list.sort()
-        msg += f"{global_list}\n"
-
         guild = ctx.guild
 
-        local_sync: list[AppCommand] = []
+        msg += await self.sync_global()
         for guild in self.bot.guilds:
-            local_sync += await self.bot.tree.sync(guild=guild)
-            local_list = [command.name for command in local_sync]
-            local_list.sort()
-            msg += f" {local_list} for {guild}\n"
+            msg += await self.sync_local(guild)
 
         self.logger.warning(f"{ctx.author} Synced slash commands!")
         self.logger.debug(msg)
         await ctx.send(msg)
+
+    async def sync_local(self, guild: Guild) -> str:
+        local_sync: list[AppCommand] = []
+        local_sync += await self.bot.tree.sync(guild=guild)
+        local_list = [command.name for command in local_sync]
+        local_list.sort()
+        return f"{local_list} for {guild}\n"
+
+    async def sync_global(self) -> str:
+        global_sync = await self.bot.tree.sync()
+        global_list = [command.name for command in global_sync]
+        global_list.sort()
+        return f"{global_list}\n"
 
 
 
