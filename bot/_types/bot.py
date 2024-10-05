@@ -143,7 +143,7 @@ class WinterDragon(AutoShardedBot):
         extensions = []
         for root, _, files in os.walk(EXTENSIONS):
             extensions.extend(
-                os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
+                self.normalize_extension_path(os.path.join(root, file[:-3]).replace("/", ".").replace("\\", "."))
                 for file in files
                 if file.endswith(".py")
             )
@@ -160,8 +160,7 @@ class WinterDragon(AutoShardedBot):
         if not (os.listdir(EXTENSIONS)):
             self.logger.critical("No extensions Directory To Load!")
             return
-        for i in await self.get_extensions():
-            extension = self.normalize_extension_path(i)
+        for extension in await self.get_extensions():
             self.logger.info(f"Loading {extension}")
             try:
                 await self.load_extension(extension)
