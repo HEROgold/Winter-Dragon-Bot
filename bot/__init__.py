@@ -1,4 +1,4 @@
-from .types.bot import WinterDragon
+from ._types.bot import WinterDragon
 
 
 __all__ = [
