@@ -4,7 +4,6 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.tables.base import Base
-from tools.main_log import sql_logger as logger
 
 
 class Game(Base):
@@ -22,12 +21,9 @@ class Game(Base):
         from database import session
 
         with session:
-            logger.debug(f"Looking for game {name=}")
             if game := session.query(cls).where(cls.name == name).first():
-                logger.debug(f"Returning game {name=}")
                 return game
 
-            logger.debug(f"Creating game {name=}")
             session.add(cls(name=name))
             session.commit()
             return session.query(cls).where(cls.name == name).first()  # type: ignore
