@@ -11,7 +11,7 @@ Winter-Dragon-Bot is a versatile Discord bot designed to enhance server manageme
 - **Dynamic Logging**: Separate and dynamic log files for different aspects of the bot's operation (Discord, SQL, etc.), including automatic log rotation to conserve disk space.
 - **Error Handling**: Extensive error handling mechanisms to ensure stability and reliability.
 - **SQLite Integration**: Utilizes SQLite for data storage, management and speed.
-- **Docker Support**: Designed to run in Docker containers for easy deployment and scalability. Includes a Python 3.12 container and a SQLite container.
+- **Docker Support**: Designed to run in Docker containers for easy deployment and scalability. Includes two Python 3.12 container's, for the bot and the corresponding website and a postgresql container.
 
 ## Installation
 
