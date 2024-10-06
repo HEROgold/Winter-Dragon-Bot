@@ -1,4 +1,4 @@
-from constants import DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL
+from website.constants import DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL
 from fastapi import APIRouter, Request
 
 
