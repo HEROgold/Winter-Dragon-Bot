@@ -21,7 +21,7 @@ services:
     container_name: discord-bot
     build:
       context: .
-      dockerfile: /bot/dockerfile
+      dockerfile: bot/dockerfile
     volumes:
       - ./bot:/app
     ports:
@@ -34,7 +34,7 @@ services:
     container_name: bot-website
     build:
       context: .
-      dockerfile: /website/dockerfile
+      dockerfile: website/dockerfile
     volumes:
       - ./website:/app
     ports:
