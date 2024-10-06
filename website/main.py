@@ -1,10 +1,11 @@
 import uvicorn
-from app import app
+
+from website.app import site
 
 
 def main() -> None:
     all_addresses = "0.0.0.0"  # noqa: S104
-    uvicorn.run(app, host=all_addresses)
+    uvicorn.run(site, host=all_addresses)
 
 
 if __name__ == "__main__":
