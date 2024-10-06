@@ -168,3 +168,4 @@ logon.txt
 readme/
 steam_cmd/
 .obsidian/
+postgres/*
