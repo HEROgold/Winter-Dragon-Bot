@@ -38,7 +38,7 @@ services:
     volumes:
       - ./website:/app
     ports:
-      - 8000:8000
+      - 443:8000
     restart: unless-stopped
     depends_on:
       postgres:
