@@ -1,3 +1,10 @@
+from pathlib import Path
+
+
+WEBSITE_DIR = Path(__file__).parent
+
+WEBSITE_CONFIG = WEBSITE_DIR / "config.ini"
+
 WEBSITE_URL = ""
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
