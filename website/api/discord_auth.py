@@ -1,5 +1,6 @@
-from website.constants import DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL
 from fastapi import APIRouter, Request
+
+from website.constants import DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL
 
 
 router = APIRouter(prefix="/oauth", tags=["oauth"])
