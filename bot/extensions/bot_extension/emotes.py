@@ -2,7 +2,7 @@
 # TODO: Read and add emoji's to a specific directory to read from.
 
 
-from discord import Attachment, Guild, Interaction, User
+from discord import Attachment, Guild, Interaction, Member, Permissions, User
 
 from bot import WinterDragon
 from bot._types.cogs import Cog
@@ -10,6 +10,7 @@ from bot.constants import EMOJI_DIR, GUILD_OWNERSHIP_LIMIT
 
 
 GUILD_NAME = "Emotes"
+EMOTE_MANAGER = "Emote Manager"
 
 class EmoteManager(Cog):
     async def show_emotes(self, interaction: Interaction) -> None:
@@ -34,11 +35,16 @@ class EmoteManager(Cog):
                     break
         else:
             if guild_counter < GUILD_OWNERSHIP_LIMIT:
-                guild = await self.bot.create_guild(name=f"{GUILD_NAME} {guild_counter}")
+                guild = await self.create_guild(guild_counter)
                 guild_counter += 1
                 await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())
-                await self.invite_owners(guild)
         await interaction.response.send_message("All available guilds and emoji's are filled.")
+
+    async def create_guild(self, guild_counter: int) -> Guild:
+        guild = await self.bot.create_guild(name=f"{GUILD_NAME} {guild_counter}")
+        await guild.create_role(name=EMOTE_MANAGER, permissions=Permissions(administrator=True))
+        await self.invite_owners(guild)
+        return guild
 
     async def invite_owners(self, guild: Guild) -> None:
         invite = await guild.channels[0].create_invite()
@@ -47,6 +53,10 @@ class EmoteManager(Cog):
             owner: User = await self.bot.get_user(i)
             owner.send(f"Created guild {guild.name} with invite {invite.url}.")
 
+    @Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        role = next(role for role in member.guild.roles if role.name == EMOTE_MANAGER)
+        await member.add_roles(role)
 
 async def setup(bot: WinterDragon) -> None:
     await bot.add_cog(EmoteManager(bot))  # type: ignore
