@@ -2,7 +2,7 @@
 # TODO: Read and add emoji's to a specific directory to read from.
 
 
-from discord import Attachment, Interaction
+from discord import Attachment, Guild, Interaction, User
 
 from bot import WinterDragon
 from bot._types.cogs import Cog
@@ -34,11 +34,18 @@ class EmoteManager(Cog):
                     break
         else:
             if guild_counter < GUILD_OWNERSHIP_LIMIT:
-                await self.bot.create_guild(name=f"{GUILD_NAME} {guild_counter}")
+                guild = await self.bot.create_guild(name=f"{GUILD_NAME} {guild_counter}")
                 guild_counter += 1
+                await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())
+                await self.invite_owners(guild)
         await interaction.response.send_message("All available guilds and emoji's are filled.")
 
-
+    async def invite_owners(self, guild: Guild) -> None:
+        invite = await guild.channels[0].create_invite()
+        owners = self.bot.owner_ids or [self.bot.owner_id] if self.bot.owner_id else []
+        for i in owners:
+            owner: User = await self.bot.get_user(i)
+            owner.send(f"Created guild {guild.name} with invite {invite.url}.")
 
 
 async def setup(bot: WinterDragon) -> None:
