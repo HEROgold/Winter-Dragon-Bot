@@ -100,4 +100,5 @@ class Incremental(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    return
     await bot.add_cog(Incremental(bot))
