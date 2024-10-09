@@ -319,6 +319,13 @@ class BotC(GroupCog):
             await interaction.response.send_message("Could not make a graph to show.")
 
 
+    @commands.is_owner()
+    @app_commands.command(name="update", description="Update the bot's status and activity")
+    async def slash_update(self, interaction: discord.Interaction, branch: str, tag: str) -> None:
+        # TODO: Auto complete for branch and tag, using stored and known branches and tags
+        await interaction.response.defer()
+
+
     @staticmethod
     def get_colors(value: float, max_amount: int) -> tuple[str, int]:
         """Get colors based on given max value, with predefined percentages"""
