@@ -4,10 +4,10 @@
     {% block head %}{% endblock %}
 </head>
 <body>
-    <header>{% block header %}{% endblock %}</header>
-    <nav>{% block nav %}{% endblock %}</nav>
-    <main>{% block content %}{% endblock %}</main>
-    <footer>{% block footer %}{% endblock %}</footer>
-    <script>{% block scripts %}{% endblock %}</script>
+    <header>{% block header %}{% endblock %}</header>   {# Could use include, but that's not dynamic enough. #}
+    <nav>{% block nav %}{% endblock %}</nav>    {# Could use include, but that's not dynamic enough. #}
+    <main>{% block content %}{% endblock %}</main>  {# Could use include, but that's not dynamic enough. #}
+    <footer>{% block footer %}{% endblock %}</footer>   {# Could use include, but that's not dynamic enough. #}
+    <script>{% block scripts %}{% endblock %}</script>  {# Could use include, but that's not dynamic enough. #}
 </body>
 </html>
