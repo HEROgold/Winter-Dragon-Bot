@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    {% block head %}{% endblock %}
+    {% include "components/head.j2" %}
 </head>
 <body>
-    <header>{% block header %}{% endblock %}</header>   {# Could use include, but that's not dynamic enough. #}
-    <nav>{% block nav %}{% endblock %}</nav>    {# Could use include, but that's not dynamic enough. #}
-    <main>{% block content %}{% endblock %}</main>  {# Could use include, but that's not dynamic enough. #}
-    <footer>{% block footer %}{% endblock %}</footer>   {# Could use include, but that's not dynamic enough. #}
-    <script>{% block scripts %}{% endblock %}</script>  {# Could use include, but that's not dynamic enough. #}
+    <header>{% include "components/header.j2" %}</header>
+    <nav>{% include "components/nav.j2" %}</nav>
+    <main>
+        {% block content %}{% endblock content %}
+        {% include "components/sidebar/sidebar.j2" %}
+    </main>
+    <footer>{% include "components/footer.j2" %}</footer>
 </body>
 </html>
