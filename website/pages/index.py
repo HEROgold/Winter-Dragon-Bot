@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from website._types.responses import TemplateResponse
+from website.aliases.responses import TemplateResponse
 from website.templates import footer, head, header, nav, templates
 
 
