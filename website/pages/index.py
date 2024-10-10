@@ -1,6 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 
-from website.pages.base import TEMPLATES
+from website._types.responses import TemplateResponse
+from website.templates import footer, head, header, nav, templates
 
 
 router = APIRouter(tags=["website", "home"])
