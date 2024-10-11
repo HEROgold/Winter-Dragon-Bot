@@ -2,7 +2,7 @@ import logging
 from itertools import chain
 
 import discord
-from discord import User, app_commands
+from discord import app_commands
 from discord.ext import commands  # , tasks
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
