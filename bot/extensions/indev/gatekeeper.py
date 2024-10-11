@@ -29,7 +29,7 @@ class Gatekeeper(GroupCog):
 
     @app_commands.command(name="setup", description="Sets up the roles for the gatekeeper system.")
     async def slash_setup(self, interaction: Interaction, member_role: Role | None = None) -> None:
-        guild: Guild = interaction.guild # type: ignore[reportAssignmentType]
+        guild: Guild = interaction.guild[reportAssignmentType]
         await self.setup_roles(guild, member_role)
         await interaction.response.send_message(f"Roles have been setup. You can now use {self.get_command_mention(self.slash_enable_gatekeeper)}", ephemeral=True)
 

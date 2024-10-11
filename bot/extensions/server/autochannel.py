@@ -155,7 +155,7 @@ class AutomaticChannels(GroupCog):
         interaction: discord.Interaction,
         channel: discord.abc.GuildChannel | None=None,
     ) -> None:
-        if channel is None and (channel := interaction.channel) is None: # type: ignore
+        if channel is None and (channel := interaction.channel) is None:
             msg = "No channel found"
             raise ValueError(msg)
 
@@ -211,7 +211,7 @@ class AutomaticChannels(GroupCog):
             if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
                 if channel is not None:
-                    await channel.edit(user_limit=limit) # type: ignore
+                    await channel.edit(user_limit=limit)
 
                 await interaction.response.send_message(
                     f"{interaction.user.mention} You have set the channel limit to be `{limit}`!, settings are saved",

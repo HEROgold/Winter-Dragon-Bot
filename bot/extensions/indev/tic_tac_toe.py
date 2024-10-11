@@ -453,7 +453,7 @@ class TicTacToeGame(discord.ui.View, LoggerMixin):
     player_x: discord.Member
     player_o: discord.Member
     Tie = 2
-    children: list[TicTacToeButton] # type: ignore
+    children: list[TicTacToeButton]
 
 
     def __init__(self, player_one: discord.Member, player_two: discord.Member, game_data: GameData) -> None:
@@ -636,4 +636,4 @@ class TicTacToeGame(discord.ui.View, LoggerMixin):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(TicTacToe(bot)) # type: ignore
+    await bot.add_cog(TicTacToe(bot))

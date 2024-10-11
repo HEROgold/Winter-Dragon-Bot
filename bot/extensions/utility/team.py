@@ -115,7 +115,7 @@ class Team(GroupCog):
                 Channel.type == TEAM_CATEGORY,
                 Channel.guild_id == guild.id,
             ).first():
-                return self.bot.get_channel(channel.id) # type: ignore
+                return self.bot.get_channel(channel.id)
             return None
 
 
@@ -230,7 +230,7 @@ class Team(GroupCog):
         teams = self.split_teams(team_count, members)
 
         for _, channel in await self.create_team_channels(teams, category):
-            await self.move_from_category(teams, channel) # type: ignore
+            await self.move_from_category(teams, channel)
 
         await interaction.edit_original_response(content="Users from your voice split among teams")
 
@@ -262,7 +262,7 @@ class Team(GroupCog):
             )
             return
 
-        teams = self.split_teams(team_count, members) # type: ignore
+        teams = self.split_teams(team_count, members)
 
         embed = discord.Embed(
             title="Teams",

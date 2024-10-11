@@ -1,4 +1,4 @@
-import discord  # type: ignore
+import discord
 from discord import app_commands
 
 from bot import WinterDragon
@@ -83,4 +83,4 @@ class Lfg(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(Lfg(bot))  # type: ignore
+    await bot.add_cog(Lfg(bot))

@@ -37,7 +37,7 @@ class Reminder(Cog):
             session.commit()
 
 
-    @send_reminder.before_loop # type: ignore
+    @send_reminder.before_loop
     async def before_send_reminder(self) -> None:
         await self.bot.wait_until_ready()
 

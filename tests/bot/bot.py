@@ -12,6 +12,6 @@ from bot.constants import INTENTS
 def test_winter_dragon() -> None:
     WinterDragon(
         intents=INTENTS,
-        command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),  
+        command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),
         case_insensitive=True,
     )

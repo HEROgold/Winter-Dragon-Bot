@@ -2,7 +2,7 @@ import logging
 import random
 
 import aiohttp
-import discord  # type: ignore
+import discord
 from discord import app_commands
 
 from bot import WinterDragon
@@ -315,4 +315,4 @@ class Hangman(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(Hangman(bot))  # type: ignore
+    await bot.add_cog(Hangman(bot))

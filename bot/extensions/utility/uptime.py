@@ -1,6 +1,6 @@
 import datetime
 
-import discord  # type: ignore
+import discord
 from discord import app_commands
 
 from bot import WinterDragon

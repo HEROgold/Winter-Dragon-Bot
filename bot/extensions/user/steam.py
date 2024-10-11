@@ -362,7 +362,7 @@ class Steam(GroupCog):
         game_sales = []
         for sale_tag in soup.find_all("a", class_=BUNDLE_LINK):
             sale_tag: bs4.element.Tag
-            game_sales.append(await self.get_game_sale(sale_tag["href"])) # type: ignore
+            game_sales.append(await self.get_game_sale(sale_tag["href"]))
         return game_sales
 
 
@@ -409,7 +409,7 @@ class Steam(GroupCog):
             a_tag = sale_tag.find_parent("a", href=True)
 
             if discount_perc is None: # Check game's page
-                yield await self.get_game_sale(a_tag["href"]) # type: ignore
+                yield await self.get_game_sale(a_tag["href"])
                 continue
 
             discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
@@ -569,7 +569,7 @@ class Steam(GroupCog):
         self,
         sale: SteamSale | Sale,
         category: str,
-        session: Session=None, # type: ignore
+        session: Session=None,
     ) -> Sale:
         """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session.
 

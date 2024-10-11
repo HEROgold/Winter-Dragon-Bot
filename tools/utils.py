@@ -9,7 +9,7 @@ def get_arg[T](args: Sequence[Any], target: T) -> T | None:
             for arg in args
             if isinstance(
                 arg,
-                target,  
+                target,
             )
         ),
         None,

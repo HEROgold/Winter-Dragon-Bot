@@ -33,7 +33,7 @@ class AutoReAssign(GroupCog):
                 UserRoles.user_id == member.id,
                 UserRoles.guild_id == member.guild.id,
             ).all():
-                role = member.guild.get_role(role_id=auto_assign.role_id) # type: ignore
+                role = member.guild.get_role(role_id=auto_assign.role_id)
                 await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
                 self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
 

@@ -22,7 +22,7 @@ class Translate(Cog):
         if not reaction.emoji.is_unicode_emoji():
             return
 
-        land_code = flag.dflagize(reaction.emoji, subregions=False)[1:-1] # type: ignore
+        land_code = flag.dflagize(reaction.emoji, subregions=False)[1:-1]
 
         land_code_target_length = 2
         if len(land_code) != land_code_target_length:

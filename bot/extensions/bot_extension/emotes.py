@@ -59,4 +59,4 @@ class EmoteManager(Cog):
         await member.add_roles(role)
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(EmoteManager(bot))  # type: ignore
+    await bot.add_cog(EmoteManager(bot))

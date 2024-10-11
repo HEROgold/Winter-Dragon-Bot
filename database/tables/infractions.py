@@ -43,4 +43,4 @@ class Infractions(Base):
 
             session.add(cls(id=id_))
             session.commit()
-            return session.query(cls).where(cls.id == id_).first()  
+            return session.query(cls).where(cls.id == id_).first()
