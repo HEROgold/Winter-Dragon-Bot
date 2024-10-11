@@ -34,7 +34,7 @@ class Cog(commands.Cog, LoggerMixin):
 
     def __init__(self, *args, **kwargs) -> None:
         self.ErrorHandler = ErrorHandler
-        self.bot = get_arg(args, WinterDragon) or kwargs.get("bot") # type: ignore
+        self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.session = Session(engine)
 
         if self.bot:
