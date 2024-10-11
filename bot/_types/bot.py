@@ -3,7 +3,7 @@ import logging
 import os
 from asyncio import Task
 from collections.abc import Coroutine
-from typing import Any
+from typing import Any, Sequence
 
 import discord
 from discord import Intents, app_commands
@@ -13,9 +13,9 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from bot._types.aliases import AppCommandStore
+from bot._types.aliases import AppCommandStore, MaybeGroupedAppCommand
 from bot.config import config
-from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, OAUTH_SCOPE
+from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS
 
 
 class WinterDragon(AutoShardedBot):
@@ -65,9 +65,7 @@ class WinterDragon(AutoShardedBot):
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
             + f"&permissions={BOT_PERMISSIONS}"
-            # + f"&scope={"+".join(OAUTH_SCOPE)}"
             + f"&scope={"+".join(BOT_SCOPE)}"
-            # + f"&redirect_uri={WEBSITE_URL}/callback"
         )
 
     async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
@@ -85,8 +83,8 @@ class WinterDragon(AutoShardedBot):
         value: str | int,
         guild: Snowflake | int | None = None,
         fallback_to_global: bool = True,
-    ) -> app_commands.AppCommand | None:
-        def search_dict(d: AppCommandStore) -> app_commands.AppCommand | None:
+    ) -> MaybeGroupedAppCommand:
+        def search_dict(d: AppCommandStore) -> MaybeGroupedAppCommand:
             for cmd_name, cmd in d.items():
                 if value == cmd_name or (str(value).isdigit() and int(value) == cmd.id):
                     return cmd
@@ -109,15 +107,15 @@ class WinterDragon(AutoShardedBot):
         def unpack_app_commands(commands: list[app_commands.AppCommand]) -> AppCommandStore:
             ret: AppCommandStore = {}
 
-            def unpack_options(options: list[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument]) -> None:
+            def unpack_options(options: Sequence[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument]) -> None:
                 for option in options:
                     if isinstance(option, app_commands.AppCommandGroup):
-                        ret[option.qualified_name] = option  # type: ignore
-                        unpack_options(option.options)  # type: ignore
+                        ret[option.qualified_name] = option
+                        unpack_options(option.options)
 
             for command in commands:
                 ret[command.name] = command
-                unpack_options(command.options)  # type: ignore
+                unpack_options(command.options)
 
             return ret
 
