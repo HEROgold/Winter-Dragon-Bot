@@ -3,22 +3,21 @@ import logging
 import os
 from asyncio import Task
 from collections.abc import Coroutine
-from typing import Any, Sequence
+from typing import Any, Self, Sequence
 
 import discord
 from discord import Intents, app_commands
 from discord.abc import Snowflake
 from discord.ext.commands import AutoShardedBot, CommandError
-from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from bot._types.aliases import AppCommandStore, MaybeGroupedAppCommand
+from bot._types.aliases import AppCommandStore, BotT, MaybeGroupedAppCommand, PrefixType
 from bot.config import config
 from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS
 
 
-class WinterDragon(AutoShardedBot):
+class WinterDragon[T: Self](AutoShardedBot):
     """
     WinterDragon is a subclass of AutoShardedBot that represents a bot with additional attributes and methods specific to the Winter Dragon bot.
 
@@ -39,10 +38,9 @@ class WinterDragon(AutoShardedBot):
     _guild_app_commands: dict[int, AppCommandStore]
     default_intents: Intents
 
-
     def __init__(
         self,
-        command_prefix: str,
+        command_prefix: PrefixType[T],
         *,
         help_command: HelpCommand | None = None,
         tree_cls: type[app_commands.CommandTree[Any]] = app_commands.CommandTree,

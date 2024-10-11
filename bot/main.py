@@ -22,7 +22,7 @@ if not config.is_valid():
 
 bot = WinterDragon(
     intents=INTENTS,
-    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),  # type: ignore
+    command_prefix=commands.when_mentioned_or(config["Main"]["prefix"]),
     case_insensitive=True,
 )
 
