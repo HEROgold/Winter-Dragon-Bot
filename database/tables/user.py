@@ -26,4 +26,4 @@ class User(Base):
 
             session.add(cls(id=id_))
             session.commit()
-            return session.query(cls).where(cls.id == id_).first()  # type: ignore
+            return session.query(cls).where(cls.id == id_).first()  

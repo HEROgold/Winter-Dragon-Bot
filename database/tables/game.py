@@ -26,4 +26,4 @@ class Game(Base):
 
             session.add(cls(name=name))
             session.commit()
-            return session.query(cls).where(cls.name == name).first()  # type: ignore
+            return session.query(cls).where(cls.name == name).first()  
