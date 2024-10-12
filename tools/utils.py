@@ -1,8 +1,11 @@
 from collections.abc import Sequence
+from types import UnionType
 from typing import Any
 
 
-def get_arg[T](args: Sequence[Any], target: T) -> T | None:
+type _ClassInfo = type | UnionType | tuple[_ClassInfo, ...]
+
+def get_arg[T: _ClassInfo](args: Sequence[Any], target: T) -> T | None:
     return next(
         (
             arg
