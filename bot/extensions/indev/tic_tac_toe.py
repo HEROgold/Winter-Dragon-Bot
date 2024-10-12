@@ -636,4 +636,5 @@ class TicTacToeGame(discord.ui.View, LoggerMixin):
 
 
 async def setup(bot: WinterDragon) -> None:
+    return
     await bot.add_cog(TicTacToe(bot))

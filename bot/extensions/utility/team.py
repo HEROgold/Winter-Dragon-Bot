@@ -1,5 +1,6 @@
 import math
 import random
+from typing import cast
 
 import discord
 from discord import CategoryChannel, Guild, Member, VoiceChannel, app_commands
@@ -115,7 +116,7 @@ class Team(GroupCog):
                 Channel.type == TEAM_CATEGORY,
                 Channel.guild_id == guild.id,
             ).first():
-                return self.bot.get_channel(channel.id)
+                return cast(CategoryChannel, self.bot.get_channel(channel.id))
             return None
 
 
@@ -229,7 +230,8 @@ class Team(GroupCog):
         category = await self.fetch_teams_category(interaction.guild)
         teams = self.split_teams(team_count, members)
 
-        for _, channel in await self.create_team_channels(teams, category):
+        _, channels = await self.create_team_channels(teams, category)
+        for channel in channels:
             await self.move_from_category(teams, channel)
 
         await interaction.edit_original_response(content="Users from your voice split among teams")
@@ -241,11 +243,11 @@ class Team(GroupCog):
         interaction: discord.Interaction,
         team_count: int = 2,
     ) -> None:
-        members = interaction.message.mentions
+        members = cast(list[Member], interaction.message.mentions)
 
         if members is None:
             try:
-                members = interaction.user.voice.channel.members
+                members: list[Member] = interaction.user.voice.channel.members
             except AttributeError:
                 await interaction.response.send_message(
                     "Could not get users from your voice channel, are you in one?",

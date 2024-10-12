@@ -2,7 +2,7 @@ import asyncio
 import datetime
 import re
 from textwrap import dedent
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, cast
 
 import bs4
 import discord
@@ -359,11 +359,10 @@ class Steam(GroupCog):
         html = await self.get_htl(url)
         soup = BeautifulSoup(html.text, "html.parser")
 
-        game_sales = []
-        for sale_tag in soup.find_all("a", class_=BUNDLE_LINK):
-            sale_tag: bs4.element.Tag
-            game_sales.append(await self.get_game_sale(sale_tag["href"]))
-        return game_sales
+        return [
+            await self.get_game_sale(sale["href"])
+            for sale in soup.find_all("a", class_=BUNDLE_LINK)
+        ]
 
 
     def SteamSale_to_Sale(self, sale: SteamSale) -> Sale:  # noqa: N802
@@ -407,9 +406,10 @@ class Steam(GroupCog):
             sale_tag: bs4.element.Tag
             discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
             a_tag = sale_tag.find_parent("a", href=True)
+            href = cast(str, a_tag.get("href"))
 
             if discount_perc is None: # Check game's page
-                yield await self.get_game_sale(a_tag["href"])
+                yield await self.get_game_sale(href)
                 continue
 
             discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
@@ -569,7 +569,6 @@ class Steam(GroupCog):
         self,
         sale: SteamSale | Sale,
         category: str,
-        session: Session=None,
     ) -> Sale:
         """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session.
 
@@ -581,19 +580,12 @@ class Steam(GroupCog):
         Returns:
             Sale: TypedDict in presentable format
         """
-        if not session:
-            session = Session(engine)
-            commit = True
-        else:
-            commit = False
-
-        with session:
+        with self.session:
             if isinstance(sale, dict): # Assume Sale typeddict
                 sale = self.Sale_to_SteamSale(sale)
-            if not self.update_sale(sale, session):
-                session.add(sale)
-            if commit:
-                session.commit()
+            if not self.update_sale(sale, self.session):
+                self.session.add(sale)
+            self.session.commit()
 
         self.logger.debug(f"Found {category} {sale=}")
         return self.SteamSale_to_Sale(sale)

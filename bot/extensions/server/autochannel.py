@@ -1,10 +1,12 @@
 from textwrap import dedent
+from typing import cast
 
 import discord
 from discord import (
     VoiceChannel,
     app_commands,
 )
+from discord.guild import VocalGuildChannel
 
 from bot import WinterDragon
 from bot._types.cogs import Cog, GroupCog
@@ -153,7 +155,7 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: discord.abc.GuildChannel | None=None,
+        channel: discord.interactions.InteractionChannel | None=None,
     ) -> None:
         if channel is None and (channel := interaction.channel) is None:
             msg = "No channel found"
@@ -211,6 +213,7 @@ class AutomaticChannels(GroupCog):
             if autochannel := session.query(AC).where(AC.id == interaction.user.id).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
                 if channel is not None:
+                    channel = cast(VocalGuildChannel, channel)
                     await channel.edit(user_limit=limit)
 
                 await interaction.response.send_message(

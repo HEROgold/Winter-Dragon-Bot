@@ -46,7 +46,7 @@ class RpsButton(Button["RPSView"], LoggerMixin):
 # calcs results and posts them
 class RPSView(discord.ui.View, LoggerMixin):
     """View created for rock paper scissors. Contains 3 buttons."""
-    children: list[RpsButton]
+    # children: list[RpsButton]
     p1_choice: str
     p2_choice: str
     player_1: discord.Member
@@ -168,4 +168,5 @@ class RockPaperScissors(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    return
     await bot.add_cog(RockPaperScissors(bot))

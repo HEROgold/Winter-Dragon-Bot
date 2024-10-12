@@ -29,7 +29,10 @@ class Gatekeeper(GroupCog):
 
     @app_commands.command(name="setup", description="Sets up the roles for the gatekeeper system.")
     async def slash_setup(self, interaction: Interaction, member_role: Role | None = None) -> None:
-        guild: Guild = interaction.guild[reportAssignmentType]
+        guild = interaction.guild
+        if not guild:
+            self.logger.warning("Guild not found for setup")
+            return
         await self.setup_roles(guild, member_role)
         await interaction.response.send_message(f"Roles have been setup. You can now use {self.get_command_mention(self.slash_enable_gatekeeper)}", ephemeral=True)
 
@@ -71,7 +74,7 @@ class Gatekeeper(GroupCog):
         view.add_item(verify_button)
         await member.send("Please accept the rules to gain access to the guild.", view=view)
 
-    def check_user_accepted_rules(self, member: discord.Member) -> bool:
+    def check_user_accepted_rules(self, _member: discord.Member) -> bool:
         # Implement your logic to check if the user has accepted the rules
         # This is just a placeholder function
         return True

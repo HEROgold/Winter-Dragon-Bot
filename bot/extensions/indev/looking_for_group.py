@@ -60,7 +60,7 @@ class Lfg(GroupCog):
     @slash_lfg_join.autocomplete("game")
     async def autocomplete_game(
         self,
-        interaction:
+        _interaction:
         discord.Interaction,
         current: str,
     ) -> list[app_commands.Choice[str]]:
@@ -74,7 +74,7 @@ class Lfg(GroupCog):
         ]
 
 
-    async def search_match(self, interaction: discord.Interaction, game: str) -> None:
+    async def search_match(self, interaction: discord.Interaction, _game: str) -> None:
         with self.session as session:
             user_games = session.query(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id).all()
             for user_game in user_games:
