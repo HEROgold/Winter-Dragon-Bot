@@ -24,6 +24,7 @@ class Game(Base):
             if game := session.query(cls).where(cls.name == name).first():
                 return game
 
-            session.add(cls(name=name))
+            inst = cls(name=name)
+            session.add(inst)
             session.commit()
-            return session.query(cls).where(cls.name == name).first()
+            return inst
