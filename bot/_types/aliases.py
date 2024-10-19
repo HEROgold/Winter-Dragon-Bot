@@ -1,8 +1,10 @@
-from typing import Any, Callable, Coroutine
+from typing import Any, Awaitable, Callable, Coroutine, Iterable
 
+from discord import Message
 from discord.abc import GuildChannel, PrivateChannel
-from discord.app_commands import AppCommand
+from discord.app_commands import AppCommand, AppCommandGroup
 from discord.channel import CategoryChannel, DMChannel, ForumChannel, GroupChannel, StageChannel, TextChannel, VoiceChannel
+from discord.ext.commands.bot import AutoShardedBot, Bot
 from discord.member import Member
 from discord.role import Role
 from discord.threads import Thread
@@ -11,7 +13,8 @@ from discord.threads import Thread
 type Optional[T] = T | None
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
-type AppCommandStore = dict[str, AppCommand]
+type AppCommandStore = dict[str, AppCommand | AppCommandGroup]
+type MaybeGroupedAppCommand = AppCommand | AppCommandGroup | None
 
 type MemberRole = Role | Member
 
@@ -20,3 +23,12 @@ type GTPChannel = GuildChannel | Thread | PrivateChannel
 
 
 type GChannel = TextChannel | VoiceChannel | StageChannel | Thread | GuildChannel
+
+type _Bot = Bot | AutoShardedBot
+type MaybeAwaitable[T] = T | Awaitable[T]
+type MaybeAwaitableFunc[**P, T] = Callable[P, MaybeAwaitable[T]]
+type _Prefix = Iterable[str] | str
+type _PrefixCallable[BotT] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
+type PrefixType[BotT: _Bot] = _Prefix | _PrefixCallable[BotT]
+
+type BotT[T: _Bot] = T

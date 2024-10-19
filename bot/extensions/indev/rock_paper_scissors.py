@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-import discord  # type: ignore
+import discord
 from discord import app_commands
 from discord.ui import Button
 
@@ -46,7 +46,7 @@ class RpsButton(Button["RPSView"], LoggerMixin):
 # calcs results and posts them
 class RPSView(discord.ui.View, LoggerMixin):
     """View created for rock paper scissors. Contains 3 buttons."""
-    children: list[RpsButton] # type: ignore
+    # children: list[RpsButton]
     p1_choice: str
     p2_choice: str
     player_1: discord.Member
@@ -168,4 +168,5 @@ class RockPaperScissors(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(RockPaperScissors(bot)) # type: ignore
+    return
+    await bot.add_cog(RockPaperScissors(bot))

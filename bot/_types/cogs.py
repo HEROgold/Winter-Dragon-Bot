@@ -2,7 +2,7 @@ import logging
 from itertools import chain
 
 import discord
-from discord import User, app_commands
+from discord import app_commands
 from discord.ext import commands  # , tasks
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
@@ -34,7 +34,7 @@ class Cog(commands.Cog, LoggerMixin):
 
     def __init__(self, *args, **kwargs) -> None:
         self.ErrorHandler = ErrorHandler
-        self.bot = get_arg(args, WinterDragon) or kwargs.get("bot") # type: ignore
+        self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.session = Session(engine)
 
         if self.bot:
@@ -56,13 +56,13 @@ class Cog(commands.Cog, LoggerMixin):
         user = interaction.message.author if isinstance(interaction, commands.Context) else interaction.user
 
         with self.session as session:
-            targets: list[GuildCommands | Channel | User | None] = []
+            targets: list[GuildCommands | Channel | DbUser | None] = []
             if guild:
                 targets.append(session.query(GuildCommands).where(GuildCommands.guild_id == guild.id).first())
             if channel:
                 targets.append(session.query(Channel).where(Channel.id == channel.id).first())
             if user:
-                targets.append(session.query(DbUser).where(DbUser.id == user.id).first()) # type: ignore
+                targets.append(session.query(DbUser).where(DbUser.id == user.id).first())
 
             disabled_ids = [
                 c.command_id

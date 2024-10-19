@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 
 from website.aliases.responses import TemplateResponse
-from website.templates import footer, head, header, nav, templates
+from website.templates import templates
 
 
 router = APIRouter(tags=["website", "home"])
@@ -15,11 +15,5 @@ def index(request: Request) -> TemplateResponse:
         "index.j2",
         {
             "request": request,
-            "head": head,
-            "header": header,
-            "nav": nav,
-            "content": """content""",
-            "footer": footer,
-            "script": """script""",
         },
     )

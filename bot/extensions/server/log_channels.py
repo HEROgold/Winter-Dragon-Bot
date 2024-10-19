@@ -1,7 +1,8 @@
 import itertools
+from typing import cast
 
 import discord
-from discord import CategoryChannel, Member, app_commands
+from discord import CategoryChannel, StageInstance, app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
@@ -237,7 +238,7 @@ class LogChannels(GroupCog):
     async def on_guild_channel_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.channel_create
         self.logger.debug(f"On channel create: {entry.guild=}, {entry.target=}")
-        channel: discord.abc.GuildChannel = entry.target # type: ignore
+        channel = entry.target # cast(discord.abc.GuildChannel, entry.target)
 
         mention = channel.mention
 
@@ -251,8 +252,8 @@ class LogChannels(GroupCog):
 
     async def on_guild_channel_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.channel_update
-        before: discord.abc.GuildChannel = entry.before # type: ignore
-        after: discord.abc.GuildChannel = entry.after # type: ignore
+        before = entry.before
+        after = entry.after
         channel = after or before
         embed = None
 
@@ -287,7 +288,7 @@ class LogChannels(GroupCog):
 
     async def on_guild_channel_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.channel_delete
-        channel = entry.target # type: ignore
+        channel = entry.target
         self.logger.debug(f"On channel delete: guild='{entry.guild}' channel='{channel}'")
         channel_type = channel.type if channel.type != discord.object.Object else ""
 
@@ -301,31 +302,31 @@ class LogChannels(GroupCog):
 
     async def on_invite_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.invite_create
-        invite = entry.target # type: ignore
+        invite = entry.target
         self.logger.debug(f"On invite create: {invite.guild=}, {invite=}")
         embed = discord.Embed(
             title="Created Invite",
             description=f"{entry.user.mention} Created invite {invite} with reason: {entry.reason or None}",
             color= CREATED_COLOR,
             )
-        await self.send_channel_logs(invite.guild, embed, LogCategories.INVITE_CREATE) # type: ignore
+        await self.send_channel_logs(entry.guild, embed, LogCategories.INVITE_CREATE)
 
 
     async def on_invite_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.invite_update
-        invite = entry.target # type: ignore
+        invite = entry.target
         self.logger.debug(f"On invite update: {invite.guild=}, {invite=}")
         embed = discord.Embed(
             title="Updated Invite",
             description=f"{entry.user.mention} Updated invite {invite} with reason: {entry.reason or None}",
             color= CREATED_COLOR,
             )
-        await self.send_channel_logs(invite.guild, embed, LogCategories.INVITE_UPDATE) # type: ignore
+        await self.send_channel_logs(entry.guild, embed, LogCategories.INVITE_UPDATE)
 
 
     async def on_invite_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.invite_delete
-        invite = entry.target # type: ignore
+        invite = entry.target
         self.logger.debug(f"On invite delete: {invite.guild=}, {invite=}")
         embed = None
         embed = discord.Embed(
@@ -333,13 +334,13 @@ class LogChannels(GroupCog):
             description=f"{entry.user.mention} Removed invite {invite} with reason: {entry.reason or None}",
             color=DELETED_COLOR,
             )
-        await self.send_channel_logs(invite.guild, embed, LogCategories.INVITE_DELETE) # type: ignore
+        await self.send_channel_logs(entry.guild, embed, LogCategories.INVITE_DELETE)
 
 
     async def on_role_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.role_create
         self.logger.debug(f"On role create: guild='{entry.guild}' channel='{entry.target}'")
-        role:discord.Role = entry.target # type: ignore
+        role = entry.target
         embed = discord.Embed(
             title="Role Created",
             description=f"{entry.user.mention} created {role.mention or entry.target.mention} with permissions {role.permissions} with reason: {entry.reason or None}",
@@ -351,7 +352,7 @@ class LogChannels(GroupCog):
     async def on_role_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.role_update
         self.logger.debug(f"On role update: guild='{entry.guild}', role='{entry.target}'")
-        role:discord.Role = entry.target # type: ignore
+        role = entry.target
 
         embed = discord.Embed(
             title="Role Updated",
@@ -364,7 +365,7 @@ class LogChannels(GroupCog):
     async def on_role_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.role_delete
         self.logger.debug(f"On role delete: guild='{entry.guild}', role='{entry.target}'")
-        role:discord.Role = entry.target # type: ignore
+        role = entry.target
         embed = discord.Embed(
             title="Role Removed",
             description=f"{entry.user.mention} created {role or entry.target} with reason: {entry.reason or None}",
@@ -402,7 +403,7 @@ class LogChannels(GroupCog):
 
     async def audit_member_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.member_update
-        member: discord.Member = entry.target # type: ignore
+        member = entry.target
         self.logger.debug(f"On member update: guild='{member.guild}', member='{member}'")
 
         if (
@@ -424,7 +425,7 @@ class LogChannels(GroupCog):
                 description=update_message,
                 color=CHANGED_COLOR,
             )
-            await self.send_channel_logs(member.guild, embed, LogCategories.MEMBER_UPDATE)
+            await self.send_channel_logs(entry.guild, embed, LogCategories.MEMBER_UPDATE)
 
 
     async def on_member_move(self, entry: discord.AuditLogEntry) -> None:
@@ -521,7 +522,7 @@ class LogChannels(GroupCog):
             self.logger.warning(f"got {type(entry)} from {entry}, where expected discord.audit_logs.AuditLogEntry.")
             return
 
-        message: discord.Message = entry.target # type: ignore
+        message = cast(discord.Message, entry.target)
         await self.on_message_delete(message, entry.reason)
 
         # artifacts from audit log
@@ -625,7 +626,7 @@ class LogChannels(GroupCog):
 
     async def on_bot_add(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.bot_add
-        target: Member = entry.target # type: ignore
+        target = entry.target
         self.logger.debug(f"on bot_add: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Bot Add",
@@ -747,7 +748,7 @@ class LogChannels(GroupCog):
 
     async def on_integration_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.integration_create
-        target: discord.Integration = entry.target # type: ignore
+        target = entry.target
         self.logger.debug(f"on integration_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Integration Create",
@@ -759,7 +760,7 @@ class LogChannels(GroupCog):
 
     async def on_integration_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.integration_update
-        target: discord.Integration = entry.target # type: ignore
+        target = entry.target
         # target.account
         # target.enabled
         # target.guild
@@ -776,7 +777,7 @@ class LogChannels(GroupCog):
 
     async def on_integration_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.integration_delete
-        target: discord.Integration = entry.target # type: ignore
+        target = entry.target
         self.logger.debug(f"on integration_delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Integration Delete",
@@ -788,7 +789,7 @@ class LogChannels(GroupCog):
 
     async def on_stage_instance_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.stage_instance_create
-        target: discord.StageInstance = entry.target # type: ignore
+        target = cast(StageInstance, entry.target)
         self.logger.debug(f"on stage_instance_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Stage Instance Create",
@@ -800,7 +801,6 @@ class LogChannels(GroupCog):
 
     async def on_stage_instance_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.stage_instance_update
-        target: discord.StageInstance = entry.target # type: ignore
         self.logger.debug(f"on stage_instance_update: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Stage Instance Update",
@@ -812,7 +812,6 @@ class LogChannels(GroupCog):
 
     async def on_stage_instance_delete(self, entry: discord.AuditLogEntry) -> None:
         # seehttps://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.stage_instance_delete
-        target: discord.StageInstance = entry.target # type: ignore
         self.logger.debug(f"on stage_instance_delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Stage Instance Delete",
@@ -824,7 +823,6 @@ class LogChannels(GroupCog):
 
     async def on_sticker_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.sticker_create
-        target: discord.Sticker = entry.target # type: ignore
         self.logger.debug(f"on sticker_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Sticker Create",
@@ -836,7 +834,6 @@ class LogChannels(GroupCog):
 
     async def on_sticker_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.sticker_update
-        target: discord.Sticker = entry.target # type: ignore
         self.logger.debug(f"on sticker_update: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Sticker Update",
@@ -848,7 +845,6 @@ class LogChannels(GroupCog):
 
     async def on_sticker_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.sticker_delete
-        target: discord.Sticker = entry.target # type: ignore
         self.logger.debug(f"on sticker_delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Sticker Delete",
@@ -860,7 +856,6 @@ class LogChannels(GroupCog):
 
     async def on_scheduled_event_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.scheduled_event_create
-        target: discord.ScheduledEvent = entry.target # type: ignore
         self.logger.debug(f"on scheduled_event_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Scheduled Event Create",
@@ -873,7 +868,6 @@ class LogChannels(GroupCog):
     async def on_scheduled_event_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.scheduled_event_update
         self.logger.debug(f"on scheduled_event_update: {entry.guild=}, {entry=}")
-        target: discord.ScheduledEvent = entry.target # type: ignore
         embed = discord.Embed(
             title="Scheduled Event Update",
             description=f"{entry.user.mention} {entry.action.name} on {entry.target.type} {entry.target}",
@@ -884,7 +878,6 @@ class LogChannels(GroupCog):
 
     async def on_scheduled_event_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.schedules_event_delete
-        target: discord.ScheduledEvent = entry.target # type: ignore
         self.logger.debug(f"on scheduled_event_delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Scheduled Event Delete",
@@ -896,7 +889,6 @@ class LogChannels(GroupCog):
 
     async def on_thread_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.on_thread_create
-        target: discord.Thread = entry.target # type: ignore
         self.logger.debug(f"on thread_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Thread Create",
@@ -908,7 +900,6 @@ class LogChannels(GroupCog):
 
     async def on_thread_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.on_thread_update
-        target: discord.Thread = entry.target # type: ignore
         self.logger.debug(f"on thread_update: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Thread Update",
@@ -920,7 +911,6 @@ class LogChannels(GroupCog):
 
     async def on_thread_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.on_thread_delete
-        target: discord.Thread = entry.target # type: ignore
         self.logger.debug(f"on thread_delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Thread Delete",
@@ -932,7 +922,6 @@ class LogChannels(GroupCog):
 
     async def on_app_command_permission_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.app_command_permission_update
-        target: discord.PartialIntegration | app_commands.AppCommand = entry.target # type: ignore
         self.logger.debug(f"on app_command_permission_update: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="App Command Permission Update",
@@ -943,7 +932,6 @@ class LogChannels(GroupCog):
 
     async def on_automod_rule_create(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_rule_create
-        target: discord.AutoModRule = entry.target # type: ignore
         self.logger.debug(f"on automod_rule_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Automod Rule Create",
@@ -955,7 +943,6 @@ class LogChannels(GroupCog):
 
     async def on_automod_rule_update(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_rule_update
-        target: discord.AutoModRule = entry.target # type: ignore
         self.logger.debug(f"on automod_rule_update: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Automod Rule Update",
@@ -967,7 +954,6 @@ class LogChannels(GroupCog):
 
     async def on_automod_rule_delete(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_rule_delete
-        target: discord.AutoModRule = entry.target # type: ignore
         self.logger.debug(f"on automod_rule_delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Automod Rule Delete",
@@ -979,7 +965,6 @@ class LogChannels(GroupCog):
 
     async def on_automod_block_message(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_block_message
-        target: discord.Member = entry.target # type: ignore
         self.logger.debug(f"on automod_block_message: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Automod Block Message",
@@ -991,7 +976,6 @@ class LogChannels(GroupCog):
 
     async def on_automod_flag_message(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_flag_message
-        target: discord.Member = entry.target # type: ignore
         self.logger.debug(f"on automod_flag_message: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Automod Flag Message",
@@ -1003,7 +987,6 @@ class LogChannels(GroupCog):
 
     async def on_automod_timeout_member(self, entry: discord.AuditLogEntry) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_timeout_member
-        target: discord.Member = entry.target # type: ignore
         self.logger.debug(f"on automod_timeout_member: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Automod Timeout Member",
@@ -1242,7 +1225,7 @@ class LogChannels(GroupCog):
                     ))
             session.commit()
 
-        return category_channels # type: ignore
+        return cast(list[CategoryChannel], category_channels)
 
 # ------------
 # Commands End

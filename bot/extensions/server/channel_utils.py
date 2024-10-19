@@ -35,7 +35,7 @@ class ChannelUtils(GroupCog):
         role_perms.send_messages = False
         await interaction.channel.set_permissions(
             target=target,
-            permissions=role_perms, # type: ignore
+            permissions=role_perms,
             reason=f"Channel locked for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(f"Locked this channel for {target.mention}", ephemeral=True)
@@ -49,7 +49,7 @@ class ChannelUtils(GroupCog):
         role_perms.send_messages = True
         await interaction.channel.set_permissions(
             target=target,
-            permissions=role_perms, # type: ignore
+            permissions=role_perms,
             reason=f"Channel locked for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(f"UnLocked this channel for {target.mention}", ephemeral=True)

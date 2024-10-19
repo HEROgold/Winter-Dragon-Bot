@@ -33,9 +33,9 @@ class AutoReAssign(GroupCog):
                 UserRoles.user_id == member.id,
                 UserRoles.guild_id == member.guild.id,
             ).all():
-                role = member.guild.get_role(role_id=auto_assign.role_id) # type: ignore
-                await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
-                self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
+                if role := member.guild.get_role(auto_assign.role_id):
+                    await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
+                    self.logger.debug(f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}")
 
     @app_commands.command(name="enable", description="Enable the AutoReAssign feature")
     async def slash_enable(self, interaction: discord.Interaction) -> None:

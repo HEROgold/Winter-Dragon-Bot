@@ -2,7 +2,7 @@
 
 import datetime
 
-import discord  # type: ignore
+import discord
 from discord import InteractionType, app_commands
 
 from bot import WinterDragon
@@ -147,7 +147,7 @@ class DatabaseManager(Cog):
             for channel in guild.channels:
                 self._add_db_channel(channel)
 
-    @update.before_loop # type: ignore
+    @update.before_loop
     async def before_update(self) -> None:
         await self.bot.wait_until_ready()
 
@@ -278,4 +278,4 @@ class DatabaseManager(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    await bot.add_cog(DatabaseManager(bot))  # type: ignore
+    await bot.add_cog(DatabaseManager(bot))

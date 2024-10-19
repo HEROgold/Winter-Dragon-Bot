@@ -1,5 +1,5 @@
 import discord
-from discord import Role, app_commands
+from discord import app_commands
 
 from bot import WinterDragon
 from bot._types.cogs import Cog, GroupCog
@@ -13,7 +13,7 @@ class AutoAssign(GroupCog):
     async def slash_assign_show(self, interaction: discord.Interaction) -> None:
         with self.session as session:
             aar = session.query(AutoAssignRole).where(AutoAssignRole.guild_id == interaction.guild.id).first()
-        role: Role = interaction.guild.get_role(role_id=aar.role_id) # type: ignore
+        role = interaction.guild.get_role(aar.role_id)
         await interaction.response.send_message(role.mention, ephemeral=True)
 
     @app_commands.command(name="add", description="Automatically give a new user the selected role when they join")
@@ -65,8 +65,8 @@ class AutoAssign(GroupCog):
     async def on_member_join(self, member: discord.Member) -> None:
         with self.session as session:
             for auto_assign in session.query(AutoAssignRole).where(AutoAssignRole.guild_id == member.guild.id).all():
-                role = member.guild.get_role(role_id=auto_assign.role_id) # type: ignore
-                await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
+                if role := member.guild.get_role(auto_assign.role_id):
+                    await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
         self.logger.debug(f"Added AutoAssign role {role} to new member {member.mention}")
 
 

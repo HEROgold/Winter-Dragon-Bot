@@ -37,13 +37,13 @@ class Reminder(Cog):
             session.commit()
 
 
-    @send_reminder.before_loop # type: ignore
+    @send_reminder.before_loop
     async def before_send_reminder(self) -> None:
         await self.bot.wait_until_ready()
 
 
     @app_commands.command(name="remind", description = "Set a reminder for yourself!")
-    async def slash_reminder(  # noqa: PLR0913
+    async def slash_reminder(
         self,
         interaction: discord.Interaction,
         reminder: str,
