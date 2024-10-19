@@ -12,6 +12,7 @@ Winter-Dragon-Bot is a versatile Discord bot designed to enhance server manageme
 - **Error Handling**: Extensive error handling mechanisms to ensure stability and reliability.
 - **SQLite Integration**: Utilizes SQLite for data storage, management and speed.
 - **Docker Support**: Designed to run in Docker containers for easy deployment and scalability. Includes two Python 3.12 container's, for the bot and the corresponding website and a postgresql container.
+- **Website**: There's a builtin website that helps users and administrators to manage servers, commands, and the database.
 
 ## Installation
 
@@ -23,13 +24,16 @@ Winter-Dragon-Bot is a versatile Discord bot designed to enhance server manageme
 ### Steps
 
 1. **Clone the Repository**: Clone this repository to your local machine using `git clone`.
-2. **Docker Setup**: Navigate to the project directory and run `docker-compose build` to build the containers. Then, use `docker-compose up` to start the bot.
-3. **Initial Configuration**: On the first run, the bot will require some configuration adjustments marked with `!!` in the `config.ini` file. Follow the instructions to set up the necessary configurations.
+2. **Initial Configuration**: Before the first run, the bot will require some configuration adjustments marked with `!!` in the `config.ini` file. Follow the instructions to set up the necessary configurations.
+3. **Docker Setup**: Navigate to the project directory and run `docker-compose build` to build the containers. Use `docker-compose up` to start the entire project.
 4. **Running the Bot**: After configuration, restart the bot using Docker Compose. The bot should now be up and running.
 
-### Note
+### Notes
 
-While it's possible to run the bot directly using `python main.py`, it's recommended to use Docker for a more streamlined and consistent environment.
+1. While it's possible to run the bot directly using `python main.py`, it's recommended to use Docker for a more streamlined and consistent environment.
+2. This project is structured in a way that allows for easy and quick changes to the codebase. All discord bot related files are under `/bot` directory, while the website is under `/website`. There's a `/database` directory, which holds the schema's for all used tables. Furthermore, a `/tests` directory exists where tests for this project are located.
+3. For more detailed information about each section, navigate to their respective directories, and find their readme.md.
+<!-- Or refer to the docs. (If they exists) -->
 
 ## Contributing
 
