@@ -83,7 +83,11 @@ class TicTacToe(GroupCog):
         values = game_results.values()
 
         plt.suptitle(f"Total games: {sum(values)}")
-        plt.pie(values, labels=labels, autopct=self.make_autopct(values))
+        plt.pie(
+            list(values),
+            labels=list(labels),
+            autopct=self.make_autopct(list(values))
+        )
         plt.savefig(f"{self.PIECHART_PATH}/{interaction.user.id}.png")
         plt.close(interaction.user.id)
 ## /\
