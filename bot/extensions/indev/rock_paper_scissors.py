@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 import discord
-from discord import app_commands
+from discord import Member, User, app_commands
 from discord.ui import Button
 
 from bot import WinterDragon
@@ -22,7 +22,6 @@ class RpsButton(Button["RPSView"], LoggerMixin):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         view = self._view
-        self.disabled = True
         for button in view.children:
             button.disabled = True
 
@@ -47,18 +46,17 @@ class RpsButton(Button["RPSView"], LoggerMixin):
 class RPSView(discord.ui.View, LoggerMixin):
     """View created for rock paper scissors. Contains 3 buttons."""
     # children: list[RpsButton]
-    p1_choice: str
-    p2_choice: str
-    player_1: discord.Member
-    player_2: discord.Member
-
+    p1_choice: str | None
+    p2_choice: str | None
+    player_1: User | Member | None
+    player_2: User | Member | None
 
     def __init__(
         self,
-        first_choice: str,
-        second_choice: str,
-        player_1: discord.Member,
-        player_2: discord.Member,
+        first_choice: str | None = None,
+        second_choice: str | None = None,
+        player_1: User | Member | None = None,
+        player_2: User | Member | None = None,
     ) -> None:
         super().__init__()
         self.p1_choice = first_choice
@@ -168,5 +166,4 @@ class RockPaperScissors(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
-    return
     await bot.add_cog(RockPaperScissors(bot))
