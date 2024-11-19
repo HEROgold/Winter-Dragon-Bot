@@ -1,6 +1,6 @@
 # pipreqs --encoding=utf8 --ignore=.venv --force .\
 # This file contains all the dependencies that are required to run the entire project.
-aiohttp==3.10.9
+aiohttp==3.11.5
 beautifulsoup4==4.12.3
 discord.py==2.4.0
 fastapi==0.115.0
