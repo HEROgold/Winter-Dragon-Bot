@@ -1,12 +1,11 @@
 from textwrap import dedent
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import discord
 from discord import (
     VoiceChannel,
     app_commands,
 )
-from discord.guild import VocalGuildChannel
 
 from bot import WinterDragon
 from bot._types.cogs import Cog, GroupCog
@@ -14,6 +13,10 @@ from bot.constants import AUTOCHANNEL_CREATE_REASON
 from database import Session
 from database.tables import AutoChannel as AC  # noqa: N817
 from database.tables import AutoChannelSettings as ACS  # noqa: N817
+
+
+if TYPE_CHECKING:
+    from discord.guild import VocalGuildChannel
 
 
 class AutomaticChannels(GroupCog):
