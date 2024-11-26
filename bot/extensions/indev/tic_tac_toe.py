@@ -378,7 +378,7 @@ class TicTacToe(GroupCog):
 # To avoid other players intervening
 
 
-class TicTacToeButton(discord.ui.Button["TicTacToe"], LoggerMixin):
+class TicTacToeButton(discord.ui.Button["TicTacToeGame"], LoggerMixin):
     def __init__(self, x: int, y: int) -> None:
         # A label is required, but we don't need one so a zero-width space is used, '\u200b'
         # The row parameter tells the View which row to place the button under.
@@ -390,63 +390,62 @@ class TicTacToeButton(discord.ui.Button["TicTacToe"], LoggerMixin):
 
     # This function is called whenever this button is pressed
     async def callback(self, interaction: discord.Interaction, from_ai: bool=False) -> None:
-        view: TicTacToeGame = self.view
-        if interaction.user.id not in [view.player_x.id, view.player_o.id]:
+        if interaction.user.id not in [self.view.player_x.id, self.view.player_o.id]:
             await interaction.response.send_message("You may not play in this game", ephemeral=True)
             return
 
-        if interaction.user.id != view.current_player and not from_ai:
+        if interaction.user.id != self.view.current_player and not from_ai:
             await interaction.response.send_message("It's not your turn", ephemeral=True)
             return
 
         assert self.view is not None
-        state = view.board[self.y][self.x]
-        if state in [view.player_x.id, view.player_o.id] and from_ai:
-            await view.make_bot_move(interaction)
+        state = self.view.board[self.y][self.x]
+        if state in [self.view.player_x.id, self.view.player_o.id] and from_ai:
+            await self.view.make_bot_move(interaction)
             return
 
-        if view.current_player == view.player_x.id:
+        if self.view.current_player == self.view.player_x.id:
             self.style = discord.ButtonStyle.danger
             self.label = "X"
-            view.board[self.y][self.x] = view.player_x.id
-            view.current_player = view.player_o.id
-            content = f"It is now {view.player_o.mention or 'O'}'s turn"
-        elif view.current_player == view.player_o.id:
+            self.view.board[self.y][self.x] = self.view.player_x.id
+            self.view.current_player = self.view.player_o.id
+            content = f"It is now {self.view.player_o.mention or 'O'}'s turn"
+        elif self.view.current_player == self.view.player_o.id:
             self.style = discord.ButtonStyle.success
             self.label = "O"
-            view.board[self.y][self.x] = view.player_o.id
-            view.current_player = view.player_x.id
-            content = f"It is now {view.player_x.mention or 'X'}'s turn"
+            self.view.board[self.y][self.x] = self.view.player_o.id
+            self.view.current_player = self.view.player_x.id
+            content = f"It is now {self.view.player_x.mention or 'X'}'s turn"
 
         self.disabled = True
-        winner = view.check_board_winner()
+        winner = self.view.check_board_winner()
         self.logger.debug(f"{winner=}")
 
         if winner is not None:
-            if winner == view.player_x.id:
-                content = f'{view.player_x.mention or "X"} won!'
-            elif winner == view.player_o.id:
-                content = f'{view.player_o.mention or "O"} won!'
+            if winner == self.view.player_x.id:
+                content = f'{self.view.player_x.mention or "X"} won!'
+            elif winner == self.view.player_o.id:
+                content = f'{self.view.player_o.mention or "O"} won!'
             else:
                 content = "It's a tie!"
 
-            for child in view.children:
+            for child in self.view.children:
                 child.disabled = True
 
-            view.stop()
+            self.view.stop()
 
         if from_ai:
             await asyncio.sleep(1)
-            await interaction.edit_original_response(content=content, view=view)
+            await interaction.edit_original_response(content=content, view=self.view)
         else:
-            await interaction.response.edit_message(content=content, view=view)
+            await interaction.response.edit_message(content=content, view=self.view)
 
         if (
-            view.is_vs_bot
+            self.view.is_vs_bot
             and not from_ai
         ):
             self.logger.debug("Before TTT AI Move")
-            await view.make_bot_move(interaction)
+            await self.view.make_bot_move(interaction)
             self.logger.debug("After TTT AI Move")
 
 
