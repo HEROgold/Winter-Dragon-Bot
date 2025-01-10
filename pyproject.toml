@@ -70,3 +70,6 @@ sort_table_keys = true
 spaces_before_inline_comment = 2
 spaces_indent_inline_array = 4
 trailing_comma_inline_array = true
+
+[tool.uv.workspace]
+members = ["website/backend/fastapi"]
