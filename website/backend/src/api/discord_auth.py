@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import RedirectResponse
 
-from website.constants import APPLICATION_ID, DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL
+from src.constants import APPLICATION_ID, DISCORD_AUTHORIZE, OAUTH_SCOPE, WEBSITE_URL
 
 
 router = APIRouter(prefix="/oauth", tags=["oauth"])

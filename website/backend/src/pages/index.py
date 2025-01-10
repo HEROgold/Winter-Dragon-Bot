@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Request
-
-from website.aliases.responses import TemplateResponse
-from website.templates import templates
+from src.aliases.responses import TemplateResponse
+from src.templates import templates
 
 
 router = APIRouter(tags=["website", "home"])

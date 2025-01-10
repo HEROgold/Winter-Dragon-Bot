@@ -3,7 +3,7 @@ import shutil
 from collections.abc import Generator
 from typing import Any, Self
 
-from website.constants import WEBSITE_CONFIG, WEBSITE_DIR
+from src.constants import WEBSITE_CONFIG, WEBSITE_DIR
 
 
 class ConfigParserSingleton(configparser.ConfigParser):

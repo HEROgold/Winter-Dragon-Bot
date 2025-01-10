@@ -1,7 +1,6 @@
 from fastapi.templating import Jinja2Templates
 from jinja2 import Template
-
-from website.pages.base import COMPONENTS
+from src.pages.base import COMPONENTS
 
 
 templates = Jinja2Templates(directory="website/templates")
