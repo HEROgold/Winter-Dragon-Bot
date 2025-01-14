@@ -23,6 +23,7 @@ services:
       context: .
       dockerfile: bot/dockerfile
     volumes:
+      - ./database:/database
       - ./bot:/app
     ports:
       - 5000:5000
@@ -36,6 +37,7 @@ services:
       context: .
       dockerfile: website/backend/dockerfile
     volumes:
+      - ./database:/database
       - ./website/backend:/app
     expose:
       - 8000
