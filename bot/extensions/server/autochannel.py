@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
@@ -7,16 +9,17 @@ from discord import (
     app_commands,
 )
 
-from bot import WinterDragon
 from bot._types.cogs import Cog, GroupCog
 from bot.constants import AUTOCHANNEL_CREATE_REASON
-from database import Session
 from database.tables import AutoChannel as AC  # noqa: N817
 from database.tables import AutoChannelSettings as ACS  # noqa: N817
 
 
 if TYPE_CHECKING:
     from discord.guild import VocalGuildChannel
+
+    from bot import WinterDragon
+    from database import Session
 
 
 class AutomaticChannels(GroupCog):
