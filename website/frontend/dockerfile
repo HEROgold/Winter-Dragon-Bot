@@ -15,4 +15,4 @@
 
 FROM node:23-alpine
 
-COPY src /src
+COPY website/frontend/src /src
