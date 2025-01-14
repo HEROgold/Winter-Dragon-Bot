@@ -52,18 +52,6 @@ jobs:
       - name: Sort TOML files
         run: |
           toml-sort .
-      - name: Commit and push changes
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git checkout -b tomlsort-changes
-          git add .
-          git commit -m "Sort TOML files"
-          git push origin tomlsort-changes
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: tomlsort-changes
-          title: "Sort TOML files"
-          body: "This PR sorts the TOML files based on the tomlsort.toml configuration."
+          - name: Check for changes
+          run: |
+            git diff --exit-code
