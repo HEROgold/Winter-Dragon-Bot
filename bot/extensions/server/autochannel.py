@@ -162,7 +162,7 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: "InteractionChannel | None"=None,
+        channel: InteractionChannel | None=None,
     ) -> None:
         if channel is None and (channel := interaction.channel) is None:
             msg = "No channel found"
