@@ -1,0 +1,80 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          # python -m pip install --upgrade pip
+          pip install ruff
+      - name: Run ruff
+        run: |
+          ruff check .
+
+  docker:
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+        ports:
+          - 2375:2375
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build and run individual containers
+        run: |
+          docker-compose up -d --build
+          # Add commands to check if each container runs separately
+          # Example:
+          # docker-compose run <service_name> pytest
+      - name: Build and run all containers
+        run: |
+          docker-compose up -d --build
+          # Add commands to check if all containers run together
+          # Example:
+          # docker-compose ps
+
+  tomlsort:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          # python -m pip install --upgrade pip
+          pip install toml-sort
+      - name: Sort TOML files
+        run: |
+          toml-sort .
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b tomlsort-changes
+          git add .
+          git commit -m "Sort TOML files"
+          git push origin tomlsort-changes
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: tomlsort-changes
+          title: "Sort TOML files"
+          body: "This PR sorts the TOML files based on the tomlsort.toml configuration."
