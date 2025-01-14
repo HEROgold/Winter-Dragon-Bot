@@ -1,5 +1,5 @@
 from fastapi.templating import Jinja2Templates
-from src.constants import WEBSITE_DIR
+from constants import WEBSITE_DIR
 
 
 TEMPLATES_DIR = WEBSITE_DIR/"templates"

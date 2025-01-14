@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from src.api import router as api_router
-from src.pages import router as pages_router
+from api import router as api_router
+from pages import router as pages_router
 
 
 site = FastAPI()

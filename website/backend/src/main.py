@@ -1,9 +1,9 @@
 import uvicorn
-from src.pages.base import COMPONENTS_DIR, STATIC_DIR, TEMPLATES_DIR
+from pages.base import COMPONENTS_DIR, STATIC_DIR, TEMPLATES_DIR
 
 
 def main() -> None:
-    from src.app import site
+    from app import site
     all_addresses = "0.0.0.0"  # noqa: S104
     uvicorn.run(site, host=all_addresses)
 
