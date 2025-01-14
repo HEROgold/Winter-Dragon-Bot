@@ -161,9 +161,8 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: discord.guild.GuildChannel | None=None,
+        channel: discord.VoiceChannel | None=None,
     ) -> None:
-        channel = interaction.channel if isinstance(interaction.channel, discord.abc.GuildChannel) else None
         if channel is None:
             msg = "Incorrect channel type, please use this command in a guild channel"
             await interaction.response.send_message(msg, ephemeral=True)
