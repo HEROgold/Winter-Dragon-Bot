@@ -32,20 +32,9 @@ jobs:
         ports:
           - 2375:2375
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build and run individual containers
+      - name: Build all containers
         run: |
-          docker-compose up -d --build
-          # Add commands to check if each container runs separately
-          # Example:
-          # docker-compose run <service_name> pytest
-      - name: Build and run all containers
-        run: |
-          docker-compose up -d --build
-          # Add commands to check if all containers run together
-          # Example:
-          # docker-compose ps
+          docker-compose build
 
   tomlsort:
     runs-on: ubuntu-latest
