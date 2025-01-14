@@ -1,9 +1,0 @@
-{% block nav %}
-    <ul>
-        {% for item in routes %}
-            <li><a href="{{ item.url }}" class="active">{{ item.title }}</a></li>
-        {% else %}
-            <li><a href="/">Home</a></li>
-        {% endfor %}
-    </ul>
-{% endblock nav %}
