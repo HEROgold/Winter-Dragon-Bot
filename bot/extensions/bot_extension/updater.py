@@ -10,8 +10,10 @@ class Updater(commands.Cog):
     def __init__(self, bot: WinterDragon) -> None:
         self.bot = bot
 
+    @commands.is_owner()
     @discord.app_commands.command(name="update", description="Update the bot from the configured .git URL")
     async def update(self, interaction: discord.Interaction) -> None:
+        """Update the bot from the configured .git URL"""
         await interaction.response.send_message("Updating the bot...")
 
         # Pull the latest changes from the git repository
