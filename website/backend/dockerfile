@@ -1,10 +1,7 @@
 FROM python:3.12-slim
 
-COPY /website /website
-COPY /database /database
-COPY /tools /tools
-COPY /website/main.py main.py
+COPY src /src
 
-RUN pip3.12 install -r website/requirements.txt
+RUN pip3.12 install -r website/backend/requirements.txt
 
 CMD ["python3", "main.py"]
