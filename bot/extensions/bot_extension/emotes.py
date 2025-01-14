@@ -32,12 +32,11 @@ class EmoteManager(Cog):
                     await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())
                     await interaction.response.send_message(f"Added {emoji.filename}.")
                     self.logger.info(f"Added {emoji.filename} to {guild=}.")
-                    break
-        else:
-            if guild_counter < GUILD_OWNERSHIP_LIMIT:
-                guild = await self.create_guild(guild_counter)
-                guild_counter += 1
-                await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())
+                    return
+        if guild_counter < GUILD_OWNERSHIP_LIMIT:
+            guild = await self.create_guild(guild_counter)
+            guild_counter += 1
+            await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())
         await interaction.response.send_message("All available guilds and emoji's are filled.")
 
     async def create_guild(self, guild_counter: int) -> Guild:
