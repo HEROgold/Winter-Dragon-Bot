@@ -1,5 +1,5 @@
 import discord
-from discord import app_commands
+from discord import PermissionOverwrite, Permissions, app_commands
 
 from bot import WinterDragon
 from bot._types.aliases import MemberRole
@@ -35,7 +35,7 @@ class ChannelUtils(GroupCog):
         role_perms.send_messages = False
         await interaction.channel.set_permissions(
             target=target,
-            permissions=role_perms,
+            overwrite=PermissionOverwrite().from_pair(role_perms, Permissions()),
             reason=f"Channel locked for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(f"Locked this channel for {target.mention}", ephemeral=True)
@@ -49,7 +49,7 @@ class ChannelUtils(GroupCog):
         role_perms.send_messages = True
         await interaction.channel.set_permissions(
             target=target,
-            permissions=role_perms,
+            overwrite=PermissionOverwrite().from_pair(role_perms, Permissions()),
             reason=f"Channel locked for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(f"UnLocked this channel for {target.mention}", ephemeral=True)
