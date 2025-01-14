@@ -9,7 +9,6 @@ from discord import (
     app_commands,
 )
 
-from bot._types.aliases import InteractionChannel
 from bot._types.cogs import Cog, GroupCog
 from bot.constants import AUTOCHANNEL_CREATE_REASON
 from database.tables import AutoChannel as AC  # noqa: N817
@@ -162,11 +161,13 @@ class AutomaticChannels(GroupCog):
     async def slash_mark(
         self,
         interaction: discord.Interaction,
-        channel: InteractionChannel | None=None,
+        channel: discord.guild.GuildChannel | None=None,
     ) -> None:
-        if channel is None and (channel := interaction.channel) is None:
-            msg = "No channel found"
-            raise ValueError(msg)
+        channel = interaction.channel if isinstance(interaction.channel, discord.abc.GuildChannel) else None
+        if channel is None:
+            msg = "Incorrect channel type, please use this command in a guild channel"
+            await interaction.response.send_message(msg, ephemeral=True)
+            return
 
         if channel != VoiceChannel:
             await interaction.response.send_message(dedent(f"""{channel.mention} is not a voice channel!
