@@ -1,42 +1,14 @@
-
 indent-width = 4
 line-length = 128
 target-version = "py312"
 unsafe-fixes = true
 
 [lint]
-select = ["ALL"]
 exclude = ["build", "dist", "venv"]
-# ignore = [
-#     "ANN002",
-#     "ANN003",
-#     "ANN101",
-#     "ANN102",
-#     "COM812",
-#     "D",
-#     "D100",
-#     "E501",
-#     "ERA001",
-#     "FBT",
-#     "FIX",
-#     "G004",
-#     "INP001",
-#     "ISC001",
-#     "PGH003",
-#     "PTH",
-#     "S101",
-#     "S311",
-#     "SIM105",
-#     "T201",
-#     "TCH004",
-#     "TD",
-#     "TRY301",
-#     "UP035",
-# ]
+select = ["ALL"]
 
 [lint.isort]
 lines-after-imports = 2
-
 
 [lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]  # imports not at top of cell and unused imports
