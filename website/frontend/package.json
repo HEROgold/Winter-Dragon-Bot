@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "cra-template-typescript": "1.2.0",
+    "frontend": "file:",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-scripts": "5.0.1"
