@@ -12,7 +12,8 @@ def get_v4_port() -> int:
         the port found, or in use
 
     """
-    # FIXME: A randomized port doesn't work with oath2 requests, as discord requires a static port.
+    # FIXME @<HEROgold>: A randomized port doesn't work with oath2 requests, as discord requires a static port.
+    # 130
     # This is why the v4_port is set to 5000 manually.
     global v4_port
     if v4_port != 0:

@@ -1,7 +1,7 @@
 import datetime
-import os
 import random
 import time
+from pathlib import Path
 
 import discord
 import psutil
@@ -446,7 +446,7 @@ class BotC(GroupCog):
         plt.ylabel("Value")
         plt.title("System Metrics Over Time")
         plt.legend()
-        os.makedirs(IMG_DIR, exist_ok=True)
+        Path(IMG_DIR).mkdir(exist_ok=True)
         plt.savefig(METRICS_FILE)
         plt.clf()
 

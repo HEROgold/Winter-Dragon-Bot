@@ -14,7 +14,8 @@ class DisabledCommands(Base):
     _guild_id: Mapped[int] = mapped_column(ForeignKey(GUILDS_ID), nullable=True)
 
     def __init__(self, **kw: int) -> None:
-        # TODO: needs testing
+        # TODO @HEROgold: needs testing
+        # 000
         id_limit = 2
 
         command_id = kw.get("command_id")

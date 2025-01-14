@@ -48,14 +48,14 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     raise KeyboardInterrupt
 
 
-def terminate(*args, **kwargs) -> None:
+def terminate(*args, **kwargs) -> None:  # noqa: ANN002, ANN003
     logs.logger.warning(f"{args=}, {kwargs=}")
     logs.logger.info("terminated")
     logs.shutdown()
     try:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(bot.close())
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001, S110
         pass
     sys.exit()
 

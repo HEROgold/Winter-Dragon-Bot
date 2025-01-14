@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import re
 from collections.abc import AsyncGenerator
+from contextlib import suppress
 from textwrap import dedent
 from typing import Any, cast
 
@@ -59,9 +60,9 @@ class Steam(GroupCog):
                 return
             session.add(SteamUser(id = interaction.user.id))
             session.commit()
-        # _, sub_mention = self.get_command_mention(self.slash_show)
         sub_mention = self.get_command_mention(self.slash_show)
-        await interaction.response.send_message(f"I will notify you of new steam games!\nUse {sub_mention} to view current sales.", ephemeral=True)
+        msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
+        await interaction.response.send_message(msg, ephemeral=True)
 
 
     @app_commands.command(name="remove", description="No longer get notified of free steam games")
@@ -87,16 +88,15 @@ class Steam(GroupCog):
         self.logger.debug(f"{embed.to_dict()}")
 
         if len(embed.fields) > 0:
-            # await interaction.response.send_message(embed=embed, ephemeral=True)
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            # await interaction.response.send_message(f"No steam games found with {percent} or higher sales.", ephemeral=True)
             await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
 
 
     @loop(seconds=STEAM_SEND_PERIOD)
     async def update(self) -> None:
-        """Creates a discord Embed object to send and notify users of new 100% sales.
+        """Create a discord Embed object to send and notify users of new 100% sales.
+
         Expected amount of sales should be low enough it'll never reach embed size limit.
         """
         self.logger.info("updating sales")
@@ -140,26 +140,13 @@ class Steam(GroupCog):
 
 
     def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed:
-        """Fills a given embed with sales, and then returns the populated embed.
-
-        Args:
-        ----
-            sales (list): List of found sales
-            embed (discord.Embed): discord.Embed
-
-        Returns:
-        -------
-            discord.Embed
-
-        """
+        """Fill a given embed with sales, and then returns the populated embed."""
         if not sales:
             return embed
 
-        try:
+        with suppress(AttributeError):
             # Sort on sale percentage (int), so reverse to get highest first
             sales.sort(key=lambda x: x["sale_percent"], reverse=True)
-        except AttributeError:
-            pass
 
         for i, sale in enumerate(sales):
             install_url = f"{WEBSITE_URL}/redirect?redirect_url=steam://install/{self.get_id_from_game_url(sale['url'])}"
@@ -347,15 +334,7 @@ class Steam(GroupCog):
 
 
     async def get_steam_sales(self, percent: int) -> list[Sale]:
-        """Get sales from database or from website depending on `UPDATE_PERIOD`.
-
-        Returns
-        -------
-            list[SteamSale]: List of SteamSale database objects
-
-        """
-        # return self.get_updated_sales(self.get_saved_sales(percent)) or self.get_sales_from_steam(percent)
-
+        """Get sales from database or from website depending on `UPDATE_PERIOD`."""
         updated_sales = await self.get_updated_sales(self.get_saved_sales())
         if updated_sales == []:
             self.logger.debug("getting sales from steam")
@@ -419,17 +398,9 @@ class Steam(GroupCog):
 
 
     async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[Sale, Any]:
-        """Scrape sales from https://store.steampowered.com/search/
+        """Scrape sales from https://store.steampowered.com/search/.
+
         With the search options: Ascending price, Special deals, English.
-
-        Args:
-        ----
-            search_percent (int, optional): Percentage of sale to look for. Defaults to 100.
-
-        Returns:
-        -------
-            list[Sale]: List of SteamSale database objects
-
         """
         html = await self.get_htl(config["Steam"]["url"])
         soup = BeautifulSoup(html.text, "html.parser")
@@ -506,22 +477,7 @@ class Steam(GroupCog):
 
 
     async def get_game_sale(self, url: str) -> Sale:
-        # sourcery skip: extract-method
-        """Get a single game sale from specific url.
-
-        Args:
-        ----
-            url (str): Url of the game to get a sale from
-
-        Raises:
-        ------
-            ValueError: Error when url is invalid
-
-        Returns:
-        -------
-            SteamSale: SteamSale database object
-
-        """
+        """Get a single game sale from specific url."""
         if not self.is_valid_game_url(url):
             msg = "Invalid Steam Game URL"
             raise ValueError(msg)
@@ -575,7 +531,6 @@ class Steam(GroupCog):
         self.logger.warning(f"Got empty price: {url=}")
         msg = "Should not be reached"
         raise NotImplementedError(msg)
-        # return None
 
 
     def price_to_num(self, s: str) -> float:

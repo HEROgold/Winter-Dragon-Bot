@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from bot.config import config
 
@@ -7,7 +8,7 @@ class LoggerMixin:
     logger: logging.Logger
     _furthest_child_name = None  # Track the name of the furthest child class
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: Any) -> None:  # noqa: ANN401
         super().__init_subclass__(**kwargs)
         # Update the furthest child name with the current subclass name
         LoggerMixin._furthest_child_name = cls.__name__

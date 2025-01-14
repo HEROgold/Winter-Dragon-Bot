@@ -5,6 +5,7 @@ import re
 import shutil
 from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 from bot.config import config
 
@@ -65,7 +66,7 @@ class LogsManager:
 
         """
         total_size = sum(
-            os.path.getsize(os.path.join(root, file))
+            (Path(root) / file).stat().st_size
             for root, _, files in os.walk(config["Main"]["log_path"])
             for file in files
         )
@@ -76,7 +77,7 @@ class LogsManager:
     def delete_oldest_saved_logs(self) -> None:
         """Delete the oldest findable logs."""
         oldest_files = sorted((
-            os.path.join(root, file)
+            Path(root) / file
             for root, _, files in os.walk(config["Main"]["log_path"])
             for file in files
             ),
@@ -87,12 +88,12 @@ class LogsManager:
         # /logs\\2023-05-08-00-10-27\\
         regex = r"(\.\/logs)(\/|\\|\d|-|_)+"
 
-        folder_path = re.match(regex, oldest_files[0])[0]
+        folder_path = re.match(regex, str(oldest_files[0]))[0]
         self.logger.info(f"deleting old logs for space: {folder_path=}")
 
         for file in os.listdir(folder_path):
-            os.remove(f"{folder_path}{file}")
-        os.rmdir(folder_path)
+            Path(f"{folder_path}{file}").unlink()
+        Path(folder_path).rmdir()
 
 
     def save_logs(self) -> None:
@@ -102,7 +103,7 @@ class LogsManager:
 
         log_time = datetime.now(tz=UTC).strftime("%Y-%m-%d-%H-%M-%S")
 
-        os.makedirs(f"{config['Main']['log_path']}/{log_time}", exist_ok=True)
+        Path(f"{config['Main']['log_path']}/{log_time}").mkdir(parents=True, exist_ok=True)
 
         self.logger.info("Saving log files")
         self.logger.info(f"uptime: {datetime.now(UTC) - self.launch_time}")
@@ -127,18 +128,18 @@ class LogsManager:
 
 
     def _delete_top_level_logs(self) -> None:
-        """Deletes the top level logs (not in logs directory)."""
+        """Delete the top level logs (not in logs directory)."""
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 self.logger.info(f"Removing {file}")
                 try:
-                    os.remove(file)
+                    Path(file).unlink()
                 except Exception:
                     self.logger.exception(f"Error removing file {file}")
 
 
     def shutdown(self) -> None:
-        """Calls `save_logs` and `delete_latest_logs` before `logging.shutdown`."""
+        """Call `save_logs` and `delete_latest_logs` before `logging.shutdown`."""
         self.save_logs()
         self.delete_latest_logs()
         logging.shutdown()

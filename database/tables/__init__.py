@@ -12,7 +12,6 @@ from .autochannelsettings import AutoChannelSettings
 from .autoreassign import AutoReAssign
 from .car_fuel import CarFuel
 from .channel import Channel
-from .colorcodes import ColorCodes
 from .command import Command
 from .commandgroup import CommandGroup
 from .disabledcommands import DisabledCommands
@@ -54,7 +53,6 @@ __all__ = [
     "AutoChannel",
     "AutoChannelSettings",
     "Channel",
-    "ColorCodes",
     "Command",
     "CommandGroup",
     "DisabledCommands",

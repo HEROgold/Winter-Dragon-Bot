@@ -49,7 +49,7 @@ class Team(GroupCog):
         team_count: int,
         members: list[Member],
     ) -> list[TeamDict]:
-        """Splits a team evenly around :param:`team_count`."""
+        """Split a team evenly around :param:`team_count`."""
         random.shuffle(members)
         # find divide and module by desired team size,
         # and found amount of users
@@ -73,13 +73,17 @@ class Team(GroupCog):
 
 
     async def move_team(self, team: TeamDict, channel: VoiceChannel) -> None:
-        """Moves a whole team to its channel."""
+        """Move a whole team to its channel."""
         self.logger.debug(f"moving {team['members']} to {channel}")
         for user in team["members"]:
             await user.move_to(channel)
 
 
-    async def create_team_channels(self, teams: list[TeamDict], category: CategoryChannel) -> tuple[list[Channel], list[VoiceChannel]]:
+    async def create_team_channels(
+        self,
+        teams: list[TeamDict],
+        category: CategoryChannel,
+    ) -> tuple[list[Channel], list[VoiceChannel]]:
         """Create team channels based on a list of teams, adds those channels to database."""
         with self.session as session:
             db_channels: list[Channel] = []
@@ -175,7 +179,7 @@ class Team(GroupCog):
 
 
     async def move_from_category(self, teams: list[TeamDict], channel: VoiceChannel) -> None:
-        """Handles moving members, if member not in teams lobby, they won't get moved."""
+        """Handle moving members, if member not in teams lobby, they won't get moved."""
         for team in teams:
             team_to_move: TeamDict = {
                 "id": team["id"],
@@ -254,8 +258,6 @@ class Team(GroupCog):
                     ephemeral=True,
                 )
                 return
-
-        # self.sanitize_members_str(members)
 
         if len(members) < team_count:
             await interaction.response.send_message(

@@ -30,13 +30,7 @@ class Infractions(Base):
 
     @classmethod
     def fetch_user(cls, id_: int) -> Self:
-        """Find existing or create new user, and return it.
-
-        Args:
-        ----
-            id (int): Identifier for the user.
-
-        """
+        """Find existing or create new user, and return it."""
         from database import session
 
         with session:

@@ -17,17 +17,7 @@ class Presence(Base):
 
     @staticmethod
     def remove_old_presences(member_id: int, days: int = 265) -> None:
-        """Removes old presences present in the database, if they are older then a year.
-
-        Parameters
-        ----------
-        :param:`member`: :class:`int`
-            The Member_id to clean
-
-        :param:`days`: :class:`int`
-            The amount of days ago to remove, defaults to (256)
-
-        """
+        """Remove old presences present in the database, if they are older then a year."""
         from database import session
 
         with session:

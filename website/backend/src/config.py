@@ -1,6 +1,7 @@
 import configparser
 import shutil
 from collections.abc import Generator
+from pathlib import Path
 from typing import Any, Self
 
 from constants import WEBSITE_CONFIG, WEBSITE_DIR
@@ -17,10 +18,10 @@ class ConfigParserSingleton(configparser.ConfigParser):
     def __init__(self) -> None:
         super().__init__()
         try:
-            with open(WEBSITE_CONFIG):
+            with Path(WEBSITE_CONFIG).open():
                 pass
         except FileNotFoundError as _:
-            shutil.copy(WEBSITE_DIR/"config_template.ini", WEBSITE_CONFIG)
+            shutil.copy(WEBSITE_DIR / "config_template.ini", WEBSITE_CONFIG)
         self.read(WEBSITE_CONFIG)
 
     def is_valid(self) -> bool:

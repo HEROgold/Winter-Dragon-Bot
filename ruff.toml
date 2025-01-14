@@ -6,6 +6,7 @@ unsafe-fixes = true
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
+ignore = ["INP001", "D10", "G004", "S311", "FIX001", "FIX002", "TD001"]
 
 [lint.isort]
 lines-after-imports = 2
@@ -16,6 +17,7 @@ lines-after-imports = 2
 "cog_template.py" = ["ALL"]
 "database_tables.py" = ["A002", "A003", "DTZ005", "UP007"]
 "log_channels.py" = ["F841", "UP007"]
+"*/indev/*" = ["ALL"]  # ignore indev files for CI checks
 
 [format]
 indent-style = "space"

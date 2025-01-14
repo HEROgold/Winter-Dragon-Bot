@@ -21,7 +21,11 @@ class Invite(GroupCog):
         guild = self.bot.get_guild(config.getint("Main", "support_guild_id")) or \
             await self.bot.fetch_guild(config.getint("Main", "support_guild_id"))
         channel = guild.system_channel or guild.channels[0]
-        invite = await channel.create_invite(max_uses=1, max_age=60, reason=f"Support command used by {interaction.user.mention}")
+        invite = await channel.create_invite(
+            max_uses=1,
+            max_age=60,
+            reason=f"Support command used by {interaction.user.mention}",
+        )
         await interaction.response.send_message(invite.url, ephemeral=True)
 
 

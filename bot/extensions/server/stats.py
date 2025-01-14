@@ -82,7 +82,7 @@ class Stats(GroupCog):
                 Channel.update(Channel(
                     id = v.id,
                     guild_id = guild.id,
-                    type = STATS,
+                    type = ChannelTypes.STATS,
                     name = k,
                 ))
             session.commit()

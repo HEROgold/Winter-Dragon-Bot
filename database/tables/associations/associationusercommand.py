@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database.tables.base import Base
@@ -14,21 +14,15 @@ class AssociationUserCommand(Base):
 
     @classmethod
     def cleanup(cls) -> None:
-        """Cleanup this database to keep track of (at most)
-        1k commands for each user
-        TODO: test
-        TODO: Use sqlalchemy queries, as it's faster.
-        """
+        """Clean the database to keep track of (at most) 1k commands for each user."""
         from database import session
 
         track_amount = 1000
         with session:
-            data = session.query(cls).all()
-            seen_users = []
-            for row in data:
-                seen_users.append(row.user_id)
-                if seen_users.count(row.user_id) >= track_amount:
-                    # get first findable row, then delete it
-                    session.delete(session.query(cls).where(cls.user_id == row.user_id).first())
-                    seen_users.remove(row.user_id)
+            (
+                session.query(cls.user_id)
+                .group_by(cls.user_id)
+                .having(func.count(cls.user_id) > track_amount)
+                .delete()
+            )
             session.commit()

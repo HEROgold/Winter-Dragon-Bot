@@ -20,9 +20,6 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     target_id: Mapped[int] = mapped_column(Integer, nullable=True)
     category: Mapped[int] = mapped_column(Integer, nullable=True) # AuditLogActionCategory
-    # # changes: Mapped[AuditLogChanges] = mapped_column(, nullable=True)
-    # before: Mapped[AuditLogDiff] = mapped_column(String, nullable=True)
-    # after: Mapped[AuditLogDiff] = mapped_column(String, nullable=True)
 
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
@@ -36,9 +33,6 @@ class AuditLog(Base):
                 created_at=entry.created_at,
                 target=entry.target,
                 category=entry.category,
-                # changes = entry.changes,
-                # before = entry.before,
-                # after = entry.after,
             )
             session.add(audit)
             session.commit()

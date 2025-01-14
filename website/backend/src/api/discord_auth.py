@@ -14,7 +14,8 @@ def oath(request: Request) -> RedirectResponse:  # noqa: ARG001
 
 @router.get("/callback")
 def oath_callback(request: Request) -> dict[str, str]:
-    # TODO: Respond with the user's home page.
+    # TODO @<HEROgold>: Respond with the user's home page.
+    # 123
     return {"message": f"{request.__dict__}"}
 
 

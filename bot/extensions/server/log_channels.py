@@ -18,7 +18,6 @@ from bot.constants import (
 )
 from bot.enums.channels import ChannelTypes, LogCategories
 from bot.errors import NoneTypeError
-from bot.tools.msg_checks import is_tic_tac_toe
 from database.tables import AuditLog, Channel
 
 
@@ -471,9 +470,6 @@ class LogChannels(GroupCog):
             return
         if before.clean_content == after.clean_content:
             self.logger.debug(f"Message content is the same: {before}")
-            return
-        if is_tic_tac_toe(before.clean_content):
-            self.logger.debug(f"Edited message was tic-tac-toe game: {before}")
             return
 
         self.logger.debug(f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}")

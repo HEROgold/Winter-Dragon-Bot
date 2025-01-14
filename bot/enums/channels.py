@@ -5,6 +5,7 @@ from discord import AuditLogAction
 
 
 class ChannelTypes(Enum):
+    UNKNOWN = auto()
     STATS = auto()
     LOGS = auto()
     TICKETS = auto()
