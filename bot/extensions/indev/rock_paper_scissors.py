@@ -45,6 +45,7 @@ class RpsButton(Button["RPSView"], LoggerMixin):
 # calcs results and posts them
 class RPSView(discord.ui.View, LoggerMixin):
     """View created for rock paper scissors. Contains 3 buttons."""
+
     # children: list[RpsButton]
     p1_choice: str | None
     p2_choice: str | None

@@ -4,23 +4,25 @@ from textwrap import dedent
 
 
 def is_tic_tac_toe(msg: str) -> bool:
-    """
-    Checks if a given message contains a tic-tac-toe game pattern.
+    """Checks if a given message contains a tic-tac-toe game pattern.
 
     Args:
+    ----
         msg (str): The message to check.
 
     Returns:
+    -------
         bool: True if the message contains a tic-tac-toe game pattern, False otherwise.
 
     Example:
+    -------
         ```python
         msg = "It is now X's turn"
         result = is_tic_tac_toe(msg)
         print(result)
         ```
-    """
 
+    """
     regex = generate_ttt_regex()
 
     find_all = re.findall(regex, msg)
@@ -40,17 +42,19 @@ def is_tic_tac_toe(msg: str) -> bool:
 
 
 def generate_ttt_regex() -> str:
-    """
-    Generates a regular expression pattern for tic-tac-toe game messages.
+    """Generates a regular expression pattern for tic-tac-toe game messages.
 
     Returns:
+    -------
         str: The generated regular expression pattern.
 
     Example:
+    -------
         ```python
         regex = generate_ttt_regex()
         print(regex)
         ```
+
     """
     mention_regex = r"\@[a-zA-Z0-9_ ]+"
     user_regex = rf"(X|O|{mention_regex})"

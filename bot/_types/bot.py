@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 import discord
 from discord import Intents, app_commands
@@ -16,7 +16,7 @@ from bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSI
 
 if TYPE_CHECKING:
     from asyncio import Task
-    from collections.abc import Coroutine
+    from collections.abc import Coroutine, Sequence
 
     from discord.abc import Snowflake
     from discord.ext.commands.context import Context
@@ -25,16 +25,17 @@ if TYPE_CHECKING:
 
 
 class WinterDragon(AutoShardedBot):
-    """
-    WinterDragon is a subclass of AutoShardedBot that represents a bot with additional attributes and methods specific to the Winter Dragon bot.
+    """WinterDragon is a subclass of AutoShardedBot that represents a bot with additional attributes and methods specific to the Winter Dragon bot.
 
     Args:
+    ----
         command_prefix (str): The prefix used to invoke commands.
         help_command (HelpCommand | None, optional): The custom help command to use. Defaults to None.
         tree_cls (type[app_commands.CommandTree[Any]], optional): The custom command tree class to use. Defaults to app_commands.CommandTree.
         description (str | None, optional): The description of the bot. Defaults to None.
         intents (discord.Intents): The intents to enable for the bot.
         **options (Any): Additional options to pass to the superclass constructor.
+
     """
 
     launch_time: datetime.datetime

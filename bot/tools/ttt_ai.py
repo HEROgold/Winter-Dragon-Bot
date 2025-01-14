@@ -81,4 +81,3 @@ class TicTacToeAI:
 # Example usage, TODO: TEST
 ttt_ai = TicTacToeAI()
 best_move = ttt_ai.find_best_move()
-print(f"Best move for AI: {best_move}")

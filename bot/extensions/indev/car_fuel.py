@@ -17,7 +17,7 @@ class Fuel(GroupCog):
                 user_id=interaction.user.id,
                 amount=amount,
                 distance=distance,
-                price=fuel
+                price=fuel,
             ))
             self.session.commit()
         await interaction.response.send_message(f"Stored {fuel=}, {distance=}, {amount=}", ephemeral=True)

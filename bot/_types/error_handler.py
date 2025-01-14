@@ -50,13 +50,14 @@ type ReturnOriginal = (
 
 
 class ErrorHandler(LoggerMixin):
-    """
-    ErrorHandler is a class that handles errors encountered during command execution in the WinterDragon bot.
+    """ErrorHandler is a class that handles errors encountered during command execution in the WinterDragon bot.
 
     Args:
+    ----
         bot (WinterDragon): The instance of the WinterDragon bot.
         interface (commands.Context | discord.Interaction): The context or interaction where the error occurred.
         error (app_commands.AppCommandError | commands.CommandError): The error that occurred.
+
     """
 
     interface: commands.Context | discord.Interaction

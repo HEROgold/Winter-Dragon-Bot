@@ -20,12 +20,13 @@ from .tasks import loop
 
 
 class Cog(commands.Cog, LoggerMixin):
-    """
-    Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
+    """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
 
     Args:
+    ----
         bot (WinterDragon): The instance of the WinterDragon bot.
         logger (logging.Logger): The logger for the cog.
+
     """
 
     bot: WinterDragon
@@ -128,11 +129,10 @@ class Cog(commands.Cog, LoggerMixin):
 
 
     def get_command_mention(self, command: app_commands.Command) -> str | None:
-        """
-        Return a command string from a given functiontype. (Decorated with app_commands.command)
+        """Return a command string from a given functiontype. (Decorated with app_commands.command).
 
         Parameters
-        -----------
+        ----------
         :param:`command`: :class:`app_commands.Command`
             The command to convert.
 
@@ -145,6 +145,7 @@ class Cog(commands.Cog, LoggerMixin):
         ------
         :class:`TypeError`
             If the command is not an instance of app_commands.Command.
+
         """
         if not isinstance(command, app_commands.Command): # type:ignore
             msg = f"Expected app_commands.commands.Command but got {type(command)} instead"
@@ -157,9 +158,7 @@ class Cog(commands.Cog, LoggerMixin):
 
 
 class GroupCog(Cog):
-    """
-    GroupCog is a subclass of Cog that represents a cog with app commands group functionality.
-    """
+    """GroupCog is a subclass of Cog that represents a cog with app commands group functionality."""
 
     # Reflect difference in commands.GroupCog
     __cog_is_app_commands_group__ = True

@@ -13,10 +13,12 @@ class User(Base):
 
     @classmethod
     def fetch_user(cls, id_: int) -> Self:
-        """Find existing or create new user, and return it
+        """Find existing or create new user, and return it.
 
         Args:
+        ----
             id (int): Identifier for the user.
+
         """
         from database import session
 

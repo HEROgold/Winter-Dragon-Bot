@@ -33,32 +33,32 @@ class Guild(GroupCog):
         invite_code: str | None = None,
         discoverable: bool = True,
         disable_invites: bool = True,
-        disable_widget: bool = True
+        disable_widget: bool = True,
     ) -> None:
-        """Initialize"""
+        """Initialize."""
         await interaction.response.defer(thinking=True, ephemeral=True)
         guild = await self.bot.create_guild(name="Initializing guild")
         rules_channel = await guild.create_text_channel(
             "rules",
             position=0,
             topic="Rules channel",
-            overwrites={guild.default_role: PermissionOverwrite(view_channel=True)}
+            overwrites={guild.default_role: PermissionOverwrite(view_channel=True)},
         )
         afk_channel = await guild.create_voice_channel(
             "AFK",
             position=0,
-            overwrites={guild.default_role: PermissionOverwrite(connect=False, view=False)}
+            overwrites={guild.default_role: PermissionOverwrite(connect=False, view=False)},
         )
         system_channel = await guild.create_text_channel(
             "system",
             position=0,
             topic="System channel",
-            overwrites={guild.default_role: PermissionOverwrite(view_channel=True)}
+            overwrites={guild.default_role: PermissionOverwrite(view_channel=True)},
         )
         safety_alerts_channel = await guild.create_text_channel(
             "safety-alerts",
             position=0,
-            topic="Safety alerts channel"
+            topic="Safety alerts channel",
         )
         await guild.edit(
             reason="Initializing guild",
@@ -97,7 +97,7 @@ class Guild(GroupCog):
         if not disable_widget:
             await guild.edit(
                 widget_enabled=True,
-                widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel")
+                widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel"),
             )
         await interaction.followup.send("Guild initialized!")
         await system_channel.send(dedent(
@@ -108,7 +108,7 @@ class Guild(GroupCog):
             Use {self.get_command_mention(Stats.slash_stats_category_remove)} to remove stat channels
             Use {self.get_command_mention(Welcome.slash_set_msg)} to set a custom welcome message.
             Use {self.get_command_mention(Welcome.slash_enable)} to enable welcome messages.
-            Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages."""
+            Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages.""",
         ))
 
 

@@ -1,3 +1,5 @@
+import contextlib
+
 import discord
 from discord import app_commands
 
@@ -39,10 +41,8 @@ class Purge(Cog):
         messages = []
         async for message in interaction.channel.history(limit=count):
             message: discord.Message
-            try:
+            with contextlib.suppress(discord.NotFound):
                 await message.delete()
-            except discord.NotFound:
-                pass
             messages.append(message)
         return messages
 

@@ -1,4 +1,5 @@
-from typing import Any, Awaitable, Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
+from typing import Any
 
 from discord import Message
 from discord.abc import GuildChannel, PrivateChannel

@@ -1,3 +1,5 @@
+import contextlib
+
 import discord
 from discord import PermissionOverwrite, Permissions, app_commands
 
@@ -13,7 +15,7 @@ class ChannelUtils(GroupCog):
     @app_commands.checks.has_permissions(manage_channels=True)
     @categories.command(name="delete", description="Delete a category and ALL channels inside.")
     async def slash_cat_delete(self, interaction: discord.Interaction, category: discord.CategoryChannel) -> None:
-        """Delete a discord category with all channels inside"""
+        """Delete a discord category with all channels inside."""
         await interaction.response.defer(ephemeral=True)
         cmd_mention = self.get_command_mention(self.slash_cat_delete)
 
@@ -21,16 +23,14 @@ class ChannelUtils(GroupCog):
             await channel.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
         await category.delete(reason=f"Deleted by {interaction.user.mention} using {cmd_mention}")
 
-        try:
+        with contextlib.suppress(discord.NotFound):
             await interaction.followup.send("Channels removed", ephemeral=True)
-        except discord.NotFound:
-            pass
 
 
     @app_commands.command(name="lock", description="Lock a channel")
     @app_commands.describe(target="Optional role or member to lock out of this channel")
     async def slash_lock(self, interaction: discord.Interaction, target: MemberRole) -> None:
-        """Lock a channel"""
+        """Lock a channel."""
         role_perms = interaction.channel.permissions_for(target)
         role_perms.send_messages = False
         await interaction.channel.set_permissions(
@@ -44,7 +44,7 @@ class ChannelUtils(GroupCog):
     @app_commands.command(name="unlock", description="Lock a channel")
     @app_commands.describe(target="Optional role or member to unlock this channel")
     async def slash_unlock(self, interaction: discord.Interaction, target: MemberRole) -> None:
-        """unLock a channel"""
+        """UnLock a channel."""
         role_perms = interaction.channel.permissions_for(target)
         role_perms.send_messages = True
         await interaction.channel.set_permissions(

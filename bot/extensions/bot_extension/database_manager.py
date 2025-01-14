@@ -78,7 +78,7 @@ class DatabaseManager(Cog):
         if isinstance(message.channel, (  # noqa: UP038
             discord.DMChannel,
             discord.GroupChannel,
-            discord.PartialMessageable
+            discord.PartialMessageable,
         )):
             return
 
@@ -154,16 +154,16 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_presence_update(self, before: discord.Member, after: discord.Member) -> None:
-        """
-        Code to run whenever a presence is updated, to keep track of a users online status.
+        """Code to run whenever a presence is updated, to keep track of a users online status.
         This only updates once every 10 seconds, and only tracks online status.
 
         Parameters
-        -----------
+        ----------
         :param:`before`: :class:`discord.Member`
             The Member before the update
         :param:`after`: :class:`discord.Member`
             The Member after the update
+
         """
         member = after or before
         Presence.remove_old_presences(member.id)
@@ -194,18 +194,18 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction) -> None:
-        """
-        Code to run whenever a interaction happens,
+        """Code to run whenever a interaction happens,
         This adds users and command to the database,
         and links both of them for tracking stats.
         Only tracks
         :class:`discord.InteractionType.ping` and
-        :class:`discord.InteractionType.application_command`
+        :class:`discord.InteractionType.application_command`.
 
         Parameters
-        -----------
+        ----------
         :param:`interaction`: :class:`discord.Interaction`
             The interaction that happened
+
         """
         self.logger.debug(f"on interaction: {interaction=}")
         if interaction.type not in [
@@ -229,18 +229,18 @@ class DatabaseManager(Cog):
 
 
     def _fetch_db_command(self, command: app_commands.Command) -> Command:
-        """
-        Returns a command if it can find one, otherwise it creates one
-        and then returns it
+        """Returns a command if it can find one, otherwise it creates one
+        and then returns it.
 
         Parameters
-        -----------
+        ----------
         :param:`command`: :class:`app_commands.Command`
             The app command to get from the database
 
-        Returns:
-        --------
+        Returns
+        -------
             :class:`Command`: The database version of a command
+
         """
         with self.session as session:
             if db_command := session.query(Command).where(Command.qual_name == command.name).first():
@@ -257,15 +257,15 @@ class DatabaseManager(Cog):
 
 
     def _link_db_user_command(self, user: discord.Member, command: Command) -> None:
-        """
-        Links a database user to a command when used
+        """Links a database user to a command when used.
 
         Parameters
-        -----------
+        ----------
         :param:`user`: :class:`discord.Member`
             The member to link a command to
         :param:`command`: :class:`Command`
             The command to link a member to
+
         """
         with self.session as session:
             session.add(

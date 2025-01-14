@@ -14,16 +14,14 @@ from database.tables import Infractions as InfractionsDb
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Infractions(GroupCog):
-    """
-    Track automod interaction from discord, keep track of amount of violations
-    (Infractions) Ban users when X amount have reached. (Per guild configurable)
+    """Track automod interaction from discord, keep track of amount of violations
+    (Infractions) Ban users when X amount have reached. (Per guild configurable).
 
     TODO: Add automod rules to keep track of,
     TODO: On automod trigger, add infraction (Delete old ones)
     TODO: Make rules that can trigger an infraction.
         IE: Spamming the same message in more then X amount of channels
     """
-
 
     @Cog.listener()
     async def on_automod_rule_create(self, rule: AutoModRule) -> None:

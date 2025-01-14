@@ -1,6 +1,4 @@
-"""
-Add error handling from discord tasks
-"""
+"""Add error handling from discord tasks."""
 
 
 import asyncio

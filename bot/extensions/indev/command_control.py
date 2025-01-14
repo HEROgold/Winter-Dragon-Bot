@@ -1,7 +1,6 @@
-"""
-Allow admins to enable/disable certain commands,
+"""Allow admins to enable/disable certain commands,
 also allow them to sync commands to their guild
-so that disabled commands don't show up
+so that disabled commands don't show up.
 
 Ratelimit the sync for a guild to once per day
 
@@ -46,7 +45,7 @@ class CommandControl(GroupCog):
 
     @app_commands.command(name="enable", description="Enable a command")
     async def slash_command_enable(self, interaction: discord.Interaction, command: str) -> None:
-        """CommandControl"""
+        """CommandControl."""
         with self.session as session:
             cmd = session.query(DbCommand).where(DbCommand.qual_name == command).first()
             session.query(CommandGroup).where(CommandGroup.name == command).first()
@@ -60,7 +59,7 @@ class CommandControl(GroupCog):
 
     @app_commands.command(name="disable", description="Disable a command")
     async def slash_command_disable(self, interaction: discord.Interaction, command: str) -> None:
-        """CommandControl"""
+        """CommandControl."""
         with self.session as session:
             cmd = session.query(GuildCommands).join(DbCommand).where(DbCommand.qual_name == command).first()
             self.logger.debug(f"{cmd}")

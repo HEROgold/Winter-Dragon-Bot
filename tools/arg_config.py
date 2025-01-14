@@ -16,20 +16,20 @@ class _ArgsNameSpace:
 
 class ArgConfig:
     def __init__(self, args: ArgumentParser, config: ConfigParser, file: Path | None) -> None:
-        """
-        Read a config file and add the config settings to the argument parser.
+        """Read a config file and add the config settings to the argument parser.
         in the form of --<key> <value> arguments.
 
         Attempts a help message for each config setting, showing the section, key and value.
 
         Parameters
-        -----------
+        ----------
         :param:`args_parser`: :class:`ArgumentParser`
             The argument parser to add the config settings to.
         :param:`config_parser`: :class:`ConfigParser`
             The config parser to read the config from.
         :param:`config_file`: :class:`Path`
             The path to the config file.
+
         """
         args.add_argument("-c", "--config", type=str, help="Config file path")
         self.config = config

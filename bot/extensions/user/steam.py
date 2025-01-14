@@ -1,8 +1,9 @@
 import asyncio
 import datetime
 import re
+from collections.abc import AsyncGenerator
 from textwrap import dedent
-from typing import Any, AsyncGenerator, cast
+from typing import Any, cast
 
 import bs4
 import discord
@@ -95,9 +96,8 @@ class Steam(GroupCog):
 
     @loop(seconds=STEAM_SEND_PERIOD)
     async def update(self) -> None:
-        """
-        creates a discord Embed object to send and notify users of new 100% sales.
-        Expected amount of sales should be low enough it'll never reach embed size limit
+        """Creates a discord Embed object to send and notify users of new 100% sales.
+        Expected amount of sales should be low enough it'll never reach embed size limit.
         """
         self.logger.info("updating sales")
 
@@ -140,14 +140,17 @@ class Steam(GroupCog):
 
 
     def populate_embed(self, embed: discord.Embed, sales: list[Sale]) -> discord.Embed:
-        """Fills a given embed with sales, and then returns the populated embed
+        """Fills a given embed with sales, and then returns the populated embed.
 
         Args:
+        ----
             sales (list): List of found sales
             embed (discord.Embed): discord.Embed
 
         Returns:
+        -------
             discord.Embed
+
         """
         if not sales:
             return embed
@@ -188,13 +191,16 @@ class Steam(GroupCog):
 
     async def get_updated_sales(self, sales: list[SteamSale] | list[Sale]) -> list[Sale]:
         # sourcery skip: assign-if-exp, reintroduce-else
-        """Return a new list of sales, based of a given list of sales
+        """Return a new list of sales, based of a given list of sales.
 
         Args:
+        ----
             sales (list[SteamSale]): Old list to run checks on
 
         Returns:
+        -------
             list[SteamSale]: New list that gets returned
+
         """
         # convert to Sale for each element that is SteamSale
         known_sales: list[Sale] = [
@@ -218,13 +224,16 @@ class Steam(GroupCog):
 
 
     def is_outdated(self, sale: SteamSale | Sale) -> bool:
-        """Check if a sale has recently been updated
+        """Check if a sale has recently been updated.
 
         Args:
+        ----
             sale (SteamSale | Sale): The sale to check against
 
         Returns:
+        -------
             bool: True, False
+
         """
         if isinstance(sale, SteamSale):
             update_period_date = sale.update_datetime + datetime.timedelta(seconds=STEAM_PERIOD)
@@ -238,10 +247,12 @@ class Steam(GroupCog):
 
 
     def get_saved_sales(self) -> list[SteamSale]:
-        """get saved/known sales from database
+        """Get saved/known sales from database.
 
-        Returns:
+        Returns
+        -------
             list[SteamSale]: List of SteamSale database objects
+
         """
         with self.session as session:
             sales = session.query(SteamSale).all()
@@ -250,13 +261,16 @@ class Steam(GroupCog):
 
 
     def get_id_from_game_url(self, url: str) -> int:
-        """Get an id from a steam game url
+        """Get an id from a steam game url.
 
         Args:
+        ----
             url (str): Url to extract the id from
 
         Returns:
+        -------
             int: The found id of a game
+
         """
         # sourcery skip: class-extract-method
         # example: https://store.steampowered.com/app/1168660/Barro_2020/
@@ -268,13 +282,16 @@ class Steam(GroupCog):
 
 
     def is_bundle(self, url: str) -> bool:
-        """Find out if a url is for a bundle
+        """Find out if a url is for a bundle.
 
         Args:
+        ----
             url (str): Url to look through
 
         Returns:
+        -------
             bool: True, False
+
         """
         # sourcery skip: class-extract-method
         # example: https://store.steampowered.com/bundle/23756/Bundle_with_fun_games/?l=dutch&curator_clanid=4777282
@@ -285,25 +302,31 @@ class Steam(GroupCog):
 
 
     def is_valid_game_url(self, url: str) -> bool:
-        """Find out if a url is for a valid game
+        """Find out if a url is for a valid game.
 
         Args:
+        ----
             url (str): Url to check for
 
         Returns:
+        -------
             bool: True, False
+
         """
         return bool(self.get_id_from_game_url(url))
 
 
     async def get_new_steam_sales(self, percent: int) -> list[Sale]:
-        """Get only unknown/new sales
+        """Get only unknown/new sales.
 
         Args:
+        ----
             percent (int): Percentage to check for
 
         Returns:
+        -------
             list[Sale]: List of TypedDict Sale
+
         """
         known_sales = [self.SteamSale_to_Sale(i) for i in self.get_saved_sales()]
         steam_sales = [x async for x in self.get_sales_from_steam(percent)]
@@ -324,10 +347,12 @@ class Steam(GroupCog):
 
 
     async def get_steam_sales(self, percent: int) -> list[Sale]:
-        """get sales from database or from website depending on `UPDATE_PERIOD`
+        """Get sales from database or from website depending on `UPDATE_PERIOD`.
 
-        Returns:
+        Returns
+        -------
             list[SteamSale]: List of SteamSale database objects
+
         """
         # return self.get_updated_sales(self.get_saved_sales(percent)) or self.get_sales_from_steam(percent)
 
@@ -341,16 +366,20 @@ class Steam(GroupCog):
 
 
     async def get_games_from_bundle(self, url: str) -> list[Sale]:
-        """Get the sales from a bundle
+        """Get the sales from a bundle.
 
         Args:
+        ----
             url (str): Url of the bundle to get the game sales from
 
         Raises:
+        ------
             ValueError: Error when url is invalid
 
         Returns:
+        -------
             SteamSale: SteamSale database object
+
         """
         if not self.is_bundle(url):
             msg = "Invalid Steam Bundle URL"
@@ -366,13 +395,16 @@ class Steam(GroupCog):
 
 
     def SteamSale_to_Sale(self, sale: SteamSale) -> Sale:  # noqa: N802
-        """Convert a SteamSale db object to TypedDict Sale
+        """Convert a SteamSale db object to TypedDict Sale.
 
         Args:
+        ----
             sale (SteamSale): SteamSale database object
 
         Returns:
+        -------
             Sale: TypedDict containing the same items as Db object
+
         """
         with Session(engine, expire_on_commit=False):
             return {
@@ -388,13 +420,16 @@ class Steam(GroupCog):
 
     async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[Sale, Any]:
         """Scrape sales from https://store.steampowered.com/search/
-        With the search options: Ascending price, Special deals, English
+        With the search options: Ascending price, Special deals, English.
 
         Args:
+        ----
             search_percent (int, optional): Percentage of sale to look for. Defaults to 100.
 
         Returns:
+        -------
             list[Sale]: List of SteamSale database objects
+
         """
         html = await self.get_htl(config["Steam"]["url"])
         soup = BeautifulSoup(html.text, "html.parser")
@@ -434,16 +469,20 @@ class Steam(GroupCog):
 
     async def get_bundle_sale(self, url: str) -> Sale:
         # sourcery skip: extract-method
-        """Get sale for a bundle
+        """Get sale for a bundle.
 
         Args:
+        ----
             url (str): Url of the bundle to get the sale from
 
         Raises:
+        ------
             ValueError: Error when url is invalid
 
         Returns:
+        -------
             SteamSale: SteamSale database object
+
         """
         if not self.is_bundle(url):
             msg = "Invalid Steam Bundle URL"
@@ -468,16 +507,20 @@ class Steam(GroupCog):
 
     async def get_game_sale(self, url: str) -> Sale:
         # sourcery skip: extract-method
-        """get a single game sale from specific url
+        """Get a single game sale from specific url.
 
         Args:
+        ----
             url (str): Url of the game to get a sale from
 
         Raises:
+        ------
             ValueError: Error when url is invalid
 
         Returns:
+        -------
             SteamSale: SteamSale database object
+
         """
         if not self.is_valid_game_url(url):
             msg = "Invalid Steam Game URL"
@@ -544,14 +587,17 @@ class Steam(GroupCog):
 
 
     def update_sale(self, sale: SteamSale, session: Session) -> bool:
-        """Update/override a sale record in Database
+        """Update/override a sale record in Database.
 
         Args:
+        ----
             session (Session): Session to connect to DataBase
             sale (SteamSale): Sale to update
 
         Returns:
+        -------
             bool: True when updated, False when not updated
+
         """
         if known := session.query(SteamSale).where(SteamSale.id == sale.id).first():
             known.title = sale.title
@@ -573,12 +619,15 @@ class Steam(GroupCog):
         """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session.
 
         Args:
+        ----
             session (Session): Session for database connection
             sale (SteamSale): SteamSale database object
             category (str): Category where sale was found
 
         Returns:
+        -------
             Sale: TypedDict in presentable format
+
         """
         with self.session:
             if isinstance(sale, dict): # Assume Sale typeddict

@@ -38,15 +38,15 @@ class Gatekeeper(GroupCog):
 
 
     async def setup_roles(self, guild: Guild, member_role: Role | None = None) -> None:
-        """
-        Copies the default role permissions to the member role and removes all permissions from the default role.
+        """Copies the default role permissions to the member role and removes all permissions from the default role.
 
         Parameters
-        -----------
+        ----------
         :param:`guild`: :class:`Guild`
             The guild to setup the roles in.
         :param:`member_role`: :class:`Role | None`, optional
             A existing role, if any. by default None, and a new role will be created.
+
         """
         base_role = guild.default_role
         role = member_role or await guild.create_role(name="Member", permissions=base_role.permissions)

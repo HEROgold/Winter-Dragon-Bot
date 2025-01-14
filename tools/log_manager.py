@@ -53,13 +53,16 @@ class LogsManager:
 
 
     def logs_size_limit_check(self, size_in_kb: int) -> bool:
-        """Check if the stored logs total size in kb, is bigger then given value
+        """Check if the stored logs total size in kb, is bigger then given value.
 
         Args:
+        ----
             size_in_kb (int): Size in kb
 
         Returns:
+        -------
             bool: True, False
+
         """
         total_size = sum(
             os.path.getsize(os.path.join(root, file))
@@ -71,7 +74,7 @@ class LogsManager:
 
 
     def delete_oldest_saved_logs(self) -> None:
-        """Delete the oldest findable logs"""
+        """Delete the oldest findable logs."""
         oldest_files = sorted((
             os.path.join(root, file)
             for root, _, files in os.walk(config["Main"]["log_path"])
@@ -106,7 +109,6 @@ class LogsManager:
 
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
-                print(file)
                 shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
 
 
@@ -125,7 +127,7 @@ class LogsManager:
 
 
     def _delete_top_level_logs(self) -> None:
-        """Deletes the top level logs (not in logs directory)"""
+        """Deletes the top level logs (not in logs directory)."""
         for file in os.listdir("./"):
             if file.endswith(".log") or file[:-2].endswith(".log"):
                 self.logger.info(f"Removing {file}")
@@ -136,7 +138,7 @@ class LogsManager:
 
 
     def shutdown(self) -> None:
-        """Calls `save_logs` and `delete_latest_logs` before `logging.shutdown`"""
+        """Calls `save_logs` and `delete_latest_logs` before `logging.shutdown`."""
         self.save_logs()
         self.delete_latest_logs()
         logging.shutdown()

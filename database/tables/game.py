@@ -13,10 +13,12 @@ class Game(Base):
 
     @classmethod
     def fetch_game_by_name(cls, name: str) -> Self:
-        """Find existing or create new game, and return it
+        """Find existing or create new game, and return it.
 
         Args:
+        ----
             name (str): Name for the game
+
         """
         from database import session
 

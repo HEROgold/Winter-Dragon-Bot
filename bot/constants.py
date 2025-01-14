@@ -37,7 +37,7 @@ OAUTH_SCOPE = [
     "applications.commands.permissions.update",
 ]
 BOT_SCOPE = [
-    "bot"
+    "bot",
 ]
 
 DATE_FORMAT = "%Y-%m-%d, %H:%M:%S"

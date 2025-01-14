@@ -307,7 +307,7 @@ class Hangman(GroupCog):
 
     @app_commands.command(name="start", description="Hangman")
     async def slash_hangman(self, interaction: discord.Interaction) -> None:
-        """Hangman"""
+        """Hangman."""
         view = discord.ui.View()
         btn = HangmanButton(label="Add Letter", style=discord.ButtonStyle.primary)
         view.add_item(btn)

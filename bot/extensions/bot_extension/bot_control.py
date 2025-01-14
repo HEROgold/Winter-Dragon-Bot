@@ -321,7 +321,7 @@ class BotC(GroupCog):
 
     @staticmethod
     def get_colors(value: float, max_amount: int) -> tuple[str, int]:
-        """Get colors based on given max value, with predefined percentages"""
+        """Get colors based on given max value, with predefined percentages."""
         if value < max_amount * 0.4:
             ansi_start = "ansi\n\x1b[2;32m"
             color = 1179392

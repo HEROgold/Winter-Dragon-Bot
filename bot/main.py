@@ -31,11 +31,9 @@ tree = bot.tree
 
 @bot.event
 async def on_ready() -> None:
-    invite_link = bot.get_bot_invite()
+    bot.get_bot_invite()
 
     bot_logger.info(f"Logged on as {bot.user}!")
-    print("Bot is running!")
-    print("invite link: ", invite_link)
 
 
 
@@ -57,8 +55,8 @@ def terminate(*args, **kwargs) -> None:
     try:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(bot.close())
-    except Exception as e:  # noqa: BLE001
-        print(e)
+    except Exception:  # noqa: BLE001
+        pass
     sys.exit()
 
 
