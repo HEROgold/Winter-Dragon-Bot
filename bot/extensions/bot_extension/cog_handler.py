@@ -17,7 +17,7 @@ class AutoCogReloader(Cog):
     data: CogData
 
 
-    def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.data = {
             "timestamp": datetime.datetime.now(tz=datetime.UTC).timestamp(),

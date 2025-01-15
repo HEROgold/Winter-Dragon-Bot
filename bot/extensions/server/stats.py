@@ -32,7 +32,11 @@ class Stats(GroupCog):
         self.logger.debug(f"Member update: {member.guild=}, {member=}")
         guild = member.guild
         with self.session as session:
-            if peak_online := session.query(Channel).where(Channel.guild_id == guild.id, Channel.name == "peak_channel").first():
+            if peak_online := (
+                session.query(Channel)
+                .where(Channel.guild_id == guild.id, Channel.name == "peak_channel")
+                .first()
+            ):
                 await self.update_peak(guild, peak_online)
 
 
@@ -256,7 +260,9 @@ class Stats(GroupCog):
 
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
-    @app_commands.command(name="add", description="This command will create the Stats category which will show some stats about the guild.")
+    @app_commands.command(
+        name="add",
+        description="This command will create the Stats category which will show some stats about the guild.")
     async def slash_stats_category_add(self, interaction:discord.Interaction) -> None:
         with self.session as session:
             if session.query(Channel).where(
@@ -273,7 +279,10 @@ class Stats(GroupCog):
             c_mention = self.get_command_mention(self.slash_stats_category_add)
 
             await interaction.response.defer(ephemeral=True)
-            await self.create_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
+            await self.create_stats_channels(
+                guild=interaction.guild,
+                reason=f"Requested by {interaction.user.display_name} using {c_mention}",
+            )
             await interaction.followup.send("Stats channels are set up")
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import discord
@@ -25,17 +26,9 @@ if TYPE_CHECKING:
 
 
 class WinterDragon(AutoShardedBot):
-    """WinterDragon is a subclass of AutoShardedBot that represents a bot with additional attributes and methods specific to the Winter Dragon bot.
+    """WinterDragon is a subclass of AutoShardedBot.
 
-    Args:
-    ----
-        command_prefix (str): The prefix used to invoke commands.
-        help_command (HelpCommand | None, optional): The custom help command to use. Defaults to None.
-        tree_cls (type[app_commands.CommandTree[Any]], optional): The custom command tree class to use. Defaults to app_commands.CommandTree.
-        description (str | None, optional): The description of the bot. Defaults to None.
-        intents (discord.Intents): The intents to enable for the bot.
-        **options (Any): Additional options to pass to the superclass constructor.
-
+    this represents a bot with additional attributes and methods specific to the Winter Dragon bot.
     """
 
     launch_time: datetime.datetime
@@ -46,7 +39,7 @@ class WinterDragon(AutoShardedBot):
     _guild_app_commands: dict[int, AppCommandStore]
     default_intents: Intents
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         command_prefix: PrefixType[WinterDragon],
         *,
@@ -64,7 +57,14 @@ class WinterDragon(AutoShardedBot):
         if help_command is None:
             help_command = DefaultHelpCommand()
 
-        super().__init__(command_prefix, help_command=help_command, tree_cls=tree_cls, description=description, intents=intents, **options)
+        super().__init__(
+            command_prefix,
+            help_command=help_command,
+            tree_cls=tree_cls,
+            description=description,
+            intents=intents,
+            **options,
+        )
 
     def get_bot_invite(self) -> str:
         return (
@@ -88,7 +88,7 @@ class WinterDragon(AutoShardedBot):
         self,
         value: str | int,
         guild: Snowflake | int | None = None,
-        fallback_to_global: bool = True,
+        fallback_to_global: bool = True,  # noqa: FBT001, FBT002
     ) -> MaybeGroupedAppCommand:
         def search_dict(d: AppCommandStore) -> MaybeGroupedAppCommand:
             for cmd_name, cmd in d.items():
@@ -113,7 +113,9 @@ class WinterDragon(AutoShardedBot):
         def unpack_app_commands(commands: list[app_commands.AppCommand]) -> AppCommandStore:
             ret: AppCommandStore = {}
 
-            def unpack_options(options: Sequence[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument]) -> None:
+            def unpack_options(
+                options: Sequence[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument],
+            ) -> None:
                 for option in options:
                     if isinstance(option, app_commands.AppCommandGroup):
                         ret[option.qualified_name] = option
@@ -146,16 +148,15 @@ class WinterDragon(AutoShardedBot):
     async def get_extensions(self) -> list[str]:
         extensions = []
         for root, _, files in os.walk(EXTENSIONS):
-            extensions.extend(
-                self.normalize_extension_path(os.path.join(root, file[:-3]).replace("/", ".").replace("\\", "."))
-                for file in files
-                if file.endswith(".py")
-            )
+            for file in files:
+                if file.endswith(".py"):
+                    extension = Path(root) / file
+                    extensions.append(self.normalize_extension_path(extension.as_posix()))
         return extensions
 
     @staticmethod
     def normalize_extension_path(extension: str) -> str:
-            idx = len(os.getcwd())
+            idx = len(os.getcwd())  # noqa: PTH109
             if os.name == "nt":
                 idx += 1 # +1 to avoid a leading slash after replacing.
             return extension[idx:].replace(os.sep, ".")

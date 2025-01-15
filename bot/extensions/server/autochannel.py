@@ -64,8 +64,14 @@ class AutomaticChannels(GroupCog):
     ) -> None:
         overwrites = {
             member.guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
-            member.guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
-            member: discord.PermissionOverwrite.from_pair(discord.Permissions.all_channel(), discord.Permissions.none()),
+            member.guild.me: discord.PermissionOverwrite.from_pair(
+                discord.Permissions.all_channel(),
+                discord.Permissions.none(),
+            ),
+            member: discord.PermissionOverwrite.from_pair(
+                discord.Permissions.all_channel(),
+                discord.Permissions.none(),
+            ),
         }
 
         if after.channel is None:
@@ -189,7 +195,10 @@ class AutomaticChannels(GroupCog):
                     channel_limit = 0,
                 ))
             session.commit()
-        await interaction.response.send_message(f"You have changed the channel limit for your guild to `{limit}`!", ephemeral=True)
+        await interaction.response.send_message(
+            f"You have changed the channel limit for your guild to `{limit}`!",
+            ephemeral=True,
+        )
 
 
     @app_commands.command(name="limit", description="Set a limit for your channel")

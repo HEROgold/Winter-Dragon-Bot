@@ -63,7 +63,8 @@ class Incremental(GroupCog):
                 amount = int(rate.per_second * time.total_seconds())
                 balance.value += amount
             session.commit()
-        # TODO: return a embed containing the resources collected.
+        # TODO @HEROgold: return a embed containing the resources collected.
+        # 000
 
     async def slash_collect(self, interaction: discord.Interaction) -> None:
         # Collect resources

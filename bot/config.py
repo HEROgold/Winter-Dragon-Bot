@@ -18,7 +18,7 @@ class ConfigParserSingleton(configparser.ConfigParser):
     def __init__(self) -> None:
         super().__init__()
         try:
-            with open(BOT_CONFIG):
+            with BOT_CONFIG.open():
                 pass
         except FileNotFoundError as e:
             shutil.copy(BOT_DIR/"config_template.ini", BOT_CONFIG)
@@ -42,4 +42,5 @@ class ConfigParserSingleton(configparser.ConfigParser):
 
 
 config = ConfigParserSingleton()
-# TODO: Split non-bot configs into their owner config files
+# TODO @HEROgold: Split non-bot configs into their owner config files
+# 138

@@ -3,7 +3,8 @@ from bot._types.cogs import Cog
 
 
 class LeagueOfLegends(Cog):
-    """This Cog is for the League of Legends game.
+    """League of Legends game.
+
     It allows users to get information about their games.
     It can watch and track (ranked) games.
 
@@ -13,13 +14,6 @@ class LeagueOfLegends(Cog):
     - champion mastery.
     - champion statistics.
     - champion leaderboard.
-
-
-    Parameters
-    ----------
-    :param:`Cog`: :class:`_type_`
-        _description_
-
     """
 
 

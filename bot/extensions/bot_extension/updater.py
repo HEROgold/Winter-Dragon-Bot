@@ -17,7 +17,11 @@ class Updater(commands.Cog):
         await interaction.response.send_message("Updating the bot...")
 
         # Pull the latest changes from the git repository
-        process = await asyncio.create_subprocess_exec("git", "pull", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        process = await asyncio.create_subprocess_exec(
+            "git", "pull",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
         _, stderr = await process.communicate()
 
         if process.returncode == 0:

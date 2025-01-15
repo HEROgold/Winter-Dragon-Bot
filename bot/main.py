@@ -48,7 +48,7 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     raise KeyboardInterrupt
 
 
-def terminate(*args, **kwargs) -> None:  # noqa: ANN002, ANN003
+def terminate(*args, **kwargs) -> None:
     logs.logger.warning(f"{args=}, {kwargs=}")
     logs.logger.info("terminated")
     logs.shutdown()

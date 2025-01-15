@@ -47,7 +47,11 @@ class WouldYouRather(GroupCog):
     async def slash_wyr(self, interaction: discord.Interaction) -> None:
         game_id, questions = self.get_questions()
         question = random.choice(questions)
-        emb = discord.Embed(title=f"Would You Rather #{game_id}", description=question.value, color=random.choice(rainbow.RAINBOW))
+        emb = discord.Embed(
+            title=f"Would You Rather #{game_id}",
+            description=question.value,
+            color=random.choice(rainbow.RAINBOW),
+        )
         emb.add_field(name="Option 1", value="1️⃣")
         emb.add_field(name="Option 2", value="2️⃣")
         send_msg = await interaction.channel.send(embed=emb)
@@ -68,7 +72,10 @@ class WouldYouRather(GroupCog):
                 content = wyr_question,
             ))
             session.commit()
-        await interaction.response.send_message(f"The question ```{wyr_question}``` is added, it will be verified later.", ephemeral=True)
+        await interaction.response.send_message(
+            f"The question ```{wyr_question}``` is added, it will be verified later.",
+            ephemeral=True,
+        )
 
 
     @app_commands.command(

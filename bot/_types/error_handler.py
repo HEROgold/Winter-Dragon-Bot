@@ -82,8 +82,6 @@ class ErrorHandler(LoggerMixin):
 
     @loop(count=1)
     async def _async_init(self) -> None:
-        # TODO: use cog's get_command_mention method to get and mention invite command
-        # self.help_command = self.bot.get_app_command("help")
         self.invite_command = self.bot.get_app_command("invite")
         if self.invite_command is None:
             self.server_invite = self.bot.get_bot_invite()
@@ -141,20 +139,18 @@ class ErrorHandler(LoggerMixin):
                 error_msg = f"This bot is missing a required role, {error.missing_role}"
             case app_commands.errors.MissingAnyRole | commands.errors.MissingAnyRole:
                 error_msg = f"You are missing the required Role, {error.missing_roles}"
-            # case commands.errors.CommandNotFound: error_msg = f"Command not found, try {self.help_command.mention} to find all available commands",
-            # case app_commands.errors.CommandNotFound: error_msg = f"Command not found, try {self.help_command.mention} to find all available commands",
             # Errors below need reviewing, might not want to show to users
             case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
-                # TODO: Add invoke error handling
                 if "403 Forbidden" in error.args:
                     error_msg = error
             case commands.errors.CheckFailure:
-                error_msg = f"{error}" # TODO: Add check failure handling
+                error_msg = f"{error}"
             case discord.errors.Forbidden:
                 error_msg = "I do not have enough permissions to do that."
             case _:
                 error_msg = dedent(f"""
-                    Unexpected error {error}, try {self.help_msg} for help, or contact the bot creator with the following code `{self.time_code}`.
+                    Unexpected error {error}, try {self.help_msg} for help.
+                    Or contact the bot creator with the following code `{self.time_code}`.
                     Use {self.server_invite} to join the official bot guild, and submit the error code in the forums channel.
                 """)
         return error_msg
@@ -189,11 +185,8 @@ class ErrorHandler(LoggerMixin):
             except discord.errors.InteractionResponded:
                 original = await interface.original_response()
                 await original.edit(content=message)
-                # dm = interface.user.dm_channel or await interface.user.create_dm()
-                # await dm.send(message)
         else:
             dm = await self.get_dm(interface)
-            # self.logger.debug(f"Sending {message=} to {dm=}")
 
             try:
                 await interface.message.delete()

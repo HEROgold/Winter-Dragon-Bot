@@ -32,9 +32,14 @@ class Purge(Cog):
                 history_messages = await self.history_delete(interaction=interaction, count=(count - purged_count))
                 history_messages_count = len(history_messages)
                 self.logger.debug(f"History killed: {history_messages_count}")
-            await interaction.followup.send(f"{interaction.user.mention} Killed {history_messages_count + purged_count} Messages")
+            await interaction.followup.send(
+                f"{interaction.user.mention} Killed {history_messages_count + purged_count} Messages",
+            )
         else:
-            await interaction.response.send_message(f"Too many message to kill! The limit is {config['Purge']['LIMIT']}", ephemeral=True)
+            await interaction.response.send_message(
+                f"Too many message to kill! The limit is {config['Purge']['LIMIT']}",
+                ephemeral=True,
+            )
 
 
     async def history_delete(self, interaction: discord.Interaction, count: int) -> list[discord.Message]:

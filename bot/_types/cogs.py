@@ -33,7 +33,7 @@ class Cog(commands.Cog, LoggerMixin):
     logger: logging.Logger
 
 
-    def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+    def __init__(self, *args, **kwargs) -> None:
         self.ErrorHandler = ErrorHandler
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.session = Session(engine)
@@ -51,7 +51,8 @@ class Cog(commands.Cog, LoggerMixin):
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         # Get db info and check if command is disabled on guild, channel, or just for this user.
-        # TODO: Needs testing
+        # TODO @HEROgold: Needs testing
+        # 000
         guild = interaction.guild
         channel = interaction.channel
         user = interaction.message.author if isinstance(interaction, commands.Context) else interaction.user
@@ -99,7 +100,6 @@ class Cog(commands.Cog, LoggerMixin):
 
     @loop(count=1)
     async def add_mentions(self) -> None:
-        # await self.add_command_mentions()
         if not self.bot.has_app_command_mentions:
             self.logger.debug(f"Adding app_commands cache to {self.__cog_name__}")
             await self.bot.update_app_commands_cache()
@@ -112,7 +112,7 @@ class Cog(commands.Cog, LoggerMixin):
             if isinstance(command, app_commands.Group):
                 continue
             self.logger.debug(f"Adding is_command_disabled check to {command.qualified_name}")
-            command.add_check(self.is_command_enabled) # type: ignore
+            command.add_check(self.is_command_enabled) # type: ignore[reportArgumentType]
 
     @add_mentions.before_loop
     @add_disabled_check.before_loop
@@ -129,25 +129,8 @@ class Cog(commands.Cog, LoggerMixin):
 
 
     def get_command_mention(self, command: app_commands.Command) -> str | None:
-        """Return a command string from a given functiontype. (Decorated with app_commands.command).
-
-        Parameters
-        ----------
-        :param:`command`: :class:`app_commands.Command`
-            The command to convert.
-
-        Returns
-        -------
-        :class:`str | None`
-            The string used to use the command in discord.
-
-        Raises
-        ------
-        :class:`TypeError`
-            If the command is not an instance of app_commands.Command.
-
-        """
-        if not isinstance(command, app_commands.Command): # type:ignore
+        """Return a command string from a given functiontype. (Decorated with app_commands.command)."""
+        if not isinstance(command, app_commands.Command): # type:ignore[reportUnnecessaryIsInstance]
             msg = f"Expected app_commands.commands.Command but got {type(command)} instead"
             raise TypeError(msg)
 

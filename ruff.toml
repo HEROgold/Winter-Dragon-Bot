@@ -5,7 +5,7 @@ unsafe-fixes = true
 
 [lint]
 exclude = ["build", "dist", "venv"]
-ignore = ["D10", "D203", "D213", "FIX001", "FIX002", "G004", "INP001", "S311", "TD001"]
+ignore = ["D10", "D203", "D213", "FIX001", "FIX002", "G004", "INP001", "S311", "TD001", "ANN002", "ANN003"]
 select = ["ALL"]
 
 [lint.isort]
@@ -18,6 +18,8 @@ lines-after-imports = 2
 "cog_template.py" = ["ALL"]
 "database_tables.py" = ["A002", "A003", "DTZ005", "UP007"]
 "log_channels.py" = ["F841", "UP007"]
+"would_you_rather.py" = ["E501"]
+"never_have_i_ever.py" = ["E501"]
 
 [format]
 indent-style = "space"

@@ -1,7 +1,6 @@
-"""This file contains a class which represents a 'lobby'
+"""Contains a class which represents a 'lobby'.
+
 This 'lobby' will be a message and have a join and leave button
-# TODO: expand on this
-# TODO: Needs testing.
 """
 
 import asyncio
@@ -21,7 +20,7 @@ from database.tables import Lobby as DbLobby
 def f() -> None:  ...
 type FunctionType = type[f]
 
-# TODO: Add updating message system
+
 class Lobby:
     if TYPE_CHECKING:
         message: discord.Message
@@ -65,7 +64,7 @@ class Lobby:
     )
 
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         message: discord.Message,
         max_players: int = 0,
@@ -92,7 +91,6 @@ class Lobby:
         self.view.add_item(self.start_button)
         self.view.add_item(self.join_button)
         self.view.add_item(self.leave_button)
-        # self.update_message(reason="Turning message into a lobby")
         self.update_message()
 
 
@@ -116,14 +114,12 @@ class Lobby:
             view=self.view,
         ))
 
-
     def join_callback(self, interaction: Interaction) -> None:
         self._session.add(AUL(
             lobby_id=self.message,
             user_id=interaction.user.id,
         ))
         self._session.commit()
-        # self.update_message(reason=f"player joined lobby: {interaction.user.mention}")
         self.update_message()
 
 
@@ -135,7 +131,6 @@ class Lobby:
                     AUL.user_id == interaction.user.id,
                 ))
         self._session.commit()
-        # self.update_message(reason=f"player left lobby: {interaction.user.mention}")
         self.update_message()
 
 

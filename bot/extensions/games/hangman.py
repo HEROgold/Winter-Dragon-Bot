@@ -1,5 +1,6 @@
 import logging
 import random
+from textwrap import dedent
 
 import aiohttp
 import discord
@@ -232,7 +233,12 @@ class SubmitLetter(Modal, title="Submit Letter"):
             wrong_max = 10
             if len(wrong_after) >= wrong_max:
                 await interaction.response.edit_message(
-                    content=f"Game Lost...\nGuesses: {hidden_word}\n Word: {hangman_db.word}\n{hangman}`\nLetters: {hangman_db.letters}",
+                    content=dedent(
+                        f"""Game Lost...
+                        Guesses: {hidden_word}
+                        Word: {hangman_db.word}
+                        {hangman}`
+                        Letters: {hangman_db.letters}"""),
                     view=None,
                 )
                 return
@@ -301,9 +307,6 @@ class Hangman(GroupCog):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.game = Game.fetch_game_by_name(HANGMAN)
-
-    # Hangman_GROUP = app_commands.Group(name="HangmanGroup", description="Hangman")
-    # @Hangman_GROUP.command()
 
     @app_commands.command(name="start", description="Hangman")
     async def slash_hangman(self, interaction: discord.Interaction) -> None:

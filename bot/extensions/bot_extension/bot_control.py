@@ -144,7 +144,10 @@ class BotC(GroupCog):
             return await self._start_randomizer(interaction)
 
         if status == "random" or activity == "random":
-            return await interaction.response.send_message("Both status and activity need to be random or not chosen.", ephemeral=True)
+            return await interaction.response.send_message(
+                "Both status and activity need to be random or not chosen.",
+                ephemeral=True,
+            )
 
         status_attr = discord.Status[status] or discord.Status.online
         activity_type = discord.Status[activity] or discord.ActivityType.playing

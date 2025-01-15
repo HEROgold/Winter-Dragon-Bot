@@ -11,7 +11,9 @@ from tools import rainbow
 
 
 class Announce(Cog):
-    @app_commands.command(name="announcement", description="Using this command will ping everyone and put your message in a clean embed!")
+    @app_commands.command(
+            name="announcement",
+            description="Using this command will ping everyone and put your message in a clean embed!")
     @app_commands.checks.has_permissions(mention_everyone=True)
     async def announce(self, interaction:discord.Interaction, message:str) -> None:
         member = interaction.user

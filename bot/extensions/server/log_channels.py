@@ -272,7 +272,11 @@ class LogChannels(GroupCog):
         }
 
         self.logger.debug(f"On channel update: {entry.guild=}, {channel=}")
-        if differences := [prop for prop in properties if hasattr(before, prop) and getattr(before, prop) != getattr(after, prop)]:
+        if differences := [
+            prop
+            for prop in properties
+            if hasattr(before, prop) and getattr(before, prop) != getattr(after, prop)
+        ]:
             if "name" in differences or before.name != after.name:
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
@@ -364,7 +368,10 @@ class LogChannels(GroupCog):
 
         embed = discord.Embed(
             title="Role Updated",
-            description=f"{entry.user.mention} created {role.mention or entry.target.mention} with reason: {entry.reason or None}",
+            description=(
+                f"{entry.user.mention} created {role.mention or entry.target.mention} "
+                f"with reason: {entry.reason or None}"
+            ),
             color=CHANGED_COLOR,
             )
         await self.send_channel_logs(entry.guild, embed, LogCategories.ROLE_UPDATE)
@@ -481,7 +488,9 @@ class LogChannels(GroupCog):
             self.logger.debug(f"Message content is the same: {before}")
             return
 
-        self.logger.debug(f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}")
+        self.logger.debug(
+            f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}",
+        )
         embed = discord.Embed(
             title="Message Edited",
             description=f"{before.author.mention} Edited a message",
@@ -632,7 +641,10 @@ class LogChannels(GroupCog):
         self.logger.debug(f"on member_disconnect: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Member Disconnect",
-            description=f"{entry.user.mention} disconnected {entry.target.type} {entry.target} from {entry.extra} with reason {entry.reason or None}",
+            description=(
+                f"{entry.user.mention} disconnected {entry.target.type} "
+                f"{entry.target} from {entry.extra} with reason {entry.reason or None}"
+            ),
             color=DELETED_COLOR,
         )
         await self.send_channel_logs(entry.guild, embed, LogCategories.MEMBER_DISCONNECT)
@@ -807,7 +819,10 @@ class LogChannels(GroupCog):
         self.logger.debug(f"on stage_instance_create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Stage Instance Create",
-            description=f"{entry.user.mention} started a stage in {self.bot.get_channel(target.channel_id).mention} with topic {target.topic}",
+            description=(
+                f"{entry.user.mention} started a stage in "
+                f"{self.bot.get_channel(target.channel_id).mention} with topic {target.topic}"
+            ),
             color=CREATED_COLOR,
         )
         await self.send_channel_logs(entry.guild, embed, LogCategories.STAGE_INSTANCE_CREATE)
@@ -1169,7 +1184,13 @@ class LogChannels(GroupCog):
         self.logger.debug(f"Updating Log for {guild=}")
         if guild is None:
             with self.session as session:
-                guild_ids = session.query(Channel.guild_id).where(Channel.type == LOGS).distinct().group_by(Channel.guild_id).all()
+                guild_ids = (
+                    session.query(Channel.guild_id)
+                        .where(Channel.type == LOGS)
+                        .distinct()
+                        .group_by(Channel.guild_id)
+                        .all()
+                )
                 for guild_id in guild_ids[0]:
                     return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
             msg = "How did we get here"
@@ -1230,7 +1251,10 @@ class LogChannels(GroupCog):
                         name=f"{self.bot.user.display_name} Log {i+1}",
                         overwrites= {
                             guild.default_role: discord.PermissionOverwrite(view_channel=False),
-                            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none()),
+                            guild.me: discord.PermissionOverwrite.from_pair(
+                                discord.Permissions.all(),
+                                discord.Permissions.none(),
+                            ),
                         },
                         position=99,
                         reason="Adding Log channels",

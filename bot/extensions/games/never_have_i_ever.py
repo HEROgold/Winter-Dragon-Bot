@@ -69,7 +69,10 @@ class NeverHaveIEver(GroupCog):
                 content = nhie_question,
             ))
             session.commit()
-        await interaction.response.send_message(f"The question ```{nhie_question}``` is added, it will be verified later.", ephemeral=True)
+        await interaction.response.send_message(
+            f"The question ```{nhie_question}``` is added, it will be verified later.",
+            ephemeral=True,
+        )
 
 
     @app_commands.command(
@@ -80,7 +83,7 @@ class NeverHaveIEver(GroupCog):
     @commands.is_owner()
     async def slash_nhie_add_verified(self, interaction:discord.Interaction) -> None:
         with self.session as session:
-            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified == True)  # noqa: E712
+            result = session.query(Suggestion).where(Suggestion.type == NHIE, Suggestion.is_verified)
             questions = result.all()
             if not questions:
                 await interaction.response.send_message("No questions to add", ephemeral=True)

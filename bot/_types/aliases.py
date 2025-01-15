@@ -19,7 +19,16 @@ type MaybeGroupedAppCommand = AppCommand | AppCommandGroup | None
 
 type MemberRole = Role | Member
 
-type InteractionChannel = VoiceChannel | StageChannel | TextChannel | ForumChannel | CategoryChannel | Thread | DMChannel | GroupChannel
+type InteractionChannel = (
+    VoiceChannel |
+    StageChannel |
+    TextChannel |
+    ForumChannel |
+    CategoryChannel |
+    Thread |
+    DMChannel |
+    GroupChannel
+)
 type GTPChannel = GuildChannel | Thread | PrivateChannel
 
 

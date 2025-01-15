@@ -1,5 +1,8 @@
-# TODO: Allow the bot to create a discord Guild, to add up to 50 custom emojis to the guild, and to use those emojis in messages etc.
-# TODO: Read and add emoji's to a specific directory to read from.
+# TODO @HEROgold: Allow the bot to create a discord Guild, to add up to 50 custom emojis to the guild
+# and to use those emojis in messages etc.
+# 000
+# TODO @HEROgold: Read and add emoji's to a specific directory to read from.
+# 000
 
 
 from discord import Attachment, Guild, Interaction, Member, Permissions, User
@@ -14,7 +17,7 @@ EMOTE_MANAGER = "Emote Manager"
 
 class EmoteManager(Cog):
     async def show_emotes(self, interaction: Interaction) -> None:
-        """Shows all emoji's in one message."""
+        """Show all emoji's in one message."""
         msg = ""
         for guild in self.bot.guilds:
             if guild.owner.id == self.bot.user.id:
