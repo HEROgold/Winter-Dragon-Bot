@@ -14,7 +14,7 @@ psutil==6.0.0
 pydantic_settings==2.5.2
 pytest==8.3.3
 Requests==2.32.3
-SQLAlchemy==2.0.35
+SQLAlchemy==2.0.37
 discord-ext-prometheus==0.2.0
 aiofiles==24.1.0
 uvicorn==0.32.0
