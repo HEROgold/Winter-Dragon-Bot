@@ -6,7 +6,7 @@ unsafe-fixes = true
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
-ignore = ["INP001", "D10", "G004", "S311", "FIX001", "FIX002", "TD001"]
+ignore = ["INP001", "D10", "G004", "S311", "FIX001", "FIX002", "TD001", "D213", "D211"]
 
 [lint.isort]
 lines-after-imports = 2
