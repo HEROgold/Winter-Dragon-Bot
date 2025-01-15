@@ -1,4 +1,4 @@
-aiohttp==3.10.9
+aiohttp==3.10.11
 beautifulsoup4==4.12.3
 discord.py==2.4.0
 Flag==0.1.1
