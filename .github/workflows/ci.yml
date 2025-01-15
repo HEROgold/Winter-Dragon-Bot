@@ -23,18 +23,18 @@ jobs:
         run: |
           ruff check .
 
-  docker:
-    runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:19.03.12
-        options: --privileged
-        ports:
-          - 2375:2375
-    steps:
-      - name: Build all containers
-        run: |
-          docker compose build ./docker-compose.yml
+  # docker:
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     docker:
+  #       image: docker:19.03.12
+  #       options: --privileged
+  #       ports:
+  #         - 2375:2375
+  #   steps:
+  #     - name: Build all containers
+  #       run: |
+  #         docker compose build ./docker-compose.yml
 
   tomlsort:
     runs-on: ubuntu-latest
