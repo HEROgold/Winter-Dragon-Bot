@@ -42,7 +42,7 @@ class Reminder(Cog):
 
 
     @app_commands.command(name="remind", description = "Set a reminder for yourself!")
-    async def slash_reminder(  # noqa: PLR0913
+    async def slash_reminder(
         self,
         interaction: discord.Interaction,
         reminder: str,

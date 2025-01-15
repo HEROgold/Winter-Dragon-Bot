@@ -21,9 +21,9 @@ class DisabledCommands(Base):
         command_id = kw.get("command_id")
         if not command_id:
             raise ValueError("command_id is required!")  # noqa: EM101, TRY003
-        user_id = kw.get("_user_id", None)
-        channel_id = kw.get("_channel_id", None)
-        guild_id = kw.get("_guild_id", None)
+        user_id = kw.get("_user_id")
+        channel_id = kw.get("_channel_id")
+        guild_id = kw.get("_guild_id")
 
         if not any([user_id, channel_id, guild_id]):
             raise ValueError("At least one of _user_id, _channel_id, or _guild_id is required!")  # noqa: EM101, TRY003

@@ -31,7 +31,7 @@ class ConfigParserSingleton(configparser.ConfigParser):
                     return False
         return True
 
-    def get_invalid(self) -> Generator[str, Any, None]:
+    def get_invalid(self) -> Generator[str, Any]:
         for section in self.sections():
             for setting in self.options(section):
                 if self[section][setting] == "!!":

@@ -64,7 +64,7 @@ class Lobby:
     )
 
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         message: discord.Message,
         max_players: int = 0,

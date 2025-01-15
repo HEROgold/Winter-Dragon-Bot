@@ -4,7 +4,7 @@ from .player import Player
 
 
 __all__ = [
-    "UserMoney",
-    "UserGenerator",
     "Player",
+    "UserGenerator",
+    "UserMoney",
 ]

@@ -39,7 +39,7 @@ class WinterDragon(AutoShardedBot):
     _guild_app_commands: dict[int, AppCommandStore]
     default_intents: Intents
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         command_prefix: PrefixType[WinterDragon],
         *,
