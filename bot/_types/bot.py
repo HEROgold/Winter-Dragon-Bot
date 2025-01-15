@@ -159,7 +159,7 @@ class WinterDragon(AutoShardedBot):
             idx = len(os.getcwd())  # noqa: PTH109
             if os.name == "nt":
                 idx += 1 # +1 to avoid a leading slash after replacing.
-            return extension[idx:].replace(os.sep, ".")
+            return extension[idx:].replace(os.sep, ".").replace(".py", "")
 
     async def load_extensions(self) -> None:
         if not (os.listdir(EXTENSIONS)):
