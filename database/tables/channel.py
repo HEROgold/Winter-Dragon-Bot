@@ -3,7 +3,7 @@ from typing import Self
 from sqlalchemy import BigInteger, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from bot.enums.channels import ChannelTypes
+from database.channels import ChannelTypes
 from database.tables.base import Base
 from database.tables.definitions import GUILDS_ID
 
@@ -13,7 +13,7 @@ class Channel(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
     name: Mapped[str] = mapped_column(String(50))
-    type: Mapped[ChannelTypes] = mapped_column(Enum, default=ChannelTypes.UNKNOWN)
+    type: Mapped[ChannelTypes] = mapped_column(Enum(ChannelTypes), default=ChannelTypes.UNKNOWN)
     guild_id: Mapped[int | None] = mapped_column(ForeignKey(GUILDS_ID), nullable=True)
 
 

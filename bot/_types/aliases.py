@@ -19,6 +19,7 @@ type MaybeGroupedAppCommand = AppCommand | AppCommandGroup | None
 
 type MemberRole = Role | Member
 
+type VocalGuildChannel = VoiceChannel | StageChannel
 type InteractionChannel = (
     VoiceChannel |
     StageChannel |

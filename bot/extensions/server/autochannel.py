@@ -8,8 +8,8 @@ from discord import (
     VoiceChannel,
     app_commands,
 )
-from discord.guild import VocalGuildChannel
 
+from bot._types.aliases import VocalGuildChannel
 from bot._types.cogs import Cog, GroupCog
 from bot.constants import AUTOCHANNEL_CREATE_REASON
 from database.tables import AutoChannel as AC  # noqa: N817

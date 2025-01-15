@@ -1,6 +1,6 @@
 from sqlalchemy.orm import DeclarativeBase
 
-from bot._types.mixins import LoggerMixin
+from database.logger import LoggerMixin
 
 
 class Base(DeclarativeBase, LoggerMixin):
