@@ -23,12 +23,6 @@ if TYPE_CHECKING:
 
 
 class AutomaticChannels(GroupCog):
-    # FIXME: weird behavior sometimes on join/leave
-    # TODO: add automatic naming, when a name is not specified in settings > get current activity name
-    # see https://discordpy.readthedocs.io/en/stable/api.html?highlight=voice_state_update#discord.on_voice_state_update
-    # TODO: add kick/ban commands per user to (temp)ban specific users from a user's voice channel
-    # TODO: add a silent kick command, which adds a blacklist for the user's voice channel on the given user, but doesn't kick them
-
     @Cog.listener()
     async def on_voice_state_update(
         self,
@@ -48,7 +42,6 @@ class AutomaticChannels(GroupCog):
                     # ignore when already moved from "Join Me"
                     return
                 elif len(before.channel.members) == 0:  # noqa: SIM102
-                    # TODO: what if before.channel.members is cached, and does not reflect the count for after leaving?
                     if db_channel := session.query(AC).where(AC.channel_id == before.channel.id).first():
                         if dc_channel := member.guild.get_channel(db_channel.channel_id):
                             await dc_channel.delete(reason="removing empty voice")
@@ -103,8 +96,8 @@ class AutomaticChannels(GroupCog):
             )
 
             await member.move_to(voice_channel)
-            # await voice_channel.set_permissions(self.bot.user, connect=True, read_messages=True)
-            # await voice_channel.set_permissions(member, connect=True, read_messages=True)
+            await voice_channel.set_permissions(self.bot.user, connect=True, read_messages=True) # type: ignore  # noqa: PGH003
+            await voice_channel.set_permissions(member, connect=True, read_messages=True)
             await voice_channel.edit(name=name, user_limit=limit)
             session.add(AC(
                 id=member.id,
@@ -183,13 +176,9 @@ class AutomaticChannels(GroupCog):
 
         await interaction.response.send_message(f"Successfully set {channel.mention} as this guild's creation channel")
 
-
-    # FIXME: both limits seem to lock db!?
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="guild_limit", description="Set a limit for AutoChannels")
     async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
-        # await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
-        # return
         with self.session as session:
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
@@ -205,8 +194,6 @@ class AutomaticChannels(GroupCog):
 
     @app_commands.command(name="limit", description="Set a limit for your channel")
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
-        # await interaction.response.send_message("Disabled due to a bug", ephemeral=True)
-        # return
         with self.session as session:
             if autochannel_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 autochannel_settings.channel_limit = limit
@@ -228,7 +215,10 @@ class AutomaticChannels(GroupCog):
                     ephemeral=True,
                 )
             else:
-                await interaction.response.send_message(f"{interaction.user.mention} You don't own a channel, settings are saved.", ephemeral=True)
+                await interaction.response.send_message(
+                    f"{interaction.user.mention} You don't own a channel, settings are saved.",
+                    ephemeral=True,
+                )
             session.commit()
 
 
@@ -245,7 +235,10 @@ class AutomaticChannels(GroupCog):
                 if channel is not None:
                     await channel.edit(name=name)
 
-            await interaction.response.send_message(f"{interaction.user.mention} You have changed your channel name to `{name}`!", ephemeral=True)
+            await interaction.response.send_message(
+                f"{interaction.user.mention} You have changed your channel name to `{name}`!",
+                ephemeral=True,
+            )
 
             if voice_settings := session.query(ACS).where(ACS.id == interaction.user.id).first():
                 voice_settings.channel_name = name

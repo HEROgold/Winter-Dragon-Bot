@@ -32,4 +32,5 @@ class Channel(Base):
                 session.add(channel)
             channel.logger.debug("Updated channel", extra=channel.__dict__)
             # TODO @HEROgold: Verify the logger works as intended.
+            # 000
             session.commit()

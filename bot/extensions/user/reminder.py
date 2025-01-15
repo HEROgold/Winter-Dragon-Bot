@@ -22,7 +22,6 @@ class Reminder(Cog):
 
     @loop(seconds=60)
     async def send_reminder(self) -> None:
-        # self.logger.debug("checking reminders")
         is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp  # noqa: DTZ005
         with self.session as session:
             results = session.query(ReminderDb).where(is_past_timestamp)
@@ -43,7 +42,7 @@ class Reminder(Cog):
 
 
     @app_commands.command(name="remind", description = "Set a reminder for yourself!")
-    async def slash_reminder(
+    async def slash_reminder(  # noqa: PLR0913
         self,
         interaction: discord.Interaction,
         reminder: str,
@@ -60,7 +59,6 @@ class Reminder(Cog):
         time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
         with self.session as session:
             session.add(ReminderDb(
-                # id = None,
                 content = reminder,
                 user_id = member.id,
                 timestamp = time,

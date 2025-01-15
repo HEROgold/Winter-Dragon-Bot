@@ -1,5 +1,6 @@
 import datetime
 import os
+from pathlib import Path
 
 import discord
 from discord import NotFound, app_commands
@@ -16,7 +17,7 @@ class AutoCogReloader(Cog):
     data: CogData
 
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         super().__init__(*args, **kwargs)
         self.data = {
             "timestamp": datetime.datetime.now(tz=datetime.UTC).timestamp(),
@@ -36,14 +37,14 @@ class AutoCogReloader(Cog):
             for file in files:
                 if not file.endswith(".py"):
                     continue
-                if file == os.path.basename(__file__):
-                    # self.logger.debug(f"Skipping {file} (myself/itself)")
+                if file == Path(__file__).name:
+                    self.logger.debug(f"Skipping {file} (myself/itself)")
                     continue
-                # self.logger.debug(f"Getting data from {file}")
-                file_path = os.path.join(root, file)
-                cog_path = os.path.join(root, file[:-3]).replace("/", ".").replace("\\", ".")
-                with open(file_path) as f:
-                    edit_timestamp = os.path.getmtime(file_path)
+                self.logger.debug(f"Getting data from {file}")
+                file_path = Path(root) / file
+                cog_path = (Path(root) / file[:-3]).as_posix().replace("/", ".").replace("\\", ".")
+                with file_path.open() as f:
+                    edit_timestamp = file_path.stat().st_mtime
                     self.data["files"][file] = {
                         "filepath": f.name,
                         "cog_path": cog_path,

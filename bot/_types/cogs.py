@@ -33,7 +33,7 @@ class Cog(commands.Cog, LoggerMixin):
     logger: logging.Logger
 
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         self.ErrorHandler = ErrorHandler
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.session = Session(engine)

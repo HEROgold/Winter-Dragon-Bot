@@ -277,7 +277,10 @@ class LogChannels(GroupCog):
                 name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
             embed = discord.Embed(
                 title="Channel Changed",
-                description=f"{entry.user.mention} changed {differences} of channel {name_change or after.mention} with reason: {entry.reason or None}",
+                description=(
+                    f"{entry.user.mention} changed {differences} of channel "
+                    f"{name_change or after.mention} with reason: {entry.reason or None}"
+                ),
                 color=CHANGED_COLOR,
             )
         if not embed:
@@ -293,7 +296,10 @@ class LogChannels(GroupCog):
 
         embed = discord.Embed(
             title="Channel Deleted",
-            description=f"{entry.user.mention} deleted {channel_type}  `{channel.id}` with reason: {entry.reason or None}", # `{channel.name}`, channel has not attrib, name
+            description=(
+                f"{entry.user.mention} deleted {channel_type}  `{channel.id}` "
+                f"with reason: {entry.reason or None}"
+            ),  # `{channel.name}`, channel has not attrib, name
             color=DELETED_COLOR,
         )
         await self.send_channel_logs(entry.guild, embed, LogCategories.CHANNEL_DELETE)
@@ -342,7 +348,10 @@ class LogChannels(GroupCog):
         role = entry.target
         embed = discord.Embed(
             title="Role Created",
-            description=f"{entry.user.mention} created {role.mention or entry.target.mention} with permissions {role.permissions} with reason: {entry.reason or None}",
+            description=(
+                f"{entry.user.mention} created {role.mention or entry.target.mention} "
+                f"with permissions {role.permissions} with reason: {entry.reason or None}"
+            ),
             color= CREATED_COLOR,
             )
         await self.send_channel_logs(entry.guild, embed, LogCategories.ROLE_CREATE)
@@ -538,7 +547,10 @@ class LogChannels(GroupCog):
         self.logger.debug(f"On overwrite create: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Overwrite Create",
-            description=f"{entry.user.mention} added permissions to {entry.target.type} {entry.extra} for {entry.target} with reason {entry.reason or None}",
+            description=(
+                f"{entry.user.mention} added permissions to {entry.target.type} "
+                f"{entry.extra} for {entry.target} with reason {entry.reason or None}"
+            ),
             color=CREATED_COLOR,
         )
         await self.send_channel_logs(entry.guild, embed, LogCategories.OVERWRITE_CREATE)
@@ -549,7 +561,10 @@ class LogChannels(GroupCog):
         self.logger.debug(f"On overwrite update: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Overwrite Update",
-            description=f"{entry.user.mention} changed permissions of {entry.target.type} {entry.target} for {entry.extra} with reason {entry.reason or None}",
+            description=(
+                f"{entry.user.mention} changed permissions of {entry.target.type} "
+                f"{entry.target} for {entry.extra} with reason {entry.reason or None}"
+            ),
             color=CHANGED_COLOR,
         )
         await self.send_channel_logs(entry.guild, embed, LogCategories.OVERWRITE_UPDATE)
@@ -560,7 +575,10 @@ class LogChannels(GroupCog):
         self.logger.debug(f"On overwrite delete: {entry.guild=}, {entry=}")
         embed = discord.Embed(
             title="Overwrite Delete",
-            description=f"{entry.user.mention} removed permissions from {entry.target.type} {entry.target} for {entry.extra} with reason {entry.reason or None}",
+            description=(
+                f"{entry.user.mention} removed permissions from {entry.target.type} "
+                f"{entry.target} for {entry.extra} with reason {entry.reason or None}"
+            ),
             color=DELETED_COLOR,
         )
         await self.send_channel_logs(entry.guild, embed, LogCategories.OVERWRITE_DELETE)
@@ -738,7 +756,7 @@ class LogChannels(GroupCog):
         await self.send_channel_logs(entry.guild, embed, LogCategories.MESSAGE_UNPIN)
 
 # -----------------------------------------
-# TODO: Add Unique msg for each function
+# TODO: Add Unique msg for each function  # noqa: TD002, TD003
 # -----------------------------------------
 
 
@@ -1084,7 +1102,10 @@ class LogChannels(GroupCog):
                 ))
             session.commit()
 
-        await interaction.followup.send(f"Set up Log category and channels under {', '.join(i.mention for i in category_channels)}")
+        category_mention = ", ".join(i.mention for i in category_channels)
+        await interaction.followup.send(
+            f"Set up Log category and channels under {category_mention}",
+            )
         self.logger.info(f"Setup Log for {interaction.guild}")
 
 
@@ -1092,7 +1113,9 @@ class LogChannels(GroupCog):
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
-    @app_commands.command(name="remove", description="Disables automatic moderation for this guild, and removes the log channels.")
+    @app_commands.command(
+        name="remove",
+        description="Disables automatic moderation for this guild, and removes the log channels.")
     async def slash_log_remove(self, interaction:discord.Interaction) -> None:
         with self.session as session:
             result = session.query(Channel).where(

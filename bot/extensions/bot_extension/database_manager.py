@@ -21,6 +21,7 @@ class DatabaseManager(Cog):
     @Cog.listener()
     async def on_guild_channel_update(self, entry: discord.AuditLogEntry) -> None:
         # TODO @HEROgold: Verify this works as intended.
+        # 000
         channel = entry.target
         if isinstance(channel, discord.abc.GuildChannel):
             self._update_channel(channel)
@@ -219,8 +220,8 @@ class DatabaseManager(Cog):
         command = interaction.command
 
         self._add_db_user(user)
-        # db_cmd = self._fetch_db_command(command)
-        # self._link_db_user_command(user, db_cmd)
+        db_cmd = self._fetch_db_command(command) # type: ignore  # noqa: PGH003
+        self._link_db_user_command(user, db_cmd)
 
         channel = interaction.channel
         extras = interaction.extras
@@ -245,7 +246,7 @@ class DatabaseManager(Cog):
         return db_command
 
 
-    def _link_db_user_command(self, user: discord.Member, command: Command) -> None:
+    def _link_db_user_command(self, user: discord.Member | discord.User, command: Command) -> None:
         """Link a database user to a command when used."""
         with self.session as session:
             session.add(

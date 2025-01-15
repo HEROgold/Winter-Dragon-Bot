@@ -139,7 +139,9 @@ class Stats(GroupCog):
             bot_channel, \
             user_channel, \
             online_channel = await self.get_guild_stats_channels(guild)
-            self.logger.debug(f"Channels list: {peak_channel}, {user_channel}, {bot_channel}, {online_channel}, {guild_channel}")
+            self.logger.debug(
+                f"Channels list: {peak_channel}, {user_channel}, {bot_channel}, {online_channel}, {guild_channel}",
+            )
 
             peak_count = get_peak_count(peak_channel)
             reason_update = "Updating Stats channels"
@@ -262,7 +264,10 @@ class Stats(GroupCog):
                 Channel.type == STATS,
             ).all():
                 rem_mention = self.get_command_mention(self.slash_stats_category_remove)
-                await interaction.response.send_message(f"Stats channels already set up use {rem_mention} to remove them", ephemeral=True)
+                await interaction.response.send_message(
+                    f"Stats channels already set up use {rem_mention} to remove them",
+                    ephemeral=True,
+                )
                 return
 
             c_mention = self.get_command_mention(self.slash_stats_category_add)
@@ -272,7 +277,9 @@ class Stats(GroupCog):
             await interaction.followup.send("Stats channels are set up")
 
 
-    @app_commands.command(name="remove", description="This command removes the stat channels. Including the Category and all channels in there.")
+    @app_commands.command(
+        name="remove",
+        description="This command removes the stat channels. Including the Category and all channels in there.")
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     async def slash_stats_category_remove(self, interaction:discord.Interaction) -> None:
@@ -283,13 +290,19 @@ class Stats(GroupCog):
             ).all()
             if not channels:
                 add_mention = self.get_command_mention(self.slash_stats_category_add)
-                await interaction.response.send_message(f"No stats channels found to remove, use {add_mention} to add them", ephemeral=True)
+                await interaction.response.send_message(
+                    f"No stats channels found to remove, use {add_mention} to add them",
+                    ephemeral=True,
+                )
                 return
 
         c_mention = self.get_command_mention(self.slash_stats_category_remove)
 
         await interaction.response.defer(ephemeral=True)
-        await self.remove_stats_channels(guild=interaction.guild, reason=f"Requested by {interaction.user.display_name} using {c_mention}")
+        await self.remove_stats_channels(
+            guild=interaction.guild,
+            reason=f"Requested by {interaction.user.display_name} using {c_mention}",
+        )
         await interaction.followup.send("Removed stats channels")
 
 
