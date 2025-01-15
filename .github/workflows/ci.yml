@@ -51,7 +51,10 @@ jobs:
           pip install toml-sort
       - name: Sort TOML files
         run: |
-          toml-sort .
+          toml-sort ruff.toml
+          toml-sort pyproject.toml
+          # toml-sort bot/pyproject.toml
+          # toml-sort website/backend/src/pyproject.toml
           - name: Check for changes
           run: |
             git diff --exit-code
