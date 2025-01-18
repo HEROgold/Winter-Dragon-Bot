@@ -27,6 +27,7 @@ services:
       - ./bot:/app
     ports:
       - 5000:5000
+      - 8000:80
     restart: unless-stopped # unless-stopped, change to always for auto reboot
     depends_on:
       postgres:
