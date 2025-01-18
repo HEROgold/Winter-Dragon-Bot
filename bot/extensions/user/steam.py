@@ -34,7 +34,7 @@ from bot.constants import (
     STEAM_SEND_PERIOD,
     WEBSITE_URL,
 )
-from database import Session, engine
+from database import Session
 from database.tables import SteamSale, SteamUser, User
 
 
@@ -387,7 +387,7 @@ class Steam(GroupCog):
             Sale: TypedDict containing the same items as Db object
 
         """
-        with Session(engine, expire_on_commit=False):
+        with self.session:
             return {
                 "title": sale.title,
                 "url": sale.url,
