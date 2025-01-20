@@ -1,10 +1,10 @@
 [project]
-name = "database"
-version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.12"
 dependencies = [
     "psycopg2-binary>=2.9.10",
     "sqlalchemy>=2.0.37",
 ]
+description = "Add your description here"
+name = "database"
+readme = "README.md"
+requires-python = ">=3.12"
+version = "0.1.0"

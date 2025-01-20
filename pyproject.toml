@@ -22,10 +22,10 @@ members = [
 ]
 
 [tool.uv.sources]
-database = { workspace = true }
-backend = { workspace = true }
-bot = { workspace = true }
-tests = { workspace = true }
+backend = {workspace = true}
+bot = {workspace = true}
+database = {workspace = true}
+tests = {workspace = true}
 
 [tool.setuptools]
 py-modules = [
