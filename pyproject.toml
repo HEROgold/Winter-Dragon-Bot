@@ -14,13 +14,14 @@ members = [
     "bot",
     "database",
     "tests",
-    "website/backend/src",
+    "backend",
 ]
 
 [tool.setuptools]
 py-modules = [
     "bot",
-    "website.backend",
+    "database",
+    "backend",
 ]
 
 [tool.tomlsort]
