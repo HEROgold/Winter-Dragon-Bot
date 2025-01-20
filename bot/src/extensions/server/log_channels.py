@@ -253,7 +253,7 @@ class LogChannels(GroupCog):
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.channel_update
         before = entry.before
         after = entry.after
-        channel = after or before
+        channel = entry.target
         embed = None
 
         properties_before = iter(entry.before)
@@ -284,7 +284,7 @@ class LogChannels(GroupCog):
             if hasattr(before, prop) and getattr(before, prop) != getattr(after, prop)
         ]:
             if "name" in differences or before.name != after.name:
-                name_change = f"`{before.name}` to `{after.name}` for {after.mention}"
+                name_change = f"`{before.name}` to `{after.name}` for {channel.mention}"
             embed = discord.Embed(
                 title="Channel Changed",
                 description=(
