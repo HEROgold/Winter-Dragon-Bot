@@ -1,6 +1,6 @@
 import logging
 
-from bot.config import config
+from bot.src.config import config
 from tools.log_manager import LogsManager
 
 

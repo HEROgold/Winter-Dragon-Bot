@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from bot.config import config
+from bot.src.config import config
 
 
 KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")

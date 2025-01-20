@@ -1,8 +1,7 @@
 FROM python:3.12-slim
 
-COPY website/backend/src /src
+COPY website/backend /backend
 
-RUN pip3.12 install -r /src/requirements.txt
+RUN pip3.12 install backend/
 
-CMD ["python3", "src/main.py"]
-# CMD ["uvicorn", "src/main:app", "--host", "0.0.0.0"]
+CMD ["python3", "src"]

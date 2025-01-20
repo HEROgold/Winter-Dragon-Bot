@@ -3,9 +3,9 @@ from discord.ext import commands
 from hypothesis import given
 from hypothesis.strategies import text
 
-from bot.core import WinterDragon
-from bot.config import config
-from bot.constants import INTENTS
+from bot.src.config import config
+from bot.src.constants import INTENTS
+from bot.src.core import WinterDragon
 
 
 @given(text())
