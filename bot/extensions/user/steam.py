@@ -15,7 +15,7 @@ from discord import app_commands
 from bot import WinterDragon
 from bot._types.cogs import GroupCog
 from bot._types.dicts import Sale
-from bot._types.tasks import loop
+from bot.core.tasks import loop
 from bot.config import config
 from bot.constants import (
     BUNDLE_DISCOUNT,

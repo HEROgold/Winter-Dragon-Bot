@@ -12,7 +12,7 @@ from psutil._common import snetio
 
 from bot import WinterDragon
 from bot._types.cogs import GroupCog
-from bot._types.tasks import loop
+from bot.core.tasks import loop
 from bot.config import config
 from bot.constants import IMG_DIR, METRICS_FILE, STATUS_MSGS
 from tools.strings import codeblock

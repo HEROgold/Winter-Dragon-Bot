@@ -6,7 +6,7 @@ from discord import InteractionType, app_commands
 from bot import WinterDragon
 from bot._types.aliases import GChannel
 from bot._types.cogs import Cog
-from bot._types.tasks import loop
+from bot.core.tasks import loop
 from bot.config import config
 from bot.enums.channels import ChannelTypes
 from database.tables import AssociationUserCommand as AUC  # noqa: N817

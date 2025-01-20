@@ -6,7 +6,7 @@ from discord.ui import Button
 
 from bot import WinterDragon
 from bot._types.cogs import GroupCog
-from bot._types.mixins import LoggerMixin
+from bot.base.mixins import LoggerMixin
 from database.tables import ResultDuels
 
 

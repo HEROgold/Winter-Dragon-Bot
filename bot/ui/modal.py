@@ -1,7 +1,7 @@
 
 import discord
 
-from bot._types.mixins import LoggerMixin
+from bot.base.mixins import LoggerMixin
 
 
 class Modal(discord.ui.Modal, LoggerMixin): ...

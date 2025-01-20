@@ -7,8 +7,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot import WinterDragon
-from bot._types.mixins import LoggerMixin
-from bot._types.tasks import loop
+from bot.base.mixins import LoggerMixin
+from bot.core.tasks import loop
 from bot.config import config
 from bot.errors.aliases import AllErrors
 

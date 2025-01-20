@@ -8,8 +8,8 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 
 from bot import WinterDragon
-from bot._types.error_handler import ErrorHandler
-from bot._types.mixins import LoggerMixin
+from bot.core.error_handler import ErrorHandler
+from bot.base.mixins import LoggerMixin
 from database import Session, engine
 from database.tables import Channel, DisabledCommands, GuildCommands
 from database.tables import Command as DbCommand

@@ -9,7 +9,7 @@ from bot import WinterDragon
 from bot._types.aliases import GTPChannel
 from bot._types.cogs import GroupCog
 from bot._types.dicts import TeamDict
-from bot._types.tasks import loop
+from bot.core.tasks import loop
 from bot.enums.channels import ChannelTypes
 from database.tables import Channel
 from tools import rainbow

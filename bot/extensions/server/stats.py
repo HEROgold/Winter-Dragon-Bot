@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from bot import WinterDragon
 from bot._types.cogs import Cog, GroupCog
-from bot._types.tasks import loop
+from bot.core.tasks import loop
 from bot.config import config
 from bot.enums.channels import ChannelTypes
 from bot.errors import NoneTypeError

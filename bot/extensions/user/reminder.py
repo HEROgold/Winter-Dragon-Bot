@@ -5,7 +5,7 @@ from discord import app_commands
 
 from bot import WinterDragon
 from bot._types.cogs import Cog
-from bot._types.tasks import loop
+from bot.core.tasks import loop
 from database.tables import Reminder as ReminderDb
 
 
