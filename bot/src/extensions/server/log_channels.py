@@ -2,11 +2,6 @@ import itertools
 from typing import cast
 
 import discord
-from discord import CategoryChannel, StageInstance, app_commands
-from discord.ext import commands
-
-from core.bot import WinterDragon
-from core.cogs import Cog, GroupCog
 from config import config
 from constants import (
     CHANGED_COLOR,
@@ -16,8 +11,13 @@ from constants import (
     MAX_CATEGORY_SIZE,
     MEMBER_UPDATE_PROPERTIES,
 )
+from core.bot import WinterDragon
+from core.cogs import Cog, GroupCog
+from discord import CategoryChannel, StageInstance, app_commands
+from discord.ext import commands
 from enums.channels import ChannelTypes, LogCategories
 from errors import NoneTypeError
+
 from database.tables import AuditLog, Channel
 
 
@@ -255,6 +255,12 @@ class LogChannels(GroupCog):
         after = entry.after
         channel = after or before
         embed = None
+
+        properties_before = iter(entry.before)
+        properties_after = iter(entry.after)
+
+        for b, a in zip(properties_before, properties_after, strict=True):
+            self.logger.debug(f"{b=}, {a=}")
 
         properties = {
             "name",
