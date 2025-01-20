@@ -5,6 +5,7 @@ dependencies = [
     "database",
     # "audioop-lts>=0.2.1",
     "discord-py>=2.4.0",
+    "tests",
     "uvicorn>=0.34.0",
 ]
 name = "Winter-Dragon-Bot"
@@ -21,9 +22,10 @@ members = [
 ]
 
 [tool.uv.sources]
-bot = { workspace = true }
-backend = { workspace = true }
 database = { workspace = true }
+backend = { workspace = true }
+bot = { workspace = true }
+tests = { workspace = true }
 
 [tool.setuptools]
 py-modules = [

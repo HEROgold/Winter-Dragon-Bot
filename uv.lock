@@ -948,6 +948,7 @@ dependencies = [
     { name = "bot" },
     { name = "database" },
     { name = "discord-py" },
+    { name = "tests" },
     { name = "uvicorn" },
 ]
 
@@ -957,6 +958,7 @@ requires-dist = [
     { name = "bot", virtual = "bot" },
     { name = "database", virtual = "database" },
     { name = "discord-py", specifier = ">=2.4.0" },
+    { name = "tests", virtual = "tests" },
     { name = "uvicorn", specifier = ">=0.34.0" },
 ]
 
