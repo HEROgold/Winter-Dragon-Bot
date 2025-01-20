@@ -5,5 +5,6 @@ COPY /database /database
 COPY /tools /tools
 
 RUN pip3.12 install bot/
+RUN pip3.12 install -e database
 
 CMD ["python3", "/bot/src/"]
