@@ -1,12 +1,11 @@
 import datetime
 import random
 import time
-from pathlib import Path
 
 import discord
 import psutil
 from config import config
-from constants import IMG_DIR, METRICS_FILE, STATUS_MSGS
+from constants import METRICS_FILE, STATUS_MSGS
 from core.bot import WinterDragon
 from core.cogs import GroupCog
 from core.tasks import loop
@@ -448,8 +447,6 @@ class BotC(GroupCog):
         plt.ylabel("Value")
         plt.title("System Metrics Over Time")
         plt.legend()
-        Path(IMG_DIR).mkdir(exist_ok=True)
-        METRICS_FILE.mkdir(exist_ok=True)
         plt.savefig(METRICS_FILE)
         plt.clf()
 

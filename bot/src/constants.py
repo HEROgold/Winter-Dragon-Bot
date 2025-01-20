@@ -112,3 +112,10 @@ INTENTS.auto_moderation_configuration = True
 INTENTS.auto_moderation_execution = True
 INTENTS.voice_states = True
 GUILD_OWNERSHIP_LIMIT = 10
+
+
+## ensure directories exist
+
+DYNAMIC_DIR.mkdir(exist_ok=True)
+IMG_DIR.mkdir(exist_ok=True)
+EMOJI_DIR.mkdir(exist_ok=True)
