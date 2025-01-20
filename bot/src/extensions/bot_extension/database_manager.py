@@ -1,14 +1,14 @@
 import datetime
 
 import discord
-from discord import InteractionType, app_commands
-
 from _types.aliases import GChannel
 from config import config
 from core.bot import WinterDragon
 from core.cogs import Cog
 from core.tasks import loop
+from discord import InteractionType, app_commands
 from enums.channels import ChannelTypes
+
 from database.tables import AssociationUserCommand as AUC  # noqa: N817
 from database.tables import Channel, Command, Guild, Message, Presence, Role, User
 
@@ -19,19 +19,12 @@ class DatabaseManager(Cog):
         self.update.start()
 
     @Cog.listener()
-    async def on_guild_channel_update(self, entry: discord.AuditLogEntry) -> None:
-        # TODO @HEROgold: Verify this works as intended.
-        # 000
-        channel = entry.target
-        if isinstance(channel, discord.abc.GuildChannel):
-            self._update_channel(channel)
-
-    def _update_channel(self, channel: discord.abc.GuildChannel) -> None:
+    async def on_guild_channel_update( self, _: discord.abc.GuildChannel, after: discord.abc.GuildChannel) -> None:
         Channel.update(Channel(
-            id = channel.id,
-            name = channel.name,
+            id = after.id,
+            name = after.name,
             type = ChannelTypes.UNKNOWN,
-            guild_id = channel.guild.id,
+            guild_id = after.guild.id,
         ))
 
     @Cog.listener()
