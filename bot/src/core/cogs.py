@@ -10,12 +10,12 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
+from tools.utils import get_arg
 
 from database import Session, engine
 from database.tables import Channel, DisabledCommands, GuildCommands
 from database.tables import Command as DbCommand
 from database.tables import User as DbUser
-from tools.utils import get_arg
 
 
 class Cog(commands.Cog, LoggerMixin):
