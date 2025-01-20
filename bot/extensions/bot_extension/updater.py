@@ -14,7 +14,7 @@ class Updater(commands.Cog):
     @discord.app_commands.command(name="update", description="Update the bot from the configured .git URL")
     async def update(self, interaction: discord.Interaction) -> None:
         """Update the bot from the configured .git URL."""
-        await interaction.response.send_message("Updating the bot...")
+        await interaction.response.send_message("Updating the bot...", ephemeral=True)
 
         # Pull the latest changes from the git repository
         process = await asyncio.create_subprocess_exec(
