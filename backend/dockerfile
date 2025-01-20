@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 
-COPY website/backend /backend
+COPY backend /backend
 
 RUN pip3.12 install backend/
 

@@ -15,6 +15,6 @@
 
 FROM node:23-alpine
 
-COPY website/frontend/src /src
+COPY frontend/src /src
 
 CMD ["npm", "start"]

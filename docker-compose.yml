@@ -36,10 +36,10 @@ services:
     container_name: website-backend
     build:
       context: .
-      dockerfile: website/backend/dockerfile
+      dockerfile: backend/dockerfile
     volumes:
       - ./database:/src/database
-      - ./website/backend:/app
+      - ./backend:/app
     expose:
       - 8000
     restart: unless-stopped
@@ -50,9 +50,9 @@ services:
     container_name: website-frontend
     build:
       context: .
-      dockerfile: website/frontend/dockerfile
+      dockerfile: frontend/dockerfile
     volumes:
-      - ./website/frontend:/app
+      - ./frontend:/app
     ports:
       - 80:3000
     restart: unless-stopped
