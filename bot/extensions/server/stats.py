@@ -4,10 +4,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from bot import WinterDragon
-from bot._types.cogs import Cog, GroupCog
-from bot.core.tasks import loop
+from bot.core import WinterDragon
 from bot.config import config
+from bot.core.cogs import Cog, GroupCog
+from bot.core.tasks import loop
 from bot.enums.channels import ChannelTypes
 from bot.errors import NoneTypeError
 from database.tables import Channel

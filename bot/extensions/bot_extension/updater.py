@@ -3,7 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
-from bot._types.bot import WinterDragon
+from bot.core.bot import WinterDragon
 
 
 class Updater(commands.Cog):

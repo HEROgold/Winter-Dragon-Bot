@@ -7,8 +7,8 @@
 
 from discord import Attachment, Guild, Interaction, Member, Permissions, User
 
-from bot import WinterDragon
-from bot._types.cogs import Cog
+from bot.core import WinterDragon
+from bot.core.cogs import Cog
 from bot.constants import EMOJI_DIR, GUILD_OWNERSHIP_LIMIT
 
 

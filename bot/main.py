@@ -7,7 +7,7 @@ import sys
 import discord
 from discord.ext import commands
 
-from bot import WinterDragon
+from bot.core import WinterDragon
 from bot.config import config
 from bot.constants import INTENTS
 from bot.errors.config import ConfigError

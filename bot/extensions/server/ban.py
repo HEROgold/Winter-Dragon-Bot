@@ -2,8 +2,8 @@
 import discord
 from discord import app_commands
 
-from bot import WinterDragon
-from bot._types.cogs import Cog, GroupCog
+from bot.core import WinterDragon
+from bot.core.cogs import Cog, GroupCog
 from database.tables import SyncBan, SyncBanGuild
 
 

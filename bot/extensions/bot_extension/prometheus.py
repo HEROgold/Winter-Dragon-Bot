@@ -2,7 +2,7 @@
 # 137
 from discord.ext.prometheus import PrometheusCog
 
-from bot import WinterDragon
+from bot.core import WinterDragon
 from bot.config import config
 
 

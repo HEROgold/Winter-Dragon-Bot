@@ -4,8 +4,8 @@ import discord
 from discord import Guild, app_commands
 from discord.ext import commands
 
-from bot import WinterDragon
-from bot._types.cogs import Cog
+from bot.core import WinterDragon
+from bot.core.cogs import Cog
 
 
 if TYPE_CHECKING:

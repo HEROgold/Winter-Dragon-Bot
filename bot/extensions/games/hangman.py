@@ -6,9 +6,9 @@ import aiohttp
 import discord
 from discord import app_commands
 
-from bot import WinterDragon
+from bot.core import WinterDragon
 from bot._types.button import Button
-from bot._types.cogs import GroupCog
+from bot.core.cogs import GroupCog
 from bot._types.modal import Modal
 from bot.config import config
 from database import Session, engine

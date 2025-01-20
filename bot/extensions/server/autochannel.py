@@ -10,7 +10,7 @@ from discord import (
 )
 
 from bot._types.aliases import VocalGuildChannel
-from bot._types.cogs import Cog, GroupCog
+from bot.core.cogs import Cog, GroupCog
 from bot.constants import AUTOCHANNEL_CREATE_REASON
 from database.tables import AutoChannel as AC  # noqa: N817
 from database.tables import AutoChannelSettings as ACS  # noqa: N817
@@ -18,7 +18,7 @@ from database.tables import AutoChannelSettings as ACS  # noqa: N817
 
 if TYPE_CHECKING:
 
-    from bot import WinterDragon
+    from bot.core import WinterDragon
     from database import Session
 
 

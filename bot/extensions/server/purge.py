@@ -3,8 +3,8 @@ import contextlib
 import discord
 from discord import app_commands
 
-from bot import WinterDragon
-from bot._types.cogs import Cog
+from bot.core import WinterDragon
+from bot.core.cogs import Cog
 from bot.config import config
 
 

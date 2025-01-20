@@ -2,8 +2,8 @@
 import discord
 from discord import app_commands
 
-from bot import WinterDragon
-from bot._types.cogs import GroupCog
+from bot.core import WinterDragon
+from bot.core.cogs import GroupCog
 from database.tables import CarFuel as DbFuel
 
 

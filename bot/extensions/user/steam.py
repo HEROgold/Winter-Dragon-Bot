@@ -12,10 +12,8 @@ import requests
 from bs4 import BeautifulSoup
 from discord import app_commands
 
-from bot import WinterDragon
-from bot._types.cogs import GroupCog
+from bot.core import WinterDragon
 from bot._types.dicts import Sale
-from bot.core.tasks import loop
 from bot.config import config
 from bot.constants import (
     BUNDLE_DISCOUNT,
@@ -34,6 +32,8 @@ from bot.constants import (
     STEAM_SEND_PERIOD,
     WEBSITE_URL,
 )
+from bot.core.cogs import GroupCog
+from bot.core.tasks import loop
 from database import Session
 from database.tables import SteamSale, SteamUser, User
 

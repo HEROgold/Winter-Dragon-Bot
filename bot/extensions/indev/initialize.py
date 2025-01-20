@@ -13,8 +13,8 @@ from discord import (
     app_commands,
 )
 
-from bot import WinterDragon
-from bot._types.cogs import GroupCog
+from bot.core import WinterDragon
+from bot.core.cogs import GroupCog
 from bot.extensions.server.log_channels import LogChannels
 from bot.extensions.server.stats import Stats
 from bot.extensions.server.welcome import Welcome

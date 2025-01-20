@@ -4,8 +4,8 @@ import discord
 from discord import Member, User, app_commands
 from discord.ui import Button
 
-from bot import WinterDragon
-from bot._types.cogs import GroupCog
+from bot.core import WinterDragon
+from bot.core.cogs import GroupCog
 from bot.base.mixins import LoggerMixin
 from database.tables import ResultDuels
 

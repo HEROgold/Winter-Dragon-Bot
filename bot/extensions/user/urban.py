@@ -5,11 +5,11 @@ import discord
 import requests
 from discord import app_commands
 
-from bot import WinterDragon
-from bot._types.cogs import GroupCog
+from bot.core import WinterDragon
 from bot.base.mixins import LoggerMixin
 from bot.config import config
 from bot.constants import UD_DEFINE_URL, UD_RANDOM_URL
+from bot.core.cogs import GroupCog
 
 
 class Urban(GroupCog, LoggerMixin):

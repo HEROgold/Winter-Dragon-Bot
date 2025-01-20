@@ -5,8 +5,8 @@ import discord
 from discord import CategoryChannel, StageInstance, app_commands
 from discord.ext import commands
 
-from bot import WinterDragon
-from bot._types.cogs import Cog, GroupCog
+from bot.core import WinterDragon
+from bot.core.cogs import Cog, GroupCog
 from bot.config import config
 from bot.constants import (
     CHANGED_COLOR,
