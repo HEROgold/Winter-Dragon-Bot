@@ -593,8 +593,8 @@ class Steam(GroupCog):
                 self.session.add(sale)
             self.session.commit()
 
-        self.logger.debug(f"Found {category} {sale=}")
-        return self.SteamSale_to_Sale(sale)
+            self.logger.debug(f"Found {category} {sale=}")
+            return self.SteamSale_to_Sale(sale)
 
 
     def Sale_to_SteamSale(self, sale: Sale) -> SteamSale:  # noqa: N802
