@@ -3,15 +3,7 @@ from typing import Self
 
 from discord import AuditLogAction
 
-
-class ChannelTypes(Enum):
-    UNKNOWN = auto()
-    STATS = auto()
-    LOGS = auto()
-    TICKETS = auto()
-    TEAM_VOICE = auto()
-    TEAM_CATEGORY = auto()
-    TEAM_LOBBY = auto()
+from database.channels import ChannelTypes  # type: ignore[NotAccessed] # noqa: F401
 
 
 class LogCategories(Enum):
