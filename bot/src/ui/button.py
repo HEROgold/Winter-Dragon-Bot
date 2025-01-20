@@ -1,6 +1,5 @@
 
 import discord.ui.button
-
 from base.mixins import LoggerMixin
 
 

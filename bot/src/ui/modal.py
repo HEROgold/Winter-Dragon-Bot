@@ -1,6 +1,5 @@
 
 import discord
-
 from base.mixins import LoggerMixin
 
 

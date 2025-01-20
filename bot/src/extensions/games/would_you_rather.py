@@ -1,14 +1,14 @@
 import random
 
 import discord
-from discord import app_commands
-from discord.ext import commands
-
+from config import config
 from core.bot import WinterDragon
 from core.cogs import GroupCog
-from config import config
-from database.tables import Game, Suggestion, WyrQuestion
+from discord import app_commands
+from discord.ext import commands
 from tools import rainbow
+
+from database.tables import Game, Suggestion, WyrQuestion
 
 
 WYR = "WOULD_YOU_RATHER"

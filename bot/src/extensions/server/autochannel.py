@@ -4,14 +4,14 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 import discord
+from _types.aliases import VocalGuildChannel
+from constants import AUTOCHANNEL_CREATE_REASON
+from core.cogs import Cog, GroupCog
 from discord import (
     VoiceChannel,
     app_commands,
 )
 
-from _types.aliases import VocalGuildChannel
-from core.cogs import Cog, GroupCog
-from constants import AUTOCHANNEL_CREATE_REASON
 from database.tables import AutoChannel as AC  # noqa: N817
 from database.tables import AutoChannelSettings as ACS  # noqa: N817
 
@@ -19,6 +19,7 @@ from database.tables import AutoChannelSettings as ACS  # noqa: N817
 if TYPE_CHECKING:
 
     from core.bot import WinterDragon
+
     from database import Session
 
 

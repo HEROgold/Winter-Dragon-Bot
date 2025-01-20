@@ -1,9 +1,9 @@
 import discord
-from discord import app_commands
-
+from constants import AUTO_ASSIGN_REASON
 from core.bot import WinterDragon
 from core.cogs import Cog, GroupCog
-from constants import AUTO_ASSIGN_REASON
+from discord import app_commands
+
 from database.tables import AutoAssignRole
 from database.tables import Role as DbRole
 

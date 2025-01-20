@@ -3,16 +3,16 @@ import random
 from typing import cast
 
 import discord
-from discord import CategoryChannel, Guild, Member, VoiceChannel, app_commands
-
-from core.bot import WinterDragon
 from _types.aliases import GTPChannel
 from _types.dicts import TeamDict
+from core.bot import WinterDragon
 from core.cogs import GroupCog
 from core.tasks import loop
+from discord import CategoryChannel, Guild, Member, VoiceChannel, app_commands
 from enums.channels import ChannelTypes
-from database.tables import Channel
 from tools import rainbow
+
+from database.tables import Channel
 
 
 TEAM_VOICE = ChannelTypes.TEAM_VOICE.name

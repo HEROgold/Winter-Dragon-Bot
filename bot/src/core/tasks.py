@@ -5,11 +5,10 @@ import asyncio
 import datetime
 from collections.abc import Callable, Sequence
 
-from discord.ext import tasks
-from discord.utils import MISSING
-
 from _types.aliases import CoroutineFunction
 from base.mixins import LoggerMixin
+from discord.ext import tasks
+from discord.utils import MISSING
 
 
 class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):

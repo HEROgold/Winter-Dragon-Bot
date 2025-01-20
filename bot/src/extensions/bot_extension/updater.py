@@ -1,8 +1,8 @@
 import asyncio
 
 import discord
-from discord.ext import commands
 from core.bot import WinterDragon
+from discord.ext import commands
 
 
 class Updater(commands.Cog):
