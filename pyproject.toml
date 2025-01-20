@@ -11,17 +11,17 @@ version = "0.1.0"
 
 [tool.uv.workspace]
 members = [
+    "backend",
     "bot",
     "database",
     "tests",
-    "backend",
 ]
 
 [tool.setuptools]
 py-modules = [
+    "backend",
     "bot",
     "database",
-    "backend",
 ]
 
 [tool.tomlsort]
