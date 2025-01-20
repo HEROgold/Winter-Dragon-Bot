@@ -16,8 +16,8 @@
 FROM node:23-alpine
 
 
-COPY frontend/src /src
-COPY frontend/package.json /package.json
+ADD frontend/src /src
+ADD frontend/package.json /package.json
 
 RUN npm install
 
