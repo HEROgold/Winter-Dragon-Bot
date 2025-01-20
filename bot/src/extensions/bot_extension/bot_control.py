@@ -449,6 +449,7 @@ class BotC(GroupCog):
         plt.title("System Metrics Over Time")
         plt.legend()
         Path(IMG_DIR).mkdir(exist_ok=True)
+        METRICS_FILE.mkdir(exist_ok=True)
         plt.savefig(METRICS_FILE)
         plt.clf()
 
