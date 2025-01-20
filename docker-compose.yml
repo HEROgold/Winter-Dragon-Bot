@@ -38,7 +38,7 @@ services:
       context: .
       dockerfile: backend/dockerfile
     volumes:
-      - ./database:/src/database
+      - ./database:/database
       - ./backend:/app
     expose:
       - 8000
