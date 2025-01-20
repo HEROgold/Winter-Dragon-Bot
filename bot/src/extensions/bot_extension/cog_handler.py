@@ -41,7 +41,7 @@ class AutoCogReloader(Cog):
                     continue
                 self.logger.debug(f"Getting data from {file}")
                 file_path = Path(root) / file
-                cog_path = (Path(root) / file[:-3]).as_posix().replace("/", ".").replace("\\", ".")
+                cog_path = (Path(root) / file[:-3]).as_posix().replace("/", ".")
                 with file_path.open() as f:
                     edit_timestamp = file_path.stat().st_mtime
                     self.data["files"][file] = {

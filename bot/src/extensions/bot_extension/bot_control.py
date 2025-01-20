@@ -14,7 +14,6 @@ from discord import app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
-
 from tools.strings import codeblock
 
 
