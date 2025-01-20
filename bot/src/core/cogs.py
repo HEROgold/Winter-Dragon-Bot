@@ -45,8 +45,10 @@ class Cog(commands.Cog, LoggerMixin):
 
         for listener in self.get_listeners():
             self.logger.debug(f"{listener=}")
+        self.setup_logger()
 
-    def initialize_logger(self) -> None:
+
+    def setup_logger(self) -> None:
         self.logger.setLevel(logging.DEBUG)
         self.logger.addHandler(logging.FileHandler(f"{self.logger.name}.log"))
 
