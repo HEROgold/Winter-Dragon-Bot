@@ -13,7 +13,7 @@ class _ArgsNameSpace:
 
 class ArgConfig:
     def __init__(self, args: ArgumentParser, config: ConfigParser, file: Path | None) -> None:
-        """Read a config file and add the config settings to the argument parser. in the form of --<key> <value> arguments.
+        """Read a config file and add the config settings to the argument parser. in the form of `--<key> <value>` arguments.
 
         Attempts a help message for each config setting, showing the section, key and value.
         """
