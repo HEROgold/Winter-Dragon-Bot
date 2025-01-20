@@ -33,7 +33,6 @@ class Cog(commands.Cog, LoggerMixin):
 
 
     def __init__(self, *args, **kwargs) -> None:
-        self.ErrorHandler = ErrorHandler
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.session = Session(engine)
 
@@ -46,6 +45,10 @@ class Cog(commands.Cog, LoggerMixin):
 
         for listener in self.get_listeners():
             self.logger.debug(f"{listener=}")
+
+    def initialize_logger(self) -> None:
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.addHandler(logging.FileHandler(f"{self.logger.name}.log"))
 
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
@@ -89,7 +92,7 @@ class Cog(commands.Cog, LoggerMixin):
 
 
     async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
-        self.ErrorHandler(self.bot, ctx, error)
+        ErrorHandler(self.bot, ctx, error)
 
 
     async def cog_load(self) -> None:
@@ -124,7 +127,7 @@ class Cog(commands.Cog, LoggerMixin):
         interaction: discord.Interaction,
         error: app_commands.AppCommandError,
     ) -> None:
-        self.ErrorHandler(self.bot, interaction, error)
+        ErrorHandler(self.bot, interaction, error)
 
 
     def get_command_mention(self, command: app_commands.Command) -> str | None:
