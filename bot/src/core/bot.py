@@ -12,6 +12,7 @@ from constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS
 from discord import Intents, app_commands
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
+from tools.log_manager import LogsManager
 
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class WinterDragon(AutoShardedBot):
 
     launch_time: datetime.datetime
     logger: logging.Logger
+    log_manager: LogsManager
     has_app_command_mentions: bool = False
     log_saver: Task[Coroutine[Any, Any, None]] | None = None
     _global_app_commands: AppCommandStore
@@ -49,7 +51,9 @@ class WinterDragon(AutoShardedBot):
     ) -> None:
         self._global_app_commands = {}
         self._guild_app_commands = {}
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
+        self.log_manager = LogsManager()
+        self.initialize_loggers()
+
         self.launch_time = datetime.datetime.now(datetime.UTC)
 
         if help_command is None:
@@ -63,6 +67,19 @@ class WinterDragon(AutoShardedBot):
             intents=intents,
             **options,
         )
+
+    def initialize_loggers(self) -> None:
+        """Initialize loggers related to WinterDragon."""
+        self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
+
+        self.log_manager.add_logger("bot", self.logger)
+        self.log_manager.add_logger("discord", logging.getLogger("discord"))
+        self.log_manager.add_logger("sqlalchemy", logging.getLogger("sqlalchemy.engine"))
+
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        self.logger.addHandler(stream_handler)
+
 
     def get_bot_invite(self) -> str:
         return (
@@ -153,6 +170,7 @@ class WinterDragon(AutoShardedBot):
                         extension.as_posix()
                         .replace(str(f"{EXTENSIONS.parent.as_posix()}/"), "")
                         .replace("/", ".")
+                        .replace(".py", "")
                     )
                     extensions.append(extension_path)
         return extensions
