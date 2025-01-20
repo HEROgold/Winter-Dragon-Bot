@@ -1,6 +1,9 @@
 [project]
 dependencies = [
-    "audioop-lts>=0.2.1",
+    "backend",
+    "bot",
+    "database",
+    # "audioop-lts>=0.2.1",
     "discord-py>=2.4.0",
     "uvicorn>=0.34.0",
 ]
@@ -16,6 +19,11 @@ members = [
     "database",
     "tests",
 ]
+
+[tool.uv.sources]
+bot = { workspace = true }
+backend = { workspace = true }
+database = { workspace = true }
 
 [tool.setuptools]
 py-modules = [
