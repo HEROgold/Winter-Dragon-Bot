@@ -4,4 +4,4 @@ ADD backend /backend
 
 RUN pip3.12 install backend/
 
-CMD ["python3", "src"]
+CMD ["python3", "backend/src"]
