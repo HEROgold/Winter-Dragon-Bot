@@ -6,6 +6,7 @@ dependencies = [
     # "audioop-lts>=0.2.1",
     "discord-py>=2.4.0",
     "tests",
+    "toml-sort>=0.24.2",
     "uvicorn>=0.34.0",
 ]
 name = "Winter-Dragon-Bot"
