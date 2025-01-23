@@ -22,4 +22,6 @@ def oath_callback(request: Request) -> RedirectResponse:
     code = request.get("code", "")
     access = client.exchange_code(code)
     print(access.fetch_identify())
+    # TODO @HEROgold: give the user_id to the home page
+    # 000
     return RedirectResponse(url="/home")
