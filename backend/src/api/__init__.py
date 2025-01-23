@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from .admin import router as admin_router
-from .discord_auth import router as oauth_router
+from .oauth import router as oauth_router
 from .public import router as public_router
 from .user import router as user_router
 
