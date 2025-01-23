@@ -1,6 +1,7 @@
 [project]
 dependencies = [
-    "fastapi[standard]>=0.1.0",
+    "discord-oauth2-py>=1.2.1",
+    "fastapi[standard]==0.115.7",
     "uvicorn>=0.34.0",
 ]
 description = "Add your description here"
