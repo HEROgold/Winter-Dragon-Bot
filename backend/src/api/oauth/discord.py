@@ -18,5 +18,8 @@ def oath(_: Request) -> RedirectResponse:
 
 
 @router.get("/callback")
-def oath_callback(_: Request) -> RedirectResponse:
+def oath_callback(request: Request) -> RedirectResponse:
+    code = request.get("code", "")
+    access = client.exchange_code(code)
+    print(access.fetch_identify())
     return RedirectResponse(url="/home")
