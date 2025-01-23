@@ -42,6 +42,9 @@ services:
       - ./backend:/app
     expose:
       - 8000
+    # WARNING!: Ports should only be opened to the host for development
+    ports:
+      - 8000:8000
     restart: unless-stopped
     depends_on:
       postgres:
