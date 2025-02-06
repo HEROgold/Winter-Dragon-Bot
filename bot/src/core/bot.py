@@ -119,29 +119,28 @@ class WinterDragon(AutoShardedBot):
             return search_dict(guild_commands) or search_dict(self._global_app_commands)
         return search_dict(self._global_app_commands)
 
+    def unpack_app_commands(self, commands: list[app_commands.AppCommand]) -> AppCommandStore:
+        ret: AppCommandStore = {}
+
+        def unpack_options(
+            options: Sequence[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument],
+        ) -> None:
+            for option in options:
+                if isinstance(option, app_commands.AppCommandGroup):
+                    ret[option.qualified_name] = option
+                    unpack_options(option.options)
+
+        for command in commands:
+            ret[command.name] = command
+            unpack_options(command.options)
+
+        return ret
 
     async def update_app_commands_cache(
         self,
         commands: list[app_commands.AppCommand] | None = None,
         guild: Snowflake | int | None = None,
     ) -> None:
-        def unpack_app_commands(commands: list[app_commands.AppCommand]) -> AppCommandStore:
-            ret: AppCommandStore = {}
-
-            def unpack_options(
-                options: Sequence[app_commands.AppCommand | app_commands.AppCommandGroup | app_commands.Argument],
-            ) -> None:
-                for option in options:
-                    if isinstance(option, app_commands.AppCommandGroup):
-                        ret[option.qualified_name] = option
-                        unpack_options(option.options)
-
-            for command in commands:
-                ret[command.name] = command
-                unpack_options(command.options)
-
-            return ret
-
         # because we support both int and Snowflake
         # we need to convert it to a Snowflake like object if it's an int
         _guild: Snowflake | None = None
@@ -155,9 +154,9 @@ class WinterDragon(AutoShardedBot):
             commands = await tree.fetch_commands(guild=_guild)
 
         if _guild:
-            self._guild_app_commands[_guild.id] = unpack_app_commands(commands)
+            self._guild_app_commands[_guild.id] = self.unpack_app_commands(commands)
         else:
-            self._global_app_commands = unpack_app_commands(commands)
+            self._global_app_commands = self.unpack_app_commands(commands)
 
 
     async def get_extensions(self) -> list[str]:
