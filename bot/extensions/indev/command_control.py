@@ -9,12 +9,12 @@ Get and store enabled commands per guild in database
 
 
 import discord
+from core.bot import WinterDragon
+from core.cogs import GroupCog  #, Cog
 from discord import app_commands
 from discord.app_commands import Command as DcCommand
 from sqlalchemy.orm import Session
 
-from core.bot import WinterDragon
-from core.cogs import GroupCog  #, Cog
 from database import engine
 from database.tables import Command as DbCommand
 from database.tables import CommandGroup, GuildCommands

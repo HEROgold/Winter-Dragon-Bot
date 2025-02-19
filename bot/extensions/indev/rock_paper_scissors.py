@@ -1,12 +1,12 @@
 from typing import ClassVar
 
 import discord
+from base.mixins import LoggerMixin
+from core.bot import WinterDragon
+from core.cogs import GroupCog
 from discord import Member, User, app_commands
 from discord.ui import Button
 
-from core.bot import WinterDragon
-from core.cogs import GroupCog
-from base.mixins import LoggerMixin
 from database.tables import ResultDuels
 
 

@@ -162,7 +162,7 @@ class BotC(GroupCog):
 
         config["Activity"]["PERIODIC_CHANGE"] = "False"
         self.activity_switch.stop()
-        return None
+        return
 
 
     @slash_bot_activity.autocomplete("status")

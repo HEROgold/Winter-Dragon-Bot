@@ -1,3 +1,6 @@
+from config import config
+from core.bot import WinterDragon
+from core.cogs import Cog, GroupCog
 from discord import (
     AutoModAction,
     AutoModRule,
@@ -6,9 +9,6 @@ from discord import (
     app_commands,
 )
 
-from core.bot import WinterDragon
-from core.cogs import Cog, GroupCog
-from config import config
 from database.tables import Infractions as InfractionsDb
 
 
