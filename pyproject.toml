@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "backend",
     "bot",
     "database",
 ]
@@ -18,3 +19,4 @@ members = ["bot", "backend", "database", "tests"]
 [tool.uv.sources]
 bot = { workspace = true }
 database = { workspace = true }
+backend = { workspace = true }
