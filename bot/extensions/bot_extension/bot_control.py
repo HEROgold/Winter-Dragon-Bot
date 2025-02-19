@@ -133,19 +133,23 @@ class BotC(GroupCog):
         activities = ", ".join([i.name for i in ACTIVITY_TYPES])
 
         if status not in [i.name.lower() for i in STATUS_TYPES]:
-            return await interaction.response.send_message(f"Status not found, can only be\n{statuses}", ephemeral=True)
+            await interaction.response.send_message(f"Status not found, can only be\n{statuses}", ephemeral=True)
+            return
 
         if activity not in activities:
-            return await interaction.response.send_message(f"Activity not found, can only be\n{activities}", ephemeral=True)
+            await interaction.response.send_message(f"Activity not found, can only be\n{activities}", ephemeral=True)
+            return
 
         if status == "random" and activity == "random":
-            return await self._start_randomizer(interaction)
+            await self._start_randomizer(interaction)
+            return
 
         if status == "random" or activity == "random":
-            return await interaction.response.send_message(
+            await interaction.response.send_message(
                 "Both status and activity need to be random or not chosen.",
                 ephemeral=True,
             )
+            return
 
         status_attr = discord.Status[status] or discord.Status.online
         activity_type = discord.Status[activity] or discord.ActivityType.playing
