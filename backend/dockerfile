@@ -1,9 +1,0 @@
-FROM python:3.12-slim
-
-ADD backend /backend
-ADD database /database
-
-RUN pip3.12 install backend/
-RUN pip3.12 install -e database
-
-CMD ["python3", "backend/src"]

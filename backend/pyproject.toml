@@ -1,11 +1,7 @@
 [project]
-dependencies = [
-    "discord-oauth2-py>=1.2.1",
-    "fastapi[standard]==0.115.7",
-    "uvicorn>=0.34.0",
-]
-description = "Add your description here"
 name = "backend"
-readme = "README.md"
-requires-python = ">=3.12"
 version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
