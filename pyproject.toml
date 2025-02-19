@@ -6,5 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = []
 
+[tool.setuptools]
+packages = ["bot", "backend", "database", "tests"]
+
 [tool.uv.workspace]
 members = ["bot", "backend", "database", "tests"]
