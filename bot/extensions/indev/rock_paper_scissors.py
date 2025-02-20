@@ -110,10 +110,13 @@ class RPSView(discord.ui.View, LoggerMixin):
             session.add(ResultDuels(
                 # id=,
                 game = "rps",
-                player_1 = self.player_1,
-                player_2 = self.player_2,
-                winner = winner,
-                loser = loser,
+                player = self.player_1.id,
+                winner = winner == self.player_1,
+            ))
+            session.add(ResultDuels(
+                game = "rps",
+                player = self.player_2.id,
+                winner = winner == self.player_2,
             ))
             session.commit()
         self.stop()
