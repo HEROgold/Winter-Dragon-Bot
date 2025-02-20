@@ -1,9 +1,6 @@
 import enum
 
-from sqlalchemy import Enum
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import SQLModel
 
 
 class LobbyStatusEnum(enum.Enum):
@@ -13,7 +10,6 @@ class LobbyStatusEnum(enum.Enum):
     ENDED = "ended"
 
 
-class LobbyStatus(Base):
-    __tablename__ = "lobby_status"
+class LobbyStatus(SQLModel, table=True):
 
-    status: Mapped[str] = mapped_column(Enum(LobbyStatusEnum), primary_key=True)
+    status: LobbyStatusEnum

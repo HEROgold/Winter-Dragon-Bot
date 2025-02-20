@@ -1,5 +1,4 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlmodel import Session, create_engine
 
 from .constants import DATABASE_URL
 from .tables import (
@@ -35,8 +34,8 @@ from .tables import (
     SteamSale,
     SteamUser,
     Suggestion,
-    SyncBan,
     SyncBanGuild,
+    SyncBanUser,
     User,
     UserRoles,
     Welcome,
@@ -85,8 +84,8 @@ __all__ = [
     "SteamSale",
     "SteamUser",
     "Suggestion",
-    "SyncBan",
     "SyncBanGuild",
+    "SyncBanUser",
     "User",
     "UserRoles",
     "Welcome",

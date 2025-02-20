@@ -1,10 +1,6 @@
-from sqlalchemy import BigInteger
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel
 
 
-class Guild(Base):
-    __tablename__ = "guilds"
+class Guild(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
+    id: int = Field(primary_key=True, unique=True, default=None)

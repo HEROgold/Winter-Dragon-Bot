@@ -1,15 +1,11 @@
 from typing import Self
 
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel, select
 
 
-class Game(Base):
-    __tablename__ = "games"
+class Game(SQLModel, table=True):
 
-    name: Mapped[str] = mapped_column(String(64), primary_key=True, unique=True)
+    name: str = Field(primary_key=True, unique=True)
 
     @classmethod
     def fetch_game_by_name(cls, name: str) -> Self:
@@ -23,7 +19,7 @@ class Game(Base):
         from database import session
 
         with session:
-            if game := session.query(cls).where(cls.name == name).first():
+            if game := session.exec(select(cls).where(cls.name == name)).first():
                 return game
 
             inst = cls(name=name)

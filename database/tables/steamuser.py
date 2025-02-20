@@ -1,11 +1,6 @@
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
-from database.tables.definitions import USERS_ID
+from sqlmodel import Field, SQLModel
 
 
-class SteamUser(Base):
-    __tablename__ = "steam_users"
+class SteamUser(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True, unique=True)
+    id: int = Field()

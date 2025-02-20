@@ -6,8 +6,7 @@ from database.tables.base import Base
 from database.tables.definitions import LOBBIES_ID, USERS_ID
 
 
-class AssociationUserLobby(Base):
-    __tablename__ = "association_users_lobbies"
+class AssociationUserLobby(SQLModel, table=True):
 
-    lobby_id: Mapped[int] = mapped_column(ForeignKey(LOBBIES_ID, ondelete=CASCADE), primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
+    lobby_id = 
+    user_id: int = Field(foreign_key=USERS_ID)

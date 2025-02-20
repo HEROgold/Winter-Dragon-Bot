@@ -1,17 +1,14 @@
 from typing import Self
 
-from sqlalchemy import ForeignKey, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel, select
 
-from database.tables.base import Base
 from database.tables.definitions import USERS_ID
 
 
-class Infractions(Base):
-    __tablename__ = "infractions"
+class Infractions(SQLModel, table=True):
 
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
-    infraction_count: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: int = Field(foreign_key=USERS_ID)
+    infraction_count: int = Field(default=0)
 
     @classmethod
     def add_infraction_count(cls, user_id: int, amount: int) -> None:
@@ -19,7 +16,7 @@ class Infractions(Base):
         from database import session
 
         with session:
-            infraction = session.query(cls).where(cls.user_id == user_id).first()
+            infraction = session.exec(select(cls).where(cls.user_id == user_id)).first()
 
             if infraction is None:
                 infraction = cls(user_id=user_id, infraction_count=0)
@@ -34,10 +31,10 @@ class Infractions(Base):
         from database import session
 
         with session:
-            if user := session.query(cls).where(cls.id == id_).first():
+            if user := session.exec(select(cls).where(cls.user_id == id_)).first():
                 return user
 
-            inst = cls(id=id_)
+            inst = cls(user_id=id_)
             session.add(inst)
             session.commit()
             return inst

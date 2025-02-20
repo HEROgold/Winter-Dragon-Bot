@@ -1,13 +1,10 @@
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.tables.base import Base
 from database.tables.definitions import MESSAGES_ID
 
 
-class Hangman(Base):
-    __tablename__ = "hangmen"
+class Hangman(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID), primary_key=True, unique=True)
-    word: Mapped[str] = mapped_column(String(24))
-    letters: Mapped[str] = mapped_column(String(24), nullable=True)
+    id: int = Field(foreign_key=MESSAGES_ID, primary_key=True, unique=True)
+    word: str = Field()
+    letters: str = Field()

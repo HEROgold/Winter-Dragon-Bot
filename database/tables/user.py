@@ -1,15 +1,11 @@
 from typing import Self
 
-from sqlalchemy import BigInteger
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel, select
 
 
-class User(Base):
-    __tablename__ = "users"
+class User(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False, unique=True)
+    id: int = Field()
 
     @classmethod
     def fetch_user(cls, id_: int) -> Self:
@@ -17,7 +13,7 @@ class User(Base):
         from database import session
 
         with session:
-            if user := session.query(cls).where(cls.id == id_).first():
+            if user := session.exec(select(cls).where(cls.id == id_)).first():
                 return user
 
             inst = cls(id=id_)

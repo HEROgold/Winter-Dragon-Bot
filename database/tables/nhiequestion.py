@@ -1,11 +1,7 @@
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel
 
 
-class NhieQuestion(Base):
-    __tablename__ = "nhie_questions"
+class NhieQuestion(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    value: Mapped[str] = mapped_column(String())
+    id: int | None = Field(default=None, primary_key=True)
+    value: str = Field()

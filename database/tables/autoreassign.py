@@ -1,12 +1,9 @@
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
 from database.constants import CASCADE
-from database.tables.base import Base
-from database.tables.definitions import ROLES_ID
+from database.tables.definitions import GUILDS_ID
 
 
-class AutoReAssign(Base):
-    __tablename__ = "auto_reassign"
+class AutoReAssign(SQLModel, table=True):
 
-    guild_id: Mapped[int] = mapped_column(ForeignKey(ROLES_ID, ondelete=CASCADE), primary_key=True)
+    guild_id = Field(foreign_key=GUILDS_ID, ondelete=CASCADE, primary_key=True)

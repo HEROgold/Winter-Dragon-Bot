@@ -1,13 +1,10 @@
 # if TYPE_CHECKING:
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.tables.base import Base
 from database.tables.definitions import CHANNELS_ID
 
 
-class AutoChannel(Base):
-    __tablename__ = "autochannels"
+class AutoChannel(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
-    channel_id: Mapped[int] = mapped_column(ForeignKey(CHANNELS_ID))
+    id: int
+    channel_id: int = Field(foreign_key=CHANNELS_ID)

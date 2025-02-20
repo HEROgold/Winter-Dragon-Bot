@@ -1,12 +1,8 @@
-from sqlalchemy import Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import SQLModel
 
 
-class AutoChannelSettings(Base):
-    __tablename__ = "autochannel_settings"
+class AutoChannelSettings(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=False)
-    channel_name: Mapped[str] = mapped_column(Text)
-    channel_limit: Mapped[int] = mapped_column(Integer)
+    id: int
+    channel_name: str
+    channel_limit: int

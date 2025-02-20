@@ -6,10 +6,9 @@ from database.tables.base import Base
 from database.tables.definitions import USERS_ID
 
 
-class UserGenerator(Base):
-    __tablename__ = "incremental_generators"
+class UserGenerator(SQLModel, table=True):
 
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID), primary_key=True)
-    generator_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    count: Mapped[int] = mapped_column(Integer, default=0)
+    user_id: int = Field(foreign_key=USERS_ID)
+    generator_id = 
+    count = 
 

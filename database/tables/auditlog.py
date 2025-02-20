@@ -1,28 +1,25 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Self
 
-from sqlalchemy import DateTime, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel
 
 
 if TYPE_CHECKING:
     from discord import AuditLogEntry
 
 
-class AuditLog(Base):
-    __tablename__ = "audit_log"
+class AuditLog(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, unique=True, autoincrement=True)
-    action: Mapped[int] = mapped_column(Integer) # AuditLogAction
-    reason: Mapped[str] = mapped_column(String(200), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    target_id: Mapped[int] = mapped_column(Integer, nullable=True)
-    category: Mapped[int] = mapped_column(Integer, nullable=True) # AuditLogActionCategory
+    id: int | None = Field(default=None, primary_key=True)
+    action: int # AuditLogAction
+    reason: str = Field(nullable=True)
+    created_at: datetime = Field(nullable=True)
+    target_id: int = Field(nullable=True)
+    category: int = Field(nullable=True) # AuditLogActionCategory
 
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
+    # TODO: This METHOD needs some work to work with SQLModel
         from database import session
 
         with session:
@@ -31,7 +28,7 @@ class AuditLog(Base):
                 action=entry.action,
                 reason=entry.reason,
                 created_at=entry.created_at,
-                target=entry.target,
+                target_id=entry.target,
                 category=entry.category,
             )
             session.add(audit)

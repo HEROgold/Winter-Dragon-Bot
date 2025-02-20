@@ -1,13 +1,9 @@
 
-from sqlalchemy import Integer
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import SQLModel
 
 
-class GeneratorRates(Base):
-    __tablename__ = "incremental_rates"
+class GeneratorRates(SQLModel, table=True):
 
-    generator_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    currency: Mapped[int] = mapped_column(Integer, default=0)
-    per_second: Mapped[int] = mapped_column(Integer, default=0)
+    generator_id: int
+    currency: int
+    per_second: int

@@ -32,8 +32,8 @@ from .role import Role
 from .steamsale import SteamSale
 from .steamuser import SteamUser
 from .suggestion import Suggestion
-from .syncban import SyncBan
 from .syncbanguild import SyncBanGuild
+from .syncbanuser import SyncBanUser
 from .user import User
 from .userroles import UserRoles
 from .welcome import Welcome
@@ -73,8 +73,8 @@ __all__ = [
     "SteamSale",
     "SteamUser",
     "Suggestion",
-    "SyncBan",
     "SyncBanGuild",
+    "SyncBanUser",
     "User",
     "UserRoles",
     "Welcome",

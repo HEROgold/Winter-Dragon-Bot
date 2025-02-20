@@ -1,11 +1,7 @@
-from sqlalchemy import BigInteger, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel
 
 
-class Role(Base):
-    __tablename__ = "roles"
+class Role(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, unique=True)
-    name: Mapped[str] = mapped_column(String)
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field()

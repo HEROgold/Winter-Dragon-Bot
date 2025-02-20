@@ -1,13 +1,10 @@
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.tables.base import Base
 from database.tables.definitions import GAMES_NAME, USERS_ID
 
 
-class LookingForGroup(Base):
-    __tablename__ = "looking_for_groups"
+class LookingForGroup(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    game_name: Mapped[str] = mapped_column(ForeignKey(GAMES_NAME))
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key=USERS_ID)
+    game_name: str = Field(foreign_key=GAMES_NAME)

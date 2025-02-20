@@ -1,19 +1,15 @@
-import datetime
+from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
-
-from database.tables.base import Base
+from sqlmodel import Field, SQLModel
 
 
-class SteamSale(Base):
-    __tablename__ = "steam_sales"
+class SteamSale(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True)
-    title: Mapped[str] = mapped_column(String(50))
-    url: Mapped[str] = mapped_column(String(200))
-    sale_percent: Mapped[int] = mapped_column(Integer)
-    final_price: Mapped[int] = mapped_column(Float)  # (5, True, 2)
-    is_dlc: Mapped[bool] = mapped_column(Boolean)
-    is_bundle: Mapped[bool] = mapped_column(Boolean)
-    update_datetime: Mapped[datetime.datetime] = mapped_column(DateTime)
+    id: int | None = Field(default=None, primary_key=True)
+    title: str = Field()
+    url: str = Field()
+    sale_percent: int = Field()
+    final_price: int = Field()
+    is_dlc: bool = Field()
+    is_bundle: bool = Field()
+    update_datetime: datetime = Field()

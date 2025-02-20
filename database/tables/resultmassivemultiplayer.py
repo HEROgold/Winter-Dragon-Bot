@@ -1,14 +1,11 @@
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.tables.base import Base
 from database.tables.definitions import GAMES_NAME, USERS_ID
 
 
-class ResultMassiveMultiplayer(Base):
-    __tablename__ = "results_mp"
+class ResultMassiveMultiplayer(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    game: Mapped[str] = mapped_column(ForeignKey(GAMES_NAME))
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    placement: Mapped[int | None] = mapped_column(nullable=True)
+    id: int | None = Field(default=None, primary_key=True)
+    game: str = Field(foreign_key=GAMES_NAME)
+    player: int = Field(foreign_key=USERS_ID)
+    placement: int = Field()

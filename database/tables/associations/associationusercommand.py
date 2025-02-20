@@ -5,12 +5,11 @@ from database.tables.base import Base
 from database.tables.definitions import COMMANDS_ID, USERS_ID
 
 
-class AssociationUserCommand(Base):
-    __tablename__ = "association_user_command"
+class AssociationUserCommand(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(primary_key=True, unique=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey(USERS_ID))
-    command_id: Mapped[int] = mapped_column(ForeignKey(COMMANDS_ID))
+    id = 
+    user_id: int = Field(foreign_key=USERS_ID)
+    command_id = 
 
     @classmethod
     def cleanup(cls) -> None:
@@ -20,7 +19,7 @@ class AssociationUserCommand(Base):
         track_amount = 1000
         with session:
             (
-                session.query(cls.user_id)
+                session.exec(select(cls.user_id)
                 .group_by(cls.user_id)
                 .having(func.count(cls.user_id) > track_amount)
                 .delete()

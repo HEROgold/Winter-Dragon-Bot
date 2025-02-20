@@ -1,14 +1,10 @@
-from sqlalchemy import ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.constants import CASCADE
-from database.tables.base import Base
-from database.tables.definitions import GAMES_NAME, LOBBY_STATUS, MESSAGES_ID
+from database.tables.definitions import GAMES_NAME, LOBBY_STATUS
 
 
-class Lobby(Base):
-    __tablename__ = "lobbies"
+class Lobby(SQLModel, table=True):
 
-    id: Mapped[int] = mapped_column(ForeignKey(MESSAGES_ID, ondelete=CASCADE), primary_key=True, unique=True)
-    game: Mapped[str] = mapped_column(ForeignKey(GAMES_NAME))
-    status: Mapped[str] = mapped_column(ForeignKey(LOBBY_STATUS))
+    id: int | None = Field(default=None, primary_key=True)
+    game: str = Field(foreign_key=GAMES_NAME)
+    status: str = Field(foreign_key=LOBBY_STATUS)
