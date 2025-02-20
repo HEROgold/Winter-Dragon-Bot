@@ -4,7 +4,7 @@ from core.bot import WinterDragon
 from core.cogs import Cog, GroupCog
 from discord import app_commands
 
-from database.tables import SyncBan, SyncBanGuild
+from database.tables import SyncBanUser, SyncBanGuild
 
 
 class SyncedBans(GroupCog):
@@ -63,7 +63,7 @@ class SyncedBans(GroupCog):
     async def synced_ban_sync(self, member: discord.Member) -> None:
         with self.session as session:
             session.add(
-                SyncBan(
+                SyncBanUser(
                     user_id=member.id,
                 ),
             )
