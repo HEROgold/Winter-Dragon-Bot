@@ -12,7 +12,7 @@ class AuditLog(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     action: int # AuditLogAction
-    reason: str = Field(nullable=True)
+    reason: str | None = Field(default=None, nullable=True)
     created_at: datetime = Field(nullable=True)
     target_id: int = Field(nullable=True)
     category: int = Field(nullable=True) # AuditLogActionCategory
@@ -25,11 +25,11 @@ class AuditLog(SQLModel, table=True):
         with session:
             audit = cls(
                 id=entry.id,
-                action=entry.action,
+                action=entry.action.value,
                 reason=entry.reason,
                 created_at=entry.created_at,
-                target_id=entry.target,
-                category=entry.category,
+                target_id=int(entry.target.id),
+                category=entry.category.value,
             )
             session.add(audit)
             session.commit()
