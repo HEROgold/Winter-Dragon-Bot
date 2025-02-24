@@ -1,6 +1,6 @@
-from sqlmodel import Field, SQLModel
+from sqlmodel import SQLModel
 
 
 class SteamUser(SQLModel, table=True):
 
-    id: int = Field()
+    id: int

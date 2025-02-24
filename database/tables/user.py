@@ -1,11 +1,11 @@
 from typing import Self
 
-from sqlmodel import Field, SQLModel, select
+from sqlmodel import SQLModel, select
 
 
 class User(SQLModel, table=True):
 
-    id: int = Field()
+    id: int
 
     @classmethod
     def fetch_user(cls, id_: int) -> Self:

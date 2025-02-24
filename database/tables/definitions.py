@@ -4,6 +4,7 @@ from sqlmodel import Field
 
 
 USERS_ID = "users.id"
+GENERATORS_ID = "generators.id"
 CHANNELS_ID = "channels.id"
 GUILDS_ID = "guilds.id"
 COMMANDS_ID = "commands.id"

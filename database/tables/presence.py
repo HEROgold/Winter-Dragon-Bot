@@ -9,8 +9,8 @@ class Presence(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key=USERS_ID)
-    status: str = Field()
-    date_time: datetime = Field()
+    status: str
+    date_time: datetime
 
     @staticmethod
     def remove_old_presences(member_id: int, days: int = 265) -> None:

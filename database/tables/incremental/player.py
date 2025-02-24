@@ -1,13 +1,11 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.tables.base import Base
-from database.tables.definitions import USERS_ID
+from database.tables.user import User
 
 
 class Player(SQLModel, table=True):
 
-    id = 
-    last_collection = 
+    id = Field(foreign_key=User, primary_key=True)
+    last_collection: datetime = Field(default=datetime.now(tz=UTC))

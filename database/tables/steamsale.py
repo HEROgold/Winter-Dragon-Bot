@@ -6,10 +6,10 @@ from sqlmodel import Field, SQLModel
 class SteamSale(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
-    title: str = Field()
-    url: str = Field()
-    sale_percent: int = Field()
-    final_price: int = Field()
-    is_dlc: bool = Field()
-    is_bundle: bool = Field()
-    update_datetime: datetime = Field()
+    title: str
+    url: str
+    sale_percent: int
+    final_price: int
+    is_dlc: bool
+    is_bundle: bool
+    update_datetime: datetime

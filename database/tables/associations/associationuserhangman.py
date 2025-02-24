@@ -1,13 +1,11 @@
-from sqlalchemy import ForeignKey, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
-from database.tables.base import Base
-from database.tables.definitions import HANGMEN_ID, USERS_ID
+from database.tables.definitions import AUTO_INCREMENT_ID, HANGMEN_ID, USERS_ID
 
 
 class AssociationUserHangman(SQLModel, table=True):
 
-    id = 
-    hangman_id = 
+    id = AUTO_INCREMENT_ID
+    hangman_id = Field(foreign_key=HANGMEN_ID)
     user_id: int = Field(foreign_key=USERS_ID)
-    score = 
+    score: int
