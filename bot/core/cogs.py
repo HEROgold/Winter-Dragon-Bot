@@ -2,6 +2,7 @@ import logging
 from itertools import chain
 
 import discord
+from sqlmodel import select
 from base.mixins import LoggerMixin
 from core.bot import WinterDragon
 from core.error_handler import ErrorHandler
@@ -14,7 +15,6 @@ from tools.utils import get_arg
 
 from database import Session, engine
 from database.tables import Channel, DisabledCommands, GuildCommands
-from database.tables import Command as DbCommand
 from database.tables import User as DbUser
 
 
@@ -31,7 +31,6 @@ class Cog(commands.Cog, LoggerMixin):
     bot: WinterDragon
     logger: logging.Logger
 
-
     def __init__(self, *args, **kwargs) -> None:
         self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
         self.session = Session(engine)
@@ -47,11 +46,9 @@ class Cog(commands.Cog, LoggerMixin):
             self.logger.debug(f"{listener=}")
         self.setup_logger()
 
-
     def setup_logger(self) -> None:
         self.logger.setLevel(logging.DEBUG)
         self.logger.addHandler(logging.FileHandler(f"{self.logger.name}.log"))
-
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         # Get db info and check if command is disabled on guild, channel, or just for this user.
@@ -64,43 +61,43 @@ class Cog(commands.Cog, LoggerMixin):
         with self.session as session:
             targets: list[GuildCommands | Channel | DbUser | None] = []
             if guild:
-                targets.append(session.query(GuildCommands).where(GuildCommands.guild_id == guild.id).first())
+                targets.append(
+                    session.exec(
+                        select(GuildCommands).where(GuildCommands.guild_id == guild.id),
+                    ).first(),
+                )
             if channel:
-                targets.append(session.query(Channel).where(Channel.id == channel.id).first())
+                targets.append(
+                    session.exec(
+                        select(Channel).where(Channel.id == channel.id),
+                    ).first(),
+                )
             if user:
-                targets.append(session.query(DbUser).where(DbUser.id == user.id).first())
+                targets.append(
+                    session.exec(
+                        select(DbUser).where(DbUser.id == user.id),
+                    ).first(),
+                )
 
-            disabled_ids = [
-                c.command_id
-                for c in session.query(DisabledCommands).join(
-                DbCommand, DisabledCommands.command_id == DbCommand.id,
-                ).where(
-                    DbCommand.qual_name == interaction.command.qualified_name,
-                ).all()
+            disabled_commands = [
+                c
+                for c in session.exec(select(DisabledCommands)).all()
             ]
 
         return next(
-            (
-                True
-                for target in targets
-                if target is not None and target.id in disabled_ids
-            ),
+            (True for target in targets if target is not None and target.id in disabled_commands),
             False,
         )
-
 
     def is_command_enabled(self, interaction: discord.Interaction) -> bool:
         return not self.is_command_disabled(interaction)
 
-
     async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
         ErrorHandler(self.bot, ctx, error)
-
 
     async def cog_load(self) -> None:
         self.add_mentions.start()
         self.add_disabled_check.start()
-
 
     @loop(count=1)
     async def add_mentions(self) -> None:
@@ -109,20 +106,18 @@ class Cog(commands.Cog, LoggerMixin):
             await self.bot.update_app_commands_cache()
             self.bot.has_app_command_mentions = True
 
-
     @loop(count=1)
     async def add_disabled_check(self) -> None:
         for command in chain(self.walk_commands(), self.walk_app_commands()):
             if isinstance(command, app_commands.Group):
                 continue
             self.logger.debug(f"Adding is_command_disabled check to {command.qualified_name}")
-            command.add_check(self.is_command_enabled) # type: ignore[reportArgumentType]
+            command.add_check(self.is_command_enabled)  # type: ignore[reportArgumentType]
 
     @add_mentions.before_loop
     @add_disabled_check.before_loop
     async def before_loops(self) -> None:
         await self.bot.wait_until_ready()
-
 
     async def cog_app_command_error(
         self,
@@ -131,10 +126,9 @@ class Cog(commands.Cog, LoggerMixin):
     ) -> None:
         ErrorHandler(self.bot, interaction, error)
 
-
     def get_command_mention(self, command: app_commands.Command) -> str | None:
         """Return a command string from a given functiontype. (Decorated with app_commands.command)."""
-        if not isinstance(command, app_commands.Command): # type:ignore[reportUnnecessaryIsInstance]
+        if not isinstance(command, app_commands.Command):  # type:ignore[reportUnnecessaryIsInstance]
             msg = f"Expected app_commands.commands.Command but got {type(command)} instead"
             raise TypeError(msg)
 

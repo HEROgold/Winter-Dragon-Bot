@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, ClassVar
 import discord
 from discord import Interaction, User
 from discord.ui import Button
+from sqlmodel import select
 
 from database import Session, engine
 from database.tables import AssociationUserLobby as AUL  # noqa: N817
@@ -116,7 +117,7 @@ class Lobby:
 
     def join_callback(self, interaction: Interaction) -> None:
         self._session.add(AUL(
-            lobby_id=self.message,
+            lobby_id=self.message.id,
             user_id=interaction.user.id,
         ))
         self._session.commit()
@@ -125,11 +126,11 @@ class Lobby:
 
     def leave_callback(self, interaction: Interaction) -> None:
         self._session.delete(
-                self._session.query(AUL)
-                .where(
-                    AUL.lobby_id == self.message,
-                    AUL.user_id == interaction.user.id,
-                ))
+            self._session.exec(
+                select(AUL)
+                .where(AUL.lobby_id == self.message, AUL.user_id == interaction.user.id),
+            ).first(),
+        )
         self._session.commit()
         self.update_message()
 
