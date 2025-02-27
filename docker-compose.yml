@@ -1,0 +1,61 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:14-alpine
+    # expose:
+      # - "5432"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3
+      - POSTGRES_DB=winter_dragon
+      - PGUSER=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "postgres", "-d", "winter_dragon"]
+      interval: 5s
+      timeout: 30s
+      retries: 6
+      start_period: 10s
+  bot:
+    container_name: discord-bot
+    build:
+      context: .
+      dockerfile: bot/dockerfile
+    volumes:
+      - ./database:/database
+      - ./bot:/app
+    ports:
+      - 5000:5000
+      - 8000:80
+    restart: unless-stopped # unless-stopped, change to always for auto reboot
+    depends_on:
+      postgres:
+        condition: service_healthy
+  backend:
+    container_name: website-backend
+    build:
+      context: .
+      dockerfile: backend/dockerfile
+    volumes:
+      - ./database:/database
+      - ./backend:/app
+    expose:
+      - 8000
+    # WARNING!: Ports should only be opened to the host for development
+    ports:
+      - 8000:8000
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+  frontend:
+    container_name: website-frontend
+    build:
+      context: .
+      dockerfile: frontend/dockerfile
+    volumes:
+      - ./frontend:/app
+    ports:
+      - 80:3000
+    restart: unless-stopped
