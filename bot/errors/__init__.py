@@ -1,8 +1,10 @@
 """Errors for WinterDragon."""
 
-class NoneTypeError(Exception):  # noqa: D101
-    pass
+class NoneTypeError(Exception):
+    """Raised when a NoneType is found."""
 
 
-class FirstTimeLaunchError(Exception):  # noqa: D101
-    pass
+
+class FirstTimeLaunchError(Exception):
+    """Raised when it's detected that WinterDragon is launched for the first time."""
+
