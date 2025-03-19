@@ -6,6 +6,9 @@ unsafe-fixes = true
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
+ignore = [
+    "G004" # Allow f-string in log messages
+]
 
 [lint.isort]
 lines-after-imports = 2
