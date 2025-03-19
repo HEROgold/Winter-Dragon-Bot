@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "discord-ext-prometheus>=0.2.0",
-    "discord-py>=2.5.0",
+    "discord-py==2.5.2",
     "matplotlib>=3.10.1",
     "psutil>=7.0.0",
 ]
