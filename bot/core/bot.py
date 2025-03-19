@@ -184,7 +184,7 @@ class WinterDragon(AutoShardedBot):
         extensions = []
         for root, _, files in os.walk(EXTENSIONS):
             for file in files:
-                if file.endswith(".py"):
+                if file.endswith(".py") and not file.startswith("_"):
                     extension = Path(root) / file
                     extension_path = (
                         extension.as_posix()
