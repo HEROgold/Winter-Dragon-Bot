@@ -1,12 +1,11 @@
 
+from pydantic import Field
 from sqlmodel import Relationship, SQLModel
-
-from database.tables.definitions import AUTO_INCREMENT_ID
 
 
 class Command(SQLModel, table=True):
 
-    id = AUTO_INCREMENT_ID # Test if this works as a primary key. Test if it works on different tables.
+    id: int | None = Field(default=None, primary_key=True)
     qual_name: str
     call_count: int
 

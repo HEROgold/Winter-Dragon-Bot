@@ -3,12 +3,12 @@ from typing import Self
 from sqlmodel import Field, SQLModel, select
 
 from database.channels import ChannelTypes
-from database.tables.definitions import AUTO_INCREMENT_ID, GUILDS_ID
+from database.tables.definitions import GUILDS_ID
 
 
 class Channel(SQLModel, table=True):
 
-    id = AUTO_INCREMENT_ID
+    id: int | None = Field(default=None, primary_key=True)
     name: str
     type: ChannelTypes
     guild_id: int = Field(foreign_key=GUILDS_ID)

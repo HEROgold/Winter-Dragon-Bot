@@ -1,12 +1,12 @@
 from sqlalchemy import func
 from sqlmodel import Field, SQLModel, select
 
-from database.tables.definitions import AUTO_INCREMENT_ID, COMMANDS_ID, USERS_ID
+from database.tables.definitions import COMMANDS_ID, USERS_ID
 
 
 class AssociationUserCommand(SQLModel, table=True):
 
-    id = AUTO_INCREMENT_ID
+    id: int | None = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key=USERS_ID)
     command_id = Field(foreign_key=COMMANDS_ID)
 
