@@ -30,6 +30,7 @@ class Guild(GroupCog):
         interaction: discord.Interaction,
         name: str,
         invite_code: str | None = None,
+        *,
         discoverable: bool = True,
         disable_invites: bool = True,
         disable_widget: bool = True,

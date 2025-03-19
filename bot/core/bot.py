@@ -116,7 +116,8 @@ class WinterDragon(AutoShardedBot):
         self,
         value: str | int,
         guild: Snowflake | int | None = None,
-        fallback_to_global: bool = True,  # noqa: FBT001, FBT002
+        *,
+        fallback_to_global: bool = True,
     ) -> MaybeGroupedAppCommand:
         """Get an app command from the cache.
 

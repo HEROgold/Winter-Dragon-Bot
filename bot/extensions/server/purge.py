@@ -13,7 +13,14 @@ class Purge(Cog):
     @app_commands.command(name="purge", description="Purge X amount of messages, use history to delete older messages.")
     @app_commands.checks.has_permissions(manage_messages=True)
     @app_commands.checks.bot_has_permissions(manage_messages=True)
-    async def slash_purge(self, interaction: discord.Interaction, count: int, use_history: bool = False) -> None:  # noqa: FBT001, FBT002
+    async def slash_purge(
+        self,
+        interaction: discord.Interaction,
+        count: int,
+        *,
+        use_history: bool = False,
+    ) -> None:
+        """Purge X amount of messages, use history to delete older messages."""
         if count == -1:
             count = config.getint("Purge", "limit")
         if count <= config.getint("Purge", "limit"):
