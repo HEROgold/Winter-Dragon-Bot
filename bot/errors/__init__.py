@@ -1,6 +1,8 @@
-class NoneTypeError(Exception):
+"""Errors for WinterDragon."""
+
+class NoneTypeError(Exception):  # noqa: D101
     pass
 
 
-class FirstTimeLaunchError(Exception):
+class FirstTimeLaunchError(Exception):  # noqa: D101
     pass
