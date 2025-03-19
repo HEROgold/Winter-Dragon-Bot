@@ -1,1 +1,4 @@
 postgres/*
+*__pycache__/*
+*.pyc
+bot/config.ini
