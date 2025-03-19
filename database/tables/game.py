@@ -1,10 +1,18 @@
+from enum import StrEnum, auto
 from typing import Self
 
 from sqlmodel import Field, SQLModel, select
 
 
-class Game(SQLModel, table=True):
+# TODO @HEROgold: reference the StrEnum as valid game types in the database.
+#147
+class ValidGames(StrEnum):
+    """Enumeration of valid games."""
 
+    HANGMAN = auto()
+
+
+class Game(SQLModel, table=True):
     name: str = Field(primary_key=True, unique=True)
 
     @classmethod
