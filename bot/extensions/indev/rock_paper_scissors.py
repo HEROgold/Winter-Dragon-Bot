@@ -1,12 +1,12 @@
 from typing import ClassVar
 
 import discord
-from base.mixins import LoggerMixin
 from core.bot import WinterDragon
 from core.cogs import GroupCog
 from discord import Member, User, app_commands
 from discord.ui import Button
 
+from bot.core.log import LoggerMixin
 from database.tables import ResultDuels
 
 
@@ -83,28 +83,12 @@ class RPSView(discord.ui.View, LoggerMixin):
 
         if self.p1_choice == self.p2_choice:
             winner = None
-            loser = None
         elif self.p1_choice == "rock":
-            if self.p2_choice == "scissors":
-                winner = self.player_1
-                loser = self.player_2
-            else:
-                winner = self.player_2
-                loser = self.player_1
+            winner = self.player_1 if self.p2_choice == "scissors" else self.player_2
         elif self.p1_choice == "paper":
-            if self.p2_choice == "rock":
-                winner = self.player_1
-                loser = self.player_2
-            else:
-                winner = self.player_2
-                loser = self.player_1
+            winner = self.player_1 if self.p2_choice == "rock" else self.player_2
         elif self.p1_choice == "scissors":
-            if self.p2_choice == "paper":
-                winner = self.player_1
-                loser = self.player_2
-            else:
-                winner = self.player_2
-                loser = self.player_1
+            winner = self.player_1 if self.p2_choice == "paper" else self.player_2
 
         with self.session as session:
             session.add(ResultDuels(
@@ -170,4 +154,5 @@ class RockPaperScissors(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(RockPaperScissors(bot))
