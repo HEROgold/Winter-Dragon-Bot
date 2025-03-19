@@ -14,7 +14,7 @@ class Lfg(GroupCog):
     slash_suggest = Games.slash_suggest
 
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
 
         with self.session as session:
