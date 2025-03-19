@@ -52,4 +52,5 @@ class AutoReAssign(GroupCog):
             session.commit()
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(AutoReAssign(bot))

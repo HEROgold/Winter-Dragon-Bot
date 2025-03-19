@@ -4,7 +4,7 @@ from core.bot import WinterDragon
 from core.cogs import Cog, GroupCog
 from discord import app_commands
 
-from database.tables import SyncBanUser, SyncBanGuild
+from database.tables import SyncBanGuild, SyncBanUser
 
 
 class SyncedBans(GroupCog):
@@ -75,4 +75,5 @@ class SyncedBans(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(SyncedBans(bot))

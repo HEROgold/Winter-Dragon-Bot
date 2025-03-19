@@ -1,15 +1,17 @@
+"""Module for WinterDragon error handlers."""
 import datetime
 import logging
 from textwrap import dedent
 
 import discord
-from base.mixins import LoggerMixin
 from config import config
 from core.bot import WinterDragon
 from core.tasks import loop
 from discord import app_commands
 from discord.ext import commands
 from errors.aliases import AllErrors
+
+from bot.core.log import LoggerMixin
 
 
 type ReturnOriginal = (
@@ -70,6 +72,11 @@ class ErrorHandler(LoggerMixin):
         interface: commands.Context | discord.Interaction,
         error: AllErrors | Exception,
     ) -> None:
+        """Initialize the ErrorHandler class.
+
+        Uses the interface for context, and processes the error that occurred.
+        Error is send using `bot`.
+        """
         self.bot = bot
         self.interface = interface
         self.error = error
@@ -92,6 +99,7 @@ class ErrorHandler(LoggerMixin):
 
     @_async_init.before_loop
     async def before_async_init(self) -> None:
+        """Set up the error handler before handling the error."""
         self.logger.debug("Setting up error handler")
         await self.bot.wait_until_ready()
 
@@ -114,6 +122,7 @@ class ErrorHandler(LoggerMixin):
         return error_msg or "An unexpected error occurred."
 
     def get_error_message(self, error: AllErrors) -> str | AllErrors:  # noqa: C901, PLR0912
+        """Get the to send to a user, based on the error that occurred."""
         error_msg = ""
         match type(error):
             case commands.errors.MissingRequiredArgument:
@@ -156,11 +165,13 @@ class ErrorHandler(LoggerMixin):
 
 
     async def get_dm(self, ctx: commands.Context) -> discord.DMChannel:
+        """Get the private chat with a user."""
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
 
 
     async def handle_error(self) -> None:
+        """Handle the error that occurred."""
         error = self.error
         self.logger.debug(f"{type(error)=}, {error.args=}")
 
@@ -176,6 +187,7 @@ class ErrorHandler(LoggerMixin):
 
 
     async def send_message(self, message: str) -> None:
+        """Send a message to the user."""
         interface = self.interface
 
         if isinstance(interface, discord.Interaction):

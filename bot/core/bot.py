@@ -1,3 +1,8 @@
+"""Module that contains the WinterDragon bot.
+
+WinterDragon is a subclass of AutoShardedBot from discord.ext.commands.
+WinterDragon has additional attributes and methods.
+"""
 from __future__ import annotations
 
 import datetime
@@ -47,8 +52,13 @@ class WinterDragon(AutoShardedBot):
         tree_cls: type[app_commands.CommandTree[Any]] = app_commands.CommandTree,
         description: str | None = None,
         intents: discord.Intents,
-        **options,
+        **options: Any,  # noqa: ANN401. We match the type of options as defined in AutoShardedBot
     ) -> None:
+        """Initialize the WinterDragon bot.
+
+        Adds additional attributes and methods to the AutoShardedBot class.
+        Like a global app_commands cache and per guild app_commands cache.
+        """
         self._global_app_commands = {}
         self._guild_app_commands = {}
         self.log_manager = LogsManager()
@@ -82,6 +92,7 @@ class WinterDragon(AutoShardedBot):
 
 
     def get_bot_invite(self) -> str:
+        """Get the link to invite the bot to a server."""
         return (
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
@@ -89,11 +100,13 @@ class WinterDragon(AutoShardedBot):
             + f"&scope={"+".join(BOT_SCOPE)}"
         )
 
-    async def on_error(self, event_method: str, /, *args, **kwargs) -> None:
+    async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:
+        """Log where errors occur during the event loop."""
         self.logger.exception(f"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
     async def on_command_error(self, context: Context[BotT], exception: CommandError) -> None:
+        """Log where errors occur during command execution."""
         self.logger.exception(f"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 
@@ -105,6 +118,10 @@ class WinterDragon(AutoShardedBot):
         guild: Snowflake | int | None = None,
         fallback_to_global: bool = True,  # noqa: FBT001, FBT002
     ) -> MaybeGroupedAppCommand:
+        """Get an app command from the cache.
+
+        This app command may be a group or app_command or None
+        """
         def search_dict(d: AppCommandStore) -> MaybeGroupedAppCommand:
             for cmd_name, cmd in d.items():
                 if value == cmd_name or (str(value).isdigit() and int(value) == cmd.id):
@@ -120,6 +137,7 @@ class WinterDragon(AutoShardedBot):
         return search_dict(self._global_app_commands)
 
     def unpack_app_commands(self, commands: list[app_commands.AppCommand]) -> AppCommandStore:
+        """Unpack the app commands from the store into a typed dictionary."""
         ret: AppCommandStore = {}
 
         def unpack_options(
@@ -141,6 +159,7 @@ class WinterDragon(AutoShardedBot):
         commands: list[app_commands.AppCommand] | None = None,
         guild: Snowflake | int | None = None,
     ) -> None:
+        """Update the app commands cache with the provided commands for a given guild."""
         # because we support both int and Snowflake
         # we need to convert it to a Snowflake like object if it's an int
         _guild: Snowflake | None = None
@@ -160,6 +179,7 @@ class WinterDragon(AutoShardedBot):
 
 
     async def get_extensions(self) -> list[str]:
+        """Get all the extensions in the extensions directory."""
         extensions = []
         for root, _, files in os.walk(EXTENSIONS):
             for file in files:
@@ -175,6 +195,7 @@ class WinterDragon(AutoShardedBot):
         return extensions
 
     async def load_extensions(self) -> None:
+        """Load all the extensions in the extensions directory."""
         if not (os.listdir(EXTENSIONS)):
             self.logger.critical("No extensions Directory To Load!")
             return

@@ -3,12 +3,13 @@ import urllib.parse
 
 import discord
 import requests
-from base.mixins import LoggerMixin
 from config import config
 from constants import UD_DEFINE_URL, UD_RANDOM_URL
 from core.bot import WinterDragon
 from core.cogs import GroupCog
 from discord import app_commands
+
+from bot.core.log import LoggerMixin
 
 
 class Urban(GroupCog, LoggerMixin):
@@ -85,4 +86,5 @@ class Urban(GroupCog, LoggerMixin):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(Urban(bot))

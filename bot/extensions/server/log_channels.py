@@ -774,7 +774,7 @@ class LogChannels(GroupCog):
         await self.send_channel_logs(entry.guild, embed, LogCategories.MESSAGE_UNPIN)
 
 # -----------------------------------------
-# TODO: Add Unique msg for each function  # noqa: TD002, TD003
+# TODO: Add Unique msg for each function
 # -----------------------------------------
 
 
@@ -1281,4 +1281,5 @@ class LogChannels(GroupCog):
 # ------------
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(LogChannels(bot))

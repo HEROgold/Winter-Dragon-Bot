@@ -66,5 +66,6 @@ class Infractions(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     return
     await bot.add_cog(Infractions(bot))

@@ -1,12 +1,19 @@
+"""Module that contains channel-related enums."""
+
 from enum import Enum, auto
 from typing import Self
 
 from discord import AuditLogAction
 
-from database.channels import ChannelTypes  # type: ignore[NotAccessed] # noqa: F401
+from database.channels import ChannelTypes  # type: ignore[NotAccessed]
+
+
+__all__ = ("ChannelTypes",)
 
 
 class LogCategories(Enum):
+    """Enum for the different categories of logs."""
+
     GLOBAL = "ALL_CATEGORIES"
 
     # Own Enums
@@ -71,4 +78,5 @@ class LogCategories(Enum):
     AUTOMOD_TIMEOUT_MEMBER = auto()
 
     def from_AuditLogAction(self, action: AuditLogAction) -> Self:  # noqa: N802
+        """Get the enum from an AuditLogAction."""
         return self.__class__[action.name.upper()]

@@ -1,3 +1,4 @@
+"""Module to sync slash commands with the Discord API."""
 from typing import TYPE_CHECKING
 
 import discord
@@ -12,8 +13,11 @@ if TYPE_CHECKING:
 
 
 class Sync(Cog):
+    """Sync slash commands with the Discord API."""
+
     @app_commands.command(name="sync", description="Sync all commands on this guild")
     async def slash_sync(self, interaction: discord.Interaction | commands.Context) -> None:
+        """Sync all commands on the current guild."""
         user = interaction.author if isinstance(interaction, commands.Context) else interaction.user
         is_allowed = await self.bot.is_owner(user)
 
@@ -34,6 +38,7 @@ class Sync(Cog):
     @commands.is_owner()
     @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")
     async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
+        """Sync all commands on all servers. This is a ctx and slash command (hybrid)."""
         msg = "Synced commands: "
         guild = ctx.guild
 
@@ -46,6 +51,7 @@ class Sync(Cog):
         await ctx.send(msg)
 
     async def sync_local(self, guild: Guild) -> str:
+        """Sync all commands on a specific guild."""
         local_sync: list[AppCommand] = []
         local_sync += await self.bot.tree.sync(guild=guild)
         local_list = [command.name for command in local_sync]
@@ -53,6 +59,7 @@ class Sync(Cog):
         return f"{local_list} for {guild}\n"
 
     async def sync_global(self) -> str:
+        """Sync all globally available commands."""
         global_sync = await self.bot.tree.sync()
         global_list = [command.name for command in global_sync]
         global_list.sort()
@@ -61,4 +68,5 @@ class Sync(Cog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(Sync(bot))

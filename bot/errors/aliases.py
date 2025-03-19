@@ -1,3 +1,5 @@
+"""Aliases for error types."""
+
 from discord import (
     ClientException,
     DiscordException,

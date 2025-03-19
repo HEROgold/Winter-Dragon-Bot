@@ -18,11 +18,13 @@ from database.tables import AssociationUserLobby as AUL  # noqa: N817
 from database.tables import Lobby as DbLobby
 
 
-def f() -> None:  ...
-type FunctionType = type[f]
+def _f() -> None:  ...
+type FunctionType = type[_f]
 
 
 class Lobby:
+    """A class that represents a lobby in text form with buttons."""
+
     if TYPE_CHECKING:
         message: discord.Message
         join_button: Button
@@ -73,6 +75,10 @@ class Lobby:
         timeout: int = 300,
         game: str | None = None,
     ) -> None:
+        """Initialize the lobby.
+
+        with a given message, max_players, start_function, timeout, and game type.
+        """
         self.message = message
         self.start_function = start_function
         self.max_players = max_players
@@ -96,10 +102,12 @@ class Lobby:
 
 
     def __del__(self) -> None:
+        """Close the session when the lobby is deleted."""
         self._session.close()
 
 
     def update_msg_text(self) -> None:
+        """Update the message with total player count and display names of joined players."""
         if len(self.players) != 0:
             self.message.content = dedent(f"""Join here to start playing!
             Total: {100*self.max_players/len(self.players)}% {len(self.players)}/{self.max_players},
@@ -108,6 +116,7 @@ class Lobby:
 
 
     def update_message(self) -> None:
+        """Update and edit the message. Calls `update_msg_text()`."""
         self.update_msg_text()
         loop = asyncio.get_event_loop()
         loop.create_task(self.message.edit(  # noqa: RUF006
@@ -116,6 +125,7 @@ class Lobby:
         ))
 
     def join_callback(self, interaction: Interaction) -> None:
+        """Add a user to the lobby. Then updates the message. calls `update_message()`."""
         self._session.add(AUL(
             lobby_id=self.message.id,
             user_id=interaction.user.id,
@@ -125,6 +135,7 @@ class Lobby:
 
 
     def leave_callback(self, interaction: Interaction) -> None:
+        """Remove a user from the lobby. Then updates the message. calls `update_message()`."""
         self._session.delete(
             self._session.exec(
                 select(AUL)
@@ -136,6 +147,7 @@ class Lobby:
 
 
     def start_callback(self, interaction: Interaction) -> None:  # noqa: ARG002
+        """Start the game. Close the session and call the start function."""
         # if coroutine run asyncio, otherwise jut run it
         # Should always have arguments ready by using partial
         self._session.close()
@@ -143,4 +155,5 @@ class Lobby:
 
 
     def on_timeout(self, interaction: Interaction) -> None:  # noqa: ARG002
+        """Remove the lobby instance on timeout."""
         del self

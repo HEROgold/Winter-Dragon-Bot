@@ -4,6 +4,7 @@ import asyncio
 import logging
 import signal
 import sys
+from typing import Any
 
 import discord
 from config import config
@@ -30,6 +31,7 @@ tree = bot.tree
 
 @bot.event
 async def on_ready() -> None:
+    """Log when the bot is ready. Note that this may happen multiple times per boot."""
     bot.get_bot_invite()
 
     bot_logger.info(f"Logged on as {bot.user}!")
@@ -39,6 +41,7 @@ async def on_ready() -> None:
 @commands.is_owner()
 @tree.command(name="shutdown", description="(For bot developer only)")
 async def slash_shutdown(interaction: discord.Interaction) -> None:
+    """Shutdown the bot."""
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
         bot_logger.info("shutdown by command.")
@@ -47,7 +50,8 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     raise KeyboardInterrupt
 
 
-def terminate(*args, **kwargs) -> None:
+def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401. Catch all arguments to log before termination.
+    """Terminate the bot."""
     bot_logger.warning(f"{args=}, {kwargs=}")
     bot_logger.info("terminated")
     try:
@@ -59,6 +63,7 @@ def terminate(*args, **kwargs) -> None:
 
 
 async def main() -> None:
+    """Entrypoint of the program."""
     async with bot:
         invite_link = bot.get_bot_invite()
         config.set("Main", "application_id", f"{bot.application_id}")

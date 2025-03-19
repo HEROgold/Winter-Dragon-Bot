@@ -1,3 +1,4 @@
+"""Module to handle other cogs."""
 import datetime
 import os
 from pathlib import Path
@@ -13,10 +14,13 @@ from discord.ext import commands
 
 
 class AutoCogReloader(Cog):
+    """Automatically reloads watched cogs when they are edited."""
+
     data: CogData
 
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args:WinterDragon, **kwargs:WinterDragon) -> None:
+        """Initialize the AutoCogReloader cog."""
         super().__init__(*args, **kwargs)
         self.data = {
             "timestamp": datetime.datetime.now(tz=datetime.UTC).timestamp(),
@@ -26,12 +30,14 @@ class AutoCogReloader(Cog):
 
 
     async def cog_load(self) -> None:
+        """When the cog is loaded, start watching files to reload."""
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
             self.auto_reload.start()
 
 
-    def get_cog_data(self) -> None:
+    def update_cog_data(self) -> None:
+        """Update data from watched cogs in the extensions directory."""
         for root, _, files in os.walk("extensions"):
             for file in files:
                 if not file.endswith(".py"):
@@ -52,8 +58,9 @@ class AutoCogReloader(Cog):
 
 
     def check_edits(self) -> None:
+        """Check if any of the watched cogs have been edited."""
         files = self.data["files"]
-        self.get_cog_data()
+        self.update_cog_data()
 
         start_time = self.data["timestamp"]
         for file in files:
@@ -67,6 +74,7 @@ class AutoCogReloader(Cog):
 
     @loop(seconds=5)
     async def auto_reload(self) -> None:
+        """Automatically reload cogs that have been edited."""
         if not self.data["edited"]:
             self.check_edits()
         for file_name, file_data in list(self.data["edited"].items()):
@@ -82,7 +90,10 @@ class AutoCogReloader(Cog):
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class CogsC(GroupCog):
+    """Commands to manage cogs."""
+
     async def mass_reload(self, interaction: discord.Interaction) -> None:
+        """Reload all previously loaded extensions."""
         await interaction.response.defer(ephemeral=True)
         reload_message = ""
         for extension in await self.bot.get_extensions():
@@ -128,6 +139,7 @@ class CogsC(GroupCog):
     @app_commands.command(name="crash", description="Raise a random Exception (Bot Dev only)")
     @commands.is_owner()
     async def slash_crash(self, interaction: discord.Interaction) -> None:
+        """Raise a CommandInvoke Exception."""
         await interaction.response.send_message("Crashing with discord.app_commands.errors.CommandInvokeError")
         msg = "Test Exception"
         raise commands.CommandInvokeError(Exception(msg))
@@ -136,6 +148,7 @@ class CogsC(GroupCog):
     @commands.is_owner()
     @app_commands.command(name = "show", description = "Show loaded extensions (For bot developer only)")
     async def slash_show(self, interaction: discord.Interaction) -> None:
+        """Show all loaded extensions."""
         extensions = await self.bot.get_extensions()
         self.logger.debug(f"Showing {extensions} to {interaction.user}")
         await interaction.response.send_message(f"{extensions}", ephemeral=True)
@@ -147,6 +160,7 @@ class CogsC(GroupCog):
         description = "Reload a specified or all available extensions (For bot developer only)",
     )
     async def slash_restart(self, interaction: discord.Interaction, extension: str = "") -> None:
+        """Reload a specified or all available extensions."""
         self.logger.info(f"{interaction.user} used /reload")
         if not extension:
             self.logger.warning("Reloading all extensions")
@@ -174,6 +188,7 @@ class CogsC(GroupCog):
     )
     @commands.is_owner()
     async def slash_unload(self, interaction: discord.Interaction, extension: str) -> None:
+        """Unload a specified extension."""
         try:
             self.logger.info(f"Unloaded {extension}")
             await self.bot.unload_extension(extension)
@@ -189,9 +204,10 @@ class CogsC(GroupCog):
     @slash_unload.autocomplete("extension")
     async def autocomplete_extension(
         self,
-        interaction: discord.Interaction,  # noqa: ARG002
+        _interaction: discord.Interaction,
         current: str,
     ) -> list[app_commands.Choice[str]]:
+        """Autocomplete extension names."""
         return [
             app_commands.Choice(name=extension, value=extension)
             for extension in self.bot.extensions
@@ -208,6 +224,7 @@ class CogsC(GroupCog):
     )
     @commands.is_owner()
     async def slash_load(self, interaction: discord.Interaction, extension: str) -> None:
+        """Load a specified extension or all available extensions."""
         try:
             await self.bot.load_extension(extension)
             self.logger.info(f"Loaded {extension}")
@@ -238,9 +255,10 @@ class CogsC(GroupCog):
     @slash_load.autocomplete("extension")
     async def load_autocomplete_extension(
         self,
-        interaction: discord.Interaction,  # noqa: ARG002
+        _interaction: discord.Interaction,
         current: str,
     ) -> list[app_commands.Choice[str]]:
+        """Autocomplete extension names."""
         extensions = await self.bot.get_extensions()
         return [
             app_commands.Choice(name=extension, value=extension)
@@ -253,5 +271,6 @@ class CogsC(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(AutoCogReloader(bot))
     await bot.add_cog(CogsC(bot))

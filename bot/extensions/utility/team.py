@@ -283,4 +283,5 @@ class Team(GroupCog):
 
 
 async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
     await bot.add_cog(Team(bot))
