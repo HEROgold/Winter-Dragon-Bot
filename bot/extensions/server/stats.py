@@ -218,7 +218,7 @@ class Stats(GroupCog):
         embed = discord.Embed(
             title=f"{guild.name} Stats",
             description=f"Information about {guild.name}",
-            color=random.choice(rainbow.RAINBOW),
+            color=random.choice(rainbow.RAINBOW),  # noqa: S311
         )
 
         embed.add_field(

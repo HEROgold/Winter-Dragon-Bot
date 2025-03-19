@@ -16,7 +16,7 @@ class Announce(Cog):
     @app_commands.checks.has_permissions(mention_everyone=True)
     async def announce(self, interaction:discord.Interaction, message:str) -> None:
         member = interaction.user
-        emb = discord.Embed(title="Announcement!", description=f"{message}", color=random.choice(rainbow.RAINBOW))
+        emb = discord.Embed(title="Announcement!", description=f"{message}", color=random.choice(rainbow.RAINBOW))  # noqa: S311
         emb.set_author(name=(member.display_name), icon_url=(member.avatar.url))
         emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)

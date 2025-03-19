@@ -54,7 +54,10 @@ class Lfg(GroupCog):
                 session.delete(i)
             session.commit()
         c_mention = await self.get_command_mention(self.slash_lfg_join)
-        await interaction.response.send_message(f"Removed you from all lfg queues, use {c_mention} to join one again.", ephemeral=True)
+        await interaction.response.send_message(
+            f"Removed you from all lfg queues, use {c_mention} to join one again.",
+            ephemeral=True,
+        )
 
 
     @slash_lfg_join.autocomplete("game")

@@ -10,7 +10,7 @@ from discord.ui import Button, View
 
 @app_commands.guild_only()
 class Gatekeeper(GroupCog):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
 
     @app_commands.command(name="enable", description="Enables the gatekeeper system.")

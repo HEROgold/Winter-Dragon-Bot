@@ -18,7 +18,7 @@ class Love(Cog):
         random.seed(user.id + member.id)
         emb.add_field(
             name = f"{member.display_name}",
-            value = f"Your compatibility with {member.display_name} is {random.randint(0,100)}%",
+            value = f"Your compatibility with {member.display_name} is {random.randint(0,100)}%",  # noqa: S311
             inline = True,
         )
         await interaction.response.send_message(embed=emb)

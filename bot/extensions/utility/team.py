@@ -270,7 +270,7 @@ class Team(GroupCog):
 
         embed = discord.Embed(
             title="Teams",
-            color=random.choice(rainbow.RAINBOW),
+            color=random.choice(rainbow.RAINBOW),  # noqa: S311
         )
 
         for team in teams:

@@ -10,7 +10,7 @@ from database.tables import Game, Suggestion
 class Games(GroupCog):
     games: list[Game]
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
         with self.session as session:
             self.games = session.query(Game).all()

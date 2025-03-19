@@ -16,7 +16,7 @@ NHIE = "NEVER_HAVE_I_EVER"
 
 
 class NeverHaveIEver(GroupCog):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
         self.game = Game.fetch_game_by_name(NHIE)
         self.set_default_data()
@@ -47,8 +47,8 @@ class NeverHaveIEver(GroupCog):
     @app_commands.checks.cooldown(1, 10)
     async def slash_nhie(self, interaction: discord.Interaction) -> None:
         game_id, questions = self.get_questions()
-        question = random.choice(questions)
-        emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))
+        question = random.choice(questions)  # noqa: S311
+        emb = discord.Embed(title=f"Never Have I Ever #{game_id}", description=question, color=random.choice(rainbow.RAINBOW))  # noqa: S311
         emb.add_field(name="I Have", value="✅")
         emb.add_field(name="Never", value="⛔")
         send_msg = await interaction.channel.send(embed=emb)

@@ -15,7 +15,7 @@ WYR = "WOULD_YOU_RATHER"
 
 
 class WouldYouRather(GroupCog):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
         self.game = Game.fetch_game_by_name(WYR)
         self.set_default_data()
@@ -46,11 +46,11 @@ class WouldYouRather(GroupCog):
     @app_commands.checks.cooldown(1, 10)
     async def slash_wyr(self, interaction: discord.Interaction) -> None:
         game_id, questions = self.get_questions()
-        question = random.choice(questions)
+        question = random.choice(questions)  # noqa: S311
         emb = discord.Embed(
             title=f"Would You Rather #{game_id}",
             description=question.value,
-            color=random.choice(rainbow.RAINBOW),
+            color=random.choice(rainbow.RAINBOW),  # noqa: S311
         )
         emb.add_field(name="Option 1", value="1️⃣")
         emb.add_field(name="Option 2", value="2️⃣")

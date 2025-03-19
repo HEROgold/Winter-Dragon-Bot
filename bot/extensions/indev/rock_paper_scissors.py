@@ -59,6 +59,7 @@ class RPSView(discord.ui.View, LoggerMixin):
         player_1: User | Member | None = None,
         player_2: User | Member | None = None,
     ) -> None:
+        """Initialize the RockPaperScissors view."""
         super().__init__()
         self.p1_choice = first_choice
         self.p2_choice = second_choice
@@ -70,7 +71,6 @@ class RPSView(discord.ui.View, LoggerMixin):
         self.add_item(rock)
         self.add_item(paper)
         self.add_item(scissor)
-
 
     async def calc_win(self, interaction: discord.Interaction) -> None:
         self.logger.debug(f"{self.p1_choice=}, {self.p2_choice=}")
@@ -91,25 +91,27 @@ class RPSView(discord.ui.View, LoggerMixin):
             winner = self.player_1 if self.p2_choice == "paper" else self.player_2
 
         with self.session as session:
-            session.add(ResultDuels(
-                # id=,
-                game = "rps",
-                player = self.player_1.id,
-                winner = winner == self.player_1,
-            ))
-            session.add(ResultDuels(
-                game = "rps",
-                player = self.player_2.id,
-                winner = winner == self.player_2,
-            ))
+            session.add(
+                ResultDuels(
+                    # id=,
+                    game="rps",
+                    player=self.player_1.id,
+                    winner=winner == self.player_1,
+                ),
+            )
+            session.add(
+                ResultDuels(
+                    game="rps",
+                    player=self.player_2.id,
+                    winner=winner == self.player_2,
+                ),
+            )
             session.commit()
         self.stop()
 
 
-
 class RockPaperScissors(GroupCog):
     choices: ClassVar = ["rock", "paper", "scissor"]
-
 
     @app_commands.checks.cooldown(1, 30)
     @app_commands.command(
@@ -122,7 +124,6 @@ class RockPaperScissors(GroupCog):
     ) -> None:
         await interaction.response.send_message(f"{interaction.user.mention} started Rock, Paper, Scissors.", view=RPSView())
         # TODO: implement lobby system like Tic Tac Toe
-
 
     @app_commands.command(
         name="duel",
@@ -143,14 +144,13 @@ class RockPaperScissors(GroupCog):
         # await interaction.response.send_message(f"{interaction.user.mention} started Rock, Paper, Scissors, what's your choice?", view=RPSView(first_choice=choice))
         # self.set_data(self.data)
 
-
     @slash_rps_duel.autocomplete("choice")
-    async def rock_paper_scissors_autocomplete_choice(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:  # noqa: ARG002
-        return [
-            app_commands.Choice(name=i, value=i)
-            for i in self.choices
-            if current.lower() in i.lower()
-        ]
+    async def rock_paper_scissors_autocomplete_choice(
+        self,
+        _interaction: discord.Interaction,
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        return [app_commands.Choice(name=i, value=i) for i in self.choices if current.lower() in i.lower()]
 
 
 async def setup(bot: WinterDragon) -> None:

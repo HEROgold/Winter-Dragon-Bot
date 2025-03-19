@@ -14,6 +14,7 @@ from core.cogs import GroupCog  #, Cog
 from discord import app_commands
 from discord.app_commands import Command as DcCommand
 from sqlalchemy.orm import Session
+from sqlmodel import select
 
 from database import engine
 from database.tables import Command as DbCommand
@@ -36,19 +37,19 @@ class CombinedCommand:
 class CommandControl(GroupCog):
     commands: list[DbCommand | CommandGroup]
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
         with self.session as session:
-            self.commands = session.query(DbCommand).all()
-            self.commands += session.query(CommandGroup).all()
+            self.commands = session.exec(select(DbCommand)).all()
+            self.commands += session.exec(select(CommandGroup)).all()
 
 
     @app_commands.command(name="enable", description="Enable a command")
     async def slash_command_enable(self, interaction: discord.Interaction, command: str) -> None:
         """CommandControl."""
         with self.session as session:
-            cmd = session.query(DbCommand).where(DbCommand.qual_name == command).first()
-            session.query(CommandGroup).where(CommandGroup.name == command).first()
+            cmd = session.exec(select(DbCommand).where(DbCommand.qual_name == command)).first()
+            session.exec(select(CommandGroup).where(CommandGroup.name == command)).first()
             session.add(GuildCommands(
                 guild_id = interaction.guild.id,
                 command_id = cmd.id,
@@ -71,7 +72,9 @@ class CommandControl(GroupCog):
     @slash_command_enable.autocomplete("command")
     @slash_command_disable.autocomplete("command")
     async def activity_autocomplete_status(
-        self, interaction: discord.Interaction, current: str,
+        self,
+        _interaction: discord.Interaction,
+        current: str,
     ) -> list[app_commands.Choice[str]]:
         choice_limit = 25
         return [
