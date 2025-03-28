@@ -31,7 +31,7 @@
         {
             "label": "UV Force reinstall project packages",
             "type": "shell",
-            "command": "uv pip install ./bot ./database./ ./backend --force-reinstall"
+            "command": "uv pip install -e . --force-reinstall"
         },
         {
             "label": "Clean environtment",
