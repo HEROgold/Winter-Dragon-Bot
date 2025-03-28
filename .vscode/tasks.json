@@ -11,27 +11,47 @@
         {
             "label": "Remove build files",
             "type": "shell",
-            "command": "rm */build/* -Confirm"
+            "command": "Get-ChildItem -Path . -Filter \"build\" -Directory -Recurse | Remove-Item -Force -Recurse"
         },
         {
             "label": "Remove dist files",
             "type": "shell",
-            "command": "rm */dist/* -Confirm"
+            "command": "Get-ChildItem -Path . -Filter \"dist\" -Directory -Recurse | Remove-Item -Force -Recurse"
         },
         {
             "label": "Remove egg-info",
             "type": "shell",
-            "command": "rm */*egg-info -Confirm"
+            "command": "Get-ChildItem -Path . -Filter \"*egg-info\" -Directory -Recurse | Remove-Item -Force -Recurse"
+        },
+        {
+            "label": "Remove log files",
+            "type": "shell",
+            "command": "Get-ChildItem -Path . -Filter \"*.log\" -File -Recurse | Remove-Item -Force"
+        },
+        {
+            "label": "UV Force reinstall project packages",
+            "type": "shell",
+            "command": "uv pip install ./bot ./database./ ./backend --force-reinstall"
+        },
+        {
+            "label": "Clean environtment",
+            "type": "shell",
+            "dependsOn": [
+                "Remove build files",
+                "Remove dist files",
+                "Remove egg-info",
+                "Remove log files"
+            ]
         },
         {
             "label": "Run all tasks",
             "type": "shell",
             "dependsOn": [
                 "UV Build project",
-                "Remove build files",
-                "Remove dist files",
-                "Remove egg-info"
-            ]
+                "UV Force reinstall project packages",
+                "Clean environtment"
+            ],
+            "dependsOrder": "sequence"
         }
     ]
 }
