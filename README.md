@@ -53,3 +53,24 @@ Extensions inside this directory are not or not fully tested.
 There's also the website that needs to be worked on.
 This should contain pages to manage bot settings more easily and might have **all** users be able to log in.
 The website doesn't have any finalized decisions, and is currently in alpha stage. Anything can and will change.
+
+
+## Dev-requirements
+
+While working on this project, make sure to add the src files of the sub-projects (bot, database, backend)
+to your editor's path.
+
+### .vscode/settings.json
+
+```json
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/database/src",
+        "${workspaceFolder}/bot/src",
+        "${workspaceFolder}/backend/src"
+    ],
+    "python.autoComplete.extraPaths": [
+        "${workspaceFolder}/database/src",
+        "${workspaceFolder}/bot/src",
+        "${workspaceFolder}/backend/src"
+    ],
+```
