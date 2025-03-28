@@ -10,13 +10,25 @@ dependencies = [
     "database",
 ]
 
-[tool.setuptools]
-packages = ["bot", "backend", "database", "tests"]
-
-[tool.uv.workspace]
-members = ["bot", "backend", "database", "tests"]
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
 [tool.uv.sources]
 bot = { workspace = true }
 database = { workspace = true }
 backend = { workspace = true }
+
+[tool.uv.workspace]
+members = ["bot", "database", "backend"]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bot.src.*", "database.src.*", "backend.src.*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yaml", "*.yml"]
