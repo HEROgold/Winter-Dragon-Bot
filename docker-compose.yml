@@ -1,4 +1,3 @@
-version: '3'
 services:
   postgres:
     image: postgres:14-alpine
@@ -23,12 +22,12 @@ services:
       context: .
       dockerfile: bot/dockerfile
     volumes:
+      - ./bot:/bot
       - ./database:/database
-      - ./bot:/app
     ports:
       - 5000:5000
       - 8000:80
-    restart: unless-stopped # unless-stopped, change to always for auto reboot
+    # restart: unless-stopped # unless-stopped, change to always for auto reboot
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +38,7 @@ services:
       dockerfile: backend/dockerfile
     volumes:
       - ./database:/database
-      - ./backend:/app
+      - ./backend:/backend
     expose:
       - 8000
     # WARNING!: Ports should only be opened to the host for development
