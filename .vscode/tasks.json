@@ -29,6 +29,11 @@
             "command": "Get-ChildItem -Path . -Filter \"*.log\" -File -Recurse | Remove-Item -Force"
         },
         {
+            "label": "Remove pycache files",
+            "type": "shell",
+            "command": "Get-ChildItem -Path . -Filter \"__pycache__\" -Directory -Recurse | Remove-Item -Force -Recurse"
+        },
+        {
             "label": "UV Force reinstall project packages",
             "type": "shell",
             "command": "uv pip install -e . --force-reinstall"
@@ -40,7 +45,8 @@
                 "Remove build files",
                 "Remove dist files",
                 "Remove egg-info",
-                "Remove log files"
+                "Remove log files",
+                "Remove pycache files"
             ]
         },
         {
