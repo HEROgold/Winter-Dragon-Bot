@@ -3,9 +3,14 @@ name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
+authors = [
+    { name = "HEROgold", email = "martijnwieringa28@gmail.com" }
+]
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.115.8",
-    "pyjwt>=2.10.1",
+    "fastapi[standard]>=0.115.11",
     "uvicorn>=0.34.0",
 ]
+
+[project.scripts]
+backend = "backend:main"

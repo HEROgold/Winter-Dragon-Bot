@@ -1,0 +1,12 @@
+FROM python:3.13-slim
+
+
+ADD database/ database/
+ADD backend/ backend/
+
+# Ensure that we install db first, as its a dependency of the bot
+RUN pip3.13 install database/
+RUN pip3.13 install backend/
+RUN pip3.13 install uvicorn
+
+CMD ["uvicorn", "wd_backend/__main__:app"]
