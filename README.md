@@ -2,38 +2,112 @@
 
 ## Description
 
-Winter-Dragon-Bot is a versatile Discord bot designed to enhance server management, provide entertainment, and offer a wide range of utilities. Developed with Python 3.11 ( and transitioning to 3.12) and leveraging the power of SQLite for data management, this bot is a project that helps with continuous learning and improvement in software development.
+Winter-Dragon-Bot is a versatile Discord bot project with multiple components designed to enhance server management, provide entertainment, and offer a wide range of utilities. The project includes a bot, database, backend API, and frontend web interface. Built with Python 3.13 and leveraging PostgreSQL for data management, this project helps with continuous learning and improvement in software development.
+
+## Project Structure
+
+```dir
+Winter-Dragon-Bot/
+├── bot/                  # Discord bot implementation
+├── database/             # Database models and schemas
+├── backend/              # FastAPI backend service
+├── frontend/             # Web interface (Bun.js)
+├── docker-compose.yml    # Docker configuration
+└── README.md             # Project documentation
+```
 
 ## Features
 
-- **Comprehensive Slash Commands**: Offers a broad spectrum of slash commands for various functionalities, enhancing user interaction and server management.
-- **Advanced Configuration**: Customizable settings through a config file, allowing for tailored bot behavior to fit specific server needs.
-- **Dynamic Logging**: Separate and dynamic log files for different aspects of the bot's operation (Discord, SQL, etc.), including automatic log rotation to conserve disk space.
-- **Error Handling**: Extensive error handling mechanisms to ensure stability and reliability.
-- **SQLite Integration**: Utilizes SQLite for data storage, management and speed.
-- **Docker Support**: Designed to run in Docker containers for easy deployment and scalability. Includes two Python 3.12 container's, for the bot and the corresponding website and a postgresql container.
-- **Website**: There's a builtin website that helps users and administrators to manage servers, commands, and the database.
+### Bot Features
+
+- **Moderation & Administration**
+  - Channel management with auto-channels
+  - Role management with auto-assignment
+  - Welcome system with customizable messages
+  - Ban synchronization across servers
+  - Infractions tracking system
+  - Gatekeeper for server access control
+  - Message purging with rate limits
+  - Logging system for different actions
+
+- **Utility Features**
+  - Reminders with customizable durations
+  - Server and user statistics tracking
+  - Comprehensive audit logging
+  - Performance monitoring
+  - Car fuel consumption tracking
+
+- **Entertainment**
+  - Various text based games (hangman, "would you rather", etc.)
+  - Game/voice lobby creation and management
+  - Looking for group functionality for multiple games
+
+- **Technical Features**
+  - Error handling
+  - Performance metrics collection
+
+### Additional Features
+
+- **Advanced Configuration**: Customizable settings through a config file
+- **Dynamic Logging**: Separate logs for different aspects
+- **Docker Support**: Containerized for easy deployment and scalability
+- **Web Interface**: Browser-based management
 
 ## Installation
 
 ### Prerequisites
 
-- Docker and Docker Compose installed on your system.
-- Basic knowledge of Docker and containerization.
+- Docker and Docker Compose installed on your system
+- A Discord Bot Token (from Discord Developer Portal)
 
 ### Steps
 
 1. **Clone the Repository**: Clone this repository to your local machine using `git clone`.
-2. **Initial Configuration**: Before the first run, the bot will require some configuration adjustments marked with `!!` in the `config.ini` file. Follow the instructions to set up the necessary configurations.
-3. **Docker Setup**: Navigate to the project directory and run `docker-compose build` to build the containers. Use `docker-compose up` to start the entire project.
-4. **Running the Bot**: After configuration, restart the bot using Docker Compose. The bot should now be up and running.
+2. **Initial Configuration**: After the first run, modify the `config.ini` file with your Discord Bot Token.
+3. **Docker Setup**: Navigate to the project directory and run `docker compose build` to build the containers. Use `docker compose up -d` to start the entire project.
+4. **Verify Installation**: The bot should connect to Discord and the website should become available.
+
+### Starting the Bot
+
+The easiest way to run Winter-Dragon-Bot is using Docker Compose:
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f bot
+
+# Stop all services
+docker-compose down
+```
+
+This will start all required services:
+- PostgreSQL database
+- Discord bot
+- FastAPI backend
+- Web frontend
 
 ### Notes
 
-1. While it's possible to run the bot directly using `python main.py`, it's recommended to use Docker for a more streamlined and consistent environment.
-2. This project is structured in a way that allows for easy and quick changes to the codebase. All discord bot related files are under `/bot` directory, while the website is under `/website`. There's a `/database` directory, which holds the schema's for all used tables. Furthermore, a `/tests` directory exists where tests for this project are located.
-3. For more detailed information about each section, navigate to their respective directories, and find their readme.md.
-<!-- Or refer to the docs. (If they exists) -->
+1. Using Docker is recommended for production environments for a streamlined and consistent deployment.
+2. All components run in separate containers but share a network for inter-service communication.
+3. Data is persisted using Docker volumes for the database.
+
+## API Reference
+
+<!-- TODO -->
+The backend provides the following API endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/bot/status` | GET | Get current bot status |
+| `/api/bot/commands` | GET | List all available commands |
+| `/api/bot/guilds` | GET | List all guilds the bot is in |
+| `/api/guilds/{guild_id}` | GET | Get specific guild information |
+| `/api/settings` | GET/POST | Get/Update bot settings |
+| `/api/users` | GET | Get users data |
+| `/api/audit-logs` | GET | Get audit logs |
 
 ## Contributing
 
@@ -54,13 +128,14 @@ There's also the website that needs to be worked on.
 This should contain pages to manage bot settings more easily and might have **all** users be able to log in.
 The website doesn't have any finalized decisions, and is currently in alpha stage. Anything can and will change.
 
-
 ## Dev-requirements
 
 While working on this project, make sure to add the src files of the sub-projects (bot, database, backend)
 to your editor's path.
 
 ### .vscode/settings.json
+
+Setup vscode to allow for correct importing of the other modules.
 
 ```json
     "python.analysis.extraPaths": [
@@ -74,3 +149,48 @@ to your editor's path.
         "${workspaceFolder}/backend/src"
     ],
 ```
+
+## Development
+
+Because this project contains 3 modules under the namespace winter_dragon, you'll need to set up a development environment:
+
+1. **Set up your environment with UV**:
+
+   ```bash
+   # Install UV if you don't have it
+   curl -fsSL https://raw.githubusercontent.com/astral-sh/uv/main/install.sh | bash
+   
+   # Create a virtual environment
+   uv venv
+   
+   # Activate the virtual environment
+   # On Unix/macOS
+   source .venv/bin/activate
+   # On Windows
+   .venv\Scripts\activate
+   ```
+
+2. **Install development dependencies**:
+
+   ```bash
+   # Install all project components in development mode
+   uv pip install -e ./database -e ./bot -e ./backend
+   ```
+
+3. **Run components**:
+
+   ```bash
+   # Run the bot
+   python -m winter_dragon.bot
+   
+   # Run the backend (in a separate terminal)
+   python -m winter_dragon.backend
+   ```
+
+### Creating New Extensions
+
+To create a new bot extension:
+
+1. Create a new Python file or directory in `bot/src/winter_dragon/bot/extensions/`
+2. Implement the extension using the Cog or GroupCog pattern from WinterDragon
+3. Add an async `setup` function that adds the cog to the bot
