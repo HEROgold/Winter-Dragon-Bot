@@ -19,7 +19,8 @@ class Gatekeeper(GroupCog):
             # Use database to store if enabled or not
             pass
         # if first time using, ask to use command
-        await interaction.response.send_message(f"Please use {self.get_command_mention(self.slash_setup)} first.", ephemeral=True)
+        msg = f"Please use {self.get_command_mention(self.slash_setup)} first."
+        await interaction.response.send_message(msg, ephemeral=True)
 
 
     @app_commands.command(name="disable", description="Disables the gatekeeper system.")
@@ -33,11 +34,12 @@ class Gatekeeper(GroupCog):
             self.logger.warning("Guild not found for setup")
             return
         await self.setup_roles(guild, member_role)
-        await interaction.response.send_message(f"Roles have been setup. You can now use {self.get_command_mention(self.slash_enable_gatekeeper)}", ephemeral=True)
+        msg = f"Roles have been setup. You can now use {self.get_command_mention(self.slash_enable_gatekeeper)}"
+        await interaction.response.send_message(msg, ephemeral=True)
 
 
     async def setup_roles(self, guild: Guild, member_role: Role | None = None) -> None:
-        """Copies the default role permissions to the member role and removes all permissions from the default role.
+        """Copy the default role permissions to the member role and removes all permissions from the default role.
 
         Parameters
         ----------

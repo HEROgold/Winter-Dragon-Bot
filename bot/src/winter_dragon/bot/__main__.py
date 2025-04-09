@@ -57,7 +57,7 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     raise KeyboardInterrupt
 
 
-def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401. Catch all arguments to log before termination.
+def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401 Catch all arguments to log before termination.
     """Terminate the bot."""
     bot_logger.warning(f"{args=}, {kwargs=}")
     bot_logger.info("terminated")

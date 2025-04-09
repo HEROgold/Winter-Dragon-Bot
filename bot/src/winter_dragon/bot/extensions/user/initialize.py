@@ -20,6 +20,8 @@ from winter_dragon.bot.extensions.server.welcome import Welcome
 
 
 class Guild(GroupCog):
+    """Cog for creating a new guild."""
+
     WEEK = 604_800
 
 
@@ -68,16 +70,16 @@ class Guild(GroupCog):
             rules_channel=rules_channel,
             public_updates_channel=guild.public_updates_channel,
             afk_channel=afk_channel,
-            # icon=guild.icon,
-            # banner=guild.banner,
-            # splash=guild.splash,
-            # discovery_splash=guild.discovery_splash,
+            #/icon=guild.icon,
+            #/banner=guild.banner,
+            #/splash=guild.splash,
+            #/discovery_splash=guild.discovery_splash,
             owner=interaction.user,
             afk_timeout=600,
             default_notifications=NotificationLevel.only_mentions,
             verification_level=VerificationLevel.highest,
             explicit_content_filter=ContentFilter.no_role,
-            # vanity_code=None,
+            #/vanity_code=None,
             system_channel=system_channel,
             system_channel_flags=SystemChannelFlags(join_notifications=True, premium_subscriptions=True),
             preferred_locale=Locale.british_english,
@@ -85,7 +87,7 @@ class Guild(GroupCog):
             discoverable=discoverable,
             invites_disabled=disable_invites,
             widget_enabled=False,
-            # widget_channel=None,
+            #/widget_channel=None,
             mfa_level=MFALevel.require_2fa,
             raid_alerts_disabled=False,
             safety_alerts_channel=safety_alerts_channel,

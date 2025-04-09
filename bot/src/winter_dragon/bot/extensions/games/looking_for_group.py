@@ -20,13 +20,6 @@ class Lfg(GroupCog):
         with self.session as session:
             self.games = [i.name for i in session.exec(select(GamesDB)).all()]
 
-
-    def check_match(self) -> None:
-        pass
-
-    # lfg_GROUP = app_commands.Group(name="lfgGroup", description="lfg")
-    # @lfg_GROUP.command()
-
     # TODO: add Database table, matching user id and category, every time someone adds, check matches.
     @app_commands.command(name="join", description="Join a search queue for finding people for the same game")
     async def slash_lfg_join(self, interaction: discord.Interaction, game: str) -> None:
@@ -42,7 +35,7 @@ class Lfg(GroupCog):
             ))
             session.commit()
         c_mention = self.get_command_mention(self.slash_lfg_leave)
-        msg = f"Adding you to the search queue for {game}, currently there are {len(total)} in the same queue. Use {c_mention} to leave all queues."
+        msg = f"Adding you to the search queue for {game}, currently there are {len(total)} in the same queue. Use {c_mention} to leave all queues."  # noqa: E501
         await interaction.response.send_message(msg, ephemeral=True)
 
 

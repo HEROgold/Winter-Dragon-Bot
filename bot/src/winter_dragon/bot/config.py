@@ -65,16 +65,12 @@ class Config[VT]:
     def __init__(self, default: VT | None = None) -> None:
         """Initialize the descriptor with a default value."""
         self._default = default
-        # self._section: str = None
-        # self._setting: str = None
-        # self._original_value: VT = None  # Will be set in __set_name__
 
     def __set_name__(self, owner: type, name: str) -> None:
         """Set the name of the attribute to the name of the descriptor."""
         self.name = name
         self._section = owner.__name__
         self._setting = name
-        # self._original_value = config[self._section][self._setting]
         self.private = f"_{self._section}_{self._setting}_{self.name}"
 
     def __get__(self, obj: object, obj_type: object) -> VT:

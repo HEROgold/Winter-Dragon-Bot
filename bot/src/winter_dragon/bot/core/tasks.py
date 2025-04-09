@@ -14,9 +14,10 @@ from winter_dragon.bot.core.log import LoggerMixin
 class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
     """Loop is a subclass of discord.ext.tasks.Loop that adds logging to the loop task."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         coro: FT,
+        *,
         seconds: float,
         hours: float,
         minutes: float,
@@ -31,7 +32,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         exception = args[-1]
         self.logger.error(
             "Unhandled exception in internal background task %r.",
-            self.coro.__name__,
+            self.coro.__name__, # type: ignore[reportUnknownArgumentType]
             exc_info=exception,
         )
         return await super()._error(*args)
