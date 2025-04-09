@@ -32,7 +32,9 @@ class _ConfigParserSingleton(configparser.ConfigParser):
         self["Tokens"] = {
             "discord_token": "!!",
         }
-        self.write(BOT_CONFIG.open("w"))
+        fp = BOT_CONFIG.open("w")
+        self.write(fp)
+        fp.close()
 
     def set_default(self, section: str, setting: str, value: Any) -> None:  # noqa: ANN401
         if not self.has_section(section):
