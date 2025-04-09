@@ -3,3 +3,4 @@ postgres/*
 *.pyc
 bot/config.ini
 *.egg-info/*
+config.ini
