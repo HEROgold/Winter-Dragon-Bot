@@ -16,7 +16,7 @@ class EmoteManager(Cog):
         """Show all emoji's in one message."""
         msg = ""
         for guild in self.bot.guilds:
-            if guild.owner.id == self.bot.user.id:
+            if guild.owner and self.bot.user and guild.owner.id == self.bot.user.id:
                 for emoji in guild.emojis:
                     msg += str(emoji)
         await interaction.response.send_message(msg)
@@ -29,7 +29,7 @@ class EmoteManager(Cog):
         # If no guild is found, create a new guild then add the emoji.
         guild_counter = 0
         for guild in self.bot.guilds:
-            if guild.owner.id == self.bot.user.id and guild.name.startswith(GUILD_NAME):
+            if guild.owner and self.bot.user and guild.owner.id == self.bot.user.id and guild.name.startswith(GUILD_NAME):
                 guild_counter += 1
                 if guild.emoji_limit - len(guild.emojis) > 0:
                     await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())

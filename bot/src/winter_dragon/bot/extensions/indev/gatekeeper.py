@@ -59,7 +59,9 @@ class Gatekeeper(GroupCog):
             await self.send_verification_message(member)
 
     async def send_verification_message(self, member: Member) -> None:
-        verify_button = Button(label="Accept Rules", style=ButtonStyle.green)
+        view = View()
+        verify_button = Button[view](label="Accept Rules", style=ButtonStyle.green)
+        view.add_item(verify_button)
 
         async def button_callback(interaction: Interaction) -> None:
             member_role = discord.utils.get(member.guild.roles, name="Member")
@@ -69,14 +71,11 @@ class Gatekeeper(GroupCog):
 
         verify_button.callback = button_callback
 
-        view = View()
-        view.add_item(verify_button)
         await member.send("Please accept the rules to gain access to the guild.", view=view)
 
     def check_user_accepted_rules(self, _member: discord.Member) -> bool:
-        # Implement your logic to check if the user has accepted the rules
-        # This is just a placeholder function
-        return True
+        msg = "This method should check if the user has accepted the rules."
+        raise NotImplementedError(msg)
 
 
 async def setup(bot: WinterDragon) -> None:

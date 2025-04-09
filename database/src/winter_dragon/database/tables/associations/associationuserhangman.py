@@ -1,10 +1,11 @@
 from sqlmodel import Field, SQLModel
-from winter_dragon.database.tables.definitions import HANGMEN_ID, USERS_ID
+from winter_dragon.database.keys import get_foreign_key
+from winter_dragon.database.tables.hangman import Hangmen
+from winter_dragon.database.tables.user import Users
 
 
 class AssociationUserHangman(SQLModel, table=True):
 
-    id: int | None = Field(default=None, primary_key=True)
-    hangman_id: int = Field(foreign_key=HANGMEN_ID)
-    user_id: int = Field(foreign_key=USERS_ID)
+    hangman_id: int = Field(foreign_key=get_foreign_key(Hangmen, "id"), primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), primary_key=True)
     score: int

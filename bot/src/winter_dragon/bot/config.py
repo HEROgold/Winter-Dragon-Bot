@@ -29,12 +29,6 @@ class _ConfigParserSingleton(configparser.ConfigParser):
         self.read(BOT_CONFIG)
 
     def _write_defaults(self) -> None:
-        self["Main"] = {
-            "log_level": "DEBUG",
-            "bot_name": "WinterDragon",
-            "support_guild_id": "!!",
-            "prefix": "!!",
-        }
         self["Tokens"] = {
             "discord_token": "!!",
         }
@@ -47,8 +41,8 @@ class _ConfigParserSingleton(configparser.ConfigParser):
             self.set(section, setting, str(value))
 
     def is_valid(self) -> bool:
-        for section in config.sections():
-            for setting in config.options(section):
+        for section in self.sections():
+            for setting in self.options(section):
                 if self[section][setting] == "!!":
                     return False
         return True
@@ -60,9 +54,7 @@ class _ConfigParserSingleton(configparser.ConfigParser):
                     yield f"{section}:{setting}"
 
     def default(self, section: str, setting: str, value: Any) -> None:  # noqa: ANN401
-        if not self.has_option(section, setting):
-            return
-        self[section][setting] = value
+        self.set_default(section, setting, value)
 
 
 class Config[VT]:
@@ -71,16 +63,16 @@ class Config[VT]:
     def __init__(self, default: VT | None = None) -> None:
         """Initialize the descriptor with a default value."""
         self._default = default
-        self._section: str = None
-        self._setting: str = None
-        self._original_value: VT = config[self._section][self._setting]
+        # self._section: str = None
+        # self._setting: str = None
+        # self._original_value: VT = None  # Will be set in __set_name__
 
     def __set_name__(self, owner: type, name: str) -> None:
         """Set the name of the attribute to the name of the descriptor."""
         self.name = name
         self._section = owner.__name__
         self._setting = name
-        self._original_value = config[self._section][self._setting]
+        # self._original_value = config[self._section][self._setting]
         self.private = f"_{self._section}_{self._setting}_{self.name}"
 
     def __get__(self, obj: object, obj_type: object) -> VT:
@@ -113,15 +105,22 @@ class Config[VT]:
         return wrapper
 
     @staticmethod
-    def as_kwarg(section: str, setting: str):  # noqa: ANN205
-        """Insert a config value into **kwargs to a given method/function using this descriptor."""
+    def as_kwarg(section: str, setting: str, name: str | None = None):  # noqa: ANN205
+        """Insert a config value into **kwargs to a given method/function using this descriptor.
 
-        def wrapper[F, **P](func: Callable[P, F]) -> Callable[P, F]:
+        Use kwarg.get(`name`) to get the value.
+        `name` is the name the kwarg gets if passed, if None, it will be the same as `setting`.
+        Section parameter is just for finding the config value.
+        """
+        if name is None:
+            name = setting
+
+        def wrapper[F, **P, T: Callable[P, F]](func: T) -> T:
             def inner(*args: P.args, **kwargs: P.kwargs) -> F:
-                kwargs[setting] = config.get(section, setting)
-                return func(*args, **kwargs)
+                kwargs[name] = config.get(section, setting)
+                return func(*args, **kwargs) # type: ignore[reportCallIssue, reportReturnType]
 
-            return inner
+            return inner # type: ignore[reportReturnType]
 
         return wrapper
 

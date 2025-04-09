@@ -1,7 +1,8 @@
 from sqlmodel import Field, SQLModel
-from winter_dragon.database.tables.definitions import USERS_ID
+from winter_dragon.database.keys import get_foreign_key
+from winter_dragon.database.tables.user import Users
 
 
 class SyncBanUser(SQLModel, table=True):
 
-    user_id: int = Field(foreign_key=USERS_ID, primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), primary_key=True)

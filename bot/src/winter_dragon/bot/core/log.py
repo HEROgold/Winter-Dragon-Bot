@@ -25,4 +25,4 @@ class LoggerMixin:
         # Traverse the MRO (Method Resolution Order) in reverse to update logger from base to the furthest child
         for base in reversed(cls.mro()):
             if issubclass(base, LoggerMixin) and hasattr(base, "_furthest_child_name"):
-                base.logger = logging.getLogger(f"{config['Main']['bot_name']}.{LoggerMixin._furthest_child_name}")
+                base.logger = logging.getLogger(f"{config.get("Main", "bot_name")}.{LoggerMixin._furthest_child_name}")

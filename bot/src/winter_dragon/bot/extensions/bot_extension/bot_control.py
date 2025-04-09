@@ -5,7 +5,7 @@ import time
 
 import discord
 import psutil
-from discord import app_commands
+from discord import Guild, app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
@@ -16,6 +16,7 @@ from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.enums.activity import ACTIVITY_TYPES, STATUS_TYPES, VALID_RNG_ACTIVITY, VALID_RNG_STATUS
 from winter_dragon.bot.tools.strings import codeblock
+from winter_dragon.database.tables.user import Users
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
@@ -55,7 +56,8 @@ class BotC(GroupCog):
         self.gather_metrics_loop.start()
 
 
-    @loop(seconds=config.getint("Activity", "periodic_time"))
+    @Config.as_kwarg("Activity", "random_activity", "seconds")
+    @loop()
     async def activity_switch(self) -> None:
         """Switch the bot's activity and status periodically. Uses activity.periodic_time config."""
         if self.random_activity:
@@ -173,12 +175,18 @@ class BotC(GroupCog):
     async def slash_bot_announce(self, interaction: discord.Interaction, msg: str) -> None:
         """Announce a message to all servers the bot is in and allowed to."""
         for guild in self.bot.guilds:
-            await self.bot.get_channel(guild.public_updates_channel.id).send(msg)
+            await self._send_announcement(msg, guild)
 
         await interaction.response.send_message(
             "Message send to all update channels on all servers!",
             ephemeral=True,
         )
+
+    async def _send_announcement(self, msg: str, guild: Guild) -> None:
+        if guild.public_updates_channel is None:
+            self.logger.warning(f"Guild {guild.name} does not have a public updates channel")
+            return
+        await guild.public_updates_channel.send(msg)
 
 
     @app_commands.command(name="ping", description="show latency")
@@ -226,10 +234,8 @@ class BotC(GroupCog):
         measured_time = time.time() - start_time
         response = round(measured_time * 1000)
 
-        from winter_dragon.database.tables import User
-
         start_time = time.time()
-        User.fetch_user(id_=interaction.user.id)
+        Users.fetch(id_=interaction.user.id)
         measured_time = time.time() - start_time
         database = round(measured_time * 1000)
         return latency, response, database
@@ -270,6 +276,8 @@ class BotC(GroupCog):
             net_counters.packets_recv,
         ]):
             self.logger.debug(f"{i=}, {value=}")
+
+            ansi_color, color = "", 0
             if i < cpu_and_ram_idx:
                 ansi_color, color = self.get_colors(value, max_amount=100)
             elif i < bytes_idx:
@@ -418,7 +426,7 @@ class BotC(GroupCog):
         )
 
         # Make the cpu and ram % fit the full scale of the plot/graph
-        values = []
+        values: list[int] = []
         for net_io in self.net_io_counters:
             values.extend((
                 net_io.bytes_sent,

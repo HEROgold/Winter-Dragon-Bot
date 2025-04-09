@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
-from winter_dragon.database.tables.user import User
+from winter_dragon.database.keys import get_foreign_key
+from winter_dragon.database.tables.user import Users
 
 
-class Player(SQLModel, table=True):
+class Players(SQLModel, table=True):
 
-    id: int = Field(foreign_key=User, primary_key=True)
+    id: int = Field(foreign_key=get_foreign_key(Users, "id"), primary_key=True)
     last_collection: datetime = Field(default=datetime.now(tz=UTC))

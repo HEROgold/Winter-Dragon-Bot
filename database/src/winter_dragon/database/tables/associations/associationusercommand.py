@@ -1,20 +1,21 @@
 from sqlalchemy import func
 from sqlmodel import Field, SQLModel, select
-from winter_dragon.database.tables.definitions import COMMANDS_ID, USERS_ID
+from winter_dragon.database.keys import get_foreign_key
+from winter_dragon.database.tables.command import Commands
+from winter_dragon.database.tables.user import Users
 
 
 class AssociationUserCommand(SQLModel, table=True):
 
-    id: int | None = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key=USERS_ID)
-    command_id: int = Field(foreign_key=COMMANDS_ID)
+    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), primary_key=True)
+    command_id: int = Field(foreign_key=get_foreign_key(Commands, "id"), primary_key=True)
 
     @classmethod
     def cleanup(cls) -> None:  # sourcery skip: remove-unreachable-code
         """Clean the database to keep track of (at most) 1k commands for each user."""
         msg = "This method requires rewrite."
         raise NotImplementedError(msg)
-        from database import session
+        from winter_dragon.database import session
 
         track_amount = 1000
         with session:

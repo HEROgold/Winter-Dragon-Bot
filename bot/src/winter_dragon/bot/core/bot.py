@@ -13,10 +13,11 @@ from typing import TYPE_CHECKING, Any
 
 import discord
 from discord import Intents, app_commands
+from discord.app_commands import AppCommandGroup
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 from winter_dragon.bot.config import Config, config
-from winter_dragon.bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS
+from winter_dragon.bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, ROOT_DIR
 from winter_dragon.bot.tools.log_manager import LogsManager
 
 
@@ -52,7 +53,7 @@ class WinterDragon(AutoShardedBot):
         tree_cls: type[app_commands.CommandTree[Any]] = app_commands.CommandTree,
         description: str | None = None,
         intents: discord.Intents,
-        **options: Any,  # noqa: ANN401. We match the type of options as defined in AutoShardedBot
+        **options: Any,  # We match the type of options as defined in AutoShardedBot  # noqa: ANN401
     ) -> None:
         """Initialize the WinterDragon bot.
 
@@ -80,7 +81,7 @@ class WinterDragon(AutoShardedBot):
 
     def initialize_loggers(self) -> None:
         """Initialize loggers related to WinterDragon."""
-        self.logger = logging.getLogger(f"{config['Main']['bot_name']}")
+        self.logger = logging.getLogger(config.get("Main", "bot_name"))
 
         self.log_manager.add_logger("bot", self.logger)
         self.log_manager.add_logger("discord", logging.getLogger("discord"))
@@ -105,7 +106,7 @@ class WinterDragon(AutoShardedBot):
         self.logger.exception(f"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
-    async def on_command_error(self, context: Context[BotT], exception: CommandError) -> None:
+    async def on_command_error(self, context: Context[BotT[Any]], exception: CommandError) -> None:
         """Log where errors occur during command execution."""
         self.logger.exception(f"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
@@ -118,13 +119,15 @@ class WinterDragon(AutoShardedBot):
         guild: Snowflake | int | None = None,
         *,
         fallback_to_global: bool = True,
-    ) -> MaybeGroupedAppCommand:
+    ) -> MaybeGroupedAppCommand | None:
         """Get an app command from the cache.
 
         This app command may be a group or app_command or None
         """
-        def search_dict(d: AppCommandStore) -> MaybeGroupedAppCommand:
+        def search_dict(d: AppCommandStore) -> MaybeGroupedAppCommand | None:
             for cmd_name, cmd in d.items():
+                if isinstance(cmd, AppCommandGroup):
+                    continue
                 if value == cmd_name or (str(value).isdigit() and int(value) == cmd.id):
                     return cmd
             return None
@@ -180,7 +183,7 @@ class WinterDragon(AutoShardedBot):
 
 
     async def get_extensions(self) -> list[str]:
-        """Get all the extensions in the extensions directory."""
+        """Get all the extensions in the extensions directory. Ignores extensions that start with _."""
         extensions = []
         for root, _, files in os.walk(EXTENSIONS):
             for file in files:
@@ -188,7 +191,7 @@ class WinterDragon(AutoShardedBot):
                     extension = Path(root) / file
                     extension_path = (
                         extension.as_posix()
-                        .replace(str(f"{EXTENSIONS.parent.as_posix()}/"), "")
+                        .replace(f"{ROOT_DIR.parent.as_posix()}/", "")
                         .replace("/", ".")
                         .replace(".py", "")
                     )
@@ -197,20 +200,21 @@ class WinterDragon(AutoShardedBot):
 
     async def load_extensions(self) -> None:
         """Load all the extensions in the extensions directory."""
-        if not (os.listdir(EXTENSIONS)):
-            self.logger.critical("No extensions Directory To Load!")
+        if not EXTENSIONS.exists():
+            self.logger.critical(f"{EXTENSIONS=} not found.")
             return
+        self.logger.debug(f"Found {EXTENSIONS=}")
         for extension in await self.get_extensions():
             self.logger.info(f"Loading {extension}")
             try:
-                await self.load_extension(extension)
+                await self.load_extension(extension, package="winter_dragon.bot")
             except Exception:
                 self.logger.exception("")
             else:
                 self.logger.info(f"Loaded {extension}")
 
     @Config.as_kwarg("Tokens", "discord_token")
-    async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs) -> None:  # noqa: ANN003
+    async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs: str) -> None:
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
         token = token or kwargs.get("discord_token")
         if token is None:

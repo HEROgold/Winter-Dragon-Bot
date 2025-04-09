@@ -1,110 +1,23 @@
+"""Module to implement the Would You Rather game."""
 import random
-from collections.abc import Sequence
+from typing import override
 
 import discord
 from discord import app_commands
-from discord.ext import commands
-from sqlmodel import select
-from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.tools import rainbow
-from winter_dragon.database.tables import Game, Suggestion, WyrQuestion
+from winter_dragon.database.tables import WyrQuestion
+
+from .base_question_game import BaseQuestionGame
 
 
-WYR = "WOULD_YOU_RATHER"
+class WouldYouRather(BaseQuestionGame[WyrQuestion]):
+    """Would You Rather game implementation."""
 
-
-class WouldYouRather(GroupCog):
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
-        super().__init__(*args, **kwargs)
-        self.game = Game.fetch_game_by_name(WYR)
-        self.set_default_data()
-
-
-    def set_default_data(self) -> None:
-        with self.session as session:
-            questions = session.exec(select(WyrQuestion)).all()
-            if len(questions) > 0:
-                self.logger.debug("Questions already present in table.")
-                return
-            for question_id, _ in enumerate(wyr_base_questions):
-                self.logger.debug(f"adding question to database {question_id=}, value={wyr_base_questions[question_id]}")
-                session.add(WyrQuestion(id=question_id, value=f"{wyr_base_questions[question_id]}"))
-            session.commit()
-
-    def get_questions(self) -> tuple[int, Sequence[WyrQuestion]]:
-        with self.session as session:
-            questions = session.exec(select(WyrQuestion)).all()
-            game_id = 0
-        return game_id, questions
-
-
-    @app_commands.command(
-        name="show",
-        description = "Use this to get a Would you rather, that you can reply to",
-    )
-    @app_commands.checks.cooldown(1, 10)
-    async def slash_wyr(self, interaction: discord.Interaction) -> None:
-        game_id, questions = self.get_questions()
-        question = random.choice(questions)  # noqa: S311
-        emb = discord.Embed(
-            title=f"Would You Rather #{game_id}",
-            description=question.value,
-            color=random.choice(rainbow.RAINBOW),  # noqa: S311
-        )
-        emb.add_field(name="Option 1", value="1️⃣")
-        emb.add_field(name="Option 2", value="2️⃣")
-        send_msg = await interaction.channel.send(embed=emb)
-        await send_msg.add_reaction("1️⃣")
-        await send_msg.add_reaction("2️⃣")
-        await interaction.response.send_message("Question send", ephemeral=True, delete_after=2)
-
-
-    @app_commands.command(
-        name = "add",
-        description="Lets you add a Would you rather question",
-        )
-    async def slash_wyr_add(self, interaction: discord.Interaction, wyr_question: str) -> None:
-        with self.session as session:
-            session.add(Suggestion(
-                id = None,
-                type = WYR,
-                content = wyr_question,
-            ))
-            session.commit()
-        await interaction.response.send_message(
-            f"The question ```{wyr_question}``` is added, it will be verified later.",
-            ephemeral=True,
-        )
-
-
-    @app_commands.command(
-        name = "add_verified",
-        description = "Add all questions stored in the WYR database file, to the questions data section.",
-        )
-    @app_commands.guilds(config.getint("Main", "support_guild_id"))
-    @commands.is_owner()
-    async def slash_add_verified(self, interaction:discord.Interaction) -> None:
-        with self.session as session:
-            result = session.exec(select(Suggestion).where(Suggestion.type == WYR, Suggestion.is_verified is True))
-            questions = result.all()
-            if not questions:
-                await interaction.response.send_message("No questions to add", ephemeral=True)
-                return
-
-            for question in questions:
-                session.add(WyrQuestion(value = question.content))
-            session.commit()
-        await interaction.response.send_message("Added all verified questions", ephemeral=True)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(WouldYouRather(bot))
-
-
-wyr_base_questions = [
+    GAME_NAME = "WOULD_YOU_RATHER"
+    GAME_DISPLAY_NAME = "Would You Rather"
+    QUESTION_MODEL = WyrQuestion
+    BASE_QUESTIONS = [  # noqa: RUF012
     "Would you rather eat a bug or a fly?",
     "Would you rather lick the floor or a broom?",
     "Would you rather eat ice cream or cake?",
@@ -221,3 +134,52 @@ wyr_base_questions = [
     "Would you rather have a booger hanging from your nose for the rest of your life or earwax planted on your earlobes?",
     "Would you rather have a sumo wrestler on top of you or yourself on top of him?",
 ]
+
+
+    @override
+    def create_embed(self, question: WyrQuestion) -> discord.Embed:
+        emb = discord.Embed(
+            title="Would You Rather",
+            description=question.value,
+            color=random.choice(rainbow.RAINBOW),  # noqa: S311
+        )
+        emb.add_field(name="Option 1", value="1️⃣")
+        emb.add_field(name="Option 2", value="2️⃣")
+        return emb
+
+    @override
+    async def add_reactions(self, message: discord.Message) -> None:
+        """Add reactions to the message."""
+        await message.add_reaction("1️⃣")
+        await message.add_reaction("2️⃣")
+
+    # Use more specific command names to avoid conflicts
+    @app_commands.command(
+        name="show",
+        description="Use this to get a Would you rather, that you can reply to",
+    )
+    @app_commands.checks.cooldown(1, 10)
+    async def slash_wyr_show(self, interaction: discord.Interaction) -> None:
+        """Send a random Would You Rather question to the channel."""
+        await self.show(interaction)
+
+    @app_commands.command(
+        name="add",
+        description="Lets you add a Would you rather question",
+    )
+    async def slash_wyr_add(self, interaction: discord.Interaction, wyr_question: str) -> None:
+        """Add a Would You Rather question to the game. The question requires verification first."""
+        await self.add(interaction, wyr_question)
+
+    @app_commands.command(
+        name="add_verified",
+        description="Add all questions stored in the WYR database file, to the questions data section.",
+    )
+    async def slash_wyr_add_verified(self, interaction: discord.Interaction) -> None:
+        """Add all verified questions to the game."""
+        await self.add_verified(interaction)
+
+
+async def setup(bot: WinterDragon) -> None:
+    """Entrypoint for adding cogs."""
+    await bot.add_cog(WouldYouRather(bot))

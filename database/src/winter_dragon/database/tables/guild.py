@@ -1,6 +1,7 @@
+from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, SQLModel
 
 
-class Guild(SQLModel, table=True):
+class Guilds(SQLModel, table=True):
 
-    id: int = Field(primary_key=True, unique=True, default=None)
+    id: int | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, autoincrement=True))

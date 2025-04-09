@@ -9,4 +9,4 @@ RUN pip3.13 install database/
 RUN pip3.13 install backend/
 RUN pip3.13 install uvicorn
 
-CMD ["uvicorn", "wd_backend/__main__:app"]
+CMD ["uvicorn", "winter_dragon/backend/__main__:app"]

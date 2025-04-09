@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import TypedDict
 
 from discord.member import Member
-from discord.user import User
 
 
 class FileData(TypedDict):
@@ -40,5 +39,5 @@ class Sale(TypedDict):
 
 class TeamDict(TypedDict):
     id: int
-    members: list[User | Member]
+    members: list[Member]
 

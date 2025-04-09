@@ -4,7 +4,6 @@ from typing import cast
 import discord
 from discord import CategoryChannel, StageInstance, app_commands
 from discord.ext import commands
-from errors import NoneTypeError
 from sqlmodel import select
 from winter_dragon.bot.config import config
 from winter_dragon.bot.constants import (
@@ -18,7 +17,8 @@ from winter_dragon.bot.constants import (
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.enums.channels import ChannelTypes, LogCategories
-from winter_dragon.database.tables import AuditLog, Channel
+from winter_dragon.bot.errors import NoneTypeError
+from winter_dragon.database.tables import AuditLog, Channels
 
 
 LOGS = ChannelTypes.LOGS
@@ -79,9 +79,9 @@ class LogChannels(GroupCog):
         embed: discord.Embed,
     ) -> None:
         with self.session as session:
-            channel = session.exec(select(Channel).where(
-                Channel.guild_id == guild.id,
-                Channel.name == LogCategories.GLOBAL.value,
+            channel = session.exec(select(Channels).where(
+                Channels.guild_id == guild.id,
+                Channels.name == LogCategories.GLOBAL.name,
             )).first()
 
         if not channel:
@@ -106,9 +106,9 @@ class LogChannels(GroupCog):
         log_channel_name = log_category.name
 
         with self.session as session:
-            channel = session.exec(select(Channel).where(
-                    Channel.guild_id == guild.id,
-                    Channel.name == log_channel_name,
+            channel = session.exec(select(Channels).where(
+                    Channels.guild_id == guild.id,
+                    Channels.name == log_channel_name,
                 )).first()
 
         if channel is None:
@@ -1077,9 +1077,9 @@ class LogChannels(GroupCog):
             guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none()),
         }
         with self.session as session:
-            channels = session.exec(select(Channel).where(
-                Channel.type == LOGS,
-                Channel.guild_id == interaction.guild.id,
+            channels = session.exec(select(Channels).where(
+                Channels.type == LOGS,
+                Channels.guild_id == interaction.guild.id,
             )).all()
             if len(channels) > 0:
                 await interaction.response.send_message("Log channels are already set up.")
@@ -1099,7 +1099,7 @@ class LogChannels(GroupCog):
                     reason="Adding Log channels",
                 )
                 category_channels.append(category_channel)
-                Channel.update(Channel(
+                Channels.update(Channels(
                     id = category_channel.id,
                     name = LOG_CHANNEL_NAME,
                     type = LOGS,
@@ -1114,7 +1114,7 @@ class LogChannels(GroupCog):
                     name=f"{log_category_name.lower()}",
                     reason="Adding Log channels",
                 )
-                Channel.update(Channel(
+                Channels.update(Channels(
                     id = text_channel.id,
                     name = log_category_name,
                     type = LOGS,
@@ -1138,9 +1138,9 @@ class LogChannels(GroupCog):
         description="Disables automatic moderation for this guild, and removes the log channels.")
     async def slash_log_remove(self, interaction:discord.Interaction) -> None:
         with self.session as session:
-            result = session.exec(select(Channel).where(
-                Channel.type == LOGS,
-                Channel.guild_id == interaction.guild.id,
+            result = session.exec(select(Channels).where(
+                Channels.type == LOGS,
+                Channels.guild_id == interaction.guild.id,
             ))
             channels = list(result.all())
             if len(channels) == 0:
@@ -1193,8 +1193,8 @@ class LogChannels(GroupCog):
         if guild is None:
             with self.session as session:
                 guild_ids = (
-                    session.exec(select(Channel.guild_id)
-                        .where(Channel.type == LOGS)
+                    session.exec(select(Channels.guild_id)
+                        .where(Channels.type == LOGS)
                         .distinct(),
                         ).all()
                 )
@@ -1204,9 +1204,9 @@ class LogChannels(GroupCog):
             raise NoneTypeError(msg)
 
         with self.session as session:
-            channels = session.exec(select(Channel).where(
-                Channel.type == LOGS,
-                Channel.guild_id == guild.id,
+            channels = session.exec(select(Channels).where(
+                Channels.type == LOGS,
+                Channels.guild_id == guild.id,
             )).all()
 
         div, mod = divmod(len(LogCategories), MAX_CATEGORY_SIZE)
@@ -1229,7 +1229,7 @@ class LogChannels(GroupCog):
 
                 new_log_channel = await category_channel.create_text_channel(channel_name, reason="Log update")
                 self.logger.info(f"Updated Log for {guild=} with {new_log_channel=}")
-                Channel.update(Channel(
+                Channels.update(Channels(
                     id = new_log_channel.id,
                     name = channel_name,
                     type = LOGS,
@@ -1241,10 +1241,10 @@ class LogChannels(GroupCog):
 
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
         with self.session as session:
-            categories = session.exec(select(Channel).where(
-                Channel.name == LOG_CHANNEL_NAME,
-                Channel.type == LOGS,
-                Channel.guild_id == guild.id,
+            categories = session.exec(select(Channels).where(
+                Channels.name == LOG_CHANNEL_NAME,
+                Channels.type == LOGS,
+                Channels.guild_id == guild.id,
             )).all()
             category_channels = [
                 discord.utils.get(guild.categories, id=category.id)
@@ -1267,7 +1267,7 @@ class LogChannels(GroupCog):
                         reason="Adding Log channels",
                     )
                     category_channels.append(category_channel)
-                    Channel.update(Channel(
+                    Channels.update(Channels(
                         id = category_channel.id,
                         name = LOG_CHANNEL_NAME,
                         type = LOGS,

@@ -6,13 +6,11 @@ from textwrap import dedent
 import discord
 from discord import app_commands
 from discord.ext import commands
-from winter_dragon.bot.config import config
+from winter_dragon.bot.config import Config, config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.errors.aliases import AllErrors
-
-from bot.src.WinterDragon.bot.config import Config
 
 
 class ErrorHandler(LoggerMixin):

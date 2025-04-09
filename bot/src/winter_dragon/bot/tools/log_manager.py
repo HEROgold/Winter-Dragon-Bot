@@ -1,3 +1,4 @@
+"""Manage logs for the bot."""
 import asyncio
 import logging
 import os
@@ -10,14 +11,16 @@ from pathlib import Path
 from winter_dragon.bot.config import Config, config
 
 
-KEEP_LATEST = config.getboolean("Main", "keep_latest_logs")
-
-
 class LogsManager:
+    """Manages some loggers and their log files."""
+
+    current_directory = Path("./")
     first_rollover: bool = False
+    KEEP_LATEST = Config(default=False)
 
     @Config.default("Main", "log_path", "./logs")
     def __init__(self) -> None:
+        """Initialize the LogsManager."""
         self._loggers: dict[str, logging.Logger] = {}
         self.launch_time = datetime.now(UTC)
         self.logger = logging.getLogger("logs")
@@ -26,13 +29,16 @@ class LogsManager:
         self.logger.addHandler(logging.StreamHandler())
 
     def add_logger(self, name: str, logger: logging.Logger) -> None:
+        """Add a logger to the manager."""
         self._loggers[name] = logger
         self.setup_logging(logger, f"{name}.log")
 
     def __getitem__(self, name: str) -> logging.Logger:
+        """Get the logger by name."""
         return self._loggers[name]
 
     async def daily_save_logs(self) -> None:
+        """Continuously save logs."""
         while True:
             if not self.first_rollover:
                 self.first_rollover = True
@@ -48,6 +54,7 @@ class LogsManager:
 
     @staticmethod
     def setup_logging(logger: logging.Logger, filename: str) -> None:
+        """Set up logging for the given logger."""
         log_level = config.get("Main", "log_level")
         logger.setLevel(log_level)
         handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
@@ -95,15 +102,20 @@ class LogsManager:
         # /logs\\2023-05-08-00-10-27\\
         regex = r"(\.\/logs)(\/|\\|\d|-|_)+"
 
-        folder_path = re.match(regex, str(oldest_files[0]))[0]
+        match = re.match(regex, str(oldest_files[0]))
+        if not match:
+            self.logger.warning("No match found for saving log files.")
+            return
+        folder_path = match[0]
         self.logger.info(f"deleting old logs for space: {folder_path=}")
 
-        for file in os.listdir(folder_path):
-            Path(f"{folder_path}{file}").unlink()
+        for file in Path(folder_path).iterdir():
+            file.unlink()
         Path(folder_path).rmdir()
 
     @Config.default("Main", "log_size_kb_limit", 9000000)
     def save_logs(self) -> None:
+        """Save logs to a new directory."""
         size_limit = config.getint("Main", "log_size_kb_limit")
         while self.logs_size_limit_check(size_limit):
             self.delete_oldest_saved_logs()
@@ -115,8 +127,8 @@ class LogsManager:
         self.logger.info("Saving log files")
         self.logger.info(f"uptime: {datetime.now(UTC) - self.launch_time}")
 
-        for file in os.listdir("./"):
-            if file.endswith(".log") or file[:-2].endswith(".log"):
+        for file in self.current_directory.iterdir():
+            if file.name.endswith(".log") or file.name[:-2].endswith(".log"):
                 shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
 
 
@@ -128,7 +140,8 @@ class LogsManager:
                     handler.doRollover()
 
     def delete_latest_logs(self) -> None:
-        if KEEP_LATEST:
+        """Delete the latest logs, if the config is set to do so."""
+        if self.KEEP_LATEST:
             self.logger.info("Keeping top level logs.")
             return
         self._delete_top_level_logs()
@@ -136,8 +149,8 @@ class LogsManager:
 
     def _delete_top_level_logs(self) -> None:
         """Delete the top level logs (not in logs directory)."""
-        for file in os.listdir("./"):
-            if file.endswith(".log") or file[:-2].endswith(".log"):
+        for file in self.current_directory.iterdir():
+            if file.name.endswith(".log") or file.name[:-2].endswith(".log"):
                 self.logger.info(f"Removing {file}")
                 try:
                     Path(file).unlink()

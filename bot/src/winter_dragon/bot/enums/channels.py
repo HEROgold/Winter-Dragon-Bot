@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Self
 
 from discord import AuditLogAction
-from winter_dragon.database.channels import ChannelTypes  # type: ignore[NotAccessed]
+from winter_dragon.database.channeltypes import ChannelTypes  # type: ignore[NotAccessed]
 
 
 __all__ = ("ChannelTypes",)
@@ -13,7 +13,7 @@ __all__ = ("ChannelTypes",)
 class LogCategories(Enum):
     """Enum for the different categories of logs."""
 
-    GLOBAL = "ALL_CATEGORIES"
+    GLOBAL = -1 # "ALL_CATEGORIES"
 
     # Own Enums
     MEMBER_JOINED = auto()

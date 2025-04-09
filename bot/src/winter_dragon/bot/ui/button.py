@@ -1,5 +1,6 @@
 """Module that contains our Button."""
-import discord.ui.button
+
+import discord
 from winter_dragon.bot.core.log import LoggerMixin
 
 

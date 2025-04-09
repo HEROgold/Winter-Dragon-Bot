@@ -1,16 +1,17 @@
 from typing import Self
 
-from sqlmodel import SQLModel, select
+from sqlalchemy import BigInteger, Column
+from sqlmodel import Field, SQLModel, select
 
 
-class User(SQLModel, table=True):
+class Users(SQLModel, table=True):
 
-    id: int
+    id: int | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, autoincrement=True))
 
     @classmethod
-    def fetch_user(cls, id_: int) -> Self:
+    def fetch(cls, id_: int) -> Self:
         """Find existing or create new user, and return it."""
-        from database import session
+        from winter_dragon.database import session
 
         with session:
             if user := session.exec(select(cls).where(cls.id == id_)).first():

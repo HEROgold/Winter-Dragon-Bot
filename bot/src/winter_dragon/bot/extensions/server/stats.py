@@ -3,21 +3,21 @@ import random
 import discord
 from discord import app_commands
 from discord.ext import commands
-from errors import NoneTypeError
 from sqlmodel import select
 from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.enums.channels import ChannelTypes
+from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.bot.tools import rainbow
-from winter_dragon.database.tables import Channel
+from winter_dragon.database.tables import Channels
 
 
 STATS = ChannelTypes.STATS.name
 
 
-def get_peak_count(channel: Channel | discord.abc.GuildChannel | None) -> int:
+def get_peak_count(channel: Channels | discord.abc.GuildChannel | None) -> int:
     try:
         return int(channel.name[13:])
     except ValueError:
@@ -34,15 +34,15 @@ class Stats(GroupCog):
         with self.session as session:
             if peak_online := (
                 session.exec(
-                    select(Channel).where(
-                        Channel.guild_id == guild.id,
-                        Channel.name == "peak_channel",
+                    select(Channels).where(
+                        Channels.guild_id == guild.id,
+                        Channels.name == "peak_channel",
                     ),
                 ).first()
             ):
                 await self.update_peak(guild, peak_online)
 
-    async def update_peak(self, guild: discord.Guild, peak_online: Channel) -> None:
+    async def update_peak(self, guild: discord.Guild, peak_online: Channels) -> None:
         peak_channel_id = peak_online.id
         peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
 
@@ -84,8 +84,8 @@ class Stats(GroupCog):
 
         with self.session as session:
             for k, v in channels.items():
-                Channel.update(
-                    Channel(
+                Channels.update(
+                    Channels(
                         id=v.id,
                         guild_id=guild.id,
                         type=ChannelTypes.STATS,
@@ -105,9 +105,9 @@ class Stats(GroupCog):
 
         with self.session as session:
             channels = session.exec(
-                select(Channel).where(
-                    Channel.guild_id == guild.id,
-                    Channel.type == STATS,
+                select(Channels).where(
+                    Channels.guild_id == guild.id,
+                    Channels.type == STATS,
                 ),
             ).all()
 
@@ -137,9 +137,9 @@ class Stats(GroupCog):
         for guild in guilds:
             with self.session as session:
                 if not session.exec(
-                    select(Channel).where(
-                        Channel.guild_id == guild.id,
-                        Channel.type == STATS,
+                    select(Channels).where(
+                        Channels.guild_id == guild.id,
+                        Channels.type == STATS,
                     ),
                 ).first():
                     continue
@@ -188,9 +188,9 @@ class Stats(GroupCog):
     ]:
         with self.session as session:
             channels = session.exec(
-                select(Channel).where(
-                    Channel.type == STATS,
-                    Channel.guild_id == guild.id,
+                select(Channels).where(
+                    Channels.type == STATS,
+                    Channels.guild_id == guild.id,
                 ),
             ).all()
 
@@ -273,9 +273,9 @@ class Stats(GroupCog):
     async def slash_stats_category_add(self, interaction: discord.Interaction) -> None:
         with self.session as session:
             if session.exec(
-                select(Channel).where(
-                    Channel.guild_id == interaction.guild.id,
-                    Channel.type == STATS,
+                select(Channels).where(
+                    Channels.guild_id == interaction.guild.id,
+                    Channels.type == STATS,
                 ),
             ).all():
                 rem_mention = self.get_command_mention(self.slash_stats_category_remove)
@@ -303,9 +303,9 @@ class Stats(GroupCog):
     async def slash_stats_category_remove(self, interaction: discord.Interaction) -> None:
         with self.session as session:
             channels = session.exec(
-                select(Channel).where(
-                    Channel.guild_id == interaction.guild.id,
-                    Channel.type == STATS,
+                select(Channels).where(
+                    Channels.guild_id == interaction.guild.id,
+                    Channels.type == STATS,
                 ),
             ).all()
             if not channels:
@@ -334,9 +334,9 @@ class Stats(GroupCog):
 
         with self.session as session:
             channels = session.exec(
-                select(Channel).where(
-                    Channel.guild_id == interaction.guild.id,
-                    Channel.type == STATS,
+                select(Channels).where(
+                    Channels.guild_id == interaction.guild.id,
+                    Channels.type == STATS,
                 ),
             ).all()
 

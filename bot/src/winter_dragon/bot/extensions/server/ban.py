@@ -31,6 +31,12 @@ class SyncedBans(GroupCog):
     @sync.command(name="join", description="Start syncing ban's with this guild")
     async def slash_synced_ban_join(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message(
+                "This command can only be used in a guild.",
+                ephemeral=True,
+            )
+            return
 
         with self.session as session:
             session.add(
@@ -48,10 +54,18 @@ class SyncedBans(GroupCog):
     @sync.command(name="leave", description="Stop syncing ban's with this guild")
     async def slash_synced_ban_leave(self, interaction: discord.Interaction) -> None:
         guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message(
+                "This command can only be used in a guild.",
+                ephemeral=True,
+            )
+            return
 
         with self.session as session:
             session.delete(
-                session.exec(select(SyncBanGuild).where(SyncBanGuild.guild_id == guild.id)).first(),
+                session.exec(
+                    select(SyncBanGuild)
+                    .where(SyncBanGuild.guild_id == guild.id)).first(),
             )
             session.commit()
 
@@ -69,8 +83,8 @@ class SyncedBans(GroupCog):
             )
 
             for db_guild in session.exec(select(SyncBanGuild)).all():
-                guild = self.bot.get_guild(db_guild.guild_id)
-                await guild.ban(member, reason="Syncing bans")
+                if guild := self.bot.get_guild(db_guild.guild_id):
+                    await guild.ban(member, reason="Syncing bans")
             session.commit()
 
 

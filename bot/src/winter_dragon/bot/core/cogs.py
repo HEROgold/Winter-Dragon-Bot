@@ -14,8 +14,8 @@ from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.tools.utils import get_arg
 from winter_dragon.database import Session, engine
-from winter_dragon.database.tables import Channel, DisabledCommands, GuildCommands
-from winter_dragon.database.tables import User as DbUser
+from winter_dragon.database.tables import Channels, DisabledCommands, GuildCommands
+from winter_dragon.database.tables import Users as DbUser
 
 
 class Cog(commands.Cog, LoggerMixin):
@@ -36,7 +36,11 @@ class Cog(commands.Cog, LoggerMixin):
 
         Sets up a error handler, app command error handler, and logger for the cog.
         """
-        self.bot = get_arg(args, WinterDragon) or kwargs.get("bot")
+        bot = get_arg(args, WinterDragon) or kwargs.get("bot")
+        if not isinstance(bot, WinterDragon):
+            msg = f"Expected WinterDragon instance but got {type(bot)} instead"
+            raise TypeError(msg)
+        self.bot = bot
         self.session = Session(engine)
 
         if self.bot:
@@ -64,10 +68,14 @@ class Cog(commands.Cog, LoggerMixin):
         #145
         guild = interaction.guild
         channel = interaction.channel
-        user = interaction.message.author if isinstance(interaction, commands.Context) else interaction.user
+
+        if interaction.message is None or not isinstance(interaction, commands.Context):
+            user = interaction.user
+        else:
+            user = interaction.message.author
 
         with self.session as session:
-            targets: list[GuildCommands | Channel | DbUser | None] = []
+            targets: list[GuildCommands | Channels | DbUser | None] = []
             if guild:
                 targets.append(
                     session.exec(
@@ -77,7 +85,7 @@ class Cog(commands.Cog, LoggerMixin):
             if channel:
                 targets.append(
                     session.exec(
-                        select(Channel).where(Channel.id == channel.id),
+                        select(Channels).where(Channels.id == channel.id),
                     ).first(),
                 )
             if user:

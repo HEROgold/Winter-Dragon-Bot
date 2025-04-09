@@ -7,34 +7,34 @@ from .associations import (
 )
 from .auditlog import AuditLog
 from .autoassignrole import AutoAssignRole
-from .autochannel import AutoChannel
+from .autochannel import AutoChannels
 from .autochannelsettings import AutoChannelSettings
 from .autoreassign import AutoReAssign
-from .car_fuel import CarFuel
-from .channel import Channel
-from .command import Command
-from .commandgroup import CommandGroup
+from .car_fuel import CarFuels
+from .channel import Channels
+from .command import Commands
+from .commandgroup import CommandGroups
 from .disabledcommands import DisabledCommands
-from .game import Game
-from .guild import Guild
-from .hangman import Hangman
+from .game import Games
+from .guild import Guilds
+from .hangman import Hangmen
 from .infractions import Infractions
-from .lobby import Lobby
+from .lobby import Lobbies
 from .lobbystatus import LobbyStatus
 from .lookingforgroup import LookingForGroup
-from .message import Message
+from .message import Messages
 from .nhiequestion import NhieQuestion
 from .presence import Presence
 from .reminder import Reminder
 from .resultduels import ResultDuels
 from .resultmassivemultiplayer import ResultMassiveMultiplayer
-from .role import Role
+from .role import Roles
 from .steamsale import SteamSale
-from .steamuser import SteamUser
-from .suggestion import Suggestion
+from .steamuser import SteamUsers
+from .suggestion import Suggestions
 from .syncbanguild import SyncBanGuild
 from .syncbanuser import SyncBanUser
-from .user import User
+from .user import Users
 from .userroles import UserRoles
 from .welcome import Welcome
 from .wyrquestion import WyrQuestion
@@ -46,37 +46,37 @@ __all__ = [
     "AssociationUserLobby",
     "AuditLog",
     "AutoAssignRole",
-    "AutoChannel",
     "AutoChannelSettings",
+    "AutoChannels",
     "AutoReAssign",
-    "CarFuel",
-    "Channel",
-    "Command",
-    "CommandGroup",
+    "CarFuels",
+    "Channels",
+    "CommandGroups",
+    "Commands",
     "DisabledCommands",
-    "Game",
-    "Guild",
+    "Games",
     "GuildCommands",
     "GuildRoles",
-    "Hangman",
+    "Guilds",
+    "Hangmen",
     "Infractions",
-    "Lobby",
+    "Lobbies",
     "LobbyStatus",
     "LookingForGroup",
-    "Message",
+    "Messages",
     "NhieQuestion",
     "Presence",
     "Reminder",
     "ResultDuels",
     "ResultMassiveMultiplayer",
-    "Role",
+    "Roles",
     "SteamSale",
-    "SteamUser",
-    "Suggestion",
+    "SteamUsers",
+    "Suggestions",
     "SyncBanGuild",
     "SyncBanUser",
-    "User",
     "UserRoles",
+    "Users",
     "Welcome",
     "WyrQuestion",
 ]

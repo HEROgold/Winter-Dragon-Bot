@@ -1,6 +1,6 @@
 import enum
 
-from sqlmodel import SQLModel
+from sqlmodel import Field, SQLModel
 
 
 class LobbyStatusEnum(enum.Enum):
@@ -12,4 +12,4 @@ class LobbyStatusEnum(enum.Enum):
 
 class LobbyStatus(SQLModel, table=True):
 
-    status: LobbyStatusEnum
+    status: str = Field(primary_key=True)

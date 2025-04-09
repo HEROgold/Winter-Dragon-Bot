@@ -11,7 +11,7 @@ from discord import (
 from sqlmodel import select
 from winter_dragon.bot.constants import AUTOCHANNEL_CREATE_REASON
 from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.database.tables import AutoChannel as AC  # noqa: N817
+from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
 from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
 
 
@@ -86,8 +86,8 @@ class AutomaticChannels(GroupCog):
         if session.exec(select(AC).where(AC.channel_id == after.channel.id)).first():
             name, limit = self.get_final_settings(
                 member,
-                session.exec(select(ACS).where(ACS.id == member.id)).first(),
-                session.exec(select(ACS).where(ACS.id == guild.id)).first(),
+                session.exec(select(ACS).where(ACS.user_id == member.id)).first(),
+                session.exec(select(ACS).where(ACS.user_id == guild.id)).first(),
             )
 
             # Set a default name if no custom one is set in settings
@@ -186,11 +186,11 @@ class AutomaticChannels(GroupCog):
     @app_commands.command(name="guild_limit", description="Set a limit for AutoChannels")
     async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
         with self.session as session:
-            if autochannel_settings := session.exec(select(ACS).where(ACS.id == interaction.user.id)).first():
+            if autochannel_settings := session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
                 autochannel_settings.channel_limit = limit
             else:
                 session.add(ACS(
-                    id = interaction.user.id,
+                    user_id = interaction.user.id,
                     channel_name = interaction.user.name,
                     channel_limit = 0,
                 ))
@@ -204,11 +204,11 @@ class AutomaticChannels(GroupCog):
     @app_commands.command(name="limit", description="Set a limit for your channel")
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
         with self.session as session:
-            if autochannel_settings := session.exec(select(ACS).where(ACS.id == interaction.user.id)).first():
+            if autochannel_settings := session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
                 autochannel_settings.channel_limit = limit
             else:
                 session.add(ACS(
-                    id = interaction.user.id,
+                    user_id = interaction.user.id,
                     channel_name = interaction.user.name,
                     channel_limit = 0,
                 ))
@@ -249,11 +249,11 @@ class AutomaticChannels(GroupCog):
                 ephemeral=True,
             )
 
-            if voice_settings := session.exec(select(ACS).where(ACS.id == interaction.user.id)).first():
+            if voice_settings := session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
                 voice_settings.channel_name = name
             else:
                 session.add(ACS(
-                    id = interaction.user.id,
+                    user_id = interaction.user.id,
                     channel_name = name,
                     channel_limit = 0,
                 ))

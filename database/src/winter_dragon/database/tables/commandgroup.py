@@ -1,11 +1,8 @@
-
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Numeric
 from sqlmodel import Field, SQLModel
 
 
-class CommandGroup(SQLModel, table=True):
+class CommandGroups(SQLModel, table=True):
 
-    id: int | None = Field(default=None, primary_key=True)
+    id: int | None = Field(sa_column=Column(Numeric(20, 0), primary_key=True), default=None)
     name: str
-
-    commands = relationship(back_populates="parent")

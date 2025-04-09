@@ -4,13 +4,13 @@ from sqlmodel import select
 from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.database.tables import Game as GameDB
+from winter_dragon.bot.extensions.indev.games import Games
+from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import LookingForGroup
 
 
 @app_commands.guilds(config.getint("Main", "support_guild_id"))
 class Lfg(GroupCog):
-    from extensions.indev.games import Games
     slash_suggest = Games.slash_suggest
 
 
@@ -18,7 +18,7 @@ class Lfg(GroupCog):
         super().__init__(*args, **kwargs)
 
         with self.session as session:
-            self.games = [i.name for i in session.exec(select(GameDB)).all()]
+            self.games = [i.name for i in session.exec(select(GamesDB)).all()]
 
 
     def check_match(self) -> None:
@@ -30,11 +30,11 @@ class Lfg(GroupCog):
     # TODO: add Database table, matching user id and category, every time someone adds, check matches.
     @app_commands.command(name="join", description="Join a search queue for finding people for the same game")
     async def slash_lfg_join(self, interaction: discord.Interaction, game: str) -> None:
-        if game not in self.games:
-            await interaction.response.send_message("This game is not supported", ephemeral=True)
-            return
         with self.session as session:
-            game_db = session.exec(select(GameDB).where(GameDB.name == game)).first()
+            game_db = session.exec(select(GamesDB).where(GamesDB.name == game)).first()
+            if game_db is None:
+                await interaction.response.send_message("This game is not supported", ephemeral=True)
+                return
             total = session.exec(select(LookingForGroup).where(LookingForGroup.game_name == game)).all()
             session.add(LookingForGroup(
                 user_id = interaction.user.id,
@@ -81,7 +81,7 @@ class Lfg(GroupCog):
         with self.session as session:
             user_games = session.exec(select(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id)).all()
             for user_game in user_games:
-                lfg_game = session.exec(select(LookingForGroup).where(LookingForGroup.game_name == user_game.id)).all()
+                lfg_game = session.exec(select(LookingForGroup).where(LookingForGroup.game_name == user_game.game_name)).all()
                 self.logger.debug(f"{user_game=}, {lfg_game=}")
 
 

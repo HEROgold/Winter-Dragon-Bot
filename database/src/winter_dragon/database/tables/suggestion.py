@@ -1,7 +1,7 @@
 from sqlmodel import Field, SQLModel
 
 
-class Suggestion(SQLModel, table=True):
+class Suggestions(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     type: str

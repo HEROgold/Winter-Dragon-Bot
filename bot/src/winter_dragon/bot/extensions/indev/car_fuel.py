@@ -4,7 +4,7 @@ from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.database.tables import CarFuel as DbFuel
+from winter_dragon.database.tables import CarFuels as DbFuel
 
 
 class Fuel(GroupCog):

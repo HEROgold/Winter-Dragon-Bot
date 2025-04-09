@@ -1,13 +1,17 @@
 from sqlmodel import Field, SQLModel
-from winter_dragon.database.tables.definitions import CHANNELS_ID, COMMANDS_ID, GUILDS_ID, USERS_ID
+from winter_dragon.database.keys import get_foreign_key
+from winter_dragon.database.tables.channel import Channels
+from winter_dragon.database.tables.command import Commands
+from winter_dragon.database.tables.guild import Guilds
+from winter_dragon.database.tables.user import Users
 
 
 class DisabledCommands(SQLModel, table=True):
 
-    command_id: int = Field(foreign_key=COMMANDS_ID, primary_key=True)
-    _user_id: int = Field(foreign_key=USERS_ID, nullable=True)
-    _channel_id: int = Field(foreign_key=CHANNELS_ID, nullable=True)
-    _guild_id: int = Field(foreign_key=GUILDS_ID, nullable=True)
+    command_id: int = Field(foreign_key=get_foreign_key(Commands, "id"), primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), nullable=True)
+    channel_id: int = Field(foreign_key=get_foreign_key(Channels, "id"), nullable=True)
+    guild_id: int = Field(foreign_key=get_foreign_key(Guilds, "id"), nullable=True)
 
     def __init__(self, **kw: int) -> None:
         # TODO @HEROgold: needs testing
@@ -35,4 +39,4 @@ class DisabledCommands(SQLModel, table=True):
     @property
     def target_id(self) -> int:
         """Return the target ID. Could be a user, channel, or guild ID."""
-        return self._user_id or self._channel_id or self._guild_id
+        return self.user_id or self.channel_id or self.guild_id

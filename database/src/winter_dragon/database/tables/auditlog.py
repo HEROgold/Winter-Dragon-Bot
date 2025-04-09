@@ -20,8 +20,14 @@ class AuditLog(SQLModel, table=True):
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
     # TODO: This METHOD needs some work to work with SQLModel
-        from database import session
+        from winter_dragon.database import session
 
+        if entry.target is None:
+            msg = f"Target should be AuditLogEntry.target type, but is {type(entry.target)}"
+            raise ValueError(msg)
+        if entry.category is None:
+            msg = f"Category should be AuditLogEntry.category type, but is {type(entry.category)}"
+            raise ValueError(msg)
         with session:
             audit = cls(
                 id=entry.id,

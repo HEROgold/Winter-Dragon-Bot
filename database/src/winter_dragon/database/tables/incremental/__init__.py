@@ -1,10 +1,10 @@
 from .currency import UserMoney
-from .generators import UserGenerator
-from .player import Player
+from .player import Players
+from .usergenerator import AssociationUserGenerator
 
 
 __all__ = [
-    "Player",
-    "UserGenerator",
+    "AssociationUserGenerator",
+    "Players",
     "UserMoney",
 ]

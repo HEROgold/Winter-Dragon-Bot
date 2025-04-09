@@ -27,7 +27,7 @@ package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["bot.src.*", "database.src.*", "backend.src.*"]
+include = ["*", "database.src.*", "backend.src.*"]
 namespaces = true
 
 [tool.setuptools.package-data]

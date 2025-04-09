@@ -1,3 +1,4 @@
+"""Cog related to steam features."""
 import asyncio
 import datetime
 import re
@@ -6,14 +7,13 @@ from contextlib import suppress
 from textwrap import dedent
 from typing import Any, cast
 
-import bs4
 import discord
 import requests
 from bs4 import BeautifulSoup
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot._types.dicts import Sale
-from winter_dragon.bot.config import config
+from winter_dragon.bot.config import Config, config
 from winter_dragon.bot.constants import (
     BUNDLE_DISCOUNT,
     BUNDLE_FINAL_PRICE,
@@ -35,32 +35,36 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database import Session
-from winter_dragon.database.tables import SteamSale, SteamUser, User
-
-from bot.src.WinterDragon.bot.config import Config
+from winter_dragon.database.tables import SteamSale, SteamUsers, Users
 
 
-class Steam(GroupCog):
+# TODO: Rewrite, using the sources used by SteamDB, and their strategies.
+
+class SteamSales(GroupCog):
+    """Cog that allows users to get notifications for steam sales."""
+
     async def cog_load(self) -> None:
+        """Load the cog."""
         self.update.start()
         self.loop = asyncio.get_event_loop()
 
-    async def get_htl(self, url: str) -> requests.Response:
+    async def _get_html(self, url: str) -> requests.Response:
         return await self.loop.run_in_executor(None, requests.get, url)
 
 
     @app_commands.command(name="add", description="Get notified automatically about free steam games")
     async def slash_add(self, interaction:discord.Interaction) -> None:
+        """Add a user to the list of recipients for free steam games."""
         with self.session as session:
-            if session.exec(select(User).where(User.id == interaction.user.id)).first() is None:
-                session.add(User(id = interaction.user.id))
+            if session.exec(select(Users).where(Users.id == interaction.user.id)).first() is None:
+                session.add(Users(id = interaction.user.id))
                 session.commit()
 
-            result = session.exec(select(SteamUser).where(SteamUser.id == interaction.user.id))
+            result = session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
             if result.first():
                 await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
                 return
-            session.add(SteamUser(id = interaction.user.id))
+            session.add(SteamUsers(id = interaction.user.id))
             session.commit()
         sub_mention = self.get_command_mention(self.slash_show)
         msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
@@ -69,8 +73,9 @@ class Steam(GroupCog):
 
     @app_commands.command(name="remove", description="No longer get notified of free steam games")
     async def slash_remove(self, interaction:discord.Interaction) -> None:
+        """Remove a user from the list of recipients for free steam games."""
         with self.session as session:
-            result = session.exec(select(SteamUser).where(SteamUser.id == interaction.user.id))
+            result = session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
             user = result.first()
             if not user:
                 await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
@@ -85,6 +90,7 @@ class Steam(GroupCog):
         name="show",
         description="Get a list of steam games that are on sale for the given percentage or higher")
     async def slash_show(self, interaction: discord.Interaction, percent: int = 100) -> None:
+        """Get a list of steam games that are on sale for the given percentage or higher."""
         await interaction.response.defer()
 
         embed = discord.Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
@@ -110,7 +116,7 @@ class Steam(GroupCog):
         self.logger.debug(f"{new_sales=}")
         embed = self.populate_embed(embed, new_sales)
 
-        if embed is None:
+        if len(embed.fields) == 0:
             self.logger.warning("Got no populated embed, skipping sale sending.")
             return
 
@@ -120,7 +126,7 @@ class Steam(GroupCog):
         all_sale_message = f"You can see other sales by using {sub_mention_show}, followed by a percentage"
 
         with self.session as session:
-            users = session.exec(select(SteamUser)).all()
+            users = session.exec(select(SteamUsers)).all()
             self.logger.debug(f"Got embed with sales, {embed}, to send to {users=}")
 
             for db_user in users:
@@ -140,6 +146,7 @@ class Steam(GroupCog):
 
     @update.before_loop
     async def before_update(self) -> None:
+        """Wait until the bot is ready before starting the loop."""
         await self.bot.wait_until_ready()
 
 
@@ -368,7 +375,7 @@ class Steam(GroupCog):
             msg = "Invalid Steam Bundle URL"
             raise ValueError(msg)
 
-        html = await self.get_htl(url)
+        html = await self._get_html(url)
         soup = BeautifulSoup(html.text, "html.parser")
 
         return [
@@ -406,14 +413,13 @@ class Steam(GroupCog):
 
         With the search options: Ascending price, Special deals, English.
         """
-        html = await self.get_htl(config.get("Steam", "search_url"))
+        html = await self._get_html(config.get("Steam", "search_url"))
         soup = BeautifulSoup(html.text, "html.parser")
 
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
             if sale_tag is None:
                 continue
 
-            sale_tag: bs4.element.Tag
             discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
             a_tag = sale_tag.find_parent("a", href=True)
             href = cast("str", a_tag.get("href"))
@@ -463,7 +469,7 @@ class Steam(GroupCog):
             msg = "Invalid Steam Bundle URL"
             raise ValueError(msg)
 
-        html = await self.get_htl(url)
+        html = await self._get_html(url)
         soup = BeautifulSoup(html.text, "html.parser")
 
         price = soup.find(class_=BUNDLE_FINAL_PRICE).text[:-1].replace(",", ".")
@@ -486,7 +492,7 @@ class Steam(GroupCog):
             msg = "Invalid Steam Game URL"
             raise ValueError(msg)
 
-        html = await self.get_htl(url)
+        html = await self._get_html(url)
         soup = BeautifulSoup(html.text, "html.parser")
 
         add_to_cart = soup.find(class_="btn_addtocart")
@@ -538,6 +544,7 @@ class Steam(GroupCog):
 
 
     def price_to_num(self, s: str) -> float:
+        """Convert a price string to a float."""
         s = s.strip()
         try:
             return float(s)
@@ -600,6 +607,7 @@ class Steam(GroupCog):
 
 
     def Sale_to_SteamSale(self, sale: Sale) -> SteamSale:  # noqa: N802
+        """Convert a Sale TypedDict to SteamSale database object."""
         return SteamSale(
             id = self.get_id_from_game_url(sale["url"]),
             title = sale["title"],
@@ -614,4 +622,4 @@ class Steam(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Steam(bot))
+    await bot.add_cog(SteamSales(bot))

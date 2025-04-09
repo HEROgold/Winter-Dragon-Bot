@@ -30,6 +30,10 @@ class Reminder(Cog):
             for i in results.all():
                 self.logger.debug(f"sending reminder {i.content=} to {i.user_id=}")
                 member = discord.utils.get(self.bot.users, id=i.user_id)
+                if member is None:
+                    self.logger.debug(f"member {i.user_id} not found")
+                    session.delete(i)
+                    continue
                 dm = await member.create_dm()
                 await dm.send(f"I'm here to remind you about\n`{i.content}`")
                 session.delete(i)

@@ -13,8 +13,8 @@ from winter_dragon.bot.ui.button import Button
 from winter_dragon.bot.ui.modal import Modal
 from winter_dragon.database import Session, engine
 from winter_dragon.database.tables import AssociationUserHangman as AUH  # noqa: N817
-from winter_dragon.database.tables import Game
-from winter_dragon.database.tables import Hangman as HangmanDb
+from winter_dragon.database.tables import Games
+from winter_dragon.database.tables import Hangmen as HangmanDb
 from winter_dragon.database.tables import ResultMassiveMultiplayer as ResultMM
 
 
@@ -259,14 +259,15 @@ class SubmitLetter(Modal, title="Submit Letter"):
 
     async def get_hangman_game(self) -> None:
         """Get the hangman game. Creates a new one if it doesn't exist."""
+        if not self.interaction.message:
+            msg = "No message found."
+            self.logger.warning(msg)
+            raise ValueError(msg)
+
         self.hangman_db = self.session.exec(
                 select(HangmanDb)
                 .where(HangmanDb.id == self.interaction.message.id),
-            ).first()
-        if self.hangman_db is None:
-            await self.new_hangman_game()
-        else:
-            self.logger.debug("Hangman game found")
+            ).first() or await self.new_hangman_game()
 
     def calculate_placement(self, hangman_players: list[AUH], player: AUH) -> int:
         """Calculate the placement of the player."""
@@ -284,6 +285,11 @@ class SubmitLetter(Modal, title="Submit Letter"):
 
     def fetch_hangman_players(self) -> list[AUH]:
         """Fetch all players that played."""
+        if not self.interaction.message:
+            msg = "No message found."
+            self.logger.warning(msg)
+            raise ValueError(msg)
+
         hangman_players = self.session.exec(
                 select(AUH)
                 .where(AUH.hangman_id == self.interaction.message.id),
@@ -311,6 +317,11 @@ class SubmitLetter(Modal, title="Submit Letter"):
 
     def get_player_record(self) -> AUH:
         """Get the player record. Create if it doesn't exist."""
+        if not self.interaction.message:
+            msg = "No message found."
+            self.logger.warning(msg)
+            raise ValueError(msg)
+
         player = self.session.exec(
                 select(AUH).where(
                     AUH.hangman_id == self.interaction.message.id,
@@ -321,6 +332,11 @@ class SubmitLetter(Modal, title="Submit Letter"):
 
     def create_player_record(self) -> AUH:
         """Create a new player record."""
+        if not self.interaction.message:
+            msg = "No message found."
+            self.logger.warning(msg)
+            raise ValueError(msg)
+
         player = AUH(
                     hangman_id=self.interaction.message.id,
                     user_id=self.interaction.user.id,
@@ -329,7 +345,7 @@ class SubmitLetter(Modal, title="Submit Letter"):
         self.session.add(player)
         return player
 
-    async def new_hangman_game(self) -> None:
+    async def new_hangman_game(self) -> HangmanDb:
         """Create a new hangman game."""
         self.logger.debug("Hangman is empty, creating new one.")
         async with aiohttp.ClientSession().get("https://www.mit.edu/~ecprice/wordlist.10000") as res:
@@ -337,12 +353,18 @@ class SubmitLetter(Modal, title="Submit Letter"):
             r_word = random.choice(t.splitlines())  # noqa: S311
         self.logger.debug(f"{r_word=}")
 
-        self.hangman_db = HangmanDb(
+        if not self.interaction.message:
+            msg = "No message found."
+            self.logger.warning(msg)
+            raise ValueError(msg)
+
+        hangman_db = HangmanDb(
             id=self.interaction.message.id,
             word=r_word,
             letters="",
         )
-        self.session.add(self.hangman_db)
+        self.session.add(hangman_db)
+        return hangman_db
 
 
 class Hangman(GroupCog):
@@ -351,7 +373,7 @@ class Hangman(GroupCog):
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         """Initialize the Hangman cog."""
         super().__init__(*args, **kwargs)
-        self.game = Game.fetch_game_by_name(HANGMAN)
+        self.game = Games.fetch_game_by_name(HANGMAN)
 
     @app_commands.command(name="start", description="Hangman")
     async def slash_hangman(self, interaction: discord.Interaction) -> None:

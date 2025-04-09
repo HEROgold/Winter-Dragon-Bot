@@ -3,6 +3,7 @@
 import asyncio
 import datetime
 from collections.abc import Callable, Sequence
+from typing import Any
 
 from discord.ext import tasks
 from discord.utils import MISSING
@@ -13,6 +14,19 @@ from winter_dragon.bot.core.log import LoggerMixin
 class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
     """Loop is a subclass of discord.ext.tasks.Loop that adds logging to the loop task."""
 
+    def __init__(
+        self,
+        coro: FT,
+        seconds: float,
+        hours: float,
+        minutes: float,
+        time: datetime.time | Sequence[datetime.time],
+        count: int | None,
+        reconnect: bool,
+        name: str | None,
+    ) -> None:
+        super().__init__(coro, seconds, hours, minutes, time, count, reconnect, name)
+
     async def _error(self, *args: Exception) -> None:
         exception = args[-1]
         self.logger.error(
@@ -22,7 +36,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         )
         return await super()._error(*args)
 
-    def _handle_task_result(self, task: asyncio.Task) -> None:
+    def _handle_task_result(self, task: asyncio.Task[Any]) -> None:
         try:
             task.result()
         except asyncio.CancelledError:
@@ -43,7 +57,7 @@ def loop[FT: CoroutineFunction](  # noqa: PLR0913
 ) -> Callable[[FT], Loop[FT]]:
     """Schedule a new task to run every N seconds, minutes, or hours."""
     # FT generic type is used here and in the Loop class to ensure the coroutine function type is preserved.
-    def decorator[FT: CoroutineFunction](func: FT) -> Loop[FT]:
+    def decorator(func: FT) -> Loop[FT]:
         return Loop[FT](
             func,
             seconds=seconds,

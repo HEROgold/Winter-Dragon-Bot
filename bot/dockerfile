@@ -1,6 +1,6 @@
 FROM python:3.13-slim
 
-COPY config.ini config.ini
+ADD config.ini config.ini
 ADD database/ database/
 ADD bot/ bot/
 
@@ -8,4 +8,4 @@ ADD bot/ bot/
 RUN pip3.13 install database/
 RUN pip3.13 install bot/
 
-CMD ["python3", "-m", "wd_bot"]
+CMD ["python3", "-m", "winter_dragon.bot"]

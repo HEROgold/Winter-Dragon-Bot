@@ -1,19 +1,22 @@
 
+from collections.abc import Sequence
+
 import discord
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.database.tables import Game, Suggestion
+from winter_dragon.database.tables import Games as GamesDB
+from winter_dragon.database.tables import Suggestions
 
 
 class Games(GroupCog):
-    games: list[Game]
+    games: Sequence[GamesDB]
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
         with self.session as session:
-            self.games = session.exec(select(Game)).all()
+            self.games = session.exec(select(GamesDB)).all()
 
 
     @app_commands.command(name="list", description="Get a list of known games")
@@ -24,11 +27,11 @@ class Games(GroupCog):
     @app_commands.command(name="suggest", description="Suggest a new game to be added")
     async def slash_suggest(self, interaction: discord.Interaction, name: str) -> None:
         with self.session as session:
-            for suggestion in session.exec(select(Suggestion).where(Suggestion.type == "game")).all():
+            for suggestion in session.exec(select(Suggestions).where(Suggestions.type == "game")).all():
                 if suggestion.content == name:
                     await interaction.response.send_message("That game is already in review", ephemeral=True)
 
-            session.add(Suggestion(
+            session.add(Suggestions(
                 type = "game",
                 is_verified = False,
                 content = name,

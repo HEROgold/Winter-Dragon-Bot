@@ -2,12 +2,14 @@
 from datetime import datetime
 
 from sqlmodel import Field, SQLModel
-from winter_dragon.database.tables.definitions import USERS_ID
+from winter_dragon.database.keys import get_foreign_key
+from winter_dragon.database.tables.user import Users
 
 
-class CarFuel(SQLModel, table=True):
+class CarFuels(SQLModel, table=True):
 
-    user_id: int = Field(foreign_key=USERS_ID)
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"))
     amount: int
     distance: int
     price: int

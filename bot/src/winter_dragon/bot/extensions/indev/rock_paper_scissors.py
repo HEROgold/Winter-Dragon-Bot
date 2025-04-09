@@ -1,3 +1,4 @@
+from enum import StrEnum, auto
 from typing import ClassVar
 
 import discord
@@ -37,7 +38,6 @@ class RpsButton(Button["RPSView"], LoggerMixin):
             await view.calc_win(interaction)
         # return await super().callback(interaction)
 
-
 # TODO: add 3 buttons, look at ticket system.
 # Each button adds the player's choice,
 # Set's player_1, and player_2 variable
@@ -45,16 +45,21 @@ class RpsButton(Button["RPSView"], LoggerMixin):
 class RPSView(discord.ui.View, LoggerMixin):
     """View created for rock paper scissors. Contains 3 buttons."""
 
+    class RPS(StrEnum):
+        Rock = auto()
+        Paper = auto()
+        Scissors = auto()
+
     # children: list[RpsButton]
-    p1_choice: str | None
-    p2_choice: str | None
+    p1_choice: RPS
+    p2_choice: RPS
     player_1: User | Member | None
     player_2: User | Member | None
 
     def __init__(
         self,
-        first_choice: str | None = None,
-        second_choice: str | None = None,
+        first_choice: RPS | None = None,
+        second_choice: RPS | None = None,
         player_1: User | Member | None = None,
         player_2: User | Member | None = None,
     ) -> None:
@@ -80,6 +85,7 @@ class RPSView(discord.ui.View, LoggerMixin):
         original = await interaction.original_response()
         await original.edit(content=f"{self.p1_choice=}, {self.p2_choice=}")
 
+        winner = None
         if self.p1_choice == self.p2_choice:
             winner = None
         elif self.p1_choice == "rock":

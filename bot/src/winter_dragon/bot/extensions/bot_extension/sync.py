@@ -16,7 +16,7 @@ class Sync(Cog):
     """Sync slash commands with the Discord API."""
 
     @app_commands.command(name="sync", description="Sync all commands on this guild")
-    async def slash_sync(self, interaction: discord.Interaction | commands.Context) -> None:
+    async def slash_sync(self, interaction: discord.Interaction) -> None:
         """Sync all commands on the current guild."""
         user = interaction.author if isinstance(interaction, commands.Context) else interaction.user
         is_allowed = await self.bot.is_owner(user)

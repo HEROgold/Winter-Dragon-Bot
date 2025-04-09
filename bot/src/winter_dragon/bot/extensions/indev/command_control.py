@@ -11,13 +11,12 @@ Get and store enabled commands per guild in database
 import discord
 from discord import app_commands
 from discord.app_commands import Command as DcCommand
-from sqlalchemy.orm import Session
-from sqlmodel import select
+from sqlmodel import Session, select
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog  #, Cog
 from winter_dragon.database import engine
-from winter_dragon.database.tables import Command as DbCommand
-from winter_dragon.database.tables import CommandGroup, GuildCommands
+from winter_dragon.database.tables import CommandGroups, GuildCommands
+from winter_dragon.database.tables import Commands as DbCommand
 
 
 # TODO: test
@@ -25,7 +24,7 @@ from winter_dragon.database.tables import CommandGroup, GuildCommands
 # TODO: add and manage commands / command groups > Database
 class CombinedCommand:
     dc_command: DcCommand
-    db_command: DbCommand
+    db_command: DbCommand | None
 
     def __init__(self, dc_command: DcCommand) -> None:
         self.dc_command = dc_command
@@ -34,13 +33,13 @@ class CombinedCommand:
 
 
 class CommandControl(GroupCog):
-    commands: list[DbCommand | CommandGroup]
+    commands: list[DbCommand | CommandGroups]
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
         with self.session as session:
-            self.commands = session.exec(select(DbCommand)).all()
-            self.commands += session.exec(select(CommandGroup)).all()
+            self.commands = list(session.exec(select(DbCommand)).all())
+            self.commands += session.exec(select(CommandGroups)).all()
 
 
     @app_commands.command(name="enable", description="Enable a command")
@@ -48,7 +47,7 @@ class CommandControl(GroupCog):
         """CommandControl."""
         with self.session as session:
             cmd = session.exec(select(DbCommand).where(DbCommand.qual_name == command)).first()
-            session.exec(select(CommandGroup).where(CommandGroup.name == command)).first()
+            session.exec(select(CommandGroups).where(CommandGroups.name == command)).first()
             session.add(GuildCommands(
                 guild_id = interaction.guild.id,
                 command_id = cmd.id, # type: ignore[has-id]

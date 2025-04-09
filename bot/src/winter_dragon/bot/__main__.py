@@ -8,25 +8,25 @@ from typing import Any
 
 import discord
 from discord.ext import commands
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import config
 from winter_dragon.bot.constants import INTENTS
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.errors.config import ConfigError
+from winter_dragon.database import SQLModel, engine
 
 
-Config.default("Main", "log_level", "DEBUG")
-Config.default("Main", "bot_name", WinterDragon.__class__.__name__)
-# TODO: if not found, create new guild, invite owners, and transfer ownership to first joined owner.
-# Then set the value in config.
-Config.default("Main", "support_guild_id", "!!")
-Config.default("Main", "prefix", "!!")
+config.default("Main", "log_level", "DEBUG")
+config.default("Main", "bot_name", WinterDragon.__class__.__name__)
+config.default("Main", "support_guild_id", "0")
+config.default("Main", "prefix", "$")
 
 if not config.is_valid():
     msg = f"""Config is not yet updated!, update the following:
         {', '.join(config.get_invalid())}"""
     raise ConfigError(msg)
 
-bot_logger = logging.getLogger(f"{config['Main']['bot_name']}")
+bot_name = config.get("Main", "bot_name")
+bot_logger = logging.getLogger(f"{bot_name}")
 prefix = config.get("Main", "prefix")
 
 bot = WinterDragon(
@@ -35,7 +35,6 @@ bot = WinterDragon(
     case_insensitive=True,
 )
 tree = bot.tree
-
 
 @bot.event
 async def on_ready() -> None:
@@ -77,6 +76,7 @@ async def main() -> None:
         config.set("Main", "application_id", f"{bot.application_id}")
         config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
 
+        SQLModel.metadata.create_all(engine, checkfirst=True)
         await bot.load_extensions()
         await bot.start()
 

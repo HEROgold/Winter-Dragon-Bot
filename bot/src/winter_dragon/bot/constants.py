@@ -9,6 +9,7 @@ import discord
 CWD = Path.cwd()
 
 PACKAGE_DIR = Path(__file__).parent
+ROOT_DIR = PACKAGE_DIR.parent
 DYNAMIC_DIR = PACKAGE_DIR / "dynamic"
 IMG_DIR = DYNAMIC_DIR / "img"
 EMOJI_DIR = DYNAMIC_DIR / "emoji"

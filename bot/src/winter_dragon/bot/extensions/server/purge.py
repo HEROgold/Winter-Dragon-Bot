@@ -4,11 +4,9 @@ import contextlib
 
 import discord
 from discord import app_commands
-from winter_dragon.bot.config import config
+from winter_dragon.bot.config import Config, config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
-
-from bot.src.WinterDragon.bot.config import Config
 
 
 @app_commands.guild_only()
