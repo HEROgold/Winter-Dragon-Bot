@@ -13,10 +13,12 @@ AUTO_ASSIGN_REASON = "Member joined again, AutoAssigned roles the user had previ
 class AutoReAssign(GroupCog):
     @Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:
+        """When a member is kicked or banned, remember their roles for auto-assignment later."""
         async for entry in member.guild.audit_logs(limit=1):
             self.remember_roles(member, entry)
 
     def remember_roles(self, member: discord.Member, entry: discord.AuditLogEntry) -> None:
+        """When a member is kicked or banned, remember their roles for auto-assignment later."""
         if entry.action in [
             discord.AuditLogAction.ban,
             discord.AuditLogAction.kick,
@@ -28,6 +30,7 @@ class AutoReAssign(GroupCog):
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
+        """When a member joins, check if they have any roles to be auto-assigned."""
         with self.session as session:
             for auto_assign in session.exec(select(UserRoles).where(
                 UserRoles.user_id == member.id,
@@ -41,17 +44,19 @@ class AutoReAssign(GroupCog):
 
     @app_commands.command(name="enable", description="Enable the AutoReAssign feature")
     async def slash_enable(self, interaction: discord.Interaction) -> None:
+        """Enable the AutoReAssign feature for the guild."""
         with self.session as session:
-            session.add(AutoReAssignDb(guild_id=interaction.guild.id))
+            session.add(AutoReAssignDb(guild_id=interaction.guild.id)) # type: ignore[reportOptionalMemberAccess]
             session.commit()
 
     @app_commands.command(name="disable", description="Disable the AutoReAssign feature")
     async def slash_disable(self, interaction: discord.Interaction) -> None:
+        """Disable the AutoReAssign feature for the guild."""
         with self.session as session:
             session.delete(
                 session.exec(
                     select(AutoReAssignDb)
-                    .where(AutoReAssignDb.guild_id == interaction.guild.id),
+                    .where(AutoReAssignDb.guild_id == interaction.guild.id), # type: ignore[reportOptionalMemberAccess]
                 ).first(),
             )
             session.commit()

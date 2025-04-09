@@ -17,7 +17,8 @@ from winter_dragon.database.tables import Channels
 STATS = ChannelTypes.STATS.name
 
 
-def get_peak_count(channel: Channels | discord.abc.GuildChannel | None) -> int:
+def get_peak_count(channel: Channels | discord.abc.GuildChannel) -> int:
+    """Get the peak count from the channel name."""
     try:
         return int(channel.name[13:])
     except ValueError:

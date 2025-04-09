@@ -98,9 +98,10 @@ class Cog(commands.Cog, LoggerMixin):
             # TODO @HEROgold: Rethink the query to get boolean values from the DB directly
             #144
             disabled_commands = list(session.exec(select(DisabledCommands)).all())
+            disabled_ids = [i.target_id for i in disabled_commands]
 
         return next(
-            (True for target in targets if target is not None and target.id in disabled_commands),
+            (True for target in targets if target and target.id in disabled_ids),
             False,
         )
 
