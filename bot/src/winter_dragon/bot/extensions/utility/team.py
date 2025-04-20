@@ -31,9 +31,6 @@ class Team(GroupCog):
         with self.session:
             channels = self.session.exec(select(Channels).where(Channels.type == TEAM_VOICE)).all()
             for channel in channels:
-                if channel.id is None:
-                    self.logger.critical(f"select query returned without id: {channel=}")
-                    continue
                 discord_channel = self.bot.get_channel(channel.id)
                 if isinstance(discord_channel, (CategoryChannel, PrivateChannel)) or discord_channel is None:
                     self.logger.debug(f"skipping invalid channel: {discord_channel=}")
@@ -132,9 +129,6 @@ class Team(GroupCog):
                 Channels.type == TEAM_CATEGORY,
                 Channels.guild_id == guild.id,
             )).first():
-                if channel.id is None:
-                    self.logger.critical(f"select query returned without id: {channel=}")
-                    return None
                 return cast("CategoryChannel", self.bot.get_channel(channel.id))
             return None
 
@@ -168,9 +162,6 @@ class Team(GroupCog):
                 Channels.type == TEAM_LOBBY,
                 Channels.guild_id == guild.id,
             )).first():
-                if channel.id is None:
-                    self.logger.critical(f"select query returned without id: {channel=}")
-                    return None
                 return cast("VoiceChannel", self.bot.get_channel(channel.id))
             return None
 
