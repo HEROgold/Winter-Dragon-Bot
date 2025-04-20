@@ -9,7 +9,7 @@ from winter_dragon.database.tables.guild import Guilds
 
 class Channels(SQLModel, table=True):
 
-    id: int | None = Field(sa_column=Column(BigInteger(), primary_key=True), default=None)
+    id: int = Field(sa_column=Column(BigInteger(), primary_key=True))
     name: str
     type: ChannelTypes | None
     guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds, "id"))))

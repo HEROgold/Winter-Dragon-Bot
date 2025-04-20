@@ -1,5 +1,8 @@
-from sqlalchemy import Column, ForeignKey, func
-from sqlmodel import Field, Relationship, SQLModel, select
+from datetime import UTC, datetime
+from functools import partial
+
+from sqlalchemy import Column, ForeignKey
+from sqlmodel import Field, Relationship, SQLModel, func, select
 from winter_dragon.database.keys import get_foreign_key
 from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.user import Users
@@ -7,8 +10,9 @@ from winter_dragon.database.tables.user import Users
 
 class AssociationUserCommand(SQLModel, table=True):
 
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id")), primary_key=True))
-    command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands, "id")), primary_key=True))
+    timestamp: datetime = Field(partial(datetime.now, tz=UTC), primary_key=True)
+    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id"))))
+    command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands, "id"))))
 
     user: Users = Relationship()
     command: Commands = Relationship()
