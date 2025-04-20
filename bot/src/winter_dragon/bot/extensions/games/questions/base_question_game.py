@@ -106,3 +106,8 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
                 session.add(self.QUESTION_MODEL(value=question.content))
             session.commit()
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
+
+
+async def setup(_bot: WinterDragon) -> None:
+    """Return and avoid loading exceptions as we don't need to load this module."""
+    return
