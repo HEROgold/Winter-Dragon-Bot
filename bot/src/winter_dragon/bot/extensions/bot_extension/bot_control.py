@@ -32,9 +32,9 @@ class BotC(GroupCog):
     packets_sent: list[int]
     packets_received: list[int]
 
-    random_activity: Config[bool] = Config(True)  # noqa: FBT003
-    periodic_change: Config[bool] = Config(True)  # noqa: FBT003
-    periodic_time: Config[int] = Config(180)
+    random_activity = Config(True)  # noqa: FBT003
+    periodic_change = Config(True)  # noqa: FBT003
+    periodic_time = Config(180)
 
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
@@ -56,7 +56,6 @@ class BotC(GroupCog):
         self.gather_metrics_loop.start()
 
 
-    @Config.as_kwarg("Activity", "random_activity", "seconds")
     @loop()
     async def activity_switch(self) -> None:
         """Switch the bot's activity and status periodically. Uses activity.periodic_time config."""
@@ -317,7 +316,6 @@ class BotC(GroupCog):
     @staticmethod
     def get_colors(value: float, max_amount: int) -> tuple[str, int]:
         """Get colors based on given max value, with predefined percentages."""
-        # TODO @HEROgold: Move the colors and thresholds to instance variables
         if value < max_amount * 0.4:
             ansi_start = "ansi\n\x1b[2;32m"
             color = 1179392
