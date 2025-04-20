@@ -301,16 +301,17 @@ class BotC(GroupCog):
     @app_commands.command(name="performance_graph", description="Show bot's Performance (Bot developer only)")
     async def slash_performance_graph(self, interaction: discord.Interaction) -> None:
         """Show the bot's performance in a graph."""
+        await interaction.response.defer(thinking=True)
         self.gather_system_metrics()
         self.plot_system_metrics()
 
         try:
             file = discord.File(METRICS_FILE)
-            await interaction.response.send_message(file=file)  # embed=embed,
+            await interaction.followup.send(file=file)  # embed=embed,
         except Exception:
             self.logger.exception("Error when creating a graph.")
             file = None
-            await interaction.response.send_message("Could not make a graph to show.")
+            await interaction.followup.send("Could not make a graph to show.")
 
 
     @staticmethod
