@@ -16,6 +16,8 @@ from winter_dragon.bot.core.log import LoggerMixin
 class Urban(GroupCog, LoggerMixin):
     """Urban Dictionary cog for Discord bot."""
 
+    allow_random = Config(default=True)
+
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Urban cog."""
         self.bot = bot
@@ -25,7 +27,6 @@ class Urban(GroupCog, LoggerMixin):
         return await self.loop.run_in_executor(None, requests.get, url)
 
     @app_commands.command(name="random", description="get random definitions")
-    @Config.default("Urban", "allow_random", True)  # noqa: FBT003
     async def slash_urban_random(self, interaction: discord.Interaction) -> None:
         """Get a random definition from the Urban Dictionary."""
         allowed_random = config.getboolean("Urban", "allow_random")
