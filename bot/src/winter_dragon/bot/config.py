@@ -37,6 +37,10 @@ class _ConfigParserSingleton(configparser.ConfigParser):
         fp.close()
 
     def set_default(self, section: str, setting: str, value: Any) -> None:  # noqa: ANN401
+        """Set a default value for a config setting.
+
+        If the section or setting does not exist, it will be created.
+        """
         if not self.has_section(section):
             self.add_section(section)
         if not self.has_option(section, setting):
@@ -56,6 +60,10 @@ class _ConfigParserSingleton(configparser.ConfigParser):
                     yield f"{section}:{setting}"
 
     def default(self, section: str, setting: str, value: Any) -> None:  # noqa: ANN401
+        """Set a default value for a config setting.
+
+        If the section or setting does not exist, it will be created.
+        """
         self.set_default(section, setting, value)
 
 
@@ -67,10 +75,11 @@ class Config[VT]:
         self._default = default
 
     def __set_name__(self, owner: type, name: str) -> None:
-        """Set the name of the attribute to the name of the descriptor."""
+        """Set the name of the attribute."""
         self.name = name
         self._section = owner.__name__
         self._setting = name
+        config.set_default(self._section, self._setting, self._default)
         self.private = f"_{self._section}_{self._setting}_{self.name}"
 
     def __get__(self, obj: object, obj_type: object) -> VT:
@@ -79,10 +88,7 @@ class Config[VT]:
         # so it can be different than type of VT
         # but we don't need obj or it's type to get the value from config in our case.
         # ignore type error, config.get() raises the wanted errors, but checker forces `str` type.
-        # TODO: Check if we want to take from config, or from the object's attribute.
-        attribute_value = getattr(obj, self.private, self._default)
-        config_value = config.get(self._section, self._setting) # type: ignore[reportArgumentType]
-        return cast(VT, attribute_value or config_value)  # noqa: TC006
+        return cast(VT, config.get(self._section, self._setting))  # noqa: TC006
 
     def __set__(self, obj: object, value: VT) -> None:
         """Set the value of the attribute."""
