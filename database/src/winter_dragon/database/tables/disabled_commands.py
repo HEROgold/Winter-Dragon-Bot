@@ -14,8 +14,6 @@ class DisabledCommands(SQLModel, table=True):
     guild_id: int = Field(foreign_key=get_foreign_key(Guilds, "id"), nullable=True)
 
     def __init__(self, **kw: int) -> None:
-        # TODO @HEROgold: needs testing
-        # 000
         id_limit = 2
 
         if len(kw) > id_limit:
@@ -32,7 +30,9 @@ class DisabledCommands(SQLModel, table=True):
         guild_id = kw.get("_guild_id")
 
         if not any([user_id, channel_id, guild_id]):
-            raise ValueError("At least one of _user_id, _channel_id, or _guild_id is required!")  # noqa: EM101, TRY003
+            raise ValueError("At least one of user_id, channel_id, or guild_id is required!")  # noqa: EM101, TRY003
+        if sum([bool(user_id), bool(channel_id), bool(guild_id)]) > 1:
+            raise ValueError("Only one of user_id, channel_id, or guild_id can be set!")  # noqa: EM101, TRY003
         super().__init__(**kw)
 
 
