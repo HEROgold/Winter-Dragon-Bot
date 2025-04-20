@@ -30,6 +30,7 @@ type InteractionChannel = (
     DMChannel |
     GroupChannel
 )
+type PrunableChannel = VoiceChannel | StageChannel | TextChannel | Thread
 type GTPChannel = GuildChannel | Thread | PrivateChannel
 
 
