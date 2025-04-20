@@ -26,7 +26,6 @@ from .message import Messages
 from .nhiequestion import NhieQuestion
 from .presence import Presence
 from .reminder import Reminder
-from .result_duels import ResultDuels
 from .result_multiplayer import ResultMassiveMultiplayer
 from .role import Roles
 from .steamsale import SteamSale
@@ -67,7 +66,6 @@ __all__ = [
     "NhieQuestion",
     "Presence",
     "Reminder",
-    "ResultDuels",
     "ResultMassiveMultiplayer",
     "Roles",
     "SteamSale",
