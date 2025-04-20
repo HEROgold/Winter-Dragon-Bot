@@ -45,7 +45,10 @@ class Stats(GroupCog):
 
     async def update_peak(self, guild: discord.Guild, peak_online: Channels) -> None:
         peak_channel_id = peak_online.id
-        peak_channel = discord.utils.get(guild.channels, id=peak_channel_id)
+        peak_channel = guild.get_channel(peak_channel_id)
+        if peak_channel is None:
+            self.logger.warning(f"Peak channel not found: {peak_online}")
+            return
 
         peak_count = get_peak_count(peak_channel)
         online = sum(member.status != discord.Status.offline and not member.bot for member in guild.members)
