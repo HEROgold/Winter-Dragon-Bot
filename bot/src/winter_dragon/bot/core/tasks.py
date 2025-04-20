@@ -26,6 +26,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         reconnect: bool,
         name: str | None,
     ) -> None:
+        """Initialize the Loop class."""
         super().__init__(coro, seconds, hours, minutes, time, count, reconnect, name)
 
     async def _error(self, *args: Exception) -> None:
