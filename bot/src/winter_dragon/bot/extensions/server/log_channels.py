@@ -226,6 +226,7 @@ class LogChannels(GroupCog):
                 enum.automod_flag_message: self.on_automod_flag_message,
                 enum.automod_timeout_member: self.on_automod_timeout_member,
             }
+            # TODO: log to database
             await actions[action](entry)
 
 
@@ -645,10 +646,13 @@ class LogChannels(GroupCog):
 
     async def on_member_disconnect(self, entry: discord.AuditLogEntry) -> None:
         self.logger.debug(f"on member_disconnect: {entry.guild=}, {entry=}")
+        if entry.user is None:
+            return
+
         embed = discord.Embed(
             title="Member Disconnect",
             description=(
-                f"{entry.user.mention} disconnected {entry.target.type} "
+                f"{entry.user.mention} disconnected "
                 f"{entry.target} from {entry.extra} with reason {entry.reason or None}"
             ),
             color=DELETED_COLOR,

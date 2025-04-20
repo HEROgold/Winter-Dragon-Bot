@@ -30,6 +30,9 @@ class ChannelUtils(GroupCog):
     @app_commands.describe(target="Optional role or member to lock out of this channel")
     async def slash_lock(self, interaction: discord.Interaction, target: MemberRole) -> None:
         """Lock a channel."""
+        if not interaction.channel:
+            await interaction.response.send_message("This command can only be used in a channel.", ephemeral=True)
+            return
         role_perms = interaction.channel.permissions_for(target)
         role_perms.send_messages = False
         await interaction.channel.set_permissions(
@@ -44,6 +47,9 @@ class ChannelUtils(GroupCog):
     @app_commands.describe(target="Optional role or member to unlock this channel")
     async def slash_unlock(self, interaction: discord.Interaction, target: MemberRole) -> None:
         """UnLock a channel."""
+        if not interaction.channel:
+            await interaction.response.send_message("This command can only be used in a channel.", ephemeral=True)
+            return
         role_perms = interaction.channel.permissions_for(target)
         role_perms.send_messages = True
         await interaction.channel.set_permissions(
