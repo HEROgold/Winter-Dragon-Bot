@@ -48,7 +48,7 @@ class Sync(Cog):
 
         self.logger.warning(f"{ctx.author} Synced slash commands!")
         self.logger.debug(msg)
-        await ctx.send(msg)
+        await ctx.send(msg, ephemeral=True)
 
     async def sync_local(self, guild: Guild) -> str:
         """Sync all commands on a specific guild."""

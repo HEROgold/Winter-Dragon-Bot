@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:14-alpine
     # expose:
@@ -16,6 +17,7 @@ services:
       timeout: 30s
       retries: 6
       start_period: 10s
+
   bot:
     container_name: discord-bot
     build:
@@ -30,6 +32,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
   backend:
     container_name: website-backend
     build:
@@ -46,6 +49,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
   frontend:
     container_name: website-frontend
     build:
