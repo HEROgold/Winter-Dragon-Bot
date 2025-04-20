@@ -19,7 +19,7 @@ class AutoCogReloader(Cog):
     data: CogData
 
 
-    def __init__(self, *args:WinterDragon, **kwargs:WinterDragon) -> None:
+    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         """Initialize the AutoCogReloader cog."""
         super().__init__(*args, **kwargs)
         self.data = {
