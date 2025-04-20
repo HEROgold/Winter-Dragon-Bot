@@ -166,6 +166,7 @@ class DatabaseManager(Cog):
         This only updates once every 10 seconds, and only tracks online status.
         """
         member = after or before
+        self._add_db_user(member)
         Presence.remove_old_presences(member.id)
         date_time = datetime.datetime.now(tz=datetime.UTC)
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
@@ -213,20 +214,28 @@ class DatabaseManager(Cog):
         command = interaction.command
 
         self._add_db_user(user)
-        db_cmd = self._fetch_db_command(command) # type: ignore  # noqa: PGH003
-        self._link_db_user_command(user, db_cmd)
 
+        # TODO: Remove debug code below.
         channel = interaction.channel
         extras = interaction.extras
-        self.logger.debug(f"{user}, {command}, {channel}, {extras}")
+        self.logger.debug(f"{user=}, {command=}, {channel=}, {extras=}")
+
+        if command is None:
+            self.logger.warning("interaction's Command is None, cannot add command to database.")
+            return
+
+        db_cmd = self._fetch_db_command(command) # type: ignore  # noqa: PGH003
+        self._link_user_db_command(user, db_cmd)
+
         # Track command used data in database
         # https://discordpy.readthedocs.io/en/latest/api.html#discord.on_interaction
 
 
     def _fetch_db_command(self, command: app_commands.Command) -> Commands:
         """Return a command if it can find one, otherwise it creates one  then returns it."""
+        name = command.qualified_name if command else ""
         with self.session as session:
-            if db_command := session.exec(select(Commands).where(Commands.qual_name == command.name)).first():
+            if db_command := session.exec(select(Commands).where(Commands.qual_name == name)).first():
                 if command.parent:
                     self.logger.debug(f"{command.parent=}")
                 self.logger.debug(f"{command}")
@@ -239,7 +248,7 @@ class DatabaseManager(Cog):
         return db_command
 
 
-    def _link_db_user_command(self, user: discord.Member | discord.User, command: Commands) -> None:
+    def _link_user_db_command(self, user: discord.Member | discord.User, command: Commands) -> None:
         """Link a database user to a command when used."""
         with self.session as session:
             session.add(
