@@ -1,7 +1,7 @@
 import contextlib
 
 import discord
-from discord import PermissionOverwrite, Permissions, app_commands
+from discord import DMChannel, GroupChannel, PermissionOverwrite, Permissions, Thread, app_commands
 from winter_dragon.bot._types.aliases import MemberRole
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
@@ -9,6 +9,8 @@ from winter_dragon.bot.core.cogs import GroupCog
 
 @app_commands.guild_only()
 class ChannelUtils(GroupCog):
+    """Utility commands for managing channels."""
+
     categories = app_commands.Group(name="categories", description="Manage your categories")
 
     @app_commands.checks.has_permissions(manage_channels=True)
@@ -25,39 +27,37 @@ class ChannelUtils(GroupCog):
         with contextlib.suppress(discord.NotFound):
             await interaction.followup.send("Channels removed", ephemeral=True)
 
+    async def _set_channel_lock_state(self, interaction: discord.Interaction, target: MemberRole, *, lock: bool) -> None:
+        """Set a lock state on a channel."""
+        if not interaction.channel:
+            await interaction.response.send_message("This command can only be used in a channel.", ephemeral=True)
+            return
+        if isinstance(interaction.channel, (Thread, DMChannel, GroupChannel)):
+            await interaction.response.send_message("You cannot lock or unlock this channel.", ephemeral=True)
+            return
+
+        role_perms = interaction.channel.permissions_for(target)
+        role_perms.send_messages = not lock
+        await interaction.channel.set_permissions(
+            target=target,
+            overwrite=PermissionOverwrite().from_pair(role_perms, Permissions()),
+            reason=f"Channel {'locked' if lock else 'unlocked'} for {target} by {interaction.user.mention}",
+        )
+        await interaction.response.send_message(
+            f"{'Locked' if lock else 'Unlocked'} this channel for {target.mention}", ephemeral=True,
+        )
 
     @app_commands.command(name="lock", description="Lock a channel")
     @app_commands.describe(target="Optional role or member to lock out of this channel")
     async def slash_lock(self, interaction: discord.Interaction, target: MemberRole) -> None:
         """Lock a channel."""
-        if not interaction.channel:
-            await interaction.response.send_message("This command can only be used in a channel.", ephemeral=True)
-            return
-        role_perms = interaction.channel.permissions_for(target)
-        role_perms.send_messages = False
-        await interaction.channel.set_permissions(
-            target=target,
-            overwrite=PermissionOverwrite().from_pair(role_perms, Permissions()),
-            reason=f"Channel locked for {target} by {interaction.user.mention}",
-        )
-        await interaction.response.send_message(f"Locked this channel for {target.mention}", ephemeral=True)
+        await self._set_channel_lock_state(interaction, target, lock=True)
 
-
-    @app_commands.command(name="unlock", description="Lock a channel")
+    @app_commands.command(name="unlock", description="Unlock a channel")
     @app_commands.describe(target="Optional role or member to unlock this channel")
     async def slash_unlock(self, interaction: discord.Interaction, target: MemberRole) -> None:
-        """UnLock a channel."""
-        if not interaction.channel:
-            await interaction.response.send_message("This command can only be used in a channel.", ephemeral=True)
-            return
-        role_perms = interaction.channel.permissions_for(target)
-        role_perms.send_messages = True
-        await interaction.channel.set_permissions(
-            target=target,
-            overwrite=PermissionOverwrite().from_pair(role_perms, Permissions()),
-            reason=f"Channel locked for {target} by {interaction.user.mention}",
-        )
-        await interaction.response.send_message(f"UnLocked this channel for {target.mention}", ephemeral=True)
+        """Unlock a channel."""
+        await self._set_channel_lock_state(interaction, target, lock=False)
 
 
 async def setup(bot: WinterDragon) -> None:
