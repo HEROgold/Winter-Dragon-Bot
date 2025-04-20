@@ -5,16 +5,16 @@ from .associations import (
     GuildCommands,
     GuildRoles,
 )
-from .auditlog import AuditLog
-from .autoassignrole import AutoAssignRole
+from .audit_log import AuditLog
+from .auto_assign_role import AutoAssignRole
+from .auto_reassign import AutoReAssign
 from .autochannel import AutoChannels
-from .autochannelsettings import AutoChannelSettings
-from .autoreassign import AutoReAssign
+from .autochannel_settings import AutoChannelSettings
 from .car_fuel import CarFuels
 from .channel import Channels
 from .command import Commands
 from .commandgroup import CommandGroups
-from .disabledcommands import DisabledCommands
+from .disabled_commands import DisabledCommands
 from .game import Games
 from .guild import Guilds
 from .hangman import Hangmen
@@ -26,8 +26,8 @@ from .message import Messages
 from .nhiequestion import NhieQuestion
 from .presence import Presence
 from .reminder import Reminder
-from .resultduels import ResultDuels
-from .resultmassivemultiplayer import ResultMassiveMultiplayer
+from .result_duels import ResultDuels
+from .result_multiplayer import ResultMassiveMultiplayer
 from .role import Roles
 from .steamsale import SteamSale
 from .steamuser import SteamUsers
@@ -35,9 +35,9 @@ from .suggestion import Suggestions
 from .syncbanguild import SyncBanGuild
 from .syncbanuser import SyncBanUser
 from .user import Users
-from .userroles import UserRoles
+from .user_roles import UserRoles
 from .welcome import Welcome
-from .wyrquestion import WyrQuestion
+from .wyr_question import WyrQuestion
 
 
 __all__ = [

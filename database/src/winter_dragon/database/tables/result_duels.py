@@ -6,6 +6,8 @@ from winter_dragon.database.tables.user import Users
 
 class ResultDuels(SQLModel, table=True):
 
+    # TODO: Remove this table, replace with ResultMassiveMultiplayer.
+    # Use SQL to figure out if it was a duel or mmo
     id: int | None = Field(default=None, primary_key=True)
     game: str = Field(foreign_key=get_foreign_key(Games, "name"))
     player: int = Field(foreign_key=get_foreign_key(Users, "id"))
