@@ -1,7 +1,7 @@
 from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from typing import Any
 
-from discord import Message
+from discord import Message, Object, PermissionOverwrite
 from discord.abc import GuildChannel, PrivateChannel
 from discord.app_commands import AppCommand, AppCommandGroup
 from discord.channel import CategoryChannel, DMChannel, ForumChannel, GroupChannel, StageChannel, TextChannel, VoiceChannel
@@ -43,3 +43,5 @@ type _PrefixCallable[BotT] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
 type PrefixType[BotT: _Bot] = _Prefix | _PrefixCallable[BotT]
 
 type BotT[T: _Bot] = T
+
+type PermissionsOverwrites = dict[Role | Member | Object, PermissionOverwrite]
