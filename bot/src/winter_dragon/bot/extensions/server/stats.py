@@ -320,7 +320,14 @@ class Stats(GroupCog):
                 ).first():
                     continue
             self.logger.info(f"Updating stat channels: guild='{guild}'")
-            self.stat_channels[guild] = StatChannels(*self.get_guild_stats_channels(guild))
+            channels = self.get_guild_stats_channels(guild)
+            self.stat_channels[guild] = StatChannels(
+                channels[0],
+                channels[1],
+                channels[2],
+                channels[3],
+                channels[4],
+            )
             for channel in self.stat_channels[guild]:
                 await channel.update()
             self.logger.info(f"Updated stat channels: guild='{guild}'")
@@ -370,6 +377,7 @@ class Stats(GroupCog):
                         raise ValueError(msg)
         self.logger.debug(f"Returning stat channels, {peak_channel, guild_channel, bot_channel, user_channel, online_channel}")
         return peak_channel, guild_channel, bot_channel, user_channel, online_channel
+
 
     @app_commands.command(name="show", description="Get some information about the guild!")
     async def slash_stats_show(self, interaction: discord.Interaction) -> None:
