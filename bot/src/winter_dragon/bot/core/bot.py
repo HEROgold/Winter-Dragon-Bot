@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 import discord
 from discord import Intents, app_commands
-from discord.app_commands import AppCommandGroup
+from discord.app_commands import AppCommand, AppCommandGroup
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 from winter_dragon.bot.config import Config, config
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from discord.abc import Snowflake
     from discord.ext.commands.context import Context
-    from winter_dragon.bot._types.aliases import AppCommandStore, BotT, MaybeGroupedAppCommand, PrefixType
+    from winter_dragon.bot._types.aliases import AppCommandStore, BotT, PrefixType
 
 
 class WinterDragon(AutoShardedBot):
@@ -119,12 +119,12 @@ class WinterDragon(AutoShardedBot):
         guild: Snowflake | int | None = None,
         *,
         fallback_to_global: bool = True,
-    ) -> MaybeGroupedAppCommand | None:
+    ) -> AppCommand | None:
         """Get an app command from the cache.
 
         This app command may be a group or app_command or None
         """
-        def search_dict(d: AppCommandStore) -> MaybeGroupedAppCommand | None:
+        def search_dict(d: AppCommandStore) -> AppCommand | None:
             for cmd_name, cmd in d.items():
                 if isinstance(cmd, AppCommandGroup):
                     continue

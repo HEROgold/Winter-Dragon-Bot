@@ -15,7 +15,6 @@ type Optional[T] = T | None
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
 type AppCommandStore = dict[str, AppCommand | AppCommandGroup]
-type MaybeGroupedAppCommand = AppCommand | AppCommandGroup
 
 type MemberRole = Role | Member
 
