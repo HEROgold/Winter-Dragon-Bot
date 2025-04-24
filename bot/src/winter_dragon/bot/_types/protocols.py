@@ -1,9 +1,15 @@
-from collections.abc import Callable
-from typing import Protocol, runtime_checkable
+from __future__ import annotations
 
-from discord import Message
-from discord.abc import SnowflakeTime
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
 from discord.utils import MISSING
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from discord import Message
+    from discord.abc import SnowflakeTime
 
 
 @runtime_checkable
