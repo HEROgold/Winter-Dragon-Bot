@@ -236,7 +236,7 @@ class Stats(GroupCog):
             guild.me: discord.PermissionOverwrite(connect=True),
         }
 
-        category = await guild.create_category(name=STATS.name, overwrites=overwrite, position=0)
+        category = await guild.create_category(name=STATS.name.capitalize(), overwrites=overwrite, position=0)
         user_channel = await category.create_voice_channel(name="Total Users:", reason=reason)
         online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
         bot_channel = await category.create_voice_channel(name="Total Bots:", reason=reason)
