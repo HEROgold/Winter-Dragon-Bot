@@ -10,7 +10,7 @@ from winter_dragon.database.tables.user import Users
 
 class AssociationUserCommand(SQLModel, table=True):
 
-    timestamp: datetime = Field(partial(datetime.now, tz=UTC), primary_key=True)
+    timestamp: datetime = Field(default_factory=partial(datetime.now, tz=UTC), primary_key=True)
     user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id"))))
     command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands, "id"))))
 
