@@ -25,7 +25,7 @@ class ErrorHandler(LoggerMixin):
     """
 
     interface: commands.Context | discord.Interaction
-    error: AllErrors
+    error: Exception
     logger: logging.Logger
     time_code: float
 
@@ -33,7 +33,7 @@ class ErrorHandler(LoggerMixin):
         self,
         bot: WinterDragon,
         interface: commands.Context | discord.Interaction,
-        error: AllErrors | Exception,
+        error: Exception,
     ) -> None:
         """Initialize the ErrorHandler class.
 
@@ -84,39 +84,41 @@ class ErrorHandler(LoggerMixin):
         error_msg = self.get_error_message(original)
         return error_msg or "An unexpected error occurred."
 
-    def get_error_message(self, error: AllErrors) -> str | AllErrors:  # noqa: C901, PLR0912
+    def get_error_message(self, error: Exception) -> str:  # noqa: C901, PLR0912
         """Get the to send to a user, based on the error that occurred."""
         error_msg = ""
-        match type(error):
-            case commands.errors.MissingRequiredArgument:
+        match error:
+            case commands.errors.MissingRequiredArgument():
                 error_msg = f"Missing a required argument, {error.param}."
-            case commands.errors.BotMissingPermissions | app_commands.errors.BotMissingPermissions:
+            case commands.errors.BotMissingPermissions() | app_commands.errors.BotMissingPermissions():
                 error_msg = f"I do not have enough permissions to use this command! {error.missing_permissions}"
-            case commands.errors.MissingPermissions | app_commands.errors.MissingPermissions:
+            case commands.errors.MissingPermissions() | app_commands.errors.MissingPermissions():
                 error_msg = f"You do not have enough permission to use this command! {error.missing_permissions}"
-            case commands.errors.TooManyArguments:
+            case commands.errors.TooManyArguments():
                 error_msg = f"Too many arguments given. use {self.help_msg} for more information"
-            case commands.errors.PrivateMessageOnly:
+            case commands.errors.PrivateMessageOnly():
                 error_msg = "This command may only be used in a private messages."
-            case commands.errors.NoPrivateMessage:
+            case commands.errors.NoPrivateMessage():
                 error_msg = "This command does not work in private messages."
-            case app_commands.errors.NoPrivateMessage:
+            case app_commands.errors.NoPrivateMessage():
                 error_msg = "This command does not work in private messages."
-            case discord.HTTPException:
+            case discord.HTTPException():
                 error_msg = f"There is a HTTPException {error.status, error.code, error.text}"
-            case commands.errors.MissingRole | app_commands.errors.MissingRole:
+            case commands.errors.MissingRole() | app_commands.errors.MissingRole():
                 error_msg = f"You are missing a required role, {error.missing_role}"
-            case commands.errors.BotMissingRole | commands.errors.BotMissingAnyRole:
+            case commands.errors.BotMissingRole():
                 error_msg = f"This bot is missing a required role, {error.missing_role}"
-            case app_commands.errors.MissingAnyRole | commands.errors.MissingAnyRole:
+            case commands.errors.BotMissingAnyRole():
+                error_msg = f"This bot is missing a required role, {error.missing_roles}"
+            case app_commands.errors.MissingAnyRole() | commands.errors.MissingAnyRole():
                 error_msg = f"You are missing the required Role, {error.missing_roles}"
             # Errors below need reviewing, might not want to show to users
-            case commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError:
+            case commands.errors.CommandInvokeError() | app_commands.errors.CommandInvokeError():
                 if "403 Forbidden" in error.args:
-                    error_msg = error
-            case commands.errors.CheckFailure:
+                    error_msg = error.__str__()
+            case commands.errors.CheckFailure():
                 error_msg = f"{error}"
-            case discord.errors.Forbidden:
+            case discord.errors.Forbidden():
                 error_msg = "I do not have enough permissions to do that."
             case _:
                 error_msg = dedent(f"""
