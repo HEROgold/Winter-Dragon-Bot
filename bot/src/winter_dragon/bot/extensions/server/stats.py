@@ -301,8 +301,6 @@ class Stats(GroupCog):
         """Load the cog."""
         self.update.start()
 
-    # TODO: test the line below, and set a default to 3600
-    # @Config.as_kwarg("stats", "update_interval", "seconds")
     @loop(seconds=3600)
     async def update(self) -> None:
         """Update all stat channels periodically."""
