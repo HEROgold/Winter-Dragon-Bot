@@ -6,4 +6,4 @@ from winter_dragon.database.tables.user import Users
 
 class SteamUsers(SQLModel, table=True):
 
-    id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id"))))
+    id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id")), primary_key=True))
