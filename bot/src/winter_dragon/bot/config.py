@@ -7,6 +7,7 @@ from typing import Any, Self, cast
 from winter_dragon.bot.constants import BOT_CONFIG
 from winter_dragon.bot.errors import FirstTimeLaunchError
 
+MISSING: Any = object()
 
 class _ConfigParserSingleton(configparser.ConfigParser):
     _instance = None
@@ -109,7 +110,7 @@ class Config[VT]:
         return wrapper
 
     @staticmethod
-    def as_kwarg(section: str, setting: str, name: str | None = None):  # noqa: ANN205
+    def as_kwarg(section: str, setting: str, name: str | None = None, default: Any = MISSING):  # noqa: ANN205, ANN401
         """Insert a config value into **kwargs to a given method/function using this descriptor.
 
         Use kwarg.get(`name`) to get the value.
@@ -121,6 +122,8 @@ class Config[VT]:
 
         def wrapper[F, **P, T: Callable[P, F]](func: T) -> T:
             def inner(*args: P.args, **kwargs: P.kwargs) -> F:
+                if default is not MISSING:
+                    config.set_default(section, setting, default)
                 kwargs[name] = config.get(section, setting)
                 return func(*args, **kwargs) # type: ignore[reportCallIssue, reportReturnType]
 
