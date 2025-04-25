@@ -54,7 +54,6 @@ class AutomaticChannels(GroupCog):
                     await self.create_user_channel(member, after, session, after.channel.guild)
                 session.commit()
 
-
     async def create_user_channel(
         self,
         member: discord.Member,
@@ -62,6 +61,7 @@ class AutomaticChannels(GroupCog):
         session: Session,
         guild: discord.Guild,
     ) -> None:
+        """Create a automatic channel for a user."""
         overwrites = {
             member.guild.default_role: discord.PermissionOverwrite(view_channel=True, connect=True),
             member.guild.me: discord.PermissionOverwrite.from_pair(
@@ -91,13 +91,23 @@ class AutomaticChannels(GroupCog):
             )
 
             # Set a default name if no custom one is set in settings
-            if name is None:
-                name = member.activity.name or f"{member.name}'s channel"
+            name = member.activity.name if member.activity and member.activity.name else f"{member.name}'s channel"
+
+            db_auto_channel = session.exec(select(AC).where(AC.id == guild.id)).first()
+            if db_auto_channel is None:
+                await member.send("You are not setup yet, please use `/setup` to create your channel")
+                return
+            channel_id = db_auto_channel.channel_id
+            voice_channel = guild.get_channel(channel_id)
+            if voice_channel is None:
+                await member.send("The category for your channel does not exist, please use `/setup` to create your channel")
+                return
+            category = voice_channel.category
 
             voice_channel = await member.guild.create_voice_channel(
                 name,
-                category=guild.get_channel(session.exec(select(AC).where(AC.id == guild.id)).first().channel_id).category,
-                overwrites=overwrites,
+                category=category,
+                overwrites=overwrites, # type: ignore[reportUnknownArgumentType]
                 reason=AUTOCHANNEL_CREATE_REASON,
             )
 
@@ -134,6 +144,11 @@ class AutomaticChannels(GroupCog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="setup", description="Start the AutoChannel setup")
     async def slash_setup(self, interaction: discord.Interaction, category_name: str, voice_channel_name: str) -> None:
+        if interaction.guild is None:
+            # TODO: Prefer an error message, which gets handled by the error_handler
+            await interaction.response.send_message("This command can only be used in a guild", ephemeral=True)
+            return
+
         with self.session as session:
             if session.exec(select(AC).where(AC.id == interaction.guild.id)).first() is not None:
                 await interaction.response.send_message("You are already set up", ephemeral=True)
@@ -162,7 +177,7 @@ class AutomaticChannels(GroupCog):
         interaction: discord.Interaction,
         channel: discord.VoiceChannel | None=None,
     ) -> None:
-        if channel is None:
+        if channel is None or interaction.guild is None:
             msg = "Incorrect channel type, please use this command in a guild channel"
             await interaction.response.send_message(msg, ephemeral=True)
             return
@@ -241,7 +256,7 @@ class AutomaticChannels(GroupCog):
         with self.session as session:
             if autochannel := session.exec(select(AC).where(AC.id == interaction.user.id)).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
-                if channel is not None:
+                if channel is not None and isinstance(channel, VoiceChannel):
                     await channel.edit(name=name)
 
             await interaction.response.send_message(
