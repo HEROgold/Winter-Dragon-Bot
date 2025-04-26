@@ -18,11 +18,13 @@ class Sync(Cog):
     @app_commands.command(name="sync", description="Sync all commands on this guild")
     async def slash_sync(self, interaction: discord.Interaction) -> None:
         """Sync all commands on the current guild."""
+        await interaction.response.defer(ephemeral=True)
         user = interaction.author if isinstance(interaction, commands.Context) else interaction.user
         is_allowed = await self.bot.is_owner(user)
 
         if not is_allowed:
             msg = "You are not allowed to sync commands"
+            self.logger.warning(f"{user} tried to sync commands, but is not allowed.")
             raise commands.NotOwner(msg)
         guild = interaction.guild
 
@@ -32,7 +34,7 @@ class Sync(Cog):
         self.logger.debug(f"Synced commands: {local_sync}")
         local_list = [command.name for command in local_sync]
         local_list.sort()
-        await interaction.response.send_message(f"Sync complete\nSynced: {local_list} to {guild}", ephemeral=True)
+        await interaction.followup.send(f"Sync complete\nSynced: {local_list} to {guild}")
 
 
     @commands.is_owner()
