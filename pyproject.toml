@@ -1,13 +1,38 @@
 [project]
 name = "winter-dragon"
 version = "0.1.0"
-description = "Add your description here"
+description = "A versatile Discord bot with moderation, utility, and entertainment features"
 readme = "README.md"
 requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "HEROgold", email = "martijnwieringa28@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Communications :: Chat",
+    "Topic :: Internet",
+    "Framework :: AsyncIO",
+]
 dependencies = [
-    "backend",
-    "bot",
     "database",
+    "bot",
+]
+
+[project.optional-dependencies]
+steam = [
+    "bot[steam]>=0.1.0",
+]
+backend = [
+    "backend>=0.1.0",
+]
+full = [
+    "bot[full]>=0.1.0",
+    "backend>=0.1.0",
 ]
 
 [build-system]

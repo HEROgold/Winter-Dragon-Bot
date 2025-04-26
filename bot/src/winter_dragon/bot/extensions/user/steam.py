@@ -34,6 +34,7 @@ from winter_dragon.bot.constants import (
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.utils.dependencies import has_steam_dependencies
 from winter_dragon.database import Session
 from winter_dragon.database.tables import SteamSale, SteamUsers, Users
 
@@ -622,4 +623,6 @@ class SteamSales(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
+    if not has_steam_dependencies:
+        return
     await bot.add_cog(SteamSales(bot))

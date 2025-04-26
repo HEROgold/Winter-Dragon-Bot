@@ -8,15 +8,23 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "beautifulsoup4>=4.13.3",
-    "database",
     "discord>=2.3.2",
     "discord-ext-prometheus>=0.2.1",
     "matplotlib>=3.10.1",
     "psutil>=7.0.0",
     "psycopg2-binary>=2.9.10",
-    "requests>=2.32.3",
     "sqlmodel>=0.0.24",
+    "database",
+]
+
+[project.optional-dependencies]
+steam = [
+    "beautifulsoup4>=4.13.3",
+    "requests>=2.32.3",
+]
+full = [
+    "beautifulsoup4>=4.13.3",
+    "requests>=2.32.3",
 ]
 
 [project.scripts]
