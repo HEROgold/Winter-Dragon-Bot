@@ -7,6 +7,7 @@ from typing import Any, Self, cast
 from winter_dragon.bot.constants import BOT_CONFIG
 from winter_dragon.bot.errors import FirstTimeLaunchError
 
+
 MISSING: Any = object()
 
 class _ConfigParserSingleton(configparser.ConfigParser):
