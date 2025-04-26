@@ -10,10 +10,9 @@ from winter_dragon.bot.config import Config, config
 from winter_dragon.bot.constants import UD_DEFINE_URL, UD_RANDOM_URL
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.core.log import LoggerMixin
 
 
-class Urban(GroupCog, LoggerMixin):
+class Urban(GroupCog):
     """Urban Dictionary cog for Discord bot."""
 
     allow_random = Config(default=True)
