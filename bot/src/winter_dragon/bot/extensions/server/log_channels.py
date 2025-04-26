@@ -115,19 +115,23 @@ class LogChannels(GroupCog):
             self.logger.warning(f"Found no logs channel! {channel=}, {guild=}, {embed=}")
             return
 
-        if mod_channel := discord.utils.get(guild.channels, id=channel.id):
+        if mod_channel := discord.utils.get(guild.text_channels, id=channel.id):
             await mod_channel.send(embed=embed)
 
         self.logger.debug(f"Send logs to {log_channel_name=}")
 
 
     def get_entry_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
+        """Get the role difference from the audit log entry."""
         diffs = []
         for change1, change2 in zip(entry.changes.before, entry.changes.after, strict=False):
             diff = [c1 or c2 for c1, c2 in itertools.zip_longest(change1[1], change2[1])]
             for role in diff:
-                role = discord.utils.get(entry.guild.roles, id=role.id)  # noqa: PLW2901
-                diffs.append(role.mention)
+                if not isinstance(role, discord.Role):
+                    self.logger.warning(f"Got {type(role)} from {role}, where expected discord.Role.")
+                    continue
+                if role := discord.utils.get(entry.guild.roles, id=role.id):
+                    diffs.append(role.mention)
         return diffs
 
 
