@@ -14,17 +14,9 @@ dependencies = [
     "psutil>=7.0.0",
     "psycopg2-binary>=2.9.10",
     "sqlmodel>=0.0.24",
+    "requests>=2.32.3",
+    "beautifulsoup4>=4.13.4",
     "database",
-]
-
-[project.optional-dependencies]
-steam = [
-    "beautifulsoup4>=4.13.3",
-    "requests>=2.32.3",
-]
-full = [
-    "beautifulsoup4>=4.13.3",
-    "requests>=2.32.3",
 ]
 
 [project.scripts]
