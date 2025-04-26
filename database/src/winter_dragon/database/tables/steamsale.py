@@ -17,7 +17,7 @@ class SteamSale(SQLModel, table=True):
 
     def update(self, session: Session) -> bool:
         """Update/override a sale record in Database."""
-        if known := session.exec(select(SteamSale).where(SteamSale.id == self.id)).first():
+        if known := session.exec(select(SteamSale).where(SteamSale.id == self.id).with_for_update()).first():
             known.title = self.title
             known.url = self.url
             known.sale_percent = self.sale_percent
