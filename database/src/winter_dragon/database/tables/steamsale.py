@@ -32,6 +32,7 @@ class SteamSale(SQLModel, table=True):
 
     def is_outdated(self, session: Session, seconds: int) -> bool:
         """Check if a sale has recently been updated."""
+        # FIXME: Detached Instance error
         if known := session.exec(select(SteamSale).where(SteamSale.id == self.id)).first():
             update_period_date = known.update_datetime + timedelta(seconds=seconds)
             return update_period_date <= datetime.now(tz=UTC)
