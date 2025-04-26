@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Field, Session, SQLModel, select
 
@@ -16,18 +16,7 @@ class SteamSale(SQLModel, table=True):
 
 
     def update(self, session: Session) -> bool:
-        """Update/override a sale record in Database.
-
-        Args:
-        ----
-            session (Session): Session to connect to DataBase
-            sale (SteamSale): Sale to update
-
-        Returns:
-        -------
-            bool: True when updated, False when not updated
-
-        """
+        """Update/override a sale record in Database."""
         if known := session.exec(select(SteamSale).where(SteamSale.id == self.id)).first():
             known.title = self.title
             known.url = self.url
@@ -40,3 +29,11 @@ class SteamSale(SQLModel, table=True):
             session.commit()
             return True
         return False
+
+    def is_outdated(self, session: Session, seconds: int) -> bool:
+        """Check if a sale has recently been updated."""
+        if known := session.exec(select(SteamSale).where(SteamSale.id == self.id)).first():
+            update_period_date = known.update_datetime + timedelta(seconds=seconds)
+            return update_period_date <= datetime.now(tz=UTC)
+        msg = "Sale not found in database"
+        raise ValueError(msg)
