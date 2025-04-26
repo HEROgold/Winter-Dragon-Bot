@@ -62,6 +62,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
+    container_name: pgadmin
     depends_on:
       - postgres
     ports:
