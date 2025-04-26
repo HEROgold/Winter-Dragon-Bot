@@ -88,7 +88,7 @@ class LogChannels(GroupCog):
             self.logger.warning(f"No global log channel found for {guild}")
             return
 
-        global_log_channel = discord.utils.get(guild.channels, id=channel.id) or None
+        global_log_channel = discord.utils.get(guild.text_channels, id=channel.id) or None
 
         self.logger.debug(f"Found: {LogCategories.GLOBAL=} as {global_log_channel=}")
         if global_log_channel is not None:
