@@ -5,13 +5,13 @@ from discord import (
     AutoModRuleActionType,
     app_commands,
 )
-from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.settings import Settings
 from winter_dragon.database.tables import Infractions as InfractionsDb
 
 
-@app_commands.guilds(config.getint("Main", "support_guild_id"))
+@app_commands.guilds(Settings.support_guild_id)
 class Infractions(GroupCog):
     """Track automod interaction from discord, keep track of amount of violations
     (Infractions) Ban users when X amount have reached. (Per guild configurable).

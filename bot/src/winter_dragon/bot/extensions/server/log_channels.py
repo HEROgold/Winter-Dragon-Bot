@@ -5,7 +5,6 @@ import discord
 from discord import CategoryChannel, StageInstance, app_commands
 from discord.ext import commands
 from sqlmodel import select
-from winter_dragon.bot.config import config
 from winter_dragon.bot.constants import (
     CHANGED_COLOR,
     CREATED_COLOR,
@@ -18,6 +17,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.enums.channels import ChannelTypes, LogCategories
 from winter_dragon.bot.errors import NoneTypeError
+from winter_dragon.bot.settings import Settings
 from winter_dragon.database.tables import AuditLog, Channels
 
 
@@ -1184,7 +1184,7 @@ class LogChannels(GroupCog):
         self.logger.info(f"Removed Log for {interaction.guild}")
 
 
-    @app_commands.guilds(config.getint("Main", "support_guild_id"))
+    @app_commands.guilds(Settings.support_guild_id)
     @commands.is_owner()
     @app_commands.command(name = "update", description = "Update Log channels")
     async def slash_log_update(self, interaction: discord.Interaction, guild_id: int | None=None) -> None:

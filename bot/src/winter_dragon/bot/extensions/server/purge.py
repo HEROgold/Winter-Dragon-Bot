@@ -16,8 +16,8 @@ from winter_dragon.bot.core.cogs import Cog
 class Purge(Cog):
     """A cog that provides a command to purge messages."""
 
-    limit = Config(100)
-    allow_history = Config(False)  # noqa: FBT003
+    limit = Config(100, int)
+    allow_history = Config(False, bool)  # noqa: FBT003
 
     @app_commands.command(name="purge", description="Purge X amount of messages, use history to delete older messages.")
     @app_commands.checks.has_permissions(manage_messages=True)
@@ -30,12 +30,10 @@ class Purge(Cog):
         use_history: bool = False,
     ) -> None:
         """Purge X amount of messages, use history to delete older messages."""
-        purge_limit = config.getint("Purge", "limit")
-
         if count == -1:
-            count = purge_limit
+            count = self.limit
 
-        if count > purge_limit:
+        if count > self.limit:
             await interaction.response.send_message(
                 f"Too many message to kill! The limit is {config['Purge']['LIMIT']}",
                 ephemeral=True,

@@ -7,10 +7,10 @@ import discord
 from discord import NotFound, app_commands
 from discord.ext import commands
 from winter_dragon.bot._types.dicts import CogData
-from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.settings import Settings
 
 
 class AutoCogReloader(Cog):
@@ -88,7 +88,7 @@ class AutoCogReloader(Cog):
         self.data["timestamp"] = datetime.datetime.now(tz=datetime.UTC).timestamp()
 
 
-@app_commands.guilds(config.getint("Main", "support_guild_id"))
+@app_commands.guilds(Settings.support_guild_id)
 class CogsC(GroupCog):
     """Commands to manage cogs."""
 

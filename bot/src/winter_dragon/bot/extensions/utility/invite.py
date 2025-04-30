@@ -1,8 +1,8 @@
 import discord
 from discord import app_commands
-from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.settings import Settings
 
 
 class Invite(GroupCog):
@@ -17,8 +17,8 @@ class Invite(GroupCog):
 
     @app_commands.command(name="guild", description="get invited to the official support guild")
     async def slash_support(self, interaction: discord.Interaction) -> None:
-        guild = self.bot.get_guild(config.getint("Main", "support_guild_id")) \
-            or await self.bot.fetch_guild(config.getint("Main", "support_guild_id"))
+        guild = self.bot.get_guild(Settings.support_guild_id) \
+            or await self.bot.fetch_guild(Settings.support_guild_id)
         channel = guild.system_channel or guild.channels[0]
         invite = await channel.create_invite(
             max_uses=1,

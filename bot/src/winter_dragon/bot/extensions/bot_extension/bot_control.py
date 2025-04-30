@@ -9,17 +9,18 @@ from discord import Guild, app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import METRICS_FILE, STATUS_MSGS
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.enums.activity import ACTIVITY_TYPES, STATUS_TYPES, VALID_RNG_ACTIVITY, VALID_RNG_STATUS
+from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools.strings import codeblock
 from winter_dragon.database.tables.user import Users
 
 
-@app_commands.guilds(config.getint("Main", "support_guild_id"))
+@app_commands.guilds(Settings.support_guild_id)
 class BotC(GroupCog):
     """Cog to control the bot."""
 

@@ -8,13 +8,13 @@ import discord
 from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from sqlmodel import select
-from winter_dragon.bot.config import config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.enums.channels import ChannelTypes
 from winter_dragon.bot.errors import NoneTypeError
+from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools import rainbow
 from winter_dragon.database.tables import Channels
 
@@ -502,7 +502,7 @@ class Stats(GroupCog):
         await interaction.followup.send("Removed stats channels")
 
     @app_commands.command(name="reset", description="Reset stats of all servers")
-    @app_commands.guilds(config.getint("Main", "support_guild_id"))
+    @app_commands.guilds(Settings.support_guild_id)
     @commands.is_owner()
     async def reset_stats(self, interaction: discord.Interaction) -> None:
         """Reset all stats on the stat channels."""

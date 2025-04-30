@@ -6,7 +6,7 @@ from textwrap import dedent
 import discord
 from discord import app_commands
 from discord.ext import commands
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.core.tasks import loop
@@ -24,6 +24,8 @@ class ErrorHandler(LoggerMixin):
 
     """
 
+    always_log_errors = Config(default=False)
+    ignore_errors = Config(default=False)
     interface: commands.Context | discord.Interaction
     error: Exception
     logger: logging.Logger
@@ -141,12 +143,10 @@ class ErrorHandler(LoggerMixin):
         error = self.error
         self.logger.debug(f"{type(error)=}, {error.args=}")
 
-        always_log_errors = config.getboolean("Error", "always_log_errors")
-        ignore_errors = config.getboolean("Error", "ignore_errors")
-        if always_log_errors:
+        if self.always_log_errors:
             self.logger.error(f"Always log error: {self.time_code}")
             self.logger.exception(error, exc_info=True)
-        if ignore_errors:
+        if self.ignore_errors:
             return
 
         message = self._get_message_from_error()

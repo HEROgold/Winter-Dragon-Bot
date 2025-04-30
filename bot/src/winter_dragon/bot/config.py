@@ -6,7 +6,7 @@ import configparser
 from collections.abc import Callable, Generator
 from configparser import ConfigParser
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Self, cast
+from typing import TYPE_CHECKING, Any, Self
 
 from winter_dragon.bot.constants import BOT_CONFIG
 from winter_dragon.bot.errors import FirstTimeLaunchError
@@ -56,17 +56,17 @@ class _ConfigParserSingleton(configparser.ConfigParser):
                 if self[section][setting] == "!!":
                     yield f"{section}:{setting}"
 
-_UNSET = object()
+_UNSET: Any = object()
 
 
-class Config[VT: Any]:
+class Config[VT]:
     """A descriptor for config values, preserving type information."""
 
     _parser: ConfigParser
     _file: Path
     _write_on_edit: bool = True
 
-    def __init__(self, default: VT = _UNSET) -> None:
+    def __init__(self, default: VT = _UNSET, converter: Callable[..., VT] = str) -> None:
         """Initialize the config descriptor with a default value.
 
         Validate that parser and filepath are present.
@@ -77,6 +77,11 @@ class Config[VT: Any]:
         self.validate_parser()
         self.validate_file()
         self._default = default
+        self._converter = converter
+
+    def convert(self, value: str) -> VT:
+        """Convert the value to the desired type using the given callable."""
+        return self._converter(value)
 
     @staticmethod
     def set_parser(parser: ConfigParser) -> None:
@@ -136,9 +141,7 @@ class Config[VT: Any]:
         # obj_type is the class in which the variable is defined
         # so it can be different than type of VT
         # but we don't need obj or it's type to get the value from config in our case.
-        # ignore type error, config.get() raises the wanted errors, but checker forces `str` type.
-        config_value = Config._parser.get(self._section, self._setting)  # type: ignore[reportArgumentType]
-        return cast(VT, config_value)  # noqa: TC006
+        return self.convert(Config._parser.get(self._section, self._setting))
 
     def __set__(self, obj: object, value: VT) -> None:
         """Set the value of the attribute."""

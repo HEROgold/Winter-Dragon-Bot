@@ -6,7 +6,7 @@ import urllib.parse
 import discord
 import requests
 from discord import app_commands
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import UD_DEFINE_URL, UD_RANDOM_URL
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
@@ -15,7 +15,8 @@ from winter_dragon.bot.core.cogs import GroupCog
 class Urban(GroupCog):
     """Urban Dictionary cog for Discord bot."""
 
-    allow_random = Config(default=True)
+    allow_random = Config(default=True, converter=bool)
+    max_size = Config(5, int)
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Urban cog."""
@@ -28,8 +29,7 @@ class Urban(GroupCog):
     @app_commands.command(name="random", description="get random definitions")
     async def slash_urban_random(self, interaction: discord.Interaction) -> None:
         """Get a random definition from the Urban Dictionary."""
-        allowed_random = config.getboolean("Urban", "allow_random")
-        if allowed_random is False:
+        if self.allow_random is False:
             await interaction.response.send_message("Random definitions are disabled", ephemeral=True)
             return
         response = await self._get_response(UD_RANDOM_URL)
@@ -40,7 +40,7 @@ class Urban(GroupCog):
         emb.set_footer(text="Results are from an API!")
         emb.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar)
         for i, r in enumerate(random_list, start=1):
-            if i <= config.getint("Urban", "MAX_LENGTH"):
+            if i <= self.max_size:
                 word = r["word"]
                 definition = r["definition"]
                 urban_url = r["permalink"]

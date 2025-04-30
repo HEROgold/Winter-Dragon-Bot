@@ -9,6 +9,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.settings import Settings
 
 
 class LogsManager:
@@ -17,8 +18,9 @@ class LogsManager:
     current_directory = Path("./")
     first_rollover: bool = False
     KEEP_LATEST = Config(default=False)
+    log_path = Config("./logs")
+    log_size_kb_limit = Config(9000000, int)
 
-    @Config.default("Main", "log_path", "./logs")
     def __init__(self) -> None:
         """Initialize the LogsManager."""
         self._loggers: dict[str, logging.Logger] = {}
@@ -55,17 +57,11 @@ class LogsManager:
     @staticmethod
     def setup_logging(logger: logging.Logger, filename: str) -> None:
         """Set up logging for the given logger."""
-        log_level = config.get("Main", "log_level")
+        log_level = Settings.log_level
         logger.setLevel(log_level)
         handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
         logger.addHandler(handler)
-
-    @property
-    def log_path(self) -> str:
-        """Get the log path from the config."""
-        return config.get("Main", "log_path")
-
 
     def logs_size_limit_check(self, size_in_kb: int) -> bool:
         """Check if the stored logs total size in kb, is bigger then given value.
@@ -113,11 +109,9 @@ class LogsManager:
             file.unlink()
         Path(folder_path).rmdir()
 
-    @Config.default("Main", "log_size_kb_limit", 9000000)
     def save_logs(self) -> None:
         """Save logs to a new directory."""
-        size_limit = config.getint("Main", "log_size_kb_limit")
-        while self.logs_size_limit_check(size_limit):
+        while self.logs_size_limit_check(self.log_size_kb_limit):
             self.delete_oldest_saved_logs()
 
         log_time = datetime.now(tz=UTC).strftime("%Y-%m-%d-%H-%M-%S")

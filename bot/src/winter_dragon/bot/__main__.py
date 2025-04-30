@@ -8,30 +8,24 @@ from typing import Any
 
 import discord
 from discord.ext import commands
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import config
 from winter_dragon.bot.constants import INTENTS
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.errors.config import ConfigError
+from winter_dragon.bot.settings import Settings
 from winter_dragon.database import SQLModel, engine
 
-
-Config.default("Main", "log_level", "DEBUG")
-Config.default("Main", "bot_name", WinterDragon.__class__.__name__)
-Config.default("Main", "support_guild_id", "0")
-Config.default("Main", "prefix", "$")
 
 if not config.is_valid():
     msg = f"""Config is not yet updated!, update the following:
         {', '.join(config.get_invalid())}"""
     raise ConfigError(msg)
 
-bot_name = config.get("Main", "bot_name")
-bot_logger = logging.getLogger(f"{bot_name}")
-prefix = config.get("Main", "prefix")
+bot_logger = logging.getLogger(Settings.bot_name)
 
 bot = WinterDragon(
     intents=INTENTS,
-    command_prefix=commands.when_mentioned_or(prefix),
+    command_prefix=commands.when_mentioned_or(Settings.prefix),
     case_insensitive=True,
 )
 tree = bot.tree
@@ -73,8 +67,8 @@ async def main() -> None:
     """Entrypoint of the program."""
     async with bot:
         invite_link = bot.get_bot_invite()
-        config.set("Main", "application_id", f"{bot.application_id}")
-        config.set("Main", "bot_invite", invite_link.replace("%", "%%"))
+        Settings.application_id = bot.application_id
+        Settings.bot_invite = invite_link.replace("%", "%%")
 
         SQLModel.metadata.create_all(engine, checkfirst=True)
         await bot.load_extensions()

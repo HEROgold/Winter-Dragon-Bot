@@ -16,8 +16,9 @@ from discord import Intents, app_commands
 from discord.app_commands import AppCommand, AppCommandGroup
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, ROOT_DIR
+from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools.log_manager import LogsManager
 
 
@@ -81,7 +82,7 @@ class WinterDragon(AutoShardedBot):
 
     def initialize_loggers(self) -> None:
         """Initialize loggers related to WinterDragon."""
-        self.logger = logging.getLogger(config.get("Main", "bot_name"))
+        self.logger = logging.getLogger(Settings.bot_name or self.__class__.__name__)
 
         self.log_manager.add_logger("bot", self.logger)
         self.log_manager.add_logger("discord", logging.getLogger("discord"))

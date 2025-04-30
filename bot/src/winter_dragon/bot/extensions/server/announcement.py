@@ -4,7 +4,7 @@ import random
 
 import discord
 from discord import app_commands
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.tools import rainbow
@@ -27,7 +27,7 @@ class Announce(Cog):
         emb.set_author(name=(member.display_name), icon_url=avatar)
         emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)
-        if config.getboolean("Announcement", "mention_all"):
+        if self.mention_all:
             mass_ping = await interaction.channel.send("<@everyone>") # type: ignore[reportAttributeAccessIssue]
             await mass_ping.delete()
 

@@ -2,7 +2,7 @@
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot.config import config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.database.tables import Welcome as WelcomeDb
@@ -12,6 +12,9 @@ from winter_dragon.database.tables import Welcome as WelcomeDb
 @app_commands.checks.has_permissions(administrator=True)
 class Welcome(GroupCog):
     """"Cog to contain the welcome commands."""
+
+    allowed_welcome_dm = Config(default=True)
+
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
@@ -24,14 +27,13 @@ class Welcome(GroupCog):
         cmd = self.bot.get_app_command("help")
         mention = cmd.mention if cmd else "the help command"
         default_message = f"Welcome {member.mention} to {member.guild},\nyou may use {mention} to see what commands I have!"
-        allowed_welcome_dm = config.getboolean("Welcome", "DM")
-        if channel is not None and allowed_welcome_dm is False:
+        if channel is not None and self.allowed_welcome_dm is False:
             self.logger.warning("sending welcome to guilds system_channel")
             if message:
                 await channel.send(message)
             else:
                 await channel.send(default_message)
-        elif channel is not None and allowed_welcome_dm is True and member.bot is False:
+        elif channel is not None and self.allowed_welcome_dm is True and member.bot is False:
             self.logger.warning("sending welcome to user's dm")
             if message:
                 await member.send(message)
