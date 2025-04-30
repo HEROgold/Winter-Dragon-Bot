@@ -6,7 +6,7 @@ import configparser
 from collections.abc import Callable, Generator
 from configparser import ConfigParser
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 
 from winter_dragon.bot.constants import BOT_CONFIG
 from winter_dragon.bot.errors import FirstTimeLaunchError
@@ -50,13 +50,13 @@ class _ConfigParserSingleton(configparser.ConfigParser):
                     return False
         return True
 
-    def get_invalid(self) -> Generator[str, Any]:
+    def get_invalid(self) -> Generator[str]:
         for section in self.sections():
             for setting in self.options(section):
                 if self[section][setting] == "!!":
                     yield f"{section}:{setting}"
 
-_UNSET: Any = object()
+_UNSET = object()
 
 
 class Config[VT]:
@@ -157,7 +157,7 @@ class Config[VT]:
                 Config._parser.write(f)
 
     @staticmethod
-    def set(section: str, setting: str, value: Any):  # noqa: ANN205, ANN401
+    def set(section: str, setting: str, value: VT):  # noqa: ANN205
         """Set a config value using this descriptor."""
 
         def wrapper[F, **P](func: Callable[P, F]) -> Callable[P, F]:
@@ -171,7 +171,7 @@ class Config[VT]:
         return wrapper
 
     @staticmethod
-    def as_kwarg(section: str, setting: str, name: str | None = None, default: Any = _UNSET):  # noqa: ANN205, ANN401
+    def as_kwarg(section: str, setting: str, name: str | None = None, default: VT = _UNSET):  # noqa: ANN205
         """Insert a config value into **kwargs to a given method/function using this descriptor.
 
         Use kwarg.get(`name`) to get the value.
@@ -202,7 +202,7 @@ class Config[VT]:
             Config._set(section, setting, value)
 
     @staticmethod
-    def default(section: str, setting: str, value: Any):  # noqa: ANN205, ANN401
+    def default(section: str, setting: str, value: VT):  # noqa: ANN205
         """Set a default config value if none are set yet using this descriptor."""
 
         def wrapper[F, **P](func: Callable[P, F]) -> Callable[P, F]:
