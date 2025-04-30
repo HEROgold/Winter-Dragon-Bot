@@ -8,17 +8,17 @@ from typing import Any
 
 import discord
 from discord.ext import commands
-from winter_dragon.bot.config import config
+from winter_dragon.bot.config import Config, config
 from winter_dragon.bot.constants import INTENTS
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.errors.config import ConfigError
 from winter_dragon.database import SQLModel, engine
 
 
-config.default("Main", "log_level", "DEBUG")
-config.default("Main", "bot_name", WinterDragon.__class__.__name__)
-config.default("Main", "support_guild_id", "0")
-config.default("Main", "prefix", "$")
+Config.default("Main", "log_level", "DEBUG")
+Config.default("Main", "bot_name", WinterDragon.__class__.__name__)
+Config.default("Main", "support_guild_id", "0")
+Config.default("Main", "prefix", "$")
 
 if not config.is_valid():
     msg = f"""Config is not yet updated!, update the following:
