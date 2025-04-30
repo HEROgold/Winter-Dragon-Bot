@@ -47,7 +47,7 @@ class SteamSales(GroupCog):
 
         async for sale in steam_sales:
             if sale is None:
-                self.logger.warning("Got None sale, skipping")
+                self.logger.debug("Got None sale, skipping")
                 continue
             self.repository.update_sale(sale)
 

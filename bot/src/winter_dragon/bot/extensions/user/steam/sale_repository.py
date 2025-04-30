@@ -25,7 +25,7 @@ class SteamSaleRepository(LoggerMixin):
         sale: SteamSale,
     ) -> None:
         """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session."""
-        self.logger.warning(f"Updating sale: {sale}")
+        self.logger.info(f"Updating sale for: {sale.title}, {sale.url}")
         sale.update(self.session)
 
     def is_outdated(self, sale: SteamSale, seconds: int) -> bool:
