@@ -2,7 +2,7 @@
 import logging
 from typing import Any
 
-from winter_dragon.bot.config import config
+from winter_dragon.bot.settings import Settings
 
 
 class LoggerMixin:
@@ -25,4 +25,11 @@ class LoggerMixin:
         # Traverse the MRO (Method Resolution Order) in reverse to update logger from base to the furthest child
         for base in reversed(cls.mro()):
             if issubclass(base, LoggerMixin) and hasattr(base, "_furthest_child_name"):
-                base.logger = logging.getLogger(f"{config.get("Main", "bot_name")}.{LoggerMixin._furthest_child_name}")
+                base.logger = logging.getLogger(f"{Settings.bot_name}.{LoggerMixin._furthest_child_name}")
+                base.setup_logger(base.logger)
+
+    @classmethod
+    def setup_logger(cls, logger: logging.Logger, level: int = logging.DEBUG) -> None:
+        """Set up the logger for the cog with a default log level and file handler."""
+        logger.setLevel(level)
+        logger.addHandler(logging.FileHandler(f"{logger.name}.log"))

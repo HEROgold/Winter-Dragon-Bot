@@ -54,12 +54,7 @@ class Cog(commands.Cog, LoggerMixin):
 
         for listener in self.get_listeners():
             self.logger.debug(listener)
-        self.setup_logger()
 
-    def setup_logger(self) -> None:
-        """Set up the logger for the cog with a default log level and file handler."""
-        self.logger.setLevel(logging.DEBUG)
-        self.logger.addHandler(logging.FileHandler(f"{self.logger.name}.log"))
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         """Check if a command is disabled for a guild, channel, or user."""
