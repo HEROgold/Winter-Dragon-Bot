@@ -16,8 +16,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-MISSING: Any = object()
-
 class _ConfigParserSingleton(configparser.ConfigParser):
     _instance = None
 
