@@ -160,7 +160,7 @@ class SteamScraper(LoggerMixin):
 
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
             if not isinstance(sale_tag, Tag):
-                self.logger.warning(f"Sale tag not found for {sale_tag=}")
+                self.logger.warning(f"Sale tag not found for {sale_tag=}, Expected Tag, got {type(sale_tag)}")
                 continue
             yield await self.get_sale_from_steam(sale_tag, percent)
 
@@ -170,15 +170,18 @@ class SteamScraper(LoggerMixin):
         a_tag = sale_tag.find_parent("a", href=True)
 
         if not isinstance(a_tag, Tag):
+            self.logger.warning(f"Tag not found for {sale_tag=}. Expected Tag got, {type(a_tag)}")
             return None
         price = a_tag.find(class_=DISCOUNT_FINAL_PRICE)
         title = a_tag.find(class_=SEARCH_GAME_TITLE)
         app_id = a_tag.get(DATA_APPID)
         url = a_tag.get("href")
         if not isinstance(price, Tag) or not isinstance(title, Tag):
+            self.logger.warning(f"Price or title not found for {sale_tag=}, Expected Tag, got {type(price)}")
             return None
 
         if sale_tag.parent is None:
+            self.logger.warning(f"Sale tag parent not found for {sale_tag=}")
             return None
         # Can sale_tag.parent be a_tag?
         discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
