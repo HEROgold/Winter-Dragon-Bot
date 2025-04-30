@@ -43,18 +43,6 @@ class _ConfigParserSingleton(configparser.ConfigParser):
         with BOT_CONFIG.open("w") as fp:
             self.write(fp)
 
-    def set_default(self, section: str, setting: str, value: Any) -> None:  # noqa: ANN401
-        """Set a default value for a config setting.
-
-        If the section or setting does not exist, it will be created.
-        """
-        if not self.has_section(section):
-            self.add_section(section)
-        if not self.has_option(section, setting):
-            self.set(section, setting, str(value))
-        with BOT_CONFIG.open("w") as fp:
-            self.write(fp)
-
     def is_valid(self) -> bool:
         for section in self.sections():
             for setting in self.options(section):
@@ -67,13 +55,6 @@ class _ConfigParserSingleton(configparser.ConfigParser):
             for setting in self.options(section):
                 if self[section][setting] == "!!":
                     yield f"{section}:{setting}"
-
-    def default(self, section: str, setting: str, value: Any) -> None:  # noqa: ANN401
-        """Set a default value for a config setting.
-
-        If the section or setting does not exist, it will be created.
-        """
-        self.set_default(section, setting, value)
 
 _UNSET = object()
 
