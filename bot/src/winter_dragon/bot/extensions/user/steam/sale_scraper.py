@@ -139,6 +139,7 @@ class SteamScraper(LoggerMixin):
             self.logger.warning(f"Title not found for {url=}")
             return None
 
+        self.logger.warning(f"SteamSale found: {url=}, {title=}, {price=}, {sale_perc=}")
         return SteamSale(
             id = url.get_id_from_game_url(),
             title = title.get_text(),
@@ -189,18 +190,20 @@ class SteamScraper(LoggerMixin):
         if discount_perc is None: # Check game's page
             return await self.get_game_sale(SteamURL(str(url)))
 
-        discount = int(discount_perc.text[1:-1]) # strip the - and % from the tag
+        sale_percentage = int(discount_perc.text[1:-1]) # strip the - and % from the tag
 
-        if discount < percent:
+        if sale_percentage < percent:
+            self.logger.warning(f"{sale_percentage=} is lower than target {percent=}, skipping")
             return None
         price = price.get_text()[:-1]
         price = price.replace(",", ".")
         title = title.get_text()
+        self.logger.warning(f"SteamSale found: {url=}, {title=}, {price=}, {sale_percentage=}")
         return SteamSale(
             id = int(str(app_id)),
             title = title,
             url = str(url),
-            sale_percent = discount,
+            sale_percent = sale_percentage,
             final_price = price_to_num(price),
             is_dlc = False,
             is_bundle = False,
