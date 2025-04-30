@@ -76,6 +76,7 @@ class LogCategories(Enum):
     AUTOMOD_FLAG_MESSAGE = auto()
     AUTOMOD_TIMEOUT_MEMBER = auto()
 
-    def from_AuditLogAction(self, action: AuditLogAction) -> Self:  # noqa: N802
+    @classmethod
+    def from_AuditLogAction(cls, action: AuditLogAction) -> Self:  # noqa: N802
         """Get the enum from an AuditLogAction."""
-        return self.__class__[action.name.upper()]
+        return cls([action.name.upper()])
