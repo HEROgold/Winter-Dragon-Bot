@@ -28,10 +28,6 @@ class SteamSales(GroupCog):
         """Load the cog."""
         await super().cog_load()
         self.loop = asyncio.get_event_loop()
-        self.sub_mention_remove = self.get_command_mention(self.slash_remove)
-        self.sub_mention_show = self.get_command_mention(self.slash_show)
-        self.disable_message = f"You can disable this message by using {self.sub_mention_remove}"
-        self.all_sale_message = f"You can see other sales by using {self.sub_mention_show}, followed by a percentage"
         self.update.start()
 
     async def get_new_steam_sales(self, percent: int) -> list[SteamSale]:
@@ -84,7 +80,16 @@ class SteamSales(GroupCog):
         self._setup_notifier_messages(notifier)
         embed = notifier.add_sales(new_sales)
 
+    def _update_notify_messages(self) -> None:
+        """Update the notify messages."""
+        self.sub_mention_remove = self.get_command_mention(self.slash_remove)
+        self.sub_mention_show = self.get_command_mention(self.slash_show)
+        self.disable_message = f"You can disable this message by using {self.sub_mention_remove}"
+        self.all_sale_message = f"You can see other sales by using {self.sub_mention_show}, followed by a percentage"
+
     def _setup_notifier_messages(self, notifier: SteamSaleNotifier) -> None:
+        """Set up the notifier messages."""
+        self._update_notify_messages()
         notifier.set_messages(
             self.sub_mention_remove,
             self.sub_mention_show,
