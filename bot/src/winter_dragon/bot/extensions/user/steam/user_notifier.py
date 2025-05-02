@@ -2,7 +2,7 @@
 from collections.abc import Iterable
 from textwrap import dedent
 
-from discord import Embed, NotFound, User
+from discord import Embed, Member, NotFound, User
 from sqlmodel import Session, select
 from winter_dragon.bot.constants import WEBSITE_URL
 from winter_dragon.bot.core.bot import WinterDragon
@@ -94,7 +94,7 @@ class SteamSaleNotifier(LoggerMixin):
             self._validated = True
         return self._validated
 
-    async def notify_user(self, user: User) -> None:
+    async def notify_user(self, user: User | Member) -> None:
         """Notify a user about the sales."""
         self.logger.debug(f"Trying to show new sales to {user=}")
         if self.validated:

@@ -137,16 +137,18 @@ class SteamSales(GroupCog):
         """Get a list of steam games that are on sale for the given percentage or higher."""
         await interaction.response.defer()
 
-        notifier = SteamSaleNotifier()
         embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
-        sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
-        embed = notifier.add_sales(embed, sales)
-        self.logger.debug(f"{embed.to_dict()}")
+        notifier = SteamSaleNotifier(self.bot, self.session, embed)
+        notifier.set_messages(
+            self.sub_mention_remove,
+            self.sub_mention_show,
+            self.disable_message,
+            self.all_sale_message,
+        )
 
-        if len(embed.fields) > 0:
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
-            await interaction.followup.send(f"No steam games found with {percent} or higher sales.", ephemeral=True)
+        sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
+        embed = notifier.add_sales(sales)
+        await notifier.notify_user(interaction.user)
 
 
 
