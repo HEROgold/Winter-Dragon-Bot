@@ -2,7 +2,6 @@
 import asyncio
 
 from discord import Embed, Interaction, app_commands
-from discord.errors import NotFound
 from sqlmodel import select
 from winter_dragon.bot.constants import STEAM_PERIOD, STEAM_SEND_PERIOD
 from winter_dragon.bot.core.bot import WinterDragon
@@ -24,6 +23,10 @@ class SteamSales(GroupCog):
         super().__init__(bot)
         self.repository = SteamSaleRepository(bot)
         self.scraper = SteamScraper()
+        self.sub_mention_remove = self.get_command_mention(self.slash_remove)
+        self.sub_mention_show = self.get_command_mention(self.slash_show)
+        self.disable_message = f"You can disable this message by using {self.sub_mention_remove}"
+        self.all_sale_message = f"You can see other sales by using {self.sub_mention_show}, followed by a percentage"
 
     async def cog_load(self) -> None:
         """Load the cog."""
@@ -76,37 +79,16 @@ class SteamSales(GroupCog):
 
         embed = Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=0x094d7f)
         new_sales = await self.get_new_steam_sales(percent=100)
-        self.logger.debug(f"{new_sales=}")
+        notifier = SteamSaleNotifier(self.bot, self.session, embed)
 
-        notifier = SteamSaleNotifier()
-        embed = notifier.populate_embed(embed, new_sales)
+        notifier.set_messages(
+            self.sub_mention_remove,
+            self.sub_mention_show,
+            self.disable_message,
+            self.all_sale_message,
+        )
 
-        if len(embed.fields) == 0:
-            self.logger.warning("Got no populated embed, skipping sale sending.")
-            return
-
-        sub_mention_remove = self.get_command_mention(self.slash_remove)
-        sub_mention_show = self.get_command_mention(self.slash_show)
-        disable_message = f"You can disable this message by using {sub_mention_remove}"
-        all_sale_message = f"You can see other sales by using {sub_mention_show}, followed by a percentage"
-
-        with self.session as session:
-            users = session.exec(select(SteamUsers)).all()
-            self.logger.debug(f"Got embed with sales, {embed}, to send to {users=}")
-
-            for db_user in users:
-                self.logger.debug(f"Trying to show new sales to {db_user.id=}")
-                try:
-                    user = self.bot.get_user(db_user.id) or await self.bot.fetch_user(db_user.id)
-                except NotFound:
-                    self.logger.warning(f"Not showing {db_user.id=} sales, discord.errors.NotFound")
-                    continue
-
-                if len(embed.fields) > 0:
-                    self.logger.debug(f"Showing {user}, {embed}")
-                    await user.send(content=f"{disable_message}\n{all_sale_message}", embed=embed)
-                else:
-                    self.logger.debug(f"Not showing sales, empty embed fields: {user}, {embed}")
+        embed = notifier.add_sales(new_sales)
 
 
     @update.before_loop
@@ -158,7 +140,7 @@ class SteamSales(GroupCog):
         notifier = SteamSaleNotifier()
         embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
         sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
-        embed = notifier.populate_embed(embed, sales)
+        embed = notifier.add_sales(embed, sales)
         self.logger.debug(f"{embed.to_dict()}")
 
         if len(embed.fields) > 0:
