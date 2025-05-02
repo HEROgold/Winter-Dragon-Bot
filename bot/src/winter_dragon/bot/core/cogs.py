@@ -12,6 +12,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.error_handler import ErrorHandler
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.tools.commands import Commands as CmdTool
 from winter_dragon.bot.tools.utils import get_arg
 from winter_dragon.database import Session, engine
 from winter_dragon.database.tables import Channels, DisabledCommands, GuildCommands
@@ -144,16 +145,9 @@ class Cog(commands.Cog, LoggerMixin):
         """Handle the errors that occur during app command invocation."""
         ErrorHandler(self.bot, interaction, error)
 
-    def get_command_mention(self, command: app_commands.Command) -> str | None:
+    def get_command_mention(self, command: app_commands.Command) -> str:
         """Return a command string from a given functiontype. (Decorated with app_commands.command)."""
-        if not isinstance(command, app_commands.Command):  # type:ignore[reportUnnecessaryIsInstance]
-            msg = f"Expected app_commands.commands.Command but got {type(command)} instead"
-            raise TypeError(msg)
-
-        if cmd := self.bot.get_app_command(command.qualified_name):
-            return cmd.mention
-        self.logger.warning(f"Can't find {command}")
-        return None
+        return CmdTool.get_command_mention(self.bot, command)
 
 
 class GroupCog(Cog):
