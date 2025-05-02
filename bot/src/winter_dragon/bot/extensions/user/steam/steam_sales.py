@@ -23,15 +23,16 @@ class SteamSales(GroupCog):
         super().__init__(bot)
         self.repository = SteamSaleRepository(bot)
         self.scraper = SteamScraper()
+
+    async def cog_load(self) -> None:
+        """Load the cog."""
+        await super().cog_load()
+        self.loop = asyncio.get_event_loop()
         self.sub_mention_remove = self.get_command_mention(self.slash_remove)
         self.sub_mention_show = self.get_command_mention(self.slash_show)
         self.disable_message = f"You can disable this message by using {self.sub_mention_remove}"
         self.all_sale_message = f"You can see other sales by using {self.sub_mention_show}, followed by a percentage"
-
-    async def cog_load(self) -> None:
-        """Load the cog."""
         self.update.start()
-        self.loop = asyncio.get_event_loop()
 
     async def get_new_steam_sales(self, percent: int) -> list[SteamSale]:
         """Get only unknown/new sales.
@@ -80,15 +81,16 @@ class SteamSales(GroupCog):
         embed = Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=0x094d7f)
         new_sales = await self.get_new_steam_sales(percent=100)
         notifier = SteamSaleNotifier(self.bot, self.session, embed)
+        self._setup_notifier_messages(notifier)
+        embed = notifier.add_sales(new_sales)
 
+    def _setup_notifier_messages(self, notifier: SteamSaleNotifier) -> None:
         notifier.set_messages(
             self.sub_mention_remove,
             self.sub_mention_show,
             self.disable_message,
             self.all_sale_message,
         )
-
-        embed = notifier.add_sales(new_sales)
 
 
     @update.before_loop
@@ -129,7 +131,6 @@ class SteamSales(GroupCog):
         await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
 
 
-    # @app_commands.checks.cooldown(1, UPDATE_PERIOD)
     @app_commands.command(
         name="show",
         description="Get a list of steam games that are on sale for the given percentage or higher")
@@ -139,12 +140,7 @@ class SteamSales(GroupCog):
 
         embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
         notifier = SteamSaleNotifier(self.bot, self.session, embed)
-        notifier.set_messages(
-            self.sub_mention_remove,
-            self.sub_mention_show,
-            self.disable_message,
-            self.all_sale_message,
-        )
+        self._setup_notifier_messages(notifier)
 
         sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
         embed = notifier.add_sales(sales)
