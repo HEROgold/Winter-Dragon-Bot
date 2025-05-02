@@ -50,6 +50,7 @@ class Team(GroupCog):
 
     async def cog_load(self) -> None:
         """Start the cog."""
+        await super().cog_load()
         self.delete_empty_team_channels.start()
 
 

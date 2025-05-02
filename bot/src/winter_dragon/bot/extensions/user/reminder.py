@@ -17,6 +17,7 @@ class Reminder(Cog):
         return seconds
 
     async def cog_load(self) -> None:
+        await super().cog_load()
         self.send_reminder.start()
 
 

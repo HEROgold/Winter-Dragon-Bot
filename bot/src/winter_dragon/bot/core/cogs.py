@@ -117,10 +117,11 @@ class Cog(commands.Cog, LoggerMixin):
     @loop(count=1)
     async def add_mentions(self) -> None:
         """Add app command mentions to the bot if it hasn't been done yet."""
-        if not self.bot.has_app_command_mentions:
+        self._has_app_command_mentions: bool = getattr(self, "_has_app_command_mentions", False)
+        if not self._has_app_command_mentions:
             self.logger.debug(f"Adding app_commands cache to {self.__cog_name__}")
             await self.bot.update_app_commands_cache()
-            self.bot.has_app_command_mentions = True
+            self._has_app_command_mentions = True
 
     @loop(count=1)
     async def add_disabled_check(self) -> None:

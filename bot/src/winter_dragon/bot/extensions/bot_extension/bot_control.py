@@ -53,6 +53,7 @@ class BotC(GroupCog):
 
     async def cog_load(self) -> None:
         """When the cog loads, start collecting metrics and activity statuses."""
+        await super().cog_load()
         self.activity_switch.start()
         self.gather_metrics_loop.start()
 

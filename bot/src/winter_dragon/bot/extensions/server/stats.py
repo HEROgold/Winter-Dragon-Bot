@@ -299,6 +299,7 @@ class Stats(GroupCog):
 
     async def cog_load(self) -> None:
         """Load the cog."""
+        await super().cog_load()
         self.update.start()
 
     @loop(seconds=3600)

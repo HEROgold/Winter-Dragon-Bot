@@ -15,6 +15,7 @@ class GuildInitializer(Cog):
 
     async def cog_load(self) -> None:
         """Create a guild for this bot if it doesn't exist, and invite the owners."""
+        await super().cog_load()
         if Settings.support_guild_id != 0:
             return
         self.logger.warning("Support guild id is not set. Creating new guild.")

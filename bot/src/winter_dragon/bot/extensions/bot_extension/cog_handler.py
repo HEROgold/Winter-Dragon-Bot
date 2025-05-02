@@ -31,6 +31,7 @@ class AutoCogReloader(Cog):
 
     async def cog_load(self) -> None:
         """When the cog is loaded, start watching files to reload."""
+        await super().cog_load()
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
             self.auto_reload.start()

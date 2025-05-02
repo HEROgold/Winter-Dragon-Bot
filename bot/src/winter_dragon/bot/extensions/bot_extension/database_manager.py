@@ -16,6 +16,8 @@ from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, 
 @app_commands.guilds(Settings.support_guild_id)
 class DatabaseManager(Cog):
     async def cog_load(self) -> None:
+        """Load the cog."""
+        await super().cog_load()
         self.update.start()
 
     @Cog.listener()
