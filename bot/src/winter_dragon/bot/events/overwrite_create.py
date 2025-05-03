@@ -1,9 +1,9 @@
 from typing import override
 
 from discord import Embed, Member, Role, User
+from discord.abc import GuildChannel
 from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
-from discord.abc import GuildChannel
 
 
 class OverwriteCreate(AuditEvent):
