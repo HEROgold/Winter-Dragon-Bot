@@ -24,8 +24,8 @@ class ErrorHandler(LoggerMixin):
 
     """
 
-    always_log_errors = Config(default=False)
-    ignore_errors = Config(default=False)
+    always_log_errors = Config(False, bool)  # noqa: FBT003
+    ignore_errors = Config(False, bool)  # noqa: FBT003
     interface: commands.Context | discord.Interaction
     error: Exception
     logger: logging.Logger
@@ -136,8 +136,6 @@ class ErrorHandler(LoggerMixin):
         self.help_msg = f"`help {ctx.command}`" if ctx else "`help`"
         return ctx.author.dm_channel or await ctx.message.author.create_dm()
 
-    @Config.default("Error", "always_log_errors", "False")
-    @Config.default("Error", "ignore_errors", "False")
     async def handle_error(self) -> None:
         """Handle the error that occurred."""
         error = self.error

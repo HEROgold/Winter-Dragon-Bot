@@ -13,7 +13,7 @@ from winter_dragon.bot.tools import rainbow
 class Announce(Cog):
     """A cog for announcing messages about the bot to all servers."""
 
-    mention_all = Config(default=True)
+    mention_all = Config(True, bool)  # noqa: FBT003
 
     @app_commands.command(
             name="announcement",

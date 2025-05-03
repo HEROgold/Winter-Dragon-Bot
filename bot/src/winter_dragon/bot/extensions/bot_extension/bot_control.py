@@ -33,9 +33,9 @@ class BotC(GroupCog):
     packets_sent: list[int]
     packets_received: list[int]
 
-    random_activity = Config(True)  # noqa: FBT003
-    periodic_change = Config(True)  # noqa: FBT003
-    periodic_time = Config(180)
+    random_activity = Config(True, bool)  # noqa: FBT003
+    periodic_change = Config(True, bool)  # noqa: FBT003
+    periodic_time = Config(180, int)
 
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:

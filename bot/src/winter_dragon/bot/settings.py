@@ -11,5 +11,5 @@ class Settings:
     bot_name = Config("WinterDragon")
     support_guild_id = Config(0, int)
     prefix = Config("$")
-    application_id = Config[int | None](None, int)
+    application_id = Config(None, int)
     bot_invite = Config("")

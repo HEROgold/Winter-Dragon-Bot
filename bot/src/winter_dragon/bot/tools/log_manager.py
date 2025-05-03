@@ -16,8 +16,8 @@ class LogsManager:
     """Manages some loggers and their log files."""
 
     current_directory = Path("./")
-    first_rollover: bool = False
-    KEEP_LATEST = Config(default=False)
+    first_rollover = Config(False, bool)  # noqa: FBT003
+    keep_latest = Config(False, bool)  # noqa: FBT003
     log_path = Config("./logs")
     log_size_kb_limit = Config(9000000, int)
 
@@ -135,7 +135,7 @@ class LogsManager:
 
     def delete_latest_logs(self) -> None:
         """Delete the latest logs, if the config is set to do so."""
-        if self.KEEP_LATEST:
+        if self.keep_latest:
             self.logger.info("Keeping top level logs.")
             return
         self._delete_top_level_logs()
