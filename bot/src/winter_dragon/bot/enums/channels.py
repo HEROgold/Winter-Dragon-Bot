@@ -79,4 +79,4 @@ class LogCategories(Enum):
     @classmethod
     def from_AuditLogAction(cls, action: AuditLogAction) -> Self:  # noqa: N802
         """Get the enum from an AuditLogAction."""
-        return cls([action.name.upper()])
+        return cls(action.name.upper())
