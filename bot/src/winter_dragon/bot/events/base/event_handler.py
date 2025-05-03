@@ -38,7 +38,7 @@ class AuditEventHandler(LoggerMixin):
                 )).first()
 
         if channel is None:
-            self.logger.warning(f"Found no logs channel! {channel=}, {guild=}, {embed=}")
+            self.logger.debug(f"Found no logs channel: {channel=}, {guild=}, {embed=}")
             return
 
         if mod_channel := discord.utils.get(guild.text_channels, id=channel.id):
