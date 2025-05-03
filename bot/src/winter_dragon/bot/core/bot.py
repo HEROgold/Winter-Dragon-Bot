@@ -178,9 +178,9 @@ class WinterDragon(AutoShardedBot):
             commands = await tree.fetch_commands(guild=_guild)
 
         if _guild:
-            self._guild_app_commands[_guild.id] = self.unpack_app_commands(commands)
+            self._guild_app_commands[_guild.id].update(self.unpack_app_commands(commands))
         else:
-            self._global_app_commands = self.unpack_app_commands(commands)
+            self._global_app_commands.update(self.unpack_app_commands(commands))
 
 
     async def get_extensions(self) -> list[str]:
