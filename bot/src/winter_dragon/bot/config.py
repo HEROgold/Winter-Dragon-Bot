@@ -151,6 +151,8 @@ class Config[VT]:
     @staticmethod
     def _set(section: str, setting: str, value: VT) -> None:
         """Set a config value, and write it to the file."""
+        if not Config._parser.has_section(section):
+            Config._parser.add_section(section)
         Config._parser.set(section, setting, str(value))
         if Config._write_on_edit:
             with Config._file.open("w") as f:
