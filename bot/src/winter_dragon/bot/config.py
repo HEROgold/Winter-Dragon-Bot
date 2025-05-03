@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import configparser
 from collections.abc import Callable, Generator
-from configparser import ConfigParser
 from functools import wraps
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 from winter_dragon.bot.constants import BOT_CONFIG
 from winter_dragon.bot.errors import FirstTimeLaunchError
@@ -16,15 +15,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class _ConfigParserSingleton(configparser.ConfigParser):
-    _instance = None
-
-    def __new__(cls) -> Self:
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+class ConfigParser(configparser.ConfigParser):
+    """Custom config parser that handles the config file."""
 
     def __init__(self) -> None:
+        """Initialize the config parser."""
         super().__init__()
         try:
             with BOT_CONFIG.open():
@@ -44,6 +39,7 @@ class _ConfigParserSingleton(configparser.ConfigParser):
             self.write(fp)
 
     def is_valid(self) -> bool:
+        """Check if the config is valid."""
         for section in self.sections():
             for setting in self.options(section):
                 if self[section][setting] == "!!":
@@ -51,6 +47,7 @@ class _ConfigParserSingleton(configparser.ConfigParser):
         return True
 
     def get_invalid(self) -> Generator[str]:
+        """Get all invalid config values."""
         for section in self.sections():
             for setting in self.options(section):
                 if self[section][setting] == "!!":
@@ -103,6 +100,14 @@ class Config[VT]:
         """Write the config file on edit."""
         Config._write_on_edit = value
 
+    def validate_strict_type(self, converter: Callable[..., VT]) -> None:
+        """Validate the type of the converter matches the desired type."""
+        config_value = Config._parser.get(self._section, self._setting)
+        converted_value = self.convert(config_value)
+        if type(converted_value) is not type(self._default):
+            msg = f"Converter {converter} does not return the same type as the default value ({type(self._default)})."
+            raise TypeError(msg)
+
     def validate_file(self) -> None:
         """Validate the config file."""
         if Config._file is None: # type: ignore[reportUnnecessaryComparison]
@@ -141,6 +146,7 @@ class Config[VT]:
         # obj_type is the class in which the variable is defined
         # so it can be different than type of VT
         # but we don't need obj or it's type to get the value from config in our case.
+        self.validate_strict_type(self._converter)
         return self.convert(Config._parser.get(self._section, self._setting))
 
     def __set__(self, obj: object, value: VT) -> None:
@@ -218,6 +224,6 @@ class Config[VT]:
         return wrapper
 
 
-config = _ConfigParserSingleton()
+config = ConfigParser()
 Config.set_parser(config)
 Config.set_file(BOT_CONFIG)
