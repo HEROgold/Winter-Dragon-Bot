@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Self
 
+from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, SQLModel
 
 
@@ -10,16 +11,15 @@ if TYPE_CHECKING:
 
 class AuditLog(SQLModel, table=True):
 
-    id: int | None = Field(default=None, primary_key=True)
+    id: int = Field(default=None, sa_column=Column(BigInteger(), primary_key=True))
     action: int # AuditLogAction
     reason: str | None = Field(default=None, nullable=True)
-    created_at: datetime = Field(nullable=True)
-    target_id: int = Field(nullable=True)
-    category: int = Field(nullable=True) # AuditLogActionCategory
+    created_at: datetime
+    target_id: str
+    category: int # AuditLogActionCategory
 
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
-    # TODO: This METHOD needs some work to work with SQLModel
         from winter_dragon.database import session
 
         if entry.target is None:
@@ -34,7 +34,7 @@ class AuditLog(SQLModel, table=True):
                 action=entry.action.value,
                 reason=entry.reason,
                 created_at=entry.created_at,
-                target_id=int(entry.target.id),
+                target_id=str(entry.target.id),
                 category=entry.category.value,
             )
             session.add(audit)
