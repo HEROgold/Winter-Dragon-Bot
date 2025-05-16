@@ -60,7 +60,18 @@ class ErrorHandler(LoggerMixin):
             self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
 
         await self.handle_error()
+        await self.remove_original_message()
 
+    async def remove_original_message(self) -> None:
+        """Stop the defer on the original message."""
+        if isinstance(self.interface, discord.Interaction) and self.interface.message:
+            try:
+                await self.interface.followup.send(f"{self._get_message_from_error()}")
+            except discord.errors.InteractionResponded:
+                original = await self.interface.original_response()
+                await original.edit(content=f"{self._get_message_from_error()}")
+            except Exception:
+                self.logger.exception("Error removing original message:")
 
     @_async_init.before_loop
     async def before_async_init(self) -> None:
@@ -116,8 +127,9 @@ class ErrorHandler(LoggerMixin):
                 error_msg = f"You are missing the required Role, {error.missing_roles}"
             # Errors below need reviewing, might not want to show to users
             case commands.errors.CommandInvokeError() | app_commands.errors.CommandInvokeError():
-                if "403 Forbidden" in error.args:
-                    error_msg = error.__str__()
+                self.logger.exception("CommandInvokeError", exc_info=error)
+                error = error.original or error.__cause__
+                return self.get_error_message(error)
             case commands.errors.CheckFailure():
                 error_msg = f"{error}"
             case discord.errors.Forbidden():
