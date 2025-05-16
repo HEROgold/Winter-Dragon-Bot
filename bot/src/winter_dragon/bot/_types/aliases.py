@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable, Coroutine, Iterable
+from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from typing import Any
 
 from discord import Message, Object, PermissionOverwrite
@@ -44,4 +44,4 @@ type PrefixType[BotT: _Bot] = _Prefix | _PrefixCallable[BotT]
 
 type BotT[T: _Bot] = T
 
-type PermissionsOverwrites = dict[Role | Member | Object, PermissionOverwrite]
+type PermissionsOverwrites = Mapping[Role | Member | Object, PermissionOverwrite]
