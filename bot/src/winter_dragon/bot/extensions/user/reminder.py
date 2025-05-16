@@ -24,21 +24,20 @@ class Reminder(Cog):
     @loop(seconds=60)
     async def send_reminder(self) -> None:
         is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp  # noqa: DTZ005
-        with self.session as session:
-            results = session.exec(select(ReminderDb).where(is_past_timestamp))
-            if not results.all():
-                return
-            for i in results.all():
-                self.logger.debug(f"sending reminder {i.content=} to {i.user_id=}")
-                member = discord.utils.get(self.bot.users, id=i.user_id)
-                if member is None:
-                    self.logger.debug(f"member {i.user_id} not found")
-                    session.delete(i)
-                    continue
-                dm = await member.create_dm()
-                await dm.send(f"I'm here to remind you about\n`{i.content}`")
-                session.delete(i)
-            session.commit()
+        results = self.session.exec(select(ReminderDb).where(is_past_timestamp))
+        if not results.all():
+            return
+        for i in results.all():
+            self.logger.debug(f"sending reminder {i.content=} to {i.user_id=}")
+            member = discord.utils.get(self.bot.users, id=i.user_id)
+            if member is None:
+                self.logger.debug(f"member {i.user_id} not found")
+                self.session.delete(i)
+                continue
+            dm = await member.create_dm()
+            await dm.send(f"I'm here to remind you about\n`{i.content}`")
+            self.session.delete(i)
+        self.session.commit()
 
 
     @send_reminder.before_loop
@@ -62,13 +61,12 @@ class Reminder(Cog):
         seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
         member = interaction.user
         time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
-        with self.session as session:
-            session.add(ReminderDb(
-                content = reminder,
-                user_id = member.id,
-                timestamp = time,
-            ))
-            session.commit()
+        self.session.add(ReminderDb(
+            content = reminder,
+            user_id = member.id,
+            timestamp = time,
+        ))
+        self.session.commit()
         epoch = int(time.timestamp())
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
 

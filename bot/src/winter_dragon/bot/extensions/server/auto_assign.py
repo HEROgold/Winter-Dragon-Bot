@@ -19,10 +19,9 @@ class AutoAssign(GroupCog):
             self.logger.warning("AutoAssign command was not used in a guild")
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
-        with self.session as session:
-            aar = session.exec(
-                select(AutoAssignRole)
-                .where(AutoAssignRole.guild_id == interaction.guild.id)).first()
+        aar = self.session.exec(
+            select(AutoAssignRole)
+            .where(AutoAssignRole.guild_id == interaction.guild.id)).first()
         if aar is None:
             self.logger.warning("AutoAssign command didn't find any assignable roles")
             await interaction.response.send_message("No auto assign role is set.", ephemeral=True)
@@ -38,14 +37,13 @@ class AutoAssign(GroupCog):
     async def slash_assign_add(self, interaction: discord.Interaction, role: discord.Role) -> None:
         """Add a role to the list of roles to be assigned to new members."""
         self.logger.info(f"Adding AutoAssign role {role} to database")
-        with self.session as session:
-            if session.exec(select(AutoAssignRole).where(AutoAssignRole.role_id == role.id)).first():
-                await interaction.response.send_message(f"Role {role.mention} is already registered.", ephemeral=True)
-                return
-            if not session.exec(select(DbRole).where(DbRole.id == role.id)).first():
-                session.add(DbRole(id=role.id, name=role.name))
-            session.add(AutoAssignRole(role_id=role.id, guild_id=role.guild.id))
-            session.commit()
+        if self.session.exec(select(AutoAssignRole).where(AutoAssignRole.role_id == role.id)).first():
+            await interaction.response.send_message(f"Role {role.mention} is already registered.", ephemeral=True)
+            return
+        if not self.session.exec(select(DbRole).where(DbRole.id == role.id)).first():
+            self.session.add(DbRole(id=role.id, name=role.name))
+        self.session.add(AutoAssignRole(role_id=role.id, guild_id=role.guild.id))
+        self.session.commit()
 
         await interaction.response.send_message(f"Adding {role.mention} when a new member joins", ephemeral=True)
 
@@ -68,13 +66,12 @@ class AutoAssign(GroupCog):
         if interaction.guild is None:
             self.logger.warning("AutoAssign command was not used in a guild")
             return
-        with self.session as session:
-            if auto_assign := session.exec(select(AutoAssignRole).where(
-                AutoAssignRole.guild_id == interaction.guild.id,
-                AutoAssignRole.role_id == role.id,
-            )).first():
-                session.delete(auto_assign)
-            session.commit()
+        if auto_assign := self.session.exec(select(AutoAssignRole).where(
+            AutoAssignRole.guild_id == interaction.guild.id,
+            AutoAssignRole.role_id == role.id,
+        )).first():
+            self.session.delete(auto_assign)
+        self.session.commit()
 
 
     async def remove_all_roles(self, interaction: discord.Interaction) -> None:
@@ -83,22 +80,20 @@ class AutoAssign(GroupCog):
             self.logger.warning("AutoAssign command was not used in a guild")
             return
         self.logger.info(f"Removing all AutoAssign roles from {interaction.guild=}")
-        with self.session as session:
-            for auto_assign in session.exec(
-                select(AutoAssignRole)
-                .where(AutoAssignRole.guild_id == interaction.guild.id)).all():
-                session.delete(auto_assign)
-            session.commit()
+        for auto_assign in self.session.exec(
+            select(AutoAssignRole)
+            .where(AutoAssignRole.guild_id == interaction.guild.id)).all():
+            self.session.delete(auto_assign)
+        self.session.commit()
 
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         """Automatically assign roles to new members."""
-        with self.session as session:
-            for auto_assign in session.exec(select(AutoAssignRole).where(AutoAssignRole.guild_id == member.guild.id)).all():
-                if role := member.guild.get_role(auto_assign.role_id):
-                    await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
-                    self.logger.debug(f"Added AutoAssign role {role} to new member {member.mention}")
+        for auto_assign in self.session.exec(select(AutoAssignRole).where(AutoAssignRole.guild_id == member.guild.id)).all():
+            if role := member.guild.get_role(auto_assign.role_id):
+                await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
+                self.logger.debug(f"Added AutoAssign role {role} to new member {member.mention}")
 
 
 async def setup(bot: WinterDragon) -> None:

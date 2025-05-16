@@ -28,19 +28,18 @@ class Team(GroupCog):
     @loop(seconds=3600)
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel."""
-        with self.session:
-            channels = self.session.exec(select(Channels).where(Channels.type == TEAM_VOICE)).all()
-            for channel in channels:
-                discord_channel = self.bot.get_channel(channel.id)
-                if isinstance(discord_channel, (CategoryChannel, PrivateChannel)) or discord_channel is None:
-                    self.logger.debug(f"skipping invalid channel: {discord_channel=}")
-                    continue
-                if len(discord_channel.members) != 0:
-                    self.logger.debug(f"skipping channel with members: {discord_channel.members}")
-                    continue
-                await discord_channel.delete()
-                self.session.delete(channel)
-            self.session.commit()
+        channels = self.session.exec(select(Channels).where(Channels.type == TEAM_VOICE)).all()
+        for channel in channels:
+            discord_channel = self.bot.get_channel(channel.id)
+            if isinstance(discord_channel, (CategoryChannel, PrivateChannel)) or discord_channel is None:
+                self.logger.debug(f"skipping invalid channel: {discord_channel=}")
+                continue
+            if len(discord_channel.members) != 0:
+                self.logger.debug(f"skipping channel with members: {discord_channel.members}")
+                continue
+            await discord_channel.delete()
+            self.session.delete(channel)
+        self.session.commit()
 
     @delete_empty_team_channels.before_loop
     async def before_update(self) -> None:
@@ -95,57 +94,53 @@ class Team(GroupCog):
         category: CategoryChannel,
     ) -> tuple[list[Channels], list[VoiceChannel]]:
         """Create team channels based on a list of teams, adds those channels to database."""
-        with self.session as session:
-            db_channels: list[Channels] = []
-            discord_channels: list[VoiceChannel] = []
-            for team in teams:
-                self.logger.debug(f"creating voice for {team}")
-                voice = await category.create_voice_channel(name=f"Team {team['id']}")
-                discord_channels.append(voice)
-                db_channels.append(Channels(
-                    id = voice.id,
-                    name = voice.name,
-                    type = TEAM_VOICE,
-                    guild_id = voice.guild.id,
-                ))
+        db_channels: list[Channels] = []
+        discord_channels: list[VoiceChannel] = []
+        for team in teams:
+            self.logger.debug(f"creating voice for {team}")
+            voice = await category.create_voice_channel(name=f"Team {team['id']}")
+            discord_channels.append(voice)
+            db_channels.append(Channels(
+                id = voice.id,
+                name = voice.name,
+                type = TEAM_VOICE,
+                guild_id = voice.guild.id,
+            ))
 
-            session.add_all(db_channels)
-            session.commit()
-            return db_channels, discord_channels
+        self.session.add_all(db_channels)
+        self.session.commit()
+        return db_channels, discord_channels
 
 
     def get_team_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all team channels from winter_dragon.database."""
-        with self.session as session:
-            return session.exec(select(Channels).where(
-                Channels.type == TEAM_VOICE,
-                Channels.guild_id == guild.id,
-            )).all()
+        return self.session.exec(select(Channels).where(
+            Channels.type == TEAM_VOICE,
+            Channels.guild_id == guild.id,
+        )).all()
 
 
     def get_teams_category(self, guild: Guild) -> CategoryChannel | None:
         """Find a category channel."""
-        with self.session as session:
-            if channel := session.exec(select(Channels).where(
-                Channels.type == TEAM_CATEGORY,
-                Channels.guild_id == guild.id,
-            )).first():
-                return cast("CategoryChannel", self.bot.get_channel(channel.id))
-            return None
+        if channel := self.session.exec(select(Channels).where(
+            Channels.type == TEAM_CATEGORY,
+            Channels.guild_id == guild.id,
+        )).first():
+            return cast("CategoryChannel", self.bot.get_channel(channel.id))
+        return None
 
 
     async def create_teams_category(self, guild: Guild) -> CategoryChannel:
         """Create a category channel, and a lobby voice channel."""
         channel = await guild.create_category(name="teams", reason="Creating team category for splitting into teams")
-        with self.session as session:
-            session.add(Channels(
-                id = channel.id,
-                name = channel.name,
-                type = TEAM_CATEGORY,
-                guild_id = guild.id,
-            ),
-            )
-            session.commit()
+        self.session.add(Channels(
+            id = channel.id,
+            name = channel.name,
+            type = TEAM_CATEGORY,
+            guild_id = guild.id,
+        ),
+        )
+        self.session.commit()
         return channel
 
 
@@ -158,27 +153,25 @@ class Team(GroupCog):
 
     def get_teams_lobby(self, guild: Guild) -> VoiceChannel | None:
         """Find a lobby channel."""
-        with self.session as session:
-            if channel := session.exec(select(Channels).where(
-                Channels.type == TEAM_LOBBY,
-                Channels.guild_id == guild.id,
-            )).first():
-                return cast("VoiceChannel", self.bot.get_channel(channel.id))
-            return None
+        if channel := self.session.exec(select(Channels).where(
+            Channels.type == TEAM_LOBBY,
+            Channels.guild_id == guild.id,
+        )).first():
+            return cast("VoiceChannel", self.bot.get_channel(channel.id))
+        return None
 
 
     async def create_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:
         """Create a lobby channel."""
-        with self.session as session:
-            voice = await category.create_voice_channel(name="Lobby", reason="Creating lobby channel for moving users.")
-            session.add(Channels(
-                id = voice.id,
-                name = voice.name,
-                type = TEAM_LOBBY,
-                guild_id = category.guild.id,
-            ))
-            session.commit()
-            return voice
+        voice = await category.create_voice_channel(name="Lobby", reason="Creating lobby channel for moving users.")
+        self.session.add(Channels(
+            id = voice.id,
+            name = voice.name,
+            type = TEAM_LOBBY,
+            guild_id = category.guild.id,
+        ))
+        self.session.commit()
+        return voice
 
 
     async def fetch_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:

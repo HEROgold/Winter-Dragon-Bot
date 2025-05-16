@@ -15,8 +15,7 @@ class Games(GroupCog):
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
         super().__init__(*args, **kwargs)
-        with self.session as session:
-            self.games = session.exec(select(GamesDB)).all()
+        self.games = self.session.exec(select(GamesDB)).all()
 
 
     @app_commands.command(name="list", description="Get a list of known games")
@@ -26,17 +25,16 @@ class Games(GroupCog):
 
     @app_commands.command(name="suggest", description="Suggest a new game to be added")
     async def slash_suggest(self, interaction: discord.Interaction, name: str) -> None:
-        with self.session as session:
-            for suggestion in session.exec(select(Suggestions).where(Suggestions.type == "game")).all():
-                if suggestion.content == name:
-                    await interaction.response.send_message("That game is already in review", ephemeral=True)
+        for suggestion in self.session.exec(select(Suggestions).where(Suggestions.type == "game")).all():
+            if suggestion.content == name:
+                await interaction.response.send_message("That game is already in review", ephemeral=True)
 
-            session.add(Suggestions(
-                type = "game",
-                is_verified = False,
-                content = name,
-            ))
-            session.commit()
+        self.session.add(Suggestions(
+            type = "game",
+            is_verified = False,
+            content = name,
+        ))
+        self.session.commit()
         await interaction.response.send_message(f"Added `{name}` for review", ephemeral=True)
 
 

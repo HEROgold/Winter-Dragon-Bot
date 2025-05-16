@@ -106,17 +106,16 @@ class SteamSales(GroupCog):
     @app_commands.command(name="add", description="Get notified automatically about free steam games")
     async def slash_add(self, interaction: Interaction) -> None:
         """Add a user to the list of recipients for free steam games."""
-        with self.session as session:
-            if session.exec(select(Users).where(Users.id == interaction.user.id)).first() is None:
-                session.add(Users(id = interaction.user.id))
-                session.commit()
+        if self.session.exec(select(Users).where(Users.id == interaction.user.id)).first() is None:
+            self.session.add(Users(id = interaction.user.id))
+            self.session.commit()
 
-            result = session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
-            if result.first():
-                await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
-                return
-            session.add(SteamUsers(id = interaction.user.id))
-            session.commit()
+        result = self.session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
+        if result.first():
+            await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
+            return
+        self.session.add(SteamUsers(id = interaction.user.id))
+        self.session.commit()
         sub_mention = self.get_command_mention(self.slash_show)
         msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
         await interaction.response.send_message(msg, ephemeral=True)
@@ -125,14 +124,13 @@ class SteamSales(GroupCog):
     @app_commands.command(name="remove", description="No longer get notified of free steam games")
     async def slash_remove(self, interaction: Interaction) -> None:
         """Remove a user from the list of recipients for free steam games."""
-        with self.session as session:
-            result = session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
-            user = result.first()
-            if not user:
-                await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
-                return
-            session.delete(user)
-            session.commit()
+        result = self.session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
+        user = result.first()
+        if not user:
+            await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
+            return
+        self.session.delete(user)
+        self.session.commit()
         await interaction.response.send_message("I not notify you of new free steam games anymore.", ephemeral=True)
 
 

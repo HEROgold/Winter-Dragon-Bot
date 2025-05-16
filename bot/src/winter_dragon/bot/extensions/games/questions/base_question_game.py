@@ -27,27 +27,24 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
 
     def set_default_data(self) -> None:
         """Set default data to the database if it doesn't exist."""
-        with self.session as session:
-            questions = session.exec(select(self.QUESTION_MODEL)).all()
-            if len(questions) > 0:
-                self.logger.debug("Questions already present in table.")
-                return
-            for question_id, _ in enumerate(self.BASE_QUESTIONS):
-                self.logger.debug(f"adding question to database {question_id=}, value={self.BASE_QUESTIONS[question_id]}")
-                session.add(self.QUESTION_MODEL(id=question_id, value=self.BASE_QUESTIONS[question_id]))
-            session.commit()
+        questions = self.session.exec(select(self.QUESTION_MODEL)).all()
+        if len(questions) > 0:
+            self.logger.debug("Questions already present in table.")
+            return
+        for question_id, _ in enumerate(self.BASE_QUESTIONS):
+            self.logger.debug(f"adding question to database {question_id=}, value={self.BASE_QUESTIONS[question_id]}")
+            self.session.add(self.QUESTION_MODEL(id=question_id, value=self.BASE_QUESTIONS[question_id]))
+        self.session.commit()
 
     def get_questions(self) -> tuple[int, Sequence[T]]:
         """Get all questions from the database."""
-        with self.session as session:
-            questions = session.exec(select(self.QUESTION_MODEL)).all()
-            game_id = 0
+        questions = self.session.exec(select(self.QUESTION_MODEL)).all()
+        game_id = 0
         return game_id, questions
 
     def get_random_question(self) -> T | None:
         """Get a random question from the database."""
-        with self.session:
-            return self.session.exec(select(self.QUESTION_MODEL).order_by(func.random)).first()
+        return self.session.exec(select(self.QUESTION_MODEL).order_by(func.random)).first()
 
     @abstractmethod
     def create_embed(self, question: T) -> discord.Embed:
@@ -78,13 +75,12 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
 
     async def add(self, interaction: discord.Interaction, question: str) -> None:
         """Add a new question to the game."""
-        with self.session as session:
-            session.add(Suggestions(
-                id=None,
-                type=self.GAME_NAME,
-                content=question,
-            ))
-            session.commit()
+        self.session.add(Suggestions(
+            id=None,
+            type=self.GAME_NAME,
+            content=question,
+        ))
+        self.session.commit()
         await interaction.response.send_message(
             f"The question ```{question}``` is added, it will be verified later.",
             ephemeral=True,
@@ -92,19 +88,18 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
 
     async def add_verified(self, interaction: discord.Interaction) -> None:
         """Add all verified questions to the game."""
-        with self.session as session:
-            result = session.exec(select(Suggestions).where(
-                Suggestions.type == self.GAME_NAME,
-                Suggestions.is_verified,
-            ))
-            questions = result.all()
-            if not questions:
-                await interaction.response.send_message("No questions to add", ephemeral=True)
-                return
+        result = self.session.exec(select(Suggestions).where(
+            Suggestions.type == self.GAME_NAME,
+            Suggestions.is_verified,
+        ))
+        questions = result.all()
+        if not questions:
+            await interaction.response.send_message("No questions to add", ephemeral=True)
+            return
 
-            for question in questions:
-                session.add(self.QUESTION_MODEL(value=question.content))
-            session.commit()
+        for question in questions:
+            self.session.add(self.QUESTION_MODEL(value=question.content))
+        self.session.commit()
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
 
 

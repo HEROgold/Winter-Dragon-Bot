@@ -38,13 +38,12 @@ class SyncedBans(GroupCog):
             )
             return
 
-        with self.session as session:
-            session.add(
-                SyncBanGuild(
-                    guild_id=guild.id,
-                ),
-            )
-            session.commit()
+        self.session.add(
+            SyncBanGuild(
+                guild_id=guild.id,
+            ),
+        )
+        self.session.commit()
 
         await interaction.response.send_message(
             "This guild will have ban's synced across this bot.",
@@ -61,13 +60,12 @@ class SyncedBans(GroupCog):
             )
             return
 
-        with self.session as session:
-            session.delete(
-                session.exec(
-                    select(SyncBanGuild)
-                    .where(SyncBanGuild.guild_id == guild.id)).first(),
-            )
-            session.commit()
+        self.session.delete(
+            self.session.exec(
+                select(SyncBanGuild)
+                .where(SyncBanGuild.guild_id == guild.id)).first(),
+        )
+        self.session.commit()
 
         await interaction.response.send_message(
             "This guild will no longer have ban's synced across this bot.",
@@ -75,17 +73,16 @@ class SyncedBans(GroupCog):
         )
 
     async def synced_ban_sync(self, member: discord.Member) -> None:
-        with self.session as session:
-            session.add(
+            self.session.add(
                 SyncBanUser(
                     user_id=member.id,
                 ),
             )
 
-            for db_guild in session.exec(select(SyncBanGuild)).all():
+            for db_guild in self.session.exec(select(SyncBanGuild)).all():
                 if guild := self.bot.get_guild(db_guild.guild_id):
                     await guild.ban(member, reason="Syncing bans")
-            session.commit()
+            self.session.commit()
 
 
 async def setup(bot: WinterDragon) -> None:

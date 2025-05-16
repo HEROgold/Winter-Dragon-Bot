@@ -31,11 +31,10 @@ class AuditEventHandler(LoggerMixin):
         """Send logs to the appropriate channel."""
         log_channel_name = log_category.name
 
-        with self.session as session:
-            channel = session.exec(select(Channels).where(
-                    Channels.guild_id == guild.id,
-                    Channels.name == log_channel_name,
-                )).first()
+        channel = self.session.exec(select(Channels).where(
+                Channels.guild_id == guild.id,
+                Channels.name == log_channel_name,
+            )).first()
 
         if channel is None:
             self.logger.debug(f"Found no logs channel: {channel=}, {guild=}, {embed=}")
@@ -52,11 +51,10 @@ class AuditEventHandler(LoggerMixin):
         embed: Embed,
     ) -> None:
         """Send logs to the global log channel."""
-        with self.session as session:
-            channel = session.exec(select(Channels).where(
-                Channels.guild_id == guild.id,
-                Channels.name == LogCategories.GLOBAL.name,
-            )).first()
+        channel = self.session.exec(select(Channels).where(
+            Channels.guild_id == guild.id,
+            Channels.name == LogCategories.GLOBAL.name,
+        )).first()
 
         if not channel:
             self.logger.warning(f"No global log channel found for {guild}")

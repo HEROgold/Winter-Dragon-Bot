@@ -70,31 +70,30 @@ class Cog(commands.Cog, LoggerMixin):
         else:
             user = interaction.message.author
 
-        with self.session as session:
-            targets: list[GuildCommands | Channels | DbUser | None] = []
-            if guild:
-                targets.append(
-                    session.exec(
-                        select(GuildCommands).where(GuildCommands.guild_id == guild.id),
-                    ).first(),
-                )
-            if channel:
-                targets.append(
-                    session.exec(
-                        select(Channels).where(Channels.id == channel.id),
-                    ).first(),
-                )
-            if user:
-                targets.append(
-                    session.exec(
-                        select(DbUser).where(DbUser.id == user.id),
-                    ).first(),
-                )
+        targets: list[GuildCommands | Channels | DbUser | None] = []
+        if guild:
+            targets.append(
+                self.session.exec(
+                    select(GuildCommands).where(GuildCommands.guild_id == guild.id),
+                ).first(),
+            )
+        if channel:
+            targets.append(
+                self.session.exec(
+                    select(Channels).where(Channels.id == channel.id),
+                ).first(),
+            )
+        if user:
+            targets.append(
+                self.session.exec(
+                    select(DbUser).where(DbUser.id == user.id),
+                ).first(),
+            )
 
-            # TODO @HEROgold: Rethink the query to get boolean values from the DB directly
-            #144
-            disabled_commands = list(session.exec(select(DisabledCommands)).all())
-            disabled_ids = [i.target_id for i in disabled_commands]
+        # TODO @HEROgold: Rethink the query to get boolean values from the DB directly
+        #144
+        disabled_commands = list(self.session.exec(select(DisabledCommands)).all())
+        disabled_ids = [i.target_id for i in disabled_commands]
 
         return next(
             (True for target in targets if target and target.id in disabled_ids),

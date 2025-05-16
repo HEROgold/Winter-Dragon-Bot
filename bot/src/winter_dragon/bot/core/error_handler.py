@@ -94,8 +94,30 @@ class ErrorHandler(LoggerMixin):
 
         original = getattr(error, "original", error)
         self.logger.debug(f"{original=}, {error=}")
-        error_msg = self.get_error_message(original)
+        error_msg = self.get_error_message2(original)
         return error_msg or "An unexpected error occurred."
+
+    def get_error_message2(self, error: Exception) -> str:
+        """."""
+        error_msg = ""
+        match error:
+            case commands.errors.CommandInvokeError():
+                original = error.original or error.__cause__
+                error_msg = self.get_error_message2(original)
+            case app_commands.errors.CommandInvokeError():
+                command = error.command
+                original = error.original or error.__cause__
+                error_msg = f"{self.get_error_message2(original)} in command {command.name}"
+            case _:
+                self.logger.debug(f"2: {error.args=}")
+                error_msg = (
+                    f"Unexpected error {error}, try {self.help_msg} for help."
+                )
+                error_msg = (
+                    error.args[0] if error.args else str(error) or error_msg
+                )
+        return error_msg
+
 
     def get_error_message(self, error: Exception) -> str:  # noqa: C901, PLR0912
         """Get the to send to a user, based on the error that occurred."""
@@ -129,9 +151,9 @@ class ErrorHandler(LoggerMixin):
             case commands.errors.CommandInvokeError() | app_commands.errors.CommandInvokeError():
                 self.logger.exception("CommandInvokeError", exc_info=error)
                 error = error.original or error.__cause__
-                return self.get_error_message(error)
+                error_msg = self.get_error_message(error)
             case commands.errors.CheckFailure():
-                error_msg = f"{error}"
+                error_msg = str(error)
             case discord.errors.Forbidden():
                 error_msg = "I do not have enough permissions to do that."
             case _:

@@ -23,43 +23,39 @@ class AutoReAssign(GroupCog):
             discord.AuditLogAction.ban,
             discord.AuditLogAction.kick,
         ]:
-            with self.session as session:
-                for role in member.roles:
-                    session.add(UserRoles(role_id=role.id, guild_id=member.guild.id, user_id=member.id))
-                session.commit()
+            for role in member.roles:
+                self.session.add(UserRoles(role_id=role.id, guild_id=member.guild.id, user_id=member.id))
+            self.session.commit()
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         """When a member joins, check if they have any roles to be auto-assigned."""
-        with self.session as session:
-            for auto_assign in session.exec(select(UserRoles).where(
-                UserRoles.user_id == member.id,
-                UserRoles.guild_id == member.guild.id,
-            )).all():
-                if role := member.guild.get_role(auto_assign.role_id):
-                    await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
-                    self.logger.debug(
-                        f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}",
-                    )
+        for auto_assign in self.session.exec(select(UserRoles).where(
+            UserRoles.user_id == member.id,
+            UserRoles.guild_id == member.guild.id,
+        )).all():
+            if role := member.guild.get_role(auto_assign.role_id):
+                await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
+                self.logger.debug(
+                    f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}",
+                )
 
     @app_commands.command(name="enable", description="Enable the AutoReAssign feature")
     async def slash_enable(self, interaction: discord.Interaction) -> None:
         """Enable the AutoReAssign feature for the guild."""
-        with self.session as session:
-            session.add(AutoReAssignDb(guild_id=interaction.guild.id)) # type: ignore[reportOptionalMemberAccess]
-            session.commit()
+        self.session.add(AutoReAssignDb(guild_id=interaction.guild.id)) # type: ignore[reportOptionalMemberAccess]
+        self.session.commit()
 
     @app_commands.command(name="disable", description="Disable the AutoReAssign feature")
     async def slash_disable(self, interaction: discord.Interaction) -> None:
         """Disable the AutoReAssign feature for the guild."""
-        with self.session as session:
-            session.delete(
-                session.exec(
-                    select(AutoReAssignDb)
-                    .where(AutoReAssignDb.guild_id == interaction.guild.id), # type: ignore[reportOptionalMemberAccess]
-                ).first(),
-            )
-            session.commit()
+        self.session.delete(
+            self.session.exec(
+                select(AutoReAssignDb)
+                .where(AutoReAssignDb.guild_id == interaction.guild.id), # type: ignore[reportOptionalMemberAccess]
+            ).first(),
+        )
+        self.session.commit()
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""

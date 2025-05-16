@@ -20,9 +20,8 @@ class Welcome(GroupCog):
     async def on_member_join(self, member: discord.Member) -> None:
         """Send a welcome message to the user when they join the server."""
         self.logger.debug(f"{member} joined {member.guild}")
-        with self.session as session:
-            welcome = session.exec(select(WelcomeDb).where(WelcomeDb.guild_id == member.guild.id)).first()
-            message = welcome.message if welcome else None
+        welcome = self.session.exec(select(WelcomeDb).where(WelcomeDb.guild_id == member.guild.id)).first()
+        message = welcome.message if welcome else None
         channel = member.guild.system_channel
         cmd = self.bot.get_app_command("help")
         mention = cmd.mention if cmd else "the help command"
@@ -85,24 +84,23 @@ class Welcome(GroupCog):
         if channel_id is None:
             channel_id = interaction.guild.system_channel.id
 
-        with self.session as session:
-            data = session.exec(select(WelcomeDb).where(WelcomeDb.guild_id == interaction.guild.id)).first()
-            if enabled is None:
-                enabled = data.enabled if data else False
-            if message is None:
-                message = data.message if data else f"Welcome to {interaction.guild.name}"
-            if data is None:
-                session.add(WelcomeDb(
-                    guild_id = interaction.guild.id,
-                    channel_id = channel_id,
-                    message = message,
-                    enabled = enabled,
-                ))
-            else:
-                data.channel_id = channel_id
-                data.message = message
-                data.enabled = enabled
-            session.commit()
+        data = self.session.exec(select(WelcomeDb).where(WelcomeDb.guild_id == interaction.guild.id)).first()
+        if enabled is None:
+            enabled = data.enabled if data else False
+        if message is None:
+            message = data.message if data else f"Welcome to {interaction.guild.name}"
+        if data is None:
+            self.session.add(WelcomeDb(
+                guild_id = interaction.guild.id,
+                channel_id = channel_id,
+                message = message,
+                enabled = enabled,
+            ))
+        else:
+            data.channel_id = channel_id
+            data.message = message
+            data.enabled = enabled
+        self.session.commit()
 
 
 async def setup(bot: WinterDragon) -> None:

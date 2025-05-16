@@ -205,21 +205,20 @@ class Stats(GroupCog):
         member = before or after
         self.logger.debug(f"Member update: {member.guild=}, {member=}")
         guild = member.guild
-        with self.session as session:
-            if peak_online := (
-                session.exec(
-                    select(Channels).where(
-                        Channels.guild_id == guild.id,
-                        Channels.name == "peak_channel",
-                    ),
-                ).first()
-            ):
-                peak_channel = guild.get_channel(peak_online.id)
-                if not isinstance(peak_channel, VoiceChannel):
-                    msg = f"Expected VoiceChannel during stat channel update, got {type(peak_channel)}"
-                    self.logger.warning(msg)
-                    return
-                await PeakStat(peak_channel).update()
+        if peak_online := (
+            self.session.exec(
+                select(Channels).where(
+                    Channels.guild_id == guild.id,
+                    Channels.name == "peak_channel",
+                ),
+            ).first()
+        ):
+            peak_channel = guild.get_channel(peak_online.id)
+            if not isinstance(peak_channel, VoiceChannel):
+                msg = f"Expected VoiceChannel during stat channel update, got {type(peak_channel)}"
+                self.logger.warning(msg)
+                return
+            await PeakStat(peak_channel).update()
 
     async def create_stats_channels(
         self,
@@ -252,17 +251,16 @@ class Stats(GroupCog):
             "peak_channel": peak_channel,
         }
 
-        with self.session as session:
-            for k, v in channels.items():
-                Channels.update(
-                    Channels(
-                        id=v.id,
-                        guild_id=guild.id,
-                        type=ChannelTypes.STATS,
-                        name=k,
-                    ),
-                )
-            session.commit()
+        for k, v in channels.items():
+            Channels.update(
+                Channels(
+                    id=v.id,
+                    guild_id=guild.id,
+                    type=ChannelTypes.STATS,
+                    name=k,
+                ),
+            )
+        self.session.commit()
         self.logger.info(f"Created stats channels for: guild='{guild}'")
 
     async def remove_stats_channels(
@@ -275,27 +273,26 @@ class Stats(GroupCog):
             msg = "Expected discord.guild"
             raise NoneTypeError(msg)
 
-        with self.session as session:
-            channels = session.exec(
-                select(Channels).where(
-                    Channels.guild_id == guild.id,
-                    Channels.type == STATS,
-                ),
-            ).all()
+        channels = self.session.exec(
+            select(Channels).where(
+                Channels.guild_id == guild.id,
+                Channels.type == STATS,
+            ),
+        ).all()
 
-            self.logger.debug(f"{channels=}")
-            self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
+        self.logger.debug(f"{channels=}")
+        self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
 
-            for db_channel in channels:
-                self.logger.debug(f"removing {db_channel}")
-                try:
-                    if channel := discord.utils.get(guild.channels, id=db_channel.id):
-                        await channel.delete(reason=reason)
-                except AttributeError:
-                    self.logger.exception("")
-                finally:
-                    session.delete(db_channel)
-            session.commit()
+        for db_channel in channels:
+            self.logger.debug(f"removing {db_channel}")
+            try:
+                if channel := discord.utils.get(guild.channels, id=db_channel.id):
+                    await channel.delete(reason=reason)
+            except AttributeError:
+                self.logger.exception("")
+            finally:
+                self.session.delete(db_channel)
+        self.session.commit()
 
     async def cog_load(self) -> None:
         """Load the cog."""
@@ -310,14 +307,13 @@ class Stats(GroupCog):
         self.logger.info("Updating all stat channels")
         guilds = self.bot.guilds
         for guild in guilds:
-            with self.session as session:
-                if not session.exec(
-                    select(Channels).where(
-                        Channels.guild_id == guild.id,
-                        Channels.type == STATS,
-                    ),
-                ).first():
-                    continue
+            if not self.session.exec(
+                select(Channels).where(
+                    Channels.guild_id == guild.id,
+                    Channels.type == STATS,
+                ),
+            ).first():
+                continue
             self.logger.info(f"Updating stat channels: guild='{guild}'")
             channels = self.get_guild_stats_channels(guild)
             self.stat_channels[guild] = StatChannels(
@@ -347,33 +343,32 @@ class Stats(GroupCog):
         bot_channel = None
         peak_channel = None
         guild_channel = None
-        with self.session as session:
-            channels = session.exec(
-                select(Channels).where(
-                    Channels.type == STATS,
-                    Channels.guild_id == guild.id,
-                ),
-            ).all()
+        channels = self.session.exec(
+            select(Channels).where(
+                Channels.type == STATS,
+                Channels.guild_id == guild.id,
+            ),
+        ).all()
 
-            for channel in channels:
-                self.logger.debug(f"check if stats channel: {channel=}")
-                match channel.name:
-                    case "user_channel":
-                        user_channel = UserStat(discord.utils.get(guild.voice_channels, id=channel.id))
-                    case "online_channel":
-                        online_channel = OnlineStat(discord.utils.get(guild.voice_channels, id=channel.id))
-                    case "bot_channel":
-                        bot_channel = BotStat(discord.utils.get(guild.voice_channels, id=channel.id))
-                    case "peak_channel":
-                        peak_channel = PeakStat(discord.utils.get(guild.voice_channels, id=channel.id))
-                    case "guild_channel":
-                        guild_channel = GuildStat(discord.utils.get(guild.voice_channels, id=channel.id))
-                    case "category_channel" | "stats":
-                        continue
-                    case _:
-                        self.logger.debug(f"not a stats channel: {channel}")
-                        msg = f"Unexpected channel {channel.name}"
-                        raise ValueError(msg)
+        for channel in channels:
+            self.logger.debug(f"check if stats channel: {channel=}")
+            match channel.name:
+                case "user_channel":
+                    user_channel = UserStat(discord.utils.get(guild.voice_channels, id=channel.id))
+                case "online_channel":
+                    online_channel = OnlineStat(discord.utils.get(guild.voice_channels, id=channel.id))
+                case "bot_channel":
+                    bot_channel = BotStat(discord.utils.get(guild.voice_channels, id=channel.id))
+                case "peak_channel":
+                    peak_channel = PeakStat(discord.utils.get(guild.voice_channels, id=channel.id))
+                case "guild_channel":
+                    guild_channel = GuildStat(discord.utils.get(guild.voice_channels, id=channel.id))
+                case "category_channel" | "stats":
+                    continue
+                case _:
+                    self.logger.debug(f"not a stats channel: {channel}")
+                    msg = f"Unexpected channel {channel.name}"
+                    raise ValueError(msg)
         self.logger.debug(f"Returning stat channels, {peak_channel, guild_channel, bot_channel, user_channel, online_channel}")
         return peak_channel, guild_channel, bot_channel, user_channel, online_channel
 
@@ -443,28 +438,27 @@ class Stats(GroupCog):
             msg = "Expected Guild"
             raise NoneTypeError(msg)
 
-        with self.session as session:
-            if session.exec(
-                select(Channels).where(
-                    Channels.guild_id == interaction.guild.id,
-                    Channels.type == STATS,
-                ),
-            ).all():
-                rem_mention = self.get_command_mention(self.slash_stats_category_remove)
-                await interaction.response.send_message(
-                    f"Stats channels already set up use {rem_mention} to remove them",
-                    ephemeral=True,
-                )
-                return
-
-            c_mention = self.get_command_mention(self.slash_stats_category_add)
-
-            await interaction.response.defer(ephemeral=True)
-            await self.create_stats_channels(
-                guild=interaction.guild,
-                reason=f"Requested by {interaction.user.display_name} using {c_mention}",
+        if self.session.exec(
+            select(Channels).where(
+                Channels.guild_id == interaction.guild.id,
+                Channels.type == STATS,
+            ),
+        ).all():
+            rem_mention = self.get_command_mention(self.slash_stats_category_remove)
+            await interaction.response.send_message(
+                f"Stats channels already set up use {rem_mention} to remove them",
+                ephemeral=True,
             )
-            await interaction.followup.send("Stats channels are set up")
+            return
+
+        c_mention = self.get_command_mention(self.slash_stats_category_add)
+
+        await interaction.response.defer(ephemeral=True)
+        await self.create_stats_channels(
+            guild=interaction.guild,
+            reason=f"Requested by {interaction.user.display_name} using {c_mention}",
+        )
+        await interaction.followup.send("Stats channels are set up")
 
     @app_commands.command(
         name="remove",
@@ -478,20 +472,19 @@ class Stats(GroupCog):
             msg = "Expected Guild"
             raise NoneTypeError(msg)
 
-        with self.session as session:
-            channels = session.exec(
-                select(Channels).where(
-                    Channels.guild_id == interaction.guild.id,
-                    Channels.type == STATS,
-                ),
-            ).all()
-            if not channels:
-                add_mention = self.get_command_mention(self.slash_stats_category_add)
-                await interaction.response.send_message(
-                    f"No stats channels found to remove, use {add_mention} to add them",
-                    ephemeral=True,
-                )
-                return
+        channels = self.session.exec(
+            select(Channels).where(
+                Channels.guild_id == interaction.guild.id,
+                Channels.type == STATS,
+            ),
+        ).all()
+        if not channels:
+            add_mention = self.get_command_mention(self.slash_stats_category_add)
+            await interaction.response.send_message(
+                f"No stats channels found to remove, use {add_mention} to add them",
+                ephemeral=True,
+            )
+            return
 
         c_mention = self.get_command_mention(self.slash_stats_category_remove)
 
@@ -514,27 +507,26 @@ class Stats(GroupCog):
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         await interaction.response.defer(ephemeral=True)
 
-        with self.session as session:
-            channels = session.exec(
-                select(Channels).where(
-                    Channels.guild_id == interaction.guild.id,
-                    Channels.type == STATS,
-                ),
-            ).all()
+        channels = self.session.exec(
+            select(Channels).where(
+                Channels.guild_id == interaction.guild.id,
+                Channels.type == STATS,
+            ),
+        ).all()
 
-            seen = []
+        seen = []
 
-            for channel in channels:
-                guild_id = channel.guild_id
-                if guild_id in seen:
-                    self.logger.debug(f"already updated {guild_id}")
-                    continue
+        for channel in channels:
+            guild_id = channel.guild_id
+            if guild_id in seen:
+                self.logger.debug(f"already updated {guild_id}")
+                continue
 
-                guild = discord.utils.get(self.bot.guilds, id=guild_id)
-                seen.append(guild_id)
-                await self.remove_stats_channels(guild=guild, reason="Resetting all stats channels")
-                await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
-                self.logger.info(f"Reset stats for: {guild}")
+            guild = discord.utils.get(self.bot.guilds, id=guild_id)
+            seen.append(guild_id)
+            await self.remove_stats_channels(guild=guild, reason="Resetting all stats channels")
+            await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
+            self.logger.info(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all guild stat channels")
 
 

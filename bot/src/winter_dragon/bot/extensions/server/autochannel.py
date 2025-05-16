@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 
     from winter_dragon.bot._types.aliases import VocalGuildChannel
     from winter_dragon.bot.core.bot import WinterDragon
-    from winter_dragon.database import Session
 
 
 class AutomaticChannels(GroupCog):
@@ -31,34 +30,32 @@ class AutomaticChannels(GroupCog):
         after: discord.VoiceState,
     ) -> None:
         self.logger.debug(f"{member} moved from {before} to {after}")
-        with self.session as session:
-            if voice_create := session.exec(select(AC).where(AC.id == member.guild.id)).first():
-                self.logger.debug(f"{voice_create}")
+        if voice_create := self.session.exec(select(AC).where(AC.id == member.guild.id)).first():
+            self.logger.debug(f"{voice_create}")
 
-                # Handle before.channel things
-                if before.channel is None:
-                    pass
-                elif before.channel.id == voice_create.channel_id:
-                    # ignore when already moved from "Join Me"
-                    return
-                elif len(before.channel.members) == 0:  # noqa: SIM102
-                    if db_channel := session.exec(select(AC).where(AC.channel_id == before.channel.id)).first():
-                        if dc_channel := member.guild.get_channel(db_channel.channel_id):
-                            await dc_channel.delete(reason="removing empty voice")
-                        session.delete(db_channel)
+            # Handle before.channel things
+            if before.channel is None:
+                pass
+            elif before.channel.id == voice_create.channel_id:
+                # ignore when already moved from "Join Me"
+                return
+            elif len(before.channel.members) == 0:  # noqa: SIM102
+                if db_channel := self.session.exec(select(AC).where(AC.channel_id == before.channel.id)).first():
+                    if dc_channel := member.guild.get_channel(db_channel.channel_id):
+                        await dc_channel.delete(reason="removing empty voice")
+                    self.session.delete(db_channel)
 
-                if (
-                    after.channel is not None and
-                    after.channel.id == voice_create.channel_id
-                ):
-                    await self.create_user_channel(member, after, session, after.channel.guild)
-                session.commit()
+            if (
+                after.channel is not None and
+                after.channel.id == voice_create.channel_id
+            ):
+                await self.create_user_channel(member, after, after.channel.guild)
+            self.session.commit()
 
     async def create_user_channel(
         self,
         member: discord.Member,
         after: discord.VoiceState,
-        session: Session,
         guild: discord.Guild,
     ) -> None:
         """Create a automatic channel for a user."""
@@ -77,23 +74,23 @@ class AutomaticChannels(GroupCog):
         if after.channel is None:
             return
 
-        if user_channel := session.exec(select(AC).where(AC.id == member.id)).first():  # noqa: SIM102
+        if user_channel := self.session.exec(select(AC).where(AC.id == member.id)).first():  # noqa: SIM102
             if dc_channel := member.guild.get_channel(user_channel.channel_id):
                 await member.send(f"You already have a channel at {dc_channel.mention}")
                 return
 
         # check if user that joined "Create Vc" channel is in db
-        if session.exec(select(AC).where(AC.channel_id == after.channel.id)).first():
+        if self.session.exec(select(AC).where(AC.channel_id == after.channel.id)).first():
             name, limit = self.get_final_settings(
                 member,
-                session.exec(select(ACS).where(ACS.user_id == member.id)).first(),
-                session.exec(select(ACS).where(ACS.user_id == guild.id)).first(),
+                self.session.exec(select(ACS).where(ACS.user_id == member.id)).first(),
+                self.session.exec(select(ACS).where(ACS.user_id == guild.id)).first(),
             )
 
             # Set a default name if no custom one is set in settings
             name = member.activity.name if member.activity and member.activity.name else f"{member.name}'s channel"
 
-            db_auto_channel = session.exec(select(AC).where(AC.id == guild.id)).first()
+            db_auto_channel = self.session.exec(select(AC).where(AC.id == guild.id)).first()
             if db_auto_channel is None:
                 await member.send("You are not setup yet, please use `/setup` to create your channel")
                 return
@@ -115,11 +112,11 @@ class AutomaticChannels(GroupCog):
             await voice_channel.set_permissions(self.bot.user, connect=True, read_messages=True) # type: ignore  # noqa: PGH003
             await voice_channel.set_permissions(member, connect=True, read_messages=True)
             await voice_channel.edit(name=name, user_limit=limit)
-            session.add(AC(
+            self.session.add(AC(
                 id=member.id,
                 channel_id=voice_channel.id,
             ))
-            session.commit()
+            self.session.commit()
 
 
     def get_final_settings(
@@ -149,8 +146,7 @@ class AutomaticChannels(GroupCog):
             await interaction.response.send_message("This command can only be used in a guild", ephemeral=True)
             return
 
-        with self.session as session:
-            if session.exec(select(AC).where(AC.id == interaction.guild.id)).first() is not None:
+            if self.session.exec(select(AC).where(AC.id == interaction.guild.id)).first() is not None:
                 await interaction.response.send_message("You are already set up", ephemeral=True)
                 return
 
@@ -162,11 +158,11 @@ class AutomaticChannels(GroupCog):
                 reason=AUTOCHANNEL_CREATE_REASON,
             )
 
-            session.add(AC(
+            self.session.add(AC(
                 id = interaction.guild.id,
                 channel_id = channel.id,
             ))
-            session.commit()
+            self.session.commit()
         await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
 
 
@@ -188,28 +184,26 @@ class AutomaticChannels(GroupCog):
             ))
             return
 
-        with self.session as session:
-            session.add(AC(
+            self.session.add(AC(
                 id = interaction.guild.id,
                 channel_id = channel.id,
             ))
-            session.commit()
+            self.session.commit()
 
         await interaction.response.send_message(f"Successfully set {channel.mention} as this guild's creation channel")
 
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="guild_limit", description="Set a limit for AutoChannels")
     async def slash_set_guild_limit(self, interaction: discord.Interaction, limit: int) -> None:
-        with self.session as session:
-            if autochannel_settings := session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
-                autochannel_settings.channel_limit = limit
-            else:
-                session.add(ACS(
-                    user_id = interaction.user.id,
-                    channel_name = interaction.user.name,
-                    channel_limit = 0,
-                ))
-            session.commit()
+        if autochannel_settings := self.session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
+            autochannel_settings.channel_limit = limit
+        else:
+            self.session.add(ACS(
+                user_id = interaction.user.id,
+                channel_name = interaction.user.name,
+                channel_limit = 0,
+            ))
+        self.session.commit()
         await interaction.response.send_message(
             f"You have changed the channel limit for your guild to `{limit}`!",
             ephemeral=True,
@@ -218,17 +212,16 @@ class AutomaticChannels(GroupCog):
 
     @app_commands.command(name="limit", description="Set a limit for your channel")
     async def slash_limit(self, interaction: discord.Interaction, limit: int) -> None:
-        with self.session as session:
-            if autochannel_settings := session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
+            if autochannel_settings := self.session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
                 autochannel_settings.channel_limit = limit
             else:
-                session.add(ACS(
+                self.session.add(ACS(
                     user_id = interaction.user.id,
                     channel_name = interaction.user.name,
                     channel_limit = 0,
                 ))
 
-            if autochannel := session.exec(select(AC).where(AC.id == interaction.user.id)).first():
+            if autochannel := self.session.exec(select(AC).where(AC.id == interaction.user.id)).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
                 if channel is not None:
                     channel = cast("VocalGuildChannel", channel)
@@ -243,7 +236,7 @@ class AutomaticChannels(GroupCog):
                     f"{interaction.user.mention} You don't own a channel, settings are saved.",
                     ephemeral=True,
                 )
-            session.commit()
+            self.session.commit()
 
 
     @slash_setup.error
@@ -253,8 +246,7 @@ class AutomaticChannels(GroupCog):
 
     @app_commands.command(name="name", description="Change the name of your channels")
     async def slash_name(self, interaction: discord.Interaction, *, name: str) -> None:
-        with self.session as session:
-            if autochannel := session.exec(select(AC).where(AC.id == interaction.user.id)).first():
+            if autochannel := self.session.exec(select(AC).where(AC.id == interaction.user.id)).first():
                 channel = self.bot.get_channel(autochannel.channel_id)
                 if channel is not None and isinstance(channel, VoiceChannel):
                     await channel.edit(name=name)
@@ -264,15 +256,15 @@ class AutomaticChannels(GroupCog):
                 ephemeral=True,
             )
 
-            if voice_settings := session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
+            if voice_settings := self.session.exec(select(ACS).where(ACS.user_id == interaction.user.id)).first():
                 voice_settings.channel_name = name
             else:
-                session.add(ACS(
+                self.session.add(ACS(
                     user_id = interaction.user.id,
                     channel_name = name,
                     channel_limit = 0,
                 ))
-            session.commit()
+            self.session.commit()
 
 
 async def setup(bot: WinterDragon) -> None:

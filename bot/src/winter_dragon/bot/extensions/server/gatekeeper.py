@@ -15,9 +15,7 @@ class Gatekeeper(GroupCog):
 
     @app_commands.command(name="enable", description="Enables the gatekeeper system.")
     async def slash_enable_gatekeeper(self, interaction: Interaction) -> None:
-        with self.session:
-            # Use database to store if enabled or not
-            pass
+        # Use database to store if enabled or not
         # if first time using, ask to use command
         msg = f"Please use {self.get_command_mention(self.slash_setup)} first."
         await interaction.response.send_message(msg, ephemeral=True)
