@@ -11,6 +11,7 @@ from discord import (
 from sqlmodel import select
 from winter_dragon.bot.constants import AUTOCHANNEL_CREATE_REASON
 from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
 from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
 
@@ -142,20 +143,25 @@ class AutomaticChannels(GroupCog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="setup", description="Start the AutoChannel setup")
     async def slash_setup(self, interaction: discord.Interaction, category_name: str, voice_channel_name: str) -> None:
-        if self.session.exec(select(AC).where(AC.id == interaction.guild.id)).first() is not None:
+        guild = interaction.guild
+        if guild is None:
+            msg = "Guild is None when setting up AutoChannel"
+            raise NoneTypeError(msg)
+
+        if self.session.exec(select(AC).where(AC.id == guild.id)).first() is not None:
             await interaction.response.send_message("You are already set up", ephemeral=True)
             return
 
-        channel = await interaction.guild.create_voice_channel(
+        channel = await guild.create_voice_channel(
             voice_channel_name,
             category=(
-                await interaction.guild.create_category(category_name)
+                await guild.create_category(category_name)
             ),
             reason=AUTOCHANNEL_CREATE_REASON,
         )
 
         self.session.add(AC(
-            id = interaction.guild.id,
+            id = guild.id,
             channel_id = channel.id,
         ))
         self.session.commit()
