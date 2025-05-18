@@ -34,7 +34,7 @@ class MessageDelete(AuditEvent):
             self.logger.warning(msg)
             raise TypeError(msg)
 
-        description = f"Deleted message sent by {message.author.mention if hasattr(message.author, 'mention') else message.author} with reason: {self.entry.reason}"
+        description = f"Deleted message sent by {message.author.mention} with reason: {self.entry.reason}"
         embed = Embed(
             title="Message Deleted",
             description=description,
