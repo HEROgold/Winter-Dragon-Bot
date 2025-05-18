@@ -1,5 +1,4 @@
-"""
-"""
+"""Gatekeeper cog for managing server roles and permissions, liming the amount of bot/spam users that can join."""
 
 import discord
 from discord import ButtonStyle, Guild, Interaction, Member, Permissions, Role, app_commands
