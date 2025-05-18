@@ -35,7 +35,7 @@ class BotC(GroupCog):
 
     random_activity = Config(True, bool)  # noqa: FBT003
     periodic_change = Config(True, bool)  # noqa: FBT003
-    periodic_time = Config(180, int)
+    periodic_time = Config(180, float)
 
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
@@ -357,13 +357,10 @@ class BotC(GroupCog):
         return cls.get_colors(packets_count, 1000000000)
 
 
-    # Switch to minutes for production
-    # @loop(minutes=10)
-    @loop(seconds=1)
+    # @Config.with_setting(periodic_time)
+    @loop(seconds=180)
     async def gather_metrics_loop(self) -> None:
         """Gather system metrics every second."""
-        # TODO @HEROgold: set the loop timers in a config file
-        #146
         self.gather_system_metrics()
 
 
