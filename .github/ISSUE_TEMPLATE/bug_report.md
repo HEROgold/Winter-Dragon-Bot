@@ -26,8 +26,6 @@ If applicable, add screenshots to help explain your problem.
 ## Environment
 - Bot Version: [e.g. 1.0.0]
 - OS: [e.g. Windows 10, Ubuntu 20.04]
-- Node.js Version: [e.g. 16.6.0]
-- Discord.js Version: [e.g. 14.0.0]
 
 ## Additional Context
 Add any other context about the problem here.
