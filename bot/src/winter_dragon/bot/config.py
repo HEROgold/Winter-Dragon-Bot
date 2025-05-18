@@ -179,8 +179,15 @@ class Config[VT]:
         return wrapper
 
     @staticmethod
+    def with_setting[T](setting: Config[T], name: str | None = None):  # noqa: ANN205
+        """Insert a config value into **kwargs to a given method/function using this decorator."""
+        name = name or setting.name
+        default = setting._default
+        return Config.as_kwarg(setting._section, setting._setting, name, default)
+
+    @staticmethod
     def as_kwarg(section: str, setting: str, name: str | None = None, default: VT = _UNSET):  # noqa: ANN205
-        """Insert a config value into **kwargs to a given method/function using this descriptor.
+        """Insert a config value into **kwargs to a given method/function using this decorator.
 
         Use kwarg.get(`name`) to get the value.
         `name` is the name the kwarg gets if passed, if None, it will be the same as `setting`.
