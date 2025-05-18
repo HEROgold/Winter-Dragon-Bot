@@ -34,47 +34,47 @@ class DatabaseManager(Cog):
         self._add_db_role(role)
 
     def _add_db_role(self, role: discord.Role) -> None:
-            if not self.session.exec(select(Roles).where(Roles.id == role.id)).first():
-                self.logger.debug(f"Adding new {role=} to Roles table")
-                self.session.add(Roles(id=role.id, name=role.name))
-                self.session.commit()
+        if not self.session.exec(select(Roles).where(Roles.id == role.id)).first():
+            self.logger.debug(f"Adding new {role=} to Roles table")
+            self.session.add(Roles(id=role.id, name=role.name))
+            self.session.commit()
 
     @Cog.listener()
     async def on_role_delete(self, role: discord.Role) -> None:
-            if db_role := self.session.exec(select(Roles).where(Roles.id == role.id)).first():
-                self.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
-                self.session.delete(db_role)
-                self.session.commit()
+        if db_role := self.session.exec(select(Roles).where(Roles.id == role.id)).first():
+            self.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
+            self.session.delete(db_role)
+            self.session.commit()
 
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
-            db_msg = self.session.exec(select(Messages).where(Messages.id == message.id)).first()
-            if db_msg is not None:
-                self.logger.debug(f"Deleting from Messages table, message was deleted from discord. {message=}")
-                self.session.delete(db_msg)
-            self.session.commit()
+        db_msg = self.session.exec(select(Messages).where(Messages.id == message.id)).first()
+        if db_msg is not None:
+            self.logger.debug(f"Deleting from Messages table, message was deleted from discord. {message=}")
+            self.session.delete(db_msg)
+        self.session.commit()
 
     @Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
-            if not self.session.exec(select(Roles).where(Roles.id == role.id)).first():
-                self.logger.debug(f"Adding new {role=} to Roles table")
-                self.session.add(Roles(id=role.id, name=role.name))
-                self.session.commit()
+        if not self.session.exec(select(Roles).where(Roles.id == role.id)).first():
+            self.logger.debug(f"Adding new {role=} to Roles table")
+            self.session.add(Roles(id=role.id, name=role.name))
+            self.session.commit()
 
     @Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role) -> None:
-            if db_role := self.session.exec(select(Roles).where(Roles.id == role.id)).first():
-                self.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
-                self.session.delete(db_role)
-                self.session.commit()
+        if db_role := self.session.exec(select(Roles).where(Roles.id == role.id)).first():
+            self.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
+            self.session.delete(db_role)
+            self.session.commit()
 
     @Cog.listener()
     async def on_guild_role_update(self, before: discord.Role, after: discord.Role) -> None:
-            if db_role := self.session.exec(select(Roles).where(Roles.id == before.id)).first():
-                self.logger.debug(f"Updating {before=} to {after=} in Roles table")
-                db_role.name = after.name
-                self.session.commit()
+        if db_role := self.session.exec(select(Roles).where(Roles.id == before.id)).first():
+            self.logger.debug(f"Updating {before=} to {after=} in Roles table")
+            db_role.name = after.name
+            self.session.commit()
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
@@ -97,42 +97,42 @@ class DatabaseManager(Cog):
 
 
     def _add_db_message(self, message: discord.Message) -> None:
-            if self.session.exec(select(Messages).where(Messages.id == message.id)).first() is None:
-                self.logger.debug(f"Adding new {message=} to Messages table")
+        if self.session.exec(select(Messages).where(Messages.id == message.id)).first() is None:
+            self.logger.debug(f"Adding new {message=} to Messages table")
 
-                self.session.add(Messages(
-                    id = message.id,
-                    content = message.clean_content,
-                    user_id = message.author.id,
-                    channel_id = message.channel.id,
-                ))
-                self.session.commit()
+            self.session.add(Messages(
+                id = message.id,
+                content = message.clean_content,
+                user_id = message.author.id,
+                channel_id = message.channel.id,
+            ))
+            self.session.commit()
 
 
     def _add_db_channel(self, channel: GChannel) -> None:
-            if self.session.exec(select(Channels).where(Channels.id == channel.id)).first() is None:
-                self.logger.info(f"Adding new {channel=} to Channels table")
-                self.session.add(Channels(
-                    id = channel.id,
-                    name = f"{channel.name}",
-                    type = None,
-                    guild_id = channel.guild.id,
-                ))
-                self.session.commit()
+        if self.session.exec(select(Channels).where(Channels.id == channel.id)).first() is None:
+            self.logger.info(f"Adding new {channel=} to Channels table")
+            self.session.add(Channels(
+                id = channel.id,
+                name = f"{channel.name}",
+                type = None,
+                guild_id = channel.guild.id,
+            ))
+            self.session.commit()
 
 
     def _add_db_user(self, user: discord.Member | discord.User) -> None:
-            if self.session.exec(select(Users).where(Users.id == user.id)).first() is None:
-                self.logger.debug(f"Adding new {user=} to User table")
-                self.session.add(Users(id=user.id))
-                self.session.commit()
+        if self.session.exec(select(Users).where(Users.id == user.id)).first() is None:
+            self.logger.debug(f"Adding new {user=} to User table")
+            self.session.add(Users(id=user.id))
+            self.session.commit()
 
 
     def _add_db_guild(self, guild: discord.Guild) -> None:
-            if self.session.exec(select(Guilds).where(Guilds.id == guild.id)).first() is None:
-                self.logger.info(f"Adding new {guild=} to Guild table")
-                self.session.add(Guilds(id=guild.id))
-                self.session.commit()
+        if self.session.exec(select(Guilds).where(Guilds.id == guild.id)).first() is None:
+            self.logger.info(f"Adding new {guild=} to Guild table")
+            self.session.add(Guilds(id=guild.id))
+            self.session.commit()
 
 
     @loop(hours=1)
@@ -203,18 +203,11 @@ class DatabaseManager(Cog):
 
         user = interaction.user
         command = interaction.command
-
-        self._add_db_user(user)
-
-        # TODO: Remove debug code below.
-        channel = interaction.channel
-        extras = interaction.extras
-        self.logger.debug(f"{user=}, {command=}, {channel=}, {extras=}")
-
         if command is None:
             self.logger.warning("interaction's Command is None, cannot add command to database.")
             return
 
+        self._add_db_user(user)
         db_cmd = self._fetch_db_command(command) # type: ignore  # noqa: PGH003
         self._link_user_db_command(user, db_cmd)
 
