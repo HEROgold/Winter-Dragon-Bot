@@ -11,6 +11,13 @@ from winter_dragon.bot.settings import Settings
 from winter_dragon.database.tables import Infractions as InfractionsDb
 
 
+_rule_severities = {
+    AutoModRuleActionType.block_message: 3,
+    AutoModRuleActionType.timeout: 2,
+    AutoModRuleActionType.send_alert_message: 1,
+    AutoModRuleActionType.block_member_interactions: 0,
+}
+
 @app_commands.guilds(Settings.support_guild_id)
 class Infractions(GroupCog):
     """Track automod interaction from discord, keep track of amount of violations
@@ -39,14 +46,8 @@ class Infractions(GroupCog):
 
     @staticmethod
     def get_severity(action: AutoModRuleAction) -> int:
-        # sourcery skip: assign-if-exp, reintroduce-else
-        if action.type == AutoModRuleActionType.block_message:
-            return 3
-        if action.type == AutoModRuleActionType.timeout:
-            return 2
-        if action.type == AutoModRuleActionType.send_alert_message:
-            return 1
-        return 0
+        """Get the severity of the action."""
+        return _rule_severities.get(action.type, 0)
 
 
     @Cog.listener()
