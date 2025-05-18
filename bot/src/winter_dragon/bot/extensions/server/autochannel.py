@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from winter_dragon.bot.core.bot import WinterDragon
 
 
+@app_commands.guild_only()
 class AutomaticChannels(GroupCog):
     @Cog.listener()
     async def on_voice_state_update(
@@ -141,28 +142,23 @@ class AutomaticChannels(GroupCog):
     @app_commands.checks.has_permissions(manage_guild=True)
     @app_commands.command(name="setup", description="Start the AutoChannel setup")
     async def slash_setup(self, interaction: discord.Interaction, category_name: str, voice_channel_name: str) -> None:
-        if interaction.guild is None:
-            # TODO: Prefer an error message, which gets handled by the error_handler
-            await interaction.response.send_message("This command can only be used in a guild", ephemeral=True)
+        if self.session.exec(select(AC).where(AC.id == interaction.guild.id)).first() is not None:
+            await interaction.response.send_message("You are already set up", ephemeral=True)
             return
 
-            if self.session.exec(select(AC).where(AC.id == interaction.guild.id)).first() is not None:
-                await interaction.response.send_message("You are already set up", ephemeral=True)
-                return
+        channel = await interaction.guild.create_voice_channel(
+            voice_channel_name,
+            category=(
+                await interaction.guild.create_category(category_name)
+            ),
+            reason=AUTOCHANNEL_CREATE_REASON,
+        )
 
-            channel = await interaction.guild.create_voice_channel(
-                voice_channel_name,
-                category=(
-                    await interaction.guild.create_category(category_name)
-                ),
-                reason=AUTOCHANNEL_CREATE_REASON,
-            )
-
-            self.session.add(AC(
-                id = interaction.guild.id,
-                channel_id = channel.id,
-            ))
-            self.session.commit()
+        self.session.add(AC(
+            id = interaction.guild.id,
+            channel_id = channel.id,
+        ))
+        self.session.commit()
         await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
 
 
