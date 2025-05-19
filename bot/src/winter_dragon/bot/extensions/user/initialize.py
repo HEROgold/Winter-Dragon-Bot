@@ -49,7 +49,7 @@ class Guild(GroupCog):
         afk_channel = await guild.create_voice_channel(
             "AFK",
             position=0,
-            overwrites={guild.default_role: PermissionOverwrite(connect=False, view=False)},
+            overwrites={guild.default_role: PermissionOverwrite(connect=False, view_channel=False)},
         )
         system_channel = await guild.create_text_channel(
             "system",
