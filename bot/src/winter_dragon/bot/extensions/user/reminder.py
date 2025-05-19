@@ -7,8 +7,9 @@ from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.tasks import loop
-from bot.src.winter_dragon.bot.tools.time import get_seconds
 from winter_dragon.database.tables import Reminder as ReminderDb
+
+from bot.src.winter_dragon.bot.tools.time import get_seconds
 
 
 class Reminder(Cog):
