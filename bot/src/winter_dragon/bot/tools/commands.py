@@ -10,11 +10,11 @@ class Commands(LoggerMixin):
 
     @staticmethod
     def _get_cmd_mention(bot: WinterDragon, command: app_commands.Command | str) -> str:
-        name = command if isinstance(command, str) else command.qualified_name
+        full_name = command if isinstance(command, str) else command.qualified_name
 
-        if cmd := bot.get_app_command(name):
+        if cmd := bot.get_app_command(full_name):
             return cmd.mention
-        msg = f"Can't find {name}"
+        msg = f"Can't find {full_name}"
         Commands.logger.exception(msg)
         raise ValueError(msg)
 
