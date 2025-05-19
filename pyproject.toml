@@ -1,6 +1,6 @@
 [project]
 name = "winter-dragon"
-version = "0.1.0"
+version = "0.3.0"
 description = "A versatile Discord bot with moderation, utility, and entertainment features"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -21,18 +21,6 @@ classifiers = [
 dependencies = [
     "database",
     "bot",
-]
-
-[project.optional-dependencies]
-steam = [
-    "bot[steam]>=0.1.0",
-]
-backend = [
-    "backend>=0.1.0",
-]
-full = [
-    "bot[full]>=0.1.0",
-    "backend>=0.1.0",
 ]
 
 [build-system]
