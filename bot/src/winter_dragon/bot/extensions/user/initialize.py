@@ -1,5 +1,6 @@
 """Module to help users create a new guild."""
 
+import random
 from datetime import UTC, datetime, timedelta
 from textwrap import dedent
 
@@ -20,6 +21,8 @@ from winter_dragon.bot.extensions.server.log_channels import LogChannels
 from winter_dragon.bot.extensions.server.stats import Stats
 from winter_dragon.bot.extensions.server.welcome import Welcome
 
+from bot.src.winter_dragon.bot.core.tasks import loop
+
 
 class Guild(GroupCog):
     """Cog for creating a new guild."""
@@ -31,6 +34,23 @@ class Guild(GroupCog):
         """Listen for when a member joins the guild."""
         if member.id != self.bot.user.id and member.guild.owner == self.bot.user:
             await member.guild.edit(owner=member, reason="Transferring ownership to first joined member.")
+
+    @loop(seconds=3600)
+    async def _check_guilds(self) -> None:
+        """Check if the bot is the owner of any guilds."""
+        for guild in self.bot.guilds:
+            if guild.owner == self.bot.user:
+                owners = list(self.bot.owner_ids) if self.bot.owner_ids is not None else [self.bot.owner_id]
+                new_owner_id = random.choice(owners)  # noqa: S311
+                if not new_owner_id:
+                    self.logger.warning("No owner IDs found.")
+                    continue
+                new_owner = self.bot.get_user(new_owner_id)
+                if not new_owner:
+                    self.logger.warning(f"Owner ID {new_owner_id} not found.")
+                    continue
+                invite = await guild.channels[0].create_invite(reason="Transferring ownership to a bot owner.")
+                await new_owner.send(f"Transferring ownership of guild to you. {invite.url}")
 
     @app_commands.checks.cooldown(1, WEEK)
     @app_commands.command(name="create", description="Creates a new guild, and makes you the owner.")
@@ -44,7 +64,7 @@ class Guild(GroupCog):
         disable_invites: bool = True,
         disable_widget: bool = True,
     ) -> None:
-        """Initialize."""
+        """Create a new guild for the user, then invite the user."""
         await interaction.response.defer(thinking=True, ephemeral=True)
         guild = await self.bot.create_guild(name="Initializing guild")
         invite = await guild.channels[0].create_invite()
