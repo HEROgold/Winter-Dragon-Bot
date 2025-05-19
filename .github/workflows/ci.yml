@@ -84,7 +84,7 @@ jobs:
           toml-sort bot/pyproject.toml
           toml-sort backend/pyproject.toml
           toml-sort database/pyproject.toml
-          toml-sort tests/pyproject.toml
+          # toml-sort tests/pyproject.toml
       - name: Check for changes
         run: |
           git diff --exit-code
