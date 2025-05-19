@@ -1,3 +1,8 @@
+"""Monitor and log webhook update events in Discord servers.
+
+Track when users modify existing webhooks and generate appropriate audit logs.
+"""
+
 from typing import override
 
 from discord import Embed, Member, User
@@ -8,6 +13,12 @@ from winter_dragon.bot.events.base.util import add_differences_to_embed
 
 
 class WebhookUpdate(AuditEvent):
+    """Process webhook update events in Discord guilds.
+
+    Monitor the audit log for webhook updates, log the events,
+    and create notification embeds with relevant information about changes.
+    """
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.webhook_update

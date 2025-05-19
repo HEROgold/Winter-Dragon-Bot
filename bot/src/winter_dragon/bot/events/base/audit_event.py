@@ -1,3 +1,4 @@
+"""Module for abstracting audit events."""
 from abc import ABC, abstractmethod
 
 from discord import AuditLogEntry, Embed

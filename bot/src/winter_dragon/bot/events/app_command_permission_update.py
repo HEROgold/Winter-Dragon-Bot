@@ -1,3 +1,4 @@
+"""Module for handling app command permission updates."""
 from typing import override
 
 from discord import Embed, Member, User
@@ -6,6 +7,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class AppCommandPermissionUpdate(AuditEvent):
+    """Handle app command permission updates."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.app_command_permission_update

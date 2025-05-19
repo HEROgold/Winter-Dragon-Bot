@@ -1,3 +1,5 @@
+"""Module containing a cog for showing bot uptime."""
+
 import datetime
 
 import discord
@@ -7,6 +9,8 @@ from winter_dragon.bot.core.cogs import GroupCog
 
 
 class Uptime(GroupCog):
+    """Cog for showing the bot's uptime."""
+
     @app_commands.command(name="bot", description="Show bot's current uptime")
     async def slash_uptime_bot(self, interaction: discord.Interaction) -> None:
         """Send a message with the bot's current uptime."""

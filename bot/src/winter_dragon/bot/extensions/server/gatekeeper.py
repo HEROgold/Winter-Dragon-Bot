@@ -9,11 +9,11 @@ from winter_dragon.bot.core.cogs import Cog, GroupCog
 
 @app_commands.guild_only()
 class Gatekeeper(GroupCog):
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
-        super().__init__(*args, **kwargs)
+    """Gatekeeper cog for limiting the amount of bot/spam users that can join."""
 
     @app_commands.command(name="enable", description="Enables the gatekeeper system.")
     async def slash_enable_gatekeeper(self, interaction: Interaction) -> None:
+        """Enable the gatekeeper system. for the guild."""
         # Use database to store if enabled or not
         # if first time using, ask to use command
         msg = f"Please use {self.get_command_mention(self.slash_setup)} first."
@@ -22,10 +22,15 @@ class Gatekeeper(GroupCog):
 
     @app_commands.command(name="disable", description="Disables the gatekeeper system.")
     async def slash_disable_gatekeeper(self, interaction: Interaction) -> None:
-        pass
+        """Disable the gatekeeper system. for the guild."""
+        # Use database to store if enabled or not
+        # if first time using, ask to use command
+        msg = f"Please use {self.get_command_mention(self.slash_setup)} first."
+        await interaction.response.send_message(msg, ephemeral=True)
 
     @app_commands.command(name="setup", description="Sets up the roles for the gatekeeper system.")
     async def slash_setup(self, interaction: Interaction, member_role: Role | None = None) -> None:
+        """Set up the roles for the gatekeeper system."""
         guild = interaction.guild
         if not guild:
             self.logger.warning("Guild not found for setup")
@@ -36,16 +41,7 @@ class Gatekeeper(GroupCog):
 
 
     async def setup_roles(self, guild: Guild, member_role: Role | None = None) -> None:
-        """Copy the default role permissions to the member role and removes all permissions from the default role.
-
-        Parameters
-        ----------
-        :param:`guild`: :class:`Guild`
-            The guild to setup the roles in.
-        :param:`member_role`: :class:`Role | None`, optional
-            A existing role, if any. by default None, and a new role will be created.
-
-        """
+        """Copy the default role permissions to the member role and removes all permissions from the default role."""
         base_role = guild.default_role
         role = member_role or await guild.create_role(name="Member", permissions=base_role.permissions)
         await role.edit(permissions=base_role.permissions)
@@ -54,10 +50,12 @@ class Gatekeeper(GroupCog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        if self.check_user_accepted_rules(member):
+        """When a member joins, check if they have accepted the rules and send them a message if not."""
+        if not self.check_user_accepted_rules(member):
             await self.send_verification_message(member)
 
     async def send_verification_message(self, member: Member) -> None:
+        """Send a verification message to the member."""
         view = View()
         verify_button = Button[view](label="Accept Rules", style=ButtonStyle.green)
         view.add_item(verify_button)
@@ -73,6 +71,7 @@ class Gatekeeper(GroupCog):
         await member.send("Please accept the rules to gain access to the guild.", view=view)
 
     def check_user_accepted_rules(self, _member: discord.Member) -> bool:
+        """Check if the user has accepted the rules."""
         msg = "This method should check if the user has accepted the rules."
         raise NotImplementedError(msg)
 

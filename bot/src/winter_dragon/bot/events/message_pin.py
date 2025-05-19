@@ -1,3 +1,4 @@
+"""."""
 
 from typing import override
 
@@ -7,6 +8,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class MessagePin(AuditEvent):
+    """Handle message pin events."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.message_pin

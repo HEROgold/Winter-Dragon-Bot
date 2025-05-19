@@ -1,3 +1,4 @@
+"""."""
 from typing import override
 
 from discord import Embed, Member, User
@@ -7,6 +8,8 @@ from winter_dragon.bot.events.base.util import add_differences_to_embed
 
 
 class MemberUpdate(AuditEvent):
+    """Handle member update events."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.member_update

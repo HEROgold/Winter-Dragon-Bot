@@ -1,3 +1,4 @@
+"""The database package for the Winter Dragon project."""
 from sqlmodel import Session, SQLModel, create_engine
 
 from .constants import DATABASE_URL

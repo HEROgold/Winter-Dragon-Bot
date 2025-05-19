@@ -1,3 +1,4 @@
+"""."""
 from typing import override
 
 from discord import Embed, Member, User
@@ -6,6 +7,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class ScheduledEventDelete(AuditEvent):
+    """Handle scheduled event delete events."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.scheduled_event_delete

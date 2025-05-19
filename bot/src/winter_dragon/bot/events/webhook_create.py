@@ -1,3 +1,7 @@
+"""Monitor and log webhook creation events in Discord servers.
+
+Track when users create new webhooks and generate appropriate audit logs.
+"""
 from typing import override
 
 from discord import Embed, Member, User
@@ -7,6 +11,12 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class WebhookCreate(AuditEvent):
+    """Process webhook creation events in Discord guilds.
+
+    Monitor the audit log for webhook creations, log the events,
+    and create notification embeds with relevant information.
+    """
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.webhook_create
@@ -15,6 +25,19 @@ class WebhookCreate(AuditEvent):
 
     @override
     def create_embed(self) -> Embed:
+        """Create an embed message for the webhook creation event.
+
+        This method generates a Discord embed object containing details about the webhook creation,
+        including the user who created the webhook, the name of the webhook, the channel it was created in,
+        and the reason provided for its creation.
+
+        Returns:
+            Embed: A Discord embed object with the webhook creation details.
+
+        Raises:
+            TypeError: If the user is not a Discord user or the target is not a guild channel.
+
+        """
         webhook = self.entry.target
         user = self.entry.user
         if not isinstance(user, (User, Member)):

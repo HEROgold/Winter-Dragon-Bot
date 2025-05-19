@@ -1,3 +1,4 @@
+"""."""
 from typing import override
 
 from discord import Embed, Member, User
@@ -6,6 +7,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class MemberDisconnect(AuditEvent):
+    """Handle member disconnect events."""
+
     @override
     async def handle(self) -> None:
         self.logger.debug(f"on member_disconnect: {self.entry.guild=}, {self.entry=}")

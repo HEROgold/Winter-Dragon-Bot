@@ -78,7 +78,3 @@ __all__ = [
     "Welcome",
     "WyrQuestion",
 ]
-
-
-# TODO @HEROgold: Test using Hypothesis
-# https://youtu.be/dsBitCcWWf4

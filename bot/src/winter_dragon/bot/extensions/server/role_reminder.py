@@ -1,3 +1,5 @@
+"""Module to help remembering user roles when they leave and rejoin the server."""
+
 import discord
 from discord import app_commands
 from sqlmodel import select
@@ -11,6 +13,8 @@ AUTO_ASSIGN_REASON = "Member joined again, AutoAssigned roles the user had previ
 
 
 class AutoReAssign(GroupCog):
+    """Cog to help re-assigning user roles when they leave and rejoin the server."""
+
     @Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:
         """When a member is kicked or banned, remember their roles for auto-assignment later."""

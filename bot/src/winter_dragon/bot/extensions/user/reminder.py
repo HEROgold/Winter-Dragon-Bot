@@ -1,3 +1,4 @@
+"""Module for reminding users of things."""
 import datetime
 
 import discord
@@ -6,25 +7,26 @@ from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.extensions.utility.time import get_seconds
 from winter_dragon.database.tables import Reminder as ReminderDb
 
 
 class Reminder(Cog):
-    def get_seconds(self, seconds:int=0, minutes:int=0, hours:int=0, days:int=0) -> int:
-        hours += days * 24
-        minutes += hours * 60
-        seconds += minutes * 60
-        return seconds
+    """Cog for setting reminders."""
 
     async def cog_load(self) -> None:
+        """Load the cog."""
         await super().cog_load()
         self.send_reminder.start()
 
 
     @loop(seconds=60)
     async def send_reminder(self) -> None:
-        is_past_timestamp = datetime.datetime.now() >= ReminderDb.timestamp  # noqa: DTZ005
-        results = self.session.exec(select(ReminderDb).where(is_past_timestamp))
+        """Task to send reminders to users."""
+        results = self.session.exec(
+            select(ReminderDb)
+            .where(ReminderDb.timestamp <= datetime.datetime.now(datetime.UTC)),
+        )
         if not results.all():
             return
         for i in results.all():
@@ -42,6 +44,7 @@ class Reminder(Cog):
 
     @send_reminder.before_loop
     async def before_send_reminder(self) -> None:
+        """Wait until the bot is ready before starting the loop."""
         await self.bot.wait_until_ready()
 
 
@@ -54,11 +57,12 @@ class Reminder(Cog):
         hours: int = 0,
         days: int = 0,
     ) -> None:
+        """Set a reminder for the user."""
         if minutes == 0 and hours == 0 and days == 0:
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
             return
 
-        seconds = self.get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
+        seconds = get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
         member = interaction.user
         time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
         self.session.add(ReminderDb(

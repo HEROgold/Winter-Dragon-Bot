@@ -1,3 +1,4 @@
+"""."""
 from typing import override
 
 from discord import Embed, Member, Role, User
@@ -7,6 +8,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class OverwriteCreate(AuditEvent):
+    """Handle overwrite create events."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.overwrite_create

@@ -1,3 +1,7 @@
+"""Monitor and log member prune events in Discord servers.
+
+Track when users prune inactive members and generate appropriate audit logs.
+"""
 from typing import override
 
 from discord import Embed, Member, User
@@ -6,6 +10,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class MemberPrune(AuditEvent):
+    """Process member prune events in Discord guilds."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.member_prune
@@ -26,7 +32,7 @@ class MemberPrune(AuditEvent):
 
         return Embed(
             title="Member Prune",
-            description=f"{user.mention} pruned {delete_count} members inactive for {days} days with reason: {self.entry.reason}",
+            description=f"{user.mention} pruned {delete_count} members inactive for {days} days with reason: {self.entry.reason}",  # noqa: E501
             color=DELETED_COLOR,
         )
 

@@ -1,4 +1,4 @@
-
+"""Module with helper methods for the database package."""
 
 from sqlmodel import SQLModel
 

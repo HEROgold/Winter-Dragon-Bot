@@ -1,3 +1,4 @@
+"""Module containing the love meter command."""
 import random
 
 import discord
@@ -7,8 +8,11 @@ from winter_dragon.bot.core.cogs import Cog
 
 
 class Love(Cog):
+    """Cog for the love meter command."""
+
     @app_commands.command(name = "love", description = "Find out if another person is compatible with you")
     async def love(self, interaction: discord.Interaction, member: discord.Member) -> None:
+        """Find out if another person is compatible with you."""
         user = interaction.user
         emb = discord.Embed(
             title = "Love Meter",

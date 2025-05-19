@@ -1,3 +1,5 @@
+"""Module for tracking user, guild, role and channel data in the database."""
+
 import datetime
 
 import discord
@@ -15,6 +17,8 @@ from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, 
 
 @app_commands.guilds(Settings.support_guild_id)
 class DatabaseManager(Cog):
+    """Track user, guild, role and channel data in the database."""
+
     async def cog_load(self) -> None:
         """Load the cog."""
         await super().cog_load()
@@ -22,6 +26,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_guild_channel_update( self, _: discord.abc.GuildChannel, after: discord.abc.GuildChannel) -> None:
+        """When a channel is updated, update it in the database."""
         Channels.update(Channels(
             id = after.id,
             name = after.name,
@@ -31,6 +36,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_role_create(self, role: discord.Role) -> None:
+        """When a role is created, add it to the database."""
         self._add_db_role(role)
 
     def _add_db_role(self, role: discord.Role) -> None:
@@ -41,6 +47,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_role_delete(self, role: discord.Role) -> None:
+        """When a role is deleted, remove it from the database."""
         if db_role := self.session.exec(select(Roles).where(Roles.id == role.id)).first():
             self.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
             self.session.delete(db_role)
@@ -49,6 +56,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message) -> None:
+        """When a message is deleted, remove it from the database."""
         db_msg = self.session.exec(select(Messages).where(Messages.id == message.id)).first()
         if db_msg is not None:
             self.logger.debug(f"Deleting from Messages table, message was deleted from discord. {message=}")
@@ -57,6 +65,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_guild_role_create(self, role: discord.Role) -> None:
+        """When a role is created, add it to the database."""
         if not self.session.exec(select(Roles).where(Roles.id == role.id)).first():
             self.logger.debug(f"Adding new {role=} to Roles table")
             self.session.add(Roles(id=role.id, name=role.name))
@@ -64,6 +73,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role) -> None:
+        """When a role is deleted, remove it from the database."""
         if db_role := self.session.exec(select(Roles).where(Roles.id == role.id)).first():
             self.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
             self.session.delete(db_role)
@@ -71,6 +81,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_guild_role_update(self, before: discord.Role, after: discord.Role) -> None:
+        """When a role is updated, update it in the database."""
         if db_role := self.session.exec(select(Roles).where(Roles.id == before.id)).first():
             self.logger.debug(f"Updating {before=} to {after=} in Roles table")
             db_role.name = after.name
@@ -78,6 +89,7 @@ class DatabaseManager(Cog):
 
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
+        """When a message is sent, add it to the database."""
         # sourcery skip: collection-to-bool, remove-redundant-if, remove-unreachable-code
         if isinstance(message.channel, (
             discord.DMChannel,
@@ -137,6 +149,7 @@ class DatabaseManager(Cog):
 
     @loop(hours=1)
     async def update(self) -> None:
+        """Update the database with user, guild, role and channel info."""
         for user in self.bot.users:
             self._add_db_user(user)
         for guild in self.bot.guilds:
@@ -148,6 +161,7 @@ class DatabaseManager(Cog):
 
     @update.before_loop
     async def before_update(self) -> None:
+        """Wait until the bot is ready before starting the update loop."""
         await self.bot.wait_until_ready()
 
 
@@ -245,3 +259,5 @@ class DatabaseManager(Cog):
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
     await bot.add_cog(DatabaseManager(bot))
+
+# TODO: Allow users to delete their own data.

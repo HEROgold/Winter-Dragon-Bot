@@ -1,3 +1,5 @@
+"""Module for league of legends related Cogs."""
+
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 

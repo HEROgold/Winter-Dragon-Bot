@@ -1,3 +1,5 @@
+"""Module to help users create a new guild."""
+
 from datetime import UTC, datetime, timedelta
 from textwrap import dedent
 

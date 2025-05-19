@@ -1,3 +1,5 @@
+"""Module that contains a list of rainbow colors in hexadecimal format."""
+
 RAINBOW = [
     0xFF0000,
     0xFF1100,

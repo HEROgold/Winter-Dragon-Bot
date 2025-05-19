@@ -1,4 +1,4 @@
 """Custom exceptions for config errors."""
 
 class ConfigError(Exception):
-    pass
+    """Base class for all configuration-related exceptions."""

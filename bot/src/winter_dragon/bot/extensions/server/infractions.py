@@ -1,3 +1,5 @@
+"""Module for tracking infractions on users."""
+
 from discord import (
     AutoModAction,
     AutoModRule,
@@ -27,21 +29,21 @@ class Infractions(GroupCog):
     TODO: On automod trigger, add infraction (Delete old ones)
     TODO: Make rules that can trigger an infraction.
         IE: Spamming the same message in more then X amount of channels
-    """
+    """  # noqa: D205
 
     @Cog.listener()
     async def on_automod_rule_create(self, rule: AutoModRule) -> None:
-        pass
+        """Track new automod rules."""
 
 
     @Cog.listener()
     async def on_automod_rule_update(self, rule: AutoModRule) -> None:
-        pass
+        """Update automod rules."""
 
 
     @Cog.listener()
     async def on_automod_rule_delete(self, rule: AutoModRule) -> None:
-        pass
+        """Remove deleted automod rules."""
 
 
     @staticmethod
@@ -52,6 +54,7 @@ class Infractions(GroupCog):
 
     @Cog.listener()
     async def on_automod_execution(self, execution: AutoModAction) -> None:
+        """Add infractions when automod is executed."""
         action = execution.action
         duration = action.duration
         user = self.bot.get_user(execution.user_id)

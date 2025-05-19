@@ -1,3 +1,7 @@
+"""Module containing Unban event handling.
+
+This module provides functionality for monitoring and logging when users are unbanned from a Discord server.
+"""
 from typing import override
 
 from discord import Embed, Member, User
@@ -6,6 +10,12 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class Unban(AuditEvent):
+    """Handles the unban event.
+
+    This class processes Discord unban events, generating logs and notifications
+    when a user's ban is removed from a guild.
+    """
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.unban

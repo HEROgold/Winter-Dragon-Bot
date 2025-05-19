@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any
 
 import discord
 from discord import Intents, app_commands
-from discord.app_commands import AppCommand, AppCommandGroup
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 from winter_dragon.bot.config import Config
@@ -27,6 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Coroutine, Sequence
 
     from discord.abc import Snowflake
+    from discord.app_commands import AppCommand, AppCommandGroup
     from discord.ext.commands.context import Context
     from winter_dragon.bot._types.aliases import AppCommandStore, BotT, PrefixType
     type MentionableCommand = AppCommand | AppCommandGroup

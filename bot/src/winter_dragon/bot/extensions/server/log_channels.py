@@ -1,3 +1,4 @@
+"""Module containing channels to help guild moderators."""
 import itertools
 from collections.abc import Sequence
 from typing import cast
@@ -27,12 +28,14 @@ from winter_dragon.database.tables import Channels
 LOGS = ChannelTypes.LOGS
 
 class LogChannels(GroupCog):
+    """Cog for managing log channels."""
 
 # ----------------------
 # Helper Functions Start
 # ----------------------
 
     def get_log_category(self, category_channels: list[CategoryChannel], current_count: int) -> CategoryChannel:
+        """Get the log category for the current count of log channels."""
         channel_locator = current_count // MAX_CATEGORY_SIZE
         category_channel = category_channels[channel_locator]
         self.logger.debug(f"{category_channels=}, {channel_locator=}")
@@ -44,12 +47,14 @@ class LogChannels(GroupCog):
 
 
     def get_member_role_difference(self, before: discord.Member, after: discord.Member) -> str:
+        """Get the difference in roles."""
         role_diff_add = [role.mention for role in after.roles if role not in before.roles]
         role_diff_rem = [role.mention for role in after.roles if role in before.roles]
         return " ".join(role_diff_add + role_diff_rem)
 
 
     def get_username_difference(self, before: discord.Member, after: discord.Member) -> str:
+        """Get the difference in usernames."""
         return (
             f"from `{before.display_name}` to `{after.display_name}`"
             if after.display_name != before.display_name
@@ -63,6 +68,7 @@ class LogChannels(GroupCog):
         embed: discord.Embed,
         log_category: LogCategories | None=None,
     ) -> tuple[None, None]:
+        """Send logs to the all appropriate log channel."""
         if not guild:
             self.logger.debug("No guild during Log channel fetching")
             return None, None
@@ -81,6 +87,7 @@ class LogChannels(GroupCog):
         guild: discord.Guild,
         embed: discord.Embed,
     ) -> None:
+        """Send logs to the global log channel."""
         channel = self.session.exec(select(Channels).where(
             Channels.guild_id == guild.id,
             Channels.name == LogCategories.GLOBAL.name,
@@ -105,6 +112,7 @@ class LogChannels(GroupCog):
         guild: discord.Guild,
         embed: discord.Embed,
     ) -> None:
+        """Send logs to the category channel."""
         log_channel_name = log_category.name
 
         channel = self.session.exec(select(Channels).where(
@@ -137,6 +145,7 @@ class LogChannels(GroupCog):
 
 
     def create_member_left_embed(self, member: discord.Member, entry: discord.AuditLogEntry) -> discord.Embed:
+        """Create an embed for when a member leaves the guild."""
         user = entry.user
         if user is None:
             msg = "User is None"
@@ -169,6 +178,7 @@ class LogChannels(GroupCog):
 
     @Cog.listener()
     async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
+        """Handle audit log entry creation."""
         action = entry.action
         self.logger.debug(f"{action=}, {entry.target}, {entry.__dict__=}")
         enum = discord.enums.AuditLogAction
@@ -178,6 +188,7 @@ class LogChannels(GroupCog):
 
     @Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
+        """Handle member updates."""
         member = after or before
         self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
         if before.voice != after.voice:
@@ -205,6 +216,7 @@ class LogChannels(GroupCog):
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
+        """Handle member joining."""
         self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
         embed = discord.Embed(
             title="Member Joined",
@@ -216,6 +228,7 @@ class LogChannels(GroupCog):
 
     @Cog.listener()
     async def on_member_remove(self, member: discord.Member) -> None:
+        """Handle member removal."""
         self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
         embed=None
         async for entry in member.guild.audit_logs(limit=1):
@@ -228,6 +241,7 @@ class LogChannels(GroupCog):
 
     @Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
+        """Handle message editing."""
         if not before.guild:
             self.logger.debug(f"Guild not found on {before=}")
             return
@@ -253,6 +267,7 @@ class LogChannels(GroupCog):
 
     @Cog.listener()
     async def on_message_delete(self, message: discord.Message, reason: str | None = None) -> None:
+        """Handle message deletion."""
         if not message.guild:
             self.logger.warning(f"Guild not found on {message=}, maybe DM?")
             self.logger.debug(f"Message deleted: {message.channel=}, {message.clean_content=}")
@@ -280,6 +295,7 @@ class LogChannels(GroupCog):
         await self.send_channel_logs(message.guild, embed, LogCategories.MESSAGE_DELETE)
 
     async def generic_change(self, entry: discord.AuditLogEntry) -> None:
+        """Handle a generic change in the audit log."""
         e_before_type = getattr(entry.before.type, "__name__", entry.target)
         e_type = getattr(entry.target.type, "__name__", e_before_type) # type: ignore[]
         e_mention = getattr(entry.target, "mention", "")
@@ -409,6 +425,7 @@ class LogChannels(GroupCog):
         name="remove",
         description="Disables automatic moderation for this guild, and removes the log channels.")
     async def slash_log_remove(self, interaction:discord.Interaction) -> None:
+        """Remove all log channels for this guild."""
         guild = interaction.guild
         if guild is None:
             msg = "Guild is None"
@@ -444,6 +461,7 @@ class LogChannels(GroupCog):
     @commands.is_owner()
     @app_commands.command(name = "update", description = "Update Log channels")
     async def slash_log_update(self, interaction: discord.Interaction, guild_id: int | None=None) -> None:
+        """Update all log channels for the guild."""
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
 
@@ -453,18 +471,15 @@ class LogChannels(GroupCog):
 
 
     async def update_log(self, guild: discord.Guild | None = None) -> None:
+        """Update log channels for a guild."""
         self.logger.debug(f"Updating Log for {guild=}")
         if guild is None:
-            guild_ids = (
+            guild_id = (
                 self.session.exec(select(Channels.guild_id)
-                    .where(Channels.type == LOGS)
-                    .distinct(),
-                    ).all()
+                    .where(Channels.type == LOGS),
+                    ).first()
             )
-            for guild_id in guild_ids[0]:
-                return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
-            msg = "How did we get here"
-            raise NoneTypeError(msg)
+            return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
 
         channels = self.session.exec(select(Channels).where(
             Channels.type == LOGS,
@@ -501,6 +516,7 @@ class LogChannels(GroupCog):
 
 
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
+        """Update the required category count for the guild."""
         categories = self.session.exec(select(Channels).where(
             Channels.name == LOG_CHANNEL_NAME,
             Channels.type == LOGS,

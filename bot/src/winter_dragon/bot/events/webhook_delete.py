@@ -1,3 +1,7 @@
+"""Monitor and log webhook deletion events in Discord servers.
+
+Track when users delete webhooks and generate appropriate audit logs.
+"""
 from typing import override
 
 from discord import Embed, Member, User
@@ -7,6 +11,12 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class WebhookDelete(AuditEvent):
+    """Process webhook deletion events in Discord guilds.
+
+    Monitor the audit log for webhook deletions, log the events,
+    and create notification embeds with relevant information.
+    """
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.webhook_delete
@@ -15,6 +25,19 @@ class WebhookDelete(AuditEvent):
 
     @override
     def create_embed(self) -> Embed:
+        """Create an embed message for the webhook deletion event.
+
+        This method generates a Discord embed object containing details about the deleted webhook,
+        including the user who deleted it, the name of the webhook, the channel it was deleted from,
+        and the reason for deletion.
+
+        Returns:
+            Embed: A Discord embed object with the webhook deletion details.
+
+        Raises:
+            TypeError: If the user is not a Discord user or the target is not a guild channel.
+
+        """
         webhook = self.entry.target
         user = self.entry.user
         if not isinstance(user, (User, Member)):

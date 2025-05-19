@@ -1,3 +1,4 @@
+"""Module for handling automod rule create events."""
 from typing import override
 
 from discord import Embed, Member, User
@@ -6,6 +7,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class AutomodRuleCreate(AuditEvent):
+    """Handle automod rule create events."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_rule_create

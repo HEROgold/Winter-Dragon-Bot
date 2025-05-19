@@ -1,4 +1,4 @@
-
+"""Module for the audit event handler."""
 
 import discord
 from discord import Embed, Guild

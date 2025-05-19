@@ -1,3 +1,5 @@
+"""Winter Dragon Bot Module."""
+
 from .core.bot import WinterDragon
 
 

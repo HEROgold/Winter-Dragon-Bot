@@ -1,3 +1,4 @@
+"""."""
 from typing import override
 
 from discord import Embed
@@ -6,6 +7,8 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class AutomodTimeoutMember(AuditEvent):
+    """Handle automod timeout member events."""
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.automod_timeout_member

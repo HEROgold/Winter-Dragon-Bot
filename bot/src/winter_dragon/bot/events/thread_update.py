@@ -1,3 +1,8 @@
+"""Monitor and log thread update events in Discord servers.
+
+Track when users modify existing threads and generate appropriate audit logs.
+"""
+
 from typing import override
 
 from discord import Embed, Member, Thread, User
@@ -6,6 +11,12 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class ThreadUpdate(AuditEvent):
+    """Process thread update events in Discord guilds.
+
+    Monitor the audit log for thread modifications, log the events,
+    and create notification embeds with relevant information about changes.
+    """
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.thread_update

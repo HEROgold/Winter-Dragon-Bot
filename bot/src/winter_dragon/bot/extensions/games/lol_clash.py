@@ -9,7 +9,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 
 
 class Clash(commands.Cog):
-    pass
+    """Clash cog for League of Legends."""
 
 
 async def setup(bot: WinterDragon) -> None:

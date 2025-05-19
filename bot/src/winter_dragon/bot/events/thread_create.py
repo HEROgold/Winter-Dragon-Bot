@@ -1,3 +1,8 @@
+"""Monitor and log thread creation events in Discord servers.
+
+Track when users create new threads and generate appropriate audit logs.
+"""
+
 from typing import override
 
 from discord import Embed, Member, Thread, User
@@ -6,6 +11,12 @@ from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
 class ThreadCreate(AuditEvent):
+    """Process thread creation events in Discord guilds.
+
+    Monitor the audit log for thread creations, log the events,
+    and create notification embeds with relevant information.
+    """
+
     @override
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.thread_create

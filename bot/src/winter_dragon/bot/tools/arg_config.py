@@ -1,3 +1,5 @@
+"""Module that helps with reading a config file and adding the config settings to the argument parser."""
+
 from argparse import ArgumentParser
 from configparser import ConfigParser
 from pathlib import Path
@@ -12,6 +14,8 @@ class _ArgsNameSpace:
 
 
 class ArgConfig:
+    """Class that helps transforming argparse arguments into config settings."""
+
     def __init__(self, args: ArgumentParser, config: ConfigParser, file: Path | None) -> None:
         """Read a config file and add the config settings to the argument parser. in the form of `--<key> <value>` arguments.
 

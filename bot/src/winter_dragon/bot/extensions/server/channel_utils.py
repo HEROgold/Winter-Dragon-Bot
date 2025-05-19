@@ -1,3 +1,5 @@
+"""Module containing Channel Utility commands."""
+
 import contextlib
 
 import discord

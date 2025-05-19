@@ -1,3 +1,4 @@
+"""Module containing the looking for group cog."""
 import discord
 from discord import app_commands
 from sqlmodel import select
@@ -11,16 +12,20 @@ from winter_dragon.database.tables import LookingForGroup
 
 @app_commands.guilds(Settings.support_guild_id)
 class Lfg(GroupCog):
+    """LFG cog for finding people to play games with."""
+
     slash_suggest = Games.slash_suggest
 
 
     def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
+        """Initialize the LFG cog."""
         super().__init__(*args, **kwargs)
         self.games = [i.name for i in self.session.exec(select(GamesDB)).all()]
 
     # TODO: add Database table, matching user id and category, every time someone adds, check matches.
     @app_commands.command(name="join", description="Join a search queue for finding people for the same game")
     async def slash_lfg_join(self, interaction: discord.Interaction, game: str) -> None:
+        """Join a search queue for finding people for the same game."""
         game_db = self.session.exec(select(GamesDB).where(GamesDB.name == game)).first()
         if game_db is None:
             await interaction.response.send_message("This game is not supported", ephemeral=True)
@@ -38,6 +43,7 @@ class Lfg(GroupCog):
 
     @app_commands.command(name="leave", description="leave all joined search queue")
     async def slash_lfg_leave(self, interaction: discord.Interaction) -> None:
+        """Leave all joined search queues."""
         lfg = self.session.exec(select(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id)).all()
         for i in lfg:
             self.session.delete(i)
@@ -56,6 +62,7 @@ class Lfg(GroupCog):
         discord.Interaction,
         current: str,
     ) -> list[app_commands.Choice[str]]:
+        """Autocomplete for the game name."""
         return [
             app_commands.Choice(name=i, value=i)
             for i in self.games
@@ -67,6 +74,7 @@ class Lfg(GroupCog):
 
 
     async def search_match(self, interaction: discord.Interaction, _game: str) -> None:
+        """Search for a match in the database."""
         user_games = self.session.exec(select(LookingForGroup).where(LookingForGroup.user_id == interaction.user.id)).all()
         for user_game in user_games:
             lfg_game = self.session.exec(select(LookingForGroup).where(LookingForGroup.game_name == user_game.game_name)).all()
