@@ -80,21 +80,23 @@ class SteamSales(GroupCog):
         self._setup_notifier_messages(notifier)
         embed = notifier.add_sales(new_sales)
 
-    def _update_notify_messages(self) -> None:
+    def _get_notify_messages(self) -> None:
         """Update the notify messages."""
-        self.sub_mention_remove = self.get_command_mention(self.slash_remove)
-        self.sub_mention_show = self.get_command_mention(self.slash_show)
-        self.disable_message = f"You can disable this message by using {self.sub_mention_remove}"
-        self.all_sale_message = f"You can see other sales by using {self.sub_mention_show}, followed by a percentage"
+        if hasattr(SteamSales, "sub_mention_add"):
+            return
+        SteamSales.sub_mention_remove = self.get_command_mention(self.slash_remove)
+        SteamSales.sub_mention_show = self.get_command_mention(self.slash_show)
+        SteamSales.disable_message = f"You can disable this message by using {SteamSales.sub_mention_remove}"
+        SteamSales.all_sale_message = f"You can see other sales by using {SteamSales.sub_mention_show}, followed by a percentage"  # noqa: E501
 
     def _setup_notifier_messages(self, notifier: SteamSaleNotifier) -> None:
         """Set up the notifier messages."""
-        self._update_notify_messages()
+        self._get_notify_messages()
         notifier.set_messages(
-            self.sub_mention_remove,
-            self.sub_mention_show,
-            self.disable_message,
-            self.all_sale_message,
+            SteamSales.sub_mention_remove,
+            SteamSales.sub_mention_show,
+            SteamSales.disable_message,
+            SteamSales.all_sale_message,
         )
 
 
