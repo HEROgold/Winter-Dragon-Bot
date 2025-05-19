@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from discord.abc import Snowflake
     from discord.ext.commands.context import Context
     from winter_dragon.bot._types.aliases import AppCommandStore, BotT, PrefixType
+    type MentionableCommand = AppCommand | AppCommandGroup
 
 
 class WinterDragon(AutoShardedBot):
@@ -120,16 +121,14 @@ class WinterDragon(AutoShardedBot):
         guild: Snowflake | int | None = None,
         *,
         fallback_to_global: bool = True,
-    ) -> AppCommand | None:
+    ) -> MentionableCommand | None:
         """Get an app command from the cache.
 
         This app command may be a group or app_command or None
         """
-        def search_dict(d: AppCommandStore) -> AppCommand | None:
+        def search_dict(d: AppCommandStore) -> MentionableCommand | None:
             for cmd_name, cmd in d.items():
-                if isinstance(cmd, AppCommandGroup):
-                    continue
-                if value == cmd_name or (str(value).isdigit() and int(value) == cmd.id):
+                if value == cmd_name:
                     return cmd
             return None
 
