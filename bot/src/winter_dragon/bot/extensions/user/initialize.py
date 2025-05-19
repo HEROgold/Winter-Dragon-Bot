@@ -50,7 +50,7 @@ class Guild(GroupCog):
                     self.logger.warning(f"Owner ID {new_owner_id} not found.")
                     continue
                 invite = await guild.channels[0].create_invite(reason="Transferring ownership to a bot owner.")
-                await new_owner.send(f"Transferring ownership of guild to you. {invite.url}")
+                await new_owner.dm_channel.send(f"Transferring ownership of guild to you. {invite.url}")
 
     @app_commands.checks.cooldown(1, WEEK)
     @app_commands.command(name="create", description="Creates a new guild, and makes you the owner.")
