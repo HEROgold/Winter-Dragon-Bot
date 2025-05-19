@@ -15,7 +15,7 @@ from discord import (
     app_commands,
 )
 from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.extensions.server.log_channels import LogChannels
 from winter_dragon.bot.extensions.server.stats import Stats
 from winter_dragon.bot.extensions.server.welcome import Welcome
@@ -26,6 +26,11 @@ class Guild(GroupCog):
 
     WEEK = 604_800
 
+    @Cog.listener()
+    async def on_member_join(self, member: discord.Member) -> None:
+        """Listen for when a member joins the guild."""
+        if member.id != self.bot.user.id and member.guild.owner == self.bot.user:
+            await member.guild.edit(owner=member, reason="Transferring ownership to first joined member.")
 
     @app_commands.checks.cooldown(1, WEEK)
     @app_commands.command(name="create", description="Creates a new guild, and makes you the owner.")
@@ -42,6 +47,8 @@ class Guild(GroupCog):
         """Initialize."""
         await interaction.response.defer(thinking=True, ephemeral=True)
         guild = await self.bot.create_guild(name="Initializing guild")
+        invite = await guild.channels[0].create_invite()
+        await interaction.followup.send(invite.url)
         rules_channel = await guild.create_text_channel(
             "rules",
             position=0,
@@ -64,6 +71,23 @@ class Guild(GroupCog):
             position=0,
             topic="Safety alerts channel",
         )
+        if invite_code:
+            await guild.edit(vanity_code=invite_code)
+        if not disable_widget:
+            await guild.edit(
+                widget_enabled=True,
+                widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel"),
+            )
+        await system_channel.send(dedent(
+            f"""Guild initialized!
+            Use {self.get_command_mention(LogChannels.slash_log_add)} to setup logging channels.
+            Use {self.get_command_mention(LogChannels.slash_log_remove)} to remove logging channels.
+            Use {self.get_command_mention(Stats.slash_stats_category_add)} to add stat channels (i.e. Member count).
+            Use {self.get_command_mention(Stats.slash_stats_category_remove)} to remove stat channels
+            Use {self.get_command_mention(Welcome.slash_set_msg)} to set a custom welcome message.
+            Use {self.get_command_mention(Welcome.slash_enable)} to enable welcome messages.
+            Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages.""",
+        ))
         await guild.edit(
             reason="Initializing guild",
             name=name,
@@ -80,7 +104,7 @@ class Guild(GroupCog):
             afk_timeout=600,
             default_notifications=NotificationLevel.only_mentions,
             verification_level=VerificationLevel.highest,
-            explicit_content_filter=ContentFilter.no_role,
+            explicit_content_filter=ContentFilter.all_members,
             #/vanity_code=None,
             system_channel=system_channel,
             system_channel_flags=SystemChannelFlags(join_notifications=True, premium_subscriptions=True),
@@ -89,31 +113,13 @@ class Guild(GroupCog):
             discoverable=discoverable,
             invites_disabled=disable_invites,
             widget_enabled=False,
-            #/widget_channel=None,
+            # /widget_channel=None,
             mfa_level=MFALevel.require_2fa,
             raid_alerts_disabled=False,
             safety_alerts_channel=safety_alerts_channel,
             invites_disabled_until=datetime.now(tz=UTC) + timedelta(days=1),
             dms_disabled_until=datetime.now(tz=UTC) + timedelta(days=1),
         )
-        if invite_code:
-            await guild.edit(vanity_code=invite_code)
-        if not disable_widget:
-            await guild.edit(
-                widget_enabled=True,
-                widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel"),
-            )
-        await interaction.followup.send("Guild initialized!")
-        await system_channel.send(dedent(
-            f"""Guild initialized!
-            Use {self.get_command_mention(LogChannels.slash_log_add)} to setup logging channels.
-            Use {self.get_command_mention(LogChannels.slash_log_remove)} to remove logging channels.
-            Use {self.get_command_mention(Stats.slash_stats_category_add)} to add stat channels (i.e. Member count).
-            Use {self.get_command_mention(Stats.slash_stats_category_remove)} to remove stat channels
-            Use {self.get_command_mention(Welcome.slash_set_msg)} to set a custom welcome message.
-            Use {self.get_command_mention(Welcome.slash_enable)} to enable welcome messages.
-            Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages.""",
-        ))
 
 
 async def setup(bot: WinterDragon) -> None:
