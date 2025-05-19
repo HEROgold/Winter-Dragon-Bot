@@ -44,7 +44,8 @@ class StatChannel(LoggerMixin, ABC, metaclass=ABCMeta):
         self.channel = channel
 
     @abstractmethod
-    async def update(self) -> None: ...  # noqa: D102
+    async def update(self) -> None:
+        """Update the channel name to display the current values."""
 
 class PeakStat(StatChannel):
     """Class for the peak stat channel."""
