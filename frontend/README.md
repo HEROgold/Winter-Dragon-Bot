@@ -1,4 +1,4 @@
-# frontend
+# bun-react-template
 
 To install dependencies:
 
@@ -6,10 +6,16 @@ To install dependencies:
 bun install
 ```
 
-To run:
+To start a development server:
 
 ```bash
-bun run index.ts
+bun dev
 ```
 
-This project was created using `bun init` in bun v1.2.1. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+To run for production:
+
+```bash
+bun start
+```
+
+This project was created using `bun init` in bun v1.2.13. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
