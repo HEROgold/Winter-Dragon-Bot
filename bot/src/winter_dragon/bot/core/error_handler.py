@@ -54,10 +54,11 @@ class ErrorHandler(LoggerMixin):
     @loop(count=1)
     async def _async_init(self) -> None:
         self.invite_command = self.bot.get_app_command("invite")
-        if self.invite_command is None:
-            self.server_invite = self.bot.get_bot_invite()
-        else:
-            self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
+        match self.invite_command:
+            case app_commands.AppCommand():
+                self.server_invite = f"</{self.invite_command} server:{self.invite_command.id}>"
+            case _:
+                self.server_invite = self.bot.get_bot_invite()
 
         await self.handle_error()
         await self.remove_original_message()
