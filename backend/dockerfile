@@ -1,12 +1,25 @@
 FROM python:3.13-slim
 
+WORKDIR /app
 
-ADD database/ database/
-ADD backend/ backend/
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-# Ensure that we install db first, as its a dependency of the bot
-RUN pip3.13 install database/
-RUN pip3.13 install backend/
-RUN pip3.13 install uvicorn
+# Install dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["uvicorn", "winter_dragon/backend/__main__:app"]
+# Install database package
+COPY database/ /app/database/
+RUN pip install -e /app/database/
+
+# Install backend package
+COPY backend/ /app/backend/
+RUN pip install -e /app/backend/
+
+# Expose the port the app runs on
+EXPOSE 8000
+
+# Command to run the API
+CMD ["uvicorn", "winter_dragon.backend.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

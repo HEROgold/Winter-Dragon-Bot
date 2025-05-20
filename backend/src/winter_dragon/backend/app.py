@@ -1,5 +1,2 @@
 """FastAPI app for the Winter Dragon project."""
-from fastapi import FastAPI
-
-
-app = FastAPI()
+# Import the configured FastAPI app from the API module

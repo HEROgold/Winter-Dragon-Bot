@@ -1,0 +1,40 @@
+"""Winter Dragon Bot API main module.
+
+This module initializes the FastAPI application and includes all API routes.
+"""
+
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+
+from .v1.router import api_router as v1_router
+
+
+app = FastAPI(
+    title="Winter Dragon Bot API",
+    description="API for Winter Dragon Discord bot management and configuration",
+    version="0.1.0",
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Update this with the actual frontend domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API routers
+app.include_router(v1_router, prefix="/api/v1")
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect root endpoint to API documentation."""
+    return RedirectResponse(url="/docs")
+
+
+if __name__ == "__main__":
+    uvicorn.run("winter_dragon.backend.api.main:app", host="0.0.0.0", port=8000, reload=True)
