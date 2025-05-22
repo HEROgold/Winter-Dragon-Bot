@@ -26,9 +26,6 @@ services:
     volumes:
       - ./bot:/bot
       - ./database:/database
-    ports:
-      - 5000:5000
-      - 8000:80
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,7 +42,7 @@ services:
       - 8000
     # WARNING!: Ports should only be opened to the host for development
     ports:
-      - 8000:8000
+      - 8480:8000
     depends_on:
       postgres:
         condition: service_healthy
