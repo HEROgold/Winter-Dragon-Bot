@@ -39,7 +39,7 @@ type _Bot = Bot | AutoShardedBot
 type MaybeAwaitable[T] = T | Awaitable[T]
 type MaybeAwaitableFunc[**P, T] = Callable[P, MaybeAwaitable[T]]
 type _Prefix = Iterable[str] | str
-type _PrefixCallable[BotT] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
+type _PrefixCallable[BotT: _Bot] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
 type PrefixType[BotT: _Bot] = _Prefix | _PrefixCallable[BotT]
 
 type BotT[T: _Bot] = T
