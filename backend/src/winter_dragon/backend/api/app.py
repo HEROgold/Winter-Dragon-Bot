@@ -3,12 +3,11 @@
 This module initializes the FastAPI application and includes all API routes.
 """
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
-from .v1.router import api_router as v1_router
+from .v1 import router as v1_router
 
 
 app = FastAPI(
@@ -27,14 +26,10 @@ app.add_middleware(
 )
 
 # Include API routers
-app.include_router(v1_router, prefix="/api/v1")
+app.include_router(v1_router)
 
 
 @app.get("/", include_in_schema=False)
-async def root():
+async def root() -> RedirectResponse:
     """Redirect root endpoint to API documentation."""
     return RedirectResponse(url="/docs")
-
-
-if __name__ == "__main__":
-    uvicorn.run("winter_dragon.backend.api.main:app", host="0.0.0.0", port=8000, reload=True)

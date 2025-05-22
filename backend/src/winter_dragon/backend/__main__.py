@@ -1,12 +1,14 @@
 """The main entry point for the Winter Dragon backend."""
 import uvicorn
 
+from .api.app import app
+
 
 def main() -> None:
     """Run the FastAPI application with uvicorn."""
     uvicorn.run(
-        "winter_dragon.backend.api.main:app",
-        host="0.0.0.0",
+        app,
+        host="0.0.0.0",  # noqa: S104
         port=8000,
         reload=True,
         log_level="info",
