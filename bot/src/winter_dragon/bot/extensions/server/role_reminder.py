@@ -8,6 +8,9 @@ from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.database.tables import AutoReAssign as AutoReAssignDb
 from winter_dragon.database.tables import UserRoles
 
+from backend.src.winter_dragon.backend.api.v1.guilds.roles.guild_roles import GuildRoles
+from database.src.winter_dragon.database.tables.role import Roles
+
 
 AUTO_ASSIGN_REASON = "Member joined again, AutoAssigned roles the user had previously"
 
@@ -34,14 +37,18 @@ class AutoReAssign(GroupCog):
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         """When a member joins, check if they have any roles to be auto-assigned."""
-        for auto_assign in self.session.exec(select(UserRoles).where(
+        guild = member.guild
+        for role in self.session.exec(select(Roles).join(UserRoles).join(GuildRoles).where(
             UserRoles.user_id == member.id,
-            UserRoles.guild_id == member.guild.id,
+            GuildRoles.guild_id == guild.id,
         )).all():
-            if role := member.guild.get_role(auto_assign.role_id):
+            if role.id is None:
+                self.logger.critical(f"on_member_join: Role ID is none for role {role=}, {guild=}")
+                continue
+            if role := guild.get_role(role.id):
                 await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
                 self.logger.debug(
-                    f"Added AutoAssign remembered role {role} to new member {member.mention} in {member.guild}",
+                    f"Added AutoAssign remembered role {role} to new member {member.mention} in {guild}",
                 )
 
     @app_commands.command(name="enable", description="Enable the AutoReAssign feature")

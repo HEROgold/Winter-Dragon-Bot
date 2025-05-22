@@ -34,7 +34,7 @@ from .suggestion import Suggestions
 from .syncbanguild import SyncBanGuild
 from .syncbanuser import SyncBanUser
 from .user import Users
-from .user_roles import UserRoles
+from .associations.user_roles import UserRoles
 from .welcome import Welcome
 from .wyr_question import WyrQuestion
 
