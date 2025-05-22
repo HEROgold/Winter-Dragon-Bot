@@ -7,9 +7,8 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.database.tables import AutoReAssign as AutoReAssignDb
 from winter_dragon.database.tables import UserRoles
-
-from backend.src.winter_dragon.backend.api.v1.guilds.roles.guild_roles import GuildRoles
-from database.src.winter_dragon.database.tables.role import Roles
+from winter_dragon.database.tables.associations.guild_roles import GuildRoles
+from winter_dragon.database.tables.role import Roles
 
 
 AUTO_ASSIGN_REASON = "Member joined again, AutoAssigned roles the user had previously"
