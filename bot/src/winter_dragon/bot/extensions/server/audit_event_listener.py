@@ -19,7 +19,7 @@ class EventListener(Cog):
     @Cog.listener()
     async def on_audit_log_entry_create(self, entry: AuditLogEntry) -> None:
         """Handle the audit log entry."""
-        AuditLog.from_audit_log(entry)
+        AuditLog.from_audit_log(entry) # creates the entry in the database, and returns the entry.
         event_handler = AuditEventHandler(AuditEvent_factory(entry), self.session)
         await event_handler.handle()
 
