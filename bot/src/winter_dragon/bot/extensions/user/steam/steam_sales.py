@@ -80,10 +80,8 @@ class SteamSales(GroupCog):
         self._setup_notifier_messages(notifier)
         embed = notifier.add_sales(new_sales)
 
-    def _get_notify_messages(self) -> None:
+    def _set_notify_messages(self) -> None:
         """Update the notify messages."""
-        if hasattr(SteamSales, "sub_mention_add"):
-            return
         SteamSales.sub_mention_remove = self.get_command_mention(self.slash_remove)
         SteamSales.sub_mention_show = self.get_command_mention(self.slash_show)
         SteamSales.disable_message = f"You can disable this message by using {SteamSales.sub_mention_remove}"
@@ -91,7 +89,7 @@ class SteamSales(GroupCog):
 
     def _setup_notifier_messages(self, notifier: SteamSaleNotifier) -> None:
         """Set up the notifier messages."""
-        self._get_notify_messages()
+        self._set_notify_messages()
         notifier.set_messages(
             SteamSales.sub_mention_remove,
             SteamSales.sub_mention_show,
@@ -145,11 +143,10 @@ class SteamSales(GroupCog):
 
         embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
         notifier = SteamSaleNotifier(self.bot, self.session, embed)
-        self._setup_notifier_messages(notifier)
 
         sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
-        embed = notifier.add_sales(sales)
-        await notifier.notify_user(interaction.user)
+        notifier.add_sales(sales)
+        await interaction.followup.send(embed=notifier.embed)
 
 
 
