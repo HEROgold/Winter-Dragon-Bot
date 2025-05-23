@@ -323,6 +323,11 @@ class LogChannels(GroupCog):
 # Commands Start
 # ---------------
 
+    # FIXME: This requires the bot to have Administrator
+    # Failing case: Command user is guild owner, and has administrator due to a role
+    # The bot does have manage_channels, but not administrator permissions
+    # This will cause the command to fail, raising 403 forbidden.
+    # When the bot is given administrator, it works.
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
@@ -355,7 +360,6 @@ class LogChannels(GroupCog):
 
         category_channels = await self.create_categories(guild, bot_user, overwrites)
         await self.create_log_channels(category_channels)
-        self.session.commit()
 
         category_mention = ", ".join(i.mention for i in category_channels)
         await interaction.followup.send(
