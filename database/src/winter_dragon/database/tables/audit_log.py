@@ -20,6 +20,7 @@ class AuditLog(SQLModel, table=True):
 
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
+        """Create an AuditLog instance from a Discord AuditLogEntry."""
         from winter_dragon.database import session
 
         if entry.target is None:
