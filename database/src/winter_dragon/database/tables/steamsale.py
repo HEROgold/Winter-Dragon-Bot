@@ -17,18 +17,35 @@ class SteamSale(SQLModel, table=True):
 
     def update(self, session: Session) -> bool:
         """Update/override a sale record in Database."""
-        if known := session.exec(select(SteamSale).where(SteamSale.id == self.id).with_for_update()).first():
-            known.title = self.title
-            known.url = self.url
-            known.sale_percent = self.sale_percent
-            known.final_price = self.final_price
-            known.is_dlc = self.is_dlc
-            known.is_bundle = self.is_bundle
-            known.update_datetime = self.update_datetime
-            session.add(known)
-            session.commit()
-            return True
+        if known := (session.exec(select(SteamSale).where(SteamSale.id == self.id).with_for_update()).first()):
+            return self._update_record(known, session)
+        return self._create_record(session)
+
+    def _create_record(self, session: Session) -> False:
+        session.add(SteamSale(
+            id=self.id,
+            title=self.title,
+            url=self.url,
+            sale_percent=self.sale_percent,
+            final_price=self.final_price,
+            is_dlc=self.is_dlc,
+            is_bundle=self.is_bundle,
+            update_datetime=self.update_datetime,
+        ))
+        session.commit()
         return False
+
+    def _update_record(self, known: "SteamSale", session: Session) -> True:
+        known.title = self.title
+        known.url = self.url
+        known.sale_percent = self.sale_percent
+        known.final_price = self.final_price
+        known.is_dlc = self.is_dlc
+        known.is_bundle = self.is_bundle
+        known.update_datetime = self.update_datetime
+        session.add(known)
+        session.commit()
+        return True
 
     def is_outdated(self, session: Session, seconds: int) -> bool:
         """Check if a sale has recently been updated."""
