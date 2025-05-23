@@ -24,7 +24,7 @@ class SteamSaleRepository(LoggerMixin):
         self,
         sale: SteamSale,
     ) -> None:
-        """Add a sale to db, and return presentable TypedDict. Doesn't commit a given session."""
+        """Add or update a sale in the db."""
         self.logger.info(f"Updating sale for: {sale.title}, {sale.url}")
         sale.update(self.session)
 
