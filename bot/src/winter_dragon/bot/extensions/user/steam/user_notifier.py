@@ -35,7 +35,7 @@ class SteamSaleNotifier(LoggerMixin):
         self.users.add(user_id)
 
     def add_sales(self, sales: Iterable[SteamSale]) -> None:
-        """Fill a given embed with sales, and then returns the populated embed."""
+        """Add multiple sales to the notifier."""
         self.logger.debug(f"Adding sales to embed, {sales=}")
         if not sales:
             return
