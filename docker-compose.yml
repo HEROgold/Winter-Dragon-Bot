@@ -25,6 +25,7 @@ services:
     volumes:
       - ./database:/database
       - ./bot:/app
+      - ./config.ini:/config.ini
     ports:
       - 5000:5000
       - 8000:80
