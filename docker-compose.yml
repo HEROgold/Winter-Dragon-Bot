@@ -26,6 +26,7 @@ services:
     volumes:
       - ./bot:/bot
       - ./database:/database
+      - ./config.ini:./config.ini
     depends_on:
       postgres:
         condition: service_healthy
