@@ -21,6 +21,7 @@ classifiers = [
 dependencies = [
     "database",
     "bot",
+    "winter-dragon-backend",
 ]
 
 [build-system]
@@ -28,9 +29,10 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv.sources]
-bot = { workspace = true }
-database = { workspace = true }
 backend = { workspace = true }
+database = { workspace = true }
+winter-dragon-backend = { workspace = true }
+bot = { workspace = true }
 
 [tool.uv.workspace]
 members = ["bot", "database", "backend"]
@@ -40,7 +42,7 @@ package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["*", "database.src.*", "backend.src.*"]
+include = ["*", "bot.src.*", "database.src.*", "backend.src.*"]
 namespaces = true
 
 [tool.setuptools.package-data]

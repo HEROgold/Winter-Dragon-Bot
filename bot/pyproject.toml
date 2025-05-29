@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "discord>=2.3.2",
     "discord-ext-prometheus>=0.2.1",
     "matplotlib>=3.10.1",
     "psutil>=7.0.0",
@@ -17,6 +16,7 @@ dependencies = [
     "requests>=2.32.3",
     "beautifulsoup4>=4.13.4",
     "database",
+    "discord-py>=2.5.2",
 ]
 
 [project.scripts]
