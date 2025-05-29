@@ -6,6 +6,7 @@ from pathlib import Path
 import discord
 from discord import NotFound, app_commands
 from discord.ext import commands
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot._types.dicts import CogData
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
@@ -19,7 +20,7 @@ class AutoCogReloader(Cog):
     data: CogData
 
 
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
+    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
         """Initialize the AutoCogReloader cog."""
         super().__init__(*args, **kwargs)
         self.data = {

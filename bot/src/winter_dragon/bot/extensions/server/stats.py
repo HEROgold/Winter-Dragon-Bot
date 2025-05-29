@@ -8,6 +8,7 @@ import discord
 from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from sqlmodel import select
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.log import LoggerMixin
@@ -192,7 +193,7 @@ class StatChannels:
 class Stats(GroupCog):
     """Cog that contains all guild stats related commands."""
 
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
+    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
         """Initialize the stats cog."""
         super().__init__(*args, **kwargs)
         self.stat_channels: dict[Guild, StatChannels] = {

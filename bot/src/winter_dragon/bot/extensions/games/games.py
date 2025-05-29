@@ -4,6 +4,7 @@ from collections.abc import Sequence
 import discord
 from discord import app_commands
 from sqlmodel import select
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import Games as GamesDB
@@ -15,7 +16,7 @@ class Games(GroupCog):
 
     games: Sequence[GamesDB]
 
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
+    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
         """Initialize the Games cog."""
         super().__init__(*args, **kwargs)
         self.games = self.session.exec(select(GamesDB)).all()

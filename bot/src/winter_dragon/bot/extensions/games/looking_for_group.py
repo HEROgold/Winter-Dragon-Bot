@@ -2,6 +2,7 @@
 import discord
 from discord import app_commands
 from sqlmodel import select
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.extensions.games.games import Games
@@ -17,7 +18,7 @@ class Lfg(GroupCog):
     slash_suggest = Games.slash_suggest
 
 
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
+    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
         """Initialize the LFG cog."""
         super().__init__(*args, **kwargs)
         self.games = [i.name for i in self.session.exec(select(GamesDB)).all()]

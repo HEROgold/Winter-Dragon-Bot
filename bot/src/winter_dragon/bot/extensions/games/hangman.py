@@ -7,6 +7,7 @@ import aiohttp
 import discord
 from discord import app_commands
 from sqlmodel import select
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.ui.button import Button
@@ -370,7 +371,7 @@ class SubmitLetter(Modal, title="Submit Letter"):
 class Hangman(GroupCog):
     """A cog that plays the hangman game in a discord chat message."""
 
-    def __init__(self, *args: WinterDragon, **kwargs: WinterDragon) -> None:
+    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
         """Initialize the Hangman cog."""
         super().__init__(*args, **kwargs)
         self.game = Games.fetch_game_by_name(HANGMAN)
