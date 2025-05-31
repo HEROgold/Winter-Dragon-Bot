@@ -1,10 +1,10 @@
 """Module containing channels to help guild moderators."""
 import itertools
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
-from discord import CategoryChannel, ClientUser, Guild, app_commands
+from discord import CategoryChannel, ChannelType, ClientUser, Guild, TextChannel, app_commands
 from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select
@@ -324,8 +324,16 @@ class LogChannels(GroupCog):
 # ---------------
 
     @app_commands.command(name="detect", description="Finds already existing log channels from this bot in the guild.")
-    async def detect_channels(self, interaction: discord.Interaction) -> None:
+    async def slash_detect(self, interaction: discord.Interaction) -> None:
         """Detect existing log channels in the guild."""
+        await interaction.response.defer(ephemeral=True)
+        await interaction.followup.send(
+            f"Found log channels:\n"
+            f"{"".join([channel[0].mention async for channel in self.detect_channels(interaction)])}",
+        )
+
+    async def detect_channels(self, interaction: discord.Interaction) -> AsyncGenerator[tuple[TextChannel, Channels]]:
+        """Detect existing log channels in the guild, and updates them in the database, then yields them."""
         guild = interaction.guild
         bot_user = self.bot.user
         if guild is None:
@@ -343,21 +351,18 @@ class LogChannels(GroupCog):
         logging_channels = [
             channel
             for category in logging_categories
-            for channel in category.channels
+            for channel in category.text_channels
         ]
         # Update the database with the found channels
         for channel in logging_channels:
-            Channels.update(Channels(
+            log_channel = Channels(
                 id=channel.id,
                 name=channel.name,
                 type=LOGS,
                 guild_id=channel.guild.id,
-            ))
-        await interaction.response.defer(ephemeral=True)
-        await interaction.followup.send(
-            f"Found {len(logging_channels)} log channels in {guild.name}:\n"
-            f"{"".join(channel.mention for channel in logging_channels)}",
-        )
+            )
+            Channels.update(log_channel)
+            yield channel, log_channel
 
     # FIXME: This requires the bot to have Administrator
     # Failing case: Command user is guild owner, and has administrator due to a role
@@ -382,7 +387,7 @@ class LogChannels(GroupCog):
         if bot_user is None:
             msg = "Bot user is None"
             raise NoneTypeError(msg)
-        channels = self.get_db_log_channels(guild)
+        channels = self.get_db_log_channels(guild) or [channel[1] async for channel in self.detect_channels(interaction)]
         if len(channels) > 0:
             await interaction.response.send_message("Log channels are already set up.")
             return
