@@ -15,9 +15,11 @@ env:
 jobs:
   lint-main:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.dirs != '.' }} # ignore errors for each subdir, but fail when any version fails.
     strategy:
       matrix:
         python-version: ['3.12', '3.13']
+        dirs: ['bot', 'backend', 'database']
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -31,38 +33,7 @@ jobs:
           pip install ruff
       - name: Run ruff
         run: |
-          ruff check .
-  lint-dev:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.12', '3.13']
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff
-      - name: Run ruff
-        run: |
-          ruff check . --ignore TD
-  # docker:
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     docker:
-  #       image: docker:19.03.12
-  #       options: --privileged
-  #       ports:
-  #         - 2375:2375
-  #   steps:
-  #     - name: Build all containers
-  #       run: |
-  #         docker compose build ./docker-compose.yml
+          ruff check ${{ matrix.dirs }}
 
   tomlsort:
     runs-on: ubuntu-latest

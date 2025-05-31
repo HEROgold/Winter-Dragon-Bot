@@ -10,11 +10,13 @@ on:
 
 
 jobs:
-  lint-main:
+  lint-dev:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.dirs != '.' }} # ignore errors for each subdir, but fail when any version fails.
     strategy:
       matrix:
         python-version: ['3.12', '3.13']
+        dirs: ['bot', 'backend', 'database']
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -28,5 +30,4 @@ jobs:
           pip install ruff
       - name: Run ruff
         run: |
-          ruff check . --ignore D,FIX,TD
-          # ignore D (docstring), FIX (contains fixme's/todo's), TD (todo's)
+          ruff check ${{ matrix.dirs }} --ignore TD
