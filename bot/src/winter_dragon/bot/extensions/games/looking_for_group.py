@@ -1,14 +1,17 @@
 """Module containing the looking for group cog."""
+from typing import Unpack
+
 import discord
 from discord import app_commands
 from sqlmodel import select
-from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.extensions.games.games import Games
 from winter_dragon.bot.settings import Settings
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import LookingForGroup
+
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 
 
 @app_commands.guilds(Settings.support_guild_id)
@@ -18,9 +21,9 @@ class Lfg(GroupCog):
     slash_suggest = Games.slash_suggest
 
 
-    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
+    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the LFG cog."""
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.games = [i.name for i in self.session.exec(select(GamesDB)).all()]
 
     # TODO: add Database table, matching user id and category, every time someone adds, check matches.
@@ -84,4 +87,4 @@ class Lfg(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Lfg(bot))
+    await bot.add_cog(Lfg(bot=bot))

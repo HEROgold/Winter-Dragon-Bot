@@ -2,13 +2,12 @@
 import random
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Generator
-from typing import TYPE_CHECKING, NoReturn
+from typing import TYPE_CHECKING, NoReturn, Unpack
 
 import discord
 from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from sqlmodel import select
-from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.log import LoggerMixin
@@ -18,6 +17,8 @@ from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools import rainbow
 from winter_dragon.database.tables import Channels
+
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 
 
 if TYPE_CHECKING:
@@ -193,9 +194,9 @@ class StatChannels:
 class Stats(GroupCog):
     """Cog that contains all guild stats related commands."""
 
-    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
+    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the stats cog."""
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.stat_channels: dict[Guild, StatChannels] = {
             i: StatChannels(*self.get_guild_stats_channels(i))
             for i in self.bot.guilds
@@ -534,4 +535,4 @@ class Stats(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Stats(bot))
+    await bot.add_cog(Stats(bot=bot))

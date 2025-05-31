@@ -5,6 +5,7 @@ from .associations import (
     GuildCommands,
     GuildRoles,
 )
+from .associations.user_roles import UserRoles
 from .audit_log import AuditLog
 from .auto_assign_role import AutoAssignRole
 from .auto_reassign import AutoReAssign
@@ -34,7 +35,6 @@ from .suggestion import Suggestions
 from .syncbanguild import SyncBanGuild
 from .syncbanuser import SyncBanUser
 from .user import Users
-from .associations.user_roles import UserRoles
 from .welcome import Welcome
 from .wyr_question import WyrQuestion
 

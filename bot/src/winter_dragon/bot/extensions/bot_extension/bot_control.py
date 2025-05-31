@@ -2,6 +2,7 @@
 import datetime
 import random
 import time
+from typing import Unpack
 
 import discord
 import psutil
@@ -9,7 +10,6 @@ from discord import Guild, app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
-from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import METRICS_FILE, STATUS_MSGS
 from winter_dragon.bot.core.bot import WinterDragon
@@ -19,6 +19,8 @@ from winter_dragon.bot.enums.activity import ACTIVITY_TYPES, STATUS_TYPES, VALID
 from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools.strings import codeblock
 from winter_dragon.database.tables.user import Users
+
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 
 
 @app_commands.guilds(Settings.support_guild_id)
@@ -39,9 +41,9 @@ class BotC(GroupCog):
     periodic_time = Config(180, float)
 
 
-    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
+    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the bot control cog."""
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.timestamps = []
         self.cpu_percentages = []
         self.net_io_counters = []
@@ -473,4 +475,4 @@ class BotC(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(BotC(bot))
+    await bot.add_cog(BotC(bot=bot))

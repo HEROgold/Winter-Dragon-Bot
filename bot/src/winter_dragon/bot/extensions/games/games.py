@@ -1,14 +1,16 @@
 """Module for tracking games."""
 from collections.abc import Sequence
+from typing import Unpack
 
 import discord
 from discord import app_commands
 from sqlmodel import select
-from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import Suggestions
+
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 
 
 class Games(GroupCog):
@@ -16,9 +18,9 @@ class Games(GroupCog):
 
     games: Sequence[GamesDB]
 
-    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
+    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the Games cog."""
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.games = self.session.exec(select(GamesDB)).all()
 
 
@@ -46,4 +48,4 @@ class Games(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Games(bot))
+    await bot.add_cog(Games(bot=bot))

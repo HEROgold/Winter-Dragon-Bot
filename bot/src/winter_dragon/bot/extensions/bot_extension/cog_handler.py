@@ -2,16 +2,18 @@
 import datetime
 import os
 from pathlib import Path
+from typing import Unpack
 
 import discord
 from discord import NotFound, app_commands
 from discord.ext import commands
-from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot._types.dicts import CogData
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.settings import Settings
+
+from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 
 
 class AutoCogReloader(Cog):
@@ -20,9 +22,9 @@ class AutoCogReloader(Cog):
     data: CogData
 
 
-    def __init__(self, *args: *BotKwarg, **kwargs: *BotKwarg) -> None:
+    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the AutoCogReloader cog."""
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.data = {
             "timestamp": datetime.datetime.now(tz=datetime.UTC).timestamp(),
             "files": {},
@@ -274,5 +276,5 @@ class CogsC(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(AutoCogReloader(bot))
-    await bot.add_cog(CogsC(bot))
+    await bot.add_cog(AutoCogReloader(bot=bot))
+    await bot.add_cog(CogsC(bot=bot))
