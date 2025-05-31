@@ -48,7 +48,7 @@ class SteamSaleNotifier(LoggerMixin):
                 Price: {sale.final_price}
                 Dlc: {sale.is_dlc}
                 Bundle: {sale.is_bundle}
-                Last Checked: <t:{int(sale.update_datetime.timestamp())}:F>
+                Last Checked: <t:{sale.update_datetime.timestamp()}:F>
                 Install game: [Click here]({install_url})
             """
             self.embed.add_field(
