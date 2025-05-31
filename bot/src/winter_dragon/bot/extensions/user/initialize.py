@@ -27,6 +27,7 @@ from bot.src.winter_dragon.bot.core.tasks import loop
 class Guild(GroupCog):
     """Cog for creating a new guild."""
 
+    INIT_NAME = "Initializing guild"
     WEEK = 604_800
 
     @Cog.listener()
@@ -39,7 +40,8 @@ class Guild(GroupCog):
     async def _check_guilds(self) -> None:
         """Check if the bot is the owner of any guilds."""
         for guild in self.bot.guilds:
-            if guild.owner == self.bot.user:
+            if guild.owner == self.bot.user or guild.name.startswith(self.INIT_NAME):
+                self.logger.warning(f"Guild {guild.name} ({guild.id}) is initializing, and not yet claimed!")
                 owners = list(self.bot.owner_ids) if self.bot.owner_ids is not None else [self.bot.owner_id]
                 new_owner_id = random.choice(owners)  # noqa: S311
                 if not new_owner_id:
@@ -66,7 +68,7 @@ class Guild(GroupCog):
     ) -> None:
         """Create a new guild for the user, then invite the user."""
         await interaction.response.defer(thinking=True, ephemeral=True)
-        guild = await self.bot.create_guild(name="Initializing guild")
+        guild = await self.bot.create_guild(name=self.INIT_NAME)
         invite = await guild.channels[0].create_invite()
         await interaction.followup.send(invite.url)
         rules_channel = await guild.create_text_channel(
