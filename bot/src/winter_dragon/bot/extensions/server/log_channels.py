@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
-from discord import CategoryChannel, ChannelType, ClientUser, Guild, TextChannel, app_commands
+from discord import CategoryChannel, ClientUser, Guild, TextChannel, app_commands
 from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select

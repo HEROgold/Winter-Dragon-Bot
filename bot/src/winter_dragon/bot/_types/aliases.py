@@ -43,5 +43,7 @@ type _PrefixCallable[BotT: _Bot] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
 type PrefixType[BotT: _Bot] = _Prefix | _PrefixCallable[BotT]
 
 type BotT[T: _Bot] = T
+type SubClass[T] = type[T]  # Type alias for a subclass of T
+
 
 type PermissionsOverwrites = Mapping[Role | Member | Object, PermissionOverwrite]
