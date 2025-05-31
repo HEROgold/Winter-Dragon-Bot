@@ -323,6 +323,42 @@ class LogChannels(GroupCog):
 # Commands Start
 # ---------------
 
+    @app_commands.command(name="detect", description="Finds already existing log channels from this bot in the guild.")
+    async def detect_channels(self, interaction: discord.Interaction) -> None:
+        """Detect existing log channels in the guild."""
+        guild = interaction.guild
+        bot_user = self.bot.user
+        if guild is None:
+            msg = "Guild is None"
+            raise NoneTypeError(msg)
+        if bot_user is None:
+            msg = "Bot user is None"
+            raise NoneTypeError(msg)
+        categories = guild.categories
+        logging_categories = [
+            category
+            for category in categories
+            if f"{bot_user.display_name} Log " in category.name
+        ]
+        logging_channels = [
+            channel
+            for category in logging_categories
+            for channel in category.channels
+        ]
+        # Update the database with the found channels
+        for channel in logging_channels:
+            Channels.update(Channels(
+                id=channel.id,
+                name=channel.name,
+                type=LOGS,
+                guild_id=channel.guild.id,
+            ))
+        await interaction.response.defer(ephemeral=True)
+        await interaction.followup.send(
+            f"Found {len(logging_channels)} log channels in {guild.name}:\n"
+            f"{"".join(channel.mention for channel in logging_channels)}",
+        )
+
     # FIXME: This requires the bot to have Administrator
     # Failing case: Command user is guild owner, and has administrator due to a role
     # The bot does have manage_channels, but not administrator permissions
