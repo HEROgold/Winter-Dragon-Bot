@@ -36,4 +36,4 @@ class Invite(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Invite(bot))
+    await bot.add_cog(Invite(bot=bot))

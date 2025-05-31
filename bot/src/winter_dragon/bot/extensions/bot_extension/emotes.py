@@ -70,4 +70,4 @@ class EmoteManager(Cog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(EmoteManager(bot))
+    await bot.add_cog(EmoteManager(bot=bot))

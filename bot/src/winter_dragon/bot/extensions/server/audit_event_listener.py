@@ -13,7 +13,7 @@ class EventListener(Cog):
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the event listener."""
-        super().__init__(bot)
+        super().__init__(bot=bot)
         self.bot = bot
 
     @Cog.listener()
@@ -27,4 +27,4 @@ class EventListener(Cog):
 
 async def setup(bot: WinterDragon) -> None:
     """Load the event listener."""
-    await bot.add_cog(EventListener(bot))
+    await bot.add_cog(EventListener(bot=bot))

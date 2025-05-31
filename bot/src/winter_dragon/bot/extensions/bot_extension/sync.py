@@ -71,4 +71,4 @@ class Sync(Cog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Sync(bot))
+    await bot.add_cog(Sync(bot=bot))

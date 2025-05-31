@@ -11,4 +11,4 @@ from winter_dragon.bot.settings import Settings
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
     if Settings.log_level == "DEBUG":
-        await bot.add_cog(PrometheusCog(bot))
+        await bot.add_cog(PrometheusCog(bot=bot))

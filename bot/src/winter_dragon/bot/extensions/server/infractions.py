@@ -29,7 +29,7 @@ class Infractions(GroupCog):
     TODO: On automod trigger, add infraction (Delete old ones)
     TODO: Make rules that can trigger an infraction.
         IE: Spamming the same message in more then X amount of channels
-    """
+    """  # noqa: D205
 
     @Cog.listener()
     async def on_automod_rule_create(self, rule: AutoModRule) -> None:
@@ -71,4 +71,4 @@ class Infractions(GroupCog):
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
     return
-    await bot.add_cog(Infractions(bot))
+    await bot.add_cog(Infractions(bot=bot))

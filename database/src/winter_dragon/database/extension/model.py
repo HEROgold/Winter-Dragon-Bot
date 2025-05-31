@@ -1,3 +1,5 @@
+"""Module for extending SQLModel with custom methods."""
+
 from typing import Self
 
 from sqlmodel import Session, select

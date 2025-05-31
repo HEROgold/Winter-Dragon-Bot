@@ -1,3 +1,5 @@
+"""Module for helping find duplicate forum posts."""
+
 from difflib import SequenceMatcher
 
 from bot.src.winter_dragon.bot.core.bot import WinterDragon
@@ -9,7 +11,7 @@ class ForumDupeFinder(GroupCog):
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the ForumDupeFinder with the bot instance."""
-        super().__init__(bot)
+        super().__init__(bot=bot)
         self.forum_posts: list[str] = []  # TODO: replace with actual forum posts titles, preferably from database.
 
     def get_ratio(self, a: str, b: str) -> float:
@@ -29,4 +31,4 @@ class ForumDupeFinder(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(ForumDupeFinder(bot))
+    await bot.add_cog(ForumDupeFinder(bot=bot))

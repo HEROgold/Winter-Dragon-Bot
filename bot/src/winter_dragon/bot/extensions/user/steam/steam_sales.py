@@ -20,7 +20,7 @@ class SteamSales(GroupCog):
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Steam Sales cog."""
-        super().__init__(bot)
+        super().__init__(bot=bot)
         self.repository = SteamSaleRepository(bot)
         self.scraper = SteamScraper()
 
@@ -152,4 +152,4 @@ class SteamSales(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(SteamSales(bot))
+    await bot.add_cog(SteamSales(bot=bot))

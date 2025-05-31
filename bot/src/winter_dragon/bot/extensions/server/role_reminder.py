@@ -30,7 +30,10 @@ class AutoReAssign(GroupCog):
             discord.AuditLogAction.kick,
         ]:
             for role in member.roles:
-                self.session.add(UserRoles(role_id=role.id, guild_id=member.guild.id, user_id=member.id))
+                user_role = UserRoles(role_id=role.id, user_id=member.id)
+                guild_role = GuildRoles(guild_id=member.guild.id, role_id=role.id)
+                self.session.add(user_role)
+                self.session.add(guild_role)
             self.session.commit()
 
     @Cog.listener()
@@ -69,4 +72,4 @@ class AutoReAssign(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(AutoReAssign(bot))
+    await bot.add_cog(AutoReAssign(bot=bot))
