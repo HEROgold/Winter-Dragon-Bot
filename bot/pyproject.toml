@@ -17,6 +17,7 @@ dependencies = [
     "beautifulsoup4>=4.13.4",
     "database",
     "discord-py>=2.5.2",
+    "sentry-sdk>=2.29.1",
 ]
 
 [project.scripts]
