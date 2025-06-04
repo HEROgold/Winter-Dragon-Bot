@@ -15,6 +15,8 @@ from winter_dragon.bot.errors.config import ConfigError
 from winter_dragon.bot.settings import Settings
 from winter_dragon.database import SQLModel, engine
 
+from bot.src.winter_dragon.bot.sentry import Sentry
+
 
 if not config.is_valid():
     msg = f"""Config is not yet updated!, update the following:
@@ -76,6 +78,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    Sentry()
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
     asyncio.run(main())
