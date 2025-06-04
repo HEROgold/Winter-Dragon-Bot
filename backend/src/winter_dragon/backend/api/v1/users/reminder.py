@@ -1,3 +1,4 @@
+"""Module for reminder api endpoints."""
 
 from fastapi import APIRouter, status
 from sqlmodel import select
