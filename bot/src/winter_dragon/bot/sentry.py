@@ -18,4 +18,8 @@ class Sentry:
             # Add data like request headers and IP for users,
             # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
             send_default_pii=True,
+            _experiments={
+                "enable_logs": True,
+            },
+            traces_sample_rate=0.05, # 5% of transactions are sampled for performance monitoring (api calls etc.)
         )
