@@ -18,7 +18,7 @@ class LogsManager:
     current_directory = Path("./")
     first_rollover = Config(False, bool)  # noqa: FBT003
     keep_latest = Config(False, bool)  # noqa: FBT003
-    log_path = Config("./logs")
+    log_path = Config("./logs", str)
     log_size_kb_limit = Config(9000000, int)
 
     def __init__(self) -> None:

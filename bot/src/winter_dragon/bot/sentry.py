@@ -8,7 +8,7 @@ from bot.src.winter_dragon.bot.config import Config
 class Sentry:
     """A class to handle Sentry setup."""
 
-    dsn = Config("")
+    dsn = Config("", str)
 
 
     def __init__(self) -> None:
