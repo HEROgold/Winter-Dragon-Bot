@@ -228,7 +228,7 @@ class Config[VT]:
         return wrapper
 
     @staticmethod
-    def with_setting[T](setting: Config[T]):  # noqa: ANN205
+    def with_setting[OVT](setting: Config[OVT]):  # noqa: ANN205
         """Insert a config value into **kwargs to a given method/function using this decorator."""
 
         def wrapper[F, **P, T: Callable[P, F]](func: T) -> T:
