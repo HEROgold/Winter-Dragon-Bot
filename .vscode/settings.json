@@ -1,5 +1,10 @@
 {
     "python.analysis.typeCheckingMode": "strict",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/bot/src",
+        "${workspaceFolder}/backend/src",
+        "${workspaceFolder}/database/src",
+    ],
     "python.analysis.diagnosticSeverityOverrides": {
         "reportGeneralTypeIssues": "none",
         "reportUnboundVariable": "none",
@@ -100,13 +105,4 @@
     ],
     "todo-tree.tree.showCountsInTree": true,
     "editor.acceptSuggestionOnEnter": "on",
-    "sqltools.useNodeRuntime": true,
-    "sqltools.connections": [
-        {
-            "previewLimit": 50,
-            "driver": "SQLite",
-            "database": "${workspaceFolder:Winter-Dragon-Bot}/database/db",
-            "name": "WinterDragon"
-        }
-    ]
 }
