@@ -13,7 +13,6 @@ class EmojiUpdate(AuditEvent):
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.emoji_update
         self.logger.debug(f"on emoji_update: {self.entry.guild=}, {self.entry=}")
-        # TODO: add to DB
 
     @override
     def create_embed(self) -> Embed:

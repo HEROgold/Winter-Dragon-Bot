@@ -255,9 +255,13 @@ class DatabaseManager(Cog):
         )
         self.session.commit()
 
+    def delete_user_data(self, user: discord.Member) -> None:
+        """Delete all data related to a user."""
+        # TODO: Cascade delete related user data, NOT guild data like syncbans.
+        self.logger.info(f"Deleting all data related to {user} from the database.")
+        self.session.delete(select(Users).where(Users.id == user.id))
+        self.session.commit()
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
     await bot.add_cog(DatabaseManager(bot=bot))
-
-# TODO: Allow users to delete their own data.

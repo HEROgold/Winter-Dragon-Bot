@@ -2,8 +2,14 @@
 from typing import override
 
 from discord import Embed, Member, User
+from sqlmodel import select
 from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.database import session
+from winter_dragon.database.tables.guild import Guilds
+from winter_dragon.database.tables.syncbanguild import SyncBanGuild
+from winter_dragon.database.tables.syncbanuser import SyncBanUser
+from winter_dragon.database.tables.user import Users
 
 
 class Ban(AuditEvent):
@@ -13,7 +19,21 @@ class Ban(AuditEvent):
     async def handle(self) -> None:
         # https://discordpy.readthedocs.io/en/stable/api.html?highlight=auditlogentry#discord.AuditLogAction.ban
         self.logger.debug(f"on ban: {self.entry.guild=}, {self.entry=}")
-        # TODO: add to DB
+        d_user = self.entry.target
+        if not isinstance(d_user, User):
+            self.logger.error(f"Ban target is not a User: {self.entry.target=}")
+            return
+        """
+        TODO: find guild user got banned from.
+        By looking at the latest auditlog for every guild?
+        user = Users.fetch(d_user.id)
+        if session.exec(
+            select(SyncBanGuild).where(SyncBanGuild.guild_id == d_user.guild.id),
+        ).first() is not None:
+            session.add(SyncBanUser(user_id=user.id))
+            session.commit()
+        """
+
 
     @override
     def create_embed(self) -> Embed:
