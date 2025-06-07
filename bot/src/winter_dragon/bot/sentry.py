@@ -1,8 +1,7 @@
 """Module to handle Sentry setup."""
 
 import sentry_sdk
-
-from bot.src.winter_dragon.bot.config import Config
+from winter_dragon.bot.config import Config
 
 
 class Sentry:

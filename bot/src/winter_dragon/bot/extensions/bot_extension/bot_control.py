@@ -10,6 +10,7 @@ from discord import Guild, app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
+from winter_dragon.bot._types.kwargs import BotKwarg
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import METRICS_FILE, STATUS_MSGS
 from winter_dragon.bot.core.bot import WinterDragon
@@ -19,8 +20,6 @@ from winter_dragon.bot.enums.activity import ACTIVITY_TYPES, STATUS_TYPES, VALID
 from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools.strings import codeblock
 from winter_dragon.database.tables.user import Users
-
-from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
 
 
 @app_commands.guilds(Settings.support_guild_id)

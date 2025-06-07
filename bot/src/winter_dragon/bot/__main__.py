@@ -12,10 +12,9 @@ from winter_dragon.bot.config import config
 from winter_dragon.bot.constants import INTENTS
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.errors.config import ConfigError
+from winter_dragon.bot.sentry import Sentry
 from winter_dragon.bot.settings import Settings
 from winter_dragon.database import SQLModel, engine
-
-from bot.src.winter_dragon.bot.sentry import Sentry
 
 
 if not config.is_valid():

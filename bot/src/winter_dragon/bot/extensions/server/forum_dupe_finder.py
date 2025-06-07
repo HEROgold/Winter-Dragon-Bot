@@ -2,8 +2,8 @@
 
 from difflib import SequenceMatcher
 
-from bot.src.winter_dragon.bot.core.bot import WinterDragon
-from bot.src.winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.bot import WinterDragon
+from winter_dragon.bot.core.cogs import GroupCog
 
 
 class ForumDupeFinder(GroupCog):
