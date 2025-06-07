@@ -19,6 +19,7 @@ from winter_dragon.database.tables import Channels, DisabledCommands, GuildComma
 from winter_dragon.database.tables import Users as DbUser
 
 from bot.src.winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.database.tables.command import Commands
 
 
 class Cog(commands.Cog, LoggerMixin):
@@ -58,46 +59,34 @@ class Cog(commands.Cog, LoggerMixin):
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         """Check if a command is disabled for a guild, channel, or user."""
-        # Get db info and check if command is disabled on guild, channel, or just for this user.
-        # TODO @HEROgold: Needs testing
-        #145
-        guild = interaction.guild
-        channel = interaction.channel
-
         if interaction.message is None or not isinstance(interaction, commands.Context):
             user = interaction.user
         else:
             user = interaction.message.author
 
-        targets: list[GuildCommands | Channels | DbUser | None] = []
-        if guild:
-            targets.append(
-                self.session.exec(
-                    select(GuildCommands).where(GuildCommands.guild_id == guild.id),
-                ).first(),
-            )
-        if channel:
-            targets.append(
-                self.session.exec(
-                    select(Channels).where(Channels.id == channel.id),
-                ).first(),
-            )
-        if user:
-            targets.append(
-                self.session.exec(
-                    select(DbUser).where(DbUser.id == user.id),
-                ).first(),
-            )
+        qual_name = None
+        if isinstance(interaction, commands.Context) or interaction.command:
+            qual_name = interaction.command.qualified_name
+        if not qual_name:
+            return False
 
-        # TODO @HEROgold: Rethink the query to get boolean values from the DB directly
-        #144
-        disabled_commands = list(self.session.exec(select(DisabledCommands)).all())
-        disabled_ids = [i.target_id for i in disabled_commands]
+        user_id = user.id if user else None
+        channel_id = interaction.channel.id if interaction.channel else None
+        guild_id = interaction.guild.id if interaction.guild else None
 
-        return next(
-            (True for target in targets if target and target.id in disabled_ids),
-            False,
+        # Check if command is disabled for user, channel, or guild
+        stmt = select(DisabledCommands).join(Commands).where(
+            (Commands.qual_name == qual_name) &
+            (
+                (DisabledCommands.target_id == user_id) |
+                (DisabledCommands.target_id == channel_id) |
+                (DisabledCommands.target_id == guild_id)
+            ),
         )
+
+        # Return True if any matching disabled command exists
+        self.logger.debug(f"Checking if command '{qual_name} is disabled for user {user_id=} {channel_id=} {guild_id=}")
+        return self.session.exec(stmt).first() is not None
 
     def is_command_enabled(self, interaction: discord.Interaction) -> bool:
         """Check if a command is enabled for a guild, channel, or user."""
