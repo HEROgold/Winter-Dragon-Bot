@@ -15,7 +15,6 @@ from winter_dragon.bot.errors.config import ConfigError
 from winter_dragon.bot.sentry import Sentry
 from winter_dragon.bot.settings import Settings
 from winter_dragon.database import SQLModel, engine
-from winter_dragon.database.migrations.migration_manager import migrate as migrate_database
 
 
 if not config.is_valid():
@@ -67,12 +66,6 @@ def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401 Catch all argu
 
 async def main() -> None:
     """Entrypoint of the program."""
-    try:
-        migrate_database(bot.logger)
-    except Exception:
-        bot_logger.exception("Database migration failed")
-        sys.exit(1)
-
     async with bot:
         invite_link = bot.get_bot_invite()
         Settings.application_id = bot.application_id

@@ -445,10 +445,9 @@ wheels = [
 
 [[package]]
 name = "database"
-version = "0.1.1"
+version = "0.1.0"
 source = { virtual = "database" }
 dependencies = [
-    { name = "alembic" },
     { name = "psycopg2-binary" },
     { name = "sqlmodel" },
 ]
