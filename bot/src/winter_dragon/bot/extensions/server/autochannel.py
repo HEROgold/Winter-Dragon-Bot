@@ -15,8 +15,8 @@ from winter_dragon.bot.constants import AUTOCHANNEL_CREATE_REASON
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
-from winter_dragon.database.tables import AutoChannelSettings as ACS
-from winter_dragon.database.tables.channel import Channels  # noqa: N817
+from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
+from winter_dragon.database.tables.channel import Channels
 
 
 if TYPE_CHECKING:
