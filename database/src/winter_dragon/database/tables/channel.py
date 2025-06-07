@@ -11,7 +11,7 @@ class Channels(SQLModel, table=True):
 
     id: int = Field(sa_column=Column(BigInteger(), primary_key=True))
     name: str
-    type: ChannelTypes | None
+    type: ChannelTypes | None = None
     guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds, "id"))))
 
 

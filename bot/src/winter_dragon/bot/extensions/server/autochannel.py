@@ -15,7 +15,8 @@ from winter_dragon.bot.constants import AUTOCHANNEL_CREATE_REASON
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
-from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
+from winter_dragon.database.tables import AutoChannelSettings as ACS
+from winter_dragon.database.tables.channel import Channels  # noqa: N817
 
 
 if TYPE_CHECKING:
@@ -167,10 +168,17 @@ class AutomaticChannels(GroupCog):
             reason=AUTOCHANNEL_CREATE_REASON,
         )
 
-        self.session.add(AC(
-            id = guild.id,
-            channel_id = channel.id,
-        ))
+        self.session.add_all([
+            Channels(
+                id=channel.id,
+                name=channel.name,
+                guild_id=guild.id,
+            ),
+            AC(
+                id = guild.id,
+                channel_id = channel.id,
+            ),
+        ])
         self.session.commit()
         await interaction.response.send_message("**You are all setup and ready to go!**", ephemeral=True)
 
