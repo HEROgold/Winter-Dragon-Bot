@@ -21,10 +21,10 @@ from winter_dragon.bot.extensions.server.log_channels import LogChannels
 from winter_dragon.bot.extensions.server.stats import Stats
 from winter_dragon.bot.extensions.server.welcome import Welcome
 
-from bot.src.winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.core.tasks import loop
 
 
-class Guild(GroupCog):
+class GuildCreator(GroupCog):
     """Cog for creating a new guild."""
 
     INIT_NAME = "Initializing guild"
@@ -146,4 +146,4 @@ class Guild(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Guild(bot=bot))
+    await bot.add_cog(GuildCreator(bot=bot))
