@@ -1,7 +1,7 @@
 """The main entry point for the Winter Dragon backend."""
 import uvicorn
 
-from .api.app import app
+from .app import app
 
 
 def main() -> None:
