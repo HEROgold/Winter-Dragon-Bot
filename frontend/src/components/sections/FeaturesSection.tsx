@@ -47,6 +47,7 @@ const featureData = [
 ] as const;
 
 export function FeaturesSection() {
+  // TODO: add #features anchor link functionality, so we can scroll to this section from links.
   return <div id="features-section" className="py-12 px-4">
     <h2 className="text-3xl font-bold text-center mb-12">Bot Features</h2>
 
