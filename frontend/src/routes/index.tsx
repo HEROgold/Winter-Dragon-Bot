@@ -1,15 +1,15 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Home from '../pages/Home';
+import Home from '@/pages/Home';
 import Layout from '../components/layout/Layout';
 
 // Feature pages
-import FeaturesIndex from '../pages/features/index';
-import ModerationFeature from '../pages/features/Moderation';
-import AutoModFeature from '../pages/features/AutoMod';
-import CustomCommandsFeature from '../pages/features/CustomCommands';
-import WelcomeFeature from '../pages/features/Welcome';
-import LoggingFeature from '../pages/features/Logging';
-import FunFeature from '../pages/features/Fun';
+import FeaturesIndex from '@/pages/features/index';
+import ModerationFeature from '@/pages/features/Moderation';
+import AutoModFeature from '@/pages/features/AutoMod';
+import CustomCommandsFeature from '@/pages/features/CustomCommands';
+import WelcomeFeature from '@/pages/features/Welcome';
+import LoggingFeature from '@/pages/features/Logging';
+import FunFeature from '@/pages/features/Fun';
 import DashboardIndex from '@/pages/dashboard';
 import PremiumIndex from '@/pages/premium';
 
