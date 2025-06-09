@@ -12,10 +12,11 @@ import LoggingFeature from '../pages/features/Logging';
 import FunFeature from '../pages/features/Fun';
 
 // Create routes
-const router = createBrowserRouter([
+export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout />,    children: [
+    element: <Layout />,
+    children: [
       { index: true, element: <Home /> },
       { path: "features", element: <FeaturesIndex /> },
       { path: "features/moderation", element: <ModerationFeature /> },

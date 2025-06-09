@@ -1,8 +1,11 @@
-import { Link, type LinkProps } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { BreadCrumbs } from "./BreadCrumbs";
 import { useRef } from "react";
+import { router } from "@/routes";
 
 export function Navigation() {
+  // https://reactrouter.com/start/framework/pending-ui
+  // Automatically generate this navigation based on the routes defined in the router.
   return (
     <nav className="navbar bg-base-100 shadow-lg">
       <div className="container mx-auto px-4">
