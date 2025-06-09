@@ -1,9 +1,7 @@
 import { useEffect } from "react";
-import { Navbar } from "../components/navigation/Navbar";
-import { Footer } from "../components/cards/Footer";
 import { FeaturesSection } from "../components/sections/FeaturesSection";
 import { BotInformation } from "../components/sections/BotInformation";
-import { BreadCrumbs } from "../components/navigation/BreadCrumbs";
+import { InviteBotSection } from "@/components/buttons/InviteBotSection";
 
 export default function Home() {
   // Add animation effect when component mounts
@@ -15,19 +13,11 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-base-100">
-      {/* Navigation */}
-      {Navbar()}
-      {BreadCrumbs()}
-
-      {/* Hero section */}
-      {BotInformation()}
-
-      {/* Features section */}
-      {FeaturesSection()}
-
-      {/* Footer section */}
-      {Footer()}
-    </div>
+    <>
+      <title>About: Winter Dragon Bot</title>
+      <BotInformation />
+      <FeaturesSection />
+      <InviteBotSection />
+    </>
   );
 }

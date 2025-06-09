@@ -1,13 +1,8 @@
 import "./index.css";
-import Home from "./pages/Home";
-
+import { Routes } from "./routes";
 
 export function App() {
-  return (
-    <div className="container mx-auto p-8 text-center relative z-10">
-      <Home />
-    </div>
-  );
+  return <Routes />;
 }
 
 export default App;
