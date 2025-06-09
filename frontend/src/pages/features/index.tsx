@@ -67,18 +67,14 @@ export default function FeaturesIndex() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {featureData.map((feature, index) => (
-          <Link to={feature.link} key={index} className="transition-transform hover:scale-105">
-            <div className="card bg-base-200 shadow-xl h-full">
-              <div className="card-body">
-                <div className={`badge badge-${feature.badgeColor} mb-2`}>{feature.badgeText}</div>
-                <h2 className="card-title">{feature.title}</h2>
-                <p>{feature.description}</p>
-                <div className="card-actions justify-end mt-4">
-                  <span className="text-primary-content/80 text-sm font-medium">Learn More →</span>
-                </div>
-              </div>
-            </div>
-          </Link>
+          <FeatureCard
+            key={index}
+            title={feature.title}
+            description={feature.description}
+            badgeText={feature.badgeText}
+            badgeColor={feature.badgeColor}
+            link={feature.link}
+          />
         ))}
       </div>
 

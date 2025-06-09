@@ -10,6 +10,8 @@ import CustomCommandsFeature from '../pages/features/CustomCommands';
 import WelcomeFeature from '../pages/features/Welcome';
 import LoggingFeature from '../pages/features/Logging';
 import FunFeature from '../pages/features/Fun';
+import DashboardIndex from '@/pages/dashboard';
+import PremiumIndex from '@/pages/premium';
 
 // Create routes
 export const router = createBrowserRouter([
@@ -25,6 +27,8 @@ export const router = createBrowserRouter([
       { path: "features/welcome", element: <WelcomeFeature /> },
       { path: "features/logging", element: <LoggingFeature /> },
       { path: "features/fun", element: <FunFeature /> },
+      { path: "dashboard", element: <DashboardIndex /> },
+      { path: "premium", element: <PremiumIndex /> },
     ],
   },
 ]);
