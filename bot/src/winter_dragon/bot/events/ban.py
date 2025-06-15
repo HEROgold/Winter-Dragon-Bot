@@ -6,10 +6,7 @@ from sqlmodel import select
 from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.database import session
-from winter_dragon.database.tables.guild import Guilds
-from winter_dragon.database.tables.syncbanguild import SyncBanGuild
-from winter_dragon.database.tables.syncbanuser import SyncBanUser
-from winter_dragon.database.tables.user import Users
+from winter_dragon.database.tables.sync_ban import SyncBanGuild, SyncBanUser
 
 
 class Ban(AuditEvent):
@@ -23,16 +20,15 @@ class Ban(AuditEvent):
         if not isinstance(d_user, User):
             self.logger.error(f"Ban target is not a User: {self.entry.target=}")
             return
-        """
-        TODO: find guild user got banned from.
-        By looking at the latest auditlog for every guild?
-        user = Users.fetch(d_user.id)
+        self.synchronize_ban(d_user)
+
+    def synchronize_ban(self, d_user: User) -> None:
+        """Synchronize the ban with the database."""
         if session.exec(
-            select(SyncBanGuild).where(SyncBanGuild.guild_id == d_user.guild.id),
+            select(SyncBanGuild).where(SyncBanGuild.guild_id == self.entry.guild.id),
         ).first() is not None:
-            session.add(SyncBanUser(user_id=user.id))
+            session.add(SyncBanUser(user_id=d_user.id))
             session.commit()
-        """
 
 
     @override

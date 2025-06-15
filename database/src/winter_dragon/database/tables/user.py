@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel, select
 
 class Users(SQLModel, table=True):
 
-    id: int | None = Field(default=None, sa_column=Column(BigInteger(), primary_key=True, autoincrement=False))
+    id: int = Field(default=None, sa_column=Column(BigInteger(), primary_key=True))
 
     @classmethod
     def fetch(cls, id_: int) -> Self:

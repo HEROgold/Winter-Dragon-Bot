@@ -32,8 +32,7 @@ from .role import Roles
 from .steamsale import SteamSale
 from .steamuser import SteamUsers
 from .suggestion import Suggestions
-from .syncbanguild import SyncBanGuild
-from .syncbanuser import SyncBanUser
+from .sync_ban import SyncBanGuild, SyncBanUser
 from .user import Users
 from .welcome import Welcome
 from .wyr_question import WyrQuestion

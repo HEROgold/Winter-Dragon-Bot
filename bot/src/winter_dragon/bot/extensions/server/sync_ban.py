@@ -4,8 +4,11 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import SyncBanGuild, SyncBanUser
+from winter_dragon.database.tables.guild import Guilds
+from winter_dragon.database.tables.sync_ban.sync_ban_banned_by import SyncBanBannedBy
+from winter_dragon.database.tables.user import Users
 
 
 class SyncedBans(GroupCog):
@@ -18,17 +21,12 @@ class SyncedBans(GroupCog):
             permissions=discord.Permissions.none(),
         )
 
-    @Cog.listener()
-    async def on_ban(self, member: discord.Member) -> None:
-        """When a member is banned, sync the ban across all guilds."""
-        await self.synced_ban_sync(member)
-
     sync = app_commands.Group(
         name="sync",
         description="Synchronize bans across other servers",
     )
 
-    @sync.command(name="join", description="Start syncing ban's with this guild")
+    @sync.command(name="join", description="Start syncing ban's with other guilds.")
     async def slash_synced_ban_join(self, interaction: discord.Interaction) -> None:
         """Start syncing ban's with this guild."""
         guild = interaction.guild
@@ -51,7 +49,7 @@ class SyncedBans(GroupCog):
             ephemeral=True,
         )
 
-    @sync.command(name="leave", description="Stop syncing ban's with this guild")
+    @sync.command(name="leave", description="Stop syncing ban's with other guilds.")
     async def slash_synced_ban_leave(self, interaction: discord.Interaction) -> None:
         """Stop syncing ban's with this guild."""
         guild = interaction.guild
@@ -70,24 +68,31 @@ class SyncedBans(GroupCog):
         self.session.commit()
 
         await interaction.response.send_message(
-            "This guild will no longer have ban's synced across this bot.",
+            "This guild will no longer have ban's synced across other guilds.",
             ephemeral=True,
         )
 
-    async def synced_ban_sync(self, member: discord.Member) -> None:
-            """Ban a member from all guilds that are synced."""
-            self.session.add(
-                SyncBanUser(
-                    user_id=member.id,
-                ),
+    @sync.command(name="sync", description="Ban members banned from other synced guilds.")
+    async def synced_ban_sync(self, interaction: discord.Interaction) -> None:
+        """Ban all members from all guilds that are synced."""
+        query = (
+            select(SyncBanBannedBy, Users, Guilds)
+            .join(SyncBanUser)
+            .join(Users)
+            .join(SyncBanGuild)
+            .join(Guilds)
+            .where(SyncBanUser.user_id == Users.id, SyncBanGuild.guild_id == Guilds.id)
+        )
+        for result in self.session.exec(query).all():
+            reason, user, guild = result
+            guild = self.bot.get_guild(guild.id)
+            member = interaction.guild.get_member(user.id)
+            if member is None:
+                continue
+            await interaction.guild.ban(
+                member,
+                reason=f"Syncing bans: {reason or 'No reason provided'} from {guild.name if guild else 'Unknown Guild'}",
             )
-
-            for db_guild in self.session.exec(select(SyncBanGuild)).all():
-                # Instead of banning the user, we should notify guild moderators/admins
-                # that the user has been banned in another guild, warning them of the user.
-                if guild := self.bot.get_guild(db_guild.guild_id):
-                    await guild.ban(member, reason="Syncing bans")
-            self.session.commit()
 
 
 async def setup(bot: WinterDragon) -> None:
