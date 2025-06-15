@@ -4,6 +4,7 @@ from typing import Self
 
 from sqlmodel import Session, select
 from sqlmodel import SQLModel as BaseSQLModel
+from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 
 
 class SQLModel(BaseSQLModel):
@@ -11,8 +12,15 @@ class SQLModel(BaseSQLModel):
 
     id: int | None
 
+    def add(self: Self, session: Session) -> None:
+        """Add a record to Database."""
+        if self.id is not None:
+            msg = f"Record with {self.__class__.__name__}.id={self.id} already exists."
+            raise AlreadyExistsError(msg)
+        self._create_record(session)
+
     def update(self: Self, session: Session) -> None:
-        """Create or update a sale record in Database."""
+        """Create or update a record in Database."""
         if known := session.exec(
             select(self.__class__)
             .where(self.__class__.id == self.id)
@@ -20,6 +28,19 @@ class SQLModel(BaseSQLModel):
         ).first():
             return self._update_record(known, session)
         return self._create_record(session)
+
+    def delete(self, session: Session) -> None:
+        """Delete a record from Database."""
+        if known := session.exec(
+            select(self.__class__)
+            .where(self.__class__.id == self.id)
+            .with_for_update(),
+        ).first():
+            session.delete(known)
+            session.commit()
+        else:
+            msg = f"Record with {self.__class__.__name__}.id={self.id} not found for deletion."
+            raise NotFoundError(msg)
 
     def _create_record(self, session: Session) -> None:
         session.add(self)
