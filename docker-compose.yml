@@ -51,8 +51,8 @@ services:
   frontend:
     container_name: website-frontend
     build:
-      context: .
-      dockerfile: frontend/dockerfile
+      context: ./frontend
+      dockerfile: dockerfile
     volumes:
       - ./frontend:/app
     ports:
