@@ -2,8 +2,11 @@ import { Link } from "react-router-dom";
 import { BreadCrumbs } from "./BreadCrumbs";
 import { useRef } from "react";
 import { router } from "@/routes";
+import { useAuth, type User } from "@/contexts/AuthContext";
 
 export function Navigation() {
+  const { isAuthenticated, login, logout, user } = useAuth();
+  
   // https://reactrouter.com/start/framework/pending-ui
   // Automatically generate this navigation based on the routes defined in the router.
   return (
@@ -16,10 +19,11 @@ export function Navigation() {
               <Link to="/features/welcome">Welcome</Link>,
               <Link to="/features/logging">Logging</Link>,
             ]} />
-            <li><Link to="/dashboard">Dashboard</Link></li>
+            {isAuthenticated && <li><Link to="/dashboard">Dashboard</Link></li>}
             <li><Link to="/premium">Premium</Link></li>
           </ul>
         </div>
+        {navbarEnd(isAuthenticated, user, logout, login)}
       </div>
     </nav>
   );
@@ -28,6 +32,43 @@ export function Navigation() {
 interface NavMenuChildProps {
   links: React.ReactNode[];
   onClick?: () => void;
+}
+
+function navbarEnd(isAuthenticated: boolean, user: User, logout: () => void, login: () => void) {
+  return <div className="navbar-end">
+    {isAuthenticated ? (
+      <div className="dropdown dropdown-end">
+        <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+          <div className="w-10 rounded-full">
+            {user?.avatar ? (
+              <img
+                src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
+                alt={`${user.username}'s avatar`} />
+            ) : (
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-content">
+                {user?.username?.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+        </div>
+        <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+          <li className="menu-title">
+            <span>{user?.username}</span>
+          </li>
+          <li><Link to="/dashboard">Dashboard</Link></li>
+          <li><a onClick={logout}>Logout</a></li>
+        </ul>
+      </div>
+    ) : (
+      DiscordLoginButton(login)
+    )}
+  </div>;
+}
+
+function DiscordLoginButton(login: () => void) {
+  return <button className="btn btn-primary" onClick={login}>
+    Login with Discord
+  </button>;
 }
 
 function NavMenu({parent, links}: {parent: string, links: React.ReactNode[]}) {

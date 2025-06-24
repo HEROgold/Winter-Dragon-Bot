@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/daisyui/card";
+import { Badge } from "@/components/daisyui/badge";
 
 export interface FeatureCardProps {
   title: string;
@@ -22,19 +24,20 @@ export function FeatureCard({
   badgeColor,
   link,
   linkText = "Learn More",
-}: FeatureCardProps) {
-  return (
-    <div className="card bg-base-200 shadow-xl hover:shadow-2xl transition-all">
-      <div className="card-body">
-        <div className={`badge badge-${badgeColor} mb-2`}>{badgeText}</div>
-        <h3 className="card-title">{title}</h3>
+}: FeatureCardProps) {  return (
+    <Card className="bg-base-200 shadow-xl hover:shadow-2xl transition-all">
+      <CardHeader>
+        <Badge variant={badgeColor} className="mb-2">{badgeText}</Badge>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
         <p>{description}</p>
-        <div className="card-actions justify-end mt-4">
-          <Link to={link} className="btn btn-sm btn-primary">
-            {linkText}
-          </Link>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+      <CardFooter className="justify-end">
+        <Link to={link} className="btn btn-sm btn-primary">
+          {linkText}
+        </Link>
+      </CardFooter>
+    </Card>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FeaturePageTemplate } from "../../components/ui/FeaturePageTemplate";
+import { FeaturePage } from "../../templates/FeaturePageTemplate";
 
 export default function CustomCommandsFeature() {
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function CustomCommandsFeature() {
   ];
 
   return (
-    <FeaturePageTemplate
+    <FeaturePage
       title="Custom Commands"
       subtitle="Personalize Your Server Experience"
       description="Create your own custom commands to provide server information, automate responses, or add fun interactions unique to your community. Winter Dragon Bot's powerful custom command system offers flexibility and ease of use."

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FeaturePageTemplate } from "../../components/ui/FeaturePageTemplate";
+import { FeaturePage } from "../../templates/FeaturePageTemplate";
 
 export default function FunFeature() {
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function FunFeature() {
   ];
 
   return (
-    <FeaturePageTemplate
+    <FeaturePage
       title="Fun & Games"
       subtitle="Entertainment for Your Community"
       description="Keep your community engaged and entertained with Winter Dragon Bot's variety of fun commands, games, and utility features. From memes to trivia contests, there's something for everyone."

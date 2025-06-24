@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FeaturePageTemplate } from "../../components/ui/FeaturePageTemplate";
+import { FeaturePage } from "../../templates/FeaturePageTemplate";
 
 export default function LoggingFeature() {
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function LoggingFeature() {
   ];
 
   return (
-    <FeaturePageTemplate
+    <FeaturePage
       title="Advanced Logging"
       subtitle="Comprehensive Server Tracking"
       description="Winter Dragon Bot provides detailed, customizable logging for all server activities. Keep track of important events, maintain server security, and have complete records of changes for moderation purposes."

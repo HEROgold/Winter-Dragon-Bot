@@ -26,7 +26,7 @@ function BotAvatar() {
 
 function ExplorationLinks() {
   return <div className="flex justify-center gap-4 flex-wrap">
-    <a href="#features" className="btn btn-primary">Explore Features</a>
+    <a href="/features" className="btn btn-primary">Explore Features</a>
     <a href="/commands" className="btn btn-accent">View Commands</a>
     <a href="/dashboard" className="btn btn-secondary">Dashboard</a>
   </div>;

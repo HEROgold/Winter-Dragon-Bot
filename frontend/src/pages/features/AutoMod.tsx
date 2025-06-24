@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FeaturePageTemplate } from "../../components/ui/FeaturePageTemplate";
+import { FeaturePage } from "../../templates/FeaturePageTemplate";
 
 export default function AutoModFeature() {
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function AutoModFeature() {
   ];
 
   return (
-    <FeaturePageTemplate
+    <FeaturePage
       title="Auto-Moderation"
       subtitle="Automated Server Protection"
       description="Winter Dragon Bot's advanced auto-moderation system helps keep your server safe without requiring constant manual oversight. Configure powerful filters and automated responses to handle common moderation issues."

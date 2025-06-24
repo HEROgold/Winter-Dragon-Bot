@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FeaturePageTemplate } from "../../components/ui/FeaturePageTemplate";
+import { FeaturePage } from "../../templates/FeaturePageTemplate";
 
 export default function WelcomeFeature() {
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function WelcomeFeature() {
   ];
 
   return (
-    <FeaturePageTemplate
+    <FeaturePage
       title="Welcome System"
       subtitle="First Impressions Matter"
       description="Make new members feel at home with Winter Dragon Bot's comprehensive welcome system. Create engaging first interactions, provide clear guidance, and streamline the onboarding process for your community."

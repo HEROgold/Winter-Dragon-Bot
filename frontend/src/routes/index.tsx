@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Home from '@/pages/Home';
-import Layout from '../components/layout/Layout';
+import Layout from '../templates/Layout';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 // Feature pages
 import FeaturesIndex from '@/pages/features/index';
@@ -12,6 +13,7 @@ import LoggingFeature from '@/pages/features/Logging';
 import FunFeature from '@/pages/features/Fun';
 import DashboardIndex from '@/pages/dashboard';
 import PremiumIndex from '@/pages/premium';
+import { Callback } from '@/pages/auth/callback';
 
 // Create routes
 export const router = createBrowserRouter([
@@ -27,8 +29,9 @@ export const router = createBrowserRouter([
       { path: "features/welcome", element: <WelcomeFeature /> },
       { path: "features/logging", element: <LoggingFeature /> },
       { path: "features/fun", element: <FunFeature /> },
-      { path: "dashboard", element: <DashboardIndex /> },
+      { path: "dashboard", element: <ProtectedRoute><DashboardIndex /></ProtectedRoute> },
       { path: "premium", element: <PremiumIndex /> },
+      { path: "callback", element: <Callback /> },
     ],
   },
 ]);

@@ -12,7 +12,7 @@ interface CommandReference {
   permission: string;
 }
 
-interface FeaturePageTemplateProps {
+interface FeaturePageProps {
   title: string;
   subtitle: string;
   description: string;
@@ -23,13 +23,13 @@ interface FeaturePageTemplateProps {
 /**
  * A reusable template for feature pages
  */
-export function FeaturePageTemplate({
+export function FeaturePage({
   title,
   subtitle,
   description,
   featureDetails,
   commandReferences,
-}: FeaturePageTemplateProps) {
+}: FeaturePageProps) {
   return (
     <div className="py-8 px-4 max-w-6xl mx-auto">
       <h1 className="text-4xl font-bold mb-6">{title}</h1>
