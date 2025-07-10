@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Numeric
-from sqlmodel import Field, SQLModel
+
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.commandgroup import CommandGroups
 
 
-class CommandGroups(SQLModel, table=True):
-
-    id: int | None = Field(sa_column=Column(Numeric(20, 0), primary_key=True), default=None)
-    name: str
+model = APIModel(CommandGroups)
+router = model.router

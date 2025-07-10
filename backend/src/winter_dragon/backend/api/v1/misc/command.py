@@ -1,8 +1,6 @@
-from sqlmodel import Field, SQLModel
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.command import Commands
 
 
-class Commands(SQLModel, table=True):
-
-    id: int | None = Field(default=None, primary_key=True)
-    qual_name: str
-    call_count: int
+model = APIModel(Commands)
+router = model.router

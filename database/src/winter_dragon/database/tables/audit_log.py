@@ -1,17 +1,16 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Self
 
-from sqlalchemy import BigInteger, Column
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+from winter_dragon.database.extension.model import DiscordID
 
 
 if TYPE_CHECKING:
     from discord import AuditLogEntry
 
 
-class AuditLog(SQLModel, table=True):
+class AuditLog(DiscordID, table=True):
 
-    id: int = Field(default=None, sa_column=Column(BigInteger(), primary_key=True))
     action: int # AuditLogAction
     reason: str | None = Field(default=None, nullable=True)
     created_at: datetime

@@ -1,8 +1,7 @@
 
-from sqlmodel import Field, SQLModel
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.incremental.generators import Generators
 
 
-class Generators(SQLModel, table=True):
-
-    id: int = Field(primary_key=True)
-    name: str
+model = APIModel(Generators)
+router = model.router

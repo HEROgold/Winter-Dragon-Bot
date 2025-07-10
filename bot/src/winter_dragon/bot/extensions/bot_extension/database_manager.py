@@ -25,7 +25,7 @@ class DatabaseManager(Cog):
         self.update.start()
 
     @Cog.listener()
-    async def on_guild_channel_update( self, _: discord.abc.GuildChannel, after: discord.abc.GuildChannel) -> None:
+    async def on_guild_channel_update(self, _: discord.abc.GuildChannel, after: discord.abc.GuildChannel) -> None:
         """When a channel is updated, update it in the database."""
         Channels.update(Channels(
             id = after.id,

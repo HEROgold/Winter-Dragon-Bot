@@ -1,10 +1,7 @@
-from sqlmodel import Field, SQLModel
-from winter_dragon.database.keys import get_foreign_key
-from winter_dragon.database.tables.message import Messages
+
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.hangman import Hangmen
 
 
-class Hangmen(SQLModel, table=True):
-
-    id: int = Field(foreign_key=get_foreign_key(Messages, "id"), primary_key=True, unique=True)
-    word: str
-    letters: str
+model = APIModel(Hangmen)
+router = model.router

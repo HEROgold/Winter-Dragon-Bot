@@ -117,12 +117,12 @@ class SteamSaleNotifier(LoggerMixin):
         users = self.session.exec(select(SteamUsers)).all()
         self.logger.debug(f"Got embed with sales, {self.embed}, to send to {users=}")
 
-        for db_user in users:
-            self.logger.debug(f"Trying to show new sales to {db_user.id=}")
+        for subscribed_user in users:
+            self.logger.debug(f"Trying to show new sales to {subscribed_user.user_id=}")
             try:
-                self.users.add(self.bot.get_user(db_user.id) or await self.bot.fetch_user(db_user.id))
+                self.users.add(self.bot.get_user(subscribed_user.user_id) or await self.bot.fetch_user(subscribed_user.user_id))
             except NotFound:
-                self.logger.warning(f"Not showing {db_user.id=} sales, discord.errors.NotFound")
+                self.logger.warning(f"Not showing {subscribed_user.user_id=} sales, discord.errors.NotFound")
                 continue
 
 

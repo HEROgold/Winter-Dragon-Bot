@@ -1,8 +1,6 @@
-from sqlalchemy import BigInteger, Column
-from sqlmodel import Field, SQLModel
+
+from winter_dragon.database.extension.model import DiscordID
 
 
-class Roles(SQLModel, table=True):
-
-    id: int | None = Field(sa_column=Column(BigInteger(), primary_key=True), default=None)
+class Roles(DiscordID, table=True):
     name: str

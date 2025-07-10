@@ -1,7 +1,5 @@
-from sqlalchemy import BigInteger, Column
-from sqlmodel import Field, SQLModel
+from winter_dragon.database.extension.model import DiscordID
 
 
-class Guilds(SQLModel, table=True):
-
-    id: int = Field(default=None, sa_column=Column(BigInteger(), primary_key=True))
+class Guilds(DiscordID, table=True):
+    ...

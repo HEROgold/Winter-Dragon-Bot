@@ -1,9 +1,7 @@
-from sqlmodel import Field, SQLModel
+
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.suggestion import Suggestions
 
 
-class Suggestions(SQLModel, table=True):
-
-    id: int | None = Field(default=None, primary_key=True)
-    type: str
-    is_verified: bool = Field(default=False)
-    content: str
+model = APIModel(Suggestions)
+router = model.router

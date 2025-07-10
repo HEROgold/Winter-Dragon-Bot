@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Numeric
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+from winter_dragon.database.extension.model import SQLModel
 
 
 class CommandGroups(SQLModel, table=True):

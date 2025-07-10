@@ -1,7 +1,7 @@
-from sqlmodel import Field, SQLModel
+
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.nhiequestion import NhieQuestion
 
 
-class NhieQuestion(SQLModel, table=True):
-
-    id: int | None = Field(default=None, primary_key=True)
-    value: str
+model = APIModel(NhieQuestion)
+router = model.router

@@ -1,7 +1,7 @@
-from sqlalchemy import String
-from sqlmodel import Field, SQLModel
+
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.wyr_question import WyrQuestion
 
 
-class WyrQuestion(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    value: str = Field(String())
+model = APIModel(WyrQuestion)
+router = model.router

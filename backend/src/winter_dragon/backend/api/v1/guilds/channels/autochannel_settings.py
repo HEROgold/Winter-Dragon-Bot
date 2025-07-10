@@ -1,10 +1,7 @@
-from sqlmodel import Field, SQLModel
-from winter_dragon.database.keys import get_foreign_key
-from winter_dragon.database.tables.user import Users
+
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.autochannel_settings import AutoChannelSettings
 
 
-class AutoChannelSettings(SQLModel, table=True):
-
-    user_id: int | None = Field(foreign_key=get_foreign_key(Users, "id"),default=None, primary_key=True)
-    channel_name: str
-    channel_limit: int
+model = APIModel(AutoChannelSettings)
+router = model.router

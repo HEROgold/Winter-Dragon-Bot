@@ -268,7 +268,7 @@ class SubmitLetter(Modal, title="Submit Letter"):
 
         self.hangman_db = self.session.exec(
                 select(HangmanDb)
-                .where(HangmanDb.id == self.interaction.message.id),
+                .where(HangmanDb.message_id == self.interaction.message.id),
             ).first() or await self.new_hangman_game()
 
     def calculate_placement(self, hangman_players: list[AUH], player: AUH) -> int:
@@ -340,10 +340,10 @@ class SubmitLetter(Modal, title="Submit Letter"):
             raise ValueError(msg)
 
         player = AUH(
-                    hangman_id=self.interaction.message.id,
-                    user_id=self.interaction.user.id,
-                    score=0,
-                )
+            hangman_id=self.interaction.message.id,
+            user_id=self.interaction.user.id,
+            score=0,
+        )
         self.session.add(player)
         return player
 
@@ -361,7 +361,7 @@ class SubmitLetter(Modal, title="Submit Letter"):
             raise ValueError(msg)
 
         hangman_db = HangmanDb(
-            id=self.interaction.message.id,
+            message_id=self.interaction.message.id,
             word=r_word,
             letters="",
         )

@@ -1,12 +1,7 @@
 
-from sqlalchemy import Column, ForeignKey
-from sqlmodel import Field, SQLModel
-from winter_dragon.database.keys import get_foreign_key
-from winter_dragon.database.tables.lobby import Lobbies
-from winter_dragon.database.tables.user import Users
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.associations.user_lobby import AssociationUserLobby
 
 
-class AssociationUserLobby(SQLModel, table=True):
-
-    lobby_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Lobbies, "id")), primary_key=True))
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id")), primary_key=True))
+model = APIModel(AssociationUserLobby)
+router = model.router

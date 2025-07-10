@@ -1,11 +1,7 @@
 
-from sqlmodel import Field, SQLModel
-from winter_dragon.database.keys import get_foreign_key
-from winter_dragon.database.tables.user import Users
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.incremental.currency import UserMoney
 
 
-class UserMoney(SQLModel, table=True):
-
-    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), primary_key=True)
-    currency: str = Field(primary_key=True)
-    value: int = Field(default=0)
+model = APIModel(UserMoney)
+router = model.router

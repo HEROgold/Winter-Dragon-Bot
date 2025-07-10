@@ -2,7 +2,8 @@ from datetime import UTC, datetime
 from functools import partial
 
 from sqlalchemy import Column, ForeignKey
-from sqlmodel import Field, Relationship, SQLModel, func, select
+from sqlmodel import Field, Relationship, func, select
+from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.user import Users

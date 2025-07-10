@@ -1,6 +1,7 @@
 from typing import Self
 
-from sqlmodel import Field, SQLModel, select
+from sqlmodel import Field
+from winter_dragon.database.extension.model import SQLModel, select
 
 
 class Games(SQLModel, table=True):

@@ -1,15 +1,7 @@
-import enum
 
-from sqlmodel import Field, SQLModel
-
-
-class LobbyStatusEnum(enum.Enum):
-    CREATED = "created"
-    WAITING = "waiting"
-    BUSY = "busy"
-    ENDED = "ended"
+from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.lobbystatus import LobbyStatus
 
 
-class LobbyStatus(SQLModel, table=True):
-
-    status: str = Field(primary_key=True)
+model = APIModel(LobbyStatus)
+router = model.router

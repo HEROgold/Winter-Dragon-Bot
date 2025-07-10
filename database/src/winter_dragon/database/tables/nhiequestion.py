@@ -1,4 +1,5 @@
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+from winter_dragon.database.extension.model import SQLModel
 
 
 class NhieQuestion(SQLModel, table=True):

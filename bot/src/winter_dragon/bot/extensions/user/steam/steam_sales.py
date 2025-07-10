@@ -110,11 +110,11 @@ class SteamSales(GroupCog):
             self.session.add(Users(id = interaction.user.id))
             self.session.commit()
 
-        result = self.session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
+        result = self.session.exec(select(SteamUsers).where(SteamUsers.user_id == interaction.user.id))
         if result.first():
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
             return
-        self.session.add(SteamUsers(id = interaction.user.id))
+        self.session.add(SteamUsers(user_id = interaction.user.id))
         self.session.commit()
         sub_mention = self.get_command_mention(self.slash_show)
         msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
@@ -124,7 +124,7 @@ class SteamSales(GroupCog):
     @app_commands.command(name="remove", description="No longer get notified of free steam games")
     async def slash_remove(self, interaction: Interaction) -> None:
         """Remove a user from the list of recipients for free steam games."""
-        result = self.session.exec(select(SteamUsers).where(SteamUsers.id == interaction.user.id))
+        result = self.session.exec(select(SteamUsers).where(SteamUsers.user_id == interaction.user.id))
         user = result.first()
         if not user:
             await interaction.response.send_message("Not in the list of recipients", ephemeral=True)
