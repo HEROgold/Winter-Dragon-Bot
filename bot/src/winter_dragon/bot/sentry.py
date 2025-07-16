@@ -20,5 +20,5 @@ class Sentry:
             _experiments={
                 "enable_logs": True,
             },
-            traces_sample_rate=0.05, # 5% of transactions are sampled for performance monitoring (api calls etc.)
+            traces_sample_rate=1, # 100% of error traces will be sent
         )
