@@ -64,7 +64,7 @@ class EmoteManager(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
-        """Add the Emote Manager role to any user that joins a emote guild."""
+        """Add the Emote Manager role to any user that joins a emote guild. (These should only be the bot owners)."""
         role = next(role for role in member.guild.roles if role.name == EMOTE_MANAGER)
         await member.add_roles(role)
 

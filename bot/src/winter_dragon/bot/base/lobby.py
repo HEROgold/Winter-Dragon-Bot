@@ -12,7 +12,8 @@ import discord
 from discord import Interaction, User
 from discord.ui import Button, View
 from sqlmodel import select
-from winter_dragon.database import Session, engine
+from winter_dragon.database import Session
+from winter_dragon.database.constants import engine
 from winter_dragon.database.tables import AssociationUserLobby as AUL  # noqa: N817
 from winter_dragon.database.tables import Lobbies as DbLobby
 

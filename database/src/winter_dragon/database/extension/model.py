@@ -6,14 +6,13 @@ from typing import ClassVar, Self
 from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
-from winter_dragon.database import session as db_session
+from winter_dragon.database.constants import session as db_session
 from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 
 
-class SQLModel(BaseSQLModel):
-    """Base SQLModel class with custom methods."""
+class BaseModel(BaseSQLModel):
+    """Base model class with custom methods."""
 
-    id: int | None = Field(default=None, primary_key=True)
     _session: ClassVar[Session] = db_session
 
     @property
@@ -100,12 +99,17 @@ class SQLModel(BaseSQLModel):
         session.add(known)
         session.commit()
 
-class DiscordID(SQLModel):
+
+class SQLModel(BaseModel):
+    """Base SQLModel class with custom methods."""
+
+    id: int | None = Field(default=None, primary_key=True, index=True)
+
+
+class DiscordID(BaseModel):
     """Model with a Discord ID as primary key."""
 
-    # Ignore override of id field, as DiscordID's are always present and known.
-    # Their column is BigInteger to fit discord's snowflake IDs.
-    id: int = Field(sa_column=Column(BigInteger(), primary_key=True)) # type: ignore[reportIncompatibleVariableOverride]
+    id: int = Field(sa_column=Column(BigInteger(), primary_key=True))
 
     @classmethod
     def fetch(cls, id_: int) -> Self:

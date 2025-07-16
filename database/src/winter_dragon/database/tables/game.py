@@ -5,8 +5,7 @@ from winter_dragon.database.extension.model import SQLModel, select
 
 
 class Games(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(unique=True)
+    name: str = Field(unique=True, index=True)
 
     @classmethod
     def fetch_game_by_name(cls, name: str) -> Self:
@@ -17,7 +16,7 @@ class Games(SQLModel, table=True):
             name (str): Name for the game
 
         """
-        from winter_dragon.database import session
+        from winter_dragon.database.constants import session
 
         with session:
             if game := session.exec(select(cls).where(cls.name == name)).first():

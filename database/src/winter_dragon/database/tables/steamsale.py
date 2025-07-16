@@ -1,12 +1,11 @@
 from datetime import UTC, datetime, timedelta
 
-from sqlmodel import Field, Session, select
+from sqlmodel import Session, select
 from winter_dragon.database.extension.model import SQLModel
 
 
 class SteamSale(SQLModel, table=True):
 
-    id: int | None = Field(default=None, primary_key=True)
     title: str
     url: str
     sale_percent: int
@@ -17,6 +16,7 @@ class SteamSale(SQLModel, table=True):
 
     def is_outdated(self, session: Session, seconds: int) -> bool:
         """Check if a sale has recently been updated."""
+        # TODO: Try to calculate this on the database side.
         if known := session.exec(select(SteamSale).where(SteamSale.id == self.id)).first():
             update_period_date = known.update_datetime.astimezone(UTC) + timedelta(seconds=seconds)
             return update_period_date <= datetime.now(tz=UTC)

@@ -3,12 +3,12 @@ from collections.abc import Sequence
 
 from fastapi import APIRouter
 from sqlmodel import select
-from winter_dragon.database import session
+from winter_dragon.database.constants import session
 from winter_dragon.database.extension.api_model import APIModel
+from winter_dragon.database.tables.associations.auto_assign_role import AutoAssignRole
 from winter_dragon.database.tables.associations.guild_audit_log import GuildAuditLog
 from winter_dragon.database.tables.associations.guild_roles import GuildRoles
 from winter_dragon.database.tables.audit_log import AuditLog
-from winter_dragon.database.tables.auto_assign_role import AutoAssignRole
 from winter_dragon.database.tables.auto_reassign import AutoReAssign
 from winter_dragon.database.tables.channel import Channels
 from winter_dragon.database.tables.guild import Guilds

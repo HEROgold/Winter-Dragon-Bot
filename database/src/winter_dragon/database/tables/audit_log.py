@@ -20,7 +20,7 @@ class AuditLog(DiscordID, table=True):
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
         """Create an AuditLog instance from a Discord AuditLogEntry."""
-        from winter_dragon.database import session
+        from winter_dragon.database.constants import session
 
         if entry.target is None:
             msg = f"Target should be AuditLogEntry.target type, but is {type(entry.target)}"

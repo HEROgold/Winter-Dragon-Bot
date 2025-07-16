@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, status
-from winter_dragon.database.extension.model import SQLModel
+from winter_dragon.database.extension.model import BaseModel
 
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 # Right now anyone can put a random ID into the object, and change the data related to that ID.
 # Even if that ID was not given out to that requesting user.
 
-class APIModel[T: type[SQLModel]]:
+class APIModel[T: type[BaseModel]]:
     """Base APIModel class with custom methods for API interactions."""
 
     router: APIRouter = APIRouter(tags=["APIModel"])

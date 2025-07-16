@@ -3,7 +3,7 @@ from collections.abc import Sequence
 
 from fastapi import APIRouter, status
 from sqlmodel import select
-from winter_dragon.database import session
+from winter_dragon.database.constants import session
 from winter_dragon.database.extension.api_model import APIModel
 from winter_dragon.database.tables.associations.user_roles import UserRoles
 from winter_dragon.database.tables.car_fuel import CarFuels

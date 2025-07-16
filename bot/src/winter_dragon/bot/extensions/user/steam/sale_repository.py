@@ -4,7 +4,8 @@ from collections.abc import Sequence
 from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.database import Session, engine
+from winter_dragon.database import Session
+from winter_dragon.database.constants import engine
 from winter_dragon.database.tables.steamsale import SteamSale
 
 

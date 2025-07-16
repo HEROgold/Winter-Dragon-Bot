@@ -5,9 +5,9 @@ from .associations import (
     GuildCommands,
     GuildRoles,
 )
+from .associations.auto_assign_role import AutoAssignRole
 from .associations.user_roles import UserRoles
 from .audit_log import AuditLog
-from .auto_assign_role import AutoAssignRole
 from .auto_reassign import AutoReAssign
 from .autochannel import AutoChannels
 from .autochannel_settings import AutoChannelSettings

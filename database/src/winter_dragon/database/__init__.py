@@ -1,7 +1,6 @@
 """The database package for the Winter Dragon project."""
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import SQLModel
 
-from .constants import DATABASE_URL
 from .tables import (
     AssociationUserCommand,
     AssociationUserHangman,
@@ -41,10 +40,6 @@ from .tables import (
     Welcome,
     WyrQuestion,
 )
-
-
-engine = create_engine(DATABASE_URL, echo=False)
-session = Session(engine)
 
 
 __all__ = [

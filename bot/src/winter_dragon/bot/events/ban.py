@@ -5,7 +5,7 @@ from discord import Embed, Member, User
 from sqlmodel import select
 from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
-from winter_dragon.database import session
+from winter_dragon.database.constants import session
 from winter_dragon.database.tables.sync_ban import SyncBanGuild, SyncBanUser
 
 

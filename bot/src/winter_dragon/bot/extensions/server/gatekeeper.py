@@ -51,6 +51,7 @@ class Gatekeeper(GroupCog):
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:
         """When a member joins, check if they have accepted the rules and send them a message if not."""
+        # Use database to check if enabled or not
         if not self.check_user_accepted_rules(member):
             await self.send_verification_message(member)
 
@@ -78,4 +79,4 @@ class Gatekeeper(GroupCog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
-    await bot.add_cog(Gatekeeper(bot=bot))
+    # await bot.add_cog(Gatekeeper(bot=bot))

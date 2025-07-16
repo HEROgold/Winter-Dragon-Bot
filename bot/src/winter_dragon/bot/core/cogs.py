@@ -15,7 +15,7 @@ from winter_dragon.bot.core.error_handler import ErrorHandler
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.tools.commands import Commands as CmdTool
-from winter_dragon.database import Session, engine
+from winter_dragon.database.constants import Session, engine
 from winter_dragon.database.tables import DisabledCommands
 from winter_dragon.database.tables.command import Commands
 
