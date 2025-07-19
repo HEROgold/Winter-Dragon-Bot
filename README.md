@@ -18,7 +18,8 @@ Winter-Dragon-Bot/
 
 ## Features
 
-### Bot Features
+### Bot
+see [Bot](docs/bot/features.md) for more details.
 
 - **Moderation & Administration**
   - Channel management with auto-channels
@@ -46,6 +47,12 @@ Winter-Dragon-Bot/
   - Error handling
   - Performance metrics collection
 
+### Frontend
+
+see [Frontend](docs/frontend/features) for more details.
+
+### Database
+see [Database](docs/database/features) for more details.
 ### Additional Features
 
 - **Advanced Configuration**: Customizable settings through a config file
