@@ -4,8 +4,6 @@ from sqlmodel import Field
 from winter_dragon.database.extension.model import SQLModel
 
 
-# TODO: Link the Enum to the LobbyStatus table
-
 class LobbyStatusEnum(enum.Enum):
     CREATED = "created"
     WAITING = "waiting"
