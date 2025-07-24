@@ -4,7 +4,7 @@ This module should make the SQLModel classes more like a `Repository` pattern.
 """
 
 from collections.abc import Sequence
-from typing import ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, Session, select
@@ -15,6 +15,9 @@ from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 
 class BaseModel(BaseSQLModel):
     """Base model class with custom methods."""
+
+    if TYPE_CHECKING:
+        id: int | None | Any
 
     _session: ClassVar[Session] = db_session
 

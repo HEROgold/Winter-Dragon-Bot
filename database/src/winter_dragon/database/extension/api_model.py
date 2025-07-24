@@ -29,7 +29,7 @@ class APIModel[T: type[BaseModel]]:
         self.router.prefix = f"/{model.__class__.__name__.lower()}"
 
     @router.get("/{_id}")
-    def get(self, _id: int) -> T:
+    def get(self, _id: int) -> T | int:
         """Get a record by ID."""
         return self.model.get(_id) or status.HTTP_404_NOT_FOUND
 
