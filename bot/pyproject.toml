@@ -18,6 +18,8 @@ dependencies = [
     "database",
     "discord-py>=2.5.2",
     "sentry-sdk>=2.29.1",
+    "icalendar>=6.0.0",
+    "aiohttp>=3.8.0",
 ]
 
 [project.scripts]

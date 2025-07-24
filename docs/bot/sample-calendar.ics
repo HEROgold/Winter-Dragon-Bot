@@ -1,0 +1,36 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Winter Dragon Bot//Sample Calendar//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:sample-meeting-1@winterdragon.bot
+DTSTART:20251225T120000Z
+DTEND:20251225T140000Z
+SUMMARY:Christmas Lunch
+DESCRIPTION:Annual Christmas lunch with family and friends. Don't forget to bring gifts!
+LOCATION:Family Home
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-meeting-2@winterdragon.bot
+DTSTART:20250101T000000Z
+DTEND:20250101T010000Z
+SUMMARY:New Year Celebration
+DESCRIPTION:Welcome the new year with fireworks and festivities!
+LOCATION:City Center
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-meeting-3@winterdragon.bot
+DTSTART:20250214T190000Z
+DTEND:20250214T220000Z
+SUMMARY:Valentine's Day Dinner
+DESCRIPTION:Romantic dinner date
+LOCATION:Fancy Restaurant
+STATUS:CONFIRMED
+SEQUENCE:0
+END:VEVENT
+END:VCALENDAR
