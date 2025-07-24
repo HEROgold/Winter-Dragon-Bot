@@ -73,7 +73,7 @@ class Cog(commands.Cog, LoggerMixin):
         guild_id = interaction.guild.id if interaction.guild else None
 
         # Check if command is disabled for user, channel, or guild
-        stmt = select(DisabledCommands).join(Commands).where(
+        statement = select(DisabledCommands).join(Commands).where(
             (Commands.qual_name == qual_name) &
             (
                 (DisabledCommands.target_id == user_id) |
@@ -84,7 +84,7 @@ class Cog(commands.Cog, LoggerMixin):
 
         # Return True if any matching disabled command exists
         self.logger.debug(f"Checking if command '{qual_name} is disabled for user {user_id=} {channel_id=} {guild_id=}")
-        return self.session.exec(stmt).first() is not None
+        return self.session.exec(statement).first() is not None
 
     def is_command_enabled(self, interaction: discord.Interaction) -> bool:
         """Check if a command is enabled for a guild, channel, or user."""
