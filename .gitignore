@@ -1,5 +1,6 @@
-postgres/*
-*__pycache__/*
+postgres
+*__pycache__
 *.pyc
-*.egg-info/*
+*.egg-info
+*/build
 config.ini
