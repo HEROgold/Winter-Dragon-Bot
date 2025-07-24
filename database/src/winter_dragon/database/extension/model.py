@@ -1,4 +1,7 @@
-"""Module for extending SQLModel with custom methods."""
+"""Module for extending SQLModel with custom methods.
+
+This module should make the SQLModel classes more like a `Repository` pattern.
+"""
 
 from collections.abc import Sequence
 from typing import ClassVar, Self
