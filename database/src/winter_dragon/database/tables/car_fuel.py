@@ -9,7 +9,7 @@ from winter_dragon.database.tables.user import Users
 
 class CarFuels(SQLModel, table=True):
 
-    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"))
+    user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE")
     amount: int
     distance: int
     price: int

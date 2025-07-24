@@ -257,7 +257,6 @@ class DatabaseManager(Cog):
 
     def delete_user_data(self, user: discord.Member) -> None:
         """Delete all data related to a user."""
-        # TODO: Cascade delete related user data, NOT guild data like syncbans.
         self.logger.info(f"Deleting all data related to {user} from the database.")
         self.session.delete(select(Users).where(Users.id == user.id))
         self.session.commit()

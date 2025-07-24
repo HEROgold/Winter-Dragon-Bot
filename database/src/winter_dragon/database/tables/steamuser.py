@@ -8,4 +8,4 @@ from winter_dragon.database.tables.user import Users
 class SteamUsers(SQLModel, table=True):
     """Table for users who want to be notified about steam sales."""
 
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id")), primary_key=True))
+    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), primary_key=True))

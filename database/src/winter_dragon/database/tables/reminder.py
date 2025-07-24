@@ -9,5 +9,5 @@ from winter_dragon.database.tables.user import Users
 class Reminder(SQLModel, table=True):
 
     content: str
-    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"))
+    user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE")
     timestamp: datetime

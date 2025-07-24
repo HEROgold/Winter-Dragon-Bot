@@ -9,7 +9,7 @@ from winter_dragon.database.tables.user import Users
 
 class Presence(SQLModel, table=True):
 
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users, "id"))))
+    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE")))
     status: str
     date_time: datetime
 
