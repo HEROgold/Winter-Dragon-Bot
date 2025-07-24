@@ -9,5 +9,5 @@ from winter_dragon.database.tables.guild import Guilds
 
 class GuildCommands(SQLModel, table=True):
 
-    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds, "id")), primary_key=True))
-    command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands, "id")), primary_key=True))
+    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), primary_key=True))
+    command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands)), primary_key=True))

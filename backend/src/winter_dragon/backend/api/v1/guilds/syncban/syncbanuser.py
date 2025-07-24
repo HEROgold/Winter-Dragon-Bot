@@ -6,4 +6,4 @@ from winter_dragon.database.tables.user import Users
 
 class SyncBanUser(SQLModel, table=True):
 
-    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users), primary_key=True)

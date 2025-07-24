@@ -7,6 +7,6 @@ from winter_dragon.database.tables.guild import Guilds
 
 
 class Channels(DiscordID, table=True):
-    guild_id: int = Field(foreign_key=get_foreign_key(Guilds, "id"))
+    guild_id: int = Field(foreign_key=get_foreign_key(Guilds))
     name: str
     type: ChannelTypes | None = None

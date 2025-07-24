@@ -5,5 +5,5 @@ from winter_dragon.database.tables.channel import Channels
 
 
 class AutoChannels(SQLModel, table=True):
-    channel_id: int = Field(foreign_key=get_foreign_key(Channels, "id"), primary_key=True)
+    channel_id: int = Field(foreign_key=get_foreign_key(Channels), primary_key=True)
     channel: Channels = Relationship()

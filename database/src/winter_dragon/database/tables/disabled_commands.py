@@ -9,10 +9,11 @@ from winter_dragon.database.tables.user import Users
 
 class DisabledCommands(SQLModel, table=True):
 
-    command_id: int = Field(foreign_key=get_foreign_key(Commands, "id"), primary_key=True)
-    user_id: int = Field(foreign_key=get_foreign_key(Users, "id"), nullable=True)
-    channel_id: int = Field(foreign_key=get_foreign_key(Channels, "id"), nullable=True)
-    guild_id: int = Field(foreign_key=get_foreign_key(Guilds, "id"), nullable=True)
+    command_id: int = Field(foreign_key=get_foreign_key(Commands), primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users), nullable=True)
+    channel_id: int = Field(foreign_key=get_foreign_key(Channels), nullable=True)
+    guild_id: int = Field(foreign_key=get_foreign_key(Guilds), nullable=True)
+    reason: str = Field(default="No reason provided")
 
     def __init__(self, **kw: int) -> None:
         id_limit = 2

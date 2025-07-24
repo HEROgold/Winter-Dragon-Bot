@@ -6,6 +6,6 @@ from winter_dragon.database.tables.message import Messages
 
 class Hangmen(SQLModel, table=True):
 
-    message_id: int = Field(foreign_key=get_foreign_key(Messages, "id"), primary_key=True)
+    message_id: int = Field(foreign_key=get_foreign_key(Messages), primary_key=True)
     word: str
     letters: str
