@@ -25,7 +25,7 @@ class Lfg(GroupCog):
         super().__init__(**kwargs)
         self.games = [i.name for i in self.session.exec(select(GamesDB)).all()]
 
-    # TODO: add Database table, matching user id and category, every time someone adds, check matches.
+    # TODO: every time someone adds, check matches.
     @app_commands.command(name="join", description="Join a search queue for finding people for the same game")
     async def slash_lfg_join(self, interaction: discord.Interaction, game: str) -> None:
         """Join a search queue for finding people for the same game."""
