@@ -13,8 +13,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.ui.button import Button
 from winter_dragon.bot.ui.modal import Modal
-from winter_dragon.database import Session
-from winter_dragon.database.constants import engine
+from winter_dragon.database.constants import Session, engine
 from winter_dragon.database.tables import AssociationUserHangman as AUH  # noqa: N817
 from winter_dragon.database.tables import Games
 from winter_dragon.database.tables import Hangmen as HangmanDb

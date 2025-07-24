@@ -6,7 +6,7 @@ This module should make the SQLModel classes more like a `Repository` pattern.
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-from sqlalchemy import BigInteger, Column
+from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
 from winter_dragon.database.constants import session as db_session
@@ -115,7 +115,7 @@ class SQLModel(BaseModel):
 class DiscordID(BaseModel):
     """Model with a Discord ID as primary key."""
 
-    id: int = Field(sa_column=Column(BigInteger(), primary_key=True))
+    id: int = Field(sa_type=BigInteger, primary_key=True, index=True)
 
     @classmethod
     def fetch(cls, id_: int) -> Self:

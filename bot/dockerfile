@@ -5,7 +5,7 @@ ADD database/ database/
 ADD bot/ bot/
 
 # Ensure that we install db first, as its a dependency of the bot
-RUN pip3.13 install database/
-RUN pip3.13 install bot/
+RUN pip install -e database/
+RUN pip install -e bot/
 
 CMD ["python3", "-m", "winter_dragon.bot"]
