@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Self
 
 from sqlmodel import Field
@@ -6,6 +8,7 @@ from winter_dragon.database.extension.model import SQLModel, select
 
 class Games(SQLModel, table=True):
     name: str = Field(unique=True, index=True)
+    alias: Self | None = Field(default=None, foreign_key="games.name") # Alias for an already existing game.
 
     @classmethod
     def fetch_game_by_name(cls, name: str) -> Self:
@@ -20,7 +23,7 @@ class Games(SQLModel, table=True):
 
         with session:
             if game := session.exec(select(cls).where(cls.name == name)).first():
-                return game
+                return game.alias or game
 
             inst = cls(name=name)
             session.add(inst)
