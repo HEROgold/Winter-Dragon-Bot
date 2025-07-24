@@ -26,7 +26,7 @@ TEAM_LOBBY = ChannelTypes.TEAM_LOBBY
 class Team(GroupCog):
     """A cog for managing teams and respective voice channels."""
 
-    team_cleanup_interval = Config(3600, float)
+    team_cleanup_interval = Config(3600, int)
 
     @loop()
     async def delete_empty_team_channels(self) -> None:

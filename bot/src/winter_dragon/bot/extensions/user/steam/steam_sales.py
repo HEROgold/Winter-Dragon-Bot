@@ -19,7 +19,7 @@ from winter_dragon.database.tables.user import Users
 class SteamSales(GroupCog):
     """Steam Sales cog for Discord bot."""
 
-    steam_sales_update_interval = Config(STEAM_SEND_PERIOD, float)
+    steam_sales_update_interval = Config(STEAM_SEND_PERIOD, int)
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Steam Sales cog."""

@@ -15,7 +15,7 @@ from winter_dragon.database.tables import Reminder as ReminderDb
 class Reminder(Cog):
     """Cog for setting reminders."""
 
-    reminder_check_interval = Config(60, float)
+    reminder_check_interval = Config(60, int)
 
     async def cog_load(self) -> None:
         """Load the cog."""

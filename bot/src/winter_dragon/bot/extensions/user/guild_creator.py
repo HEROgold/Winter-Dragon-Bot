@@ -29,7 +29,7 @@ class GuildCreator(GroupCog):
 
     INIT_NAME = "Initializing guild"
     WEEK = 604_800
-    guild_check_interval = Config(3600, float)
+    guild_check_interval = Config(3600, int)
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:

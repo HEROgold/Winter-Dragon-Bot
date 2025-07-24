@@ -194,7 +194,7 @@ class StatChannels:
 class Stats(GroupCog):
     """Cog that contains all guild stats related commands."""
 
-    stats_update_interval = Config(3600, float)
+    stats_update_interval = Config(3600, int)
 
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the stats cog."""

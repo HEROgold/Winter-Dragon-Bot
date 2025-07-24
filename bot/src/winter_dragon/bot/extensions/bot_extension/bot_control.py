@@ -37,8 +37,8 @@ class BotC(GroupCog):
 
     random_activity = Config(True, bool)  # noqa: FBT003
     periodic_change = Config(True, bool)  # noqa: FBT003
-    periodic_time = Config(180, float)
-    gather_metrics_interval = Config(180, float)
+    periodic_time = Config(180, int)
+    gather_metrics_interval = Config(180, int)
 
 
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
