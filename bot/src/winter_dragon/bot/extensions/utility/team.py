@@ -9,6 +9,7 @@ from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, a
 from discord.abc import PrivateChannel
 from sqlmodel import select
 from winter_dragon.bot._types.dicts import TeamDict
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
@@ -25,7 +26,9 @@ TEAM_LOBBY = ChannelTypes.TEAM_LOBBY
 class Team(GroupCog):
     """A cog for managing teams and respective voice channels."""
 
-    @loop(seconds=3600)
+    team_cleanup_interval = Config(3600, float)
+
+    @loop()
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel."""
         channels = self.session.exec(select(Channels).where(Channels.type == TEAM_VOICE)).all()
@@ -50,6 +53,8 @@ class Team(GroupCog):
     async def cog_load(self) -> None:
         """Start the cog."""
         await super().cog_load()
+        # Configure loop interval from config
+        self.delete_empty_team_channels.change_interval(seconds=self.team_cleanup_interval)
         self.delete_empty_team_channels.start()
 
 

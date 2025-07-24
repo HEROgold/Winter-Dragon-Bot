@@ -4,6 +4,7 @@ import datetime
 import discord
 from discord import app_commands
 from sqlmodel import select
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.tasks import loop
@@ -14,13 +15,17 @@ from winter_dragon.database.tables import Reminder as ReminderDb
 class Reminder(Cog):
     """Cog for setting reminders."""
 
+    reminder_check_interval = Config(60, float)
+
     async def cog_load(self) -> None:
         """Load the cog."""
         await super().cog_load()
+        # Configure loop interval from config
+        self.send_reminder.change_interval(seconds=self.reminder_check_interval)
         self.send_reminder.start()
 
 
-    @loop(seconds=60)
+    @loop()
     async def send_reminder(self) -> None:
         """Task to send reminders to users."""
         results = self.session.exec(

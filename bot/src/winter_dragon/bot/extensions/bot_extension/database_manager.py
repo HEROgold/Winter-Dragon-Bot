@@ -6,6 +6,7 @@ import discord
 from discord import InteractionType, app_commands
 from sqlmodel import select
 from winter_dragon.bot._types.aliases import GChannel
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.tasks import loop
@@ -19,9 +20,13 @@ from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, 
 class DatabaseManager(Cog):
     """Track user, guild, role and channel data in the database."""
 
+    database_update_interval = Config(3600, float)  # 1 hour in seconds
+
     async def cog_load(self) -> None:
         """Load the cog."""
         await super().cog_load()
+        # Configure loop interval from config
+        self.update.change_interval(hours=self.database_update_interval / 3600)
         self.update.start()
 
     @Cog.listener()
@@ -147,7 +152,7 @@ class DatabaseManager(Cog):
             self.session.commit()
 
 
-    @loop(hours=1)
+    @loop()
     async def update(self) -> None:
         """Update the database with user, guild, role and channel info."""
         for user in self.bot.users:
