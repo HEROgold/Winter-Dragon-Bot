@@ -19,13 +19,10 @@ class Games(SQLModel, table=True):
             name (str): Name for the game
 
         """
-        from winter_dragon.database.constants import session
+        if game := cls._session.exec(select(cls).where(cls.name == name)).first():
+            return game.alias or game
 
-        with session:
-            if game := session.exec(select(cls).where(cls.name == name)).first():
-                return game.alias or game
-
-            inst = cls(name=name)
-            session.add(inst)
-            session.commit()
-            return inst
+        inst = cls(name=name)
+        cls._session.add(inst)
+        cls._session.commit()
+        return inst

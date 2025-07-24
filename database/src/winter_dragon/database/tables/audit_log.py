@@ -20,23 +20,20 @@ class AuditLog(DiscordID, table=True):
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
         """Create an AuditLog instance from a Discord AuditLogEntry."""
-        from winter_dragon.database.constants import session
-
         if entry.target is None:
             msg = f"Target should be AuditLogEntry.target type, but is {type(entry.target)}"
             raise ValueError(msg)
         if entry.category is None:
             msg = f"Category should be AuditLogEntry.category type, but is {type(entry.category)}"
             raise ValueError(msg)
-        with session:
-            audit = cls(
-                id=entry.id,
-                action=entry.action.value,
-                reason=entry.reason,
-                created_at=entry.created_at,
-                target_id=str(entry.target.id),
-                category=entry.category.value,
-            )
-            session.add(audit)
-            session.commit()
+        audit = cls(
+            id=entry.id,
+            action=entry.action.value,
+            reason=entry.reason,
+            created_at=entry.created_at,
+            target_id=str(entry.target.id),
+            category=entry.category.value,
+        )
+        cls._session.add(audit)
+        cls._session.commit()
         return audit

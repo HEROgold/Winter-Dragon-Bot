@@ -14,28 +14,22 @@ class Infractions(SQLModel, table=True):
     @classmethod
     def add_infraction_count(cls, user_id: int, amount: int) -> None:
         """Add an infraction to a user, if it isn't in this table add it."""
-        from winter_dragon.database.constants import session
+        infraction = cls._session.exec(select(cls).where(cls.user_id == user_id)).first()
 
-        with session:
-            infraction = session.exec(select(cls).where(cls.user_id == user_id)).first()
+        if infraction is None:
+            infraction = cls(user_id=user_id, infraction_count=0)
+            cls._session.add(infraction)
 
-            if infraction is None:
-                infraction = cls(user_id=user_id, infraction_count=0)
-                session.add(infraction)
-
-            infraction.infraction_count += amount
-            session.commit()
+        infraction.infraction_count += amount
+        cls._session.commit()
 
     @classmethod
     def fetch_user(cls, id_: int) -> Self:
         """Find existing or create new user, and return it."""
-        from winter_dragon.database.constants import session
+        if user := cls._session.exec(select(cls).where(cls.user_id == id_)).first():
+            return user
 
-        with session:
-            if user := session.exec(select(cls).where(cls.user_id == id_)).first():
-                return user
-
-            inst = cls(user_id=id_)
-            session.add(inst)
-            session.commit()
-            return inst
+        inst = cls(user_id=id_)
+        cls._session.add(inst)
+        cls._session.commit()
+        return inst
