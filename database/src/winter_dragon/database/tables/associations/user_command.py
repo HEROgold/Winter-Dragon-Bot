@@ -11,7 +11,7 @@ from winter_dragon.database.tables.user import Users
 
 class AssociationUserCommand(SQLModel, table=True):
 
-    timestamp: datetime = Field(default_factory=partial(datetime.now, tz=UTC), primary_key=True)
+    timestamp: datetime = Field(default_factory=partial(datetime.now, tz=UTC), primary_key=True, index=True)
     user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE")))
     command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands))))
 
@@ -19,18 +19,23 @@ class AssociationUserCommand(SQLModel, table=True):
     command: Commands = Relationship()
 
     @classmethod
-    def cleanup(cls) -> None:  # sourcery skip: remove-unreachable-code
+    def cleanup(cls) -> None:
         """Clean the database to keep track of (at most) 1k commands for each user."""
-        msg = "This method requires rewrite."
-        raise NotImplementedError(msg)
-        from winter_dragon.database import session
-
         track_amount = 1000
-        with session:
-            session.exec(
-                select(cls.user_id)
-                .group_by(cls.user_id)
-                .having(func.count(cls.user_id) > track_amount)
-                .delete(),
+        users = cls._session.exec(
+            select(cls.user_id)
+            .having(func.count() > track_amount),
+        ).all()
+
+        for user_id in users:
+            known = cls._session.exec(
+                select(cls)
+                .where(cls.user_id == user_id)
+                .order_by(cls.timestamp.desc())
+                .limit(track_amount),
             ).all()
-            session.commit()
+
+            for record in known:
+                cls._session.delete(record)
+
+        cls._session.commit()
