@@ -1615,12 +1615,20 @@ dependencies = [
     { name = "winter-dragon-backend" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "alembic" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "bot", virtual = "bot" },
     { name = "database", virtual = "database" },
     { name = "winter-dragon-backend", virtual = "backend" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "alembic", specifier = ">=1.16.1" }]
 
 [[package]]
 name = "winter-dragon-backend"

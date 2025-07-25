@@ -3,6 +3,7 @@ import asyncio
 
 from discord import Embed, Interaction, app_commands
 from sqlmodel import select
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import STEAM_PERIOD, STEAM_SEND_PERIOD
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
@@ -18,6 +19,8 @@ from winter_dragon.database.tables.user import Users
 class SteamSales(GroupCog):
     """Steam Sales cog for Discord bot."""
 
+    steam_sales_update_interval = Config(STEAM_SEND_PERIOD, float)
+
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Steam Sales cog."""
         super().__init__(bot=bot)
@@ -28,6 +31,8 @@ class SteamSales(GroupCog):
         """Load the cog."""
         await super().cog_load()
         self.loop = asyncio.get_event_loop()
+        # Configure loop interval from config
+        self.update.change_interval(seconds=self.steam_sales_update_interval)
         self.update.start()
 
     async def get_new_steam_sales(self, percent: int) -> list[SteamSale]:
@@ -66,7 +71,7 @@ class SteamSales(GroupCog):
         ]
 
 
-    @loop(seconds=STEAM_SEND_PERIOD)
+    @loop()
     async def update(self) -> None:
         """Create a discord Embed object to send and notify users of new 100% sales.
 

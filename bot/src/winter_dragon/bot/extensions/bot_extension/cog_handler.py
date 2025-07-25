@@ -9,6 +9,7 @@ from discord import NotFound, app_commands
 from discord.ext import commands
 from winter_dragon.bot._types.dicts import CogData
 from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.tasks import loop
@@ -19,6 +20,7 @@ class AutoCogReloader(Cog):
     """Automatically reloads watched cogs when they are edited."""
 
     data: CogData
+    auto_reload_interval = Config(5, float)
 
 
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
@@ -36,6 +38,8 @@ class AutoCogReloader(Cog):
         await super().cog_load()
         if not self.data["files"]:
             self.logger.info("Starting Auto Reloader.")
+            # Configure loop interval from config
+            self.auto_reload.change_interval(seconds=self.auto_reload_interval)
             self.auto_reload.start()
 
 
@@ -75,7 +79,7 @@ class AutoCogReloader(Cog):
                 self.data["edited"][file] = self.data["files"][file]
 
 
-    @loop(seconds=5)
+    @loop()
     async def auto_reload(self) -> None:
         """Automatically reload cogs that have been edited."""
         if not self.data["edited"]:

@@ -9,6 +9,7 @@ from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from sqlmodel import select
 from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.log import LoggerMixin
@@ -193,6 +194,8 @@ class StatChannels:
 class Stats(GroupCog):
     """Cog that contains all guild stats related commands."""
 
+    stats_update_interval = Config(3600, float)
+
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
         """Initialize the stats cog."""
         super().__init__(**kwargs)
@@ -299,9 +302,11 @@ class Stats(GroupCog):
     async def cog_load(self) -> None:
         """Load the cog."""
         await super().cog_load()
+        # Configure loop interval from config
+        self.update.change_interval(seconds=self.stats_update_interval)
         self.update.start()
 
-    @loop(seconds=3600)
+    @loop()
     async def update(self) -> None:
         """Update all stat channels periodically."""
         # Note: keep for loop with if.

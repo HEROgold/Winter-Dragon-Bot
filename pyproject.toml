@@ -47,3 +47,8 @@ namespaces = true
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.yml"]
+
+[dependency-groups]
+dev = [
+    "alembic>=1.16.1",
+]

@@ -15,6 +15,7 @@ from discord import (
     VerificationLevel,
     app_commands,
 )
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.tasks import loop
@@ -28,6 +29,7 @@ class GuildCreator(GroupCog):
 
     INIT_NAME = "Initializing guild"
     WEEK = 604_800
+    guild_check_interval = Config(3600, float)
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
@@ -35,7 +37,14 @@ class GuildCreator(GroupCog):
         if member.id != self.bot.user.id and member.guild.owner == self.bot.user:
             await member.guild.edit(owner=member, reason="Transferring ownership to first joined member.")
 
-    @loop(seconds=3600)
+    async def cog_load(self) -> None:
+        """Load the cog."""
+        await super().cog_load()
+        # Configure loop interval from config
+        self._check_guilds.change_interval(seconds=self.guild_check_interval)
+        self._check_guilds.start()
+
+    @loop()
     async def _check_guilds(self) -> None:
         """Check if the bot is the owner of any guilds."""
         for guild in self.bot.guilds:

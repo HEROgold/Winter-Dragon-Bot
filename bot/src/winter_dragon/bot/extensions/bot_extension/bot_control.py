@@ -38,6 +38,7 @@ class BotC(GroupCog):
     random_activity = Config(True, bool)  # noqa: FBT003
     periodic_change = Config(True, bool)  # noqa: FBT003
     periodic_time = Config(180, float)
+    gather_metrics_interval = Config(180, float)
 
 
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
@@ -56,6 +57,9 @@ class BotC(GroupCog):
     async def cog_load(self) -> None:
         """When the cog loads, start collecting metrics and activity statuses."""
         await super().cog_load()
+        # Configure loop intervals from config
+        self.gather_metrics_loop.change_interval(seconds=self.gather_metrics_interval)
+        self.activity_switch.change_interval(seconds=self.periodic_time)
         self.activity_switch.start()
         self.gather_metrics_loop.start()
 
@@ -359,8 +363,7 @@ class BotC(GroupCog):
         return cls.get_colors(packets_count, 1000000000)
 
 
-    # @Config.with_setting(periodic_time)
-    @loop(seconds=180)
+    @loop()
     async def gather_metrics_loop(self) -> None:
         """Gather system metrics every second."""
         self.gather_system_metrics()
