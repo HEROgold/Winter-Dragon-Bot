@@ -8,11 +8,13 @@ class Sentry:
     """A class to handle Sentry setup."""
 
     dsn = Config("", str)
+    environment = Config("development", str)
 
 
     def __init__(self) -> None:
         """Initialize Sentry."""
         sentry_sdk.init(
+            environment=self.environment,
             dsn=self.dsn,
             # Add data like request headers and IP for users,
             # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
