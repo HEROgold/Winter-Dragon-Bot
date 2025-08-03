@@ -13,7 +13,7 @@ from winter_dragon.database.tables import Welcome as WelcomeDb
 class Welcome(GroupCog):
     """"Cog to contain the welcome commands."""
 
-    allowed_welcome_dm = Config(True, bool)  # noqa: FBT003
+    allowed_welcome_dm = Config(default=True)
 
 
     @Cog.listener()

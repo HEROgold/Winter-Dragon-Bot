@@ -35,10 +35,10 @@ class BotC(GroupCog):
     packets_sent: list[int]
     packets_received: list[int]
 
-    random_activity = Config(True, bool)  # noqa: FBT003
-    periodic_change = Config(True, bool)  # noqa: FBT003
-    periodic_time = Config(180, float)
-    gather_metrics_interval = Config(180, float)
+    random_activity = Config(default=True)
+    periodic_change = Config(default=True)
+    periodic_time = Config(180)
+    gather_metrics_interval = Config(180)
 
 
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:

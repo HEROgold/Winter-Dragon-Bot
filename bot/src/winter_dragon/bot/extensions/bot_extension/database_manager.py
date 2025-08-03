@@ -20,7 +20,7 @@ from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, 
 class DatabaseManager(Cog):
     """Track user, guild, role and channel data in the database."""
 
-    database_update_interval = Config(3600, float)  # 1 hour in seconds
+    database_update_interval = Config(3600)  # 1 hour in seconds
 
     async def cog_load(self) -> None:
         """Load the cog."""

@@ -16,10 +16,10 @@ class LogsManager:
     """Manages some loggers and their log files."""
 
     current_directory = Path("./")
-    first_rollover = Config(False, bool)  # noqa: FBT003
-    keep_latest = Config(False, bool)  # noqa: FBT003
-    log_path = Config("./logs", str)
-    log_size_kb_limit = Config(9000000, int)
+    first_rollover = Config(default=False)
+    keep_latest = Config(default=False)
+    log_path = Config("./logs")
+    log_size_kb_limit = Config(9000000)
 
     def __init__(self) -> None:
         """Initialize the LogsManager."""

@@ -24,8 +24,8 @@ class ErrorHandler(LoggerMixin):
 
     """
 
-    always_log_errors = Config(False, bool)  # noqa: FBT003
-    ignore_errors = Config(False, bool)  # noqa: FBT003
+    always_log_errors = Config(default=False)
+    ignore_errors = Config(default=False)
     interface: commands.Context | discord.Interaction
     error: Exception
     logger: logging.Logger

@@ -96,7 +96,7 @@ class SteamURL(LoggerMixin):
 class SteamScraper(LoggerMixin):
     """Scrape Steam sales. from their website using a set url."""
 
-    search_url = Config("https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1&supportedlang=english", str)
+    search_url = Config("https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1&supportedlang=english")
 
     def __init__(self) -> None:
         """Initialize the SteamScraper."""

@@ -7,8 +7,8 @@ from winter_dragon.bot.config import Config
 class Sentry:
     """A class to handle Sentry setup."""
 
-    dsn = Config("", str)
-    environment = Config("development", str)
+    dsn = Config("")
+    environment = Config("development")
 
 
     def __init__(self) -> None:

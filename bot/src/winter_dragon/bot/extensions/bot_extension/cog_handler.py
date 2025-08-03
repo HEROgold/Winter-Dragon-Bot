@@ -20,7 +20,7 @@ class AutoCogReloader(Cog):
     """Automatically reloads watched cogs when they are edited."""
 
     data: CogData
-    auto_reload_interval = Config(5, float)
+    auto_reload_interval = Config(5)
 
 
     def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:

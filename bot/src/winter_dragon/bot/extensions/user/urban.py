@@ -15,8 +15,8 @@ from winter_dragon.bot.core.cogs import GroupCog
 class Urban(GroupCog):
     """Urban Dictionary cog for Discord bot."""
 
-    allow_random = Config(True, bool)  # noqa: FBT003
-    max_size = Config(5, int)
+    allow_random = Config(default=True)
+    max_size = Config(5)
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Urban cog."""
