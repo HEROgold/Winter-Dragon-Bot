@@ -238,6 +238,7 @@ version = "0.1.0"
 source = { virtual = "bot" }
 dependencies = [
     { name = "beautifulsoup4" },
+    { name = "confkit" },
     { name = "database" },
     { name = "discord-ext-prometheus" },
     { name = "discord-py" },
@@ -252,6 +253,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.4" },
+    { name = "confkit", specifier = ">=0.1.1" },
     { name = "database", virtual = "database" },
     { name = "discord-ext-prometheus", specifier = ">=0.2.1" },
     { name = "discord-py", specifier = ">=2.5.2" },
@@ -335,6 +337,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
+]
+
+[[package]]
+name = "confkit"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/da/1abfb10add24fc09a7929b10c51ff024ebe9f992ac533417b8c2e2c81034/confkit-0.1.1.tar.gz", hash = "sha256:2eec05bfe12f19e1479bf49ba4c5caf71aa7819236b8438a5383e70843d2e2b2", size = 22507, upload-time = "2025-08-03T03:26:02.466Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/cf/56048cbaa84c82574d2a40fbf0fcc98e1b33d30b51ab2ff5ab9db837aca7/confkit-0.1.1-py3-none-any.whl", hash = "sha256:f04c1b2e3b8fdb2f815503c9985d7ea1d6325903eba4e53f3ad6d1f8918c2074", size = 8248, upload-time = "2025-08-03T03:26:00.725Z" },
 ]
 
 [[package]]
