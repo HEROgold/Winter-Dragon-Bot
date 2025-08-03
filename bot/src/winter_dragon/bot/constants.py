@@ -66,6 +66,7 @@ BUNDLE_DISCOUNT = "price bundle_discount"
 BUNDLE_FINAL_PRICE = "price bundle_final_price_with_discount"
 STEAM_SEND_PERIOD = 3600 * 3 # 3 hour cooldown on updates in seconds
 STEAM_PERIOD = STEAM_SEND_PERIOD * 10
+DISCORD_AUTOCOMPLETE_LIMIT = 25
 
 # Bot Status Messages
 STATUS_MSGS = [

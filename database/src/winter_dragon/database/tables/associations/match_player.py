@@ -1,0 +1,1 @@
+"""Track which players participated in a match."""

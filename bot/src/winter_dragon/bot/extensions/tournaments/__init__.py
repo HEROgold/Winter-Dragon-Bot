@@ -1,1 +1,1 @@
-"""Tournament strategies package."""
+"""Tournament package."""
