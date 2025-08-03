@@ -35,7 +35,9 @@ tree = bot.tree
 @bot.event
 async def on_ready() -> None:
     """Log when the bot is ready. Note that this may happen multiple times per boot."""
-    bot.get_bot_invite()
+    invite_link = bot.get_bot_invite()
+    Settings.application_id = bot.application_id
+    Settings.bot_invite = invite_link.replace("%", "%%")
 
     bot_logger.info(f"Logged on as {bot.user}!")
 
@@ -68,10 +70,6 @@ def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401 Catch all argu
 async def main() -> None:
     """Entrypoint of the program."""
     async with bot:
-        invite_link = bot.get_bot_invite()
-        Settings.application_id = bot.application_id
-        Settings.bot_invite = invite_link.replace("%", "%%")
-
         SQLModel.metadata.create_all(engine, checkfirst=True)
         await bot.load_extensions()
         await bot.start()
