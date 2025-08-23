@@ -1,12 +1,23 @@
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Container } from "./components/container";
 import "./index.css";
-import { Routes } from "./routes";
-import { AuthProvider } from "./contexts/AuthContext";
+
+import logo from "./logo.svg";
+import reactLogo from "./react.svg";
 
 export function App() {
   return (
-    <AuthProvider>
-      <Routes />
-    </AuthProvider>
+    <BrowserRouter>
+    <NavBar />
+    <div className="app">
+      <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/admin" element={<ViewUserTable />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+    </div>
+    </BrowserRouter>
   );
 }
 
