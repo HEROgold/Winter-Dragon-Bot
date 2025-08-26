@@ -14,22 +14,22 @@ class Infractions(SQLModel, table=True):
     @classmethod
     def add_infraction_count(cls, user_id: int, amount: int) -> None:
         """Add an infraction to a user, if it isn't in this table add it."""
-        infraction = cls._session.exec(select(cls).where(cls.user_id == user_id)).first()
+        infraction = cls.session.exec(select(cls).where(cls.user_id == user_id)).first()
 
         if infraction is None:
             infraction = cls(user_id=user_id, infraction_count=0)
-            cls._session.add(infraction)
+            cls.session.add(infraction)
 
         infraction.infraction_count += amount
-        cls._session.commit()
+        cls.session.commit()
 
     @classmethod
     def fetch_user(cls, id_: int) -> Self:
         """Find existing or create new user, and return it."""
-        if user := cls._session.exec(select(cls).where(cls.user_id == id_)).first():
+        if user := cls.session.exec(select(cls).where(cls.user_id == id_)).first():
             return user
 
         inst = cls(user_id=id_)
-        cls._session.add(inst)
-        cls._session.commit()
+        cls.session.add(inst)
+        cls.session.commit()
         return inst

@@ -22,13 +22,13 @@ class AssociationUserCommand(SQLModel, table=True):
     def cleanup(cls) -> None:
         """Clean the database to keep track of (at most) 1k commands for each user."""
         track_amount = 1000
-        users = cls._session.exec(
+        users = cls.session.exec(
             select(cls.user_id)
             .having(func.count() > track_amount),
         ).all()
 
         for user_id in users:
-            known = cls._session.exec(
+            known = cls.session.exec(
                 select(cls)
                 .where(cls.user_id == user_id)
                 .order_by(cls.timestamp.desc())
@@ -36,6 +36,6 @@ class AssociationUserCommand(SQLModel, table=True):
             ).all()
 
             for record in known:
-                cls._session.delete(record)
+                cls.session.delete(record)
 
-        cls._session.commit()
+        cls.session.commit()

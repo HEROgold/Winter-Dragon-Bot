@@ -19,10 +19,10 @@ class Games(SQLModel, table=True):
             name (str): Name for the game
 
         """
-        if game := cls._session.exec(select(cls).where(cls.name == name)).first():
-            return cls._session.exec(select(cls).where(cls.name == game.alias)).first() or game
+        if game := cls.session.exec(select(cls).where(cls.name == name)).first():
+            return cls.session.exec(select(cls).where(cls.name == game.alias)).first() or game
 
         inst = cls(name=name)
-        cls._session.add(inst)
-        cls._session.commit()
+        cls.session.add(inst)
+        cls.session.commit()
         return inst

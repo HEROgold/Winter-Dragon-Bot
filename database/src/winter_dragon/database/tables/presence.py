@@ -16,8 +16,8 @@ class Presence(SQLModel, table=True):
     @classmethod
     def remove_old_presences(cls, member_id: int, days: int = 265) -> None:
         """Remove old presences present in the database, if they are older then a year."""
-        db_presences = cls._session.exec(select(Presence).where(Presence.user_id == member_id)).all()
+        db_presences = cls.session.exec(select(Presence).where(Presence.user_id == member_id)).all()
         for presence in db_presences:
             if (presence.date_time + timedelta(days=days)).astimezone(UTC) >= datetime.now(UTC):
-                cls._session.delete(presence)
-        cls._session.commit()
+                cls.session.delete(presence)
+        cls.session.commit()

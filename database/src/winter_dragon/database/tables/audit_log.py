@@ -34,6 +34,6 @@ class AuditLog(DiscordID, table=True):
             target_id=str(entry.target.id),
             category=entry.category.value,
         )
-        cls._session.add(audit)
-        cls._session.commit()
+        cls.session.add(audit)
+        cls.session.commit()
         return audit

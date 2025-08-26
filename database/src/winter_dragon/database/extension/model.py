@@ -20,12 +20,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
     if TYPE_CHECKING:
         id: int | None | Any
 
-    _session: ClassVar[Session] = db_session
-
-    @property
-    def session(self) -> Session:
-        """Get the current session."""
-        return self._session
+    session: ClassVar[Session] = db_session
 
     def add(self: Self, session: Session | None = None) -> None:
         """Add a record to Database."""
@@ -71,10 +66,9 @@ class BaseModel(BaseSQLModel, LoggerMixin):
 
     @classmethod
     def _get_session(cls, session: Session | None = None) -> Session:
+        """Get the usable session, either the provided one or the default."""
         cls.logger.debug(f"Getting session: {session}")
-        if session is None:
-            session = cls._session
-        return session
+        return session or cls.session
 
     def delete(self, session: Session | None = None) -> None:
         """Delete a record from Database."""
