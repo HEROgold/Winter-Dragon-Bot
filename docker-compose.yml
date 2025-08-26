@@ -60,16 +60,16 @@ services:
       postgres:
         condition: service_healthy
 
-  frontend:
-    container_name: website-frontend
-    build:
-      context: ./frontend
-      dockerfile: dockerfile
-    volumes:
-      - ./frontend:/app
-    ports:
-      - 80:3000
-      - 443:3000
+  # frontend:
+  #   container_name: website-frontend
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: dockerfile
+  #   volumes:
+  #     - ./frontend:/app
+  #   ports:
+  #     - 80:3000
+  #     - 443:3000
 
   pgadmin:
     image: dpage/pgadmin4
