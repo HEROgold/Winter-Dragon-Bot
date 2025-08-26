@@ -11,9 +11,10 @@ from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
 from winter_dragon.database.constants import session as db_session
 from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
+from winter_dragon.database.logger import LoggerMixin
 
 
-class BaseModel(BaseSQLModel):
+class BaseModel(BaseSQLModel, LoggerMixin):
     """Base model class with custom methods."""
 
     if TYPE_CHECKING:
@@ -28,6 +29,7 @@ class BaseModel(BaseSQLModel):
 
     def add(self: Self, session: Session | None = None) -> None:
         """Add a record to Database."""
+        self.logger.debug(f"Adding record: {self}")
         if self.id is not None:
             msg = f"Record with {self.__class__.__name__}.id={self.id} already exists."
             raise AlreadyExistsError(msg)
@@ -35,6 +37,7 @@ class BaseModel(BaseSQLModel):
 
     def update(self: Self, session: Session | None = None) -> None:
         """Create or update a record in Database."""
+        self.logger.debug(f"Updating record: {self}")
         session = self._get_session(session)
         if known := session.exec(
             select(self.__class__)
@@ -47,6 +50,7 @@ class BaseModel(BaseSQLModel):
     @classmethod
     def get(cls, id_: int, session: Session | None = None, *, with_for_update: bool = False) -> Self:
         """Get a record from Database."""
+        cls.logger.debug(f"Getting record: {id_=}")
         session = cls._get_session(session)
 
         if known := session.exec(
@@ -61,17 +65,20 @@ class BaseModel(BaseSQLModel):
     @classmethod
     def get_all(cls: type[Self], session: Session | None = None) -> Sequence[Self]:
         """Get all records from Database."""
+        cls.logger.debug(f"Getting all records: {cls.__name__}")
         session = cls._get_session(session)
         return session.exec(select(cls)).all()
 
     @classmethod
     def _get_session(cls, session: Session | None = None) -> Session:
+        cls.logger.debug(f"Getting session: {session}")
         if session is None:
             session = cls._session
         return session
 
     def delete(self, session: Session | None = None) -> None:
         """Delete a record from Database."""
+        self.logger.debug(f"Deleting record: {self}")
         session = self._get_session(session)
         if known := session.exec(
             select(self.__class__)
@@ -85,12 +92,14 @@ class BaseModel(BaseSQLModel):
         raise NotFoundError(msg)
 
     def _create_record(self, session: Session | None = None) -> None:
+        self.logger.debug(f"Creating record: {self}")
         session = self._get_session(session)
         session.add(self)
         session.commit()
 
     def _update_record(self, known: Self, session: Session | None = None) -> None:
         """Update known, with the values from self."""
+        self.logger.debug(f"Updating record: {self}")
         session = self._get_session(session)
         for field, value in self.model_fields.items():
             if field == "id":
