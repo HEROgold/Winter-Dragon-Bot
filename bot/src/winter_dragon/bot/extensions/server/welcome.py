@@ -67,8 +67,9 @@ class Welcome(GroupCog):
         self,
         interaction: discord.Interaction,
         message: str | None = None,
-        enabled: bool | None = None,
         channel_id: int | None = None,
+        *,
+        enabled: bool | None = None,
     ) -> None:
         """Update the welcome message in the database."""
         self.logger.debug(f"updating {WelcomeDb} for {interaction.guild} to {message=}, {enabled=}, {channel_id=}")

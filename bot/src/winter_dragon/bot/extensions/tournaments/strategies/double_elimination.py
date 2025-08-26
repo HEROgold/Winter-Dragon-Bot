@@ -78,7 +78,7 @@ class DoubleEliminationStrategy(TournamentStrategy):
                     losers.append(loser_id)
 
             # Create next winners bracket round
-            if len(winners) >= 2:
+            if len(winners) >= self.min_team_count:
                 for i in range(0, len(winners), 2):
                     if i + 1 < len(winners):
                         match = TournamentMatch(
@@ -124,7 +124,7 @@ class DoubleEliminationStrategy(TournamentStrategy):
             team_matches = [m for m in matches if team.id in [m.team1_id, m.team2_id] and m.winner_team_id]
             losses = sum(1 for m in team_matches if m.winner_team_id != team.id)
 
-            if losses >= 2:  # Eliminated in double elimination
+            if losses >= self.min_team_count:  # Eliminated in double elimination
                 eliminated_teams.append(team)
             else:
                 active_teams.append(team)

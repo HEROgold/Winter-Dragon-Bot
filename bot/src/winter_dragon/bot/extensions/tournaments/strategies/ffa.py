@@ -77,7 +77,7 @@ class FFAStrategy(TournamentStrategy):
 
         for i in range(0, len(winners), group_size):
             group_winners = winners[i:i + group_size]
-            if len(group_winners) >= 3:
+            if len(group_winners) >= self.min_team_count:
                 match = TournamentMatch(
                     tournament_id=self.tournament.id,
                     team1_id=group_winners[0],

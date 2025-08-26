@@ -1,7 +1,7 @@
 """Tournament management extension for the Winter Dragon Bot."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 from discord import Interaction, app_commands
 from winter_dragon.bot.core.cogs import Cog
