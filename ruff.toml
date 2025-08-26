@@ -17,6 +17,7 @@ lines-after-imports = 2
 "*/__init__.py" = ["D"]
 "*/tables/*/*.py" = ["D"] # ignore docstring for db table models.
 "*/tables/*.py" = ["D"] # ignore docstring for db table models.
+"*/bot/events/base/factory.py" = ["E701"]
 
 [format]
 indent-style = "space"
