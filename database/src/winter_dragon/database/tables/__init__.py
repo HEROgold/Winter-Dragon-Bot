@@ -33,11 +33,6 @@ from .steamsale import SteamSale
 from .steamuser import SteamUsers
 from .suggestion import Suggestions
 from .sync_ban import SyncBanGuild, SyncBanUser
-from .tournament import Tournament
-from .tournament_match import TournamentMatch
-from .tournament_player import TournamentPlayer
-from .tournament_spectator import TournamentSpectator
-from .tournament_team import TournamentTeam
 from .user import Users
 from .welcome import Welcome
 from .wyr_question import WyrQuestion
@@ -77,11 +72,6 @@ __all__ = [
     "Suggestions",
     "SyncBanGuild",
     "SyncBanUser",
-    "Tournament",
-    "TournamentMatch",
-    "TournamentPlayer",
-    "TournamentSpectator",
-    "TournamentTeam",
     "UserRoles",
     "Users",
     "Welcome",
