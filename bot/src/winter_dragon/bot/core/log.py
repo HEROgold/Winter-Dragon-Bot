@@ -5,6 +5,8 @@ from typing import Any
 from winter_dragon.bot.settings import Settings
 
 
+# TODO: upload this mixing to github
+
 class LoggerMixin:
     """Mixin class for adding loggers to classes based on their names."""
 

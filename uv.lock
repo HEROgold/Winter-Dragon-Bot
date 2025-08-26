@@ -101,6 +101,15 @@ wheels = [
 ]
 
 [[package]]
+name = "atpublic"
+version = "6.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/20/40/e686038a07af08e8462a71dc9201867ffdde408b4d93be90a4ad0fbc83ef/atpublic-6.0.1.tar.gz", hash = "sha256:718932844f5bdfdf5d80ad4c64e13964f22274b4f8937d54a8d3811d6bc5dc05", size = 17520, upload-time = "2025-05-07T03:11:30.609Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/37/66f9fcdd6a56ab3da53291c7501890246c39bc7b5891e27cd956efe127ca/atpublic-6.0.1-py3-none-any.whl", hash = "sha256:f9a23902faf5ca1fdc6436b3712d79452f71abc61a810d22be1f31b40a8004c5", size = 6421, upload-time = "2025-05-07T03:11:29.398Z" },
+]
+
+[[package]]
 name = "attrs"
 version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -263,6 +272,15 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.3" },
     { name = "sentry-sdk", specifier = ">=2.29.1" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
+]
+
+[[package]]
+name = "bracketool"
+version = "0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/7e/60b8d3129cd9040ddbb82c7383d61566186ef43565647a963f3ce45a262d/bracketool-0.1.tar.gz", hash = "sha256:cded489f8bbb1ccbd9fcd41d52f2bd15a61d60c22dfaeb960a419110f6bf0d8e", size = 8680, upload-time = "2021-03-20T10:49:15.172Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/71/f8/f3e08505c761ea085e3d14549f84d743f77e620f213989ff10ec3b4818f2/bracketool-0.1-py3-none-any.whl", hash = "sha256:7b99dc4424ffcd69c987153c949cac29caba8b8fe9c144197144ad671346792a", size = 10440, upload-time = "2021-03-20T10:49:14.164Z" },
 ]
 
 [[package]]
@@ -570,6 +588,18 @@ wheels = [
 [package.optional-dependencies]
 standard = [
     { name = "uvicorn", extra = ["standard"] },
+]
+
+[[package]]
+name = "flufl-i18n"
+version = "5.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "atpublic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/69/97/ced9b5736cc440884071a61f3ab9fca454ccd3e6b8ac4a9c8947d4739677/flufl_i18n-5.2.0.tar.gz", hash = "sha256:cd8cdb90bc5be91fe11b5dd0d0e542c037100efa1104b326fce1898bbc033463", size = 18948, upload-time = "2025-05-08T00:20:40.016Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/6e/5b348e85df3031a549214d61d2087a8fe9c2f755fe186ef555756c5b226f/flufl_i18n-5.2.0-py3-none-any.whl", hash = "sha256:d711cc6be92e71aacc00961ee651120499448a6612fba1dded93719ef10d3ffa", size = 11066, upload-time = "2025-05-08T00:20:40.896Z" },
 ]
 
 [[package]]
@@ -1622,7 +1652,9 @@ version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "bot" },
+    { name = "bracketool" },
     { name = "database" },
+    { name = "flufl-i18n" },
     { name = "winter-dragon-backend" },
 ]
 
@@ -1634,7 +1666,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bot", virtual = "bot" },
+    { name = "bracketool", specifier = ">=0.1" },
     { name = "database", virtual = "database" },
+    { name = "flufl-i18n", specifier = ">=5.2.0" },
     { name = "winter-dragon-backend", virtual = "backend" },
 ]
 

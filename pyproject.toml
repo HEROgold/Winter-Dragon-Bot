@@ -22,6 +22,8 @@ dependencies = [
     "database",
     "bot",
     "winter-dragon-backend",
+    "flufl-i18n>=5.2.0",
+    "bracketool>=0.1",
 ]
 
 [build-system]

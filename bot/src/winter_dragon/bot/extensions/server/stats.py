@@ -8,7 +8,7 @@ import discord
 from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from sqlmodel import select
-from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot._types.kwargs import BotArgs
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
@@ -196,7 +196,7 @@ class Stats(GroupCog):
 
     stats_update_interval = Config(3600)
 
-    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the stats cog."""
         super().__init__(**kwargs)
         self.stat_channels: dict[Guild, StatChannels] = {

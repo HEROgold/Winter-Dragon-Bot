@@ -1,7 +1,9 @@
-from typing import TypedDict
+from typing import NotRequired, Required, TypedDict
 
+from sqlmodel import Session
 from winter_dragon.bot.core.bot import WinterDragon
 
 
-class BotKwarg(TypedDict):
-    bot: WinterDragon
+class BotArgs(TypedDict):
+    bot: Required[WinterDragon]
+    db_session: NotRequired[Session]

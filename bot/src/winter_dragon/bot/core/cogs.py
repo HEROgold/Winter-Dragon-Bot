@@ -9,7 +9,7 @@ from discord.ext import commands
 from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from sqlmodel import select
-from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot._types.kwargs import BotArgs
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.error_handler import ErrorHandler
 from winter_dragon.bot.core.log import LoggerMixin
@@ -33,14 +33,15 @@ class Cog(commands.Cog, LoggerMixin):
     bot: WinterDragon
     logger: logging.Logger
 
-    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
 
         Sets up a error handler, app command error handler, and logger for the cog.
         """
         bot = kwargs.get("bot")
+        session = kwargs.get("db_session", Session(engine))
         self.bot = bot
-        self.session = Session(engine)
+        self.session = session
 
         if self.bot:
             self.bot.default_intents = self.bot.intents
@@ -141,6 +142,6 @@ class GroupCog(Cog):
     # Reflect difference in commands.GroupCog
     __cog_is_app_commands_group__ = True
 
-    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the GroupCog instance with given args and kwargs."""
         super().__init__(**kwargs)

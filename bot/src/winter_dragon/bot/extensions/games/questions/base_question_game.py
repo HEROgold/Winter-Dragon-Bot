@@ -6,7 +6,7 @@ from typing import Unpack
 import discord
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
-from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot._types.kwargs import BotArgs
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import Games, Suggestions
@@ -21,7 +21,7 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
     QUESTION_MODEL: type[T]
     BASE_QUESTIONS: list[str]
 
-    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the game with a session and set default data."""
         super().__init__(**kwargs)
         self.game = Games.fetch_game_by_name(self.GAME_NAME)

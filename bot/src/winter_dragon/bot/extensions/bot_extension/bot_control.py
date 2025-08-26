@@ -10,7 +10,7 @@ from discord import Guild, app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
-from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot._types.kwargs import BotArgs
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import METRICS_FILE, STATUS_MSGS
 from winter_dragon.bot.core.bot import WinterDragon
@@ -41,7 +41,7 @@ class BotC(GroupCog):
     gather_metrics_interval = Config(180)
 
 
-    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the bot control cog."""
         super().__init__(**kwargs)
         self.timestamps = []

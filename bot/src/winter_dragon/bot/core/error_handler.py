@@ -178,7 +178,7 @@ class ErrorHandler(LoggerMixin):
 
         if self.always_log_errors:
             self.logger.error(f"Always log error: {self.time_code}")
-            self.logger.exception(error, exc_info=True)
+            self.logger.exception(error)
         if self.ignore_errors:
             return
 
