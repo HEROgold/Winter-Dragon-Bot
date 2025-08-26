@@ -22,12 +22,12 @@ export function NavbarLinks() {
   const routes = routeManager.getRoutes();
 
   return (
-    <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+    <ul className="navbar-nav">
       {routes.map((route) => (
         <li className="nav-item" key={route.path}>
-          <Link className="nav-link" to={route.path}>
-            {route.path}
-          </Link>
+            <Link className="nav-link" to={route.path}>
+              {route.path}
+            </Link>
         </li>
       ))}
     </ul>
