@@ -31,4 +31,3 @@ class RoleDelete(AuditEvent):
             description=f"{user.mention} deleted role `{role_name}` with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

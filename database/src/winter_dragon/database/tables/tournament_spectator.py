@@ -13,16 +13,16 @@ if TYPE_CHECKING:
 
 class TournamentSpectator(SQLModel, table=True):
     """Tournament spectator model."""
-    
+
     tournament_id: int = Field(foreign_key="tournament.id")
     user_id: int = Field(index=True)
-    
+
     # Spectator preferences
     notifications_enabled: bool = Field(default=True)
     favorite_teams: str | None = Field(default=None, max_length=500)  # Comma-separated team IDs
-    
+
     # Metadata
     joined_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     # Relationships
     tournament: Tournament = Relationship(back_populates="spectators")

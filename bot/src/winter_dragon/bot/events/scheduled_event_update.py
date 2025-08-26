@@ -65,4 +65,3 @@ class ScheduledEventUpdate(AuditEvent):
             )
 
         return embed
-

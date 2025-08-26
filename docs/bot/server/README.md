@@ -49,7 +49,7 @@ Complete action logging and administrative oversight.
 ## Key Capabilities
 
 - **Automated Moderation**: Intelligent rule enforcement
-- **Member Management**: Role assignment and access control  
+- **Member Management**: Role assignment and access control
 - **Content Control**: Message filtering and bulk operations
 - **Analytics**: Detailed server insights and statistics
 - **Cross-server Features**: Network-wide coordination tools

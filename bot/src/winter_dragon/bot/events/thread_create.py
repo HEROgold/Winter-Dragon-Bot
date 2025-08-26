@@ -41,4 +41,3 @@ class ThreadCreate(AuditEvent):
             description=f"{user.mention} created {thread.type} {thread.mention} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

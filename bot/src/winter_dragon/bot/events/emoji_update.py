@@ -32,4 +32,3 @@ class EmojiUpdate(AuditEvent):
             description=f"{user.mention} updated emoji {target} with reason: {self.entry.reason}",
             color=CHANGED_COLOR,
         )
-

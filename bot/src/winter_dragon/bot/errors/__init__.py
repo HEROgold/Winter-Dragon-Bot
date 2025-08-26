@@ -7,4 +7,3 @@ class NoneTypeError(Exception):
 
 class FirstTimeLaunchError(Exception):
     """Raised when it's detected that WinterDragon is launched for the first time."""
-

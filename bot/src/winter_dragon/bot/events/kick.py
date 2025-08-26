@@ -33,4 +33,3 @@ class Kick(AuditEvent):
             description=f"{user.mention} kicked {target.mention} {target.name} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

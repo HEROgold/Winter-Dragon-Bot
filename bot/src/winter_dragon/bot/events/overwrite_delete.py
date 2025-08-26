@@ -42,4 +42,3 @@ class OverwriteDelete(AuditEvent):
             description=f"{user.mention} deleted permission overwrite for {target_mention} in {channel_mention} with reason: {self.entry.reason}",  # noqa: E501
             color=DELETED_COLOR,
         )
-

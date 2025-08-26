@@ -29,4 +29,3 @@ class AutomodRuleCreate(AuditEvent):
             description=f"{user.mention} created automod rule {target} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

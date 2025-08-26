@@ -51,4 +51,3 @@ class MessageDelete(AuditEvent):
             )
 
         return embed
-

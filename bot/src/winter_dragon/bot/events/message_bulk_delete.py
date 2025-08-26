@@ -43,4 +43,3 @@ class MessageBulkDelete(AuditEvent):
             description=f"{user.mention} bulk deleted {count} messages in {channel.mention} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

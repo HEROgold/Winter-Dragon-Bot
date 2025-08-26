@@ -38,4 +38,3 @@ class MemberMove(AuditEvent):
             description=f"{user.mention} moved {target.mention} to {extra.channel} with reason: {self.entry.reason}",
             color=CHANGED_COLOR,
         )
-

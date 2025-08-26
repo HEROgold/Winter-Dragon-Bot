@@ -31,4 +31,3 @@ class IntegrationDelete(AuditEvent):
             description=f"{user.mention} deleted {target_type} {target} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

@@ -28,4 +28,3 @@ class GuildUpdate(AuditEvent):
             description=f"{user.mention} updated guild settings with reason: {self.entry.reason}",
             color=CHANGED_COLOR,
         )
-

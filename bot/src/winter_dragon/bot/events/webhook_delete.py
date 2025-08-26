@@ -58,4 +58,3 @@ class WebhookDelete(AuditEvent):
             description=f"{user.mention} deleted webhook `{webhook_name}` in {channel.mention} with reason: {self.entry.reason}",  # noqa: E501
             color=DELETED_COLOR,
         )
-

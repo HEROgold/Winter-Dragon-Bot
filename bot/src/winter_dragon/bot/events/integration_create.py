@@ -29,4 +29,3 @@ class IntegrationCreate(AuditEvent):
             description=f"{user.mention} created integration {target} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

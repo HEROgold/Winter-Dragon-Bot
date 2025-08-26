@@ -32,4 +32,3 @@ class IntegrationUpdate(AuditEvent):
             description=f"{user.mention} updated integration {target_name} with reason: {self.entry.reason}",
             color=CHANGED_COLOR,
         )
-

@@ -58,4 +58,3 @@ class WebhookCreate(AuditEvent):
             description=f"{user.mention} created webhook `{webhook_name}` in {channel.mention} with reason: {self.entry.reason}",  # noqa: E501
             color=CREATED_COLOR,
         )
-

@@ -41,4 +41,3 @@ class ThreadDelete(AuditEvent):
             description=f"{user.mention} deleted {thread.type} {thread.mention} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

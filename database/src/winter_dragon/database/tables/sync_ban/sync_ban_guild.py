@@ -8,4 +8,3 @@ class SyncBanGuild(SQLModel, table=True):
     """Track guilds that have subscribed to the sync ban feature."""
 
     guild_id: int = Field(foreign_key=get_foreign_key(Guilds), primary_key=True)
-

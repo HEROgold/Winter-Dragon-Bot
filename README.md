@@ -166,10 +166,10 @@ Because this project contains 3 modules under the namespace winter_dragon, you'l
    ```bash
    # Install UV if you don't have it
    curl -fsSL https://raw.githubusercontent.com/astral-sh/uv/main/install.sh | bash
-   
+
    # Create a virtual environment
    uv venv
-   
+
    # Activate the virtual environment
    # On Unix/macOS
    source .venv/bin/activate
@@ -189,7 +189,7 @@ Because this project contains 3 modules under the namespace winter_dragon, you'l
    ```bash
    # Run the bot
    python -m winter_dragon.bot
-   
+
    # Run the backend (in a separate terminal)
    python -m winter_dragon.backend
    ```

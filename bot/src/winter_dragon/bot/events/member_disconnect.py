@@ -29,4 +29,3 @@ class MemberDisconnect(AuditEvent):
             description=f"{user.mention} disconnected {target} from {extra} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

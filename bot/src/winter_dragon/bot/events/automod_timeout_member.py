@@ -24,4 +24,3 @@ class AutomodTimeoutMember(AuditEvent):
             description=f"Automod timed out {target} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

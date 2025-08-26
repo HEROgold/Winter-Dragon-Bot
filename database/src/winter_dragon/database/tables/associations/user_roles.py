@@ -9,4 +9,3 @@ from winter_dragon.database.tables.user import Users
 class UserRoles(SQLModel, table=True):
     role_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Roles)), primary_key=True))
     user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), primary_key=True))
-

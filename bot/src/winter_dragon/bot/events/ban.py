@@ -49,4 +49,3 @@ class Ban(AuditEvent):
             description=f"{user.mention} banned {target.mention} {target.name} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

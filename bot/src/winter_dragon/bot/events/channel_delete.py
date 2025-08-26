@@ -37,4 +37,3 @@ class ChannelDelete(AuditEvent):
             ),
             color=DELETED_COLOR,
         )
-

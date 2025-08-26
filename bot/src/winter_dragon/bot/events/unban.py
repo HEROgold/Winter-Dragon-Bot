@@ -38,4 +38,3 @@ class Unban(AuditEvent):
             description=f"{user.mention} unbanned {target_type} {target} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

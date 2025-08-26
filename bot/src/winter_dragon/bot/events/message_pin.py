@@ -49,4 +49,3 @@ class MessagePin(AuditEvent):
         )
 
         return embed
-

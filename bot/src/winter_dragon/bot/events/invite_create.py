@@ -30,4 +30,3 @@ class InviteCreate(AuditEvent):
             description=f"{user.mention} created invite {invite} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

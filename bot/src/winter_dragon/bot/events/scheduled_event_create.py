@@ -31,4 +31,3 @@ class ScheduledEventCreate(AuditEvent):
             description=f"{user.mention} created scheduled event `{event_name}` with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

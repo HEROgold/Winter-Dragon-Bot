@@ -35,4 +35,3 @@ class MemberPrune(AuditEvent):
             description=f"{user.mention} pruned {delete_count} members inactive for {days} days with reason: {self.entry.reason}",  # noqa: E501
             color=DELETED_COLOR,
         )
-

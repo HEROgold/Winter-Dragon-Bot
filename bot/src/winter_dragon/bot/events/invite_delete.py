@@ -30,4 +30,3 @@ class InviteDelete(AuditEvent):
             description=f"{user.mention} removed invite {invite} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

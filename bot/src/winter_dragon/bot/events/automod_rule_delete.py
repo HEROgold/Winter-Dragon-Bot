@@ -29,4 +29,3 @@ class AutomodRuleDelete(AuditEvent):
             description=f"{user.mention} deleted automod rule {target} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

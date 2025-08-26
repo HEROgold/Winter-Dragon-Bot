@@ -29,4 +29,3 @@ class Sale(TypedDict):
 class TeamDict(TypedDict):
     id: int
     members: list[Member]
-

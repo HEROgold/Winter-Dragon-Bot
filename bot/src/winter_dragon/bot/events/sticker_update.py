@@ -22,4 +22,3 @@ class StickerUpdate(AuditEvent):
     @override
     def create_embed(self) -> Embed:
         raise NotImplementedError
-

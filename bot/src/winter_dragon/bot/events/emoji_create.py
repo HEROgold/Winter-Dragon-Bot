@@ -28,4 +28,3 @@ class EmojiCreate(AuditEvent):
             description=f"{user.mention} created emoji {target} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

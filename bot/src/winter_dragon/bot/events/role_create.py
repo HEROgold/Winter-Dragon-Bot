@@ -39,4 +39,3 @@ class RoleCreate(AuditEvent):
             description=f"{user.mention} created role {role_mention} with reason: {self.entry.reason}",
             color=CREATED_COLOR,
         )
-

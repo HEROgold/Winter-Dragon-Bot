@@ -31,4 +31,3 @@ class ScheduledEventDelete(AuditEvent):
             description=f"{user.mention} deleted scheduled event `{event_name}` with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

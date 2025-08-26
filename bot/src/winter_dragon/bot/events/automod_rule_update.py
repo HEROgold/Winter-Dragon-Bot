@@ -29,4 +29,3 @@ class AutomodRuleUpdate(AuditEvent):
             description=f"{user.mention} updated automod rule {target} with reason: {self.entry.reason}",
             color=CHANGED_COLOR,
         )
-

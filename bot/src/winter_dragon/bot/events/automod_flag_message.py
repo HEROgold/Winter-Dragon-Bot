@@ -24,4 +24,3 @@ class AutomodFlagMessage(AuditEvent):
             description=f"Automod flagged a message from {target} with reason: {self.entry.reason}",
             color=CHANGED_COLOR,
         )
-

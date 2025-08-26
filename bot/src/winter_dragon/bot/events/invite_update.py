@@ -43,4 +43,3 @@ class InviteUpdate(AuditEvent):
         )
         add_differences_to_embed(embed, self.entry, properties)
         return embed
-

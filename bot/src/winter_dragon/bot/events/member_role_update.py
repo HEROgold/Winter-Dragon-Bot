@@ -61,4 +61,3 @@ class MemberRoleUpdate(AuditEvent):
             )
 
         return embed
-

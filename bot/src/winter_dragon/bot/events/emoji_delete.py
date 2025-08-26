@@ -28,4 +28,3 @@ class EmojiDelete(AuditEvent):
             description=f"{user.mention} deleted emoji {target} with reason: {self.entry.reason}",
             color=DELETED_COLOR,
         )
-

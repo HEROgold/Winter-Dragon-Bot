@@ -42,4 +42,3 @@ class OverwriteCreate(AuditEvent):
             description=f"{user.mention} created permission overwrite for {target_mention} in {channel_mention} with reason: {self.entry.reason}",  # noqa: E501
             color=CREATED_COLOR,
         )
-
