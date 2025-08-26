@@ -8,7 +8,7 @@ import discord
 from discord import NotFound, app_commands
 from discord.ext import commands
 from winter_dragon.bot._types.dicts import CogData
-from winter_dragon.bot._types.kwargs import BotKwarg
+from winter_dragon.bot._types.kwargs import BotArgs
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
@@ -23,7 +23,7 @@ class AutoCogReloader(Cog):
     auto_reload_interval = Config(5)
 
 
-    def __init__(self, **kwargs: Unpack[BotKwarg]) -> None:
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the AutoCogReloader cog."""
         super().__init__(**kwargs)
         self.data = {
