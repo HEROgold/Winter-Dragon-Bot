@@ -66,7 +66,6 @@ class Reminder(Cog):
         self,
         interaction: discord.Interaction,
         reminder: str,
-        # repeats: bool = False, # TODO: Should be a seperate command
         minutes: int = 0,
         hours: int = 0,
         days: int = 0,
@@ -83,11 +82,23 @@ class Reminder(Cog):
             content = reminder,
             user_id = member.id,
             timestamp = time,
-            # repeats = datetime.timedelta(seconds=seconds) if repeats else None,
         ))
         self.session.commit()
         epoch = int(time.timestamp())
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
+
+    @app_commands.command(name="timed_reminder", description="Set a reminder that repeats every so often.")
+    async def slash_repeat_reminder(
+        self,
+        interaction: discord.Interaction,
+        reminder: str,
+        minutes: int = 0,
+        hours: int = 0,
+        days: int = 0,
+    ) -> None:
+        """Set a repeating reminder for the user."""
+        msg = "This command is currently disabled."
+        raise NotImplementedError(msg)
 
 
 async def setup(bot: WinterDragon) -> None:
