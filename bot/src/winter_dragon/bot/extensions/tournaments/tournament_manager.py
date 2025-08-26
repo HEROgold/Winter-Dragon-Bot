@@ -3,11 +3,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from discord import Interaction
-from discord import app_commands
-
+from discord import Interaction, app_commands
 from winter_dragon.bot.core.cogs import Cog
-from winter_dragon.bot.extensions.tournaments.strategies.base import TournamentStrategy
 from winter_dragon.bot.extensions.tournaments.strategies.single_elimination import SingleEliminationStrategy
 from winter_dragon.database.tables.tournament import Tournament
 
@@ -15,6 +12,7 @@ from winter_dragon.database.tables.tournament import Tournament
 if TYPE_CHECKING:
     from winter_dragon.bot._types.kwargs import BotArgs
     from winter_dragon.bot.core.bot import WinterDragon
+    from winter_dragon.bot.extensions.tournaments.strategies.base import TournamentStrategy
 
 class Messages:
     """Messages used in the Tournament Manager."""

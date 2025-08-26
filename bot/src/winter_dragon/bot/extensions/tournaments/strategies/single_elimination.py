@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from sqlmodel import select
-from winter_dragon.bot.extensions.tournaments.strategies.errors import CannotAdvanceError, InvalidTeamCountError
+from winter_dragon.bot.extensions.tournaments.strategies.errors import CannotAdvanceError
 from winter_dragon.database.tables import TournamentMatch, TournamentTeam
 from winter_dragon.database.tables.tournament_match import TeamMatches
 

@@ -5,13 +5,12 @@ import random
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from sqlmodel import Session
-
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.extensions.tournaments.strategies.errors import InvalidTeamCountError
 
 
 if TYPE_CHECKING:
+    from sqlmodel import Session
     from winter_dragon.database.tables import Tournament, TournamentMatch, TournamentTeam
 import re
 

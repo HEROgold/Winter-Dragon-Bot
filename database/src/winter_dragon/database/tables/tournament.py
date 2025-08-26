@@ -1,19 +1,9 @@
 """Tournament database models."""
 from __future__ import annotations
 
-from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship
 from winter_dragon.database.extension.model import DiscordID
-
-
-if TYPE_CHECKING:
-    from .tournament_match import TournamentMatch
-    from .tournament_player import TournamentPlayer
-    from .tournament_spectator import TournamentSpectator
-    from .tournament_team import TournamentTeam
 
 
 class TournamentType(str, Enum):

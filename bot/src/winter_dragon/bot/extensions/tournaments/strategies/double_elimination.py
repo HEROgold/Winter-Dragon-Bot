@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from winter_dragon.bot.extensions.tournaments.strategies.errors import InvalidTeamCountError
 from winter_dragon.database.tables import TournamentMatch, TournamentTeam
 
 from .base import TournamentStrategy
