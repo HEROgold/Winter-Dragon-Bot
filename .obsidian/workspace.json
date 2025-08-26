@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "6a204fa5837abe97",
+        "id": "78e218476e89ec3d",
         "type": "tabs",
         "children": [
           {
-            "id": "84acd6f7ca4205fd",
+            "id": "e6bcf2dedd70cb59",
             "type": "leaf",
             "state": {
               "type": "empty",
@@ -164,10 +164,21 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "e74d0fc84a6e0536",
+  "active": "e6bcf2dedd70cb59",
   "lastOpenFiles": [
-    "docs/bundler/executables.md",
+    "LICENSE.md",
+    "MIGRATIONS_USAGE.md",
+    "README.md",
+    "postgres/pg_stat_tmp/db_13823.stat",
+    "postgres/pg_stat_tmp/db_13823.tmp",
+    "postgres/pg_stat_tmp/global.tmp",
     "docs/bot/features.md",
+    "postgres/global/pg_internal.init",
+    "postgres/pg_stat_tmp/global.stat",
+    "postgres/pg_stat_tmp/db_0.stat",
+    "postgres/postmaster.pid",
+    "backend/README.md",
+    "docs/bundler/executables.md",
     "frontend/node_modules/tailwindcss-animate/README.md",
     "frontend/node_modules/bun-types/docs/project/contributing.md",
     "frontend/node_modules/bun-types/docs/runtime/shell.md",
@@ -176,11 +187,8 @@
     "docs/exit-animation-translate.md",
     "docs/bundler",
     "2025-07-15.md",
-    "LICENSE.md",
-    "README.md",
     "docs/database/features.md",
     "docs/database",
-    "docs/bot",
-    "docs"
+    "docs/bot"
   ]
 }
