@@ -8,7 +8,6 @@ from winter_dragon.bot.constants import STEAM_PERIOD, STEAM_SEND_PERIOD
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.bot.extensions.user.steam.sale_repository import SteamSaleRepository
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamScraper
 from winter_dragon.bot.extensions.user.steam.user_notifier import SteamSaleNotifier
 from winter_dragon.database.tables.steamsale import SteamSale
@@ -24,7 +23,6 @@ class SteamSales(GroupCog):
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Steam Sales cog."""
         super().__init__(bot=bot)
-        self.repository = SteamSaleRepository(bot)
         self.scraper = SteamScraper()
 
     async def cog_load(self) -> None:
@@ -47,21 +45,21 @@ class SteamSales(GroupCog):
             list[Sale]: List of TypedDict Sale
 
         """
-        known_sales = self.repository.get_saved_sales()
+        known_sales = SteamSale.get_all()
         steam_sales = self.scraper.get_sales_from_steam(percent=percent)
 
         async for sale in steam_sales:
             if sale is None:
                 self.logger.debug("Got None sale, skipping")
                 continue
-            self.repository.update_sale(sale)
+            sale.update()
 
         self.logger.debug(f"checking for new sales, {known_sales=}, {steam_sales=}")
 
         outdated = [
             i
             for i in known_sales
-            if self.repository.is_outdated(i, STEAM_PERIOD)
+            if i.is_outdated(STEAM_PERIOD)
         ]
 
         return [

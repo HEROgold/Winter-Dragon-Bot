@@ -14,8 +14,10 @@ class SteamSale(SQLModel, table=True):
     is_bundle: bool
     update_datetime: datetime
 
-    def is_outdated(self, session: Session, seconds: int) -> bool:
+    def is_outdated(self, seconds: int, session: Session | None = None) -> bool:
         """Check if a sale has recently updated within the given time frame."""
+        session = self._get_session(session)
+
         return bool(session.exec(select(SteamSale).where(
             SteamSale.id == self.id,
             SteamSale.update_datetime.astimezone(UTC) + timedelta(seconds=seconds) <= datetime.now(tz=UTC),
