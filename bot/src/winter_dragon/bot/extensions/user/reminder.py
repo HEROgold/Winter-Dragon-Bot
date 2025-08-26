@@ -43,14 +43,6 @@ class Reminder(Cog):
                 continue
             dm = await member.create_dm()
             await dm.send(f"I'm here to remind you about\n`{i.content}`")
-            if i.repeats:
-                new_time = i.timestamp + i.repeats
-                self.session.add(ReminderDb(
-                    content=i.content,
-                    user_id=i.user_id,
-                    timestamp=new_time,
-                    repeats=i.repeats,
-                ))
             self.session.delete(i)
         self.session.commit()
 
