@@ -38,7 +38,7 @@ class Games(GroupCog):
 
         self.session.add(Suggestions(
             type = "game",
-            is_verified = False,
+            verified_at = None,
             content = name,
         ))
         self.session.commit()

@@ -92,7 +92,7 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
         """Add all verified questions to the game."""
         result = self.session.exec(select(Suggestions).where(
             Suggestions.type == self.GAME_NAME,
-            Suggestions.is_verified,
+            Suggestions.verified_at is not None,
         ))
         questions = result.all()
         if not questions:
