@@ -20,7 +20,7 @@ from winter_dragon.bot.constants import (
     SINGLE_GAME_TITLE,
 )
 from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.database.tables.steamsale import SteamSale
+from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 
 
 if TYPE_CHECKING:
@@ -140,16 +140,19 @@ class SteamScraper(LoggerMixin):
             return None
 
         self.logger.info(f"SteamSale found: {url=}, {title=}, {price=}, {sale_perc=}")
-        return SteamSale(
-            id = url.get_id_from_game_url(),
+        sale_id = url.get_id_from_game_url()
+        sale = SteamSale(
+            id = sale_id,
             title = title.get_text(),
             url = str(url),
             sale_percent = sale_perc.text[1:-1], # strip '-' and '%' from sale tag
             final_price = price_to_num(price.get_text()[:-1].replace(",", ".")),
-            is_dlc = bool(soup.find("div", class_="content")),
-            is_bundle = False,
             update_datetime = datetime.now(tz=UTC),
         )
+        if bool(soup.find("div", class_="content")):
+            SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
+
+        return sale
 
     async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[SteamSale | None]:
         """Scrape sales from https://store.steampowered.com/search/.
@@ -206,8 +209,6 @@ class SteamScraper(LoggerMixin):
             url = str(url),
             sale_percent = sale_percentage,
             final_price = price_to_num(price),
-            is_dlc = False,
-            is_bundle = False,
             update_datetime = datetime.now(tz=UTC),
         )
 

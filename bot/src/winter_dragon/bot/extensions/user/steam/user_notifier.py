@@ -8,7 +8,7 @@ from winter_dragon.bot.constants import WEBSITE_URL
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamURL
-from winter_dragon.database.tables.steamsale import SteamSale
+from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 from winter_dragon.database.tables.steamuser import SteamUsers
 
 
@@ -41,13 +41,17 @@ class SteamSaleNotifier(LoggerMixin):
             return
 
         for i, sale in enumerate(sales):
+            properties = self.session.exec(
+                select(SteamSaleProperties)
+                .where(SteamSaleProperties.steam_sale_id == sale.id),
+            ).all()
             install_url = f"{WEBSITE_URL}/redirect?redirect_url=steam://install/{SteamURL(sale.url).get_id_from_game_url()}"
             embed_text = f"""
                 [{sale.title}]({sale.url})
                 Sale: {sale.sale_percent}%
                 Price: {sale.final_price}
-                Dlc: {sale.is_dlc}
-                Bundle: {sale.is_bundle}
+                Dlc: {SaleTypes.DLC in {prop.property for prop in properties}}
+                Bundle: {SaleTypes.BUNDLE in {prop.property for prop in properties}}
                 Last Checked: <t:{int(sale.update_datetime.timestamp())}:F>
                 Install game: [Click here]({install_url})
             """
