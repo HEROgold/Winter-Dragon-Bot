@@ -1,4 +1,3 @@
-
 # TODO
 
 Ensure that the requests are authenticated and authorized.
