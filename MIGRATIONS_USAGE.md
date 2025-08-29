@@ -30,11 +30,11 @@ docker run --rm winter-dragon-migrations
 **What this does:**
 
 1. Waits for the PostgreSQL database to be ready
-2. Generates an initial migration if none exist
-3. Checks for schema changes in your SQLModel definitions
-4. Creates new migrations if changes are detected
-5. Applies all pending migrations to the database
-6. Shows the current migration status
+1. Generates an initial migration if none exist
+1. Checks for schema changes in your SQLModel definitions
+1. Creates new migrations if changes are detected
+1. Applies all pending migrations to the database
+1. Shows the current migration status
 
 ### 2. Manual Migration Generation
 

@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.13"
 
 [manifest]
@@ -244,7 +244,7 @@ wheels = [
 [[package]]
 name = "bot"
 version = "0.1.0"
-source = { virtual = "bot" }
+source = { editable = "bot" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "confkit" },
@@ -263,7 +263,7 @@ dependencies = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.4" },
     { name = "confkit", specifier = ">=0.1.1" },
-    { name = "database", virtual = "database" },
+    { name = "database", editable = "database" },
     { name = "discord-ext-prometheus", specifier = ">=0.2.1" },
     { name = "discord-py", specifier = ">=2.5.2" },
     { name = "matplotlib", specifier = ">=3.10.1" },
@@ -475,7 +475,7 @@ wheels = [
 [[package]]
 name = "database"
 version = "0.1.0"
-source = { virtual = "database" }
+source = { editable = "database" }
 dependencies = [
     { name = "psycopg2-binary" },
     { name = "sqlmodel" },
@@ -1665,11 +1665,11 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bot", virtual = "bot" },
+    { name = "bot", editable = "bot" },
     { name = "bracketool", specifier = ">=0.1" },
-    { name = "database", virtual = "database" },
+    { name = "database", editable = "database" },
     { name = "flufl-i18n", specifier = ">=5.2.0" },
-    { name = "winter-dragon-backend", virtual = "backend" },
+    { name = "winter-dragon-backend", editable = "backend" },
 ]
 
 [package.metadata.requires-dev]
@@ -1678,7 +1678,7 @@ dev = [{ name = "alembic", specifier = ">=1.16.1" }]
 [[package]]
 name = "winter-dragon-backend"
 version = "0.1.0"
-source = { virtual = "backend" }
+source = { editable = "backend" }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi", extra = ["standard"] },

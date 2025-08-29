@@ -39,7 +39,7 @@
             "command": "uv pip install -e . --force-reinstall"
         },
         {
-            "label": "Clean environtment",
+            "label": "Clean environment",
             "type": "shell",
             "dependsOn": [
                 "Remove build files",
@@ -55,7 +55,7 @@
             "dependsOn": [
                 "UV Build project",
                 "UV Force reinstall project packages",
-                "Clean environtment"
+                "Clean environment"
             ],
             "dependsOrder": "sequence"
         }
