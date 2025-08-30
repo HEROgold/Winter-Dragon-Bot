@@ -1,8 +1,8 @@
 """Cog for automatically assigning roles to new members."""
 import discord
+from confkit import Config
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot.constants import AUTO_ASSIGN_REASON
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.database.tables import AutoAssignRole
@@ -11,6 +11,8 @@ from winter_dragon.database.tables import Roles as DbRole
 
 class AutoAssign(GroupCog):
     """Cog for automatically assigning roles to new members."""
+
+    auto_assign_reason = Config("Member joined. Adding auto-assign roles")
 
     @app_commands.command(name="show", description="Show the current auto assign role")
     async def slash_assign_show(self, interaction: discord.Interaction) -> None:
@@ -92,7 +94,7 @@ class AutoAssign(GroupCog):
         """Automatically assign roles to new members."""
         for auto_assign in self.session.exec(select(AutoAssignRole).where(AutoAssignRole.guild_id == member.guild.id)).all():
             if role := member.guild.get_role(auto_assign.role_id):
-                await member.add_roles(role, reason=AUTO_ASSIGN_REASON)
+                await member.add_roles(role, reason=self.auto_assign_reason)
                 self.logger.debug(f"Added AutoAssign role {role} to new member {member.mention}")
 
 

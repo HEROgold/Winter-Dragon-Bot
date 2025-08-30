@@ -3,8 +3,8 @@ from typing import override
 
 from discord import Embed, Member, Role, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class OverwriteDelete(AuditEvent):
@@ -40,5 +40,5 @@ class OverwriteDelete(AuditEvent):
         return Embed(
             title="Permission Overwrite Deleted",
             description=f"{user.mention} deleted permission overwrite for {target_mention} in {channel_mention} with reason: {self.entry.reason}",  # noqa: E501
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

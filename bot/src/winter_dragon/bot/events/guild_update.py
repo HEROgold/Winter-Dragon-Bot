@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class GuildUpdate(AuditEvent):
@@ -26,5 +26,5 @@ class GuildUpdate(AuditEvent):
         return Embed(
             title="Guild Updated",
             description=f"{user.mention} updated guild settings with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )

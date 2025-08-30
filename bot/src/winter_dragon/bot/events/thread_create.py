@@ -6,8 +6,8 @@ Track when users create new threads and generate appropriate audit logs.
 from typing import override
 
 from discord import Embed, Member, Thread, User
-from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class ThreadCreate(AuditEvent):
@@ -39,5 +39,5 @@ class ThreadCreate(AuditEvent):
         return Embed(
             title="Thread Created",
             description=f"{user.mention} created {thread.type} {thread.mention} with reason: {self.entry.reason}",
-            color=CREATED_COLOR,
+            color=Settings.created_color,
         )

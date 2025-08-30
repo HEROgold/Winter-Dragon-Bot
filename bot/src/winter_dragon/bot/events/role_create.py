@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, Role, User
-from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class RoleCreate(AuditEvent):
@@ -29,7 +29,7 @@ class RoleCreate(AuditEvent):
             return Embed(
                 title="Role Created",
                 description=f"{user.mention} created a role with reason: {self.entry.reason}",
-                color=CREATED_COLOR,
+                color=Settings.created_color,
             )
 
         role_mention = role.mention if hasattr(role, "mention") else role.name
@@ -37,5 +37,5 @@ class RoleCreate(AuditEvent):
         return Embed(
             title="Role Created",
             description=f"{user.mention} created role {role_mention} with reason: {self.entry.reason}",
-            color=CREATED_COLOR,
+            color=Settings.created_color,
         )

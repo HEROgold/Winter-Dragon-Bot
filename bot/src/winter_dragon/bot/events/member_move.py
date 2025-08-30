@@ -3,8 +3,8 @@ from typing import override
 
 from discord import Embed, Member, User
 from discord.audit_logs import _AuditLogProxyMemberMoveOrMessageDelete  # type: ignore[reportPrivateUsage]
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class MemberMove(AuditEvent):
@@ -36,5 +36,5 @@ class MemberMove(AuditEvent):
         return Embed(
             title="Member Move",
             description=f"{user.mention} moved {target.mention} to {extra.channel} with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )

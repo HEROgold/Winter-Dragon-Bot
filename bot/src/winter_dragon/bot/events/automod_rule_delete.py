@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class AutomodRuleDelete(AuditEvent):
@@ -27,5 +27,5 @@ class AutomodRuleDelete(AuditEvent):
         return Embed(
             title="Automod Rule Delete",
             description=f"{user.mention} deleted automod rule {target} with reason: {self.entry.reason}",
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

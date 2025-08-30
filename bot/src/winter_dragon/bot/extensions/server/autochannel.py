@@ -6,12 +6,12 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 import discord
+from confkit import Config
 from discord import (
     VoiceChannel,
     app_commands,
 )
 from sqlmodel import select
-from winter_dragon.bot.constants import AUTOCHANNEL_CREATE_REASON
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 @app_commands.guild_only()
 class AutomaticChannels(GroupCog):
     """Automatic channels for users to create their own (temporary) channels."""
+
+    create_reason = Config("Creating AutomaticChannel")
 
     @Cog.listener()
     async def on_voice_state_update(
@@ -113,7 +115,7 @@ class AutomaticChannels(GroupCog):
                 name,
                 category=category,
                 overwrites=overwrites, # type: ignore[reportUnknownArgumentType]
-                reason=AUTOCHANNEL_CREATE_REASON,
+                reason=self.create_reason,
             )
 
             await member.move_to(voice_channel)
@@ -165,7 +167,7 @@ class AutomaticChannels(GroupCog):
             category=(
                 await guild.create_category(category_name)
             ),
-            reason=AUTOCHANNEL_CREATE_REASON,
+            reason=self.create_reason,
         )
 
         self.session.add_all([

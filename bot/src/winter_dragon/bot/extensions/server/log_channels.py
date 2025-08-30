@@ -4,19 +4,12 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
+from confkit import Config
 from discord import CategoryChannel, ClientUser, Guild, TextChannel, app_commands
 from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select
 from winter_dragon.bot._types.aliases import PermissionsOverwrites
-from winter_dragon.bot.constants import (
-    CHANGED_COLOR,
-    CREATED_COLOR,
-    DELETED_COLOR,
-    LOG_CHANNEL_NAME,
-    MAX_CATEGORY_SIZE,
-    MEMBER_UPDATE_PROPERTIES,
-)
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.enums.channels import ChannelTypes, LogCategories
@@ -26,9 +19,19 @@ from winter_dragon.database.tables import Channels
 
 
 LOGS = ChannelTypes.LOGS
+MAX_CATEGORY_SIZE = 50
+MEMBER_UPDATE_PROPERTIES = [
+    "nick",
+    "roles",
+    "pending",
+    "guild_avatar",
+    "guild_permissions",
+]
 
 class LogChannels(GroupCog):
     """Cog for managing log channels."""
+
+    log_channel_name = Config("LOG-CATEGORY")
 
 # ----------------------
 # Helper Functions Start
@@ -113,11 +116,11 @@ class LogChannels(GroupCog):
         embed: discord.Embed,
     ) -> None:
         """Send logs to the category channel."""
-        log_channel_name = log_category.name
+        category_name = log_category.name
 
         channel = self.session.exec(select(Channels).where(
                 Channels.guild_id == guild.id,
-                Channels.name == log_channel_name,
+                Channels.name == category_name,
             )).first()
 
         if channel is None:
@@ -127,7 +130,7 @@ class LogChannels(GroupCog):
         if mod_channel := discord.utils.get(guild.text_channels, id=channel.id):
             await mod_channel.send(embed=embed)
 
-        self.logger.debug(f"Send logs to {log_channel_name=}")
+        self.logger.debug(f"Send logs to {category_name=}")
 
 
     def get_entry_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
@@ -154,18 +157,18 @@ class LogChannels(GroupCog):
             return discord.Embed(
                 title="Member Banned",
                 description=f"{user.mention} Banned {member.mention} {member.name} with reason: {entry.reason or None}",
-                color=DELETED_COLOR,
+                color=self.deleted_color,
             )
         if entry.action == discord.AuditLogAction.kick:
             return discord.Embed(
                 title="Member Kicked",
                 description=f"{user.mention} Kicked {member.mention} {member.name} with reason: {entry.reason or None}",
-                color=DELETED_COLOR,
+                color=self.deleted_color,
             )
         return discord.Embed(
             title="Member Left",
             description=f"{member.mention} {member.name} Left the guild",
-            color=DELETED_COLOR,
+            color=self.deleted_color,
         )
 
 # ----------------------
@@ -209,7 +212,7 @@ class LogChannels(GroupCog):
             embed = discord.Embed(
                 title="Member Update",
                 description=update_message,
-                color=CHANGED_COLOR,
+                color=self.changed_color,
             )
             await self.send_channel_logs(member.guild, embed, LogCategories.MEMBER_UPDATE)
 
@@ -221,7 +224,7 @@ class LogChannels(GroupCog):
         embed = discord.Embed(
             title="Member Joined",
             description=f"{member.mention} Joined the guild",
-            color= CREATED_COLOR,
+            color= self.created_color,
         )
         await self.send_channel_logs(member.guild, embed, LogCategories.MEMBER_JOINED)
 
@@ -258,7 +261,7 @@ class LogChannels(GroupCog):
         embed = discord.Embed(
             title="Message Edited",
             description=f"{before.author.mention} Edited a message",
-            color=CHANGED_COLOR,
+            color=self.changed_color,
         )
         embed.add_field(name="Old", value=f"`{before.clean_content}`")
         embed.add_field(name="New", value=f"`{after.clean_content}`")
@@ -285,7 +288,7 @@ class LogChannels(GroupCog):
         embed = discord.Embed(
             title="Message Deleted",
             description=description,
-            color=DELETED_COLOR,
+            color=self.deleted_color,
         )
         embed.add_field(
             name="Content",
@@ -429,7 +432,7 @@ class LogChannels(GroupCog):
             category_channels.append(category_channel)
             Channels.update(Channels(
                 id = category_channel.id,
-                name = LOG_CHANNEL_NAME,
+                name = self.log_channel_name,
                 type = LOGS,
                 guild_id = category_channel.guild.id,
             ))
@@ -563,7 +566,7 @@ class LogChannels(GroupCog):
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
         """Update the required category count for the guild."""
         categories = self.session.exec(select(Channels).where(
-            Channels.name == LOG_CHANNEL_NAME,
+            Channels.name == self.log_channel_name,
             Channels.type == LOGS,
             Channels.guild_id == guild.id,
         )).all()
@@ -594,7 +597,7 @@ class LogChannels(GroupCog):
                 category_channels.append(category_channel)
                 Channels.update(Channels(
                     id = category_channel.id,
-                    name = LOG_CHANNEL_NAME,
+                    name = self.log_channel_name,
                     type = LOGS,
                     guild_id = category_channel.guild.id,
                 ))

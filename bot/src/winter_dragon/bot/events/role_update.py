@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, Role, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class RoleUpdate(AuditEvent):
@@ -48,7 +48,7 @@ class RoleUpdate(AuditEvent):
         embed = Embed(
             title="Role Update",
             description=f"{user.mention} updated role {role.mention} with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
 
         # Add fields for each changed property

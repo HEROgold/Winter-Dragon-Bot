@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class AutomodRuleUpdate(AuditEvent):
@@ -27,5 +27,5 @@ class AutomodRuleUpdate(AuditEvent):
         return Embed(
             title="Automod Rule Update",
             description=f"{user.mention} updated automod rule {target} with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )

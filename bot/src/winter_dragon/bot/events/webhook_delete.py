@@ -6,8 +6,8 @@ from typing import override
 
 from discord import Embed, Member, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class WebhookDelete(AuditEvent):
@@ -56,5 +56,5 @@ class WebhookDelete(AuditEvent):
         return Embed(
             title="Webhook Created",
             description=f"{user.mention} deleted webhook `{webhook_name}` in {channel.mention} with reason: {self.entry.reason}",  # noqa: E501
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

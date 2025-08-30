@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class AutomodFlagMessage(AuditEvent):
@@ -22,5 +22,5 @@ class AutomodFlagMessage(AuditEvent):
         return Embed(
             title="Automod Flag Message",
             description=f"Automod flagged a message from {target} with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )

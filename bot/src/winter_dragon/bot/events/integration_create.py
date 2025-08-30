@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class IntegrationCreate(AuditEvent):
@@ -27,5 +27,5 @@ class IntegrationCreate(AuditEvent):
         return Embed(
             title="Integration Create",
             description=f"{user.mention} created integration {target} with reason: {self.entry.reason}",
-            color=CREATED_COLOR,
+            color=Settings.created_color,
         )

@@ -3,8 +3,8 @@
 from typing import override
 
 from discord import Embed, Member, Message, TextChannel, User
-from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class MessageUnpin(AuditEvent):
@@ -40,7 +40,7 @@ class MessageUnpin(AuditEvent):
         embed = Embed(
             title="Message Unpinned",
             description=f"{user.mention} unpinned a message from {author.mention} in {channel.mention} with reason: {self.entry.reason}",  # noqa: E501
-            color=CREATED_COLOR,
+            color=Settings.created_color,
         )
         embed.add_field(
             name="Content",

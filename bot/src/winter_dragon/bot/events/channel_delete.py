@@ -3,8 +3,8 @@ from typing import override
 
 from discord import Embed, Member, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class ChannelDelete(AuditEvent):
@@ -35,5 +35,5 @@ class ChannelDelete(AuditEvent):
                 f"{user.mention} deleted {channel.mention} {channel.name}{category}"
                 f"with reason: {self.entry.reason}"
             ),
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

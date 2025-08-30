@@ -3,9 +3,9 @@ from typing import override
 
 from discord import Embed, Member, Role, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
+from winter_dragon.bot.settings import Settings
 
 
 class OverwriteUpdate(AuditEvent):
@@ -47,7 +47,7 @@ class OverwriteUpdate(AuditEvent):
                 f"{user.mention} changed permission overwrite "
                 f"for {permissions.mention} in {channel.mention} with reason: {self.entry.reason}"
             ),
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
         add_differences_to_embed(embed, self.entry, properties)
         return embed

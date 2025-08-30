@@ -5,8 +5,8 @@ from typing import override
 from discord import Embed, Member, User
 from discord.abc import GuildChannel
 from discord.audit_logs import _AuditLogProxyMessageBulkDelete  # type: ignore[reportPrivateUsage]
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class MessageBulkDelete(AuditEvent):
@@ -41,5 +41,5 @@ class MessageBulkDelete(AuditEvent):
         return Embed(
             title="Bulk Message Delete",
             description=f"{user.mention} bulk deleted {count} messages in {channel.mention} with reason: {self.entry.reason}",
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

@@ -10,7 +10,7 @@ from __future__ import annotations
 import configparser
 from typing import TYPE_CHECKING
 
-from confkit import Config
+from confkit import BaseDataType, Config
 from winter_dragon.bot.constants import BOT_CONFIG
 from winter_dragon.bot.errors import FirstTimeLaunchError
 
@@ -60,3 +60,40 @@ class ConfigParser(configparser.ConfigParser):
 config = ConfigParser()
 Config.set_parser(config)
 Config.set_file(BOT_CONFIG)
+
+class ListConfig(BaseDataType[list[str]]):
+    """A config value that is a list of values."""
+
+    separator = r","
+
+    def convert(self, value: str) -> list[str]:
+        """Convert a string to a list."""
+        return [item.casefold() for item in value.split(ListConfig.separator)]
+
+    def __str__(self) -> str:
+        """Return a string representation of the list."""
+        return ListConfig.separator.join(self.value)
+
+
+class Hex(BaseDataType[int]):
+    """A config value that is a hexadecimal."""
+
+    def convert(self, value: str) -> int:
+        """Convert a string to a hexadecimal."""
+        return int(value, 16)
+
+    def __str__(self) -> str:
+        """Return a string representation of the hexadecimal."""
+        return hex(self.value)
+
+
+class Octal(BaseDataType[int]):
+    """A config value that is an octal."""
+
+    def convert(self, value: str) -> int:
+        """Convert a string to an octal."""
+        return int(value, 8)
+
+    def __str__(self) -> str:
+        """Return a string representation of an octal."""
+        return oct(self.value)

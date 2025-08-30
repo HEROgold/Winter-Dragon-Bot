@@ -3,8 +3,8 @@ from typing import override
 
 from discord import Embed, Member, Role, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class OverwriteCreate(AuditEvent):
@@ -40,5 +40,5 @@ class OverwriteCreate(AuditEvent):
         return Embed(
             title="Permission Overwrite Created",
             description=f"{user.mention} created permission overwrite for {target_mention} in {channel_mention} with reason: {self.entry.reason}",  # noqa: E501
-            color=CREATED_COLOR,
+            color=Settings.created_color,
         )

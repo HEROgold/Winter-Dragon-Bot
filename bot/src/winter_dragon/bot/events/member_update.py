@@ -2,9 +2,9 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
+from winter_dragon.bot.settings import Settings
 
 
 class MemberUpdate(AuditEvent):
@@ -32,7 +32,7 @@ class MemberUpdate(AuditEvent):
         embed = Embed(
             title="Member Update",
             description=f"{user.mention} updated {target.mention} with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
         properties = {
             "nick",

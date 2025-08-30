@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class RoleDelete(AuditEvent):
@@ -29,5 +29,5 @@ class RoleDelete(AuditEvent):
         return Embed(
             title="Role Deleted",
             description=f"{user.mention} deleted role `{role_name}` with reason: {self.entry.reason}",
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

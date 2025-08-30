@@ -2,8 +2,8 @@
 from typing import cast, override
 
 from discord import Embed, Member, Message, User
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class MessageDelete(AuditEvent):
@@ -27,7 +27,7 @@ class MessageDelete(AuditEvent):
             return Embed(
                 title="Message Deleted",
                 description="A message was deleted, but details could not be determined.",
-                color=DELETED_COLOR,
+                color=Settings.deleted_color,
             )
 
         message = cast("Message", self.entry.target)
@@ -41,7 +41,7 @@ class MessageDelete(AuditEvent):
         embed = Embed(
             title="Message Deleted",
             description=description,
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )
 
         if hasattr(message, "clean_content") and message.clean_content:

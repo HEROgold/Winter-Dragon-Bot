@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, Role, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class MemberRoleUpdate(AuditEvent):
@@ -29,7 +29,7 @@ class MemberRoleUpdate(AuditEvent):
             return Embed(
                 title="Member Role Update",
                 description=f"{user.mention} updated roles for a member with reason: {self.entry.reason}",
-                color=CHANGED_COLOR,
+                color=Settings.changed_color,
             )
 
         before = self.entry.before
@@ -43,7 +43,7 @@ class MemberRoleUpdate(AuditEvent):
         embed = Embed(
             title="Member Role Update",
             description=description,
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
 
         if added_roles:

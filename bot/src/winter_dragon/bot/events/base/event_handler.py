@@ -29,11 +29,11 @@ class AuditEventHandler(LoggerMixin):
         embed: discord.Embed,
     ) -> None:
         """Send logs to the appropriate channel."""
-        log_channel_name = log_category.name
+        category_name = log_category.name
 
         channel = self.session.exec(select(Channels).where(
                 Channels.guild_id == guild.id,
-                Channels.name == log_channel_name,
+                Channels.name == category_name,
             )).first()
 
         if channel is None:
@@ -43,7 +43,7 @@ class AuditEventHandler(LoggerMixin):
         if mod_channel := discord.utils.get(guild.text_channels, id=channel.id):
             await mod_channel.send(embed=embed)
 
-        self.logger.debug(f"Send logs to {log_channel_name=}")
+        self.logger.debug(f"Send logs to {category_name=}")
 
     async def send_log_to_global(
         self,

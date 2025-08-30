@@ -7,9 +7,9 @@ from typing import override
 
 from discord import Embed, Member, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
+from winter_dragon.bot.settings import Settings
 
 
 class WebhookUpdate(AuditEvent):
@@ -45,7 +45,7 @@ class WebhookUpdate(AuditEvent):
         embed = Embed(
             title="Webhook Created",
             description=f"{user.mention} updated webhook `{webhook_name}` in {channel.mention} with reason: {self.entry.reason}",  # noqa: E501
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
         add_differences_to_embed(embed, self.entry, ("name", "channel", "avatar"))
         return embed

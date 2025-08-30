@@ -16,7 +16,7 @@ from discord import Intents, app_commands
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 from winter_dragon.bot.config import Config
-from winter_dragon.bot.constants import BOT_PERMISSIONS, BOT_SCOPE, DISCORD_AUTHORIZE, EXTENSIONS, ROOT_DIR
+from winter_dragon.bot.constants import BOT_PERMISSIONS, DISCORD_AUTHORIZE, EXTENSIONS, ROOT_DIR
 from winter_dragon.bot.settings import Settings
 from winter_dragon.bot.tools.log_manager import LogsManager
 
@@ -100,7 +100,7 @@ class WinterDragon(AutoShardedBot):
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
             + f"&permissions={BOT_PERMISSIONS}"
-            + f"&scope={"+".join(BOT_SCOPE)}"
+            + f"&scope={"+".join(Settings.BOT_SCOPE)}"
         )
 
     async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:

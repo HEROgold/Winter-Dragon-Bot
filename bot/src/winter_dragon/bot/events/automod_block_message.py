@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class AutomodBlockMessage(AuditEvent):
@@ -22,5 +22,5 @@ class AutomodBlockMessage(AuditEvent):
         return Embed(
             title="Automod Block Message",
             description=f"Automod blocked a message from {target} with reason: {self.entry.reason}",
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

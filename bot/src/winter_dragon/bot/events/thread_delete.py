@@ -6,8 +6,8 @@ Track when users delete threads and generate appropriate audit logs.
 from typing import override
 
 from discord import Embed, Member, Thread, User
-from winter_dragon.bot.constants import CREATED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class ThreadDelete(AuditEvent):
@@ -39,5 +39,5 @@ class ThreadDelete(AuditEvent):
         return Embed(
             title="Thread Deleted",
             description=f"{user.mention} deleted {thread.type} {thread.mention} with reason: {self.entry.reason}",
-            color=CREATED_COLOR,
+            color=Settings.created_color,
         )

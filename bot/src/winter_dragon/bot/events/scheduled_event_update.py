@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class ScheduledEventUpdate(AuditEvent):
@@ -50,7 +50,7 @@ class ScheduledEventUpdate(AuditEvent):
         embed = Embed(
             title="Scheduled Event Update",
             description=f"{user.mention} updated scheduled event `{event_name}` with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
 
         # Add fields for each changed property

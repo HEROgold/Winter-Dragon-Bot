@@ -1,9 +1,10 @@
 """Module for managing custom emoji's for the bot."""
 
 from discord import Attachment, Guild, Interaction, Member, Permissions, User
-from winter_dragon.bot.constants import EMOJI_DIR, GUILD_OWNERSHIP_LIMIT
+from winter_dragon.bot.constants import EMOJI_DIR
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.bot.settings import Settings
 
 
 GUILD_NAME = "Emotes"
@@ -36,7 +37,7 @@ class EmoteManager(Cog):
                     await interaction.response.send_message(f"Added {emoji.filename}.")
                     self.logger.info(f"Added {emoji.filename} to {guild=}.")
                     return
-        if guild_counter < GUILD_OWNERSHIP_LIMIT:
+        if guild_counter < Settings.GUILD_OWNERSHIP_LIMIT:
             guild = await self.create_guild(guild_counter)
             guild_counter += 1
             await guild.create_custom_emoji(name=emoji.filename, image=await emoji.read())

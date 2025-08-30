@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class IntegrationUpdate(AuditEvent):
@@ -30,5 +30,5 @@ class IntegrationUpdate(AuditEvent):
         return Embed(
             title="Integration Update",
             description=f"{user.mention} updated integration {target_name} with reason: {self.entry.reason}",
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )

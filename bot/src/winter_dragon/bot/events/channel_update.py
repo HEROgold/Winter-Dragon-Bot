@@ -3,9 +3,9 @@ from typing import override
 
 from discord import Embed, Member, User
 from discord.abc import GuildChannel
-from winter_dragon.bot.constants import CHANGED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
+from winter_dragon.bot.settings import Settings
 
 
 class ChannelUpdate(AuditEvent):
@@ -50,7 +50,7 @@ class ChannelUpdate(AuditEvent):
             description=(
                 f"{user.mention} changed {channel.mention} with reason: {self.entry.reason}"
             ),
-            color=CHANGED_COLOR,
+            color=Settings.changed_color,
         )
         add_differences_to_embed(embed, self.entry, properties)
         return embed

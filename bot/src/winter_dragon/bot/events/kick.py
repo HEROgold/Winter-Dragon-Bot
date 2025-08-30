@@ -2,8 +2,8 @@
 from typing import override
 
 from discord import Embed, Member, User
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 
 
 class Kick(AuditEvent):
@@ -31,5 +31,5 @@ class Kick(AuditEvent):
         return Embed(
             title="Kick",
             description=f"{user.mention} kicked {target.mention} {target.name} with reason: {self.entry.reason}",
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

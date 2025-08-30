@@ -3,8 +3,8 @@ from typing import override
 
 from discord import Embed, Member, User
 from sqlmodel import select
-from winter_dragon.bot.constants import DELETED_COLOR
 from winter_dragon.bot.events.base.audit_event import AuditEvent
+from winter_dragon.bot.settings import Settings
 from winter_dragon.database.constants import session
 from winter_dragon.database.tables.sync_ban import SyncBanGuild, SyncBanUser
 
@@ -47,5 +47,5 @@ class Ban(AuditEvent):
         return Embed(
             title="Ban",
             description=f"{user.mention} banned {target.mention} {target.name} with reason: {self.entry.reason}",
-            color=DELETED_COLOR,
+            color=Settings.deleted_color,
         )

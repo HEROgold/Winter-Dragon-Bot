@@ -4,7 +4,6 @@ import asyncio
 from discord import Embed, Interaction, app_commands
 from sqlmodel import select
 from winter_dragon.bot.config import Config
-from winter_dragon.bot.constants import STEAM_PERIOD, STEAM_SEND_PERIOD
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
@@ -14,6 +13,9 @@ from winter_dragon.database.tables.steamsale import SteamSale
 from winter_dragon.database.tables.steamuser import SteamUsers
 from winter_dragon.database.tables.user import Users
 
+
+STEAM_SEND_PERIOD = 3600 * 3 # 3 hour cooldown on updates in seconds
+OUTDATED_DELTA = STEAM_SEND_PERIOD * 10 # 30 hours.
 
 class SteamSales(GroupCog):
     """Steam Sales cog for Discord bot."""
@@ -59,7 +61,7 @@ class SteamSales(GroupCog):
         outdated = [
             i
             for i in known_sales
-            if i.is_outdated(STEAM_PERIOD)
+            if i.is_outdated(OUTDATED_DELTA)
         ]
 
         return [
