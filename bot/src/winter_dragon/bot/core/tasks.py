@@ -3,7 +3,6 @@
 import asyncio
 import datetime
 from collections.abc import Callable, Sequence
-from typing import Any
 
 from discord.ext import tasks
 from discord.utils import MISSING
@@ -38,12 +37,12 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         )
         return await super()._error(*args)
 
-    def _handle_task_result(self, task: asyncio.Task[Any]) -> None:
+    def _handle_task_result[T](self, task: asyncio.Task[T]) -> T | None:
         try:
-            task.result()
+            return task.result()
         except asyncio.CancelledError:
             pass  # Task cancellation should not be logged as an error.
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             self.logger.exception("Exception raised by task: %r", task)
 
 
