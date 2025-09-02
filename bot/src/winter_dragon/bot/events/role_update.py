@@ -16,7 +16,7 @@ class RoleUpdate(AuditEvent):
 
 
     @override
-    def create_embed(self) -> Embed:  # sourcery skip: extract-duplicate-method
+    def create_embed(self) -> Embed:
         role = self.entry.target
         user = self.entry.user
         before = self.entry.before

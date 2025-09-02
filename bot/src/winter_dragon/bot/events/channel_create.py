@@ -16,7 +16,7 @@ class ChannelCreate(AuditEvent):
         self.logger.debug(f"On channel create: {self.entry.guild=}, {self.entry.target=}")
 
     @override
-    def create_embed(self) -> Embed:  # sourcery skip: extract-duplicate-method
+    def create_embed(self) -> Embed:
         channel = self.entry.target
         if not isinstance(channel, GuildChannel):
             msg = f"Channel is not a guild channel: {channel=}"

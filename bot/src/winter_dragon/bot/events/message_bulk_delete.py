@@ -19,7 +19,7 @@ class MessageBulkDelete(AuditEvent):
 
 
     @override
-    def create_embed(self) -> Embed:  # sourcery skip: extract-duplicate-method
+    def create_embed(self) -> Embed:
         channel = self.entry.target
         user = self.entry.user
         extra = self.entry.extra

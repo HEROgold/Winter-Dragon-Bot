@@ -24,7 +24,7 @@ class ThreadUpdate(AuditEvent):
 
 
     @override
-    def create_embed(self) -> Embed:  # sourcery skip: extract-duplicate-method
+    def create_embed(self) -> Embed:
         thread = self.entry.target
         user = self.entry.user
         if not isinstance(user, (User, Member)):
