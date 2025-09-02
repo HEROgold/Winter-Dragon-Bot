@@ -95,7 +95,6 @@ class DatabaseManager(Cog):
     @Cog.listener()
     async def on_message(self, message: discord.Message) -> None:
         """When a message is sent, add it to the database."""
-        # sourcery skip: collection-to-bool, remove-redundant-if, remove-unreachable-code
         if isinstance(message.channel, (
             discord.DMChannel,
             discord.GroupChannel,
