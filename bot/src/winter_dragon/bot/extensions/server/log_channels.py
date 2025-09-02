@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
-from confkit import Config
+from winter_dragon.bot.config import Config
 from discord import CategoryChannel, ClientUser, Guild, TextChannel, app_commands
 from discord.abc import PrivateChannel
 from discord.ext import commands

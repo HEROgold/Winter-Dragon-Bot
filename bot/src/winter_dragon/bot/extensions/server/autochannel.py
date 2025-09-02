@@ -6,7 +6,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 import discord
-from confkit import Config
+from winter_dragon.bot.config import Config
 from discord import (
     VoiceChannel,
     app_commands,

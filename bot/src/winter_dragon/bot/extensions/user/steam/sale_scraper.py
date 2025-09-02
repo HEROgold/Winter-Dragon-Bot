@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import requests
 from bs4 import BeautifulSoup, Tag
-from confkit import Config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 

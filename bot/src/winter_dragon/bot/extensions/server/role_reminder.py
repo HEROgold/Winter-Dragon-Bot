@@ -1,7 +1,7 @@
 """Module to help remembering user roles when they leave and rejoin the server."""
 
 import discord
-from confkit import Config
+from winter_dragon.bot.config import Config
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon

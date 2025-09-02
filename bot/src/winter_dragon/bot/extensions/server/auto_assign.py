@@ -1,6 +1,6 @@
 """Cog for automatically assigning roles to new members."""
 import discord
-from confkit import Config
+from winter_dragon.bot.config import Config
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot.core.bot import WinterDragon
