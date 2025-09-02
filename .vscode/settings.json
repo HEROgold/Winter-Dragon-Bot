@@ -1,11 +1,11 @@
 {
+    // "files.associations": {
+    //     "*.css": "tailwindcss"
+    // },
     "tailwindCSS.includeLanguages": {
         "css": "css"
     },
     "tailwindCSS.emmetCompletions": true,
-    "files.associations": {
-        "*.css": "tailwindcss"
-    },
     "python.analysis.typeCheckingMode": "strict",
     "python.analysis.extraPaths": [
         "${workspaceFolder}/bot/src",
@@ -26,7 +26,7 @@
         "reportMissingTypeStubs": "none",
         "reportOptionalSubscript": "none",
         // "reportUnnecessaryIsInstance": "none",
-        "reportAttributeAccessIssue" : "none"
+        "reportAttributeAccessIssue": "none"
     },
     "cSpell.words": [
         "addtocart",
