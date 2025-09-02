@@ -91,7 +91,7 @@ class ErrorHandler(LoggerMixin):
             error,
             commands.errors.CommandInvokeError | app_commands.errors.CommandInvokeError,
         ):
-            self.logger.error(f"CommandInvokeError: {self.time_code=}")
+            self.logger.error(f"CommandInvokeError: {self.time_code=}", exc_info=error)
 
         original = getattr(error, "original", error)
         self.logger.debug(f"{original=}, {error=}")
