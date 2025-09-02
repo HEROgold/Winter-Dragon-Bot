@@ -42,6 +42,7 @@ def price_to_num(s: str) -> float:
     except ValueError:
         return float(s.strip(CURRENCY_LABELS))
 
+# FIXME ValueError: invalid literal for int() with base 10: '357070,366420,546090,701470,1836120'
 class SteamURL(LoggerMixin):
     """Class to handle Steam URLs."""
 
@@ -54,8 +55,10 @@ class SteamURL(LoggerMixin):
 
         """
         self.url = url
+        self._id = None
 
-    def get_id_from_game_url(self) -> int:
+    @property
+    def id(self) -> int:
         """Get an id from a steam game url.
 
         Args:
@@ -67,13 +70,14 @@ class SteamURL(LoggerMixin):
             int: The found id of a game
 
         """
-        # sourcery skip: class-extract-method
+        if self._id:
+            return self._id
         # example: https://store.steampowered.com/app/1168660/Barro_2020/
         regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
         matches = re.findall(regex_game_id, self.url)
-        self.logger.debug(f"game id: {matches=}")
-        # return first match as int, or 0
-        return int(matches[0]) or 0
+        self.logger.debug(f"game id: {matches=}, {matches=}")
+        self._id = int(matches[0]) if matches else 0
+        return self._id
 
     def is_valid_game_url(self) -> bool:
         """Find out if a url is for a valid game.
@@ -82,12 +86,8 @@ class SteamURL(LoggerMixin):
         ----
             url (str): Url to check for
 
-        Returns:
-        -------
-            bool: True, False
-
         """
-        return bool(self.get_id_from_game_url())
+        return bool(self.id)
 
     def __repr__(self) -> str:
         """Return the url as a string."""
@@ -145,7 +145,7 @@ class SteamScraper(LoggerMixin):
             return None
 
         self.logger.info(f"SteamSale found: {url=}, {title=}, {price=}, {sale_perc=}")
-        sale_id = url.get_id_from_game_url()
+        sale_id = url.id
         sale = SteamSale(
             id = sale_id,
             title = title.get_text(),
@@ -157,6 +157,7 @@ class SteamScraper(LoggerMixin):
         if bool(soup.find("div", class_="content")):
             SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
 
+        self.logger.debug(f"SteamSale found: {url=}, {title=}, {price=}")
         return sale
 
     async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[SteamSale | None]:
@@ -164,6 +165,7 @@ class SteamScraper(LoggerMixin):
 
         With the search options: Ascending price, Special deals, English.
         """
+        self.logger.debug(f"Scraping Steam sales: {percent=}")
         html = await self._get_html(self.search_url)
         soup = BeautifulSoup(html.text, "html.parser")
 
@@ -207,7 +209,7 @@ class SteamScraper(LoggerMixin):
         price = price.get_text()[:-1]
         price = price.replace(",", ".")
         title = title.get_text()
-        self.logger.debug(f"SteamSale found: {url=}, {title=}, {price=}, {sale_percentage=}")
+        self.logger.debug(f"SteamSale found: {url=}, {title=}, {price=}, {sale_percentage=}, {app_id=}")
         return SteamSale(
             id = int(str(app_id)),
             title = title,

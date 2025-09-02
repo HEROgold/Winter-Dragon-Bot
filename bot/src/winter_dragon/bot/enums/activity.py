@@ -3,14 +3,6 @@
 from discord import ActivityType, Status
 
 
-STATUSES = [
-    "dnd",
-    "do_not_disturb",
-    "idle", "invisible",
-    "offline",
-    "online",
-    "random",
-]
 STATUS_TYPES = [
     Status.dnd,
     Status.do_not_disturb,
@@ -18,15 +10,6 @@ STATUS_TYPES = [
     Status.invisible,
     Status.offline,
     Status.online,
-]
-ACTIVITIES = [
-    "competing",
-    # "custom",
-    "listening",
-    "playing",
-    "streaming",
-    "watching",
-    "random",
 ]
 ACTIVITY_TYPES = [
     ActivityType.competing,

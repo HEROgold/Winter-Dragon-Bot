@@ -73,7 +73,7 @@ class SyncedBans(GroupCog):
         )
 
     @sync.command(name="sync", description="Ban members banned from other synced guilds.")
-    async def synced_ban_sync(self, interaction: discord.Interaction) -> None:
+    async def slash_synced_ban_sync(self, interaction: discord.Interaction) -> None:
         """Ban all members from all guilds that are synced."""
         query = (
             select(SyncBanBannedBy, Users, Guilds)

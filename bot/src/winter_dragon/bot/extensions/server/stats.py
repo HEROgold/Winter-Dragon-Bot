@@ -505,7 +505,7 @@ class Stats(GroupCog):
     @app_commands.command(name="reset", description="Reset stats of all servers")
     @app_commands.guilds(Settings.support_guild_id)
     @commands.is_owner()
-    async def reset_stats(self, interaction: discord.Interaction) -> None:
+    async def slash_reset_stats(self, interaction: discord.Interaction) -> None:
         """Reset all stats on the stat channels."""
         if interaction.guild is None:
             msg = "Expected Guild"

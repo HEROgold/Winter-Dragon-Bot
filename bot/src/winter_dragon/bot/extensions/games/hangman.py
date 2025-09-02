@@ -2,7 +2,7 @@
 
 import random
 from textwrap import dedent
-from typing import Unpack
+from typing import Unpack, override
 
 import aiohttp
 import discord
@@ -173,6 +173,7 @@ class SubmitLetter(Modal, title="Submit Letter"):
         """Delete the modal."""
         self.session.close()
 
+    @override
     async def on_submit(self, interaction: discord.Interaction) -> None:
         """Submit a letter for the hangman game."""
         self.logger.debug(f"Submitting {self.letter.value=}")

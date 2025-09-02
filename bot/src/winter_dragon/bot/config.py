@@ -73,27 +73,3 @@ class ListConfig(BaseDataType[list[str]]):
     def __str__(self) -> str:
         """Return a string representation of the list."""
         return ListConfig.separator.join(self.value)
-
-
-class Hex(BaseDataType[int]):
-    """A config value that is a hexadecimal."""
-
-    def convert(self, value: str) -> int:
-        """Convert a string to a hexadecimal."""
-        return int(value, 16)
-
-    def __str__(self) -> str:
-        """Return a string representation of the hexadecimal."""
-        return hex(self.value)
-
-
-class Octal(BaseDataType[int]):
-    """A config value that is an octal."""
-
-    def convert(self, value: str) -> int:
-        """Convert a string to an octal."""
-        return int(value, 8)
-
-    def __str__(self) -> str:
-        """Return a string representation of an octal."""
-        return oct(self.value)

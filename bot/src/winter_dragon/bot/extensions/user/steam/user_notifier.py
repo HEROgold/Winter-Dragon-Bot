@@ -45,7 +45,7 @@ class SteamSaleNotifier(LoggerMixin):
                 select(SteamSaleProperties)
                 .where(SteamSaleProperties.steam_sale_id == sale.id),
             ).all()
-            install_url = f"{Settings.WEBSITE_URL}/redirect?redirect_url=steam://install/{SteamURL(sale.url).get_id_from_game_url()}"
+            install_url = f"{Settings.WEBSITE_URL}/redirect?redirect_url=steam://install/{SteamURL(sale.url).id}"
             embed_text = f"""
                 [{sale.title}]({sale.url})
                 Sale: {sale.sale_percent}%

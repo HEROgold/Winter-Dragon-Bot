@@ -59,6 +59,7 @@ def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401 Catch all argu
     """Terminate the bot."""
     bot_logger.warning(f"{args=}, {kwargs=}")
     bot_logger.info("terminated")
+    bot.log_manager.shutdown()
     try:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(bot.close())

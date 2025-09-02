@@ -1,6 +1,7 @@
 """Module that contains Configuration."""
 from __future__ import annotations
 
+from confkit.data_types import Hex
 from winter_dragon.bot.config import Config, ListConfig
 
 
@@ -17,9 +18,9 @@ class Settings:
     bot_invite = Config(GENERATED_MSG)
 
     # Colors
-    created_color = Config(0x00FF00)
-    changed_color = Config(0xFFFF00)
-    deleted_color = Config(0xFF0000)
+    created_color = Config(Hex(0x00FF00))
+    changed_color = Config(Hex(0xFFFF00))
+    deleted_color = Config(Hex(0xFF0000))
 
     bot_status_messages = Config(ListConfig([
         "Licking a wedding cake",

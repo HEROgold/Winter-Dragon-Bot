@@ -50,3 +50,4 @@ GUILD_OWNERSHIP_LIMIT = 10
 DYNAMIC_DIR.mkdir(exist_ok=True)
 IMG_DIR.mkdir(exist_ok=True)
 EMOJI_DIR.mkdir(exist_ok=True)
+WEEKS_IN_MONTH = 52

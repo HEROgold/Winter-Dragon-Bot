@@ -1,10 +1,9 @@
 """Manage logs for the bot."""
-import asyncio
 import logging
 import os
 import re
 import shutil
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -16,7 +15,6 @@ class LogsManager:
     """Manages some loggers and their log files."""
 
     current_directory = Path("./")
-    first_rollover = Config(default=False)
     keep_latest = Config(default=False)
     log_path = Config("./logs")
     log_size_kb_limit = Config(9000000)
@@ -39,26 +37,10 @@ class LogsManager:
         """Get the logger by name."""
         return self._loggers[name]
 
-    async def daily_save_logs(self) -> None:
-        """Continuously save logs."""
-        while True:
-            if not self.first_rollover:
-                self.first_rollover = True
-                self.logger.info("Skipping first rollover")
-                return
-            if self.launch_time < datetime.now(UTC) + timedelta(hours=1):
-                return
-            self.logger.debug("Daily saving of logs.")
-            self.save_logs()
-            self.logging_rollover()
-            self._delete_top_level_logs()
-            await asyncio.sleep(86400)
-
     @staticmethod
     def setup_logging(logger: logging.Logger, filename: str) -> None:
         """Set up logging for the given logger."""
-        log_level = Settings.log_level
-        logger.setLevel(log_level)
+        logger.setLevel(Settings.log_level)
         handler = RotatingFileHandler(filename=filename, backupCount=7, encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
         logger.addHandler(handler)
@@ -125,21 +107,12 @@ class LogsManager:
             if file.name.endswith(".log") or file.name[:-2].endswith(".log"):
                 shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
 
-
-    def logging_rollover(self) -> None:
-        """Rollover all RotatingFileHandlers, for all loggers contained."""
-        for logger in self._loggers.values():
-            for handler in logger.handlers:
-                if isinstance(handler, RotatingFileHandler):
-                    handler.doRollover()
-
     def delete_latest_logs(self) -> None:
         """Delete the latest logs, if the config is set to do so."""
         if self.keep_latest:
             self.logger.info("Keeping top level logs.")
             return
         self._delete_top_level_logs()
-
 
     def _delete_top_level_logs(self) -> None:
         """Delete the top level logs (not in logs directory)."""

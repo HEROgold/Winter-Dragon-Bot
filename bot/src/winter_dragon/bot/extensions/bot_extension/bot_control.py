@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from psutil._common import snetio
 from winter_dragon.bot._types.kwargs import BotArgs
 from winter_dragon.bot.config import Config
-from winter_dragon.bot.constants import METRICS_FILE, STATUS_MSGS
+from winter_dragon.bot.constants import METRICS_FILE
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
@@ -86,7 +86,7 @@ class BotC(GroupCog):
 
         activity = discord.Activity(
             type=activity_type,
-            name=random.choice(STATUS_MSGS),  # noqa: S311
+            name=random.choice(Settings.bot_status_messages),  # noqa: S311
         )
         return status, activity
 
@@ -249,7 +249,7 @@ class BotC(GroupCog):
 
 
     @app_commands.command( name="performance", description="Show bot's Performance (Bot developer only)")
-    async def performance(self, interaction: discord.Interaction) -> None:
+    async def slash_performance(self, interaction: discord.Interaction) -> None:
         """Show the bot's performance."""
         embed = discord.Embed(
             title="Performance",

@@ -71,4 +71,5 @@ class EmoteManager(Cog):
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""
+    raise DeprecationWarning("EmoteManager is deprecated. Discord doesn't support bot's owning guilds anymore.")
     await bot.add_cog(EmoteManager(bot=bot))

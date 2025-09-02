@@ -1,6 +1,7 @@
 """Module to notify users of steam sales."""
 import asyncio
 
+from confkit.data_types import Hex
 from discord import Embed, Interaction, app_commands
 from sqlmodel import select
 from winter_dragon.bot.config import Config
@@ -21,6 +22,7 @@ class SteamSales(GroupCog):
     """Steam Sales cog for Discord bot."""
 
     steam_sales_update_interval = Config(STEAM_SEND_PERIOD)
+    embed_color = Config(Hex(0x094d7f))
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Steam Sales cog."""
@@ -40,11 +42,7 @@ class SteamSales(GroupCog):
 
         Args:
         ----
-            percent (int): Percentage to check for
-
-        Returns:
-        -------
-            list[Sale]: List of TypedDict Sale
+            percent (int): Percentage to check for 0 .. 100
 
         """
         known_sales = SteamSale.get_all()
@@ -146,7 +144,7 @@ class SteamSales(GroupCog):
         """Get a list of steam games that are on sale for the given percentage or higher."""
         await interaction.response.defer()
 
-        embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=0x094d7f)
+        embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=self.embed_color)
         notifier = SteamSaleNotifier(self.bot, self.session, embed)
 
         sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
