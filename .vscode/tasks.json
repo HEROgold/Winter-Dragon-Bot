@@ -58,6 +58,18 @@
                 "Clean environment"
             ],
             "dependsOrder": "sequence"
-        }
+        },
+        {
+            "label": "Find dead code.",
+            "type": "shell",
+            "command": "uvx vulture .\\backend .\\bot",
+            "args": [
+                "--exclude", "*/protocols.py",
+                "--ignore-names", "slash_*,setup",
+                "--ignore-decorators", "@Cog.listener,@bot.event,@override",
+                "--min-confidence", "0",
+                "--sort-by-size"
+            ]
+        },
     ]
 }
