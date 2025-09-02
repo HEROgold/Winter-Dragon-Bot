@@ -1,6 +1,9 @@
 """Module that contains Configuration."""
 from __future__ import annotations
 
+from typing import Any
+
+from confkit import BaseDataType
 from confkit.data_types import Hex
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.ListConfig import ListConfig
