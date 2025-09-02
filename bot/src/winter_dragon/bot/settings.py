@@ -8,6 +8,16 @@ from winter_dragon.bot.ListConfig import ListConfig
 
 GENERATED_MSG = "AutomaticallyGenerated"
 
+class Combined(BaseDataType[str]):
+    def __init__(self, *args: Config[Any]) -> None:
+        self.args = args
+
+    def convert(self, value: str) -> str:
+        return "".join(arg.convert(value) for arg in self.args)
+
+    def __str__(self) -> str:
+        return f"Combined({', '.join(str(arg) for arg in self.args)})"
+
 class Settings:
     """Application wide Settings."""
 
@@ -40,7 +50,7 @@ class Settings:
 
     SERVER_IP = Config("localhost")
     WEBSITE_PORT = Config(80)
-    WEBSITE_URL = Config(GENERATED_MSG)
+    WEBSITE_URL = Config(Combined(Config("https://"), SERVER_IP, WEBSITE_PORT))
 
     TIME_FORMAT = Config("%H:%M:%S")
     DATE_FORMAT = Config("%Y-%m-%d")
@@ -61,3 +71,4 @@ class Settings:
     BOT_SCOPE = Config(ListConfig([
         "bot",
     ]))
+
