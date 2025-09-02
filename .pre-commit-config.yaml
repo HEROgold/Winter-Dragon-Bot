@@ -35,7 +35,7 @@ repos:
       # Security
       - id: detect-private-key
       # Text encoding/formatting
-      - id: end-of-file-fixer
+      # - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: trailing-whitespace
       # Python

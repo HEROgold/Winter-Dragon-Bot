@@ -385,11 +385,11 @@ wheels = [
 
 [[package]]
 name = "confkit"
-version = "0.1.4"
+version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5c/1e/8de902304109c7b74f5aa38489b2c8cbf99084b65724c8ea1ad413df476a/confkit-0.1.4.tar.gz", hash = "sha256:2b6c0897696f3b37c3a227e7129a581e3184cf5f9aafb29d9f20317d9971d3c0", size = 31591, upload-time = "2025-08-15T20:30:22.109Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/e9/c2eb1681f61d80755dd479823f770d52ff7fd2519f21141e7579f7461fc8/confkit-0.2.0.tar.gz", hash = "sha256:734f56e338693d6eff71d393e26da2c66dd0087307d78e2657dfe6597e9d937c", size = 17206, upload-time = "2025-08-31T03:44:45.485Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/6a/7c657c41e709f8875625db55647a08bbcd8d23b2bc6bbaeb3bb6172aa6ce/confkit-0.1.4-py3-none-any.whl", hash = "sha256:b74dbeb8980c566bc5fe608539c381ed591c79b66c1b46f78388ee2f3001c987", size = 8293, upload-time = "2025-08-15T20:30:20.821Z" },
+    { url = "https://files.pythonhosted.org/packages/69/b7/5fe69a1a07036c5eff36cead655cd2d604069a6d21fe5b94dc546c22f5c0/confkit-0.2.0-py3-none-any.whl", hash = "sha256:98f9aa3ffde1d698d41117d753c9a44e3cfd1abcf83d4ad4507b77305d74cf88", size = 8962, upload-time = "2025-08-31T03:44:44.167Z" },
 ]
 
 [[package]]
@@ -574,15 +574,15 @@ wheels = [
 
 [[package]]
 name = "discord-py"
-version = "2.6.2"
+version = "2.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "audioop-lts" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/e2/12e0e058bd2722632a828a7bc4492d780edbf3beb430275dde8fc6e04846/discord_py-2.6.2.tar.gz", hash = "sha256:e3ac5b0353211c831f046a258f4e91c6745ecd544286d29868988ebf7a695d1d", size = 1091985, upload-time = "2025-08-24T17:25:48.985Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6f/00/ec765ba7d5e16dfc070953a992379c8de8489164f9e006f7ebd8870b426f/discord_py-2.6.3.tar.gz", hash = "sha256:92bb3ef9dbe08525803be1e357bc0191f59ae16956690fc96c34f40bcd02c649", size = 1092075, upload-time = "2025-08-31T19:30:23.476Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/36/82/bdb47824d8640711c7ceee7d4224690509a0a6a1cd790f39039b7be4a87b/discord_py-2.6.2-py3-none-any.whl", hash = "sha256:6b257b02ef1a6374a2ddc4cdbfcfa6edbf88674dddeef66800c5d9403b710a2e", size = 1208887, upload-time = "2025-08-24T17:25:46.992Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/4e/05fcecd452bde37fba8e9545c318099cbb8bad7f496b6d9322fa2b88f92f/discord_py-2.6.3-py3-none-any.whl", hash = "sha256:69835269d73d9889a2f0efff4c91264a18998db0fdc4295a3c886fe9196dea4e", size = 1208828, upload-time = "2025-08-31T19:30:21.48Z" },
 ]
 
 [[package]]
@@ -645,16 +645,16 @@ standard = [
 
 [[package]]
 name = "fastapi-cli"
-version = "0.0.8"
+version = "0.0.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "rich-toolkit" },
     { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c6/94/3ef75d9c7c32936ecb539b9750ccbdc3d2568efd73b1cb913278375f4533/fastapi_cli-0.0.8.tar.gz", hash = "sha256:2360f2989b1ab4a3d7fc8b3a0b20e8288680d8af2e31de7c38309934d7f8a0ee", size = 16884, upload-time = "2025-07-07T14:44:09.326Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/31/b6/ed25b8874a27f684bf601990c48fcb3edb478edca2b9a38cc2ba196fb304/fastapi_cli-0.0.10.tar.gz", hash = "sha256:85a93df72ff834c3d2a356164512cabaf8f093d50eddad9309065a9c9ac5193a", size = 16994, upload-time = "2025-08-31T17:43:20.702Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/3f/6ad3103c5f59208baf4c798526daea6a74085bb35d1c161c501863470476/fastapi_cli-0.0.8-py3-none-any.whl", hash = "sha256:0ea95d882c85b9219a75a65ab27e8da17dac02873e456850fa0a726e96e985eb", size = 10770, upload-time = "2025-07-07T14:44:08.255Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/62/0f00036925c0614e333a2baf739c861453a6779331ffb47ec9a6147f860b/fastapi_cli-0.0.10-py3-none-any.whl", hash = "sha256:04bef56b49f7357c6c4acd4f793b4433ed3f511be431ed0af68db6d3f8bd44b3", size = 10851, upload-time = "2025-08-31T17:43:19.481Z" },
 ]
 
 [package.optional-dependencies]
