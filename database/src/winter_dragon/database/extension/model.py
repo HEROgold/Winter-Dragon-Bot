@@ -3,6 +3,7 @@
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
 
+import logging
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
@@ -21,6 +22,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
         id: int | None | Any
 
     session: ClassVar[Session] = db_session
+    logger: ClassVar[logging.Logger] # type: ignore[reportIncompatibleVariableOverride]
 
     def add(self: Self, session: Session | None = None) -> None:
         """Add a record to Database."""
