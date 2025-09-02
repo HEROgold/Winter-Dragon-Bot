@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import discord
-from winter_dragon.bot.settings import Settings
 
 
 CWD = Path.cwd()
@@ -23,7 +22,6 @@ V10 = "https://discord.com/api/v10"
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
 DISCORD_OAUTH_TOKEN = f"{OAUTH2}/token"
-Settings.WEBSITE_URL = f"http://{Settings.SERVER_IP}:{Settings.WEBSITE_PORT}"
 # unused GET_TOKEN_WEBSITE_URL = parse.quote(f"{Settings.WEBSITE_URL}/get_token")
 
 # Urban Dictionary API
