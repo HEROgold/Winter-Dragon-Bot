@@ -55,12 +55,13 @@
             "dependsOn": [
                 "UV Build project",
                 "UV Force reinstall project packages",
-                "Clean environment"
+                "Clean environment",
+                "Find dead code"
             ],
             "dependsOrder": "sequence"
         },
         {
-            "label": "Find dead code.",
+            "label": "Find dead code",
             "type": "shell",
             "command": "uvx vulture .\\backend .\\bot",
             "args": [
