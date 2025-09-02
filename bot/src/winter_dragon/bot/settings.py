@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from confkit.data_types import Hex
-from winter_dragon.bot.config import Config, ListConfig
+from winter_dragon.bot.config import Config
+from winter_dragon.bot.ListConfig import ListConfig
 
 
 GENERATED_MSG = "AutomaticallyGenerated"
