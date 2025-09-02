@@ -5,11 +5,14 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot.config import Config
+from winter_dragon.bot.constants import WEEKS_IN_MONTH
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.tools.time import get_seconds
 from winter_dragon.database.tables import Reminder as ReminderDb
+from winter_dragon.database.tables.reminder import TimedReminder
+from discord.app_commands import Choice
 
 
 class Reminder(Cog):
@@ -63,7 +66,7 @@ class Reminder(Cog):
         days: int = 0,
     ) -> None:
         """Set a reminder for the user."""
-        if minutes == 0 and hours == 0 and days == 0:
+        if minutes + hours + days == 0:
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
             return
 
@@ -80,18 +83,55 @@ class Reminder(Cog):
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
 
     @app_commands.command(name="timed_reminder", description="Set a reminder that repeats every so often.")
-    async def slash_repeat_reminder(
+    async def slash_repeat_reminder(  # noqa: PLR0913
         self,
         interaction: discord.Interaction,
         reminder: str,
         minutes: int = 0,
         hours: int = 0,
         days: int = 0,
+        weeks: int = 0,
+        years: int = 0,
     ) -> None:
         """Set a repeating reminder for the user."""
-        msg = "This command is currently disabled."
-        raise NotImplementedError(msg)
+        if minutes + hours + days + weeks + years == 0:
+            await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
+            return
 
+        repeat = datetime.timedelta(minutes=minutes, hours=hours, days=days, weeks=weeks + years * WEEKS_IN_MONTH)
+        member = interaction.user
+        time = (datetime.datetime.now(datetime.UTC) + repeat)
+        self.session.add(TimedReminder(
+            content=reminder,
+            user_id=member.id,
+            timestamp=time,
+            repeat_every=repeat,
+        ))
+        self.session.commit()
+        epoch = int(time.timestamp())
+        await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
+
+    @app_commands.command(name="remove_reminder")
+    async def slash_remove_reminder(self, interaction: discord.Interaction, reminder: str) -> None:
+        """Let a user remove any of their reminders."""
+
+    @slash_remove_reminder.autocomplete("reminder")
+    async def autocomplete_active_reminders(self, interaction: discord.Interaction, current: str) -> list[Choice]:
+        """Autocomplete active reminders for the user."""
+        query = (
+            select(ReminderDb, TimedReminder)
+            .where(
+                interaction.user.id in (ReminderDb.user_id, TimedReminder.user_id),
+                current.casefold() in ReminderDb.content.casefold()
+                or current.casefold() in TimedReminder.content.casefold(),
+            )
+        )
+
+        return [
+            Choice(name=reminder.content, value=reminder.id)
+            for reminder in self.session.exec(query).all()
+            if reminder.user_id == interaction.user.id
+        ]
 
 async def setup(bot: WinterDragon) -> None:
     """Entrypoint for adding cogs."""

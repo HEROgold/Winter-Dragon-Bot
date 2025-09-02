@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlmodel import Field
 from winter_dragon.database.extension.model import SQLModel
@@ -11,3 +11,11 @@ class Reminder(SQLModel, table=True):
     content: str
     user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE")
     timestamp: datetime
+
+class TimedReminder(SQLModel, table=True):
+
+    content: str
+    user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE")
+    timestamp: datetime
+    repeat_every: timedelta
+
