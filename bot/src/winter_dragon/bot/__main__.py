@@ -77,7 +77,8 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    Sentry()
+    if Sentry.environment not in ["development", "dev"]:
+        Sentry()
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
     asyncio.run(main())
