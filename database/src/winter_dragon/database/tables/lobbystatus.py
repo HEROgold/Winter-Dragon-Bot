@@ -13,4 +13,4 @@ class LobbyStatusEnum(enum.Enum):
 
 class LobbyStatus(SQLModel, table=True):
 
-    status: LobbyStatusEnum = Field(default=LobbyStatusEnum.CREATED)
+    status: LobbyStatusEnum = Field(default=LobbyStatusEnum.CREATED, unique=True)

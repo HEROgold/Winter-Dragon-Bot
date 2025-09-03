@@ -217,9 +217,10 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
 
         for player in hangman_players:
             placement = self.calculate_placement(hangman_players, player)
+            game = Games.fetch_game_by_name(HANGMAN)
             self.session.add(
                 ResultMM(
-                    game=HANGMAN,
+                    game_id=game.id,
                     player=player.user_id,
                     placement=placement,
                 ),

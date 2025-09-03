@@ -8,4 +8,4 @@ from winter_dragon.database.tables.user import Users
 class LookingForGroup(SQLModel, table=True):
 
     user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE")
-    game_name: str = Field(foreign_key=get_foreign_key(Games, "name"))
+    game_id: int = Field(foreign_key=get_foreign_key(Games))

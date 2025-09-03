@@ -8,7 +8,7 @@ from winter_dragon.database.extension.model import SQLModel, select
 
 class Games(SQLModel, table=True):
     name: str = Field(unique=True, index=True)
-    alias: str | None = Field(default=None, foreign_key="games.name") # Alias for an already existing game.
+    alias: int | None = Field(default=None, foreign_key="games.id") # Alias for an already existing game.
 
     @classmethod
     def fetch_game_by_name(cls, name: str) -> Self:
@@ -25,4 +25,5 @@ class Games(SQLModel, table=True):
         inst = cls(name=name)
         cls.session.add(inst)
         cls.session.commit()
+        cls.id: int  # type: ignore[reportIncompatibleVariableOverride]  # noqa: B032
         return inst

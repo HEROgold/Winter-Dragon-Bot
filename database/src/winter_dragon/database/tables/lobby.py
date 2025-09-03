@@ -10,5 +10,5 @@ from .lobbystatus import LobbyStatus
 
 class Lobbies(SQLModel, table=True):
 
-    game: str | None = Field(foreign_key=get_foreign_key(Games, "name"), nullable=True)
-    status: str = Field(foreign_key=get_foreign_key(LobbyStatus, "status"))
+    game_id: int | None = Field(foreign_key=get_foreign_key(Games), nullable=True)
+    status_id: int = Field(foreign_key=get_foreign_key(LobbyStatus))
