@@ -114,13 +114,12 @@ class BaseModel(BaseSQLModel, LoggerMixin):
 class SQLModel(BaseModel):
     """Base SQLModel class with custom methods."""
 
-    id: int | None = Field(default=None, primary_key=True, index=True)
-
+    id: int | None = Field(default=None, primary_key=True, index=True, unique=True)
 
 class DiscordID(BaseModel):
     """Model with a Discord ID as primary key."""
 
-    id: int = Field(sa_type=BigInteger, primary_key=True, index=True)
+    id: int = Field(sa_type=BigInteger, primary_key=True, index=True, unique=True)
 
     @classmethod
     def fetch(cls, id_: int) -> Self:
