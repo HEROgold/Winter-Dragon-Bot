@@ -1,6 +1,7 @@
 """The database package for the Winter Dragon project."""
 from sqlmodel import SQLModel
 
+from .constants import SessionMixin, session
 from .tables import (
     AssociationUserCommand,
     AssociationUserHangman,
@@ -72,6 +73,7 @@ __all__ = [
     "ResultMassiveMultiplayer",
     "Roles",
     "SQLModel",
+    "SessionMixin",
     "SteamSale",
     "SteamUsers",
     "Suggestions",
@@ -81,4 +83,5 @@ __all__ = [
     "Users",
     "Welcome",
     "WyrQuestion",
+    "session",
 ]
