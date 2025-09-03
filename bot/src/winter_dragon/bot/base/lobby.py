@@ -12,13 +12,13 @@ import discord
 from discord import Interaction, User
 from discord.ui import Button, View
 from sqlmodel import select
-from winter_dragon.database import Session
-from winter_dragon.database.constants import engine
+from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables import AssociationUserLobby as AUL  # noqa: N817
 from winter_dragon.database.tables import Lobbies as DbLobby
+from winter_dragon.database.tables.game import Games
 
 
-class Lobby(View):
+class Lobby(View, SessionMixin):
     """A class that represents a lobby in text form with buttons."""
 
     join_button = Button["Lobby"](
@@ -54,25 +54,25 @@ class Lobby(View):
         self,
         message: discord.Message,
         start_function: Callable[...],
+        game: Games,
         max_players: int = 0,
         timeout: int = 300,
-        game: str | None = None,
     ) -> None:
         """Initialize the lobby.
 
         with a given message, max_players, start_function, timeout, and game type.
         """
+        game = self.validate_game(game)
         super().__init__(timeout=timeout)
         self.message = message
         self.start_function = start_function
         self.max_players = max_players
-        self._session = Session(engine, autoflush=False)
         self.timeout_timestamp = datetime.now() + timedelta(seconds=timeout)  # noqa: DTZ005
         self.players: list[User] = []
 
-        self._session.add(DbLobby(
+        self.session.add(DbLobby(
             id=message.id,
-            game=game,
+            game=game.id or 0,
             status="waiting",
         ))
 
@@ -84,10 +84,19 @@ class Lobby(View):
         self.add_item(self.leave_button)
         self.update_message()
 
+    def validate_game(self, game: Games) -> Games:
+        """Validate that the game exists in the database."""
+        if game.id is None:
+            game = Games.fetch_game_by_name(game.name)
+            if game is None:
+                msg = "Game must be in the database before creating a lobby."
+                raise ValueError(msg)
+        return game
+
 
     def __del__(self) -> None:
         """Close the session when the lobby is deleted."""
-        self._session.close()
+        self.session.close()
 
 
     def update_msg_text(self) -> None:
@@ -110,23 +119,23 @@ class Lobby(View):
 
     async def join_callback(self, interaction: Interaction) -> None:
         """Add a user to the lobby. Then updates the message. calls `update_message()`."""
-        self._session.add(AUL(
+        self.session.add(AUL(
             lobby_id=self.message.id,
             user_id=interaction.user.id,
         ))
-        self._session.commit()
+        self.session.commit()
         self.update_message()
 
 
     async def leave_callback(self, interaction: Interaction) -> None:
         """Remove a user from the lobby. Then updates the message. calls `update_message()`."""
-        self._session.delete(
-            self._session.exec(
+        self.session.delete(
+            self.session.exec(
                 select(AUL)
                 .where(AUL.lobby_id == self.message, AUL.user_id == interaction.user.id),
             ).first(),
         )
-        self._session.commit()
+        self.session.commit()
         self.update_message()
 
 
@@ -134,7 +143,7 @@ class Lobby(View):
         """Start the game. Close the session and call the start function."""
         # if coroutine run asyncio, otherwise just run it
         # Should always have arguments ready by using partial
-        self._session.close()
+        self.session.close()
         self.start_function()
 
 
