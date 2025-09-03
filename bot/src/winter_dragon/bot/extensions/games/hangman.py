@@ -13,8 +13,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.ui.button import Button
 from winter_dragon.bot.ui.modal import Modal
-from winter_dragon.database import Session
-from winter_dragon.database.constants import engine
+from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables import AssociationUserHangman as AUH  # noqa: N817
 from winter_dragon.database.tables import Games
 from winter_dragon.database.tables import Hangmen as HangmanDb
@@ -164,7 +163,7 @@ class HangmanButton(Button):
             self.logger.exception("Error creating hangman SubmitLetter modal")
 
 
-class SubmitLetter(Modal, title="Submit Letter"):
+class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
     """A modal to submit a letter for the hangman game."""
 
     letter = discord.ui.TextInput(label="Letter", min_length=1, max_length=1)
@@ -178,7 +177,6 @@ class SubmitLetter(Modal, title="Submit Letter"):
         """Submit a letter for the hangman game."""
         self.logger.debug(f"Submitting {self.letter.value=}")
         self.interaction = interaction
-        self.session = Session(engine)
         await self.get_hangman_game()
         await self.notify_chosen_letter()
         player = self.get_player_record()
