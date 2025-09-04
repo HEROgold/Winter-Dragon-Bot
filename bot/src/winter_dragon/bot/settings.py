@@ -4,21 +4,25 @@ from __future__ import annotations
 from typing import Any
 
 from confkit import BaseDataType
-from confkit.data_types import Hex
+from confkit.data_types import Hex, List
 from winter_dragon.bot.config import Config
-from winter_dragon.bot.ListConfig import ListConfig
 
 
 GENERATED_MSG = "AutomaticallyGenerated"
 
 class Combined(BaseDataType[str]):
+    """A data type that combines multiple Config data types."""
+
     def __init__(self, *args: Config[Any]) -> None:
+        """Initialize with multiple Config arguments."""
         self.args = args
 
     def convert(self, value: str) -> str:
+        """Convert from a string to the combined data type."""
         return "".join(arg.convert(value) for arg in self.args)
 
     def __str__(self) -> str:
+        """Return a string representation of the combined data types."""
         return f"Combined({', '.join(str(arg) for arg in self.args)})"
 
 class Settings:
@@ -36,7 +40,7 @@ class Settings:
     changed_color = Config(Hex(0xFFFF00))
     deleted_color = Config(Hex(0xFF0000))
 
-    bot_status_messages = Config(ListConfig([
+    bot_status_messages = Config(List([
         "Licking a wedding cake",
         "Eating a wedding cake",
         "Comparing wedding cakes",
@@ -59,7 +63,7 @@ class Settings:
     DATE_FORMAT = Config("%Y-%m-%d")
     DATETIME_FORMAT = Config("%Y-%m-%d, %H:%M:%S")
 
-    OAUTH_SCOPE = Config(ListConfig([
+    OAUTH_SCOPE = Config(List([
         "relationships.read",
         "guilds.members.read",
         "connections",
@@ -71,7 +75,7 @@ class Settings:
         "applications.commands.permissions.update",
     ]))
 
-    BOT_SCOPE = Config(ListConfig([
+    BOT_SCOPE = Config(List([
         "bot",
     ]))
 
