@@ -3,6 +3,7 @@ import logging
 from typing import Any
 
 from winter_dragon.bot.settings import Settings
+from winter_dragon.bot.tools.log_manager import LogsManager
 
 
 # TODO: upload this mixing to github
@@ -34,4 +35,4 @@ class LoggerMixin:
     def setup_logger(cls, logger: logging.Logger, level: int = logging.DEBUG) -> None:
         """Set up the logger for the cog with a default log level and file handler."""
         logger.setLevel(level)
-        logger.addHandler(logging.FileHandler(f"{logger.name}.log"))
+        logger.addHandler(logging.FileHandler(f"{LogsManager.log_path}/{logger.name}.log"))

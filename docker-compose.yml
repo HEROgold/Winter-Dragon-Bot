@@ -39,6 +39,7 @@ services:
       - ./bot:/bot
       - ./database:/database
       - ./config.ini:/config.ini
+      - ./logs:/logs
     depends_on:
       postgres:
         condition: service_healthy
