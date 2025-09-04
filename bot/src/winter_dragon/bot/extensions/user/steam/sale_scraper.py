@@ -210,6 +210,22 @@ class SteamScraper(LoggerMixin):
         price = price.replace(",", ".")
         title = title.get_text()
         self.logger.debug(f"SteamSale found: {url=}, {title=}, {price=}, {sale_percentage=}, {app_id=}")
+
+        # TODO: Mark as bundle, if multiple app ids
+        # TODO: regex the url sub/(\d+)/ to determine if bundle
+        # if "," in app_id:
+        #     # url: sub/66335 # bundle of multiple ga,es with id.
+        #     SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
+        #     # Sale for multiple games, should be a bundle
+        #     sale = SteamSale(
+        #         id = int(str(app_id).split(",")[0]),
+        #         title = title,
+        #         url = str(url),
+        #         sale_percent = sale_percentage,
+        #         final_price = price_to_num(price),
+        #         update_datetime = datetime.now(tz=UTC),
+        #     )
+
         return SteamSale(
             id = int(str(app_id)),
             title = title,
