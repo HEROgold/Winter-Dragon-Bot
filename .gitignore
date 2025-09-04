@@ -4,4 +4,4 @@ postgres
 *.egg-info
 */build
 config.ini
-./logs/*
+logs/*
