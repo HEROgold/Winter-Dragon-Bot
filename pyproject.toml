@@ -24,6 +24,7 @@ dependencies = [
     "winter-dragon-backend",
     "flufl-i18n>=5.2.0",
     "bracketool>=0.1",
+    "confkit>=0.3.0",
 ]
 
 [build-system]
