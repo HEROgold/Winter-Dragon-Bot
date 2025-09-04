@@ -16,6 +16,7 @@ from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables import AssociationUserLobby as AUL  # noqa: N817
 from winter_dragon.database.tables import Lobbies as DbLobby
 from winter_dragon.database.tables.game import Games
+from winter_dragon.database.tables.lobbystatus import LobbyStatus
 
 
 class Lobby(View, SessionMixin):
@@ -72,8 +73,8 @@ class Lobby(View, SessionMixin):
 
         self.session.add(DbLobby(
             id=message.id,
-            game=game.id or 0,
-            status="waiting",
+            game_id=game.id or 0,
+            status=LobbyStatus.CREATED,
         ))
 
         self.join_button.callback = self.join_callback
