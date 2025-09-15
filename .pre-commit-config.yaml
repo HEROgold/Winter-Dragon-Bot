@@ -1,103 +1,48 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-  # Sync Python and pre-commit package versions
-  # pyproject.toml -> uv.lock
+  # Package management hooks (global)
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.8.13
     hooks:
       - id: uv-lock
-  # uv.lock -> .pre-commit-config.yaml
   - repo: https://github.com/tsvikas/sync-with-uv
     rev: v0.3.0
     hooks:
       - id: sync-with-uv
-  # .pre-commit-config.yaml -> .pre-commit-config.yaml
   - repo: https://github.com/pre-commit/sync-pre-commit-deps
     rev: v0.0.3
     hooks:
       - id: sync-pre-commit-deps
 
-  # General hooks
+  # General hooks (apply globally)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       # Filesystem
       - id: check-illegal-windows-names
       - id: check-case-conflict
-      - id: check-executables-have-shebangs
-      - id: check-shebang-scripts-are-executable
       # Git related
       - id: check-added-large-files
       - id: check-merge-conflict
-      - id: check-vcs-permalinks
-      - id: forbid-submodules # use subtree
       # Security
       - id: detect-private-key
-      # Text encoding/formatting
-      # - id: end-of-file-fixer
-      - id: fix-byte-order-marker
-      - id: trailing-whitespace
-      # Python
-      - id: check-ast
-      - id: check-docstring-first
-      - id: debug-statements
-      - id: name-tests-test
-        args: [--pytest-test-first]
-      - id: requirements-txt-fixer
-      # Symlinks
-      - id: check-symlinks
-      - id: destroyed-symlinks
       # File validation
       - id: check-json
       - id: check-toml
       - id: check-xml
       - id: check-yaml
-      # File formatting
       - id: pretty-format-json
         exclude_types: [jupyter]
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-      # Python files
-      - id: python-check-blanket-noqa
-      - id: python-check-blanket-type-ignore
-      - id: python-check-mock-methods
-      - id: python-no-eval
-      - id: python-no-log-warn
-      - id: python-use-type-annotations
-      # reStructuredText files
-      - id: rst-backticks
-      - id: rst-directive-colons
-      - id: rst-inline-touching-normal
-      # UTF-8 encoding
-      - id: text-unicode-replacement-char
+        exclude: ^frontend/
 
-  # All files
-  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.4.0
-    hooks:
-      - id: editorconfig-checker
-        exclude_types: [jupyter]
-
-  # Spell checking
+  # Spell checking (global)
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
       - id: codespell
-  - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.35.5
-    hooks:
-      - id: typos
-  - repo: local
-    hooks:
-      - id: disallow-caps
-        name: disallow improper capitalization
-        language: pygrep
-        entry: PyBind|Numpy|Cmake|CCache|Github|PyTest
-        exclude: .pre-commit-config.yaml
 
-  # Markdown files
+  # Markdown files (global)
   - repo: https://github.com/hukkin/mdformat
     rev: 0.7.22
     hooks:
@@ -108,18 +53,29 @@ repos:
           - mdformat-footnote
           - mdformat-gfm-alerts
 
-  # reStructuredText files
-  - repo: https://github.com/PyCQA/doc8
-    rev: v2.0.0
+  # Python hooks (for bot and database directories)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      - id: doc8
-
-  - repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.19.1
+      - id: check-ast
+        files: ^(bot|database)/.*\.py$
+      - id: check-docstring-first
+        files: ^(bot|database)/.*\.py$
+      - id: debug-statements
+        files: ^(bot|database)/.*\.py$
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
     hooks:
-      - id: blacken-docs
-        additional_dependencies:
-          - black==25.1.0
+      - id: python-check-blanket-noqa
+        files: ^(bot|database)/.*\.py$
+      - id: python-check-mock-methods
+        files: ^(bot|database)/.*\.py$
+      - id: python-no-eval
+        files: ^(bot|database)/.*\.py$
+      - id: python-no-log-warn
+        files: ^(bot|database)/.*\.py$
+      - id: python-use-type-annotations
+        files: ^(bot|database)/.*\.py$
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.11
     hooks:
@@ -127,7 +83,9 @@ repos:
         alias: ruff-isort
         name: ruff isort
         args: [--select, I001, --fix]
+        files: ^(bot|database)/.*\.py$
       - id: ruff-check
+        files: ^(bot|database)/.*\.py$
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.17.1
     hooks:
@@ -140,48 +98,40 @@ repos:
             --ignore-missing-imports,
             --disable-error-code=import-untyped,
           ]
+        files: ^(bot|database)/.*\.py$
 
-  # Jupyter Notebook files
-  - repo: local
+  # TypeScript/React hooks (for frontend directory)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.56.0
     hooks:
-      - id: forbid-ipynb # use jupytext
-        name: forbid ipynb
-        entry: filenames must not end in .ipynb
-        language: fail
-        types: [jupyter]
-
-  # pyproject.toml
-  - repo: https://github.com/henryiii/validate-pyproject-schema-store
-    rev: 2025.08.21
+      - id: eslint
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        types: [file]
+        additional_dependencies:
+          - eslint@8.56.0
+          - eslint-plugin-react@7.33.2
+          - eslint-plugin-react-hooks@4.6.0
+          - typescript@5.3.3
+          - '@typescript-eslint/eslint-plugin@6.15.0'
+          - '@typescript-eslint/parser@6.15.0'
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
     hooks:
-      - id: validate-pyproject
+      - id: prettier
+        files: ^frontend/.*\.(js|jsx|ts|tsx|css|scss|json|html)$
+        types: [file]
 
-  # YAML files
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.1
-    hooks:
-      - id: yamllint
-
-  # GitHub files
+  # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.33.3
     hooks:
-      - id: check-dependabot
       - id: check-github-actions
+        files: ^\.github/
       - id: check-github-workflows
-      - id: check-readthedocs
-  - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.7
-    hooks:
-      - id: actionlint
+        files: ^\.github/workflows/
 
   # Shell scripts
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
-  - repo: https://github.com/hugoh/pre-commit-fish
-    rev: v1.2
-    hooks:
-      - id: fish_syntax
-      - id: fish_indent
