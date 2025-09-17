@@ -4,12 +4,12 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
-from winter_dragon.bot.config import Config
 from discord import CategoryChannel, ClientUser, Guild, TextChannel, app_commands
 from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select
 from winter_dragon.bot._types.aliases import PermissionsOverwrites
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.enums.channels import ChannelTypes, LogCategories
