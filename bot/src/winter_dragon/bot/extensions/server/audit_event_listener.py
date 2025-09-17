@@ -5,7 +5,6 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.events.base.event_handler import AuditEventHandler
 from winter_dragon.bot.events.base.factory import AuditEvent_factory
-from winter_dragon.database.tables.audit_log import AuditLog
 
 
 class EventListener(Cog):
@@ -20,7 +19,6 @@ class EventListener(Cog):
     async def on_audit_log_entry_create(self, entry: AuditLogEntry) -> None:
         """Handle the audit log entry."""
         self.logger.info(f"Received audit log entry: {entry.id} - {entry.action.name} - {entry.target}")
-        AuditLog.from_audit_log(entry) # creates the entry in the database, and returns the entry.
         event_handler = AuditEventHandler(AuditEvent_factory(entry), self.session)
         await event_handler.handle()
 
