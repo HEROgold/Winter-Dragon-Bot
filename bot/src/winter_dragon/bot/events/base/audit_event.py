@@ -22,3 +22,7 @@ class AuditEvent(ABC, LoggerMixin):
     @abstractmethod
     def create_embed(self) -> Embed:
         """Create an embed for the audit event."""
+
+    async def log(self) -> None:
+        """Log the audit event into the database."""
+        self.logger.debug(f"Audit log event: {self.entry=}, {self.category=}")
