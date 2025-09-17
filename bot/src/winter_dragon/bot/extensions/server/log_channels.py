@@ -1,5 +1,26 @@
-"""Module containing channels to help guild moderators."""
-import itertools
+"""Cog focused solely on provisioning and maintaining log channels.
+
+Historical context:
+        This file previously contained many event listeners (member join/leave/update,
+        message edit/delete, audit log entry processing, generic diff helpers, etc.).
+        Those responsibilities have been migrated to the dedicated modular event
+        system under ``winter_dragon.bot.events``.  The event handlers now create
+        embeds and dispatch them through the central Audit / Message event handler
+        classes which route messages to the appropriate log channels.
+
+Current scope:
+        Only retain functionality necessary for:
+            * Detecting previously created log categories/channels and syncing them
+                to the database (``/detect``)
+            * Creating all required category + text channels (``/add``)
+            * Removing all log channels (``/remove``)
+            * Updating / backfilling missing channels (``/update``)
+            * Internal helpers for category selection and ensuring required counts.
+
+If you need to modify how events are transformed into embeds or how they are
+sent, look in ``winter_dragon.bot.events`` instead of re-adding listeners here.
+"""
+
 from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
@@ -11,7 +32,7 @@ from sqlmodel import select
 from winter_dragon.bot._types.aliases import PermissionsOverwrites
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.enums.channels import ChannelTypes, LogCategories
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.bot.settings import Settings
@@ -20,16 +41,12 @@ from winter_dragon.database.tables import Channels
 
 LOGS = ChannelTypes.LOGS
 MAX_CATEGORY_SIZE = 50
-MEMBER_UPDATE_PROPERTIES = [
-    "nick",
-    "roles",
-    "pending",
-    "guild_avatar",
-    "guild_permissions",
-]
 
 class LogChannels(GroupCog):
-    """Cog for managing log channels."""
+    """Manage log channel/category provisioning and synchronization.
+
+    All runtime event logging is handled by modules in ``winter_dragon.bot.events``.
+    """
 
     log_channel_name = Config("LOG-CATEGORY")
 
@@ -49,278 +66,14 @@ class LogChannels(GroupCog):
         return category_channel
 
 
-    def get_member_role_difference(self, before: discord.Member, after: discord.Member) -> str:
-        """Get the difference in roles."""
-        role_diff_add = [role.mention for role in after.roles if role not in before.roles]
-        role_diff_rem = [role.mention for role in after.roles if role in before.roles]
-        return " ".join(role_diff_add + role_diff_rem)
-
-
-    def get_username_difference(self, before: discord.Member, after: discord.Member) -> str:
-        """Get the difference in usernames."""
-        return (
-            f"from `{before.display_name}` to `{after.display_name}`"
-            if after.display_name != before.display_name
-            else ""
-        )
-
-
-    async def send_channel_logs(
-        self,
-        guild: discord.Guild,
-        embed: discord.Embed,
-        log_category: LogCategories | None=None,
-    ) -> tuple[None, None]:
-        """Send logs to the all appropriate log channel."""
-        if not guild:
-            self.logger.debug("No guild during Log channel fetching")
-            return None, None
-
-        self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
-
-        if log_category is not None:
-            await self.send_log_to_category(log_category, guild, embed)
-
-        await self.send_log_to_global(guild, embed)
-        return None, None
-
-
-    async def send_log_to_global(
-        self,
-        guild: discord.Guild,
-        embed: discord.Embed,
-    ) -> None:
-        """Send logs to the global log channel."""
-        channel = self.session.exec(select(Channels).where(
-            Channels.guild_id == guild.id,
-            Channels.name == LogCategories.GLOBAL.name,
-        )).first()
-
-        if not channel:
-            self.logger.warning(f"No global log channel found for {guild}")
-            return
-
-        global_log_channel = discord.utils.get(guild.text_channels, id=channel.id) or None
-
-        self.logger.debug(f"Found: {LogCategories.GLOBAL=} as {global_log_channel=}")
-        if global_log_channel is not None:
-            await global_log_channel.send(embed=embed)
-
-        self.logger.debug(f"Send logs to {global_log_channel=}")
-
-
-    async def send_log_to_category(
-        self,
-        log_category: LogCategories,
-        guild: discord.Guild,
-        embed: discord.Embed,
-    ) -> None:
-        """Send logs to the category channel."""
-        category_name = log_category.name
-
-        channel = self.session.exec(select(Channels).where(
-                Channels.guild_id == guild.id,
-                Channels.name == category_name,
-            )).first()
-
-        if channel is None:
-            self.logger.warning(f"Found no logs channel! {channel=}, {guild=}, {embed=}")
-            return
-
-        if mod_channel := discord.utils.get(guild.text_channels, id=channel.id):
-            await mod_channel.send(embed=embed)
-
-        self.logger.debug(f"Send logs to {category_name=}")
-
-
-    def get_entry_role_difference(self, entry: discord.AuditLogEntry) -> list[discord.Role]:
-        """Get the role difference from the audit log entry."""
-        diffs = []
-        for change1, change2 in zip(entry.changes.before, entry.changes.after, strict=False):
-            diff = [c1 or c2 for c1, c2 in itertools.zip_longest(change1[1], change2[1])]
-            for role in diff:
-                if not isinstance(role, discord.Role):
-                    self.logger.warning(f"Got {type(role)} from {role}, where expected discord.Role.")
-                    continue
-                if role := discord.utils.get(entry.guild.roles, id=role.id):
-                    diffs.append(role.mention)
-        return diffs
-
-
-    def create_member_left_embed(self, member: discord.Member, entry: discord.AuditLogEntry) -> discord.Embed:
-        """Create an embed for when a member leaves the guild."""
-        user = entry.user
-        if user is None:
-            msg = "User is None"
-            raise NoneTypeError(msg)
-        if entry.action == discord.AuditLogAction.ban:
-            return discord.Embed(
-                title="Member Banned",
-                description=f"{user.mention} Banned {member.mention} {member.name} with reason: {entry.reason or None}",
-                color=self.deleted_color,
-            )
-        if entry.action == discord.AuditLogAction.kick:
-            return discord.Embed(
-                title="Member Kicked",
-                description=f"{user.mention} Kicked {member.mention} {member.name} with reason: {entry.reason or None}",
-                color=self.deleted_color,
-            )
-        return discord.Embed(
-            title="Member Left",
-            description=f"{member.mention} {member.name} Left the guild",
-            color=self.deleted_color,
-        )
+    # NOTE: All previous embed construction & log dispatch helpers removed.
+    # Event dispatch now happens in winter_dragon.bot.events.* modules.
 
 # ----------------------
 # Helper Functions End
 # ----------------------
 
-# -------------
-# Entries Start
-# -------------
-
-    @Cog.listener()
-    async def on_audit_log_entry_create(self, entry: discord.AuditLogEntry) -> None:
-        """Handle audit log entry creation."""
-        action = entry.action
-        self.logger.debug(f"{action=}, {entry.target}, {entry.__dict__=}")
-        enum = discord.enums.AuditLogAction
-        if action not in enum:
-            await self.generic_change(entry)
-
-
-    @Cog.listener()
-    async def on_member_update(self, before: discord.Member, after: discord.Member) -> None:
-        """Handle member updates."""
-        member = after or before
-        self.logger.debug(f"On member update: guild='{member.guild}', member='{after}'")
-        if before.voice != after.voice:
-            self.logger.critical(f"{before.voice=}, {after.voice=}")
-
-        if (
-            differences := [
-                prop for prop in MEMBER_UPDATE_PROPERTIES
-                if getattr(before, prop) != getattr(after, prop)
-            ]
-        ):
-            update_message = f"{member.mention} got updated with {differences} "
-            if "nick" in differences:
-                update_message += self.get_username_difference(before, after)
-            if "roles" in differences:
-                update_message += self.get_member_role_difference(before, after)
-
-            embed = discord.Embed(
-                title="Member Update",
-                description=update_message,
-                color=self.changed_color,
-            )
-            await self.send_channel_logs(member.guild, embed, LogCategories.MEMBER_UPDATE)
-
-
-    @Cog.listener()
-    async def on_member_join(self, member: discord.Member) -> None:
-        """Handle member joining."""
-        self.logger.debug(f"On member join: guild='{member.guild}' member='{member}'")
-        embed = discord.Embed(
-            title="Member Joined",
-            description=f"{member.mention} Joined the guild",
-            color= self.created_color,
-        )
-        await self.send_channel_logs(member.guild, embed, LogCategories.MEMBER_JOINED)
-
-
-    @Cog.listener()
-    async def on_member_remove(self, member: discord.Member) -> None:
-        """Handle member removal."""
-        self.logger.debug(f"On member remove: guild='{member.guild}' member='{member}'")
-        embed=None
-        async for entry in member.guild.audit_logs(limit=1):
-            embed = self.create_member_left_embed(member, entry)
-        if not embed:
-            msg = f"Expected discord.Embed, got {embed}"
-            raise TypeError(msg)
-        await self.send_channel_logs(member.guild, embed, LogCategories.MEMBER_LEFT)
-
-
-    @Cog.listener()
-    async def on_message_edit(self, before: discord.Message, after: discord.Message) -> None:
-        """Handle message editing."""
-        if not before.guild:
-            self.logger.debug(f"Guild not found on {before=}")
-            return
-        if not before.clean_content:
-            self.logger.debug(f"Empty content on {before=}")
-            return
-        if before.clean_content == after.clean_content:
-            self.logger.debug(f"Message content is the same: {before}")
-            return
-
-        self.logger.debug(
-            f"Message edited: {before.guild=}, {before.channel=}, {before.clean_content=}, {after.clean_content=}",
-        )
-        embed = discord.Embed(
-            title="Message Edited",
-            description=f"{before.author.mention} Edited a message",
-            color=self.changed_color,
-        )
-        embed.add_field(name="Old", value=f"`{before.clean_content}`")
-        embed.add_field(name="New", value=f"`{after.clean_content}`")
-        await self.send_channel_logs(before.guild, embed, LogCategories.MESSAGE_EDITED)
-
-
-    @Cog.listener()
-    async def on_message_delete(self, message: discord.Message, reason: str | None = None) -> None:
-        """Handle message deletion."""
-        if not message.guild:
-            self.logger.warning(f"Guild not found on {message=}, maybe DM?")
-            self.logger.debug(f"Message deleted: {message.channel=}, {message.clean_content=}")
-            return
-
-        if not isinstance(message, discord.Message):
-            self.logger.warning(f"got {type(message)} from {message}, where expected discord.Message.")
-            return
-
-        self.logger.debug(f"Message deleted: {message.guild=}, {message.channel=}, {message.clean_content=}")
-        if message.clean_content in ["", "Unexpected Error..."]:
-            return
-
-        description = f"Deleted message send by {message.author.mention} with reason {reason}"
-        embed = discord.Embed(
-            title="Message Deleted",
-            description=description,
-            color=self.deleted_color,
-        )
-        embed.add_field(
-            name="Content",
-            value=f"`{message.clean_content}`",
-        )
-
-        await self.send_channel_logs(message.guild, embed, LogCategories.MESSAGE_DELETE)
-
-    async def generic_change(self, entry: discord.AuditLogEntry) -> None:
-        """Handle a generic change in the audit log."""
-        e_before_type = getattr(entry.before.type, "__name__", entry.target)
-        e_type = getattr(entry.target.type, "__name__", e_before_type) # type: ignore[]
-        e_mention = getattr(entry.target, "mention", "")
-
-        embed = discord.Embed(
-            title="Generic Change (WIP)",
-            description=f"{entry.user.mention} Changed `{e_type}` {e_mention} with reason: {entry.reason or None}", # type: ignore[]
-            color=0x123456,
-        )
-        self.logger.debug(f"Triggered generic_change:\nENTRY: {entry}\nENTRY CHANGES: {entry.changes}\n")
-        embed.add_field(name="Old", value="\u200b", inline=True)
-        embed.add_field(name="New", value="\u200b", inline=True)
-        embed.add_field(name="\u200b", value="\u200b", inline=False)
-        for change1, change2 in zip(entry.changes.before, entry.changes.after, strict=False):
-            embed.add_field(name=change1[0], value=change1[1], inline=True)
-            embed.add_field(name=change2[0], value=change2[1], inline=True)
-            embed.add_field(name="\u200b", value="\u200b", inline=False)
-        await self.send_channel_logs(entry.guild, embed)
-
-# ------------
-# Entries End
-# ------------
+    # Removed legacy @Cog.listener() methods; see winter_dragon.bot.events.*
 
 # ---------------
 # Commands Start
@@ -372,6 +125,10 @@ class LogChannels(GroupCog):
     # The bot does have manage_channels, but not administrator permissions
     # This will cause the command to fail, raising 403 forbidden.
     # When the bot is given administrator, it works.
+    #
+    # NOTE: Permission nuance — some guild owners report HTTP 403 when the bot lacks
+    # Administrator but has Manage Channels. If reproducible, adjust the decorator
+    # checks to reflect the minimal required scope.
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
