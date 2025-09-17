@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from discord import AuditLogEntry, Embed
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.enums.channels import LogCategories
+from winter_dragon.database.tables.audit_log import AuditLog
 
 
 class AuditEvent(ABC, LoggerMixin):
@@ -14,6 +15,7 @@ class AuditEvent(ABC, LoggerMixin):
         super().__init__()
         self.entry = entry
         self.category = LogCategories.from_AuditLogAction(entry.action)
+        self.db_entry = AuditLog.from_audit_log(entry) # creates the entry in the database, and returns the entry.
 
     @abstractmethod
     async def handle(self) -> None:
@@ -22,7 +24,3 @@ class AuditEvent(ABC, LoggerMixin):
     @abstractmethod
     def create_embed(self) -> Embed:
         """Create an embed for the audit event."""
-
-    async def log(self) -> None:
-        """Log the audit event into the database."""
-        self.logger.debug(f"Audit log event: {self.entry=}, {self.category=}")

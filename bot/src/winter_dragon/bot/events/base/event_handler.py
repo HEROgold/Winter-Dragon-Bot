@@ -19,7 +19,6 @@ class AuditEventHandler(LoggerMixin):
 
     async def handle(self) -> None:
         """Handle the audit event."""
-        await self.event.log()
         await self.event.handle()
         await self.send_channel_logs(self.event.entry.guild, self.event.create_embed(), self.event.category)
 
