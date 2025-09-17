@@ -6,12 +6,12 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
 import discord
-from winter_dragon.bot.config import Config
 from discord import (
     VoiceChannel,
     app_commands,
 )
 from sqlmodel import select
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
