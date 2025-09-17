@@ -69,9 +69,6 @@ if TYPE_CHECKING:
 def AuditEvent_factory(entry: AuditLogEntry) -> AuditEvent:  # noqa: C901, N802, PLR0911, PLR0912, PLR0915
     """Get the correct AuditEvent class from audit event."""
     category = LogCategories.from_AuditLogAction(entry.action)
-    # Use match case here, to import only te required classes.
-    # Using a dict would make it easier to read, but would require importing all classes at once.
-    # Because this factory is as "simple" as it is, readability is not that important.
     match category:
         case LogCategories.GUILD_UPDATE: return GuildUpdate(entry)
         case LogCategories.CHANNEL_CREATE: return ChannelCreate(entry)
