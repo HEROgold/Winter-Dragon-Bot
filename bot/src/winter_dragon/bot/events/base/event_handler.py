@@ -77,7 +77,7 @@ class AuditEventHandler(LoggerMixin):
     ) -> tuple[None, None]:
         """Send logs to their appropriate channel and global log channel."""
         if not guild:
-            self.logger.debug("No guild during Log channel fetching")
+            self.logger.warning("No guild found to send AuditLogEntry logs to.")
             return None, None
 
         self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
