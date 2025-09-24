@@ -1,5 +1,4 @@
 """Module that contains Cogs, which are extended classes of discord.ext.commands.Cog/GroupCog."""
-import logging
 from itertools import chain
 from typing import Unpack
 
@@ -31,7 +30,6 @@ class Cog(commands.Cog, LoggerMixin):
     """
 
     bot: WinterDragon
-    logger: logging.Logger
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
@@ -141,7 +139,3 @@ class GroupCog(Cog):
 
     # Reflect difference in commands.GroupCog
     __cog_is_app_commands_group__ = True
-
-    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
-        """Initialize the GroupCog instance with given args and kwargs."""
-        super().__init__(**kwargs)
