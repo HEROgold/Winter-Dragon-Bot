@@ -1,6 +1,5 @@
 """Module for WinterDragon error handlers."""
 import datetime
-import logging
 from textwrap import dedent
 
 import discord
@@ -28,7 +27,6 @@ class ErrorHandler(LoggerMixin):
     ignore_errors = Config(default=False)
     interface: commands.Context | discord.Interaction
     error: Exception
-    logger: logging.Logger
     time_code: float
 
     def __init__(
