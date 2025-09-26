@@ -6,7 +6,7 @@ import discord
 from discord import Interaction, app_commands
 from winter_dragon.bot._types.aliases import PrunableChannel
 from winter_dragon.bot._types.protocols import Prunable
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 
@@ -35,7 +35,7 @@ class Purge(Cog):
 
         if count > self.limit:
             await interaction.response.send_message(
-                f"Too many message to kill! The limit is {config['Purge']['LIMIT']}",
+                f"Too many message to kill! The limit is {self.limit}",
                 ephemeral=True,
             )
             return

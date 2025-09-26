@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from winter_dragon.bot.config import Config, config
+from winter_dragon.bot.config import Config
 from winter_dragon.bot.settings import Settings
 
 
@@ -98,14 +98,14 @@ class LogsManager:
 
         log_time = datetime.now(tz=UTC).strftime("%Y-%m-%d-%H-%M-%S")
 
-        Path(f"{config['Main']['log_path']}/{log_time}").mkdir(parents=True, exist_ok=True)
+        Path(f"{self.log_path}/{log_time}").mkdir(parents=True, exist_ok=True)
 
         self.logger.info("Saving log files")
         self.logger.info(f"uptime: {datetime.now(UTC) - self.launch_time}")
 
         for file in self.current_directory.iterdir():
             if file.name.endswith(".log") or file.name[:-2].endswith(".log"):
-                shutil.copy(src=f"./{file}", dst=f"{config['Main']['log_path']}/{log_time}/{file}")
+                shutil.copy(src=f"./{file}", dst=f"{self.log_path}/{log_time}/{file}")
 
     def delete_latest_logs(self) -> None:
         """Delete the latest logs, if the config is set to do so."""
