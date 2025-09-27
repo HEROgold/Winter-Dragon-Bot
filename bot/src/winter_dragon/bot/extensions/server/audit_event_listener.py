@@ -19,9 +19,9 @@ class EventListener(Cog):
     async def on_audit_log_entry_create(self, entry: AuditLogEntry) -> None:
         """Handle the audit log entry."""
         self.logger.debug(f"Received audit log entry: {entry.id} - {entry.action.name} - {entry.target}")
-        audit_event = AuditEventFactory.get_event(entry)
-        event_handler = AuditEventHandler(audit_event, self.session)
-        await event_handler.handle()
+        for audit_event in AuditEventFactory.get_events(entry):
+            event_handler = AuditEventHandler(audit_event, self.session)
+            await event_handler.handle()
 
 
 async def setup(bot: WinterDragon) -> None:

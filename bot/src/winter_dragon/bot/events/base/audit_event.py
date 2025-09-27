@@ -14,10 +14,6 @@ if TYPE_CHECKING:
     from discord import AuditLogAction, AuditLogEntry, Embed
 
 
-# This system is limited, to only one handler per event type.
-# It's possible we want multiple handler for a single event type, with different "filters"
-# we should design for that eventuality.
-# e.g. log channel create events log to different channels based on channel type.
 class AuditEvent(ABC, LoggerMixin):
     """Base class for audit events."""
 
