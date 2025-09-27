@@ -1,6 +1,7 @@
 """Module that contains Configuration."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from confkit import BaseDataType
@@ -28,7 +29,7 @@ class Combined(BaseDataType[str]):
 class Settings:
     """Application wide Settings."""
 
-    log_level = Config("DEBUG")
+    log_level = Config(logging.DEBUG)
     bot_name = Config("WinterDragon")
     support_guild_id = Config(0)
     prefix = Config("$")
