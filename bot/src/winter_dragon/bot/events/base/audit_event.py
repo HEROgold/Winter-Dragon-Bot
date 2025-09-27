@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.enums.channels import LogCategories
 from winter_dragon.bot.events.base.factory import AuditEventFactory
 from winter_dragon.database.tables.audit_log import AuditLog
 
@@ -23,10 +22,10 @@ class AuditEvent(ABC, LoggerMixin):
         self.entry = entry
 
     @property
-    def category(self) -> LogCategories:
+    def category(self) -> AuditLogAction:
         """Get the log category. lazily evaluated."""
         if not self._category:
-            self._category = LogCategories.from_AuditLogAction(self.entry.action)
+            self._category = self.entry.action
         return self._category
 
     @property

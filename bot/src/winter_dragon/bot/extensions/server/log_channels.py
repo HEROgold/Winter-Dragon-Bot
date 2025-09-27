@@ -25,7 +25,7 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
-from discord import CategoryChannel, ClientUser, Guild, TextChannel, app_commands
+from discord import AuditLogAction, CategoryChannel, ClientUser, Guild, TextChannel, app_commands
 from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select
@@ -33,9 +33,9 @@ from winter_dragon.bot._types.aliases import PermissionsOverwrites
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.enums.channels import ChannelTypes, LogCategories
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.bot.settings import Settings
+from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 
 
@@ -176,7 +176,7 @@ class LogChannels(GroupCog):
     ) -> list[CategoryChannel]:
         """Create log categories and channels."""
         category_channels: list[CategoryChannel] = []
-        div, mod = divmod(len(LogCategories), MAX_CATEGORY_SIZE)
+        div, mod = divmod(len(AuditLogAction), MAX_CATEGORY_SIZE)
         category_count = div + (1 if mod > 0 else 0)
 
         for i in range(category_count):
@@ -197,8 +197,8 @@ class LogChannels(GroupCog):
 
     async def create_log_channels(self, category_channels: list[CategoryChannel]) -> None:
         """Create log channels in the logging categories."""
-        for i, log_category in enumerate(LogCategories):
-            log_category_name = log_category.name.title()
+        for i, audit_action in enumerate(AuditLogAction):
+            log_category_name = audit_action.name.title()
             category_channel = self.get_log_category(category_channels, i)
 
             text_channel = await category_channel.create_text_channel(
@@ -291,7 +291,7 @@ class LogChannels(GroupCog):
             Channels.guild_id == guild.id,
         )).all()
 
-        div, mod = divmod(len(LogCategories), MAX_CATEGORY_SIZE)
+        div, mod = divmod(len(AuditLogAction), MAX_CATEGORY_SIZE)
         required_category_count = div + (1 if mod > 0 else 0)
 
         category_channels = await self.update_required_category_count(guild, required_category_count)
@@ -300,7 +300,7 @@ class LogChannels(GroupCog):
         known_names = [channel.name.lower() for channel in channels]
 
         difference.extend(
-            j for j in [i.name.lower() for i in LogCategories]
+            j for j in [i.name.lower() for i in AuditLogAction]
             if j not in known_names
         )
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")

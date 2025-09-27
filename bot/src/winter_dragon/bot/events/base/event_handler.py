@@ -1,13 +1,14 @@
 """Module for the audit event handler."""
 
 import discord
-from discord import Embed, Guild
+from discord import AuditLogAction, Embed, Guild
 from sqlmodel import Session, select
 from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.enums.channels import LogCategories
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.database.tables.channel import Channels
 
+
+GLOBAL = "GLOBAL"
 
 class AuditEventHandler(LoggerMixin):
     """Class for handling audit events."""
@@ -20,16 +21,16 @@ class AuditEventHandler(LoggerMixin):
     async def handle(self) -> None:
         """Handle the audit event."""
         await self.event.handle()
-        await self.send_channel_logs(self.event.entry.guild, self.event.create_embed(), self.event.category)
+        await self.send_channel_logs(self.event.entry.guild, self.event.create_embed(), self.event.entry.action)
 
     async def send_log_to_category(
         self,
-        log_category: LogCategories,
+        audit_action: AuditLogAction,
         guild: discord.Guild,
         embed: discord.Embed,
     ) -> None:
         """Send logs to the appropriate channel."""
-        category_name = log_category.name
+        category_name = audit_action.name
 
         channel = self.session.exec(select(Channels).where(
                 Channels.guild_id == guild.id,
@@ -53,7 +54,7 @@ class AuditEventHandler(LoggerMixin):
         """Send logs to the global log channel."""
         channel = self.session.exec(select(Channels).where(
             Channels.guild_id == guild.id,
-            Channels.name == LogCategories.GLOBAL.name,
+            Channels.name == GLOBAL,
         )).first()
 
         if not channel:
@@ -61,7 +62,7 @@ class AuditEventHandler(LoggerMixin):
             return
         global_log_channel = discord.utils.get(guild.text_channels, id=channel.id) or None
 
-        self.logger.debug(f"Found: {LogCategories.GLOBAL=} as {global_log_channel=}")
+        self.logger.debug(f"Found: {GLOBAL=} as {global_log_channel=}")
         if global_log_channel is not None:
             await global_log_channel.send(embed=embed)
 
@@ -72,17 +73,17 @@ class AuditEventHandler(LoggerMixin):
         self,
         guild: Guild,
         embed: Embed,
-        log_category: LogCategories | None=None,
+        audit_action: AuditLogAction | None=None,
     ) -> tuple[None, None]:
         """Send logs to their appropriate channel and global log channel."""
         if not guild:
             self.logger.warning("No guild found to send AuditLogEntry logs to.")
             return None, None
 
-        self.logger.debug(f"Searching for log channels {log_category=} and {LogCategories.GLOBAL=}")
+        self.logger.debug(f"Searching for log channels {audit_action=} and {GLOBAL=}")
 
-        if log_category is not None:
-            await self.send_log_to_category(log_category, guild, embed)
+        if audit_action is not None:
+            await self.send_log_to_category(audit_action, guild, embed)
 
         await self.send_log_to_global(guild, embed)
         return None, None
