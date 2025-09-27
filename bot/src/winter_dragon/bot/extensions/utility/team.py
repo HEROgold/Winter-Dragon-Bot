@@ -13,14 +13,10 @@ from winter_dragon.bot.config import Config
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.bot.enums.channels import ChannelTypes
 from winter_dragon.bot.tools import rainbow
+from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 
-
-TEAM_VOICE = ChannelTypes.TEAM_VOICE
-TEAM_CATEGORY = ChannelTypes.TEAM_CATEGORY
-TEAM_LOBBY = ChannelTypes.TEAM_LOBBY
 
 @app_commands.guild_only()
 class Team(GroupCog):
@@ -31,7 +27,7 @@ class Team(GroupCog):
     @loop()
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel."""
-        channels = self.session.exec(select(Channels).where(Channels.type == TEAM_VOICE)).all()
+        channels = self.session.exec(select(Channels).where(Channels.type == ChannelTypes.TEAM_VOICE)).all()
         for channel in channels:
             discord_channel = self.bot.get_channel(channel.id)
             if isinstance(discord_channel, (CategoryChannel, PrivateChannel)) or discord_channel is None:
@@ -108,7 +104,7 @@ class Team(GroupCog):
             db_channels.append(Channels(
                 id = voice.id,
                 name = voice.name,
-                type = TEAM_VOICE,
+                type = ChannelTypes.TEAM_VOICE,
                 guild_id = voice.guild.id,
             ))
 
@@ -120,7 +116,7 @@ class Team(GroupCog):
     def get_team_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all team channels from winter_dragon.database."""
         return self.session.exec(select(Channels).where(
-            Channels.type == TEAM_VOICE,
+            Channels.type == ChannelTypes.TEAM_VOICE,
             Channels.guild_id == guild.id,
         )).all()
 
@@ -128,7 +124,7 @@ class Team(GroupCog):
     def get_teams_category(self, guild: Guild) -> CategoryChannel | None:
         """Find a category channel."""
         if channel := self.session.exec(select(Channels).where(
-            Channels.type == TEAM_CATEGORY,
+            Channels.type == ChannelTypes.TEAM_CATEGORY,
             Channels.guild_id == guild.id,
         )).first():
             return cast("CategoryChannel", self.bot.get_channel(channel.id))
@@ -141,7 +137,7 @@ class Team(GroupCog):
         self.session.add(Channels(
             id = channel.id,
             name = channel.name,
-            type = TEAM_CATEGORY,
+            type = ChannelTypes.TEAM_CATEGORY,
             guild_id = guild.id,
         ),
         )
@@ -159,7 +155,7 @@ class Team(GroupCog):
     def get_teams_lobby(self, guild: Guild) -> VoiceChannel | None:
         """Find a lobby channel."""
         if channel := self.session.exec(select(Channels).where(
-            Channels.type == TEAM_LOBBY,
+            Channels.type == ChannelTypes.TEAM_LOBBY,
             Channels.guild_id == guild.id,
         )).first():
             return cast("VoiceChannel", self.bot.get_channel(channel.id))
@@ -172,7 +168,7 @@ class Team(GroupCog):
         self.session.add(Channels(
             id = voice.id,
             name = voice.name,
-            type = TEAM_LOBBY,
+            type = ChannelTypes.TEAM_LOBBY,
             guild_id = category.guild.id,
         ))
         self.session.commit()
