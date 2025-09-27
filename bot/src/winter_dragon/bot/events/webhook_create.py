@@ -4,13 +4,13 @@ Track when users create new webhooks and generate appropriate audit logs.
 """
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class WebhookCreate(AuditEvent):
+class WebhookCreate(AuditEvent, action=AuditLogAction.webhook_create):
     """Process webhook creation events in Discord guilds.
 
     Monitor the audit log for webhook creations, log the events,

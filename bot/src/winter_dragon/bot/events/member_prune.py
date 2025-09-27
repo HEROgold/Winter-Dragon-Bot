@@ -4,12 +4,12 @@ Track when users prune inactive members and generate appropriate audit logs.
 """
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class MemberPrune(AuditEvent):
+class MemberPrune(AuditEvent, action=AuditLogAction.member_prune):
     """Process member prune events in Discord guilds."""
 
     @override

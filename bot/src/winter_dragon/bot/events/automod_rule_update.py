@@ -1,12 +1,12 @@
 """Module for handling automod rule update events."""
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class AutomodRuleUpdate(AuditEvent):
+class AutomodRuleUpdate(AuditEvent, action=AuditLogAction.automod_rule_update):
     """Handle automod rule update events."""
 
     @override

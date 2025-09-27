@@ -1,14 +1,14 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, Role, User
+from discord import AuditLogAction, Embed, Member, Role, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
 from winter_dragon.bot.settings import Settings
 
 
-class OverwriteUpdate(AuditEvent):
+class OverwriteUpdate(AuditEvent, action=AuditLogAction.overwrite_update):
     """Handle permission overwrite update events."""
 
     @override

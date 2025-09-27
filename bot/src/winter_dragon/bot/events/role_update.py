@@ -1,12 +1,12 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, Role, User
+from discord import AuditLogAction, Embed, Member, Role, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class RoleUpdate(AuditEvent):
+class RoleUpdate(AuditEvent, action=AuditLogAction.role_update):
     """Handle role update events."""
 
     @override

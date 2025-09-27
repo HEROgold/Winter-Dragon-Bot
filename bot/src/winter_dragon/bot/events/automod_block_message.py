@@ -1,12 +1,12 @@
 """Module for handling automod block message events."""
 from typing import override
 
-from discord import Embed
+from discord import AuditLogAction, Embed
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class AutomodBlockMessage(AuditEvent):
+class AutomodBlockMessage(AuditEvent, action=AuditLogAction.automod_block_message):
     """Handle automod block message events."""
 
     @override

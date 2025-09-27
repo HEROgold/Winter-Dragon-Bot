@@ -1,13 +1,13 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, Role, User
+from discord import AuditLogAction, Embed, Member, Role, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class OverwriteCreate(AuditEvent):
+class OverwriteCreate(AuditEvent, action=AuditLogAction.overwrite_create):
     """Handle overwrite create events."""
 
     @override

@@ -1,12 +1,12 @@
 """Module for handling automod flag message events."""
 from typing import override
 
-from discord import Embed
+from discord import AuditLogAction, Embed
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class AutomodFlagMessage(AuditEvent):
+class AutomodFlagMessage(AuditEvent, action=AuditLogAction.automod_flag_message):
     """Handle automod flag message events."""
 
     @override

@@ -5,12 +5,12 @@ Track when users modify existing threads and generate appropriate audit logs.
 
 from typing import override
 
-from discord import Embed, Member, Thread, User
+from discord import AuditLogAction, Embed, Member, Thread, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class ThreadUpdate(AuditEvent):
+class ThreadUpdate(AuditEvent, action=AuditLogAction.thread_update):
     """Process thread update events in Discord guilds.
 
     Monitor the audit log for thread modifications, log the events,

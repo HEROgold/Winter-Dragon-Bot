@@ -4,11 +4,11 @@ Track when users modify custom stickers and generate appropriate audit logs.
 """
 from typing import override
 
-from discord import Embed
+from discord import AuditLogAction, Embed
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
-class StickerUpdate(AuditEvent):
+class StickerUpdate(AuditEvent, action=AuditLogAction.sticker_update):
     """Process sticker update events in Discord guilds.
 
     Monitor the audit log for sticker modifications, log the events,

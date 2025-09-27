@@ -2,12 +2,12 @@
 
 from typing import override
 
-from discord import Embed, Member, Message, TextChannel, User
+from discord import AuditLogAction, Embed, Member, Message, TextChannel, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class MessageUnpin(AuditEvent):
+class MessageUnpin(AuditEvent, action=AuditLogAction.message_unpin):
     """Handle message unpin events."""
 
     @override

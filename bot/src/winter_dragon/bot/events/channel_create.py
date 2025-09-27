@@ -1,13 +1,13 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class ChannelCreate(AuditEvent):
+class ChannelCreate(AuditEvent, action=AuditLogAction.channel_create):
     """Handle channel create events."""
 
     @override

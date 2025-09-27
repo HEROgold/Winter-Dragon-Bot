@@ -1,11 +1,11 @@
 """."""
 from typing import override
 
-from discord import Embed
+from discord import AuditLogAction, Embed
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
-class StageInstanceCreate(AuditEvent):
+class StageInstanceCreate(AuditEvent, action=AuditLogAction.stage_instance_create):
     """Handle stage instance create events."""
 
     @override

@@ -1,11 +1,11 @@
 """."""
 from typing import override
 
-from discord import Embed
+from discord import AuditLogAction, Embed
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 
 
-class StageInstanceDelete(AuditEvent):
+class StageInstanceDelete(AuditEvent, action=AuditLogAction.stage_instance_delete):
     """Handle stage instance delete events."""
 
     @override

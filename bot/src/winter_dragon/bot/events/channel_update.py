@@ -1,14 +1,14 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
 from winter_dragon.bot.settings import Settings
 
 
-class ChannelUpdate(AuditEvent):
+class ChannelUpdate(AuditEvent, action=AuditLogAction.channel_update):
     """Handle channel update events."""
 
     @override

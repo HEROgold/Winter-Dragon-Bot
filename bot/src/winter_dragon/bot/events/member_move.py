@@ -1,13 +1,13 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.audit_logs import _AuditLogProxyMemberMoveOrMessageDelete  # type: ignore[reportPrivateUsage]
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class MemberMove(AuditEvent):
+class MemberMove(AuditEvent, action=AuditLogAction.member_move):
     """Handle member move events."""
 
     @override

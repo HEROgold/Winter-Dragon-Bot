@@ -1,12 +1,12 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class MemberDisconnect(AuditEvent):
+class MemberDisconnect(AuditEvent, action=AuditLogAction.member_disconnect):
     """Handle member disconnect events."""
 
     @override

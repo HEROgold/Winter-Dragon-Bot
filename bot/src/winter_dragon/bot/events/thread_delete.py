@@ -5,12 +5,12 @@ Track when users delete threads and generate appropriate audit logs.
 
 from typing import override
 
-from discord import Embed, Member, Thread, User
+from discord import AuditLogAction, Embed, Member, Thread, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class ThreadDelete(AuditEvent):
+class ThreadDelete(AuditEvent, action=AuditLogAction.thread_delete):
     """Process thread deletion events in Discord guilds.
 
     Monitor the audit log for thread deletions, log the events,

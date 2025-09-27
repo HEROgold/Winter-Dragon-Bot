@@ -2,14 +2,14 @@
 
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from discord.audit_logs import _AuditLogProxyMessageBulkDelete  # type: ignore[reportPrivateUsage]
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class MessageBulkDelete(AuditEvent):
+class MessageBulkDelete(AuditEvent, action=AuditLogAction.message_bulk_delete):
     """Handle message bulk delete events."""
 
     @override

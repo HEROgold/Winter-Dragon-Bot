@@ -4,13 +4,13 @@ Track when users delete webhooks and generate appropriate audit logs.
 """
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class WebhookDelete(AuditEvent):
+class WebhookDelete(AuditEvent, action=AuditLogAction.webhook_delete):
     """Process webhook deletion events in Discord guilds.
 
     Monitor the audit log for webhook deletions, log the events,

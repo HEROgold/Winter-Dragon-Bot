@@ -4,12 +4,12 @@ This module provides functionality for monitoring and logging when users are unb
 """
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class Unban(AuditEvent):
+class Unban(AuditEvent, action=AuditLogAction.unban):
     """Handles the unban event.
 
     This class processes Discord unban events, generating logs and notifications

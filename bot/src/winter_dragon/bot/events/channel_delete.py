@@ -1,13 +1,13 @@
 """."""
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class ChannelDelete(AuditEvent):
+class ChannelDelete(AuditEvent, action=AuditLogAction.channel_delete):
     """Handle channel delete events."""
 
     @override

@@ -1,12 +1,12 @@
 """."""
 from typing import override
 
-from discord import Embed, Emoji, Member, User
+from discord import AuditLogAction, Embed, Emoji, Member, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class EmojiUpdate(AuditEvent):
+class EmojiUpdate(AuditEvent, action=AuditLogAction.emoji_update):
     """Handle emoji update events."""
 
     @override

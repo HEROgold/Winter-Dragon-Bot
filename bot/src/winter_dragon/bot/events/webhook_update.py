@@ -5,14 +5,14 @@ Track when users modify existing webhooks and generate appropriate audit logs.
 
 from typing import override
 
-from discord import Embed, Member, User
+from discord import AuditLogAction, Embed, Member, User
 from discord.abc import GuildChannel
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.events.base.util import add_differences_to_embed
 from winter_dragon.bot.settings import Settings
 
 
-class WebhookUpdate(AuditEvent):
+class WebhookUpdate(AuditEvent, action=AuditLogAction.webhook_update):
     """Process webhook update events in Discord guilds.
 
     Monitor the audit log for webhook updates, log the events,

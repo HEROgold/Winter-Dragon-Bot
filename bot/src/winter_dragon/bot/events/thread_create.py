@@ -5,12 +5,12 @@ Track when users create new threads and generate appropriate audit logs.
 
 from typing import override
 
-from discord import Embed, Member, Thread, User
+from discord import AuditLogAction, Embed, Member, Thread, User
 from winter_dragon.bot.events.base.audit_event import AuditEvent
 from winter_dragon.bot.settings import Settings
 
 
-class ThreadCreate(AuditEvent):
+class ThreadCreate(AuditEvent, action=AuditLogAction.thread_create):
     """Process thread creation events in Discord guilds.
 
     Monitor the audit log for thread creations, log the events,
