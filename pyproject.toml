@@ -19,39 +19,8 @@ classifiers = [
     "Framework :: AsyncIO",
 ]
 dependencies = [
-    "database",
-    "bot",
-    "winter-dragon-backend",
-    "flufl-i18n>=5.2.0",
-    "bracketool>=0.1",
     "confkit>=0.3.0",
+    "discord-py>=2.6.3",
 ]
-
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.uv.sources]
-backend = { workspace = true }
-database = { workspace = true }
-winter-dragon-backend = { workspace = true }
-bot = { workspace = true }
-
-[tool.uv.workspace]
-members = ["bot", "database", "backend"]
-
-[tool.setuptools]
-package-dir = {"" = "."}
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["*", "bot.src.*", "database.src.*", "backend.src.*"]
-namespaces = true
-
-[tool.setuptools.package-data]
-"*" = ["*.json", "*.yaml", "*.yml"]
-
-[dependency-groups]
-dev = [
-    "alembic>=1.16.1",
-]
+[tool.uv]
+package = true

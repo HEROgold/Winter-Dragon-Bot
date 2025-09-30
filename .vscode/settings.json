@@ -8,9 +8,7 @@
     "tailwindCSS.emmetCompletions": true,
     "python.analysis.typeCheckingMode": "strict",
     "python.analysis.extraPaths": [
-        "${workspaceFolder}/bot/src",
-        "${workspaceFolder}/backend/src",
-        "${workspaceFolder}/database/src",
+        "${workspaceFolder}/src",
     ],
     "python.analysis.diagnosticSeverityOverrides": {
         "reportGeneralTypeIssues": "none",
