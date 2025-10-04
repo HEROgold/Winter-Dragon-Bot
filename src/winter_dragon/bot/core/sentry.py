@@ -6,13 +6,15 @@ from pathlib import Path
 import sentry_sdk
 from confkit import Config
 
-if not Config._parser:
+
+if not Config._parser: # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
     Config.set_parser(ConfigParser())
 Config.set_file(Path(__file__).parent / "sentry_config.ini")
 
 class Sentry:
     """A class to handle Sentry setup."""
 
+    Telemetry = Config(default=True)
     dsn = Config("")
     environment = Config("development")
 

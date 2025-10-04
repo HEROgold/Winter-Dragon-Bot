@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot.events.base.factory import AuditEventFactory
@@ -43,6 +43,6 @@ class AuditEvent(ABC, LoggerMixin):
     def create_embed(self) -> Embed:
         """Create an embed for the audit event."""
 
-    def __init_subclass__(cls: type[AuditEvent], action: AuditLogAction) -> None:
+    def __init_subclass__(cls: type[Self], action: AuditLogAction) -> None:
         """Register the subclass with the factory."""
         AuditEventFactory.register(action, cls)

@@ -1,7 +1,12 @@
 
 from typing import Protocol
 
+from discord import Interaction, app_commands
+from discord.ext import commands
+
 from winter_dragon.bot.core.cogs import GroupCog
+
+from .settings import Settings
 
 
 class SupportsString(Protocol):
@@ -15,11 +20,12 @@ def codeblock(language: str, text: SupportsString) -> str:
     return f"```{language}\n{text}\n```"
 
 
+# TODO: rewrite to be a CogManager.
 @app_commands.guilds(Settings.support_guild_id)
 class ExtensionManager(GroupCog, auto_load=True):
     """Commands to manage extensions."""
 
-    async def mass_reload(self, interaction: discord.Interaction) -> None:
+    async def mass_reload(self, interaction: Interaction) -> None:
         """Reload all previously loaded extensions."""
         await interaction.response.defer(ephemeral=True)
         reload_message = ""
