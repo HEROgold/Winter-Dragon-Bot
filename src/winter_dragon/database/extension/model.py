@@ -102,8 +102,12 @@ class BaseModel(BaseSQLModel, LoggerMixin):
                 continue
             # Get the actual value from the instance, and not field info
             # Use value.annotation to match the types.
-            if value.annotation is type(self.__dict__[field]):
-                setattr(known, field, self.__dict__[field])
+            field_value = self.__dict__[field]
+            instance_field_type = type(field_value)
+            expected_field_type = value.annotation
+
+            if expected_field_type is instance_field_type:
+                setattr(known, field, field_value)
             else:
                 msg = f"Field {field=} has wrong type: {value.annotation} != {type(self.__dict__[field])}"
                 raise TypeError(msg)
