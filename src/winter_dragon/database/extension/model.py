@@ -97,7 +97,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
         """Update known, with the values from self."""
         self.logger.debug(f"Updating record: {self}")
         session = self._get_session(session)
-        for field, value in self.model_fields.items():
+        for field, value in self.__class__.model_fields.items():
             if field == "id":
                 continue
             # Get the actual value from the instance, and not field info
