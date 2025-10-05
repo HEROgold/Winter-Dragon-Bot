@@ -12,6 +12,7 @@ from discord import (
 )
 from sqlmodel import select
 from winter_dragon.bot.config import Config
+
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
@@ -22,6 +23,7 @@ from winter_dragon.database.tables.channel import Channels
 if TYPE_CHECKING:
 
     from winter_dragon.bot._types.aliases import VocalGuildChannel
+
     from winter_dragon.bot.core.bot import WinterDragon
 
 

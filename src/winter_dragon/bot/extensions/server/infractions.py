@@ -7,9 +7,10 @@ from discord import (
     AutoModRuleActionType,
     app_commands,
 )
+from winter_dragon.bot.settings import Settings
+
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.bot.settings import Settings
 from winter_dragon.database.tables import Infractions as InfractionsDb
 
 

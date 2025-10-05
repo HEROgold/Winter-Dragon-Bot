@@ -5,10 +5,11 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 from winter_dragon.bot._types.kwargs import BotArgs
+from winter_dragon.bot.settings import Settings
+
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.extensions.games.games import Games
-from winter_dragon.bot.settings import Settings
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import LookingForGroup
 

@@ -15,16 +15,16 @@ from discord import (
     VerificationLevel,
     app_commands,
 )
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.core.bot import WinterDragon
+
 from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.server.log_channels import LogChannels
 from winter_dragon.bot.extensions.server.stats import Stats
 from winter_dragon.bot.extensions.server.welcome import Welcome
 
 
-class GuildCreator(GroupCog):
+class GuildCreator(GroupCog, auto_load=True):
     """Cog for creating a new guild."""
 
     INIT_NAME = "Initializing guild"
@@ -63,7 +63,7 @@ class GuildCreator(GroupCog):
                 await new_owner.dm_channel.send(f"Transferring ownership of guild to you. {invite.url}")
 
     @app_commands.checks.cooldown(1, WEEK)
-    @app_commands.command(name="create", description="Creates a new guild, and makes you the owner.")
+    @app_commands.command(name="create", description="Updates the current guild, assuming it is newly created.")
     async def slash_create(  # noqa: PLR0913
         self,
         interaction: discord.Interaction,
@@ -74,9 +74,9 @@ class GuildCreator(GroupCog):
         disable_invites: bool = True,
         disable_widget: bool = True,
     ) -> None:
-        """Create a new guild for the user, then invite the user."""
+        """Update the current guild for the user, then invite the user."""
         await interaction.response.defer(thinking=True, ephemeral=True)
-        guild = await self.bot.create_guild(name=self.INIT_NAME)
+        guild = interaction.guild
         invite = await guild.channels[0].create_invite()
         await interaction.followup.send(invite.url)
         rules_channel = await guild.create_text_channel(
@@ -150,8 +150,3 @@ class GuildCreator(GroupCog):
             invites_disabled_until=datetime.now(tz=UTC) + timedelta(days=1),
             dms_disabled_until=datetime.now(tz=UTC) + timedelta(days=1),
         )
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(GuildCreator(bot=bot))

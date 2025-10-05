@@ -3,8 +3,9 @@
 import logging
 
 from discord.ext.prometheus import PrometheusCog
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.settings import Settings
+
+from winter_dragon.bot.core.bot import WinterDragon
 
 
 async def setup(bot: WinterDragon) -> None:

@@ -5,9 +5,10 @@ import random
 import discord
 from discord import app_commands
 from winter_dragon.bot.config import Config
+from winter_dragon.bot.tools import rainbow
+
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
-from winter_dragon.bot.tools import rainbow
 
 
 class Announce(Cog):

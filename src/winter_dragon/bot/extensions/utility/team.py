@@ -10,10 +10,11 @@ from discord.abc import PrivateChannel
 from sqlmodel import select
 from winter_dragon.bot._types.dicts import TeamDict
 from winter_dragon.bot.config import Config
+from winter_dragon.bot.tools import rainbow
+
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.bot.tools import rainbow
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 

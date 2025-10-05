@@ -4,10 +4,11 @@ from textwrap import dedent
 
 from discord import Embed, Member, NotFound, User
 from sqlmodel import Session, select
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamURL
 from winter_dragon.bot.settings import Settings
+
+from winter_dragon.bot.core.bot import WinterDragon
+from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamURL
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 from winter_dragon.database.tables.steamuser import SteamUsers
 
