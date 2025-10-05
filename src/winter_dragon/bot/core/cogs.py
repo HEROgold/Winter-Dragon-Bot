@@ -13,6 +13,7 @@ from winter_dragon.bot.core.app_command_cache import AppCommandCache
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.errors.factory import ErrorFactory
+from winter_dragon.bot.patches.cog import CogMeta
 from winter_dragon.database import engine
 from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.disabled_commands import DisabledCommands
@@ -25,7 +26,7 @@ class BotArgs(TypedDict):
     bot: Required[WinterDragon]
     db_session: NotRequired[Session]
 
-class Cog(commands.Cog, LoggerMixin):
+class Cog(commands.Cog, LoggerMixin, metaclass=CogMeta):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
 
     Args:
