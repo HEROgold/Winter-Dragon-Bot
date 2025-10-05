@@ -26,3 +26,9 @@ dependencies = [
 ]
 [tool.uv]
 package = true
+
+[project.optional-dependencies]
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+]
