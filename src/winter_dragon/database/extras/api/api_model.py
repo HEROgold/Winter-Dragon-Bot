@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, status
+
 from winter_dragon.database.extension.model import BaseModel
 
 
@@ -20,24 +21,18 @@ class APIModel[T: type[BaseModel]]:
     def __init__(self, model: T) -> None:
         """Initialize the APIModel with a SQLModel instance."""
         self.model = model
-        self.router.tags.append(model.__class__.__name__)
+        self.router.tags.append("AutoApi")
         self.router.prefix = f"/{model.__class__.__name__.lower()}"
-
-    @router.get("/{_id}")
-    def get(self, _id: int) -> T | int:
-        """Get a record by ID."""
-        return self.model.get(_id) or status.HTTP_404_NOT_FOUND
-
-    @router.delete("/{_id}")
-    def delete(self, _id: int) -> None:
-        """Delete a record by ID."""
-        inst = self.model.get(_id)
-        self.model.delete(inst)
 
     @router.get("/")
     def get_all(self) -> Sequence[T]:
         """Get all records."""
         return self.model.get_all()
+
+    @router.get("/{_id}")
+    def get(self, _id: int) -> T | int:
+        """Get a record by ID."""
+        return self.model.get(_id) or status.HTTP_404_NOT_FOUND
 
     @router.post("/")
     def create(self, item: T) -> T:
@@ -52,3 +47,9 @@ class APIModel[T: type[BaseModel]]:
             return status.HTTP_404_NOT_FOUND
         self.model.update(item)
         return None
+
+    @router.delete("/{_id}")
+    def delete(self, _id: int) -> None:
+        """Delete a record by ID."""
+        inst = self.model.get(_id)
+        self.model.delete(inst)
