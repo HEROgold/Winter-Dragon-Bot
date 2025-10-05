@@ -9,12 +9,14 @@ from discord.ext.commands._types import BotT
 from discord.ext.commands.context import Context
 from sqlmodel import Session, select
 
-from bot.src.winter_dragon.bot.core.error_handler import ErrorHandler
-from bot.src.winter_dragon.bot.core.log import LoggerMixin
-from bot.src.winter_dragon.bot.core.tasks import loop
-from database.src.winter_dragon.database.tables import Commands, DisabledCommands
 from winter_dragon.bot.core.app_command_cache import AppCommandCache
 from winter_dragon.bot.core.bot import WinterDragon
+from winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.errors.factory import ErrorFactory
+from winter_dragon.database import engine
+from winter_dragon.database.tables.command import Commands
+from winter_dragon.database.tables.disabled_commands import DisabledCommands
+from winter_dragon.logging import LoggerMixin
 
 
 class BotArgs(TypedDict):
@@ -22,7 +24,6 @@ class BotArgs(TypedDict):
 
     bot: Required[WinterDragon]
     db_session: NotRequired[Session]
-
 
 class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
@@ -100,10 +101,6 @@ class Cog(commands.Cog, LoggerMixin):
         """Check if a command is enabled for a guild, channel, or user."""
         return not self.is_command_disabled(interaction)
 
-    async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
-        """Handle errors that occur during command invocation."""
-        ErrorHandler(self.bot, ctx, error)
-
     async def cog_load(self) -> None:
         """When loaded, start the add_mentions and add_disabled_check loops."""
         self.add_mentions.start()
@@ -139,13 +136,20 @@ class Cog(commands.Cog, LoggerMixin):
         """Wait until the bot is ready before adding mentions and disabled checks."""
         await self.bot.wait_until_ready()
 
+    # Documentation mentions that `error` is CommandError, however it's type hinted with Exception?
+    async def cog_command_error(self, ctx: Context[BotT], error: commands.CommandError) -> None: # pyright: ignore[reportIncompatibleMethodOverride]
+        """Handle errors that occur during command invocation."""
+        for handler in ErrorFactory.get_handlers(self.bot, error, ctx=ctx):
+            await handler.handle()
+
     async def cog_app_command_error(
         self,
         interaction: discord.Interaction,
         error: app_commands.AppCommandError,
     ) -> None:
         """Handle the errors that occur during app command invocation."""
-        ErrorHandler(self.bot, interaction, error)
+        for handler in ErrorFactory.get_handlers(self.bot, error, interaction=interaction):
+            await handler.handle()
 
 
 class GroupCog(Cog):
