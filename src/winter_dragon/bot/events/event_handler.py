@@ -3,9 +3,11 @@
 import discord
 from discord import AuditLogAction, Embed, Guild
 from sqlmodel import Session, select
-from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.events.base.audit_event import AuditEvent
+
 from winter_dragon.database.tables.channel import Channels
+from winter_dragon.logging import LoggerMixin
+
+from .audit_event import AuditEvent
 
 
 GLOBAL = "GLOBAL"

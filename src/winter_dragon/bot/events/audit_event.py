@@ -4,9 +4,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Self
 
-from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.events.base.factory import AuditEventFactory
 from winter_dragon.database.tables.audit_log import AuditLog
+from winter_dragon.logging import LoggerMixin
+
+from .factory import AuditEventFactory
 
 
 if TYPE_CHECKING:

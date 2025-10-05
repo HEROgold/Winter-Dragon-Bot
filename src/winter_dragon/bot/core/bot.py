@@ -17,8 +17,8 @@ from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.bot import BotBase
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
-from bot.src.winter_dragon.bot.core.log import LoggerMixin
 from winter_dragon.bot import Settings
+from winter_dragon.logging import LoggerMixin
 
 from .config import Config
 from .paths import EXTENSIONS, ROOT_DIR
@@ -148,6 +148,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
     @Config.as_kwarg("Tokens", "discord_token")
     async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs: str) -> None:
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
+        # TODO: Validate configuration file!
         token = token or kwargs.get("discord_token")
         if token is None:
             msg = "No token provided"

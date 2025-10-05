@@ -9,7 +9,8 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from discord import AuditLogAction, AuditLogEntry
-    from winter_dragon.bot.events.base.audit_event import AuditEvent
+
+    from .audit_event import AuditEvent
 
 class AuditEventFactory:
     """Factory for creating audit events."""
