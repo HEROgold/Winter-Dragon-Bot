@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Self
 
 from sqlmodel import Field
+
 from winter_dragon.database.extension.model import DiscordID
 
 

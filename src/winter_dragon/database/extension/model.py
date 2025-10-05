@@ -10,9 +10,10 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
+
 from winter_dragon.database.constants import session as db_session
 from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
-from winter_dragon.database.logger import LoggerMixin
+from winter_dragon.logging import LoggerMixin
 
 
 class BaseModel(BaseSQLModel, LoggerMixin):
@@ -109,7 +110,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
             if expected_field_type is instance_field_type:
                 setattr(known, field, field_value)
             else:
-                msg = f"Field {field=} has wrong type: {value.annotation} != {type(self.__dict__[field])}"
+                msg = f"Field {field=} has wrong type: {expected_field_type} != {instance_field_type}"
                 raise TypeError(msg)
         session.add(known)
         session.commit()

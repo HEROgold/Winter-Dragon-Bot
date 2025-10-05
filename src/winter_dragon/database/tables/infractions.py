@@ -1,6 +1,7 @@
 from typing import Self
 
 from sqlmodel import Field
+
 from winter_dragon.database.extension.model import SQLModel, select
 from winter_dragon.database.keys import get_foreign_key
 from winter_dragon.database.tables.user import Users

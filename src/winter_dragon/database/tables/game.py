@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Self
 
 from sqlmodel import Field
+
 from winter_dragon.database.extension.model import SQLModel, select
 
 
