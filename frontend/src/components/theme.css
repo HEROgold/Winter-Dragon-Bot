@@ -1,35 +1,41 @@
 :root {
-    --base-color: #909090;
-    /* TODO the Calc values need to be tweaked */
-    --background-color: oklch(from var(--base-color) calc(l * 0.75) c h);
-    --primary-color: oklch(from var(--base-color) l c h);
-    --secondary-color: oklch(from var(--base-color) calc(l * 1.3) calc(c * 1.3) calc(h * 0.9));
-    --surface-color: oklch(from var(--background-color) calc(l * 1.5) c h);
-    --accent-color: oklch(from var(--base-color) l c calc(h * 1.1));
-    --text-color: rgb(50, 50, 50); /* fallback color if contract-color isn't supported. */
-    --text-color: contrast-color(var(--base-color));
+  --base-color: #909090;
+  /* TODO the Calc values need to be tweaked */
+  --background-color: oklch(from var(--base-color) calc(l * 0.75) c h);
+  --primary-color: oklch(from var(--base-color) l c h);
+  --secondary-color: oklch(
+    from var(--base-color) calc(l * 1.3) calc(c * 1.3) calc(h * 0.9)
+  );
+  --surface-color: oklch(from var(--background-color) calc(l * 1.5) c h);
+  --accent-color: oklch(from var(--base-color) l c calc(h * 1.1));
+  --text-color: rgb(
+    50,
+    50,
+    50
+  ); /* fallback color if contract-color isn't supported. */
+  --text-color: contrast-color(var(--base-color));
 }
 
 body {
-    background-color: var(--background-color);
-    color: var(--text-color);
-    font-family: Arial, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
 }
 
 .inner {
-    background-color: var(--secondary-color);
-    border-radius: 8px;
-    padding: 16px;
+  background-color: var(--secondary-color);
+  border-radius: 8px;
+  padding: 16px;
 }
 
 .surface {
-    background-color: var(--surface-color);
-    border-radius: 8px;
-    padding: 16px;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  padding: 16px;
 }
 
 .accent {
-    background-color: var(--accent-color);
-    padding: 8px;
-    border-radius: 4px;
+  background-color: var(--accent-color);
+  padding: 8px;
+  border-radius: 4px;
 }

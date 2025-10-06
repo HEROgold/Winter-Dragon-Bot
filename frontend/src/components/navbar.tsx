@@ -1,5 +1,4 @@
-
-import "./navbar.css"
+import "./navbar.css";
 import { NavbarLinks } from "@/hooks/routes";
 import StyleSelector from "./style_selector";
 

@@ -1,4 +1,3 @@
-
 import { routeManager } from "@/hooks/routes";
 
 routeManager.addRoute("/login", UserLoginPage);

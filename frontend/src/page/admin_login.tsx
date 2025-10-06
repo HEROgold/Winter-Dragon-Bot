@@ -1,4 +1,3 @@
-
 import { routeManager } from "@/hooks/routes";
 
 routeManager.addRoute("/admin/login", AdminLoginPage);

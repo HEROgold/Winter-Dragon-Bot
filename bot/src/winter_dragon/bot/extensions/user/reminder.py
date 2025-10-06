@@ -3,6 +3,7 @@ import datetime
 
 import discord
 from discord import app_commands
+from discord.app_commands import Choice
 from sqlmodel import select
 from winter_dragon.bot.config import Config
 from winter_dragon.bot.constants import WEEKS_IN_MONTH
@@ -12,7 +13,6 @@ from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.tools.time import get_seconds
 from winter_dragon.database.tables import Reminder as ReminderDb
 from winter_dragon.database.tables.reminder import TimedReminder
-from discord.app_commands import Choice
 
 
 class Reminder(Cog):

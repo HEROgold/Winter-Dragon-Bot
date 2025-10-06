@@ -8,7 +8,6 @@ import "./page/landing";
 import "./page/not_found";
 import "./page/user_login";
 
-
 import Navbar from "./components/navbar";
 import { routeManager } from "./hooks/routes";
 
@@ -21,12 +20,10 @@ export function App() {
   console.log("Registered routes:", routes);
   return (
     <BrowserRouter>
-    <Navbar />
-    <div className="app">
-      <Routes>
-        {routeElements}
-      </Routes>
-    </div>
+      <Navbar />
+      <div className="app">
+        <Routes>{routeElements}</Routes>
+      </div>
     </BrowserRouter>
   );
 }
