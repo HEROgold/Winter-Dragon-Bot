@@ -1,0 +1,32 @@
+# Backend Dockerfile
+FROM python:3.13-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY pyproject.toml uv.lock ./
+
+# Install uv for dependency management
+RUN pip install uv
+
+# Install dependencies including API extras
+RUN uv sync --frozen --extra api
+
+# Copy the source code
+COPY src/ ./src/
+COPY backend/ ./backend/
+
+# Set Python path to include src directory
+ENV PYTHONPATH=/app/src:/app
+
+# Expose port
+EXPOSE 8000
+
+# Run the backend API
+CMD ["uv", "run", "python", "backend/main.py"]
