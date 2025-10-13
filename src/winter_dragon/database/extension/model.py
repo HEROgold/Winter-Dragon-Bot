@@ -5,8 +5,9 @@ This module should make the SQLModel classes more like a `Repository` pattern.
 
 import logging
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
+from pydantic import ConfigDict
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
@@ -16,6 +17,8 @@ from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 from winter_dragon.logging import LoggerMixin
 
 
+models: set[type["BaseModel"]] = set()
+
 class BaseModel(BaseSQLModel, LoggerMixin):
     """Base model class with custom methods."""
 
@@ -24,6 +27,11 @@ class BaseModel(BaseSQLModel, LoggerMixin):
 
     session: ClassVar[Session] = db_session
     logger: ClassVar[logging.Logger] # type: ignore[reportIncompatibleVariableOverride]
+
+    def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]) -> None:
+        """Register subclass in models set."""
+        super().__init_subclass__(**kwargs)
+        models.add(cls)
 
     def add(self: Self, session: Session | None = None) -> None:
         """Add a record to Database."""
