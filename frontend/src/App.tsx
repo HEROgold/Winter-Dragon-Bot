@@ -1,33 +1,38 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { APITester } from "./APITester";
 import "./index.css";
 
-// Import all pages individually to ensure they're loaded
-import "./page/admin_login";
-import "./page/docs";
-import "./page/landing";
-import "./page/not_found";
-import "./page/user_login";
-
-
-import Navbar from "./components/navbar";
-import { routeManager } from "./hooks/routes";
-
-const routes = routeManager.getRoutes();
-const routeElements = routes.map(({ path, component: Component }) => (
-  <Route key={path} path={path} element={<Component />} />
-));
+import logo from "./logo.svg";
+import reactLogo from "./react.svg";
 
 export function App() {
-  console.log("Registered routes:", routes);
   return (
-    <BrowserRouter>
-    <Navbar />
-    <div className="app">
-      <Routes>
-        {routeElements}
-      </Routes>
+    <div className="container mx-auto p-8 text-center relative z-10">
+      <div className="flex justify-center items-center gap-8 mb-8">
+        <img
+          src={logo}
+          alt="Bun Logo"
+          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#646cffaa] scale-120"
+        />
+        <img
+          src={reactLogo}
+          alt="React Logo"
+          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#61dafbaa] [animation:spin_20s_linear_infinite]"
+        />
+      </div>
+      <Card>
+        <CardHeader className="gap-4">
+          <CardTitle className="text-3xl font-bold">Bun + React</CardTitle>
+          <CardDescription>
+            Edit <code className="rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono">src/App.tsx</code> and save to
+            test HMR
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <APITester />
+        </CardContent>
+      </Card>
     </div>
-    </BrowserRouter>
   );
 }
 
