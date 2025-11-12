@@ -542,11 +542,11 @@ wheels = [
 
 [[package]]
 name = "herogold"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/13/a4/beb8990bbac062a0ce188aab8d5d9aabe79f656bd42a6b973b096cb7a593/herogold-0.2.0.tar.gz", hash = "sha256:339f4f4ae6b47fddedb7b3e6941c79fc36a09f709504f5f6ecf2999bfb2ba630", size = 20643, upload-time = "2025-11-12T01:14:25.368Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/56/cb/cee2f287964ecc333e7ce6ab7d4eeb26928449419f07beae9ec01b468975/herogold-0.2.1.tar.gz", hash = "sha256:9216ca1de1c1d50f991197f659e555acdde1f252af4ef6b5df3ebb68240293e8", size = 20644, upload-time = "2025-11-12T01:17:42.076Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/6f/bd3747f6b87d5283cc1ff7a32510dd72a8379b5e67e1a0bc70affee9014e/herogold-0.2.0-py3-none-any.whl", hash = "sha256:e7f1580ed7978d0a5315542aff381d9f0e002d8b0cfc02ad94d0d3183e1a527b", size = 16542, upload-time = "2025-11-12T01:14:24.561Z" },
+    { url = "https://files.pythonhosted.org/packages/76/3d/1759be7a6b9523e5612d6afd3ab5f83ed6388dee1a5cd77562732c8b0498/herogold-0.2.1-py3-none-any.whl", hash = "sha256:9aee5c09cc8796ebc89be7ad70104193a7117fe3ecb1e9de63e81beaae6f4cda", size = 16539, upload-time = "2025-11-12T01:17:41.314Z" },
 ]
 
 [[package]]
