@@ -20,7 +20,7 @@ from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 models: set[type["BaseModel"]] = set()
 
 class ModelLogger(LoggerMixin):
-    """Polymorphic logger for models.
+    """Polymorphic logger for model, on cls level methods.
 
     Avoids the issue of cls.logger raising AttributeError, property has no property `xxx`
     """
