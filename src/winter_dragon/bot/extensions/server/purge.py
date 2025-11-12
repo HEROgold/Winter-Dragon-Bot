@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import discord
 from discord import Interaction, Message, StageChannel, TextChannel, Thread, VoiceChannel, app_commands
+from herogold.sentinel import MISSING
 
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.config import Config
@@ -20,9 +21,6 @@ if TYPE_CHECKING:
 
 type PrunableChannel = VoiceChannel | StageChannel | TextChannel | Thread
 
-_MISSING: Any = object()
-"""Special sentinel for Protocol signature"""
-
 @runtime_checkable
 class Prunable(Protocol):
     """A protocol that defines a prunable object.
@@ -34,7 +32,7 @@ class Prunable(Protocol):
         self,
         *,
         limit: int | None = 100,
-        check: Callable[[Message], bool] = _MISSING,
+        check: Callable[[Message], bool] = MISSING,
         before: SnowflakeTime | None = None,
         after: SnowflakeTime | None = None,
         around: SnowflakeTime | None = None,
