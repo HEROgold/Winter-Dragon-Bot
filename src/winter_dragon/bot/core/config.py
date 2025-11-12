@@ -10,7 +10,7 @@ from __future__ import annotations
 import configparser
 from typing import TYPE_CHECKING
 
-from confkit import Config
+from confkit import Config as CKConfig
 
 from winter_dragon.bot.core.paths import BOT_CONFIG
 from winter_dragon.bot.errors.config import FirstTimeLaunchError
@@ -18,6 +18,9 @@ from winter_dragon.bot.errors.config import FirstTimeLaunchError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+class Config(CKConfig):
+    """Config descriptor for WinterDragon."""
 
 
 class ConfigParser(configparser.ConfigParser):
