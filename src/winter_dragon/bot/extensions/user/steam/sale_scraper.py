@@ -8,16 +8,15 @@ from typing import TYPE_CHECKING
 
 import requests
 from bs4 import BeautifulSoup, Tag
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.core.log import LoggerMixin
 
+from winter_dragon.bot.core.config import Config
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
+from winter_dragon.logging import LoggerMixin
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from winter_dragon.bot.core.bot import WinterDragon
 
 DISCOUNT_FINAL_PRICE = "discount_final_price"
 DISCOUNT_PERCENT = "discount_pct"
@@ -145,9 +144,8 @@ class SteamScraper(LoggerMixin):
             self.logger.warning(f"Title not found for {url=}")
             return None
 
-        self.logger.info(f"SteamSale found: {url=}, {title=}, {price=}, {sale_perc=}")
         sale_id = url.id
-        sale = SteamSale(
+        steam_sale = SteamSale(
             id = sale_id,
             title = title.get_text(),
             url = str(url),
@@ -155,11 +153,10 @@ class SteamScraper(LoggerMixin):
             final_price = price_to_num(price.get_text()[:-1].replace(",", ".")),
             update_datetime = datetime.now(tz=UTC),
         )
+        self.logger.info(f"SteamSale found: {steam_sale=}")
         if bool(soup.find("div", class_="content")):
             SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
-
-        self.logger.debug(f"SteamSale found: {url=}, {title=}, {price=}")
-        return sale
+        return steam_sale
 
     async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[SteamSale | None]:
         """Scrape sales from https://store.steampowered.com/search/.
@@ -171,7 +168,7 @@ class SteamScraper(LoggerMixin):
         soup = BeautifulSoup(html.text, "html.parser")
 
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
-            if not isinstance(sale_tag, Tag):
+            if not isinstance(sale_tag, Tag): # pyright: ignore[reportUnnecessaryIsInstance]
                 self.logger.warning(f"Sale tag not found for {sale_tag=}, Expected Tag, got {type(sale_tag)}")
                 continue
             yield await self.get_sale_from_steam(sale_tag, percent)
@@ -235,8 +232,3 @@ class SteamScraper(LoggerMixin):
             final_price = price_to_num(price),
             update_datetime = datetime.now(tz=UTC),
         )
-
-
-async def setup(_bot: WinterDragon) -> None:
-    """Set up the SteamScraper."""
-    return

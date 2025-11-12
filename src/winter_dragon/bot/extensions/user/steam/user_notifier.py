@@ -4,13 +4,13 @@ from textwrap import dedent
 
 from discord import Embed, Member, NotFound, User
 from sqlmodel import Session, select
-from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.settings import Settings
 
 from winter_dragon.bot.core.bot import WinterDragon
+from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamURL
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 from winter_dragon.database.tables.steamuser import SteamUsers
+from winter_dragon.logging import LoggerMixin
 
 
 class SteamSaleNotifier(LoggerMixin):
@@ -129,9 +129,3 @@ class SteamSaleNotifier(LoggerMixin):
             except NotFound:
                 self.logger.warning(f"Not showing {subscribed_user.user_id=} sales, discord.errors.NotFound")
                 continue
-
-
-
-async def setup(_bot: WinterDragon) -> None:
-    """Set up function for the Steam Sale Notifier."""
-    return

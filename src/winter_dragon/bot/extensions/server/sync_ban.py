@@ -4,7 +4,6 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import SyncBanGuild, SyncBanUser
 from winter_dragon.database.tables.guild import Guilds
@@ -12,7 +11,7 @@ from winter_dragon.database.tables.sync_ban.sync_ban_banned_by import SyncBanBan
 from winter_dragon.database.tables.user import Users
 
 
-class SyncedBans(GroupCog):
+class SyncedBans(GroupCog, auto_load=True):
     """Sync bans across all guilds that subscribe to this feature."""
 
     async def create_banned_role(self, guild: discord.Guild) -> discord.Role:
@@ -94,8 +93,3 @@ class SyncedBans(GroupCog):
                 member,
                 reason=f"Syncing bans: {reason or 'No reason provided'} from {guild.name if guild else 'Unknown Guild'}",
             )
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(SyncedBans(bot=bot))

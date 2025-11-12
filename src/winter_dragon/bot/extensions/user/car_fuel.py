@@ -3,12 +3,11 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import CarFuels as DbFuel
 
 
-class Fuel(GroupCog):
+class Fuel(GroupCog, auto_load=True):
     """Cog for managing fuel data."""
 
     graph = app_commands.Group(name="graph", description="Show a graph containing fuel insights.")
@@ -38,9 +37,3 @@ class Fuel(GroupCog):
         fuels = [(x.timestamp, x.distance / x.amount) for x in fuels]
         # TODO: plot a graph
         await interaction.response.send_message(fuels, ephemeral=True)
-
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Fuel(bot=bot))

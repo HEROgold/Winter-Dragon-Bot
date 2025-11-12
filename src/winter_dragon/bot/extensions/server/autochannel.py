@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from textwrap import dedent
-from typing import TYPE_CHECKING, cast
 
 import discord
 from discord import (
@@ -11,24 +10,16 @@ from discord import (
     app_commands,
 )
 from sqlmodel import select
-from winter_dragon.bot.config import Config
 
 from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.bot.errors import NoneTypeError
+from winter_dragon.bot.core.config import Config
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
 from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
 from winter_dragon.database.tables.channel import Channels
 
 
-if TYPE_CHECKING:
-
-    from winter_dragon.bot._types.aliases import VocalGuildChannel
-
-    from winter_dragon.bot.core.bot import WinterDragon
-
-
 @app_commands.guild_only()
-class AutomaticChannels(GroupCog):
+class AutomaticChannels(GroupCog, auto_load=True):
     """Automatic channels for users to create their own (temporary) channels."""
 
     create_reason = Config("Creating AutomaticChannel")
@@ -158,7 +149,7 @@ class AutomaticChannels(GroupCog):
         guild = interaction.guild
         if guild is None:
             msg = "Guild is None when setting up AutoChannel"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         if self.session.exec(select(AC).where(AC.id == guild.id)).first() is not None:
             await interaction.response.send_message("You are already set up", ephemeral=True)
@@ -246,8 +237,7 @@ class AutomaticChannels(GroupCog):
 
         if autochannel := self.session.exec(select(AC).where(AC.id == interaction.user.id)).first():
             channel = self.bot.get_channel(autochannel.channel_id)
-            if channel is not None:
-                channel = cast("VocalGuildChannel", channel)
+            if channel is not None and isinstance(channel, discord.VoiceChannel):
                 await channel.edit(user_limit=limit)
 
             await interaction.response.send_message(
@@ -293,8 +283,3 @@ class AutomaticChannels(GroupCog):
                 channel_limit = 0,
             ))
         self.session.commit()
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(AutomaticChannels(bot=bot))

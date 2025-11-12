@@ -4,11 +4,10 @@ import random
 import discord
 from discord import app_commands
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 
 
-class Love(Cog):
+class Love(Cog, auto_load=True):
     """Cog for the love meter command."""
 
     @app_commands.command(name = "love", description = "Find out if another person is compatible with you")
@@ -27,8 +26,3 @@ class Love(Cog):
             inline = True,
         )
         await interaction.response.send_message(embed=emb)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Love(bot=bot))

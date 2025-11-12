@@ -8,19 +8,19 @@ import discord
 from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
 from discord.abc import PrivateChannel
 from sqlmodel import select
-from winter_dragon.bot._types.dicts import TeamDict
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.tools import rainbow
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 
 
+type TeamDict = dict[str, int | list[Member]]
+
+
 @app_commands.guild_only()
-class Team(GroupCog):
+class Team(GroupCog, auto_load=True):
     """A cog for managing teams and respective voice channels."""
 
     team_cleanup_interval = Config(3600)
@@ -310,10 +310,7 @@ class Team(GroupCog):
 
         teams = self.split_teams(team_count, members)
 
-        embed = discord.Embed(
-            title="Teams",
-            color=random.choice(rainbow.RAINBOW),  # noqa: S311
-        )
+        embed = discord.Embed(title="Teams")
 
         for team in teams:
             embed.add_field(
@@ -322,8 +319,3 @@ class Team(GroupCog):
             )
 
         await interaction.response.send_message(embed=embed)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Team(bot=bot))

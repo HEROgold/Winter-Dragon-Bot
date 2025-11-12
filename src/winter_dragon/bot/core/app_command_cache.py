@@ -20,6 +20,9 @@ class AppCommandCache:
         self._guild_app_commands: dict[int, AppCommandStore] = {}
         self.bot = bot
 
+    def __repr__(self) -> str:
+        return f"AppCommandCache(global={self._global_app_commands}, guilds={self._guild_app_commands})"
+
     # Credits to https://gist.github.com/Soheab/fed903c25b1aae1f11a8ca8c33243131#file-bot_subclass
     def get_app_command(
         self,

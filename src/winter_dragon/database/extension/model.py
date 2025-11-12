@@ -19,6 +19,13 @@ from winter_dragon.logging import LoggerMixin
 
 models: set[type["BaseModel"]] = set()
 
+class ModelLogger(LoggerMixin):
+    """Polymorphic logger for models.
+
+    Avoids the issue of cls.logger raising AttributeError, property has no property `xxx`
+    """
+
+
 class BaseModel(BaseSQLModel, LoggerMixin):
     """Base model class with custom methods."""
 
@@ -26,7 +33,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
         id: int | None | Any
 
     session: ClassVar[Session] = db_session
-    logger: ClassVar[logging.Logger] # type: ignore[reportIncompatibleVariableOverride]
+    logger: ClassVar[logging.Logger] = ModelLogger().logger # type: ignore[reportIncompatibleVariableOverride]
 
     def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]) -> None:
         """Register subclass in models set."""
@@ -43,7 +50,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
 
     def update(self: Self, session: Session | None = None) -> None:
         """Create or update a record in Database."""
-        self.logger.debug(f"Updating record: {self}")
+        self.logger.debug(f"Record update requested: {self}")
         session = self._get_session(session)
         if known := session.exec(
             select(self.__class__)

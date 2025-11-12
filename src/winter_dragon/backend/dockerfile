@@ -1,4 +1,4 @@
-# Bot Dockerfile
+# Backend Dockerfile
 FROM python:3.13-slim
 
 # Set working directory
@@ -15,18 +15,18 @@ COPY pyproject.toml uv.lock ./
 # Install uv for dependency management
 RUN pip install uv
 
-# Install dependencies
-RUN uv sync --frozen
+# Install dependencies including API extras
+RUN uv sync --frozen --extra api
 
 # Copy the source code
 COPY src/ ./src/
-COPY config.ini ./
-
-# Create logs directory
-RUN mkdir -p /app/logs
+COPY backend/ ./backend/
 
 # Set Python path to include src directory
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/app/src:/app
 
-# Run the bot
-CMD ["uv", "run", "python", "-m", "winter_dragon.bot"]
+# Expose port
+EXPOSE 8000
+
+# Run the backend API
+CMD ["uv", "run", "python", "backend/main.py"]

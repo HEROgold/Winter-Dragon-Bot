@@ -5,7 +5,6 @@ import discord
 from discord import Guild, app_commands
 from discord.ext import commands
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 
 
@@ -13,7 +12,7 @@ if TYPE_CHECKING:
     from discord.app_commands.models import AppCommand
 
 
-class Sync(Cog):
+class Sync(Cog, auto_load=True):
     """Sync slash commands with the Discord API."""
 
     @app_commands.command(name="sync", description="Sync all commands on this guild")
@@ -67,9 +66,3 @@ class Sync(Cog):
         global_list = [command.name for command in global_sync]
         global_list.sort()
         return f"{global_list}\n"
-
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Sync(bot=bot))

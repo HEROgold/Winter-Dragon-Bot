@@ -1,10 +1,9 @@
 """Module for league of legends related Cogs."""
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 
 
-class LeagueOfLegends(Cog):
+class LeagueOfLegends(Cog, auto_load=True):
     """League of Legends game.
 
     It allows users to get information about their games.
@@ -17,9 +16,3 @@ class LeagueOfLegends(Cog):
     - champion statistics.
     - champion leaderboard.
     """
-
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(LeagueOfLegends(bot=bot))

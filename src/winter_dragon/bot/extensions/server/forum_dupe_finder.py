@@ -6,7 +6,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 
 
-class ForumDupeFinder(GroupCog):
+class ForumDupeFinder(GroupCog, auto_load=True):
     """A class to find duplicate forum posts based on their content."""
 
     def __init__(self, bot: WinterDragon) -> None:
@@ -27,8 +27,3 @@ class ForumDupeFinder(GroupCog):
             if self.get_ratio(post_title, post) > ratio
         )
         return duplicates
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(ForumDupeFinder(bot=bot))

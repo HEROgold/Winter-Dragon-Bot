@@ -4,15 +4,13 @@ from typing import override
 
 import discord
 from discord import app_commands
-from winter_dragon.bot.tools import rainbow
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.database.tables import WyrQuestion
 
 from .base_question_game import BaseQuestionGame
 
 
-class WouldYouRather(BaseQuestionGame[WyrQuestion]):
+class WouldYouRather(BaseQuestionGame[WyrQuestion], auto_load=True):
     """Would You Rather game implementation."""
 
     GAME_NAME = "WOULD_YOU_RATHER"
@@ -142,7 +140,7 @@ class WouldYouRather(BaseQuestionGame[WyrQuestion]):
         emb = discord.Embed(
             title="Would You Rather",
             description=question.value,
-            color=random.choice(rainbow.RAINBOW),  # noqa: S311
+            color=random.randint(0, 0xFFFFFF),  # noqa: S311
         )
         emb.add_field(name="Option 1", value="1️⃣")
         emb.add_field(name="Option 2", value="2️⃣")
@@ -179,8 +177,3 @@ class WouldYouRather(BaseQuestionGame[WyrQuestion]):
     async def slash_wyr_add_verified(self, interaction: discord.Interaction) -> None:
         """Add all verified questions to the game."""
         await self.add_verified(interaction)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(WouldYouRather(bot=bot))

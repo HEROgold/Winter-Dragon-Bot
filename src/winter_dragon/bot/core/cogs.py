@@ -1,23 +1,28 @@
 """Module that contains Cogs, which are extended classes of discord.ext.commands.Cog/GroupCog."""
+from __future__ import annotations
+
 from itertools import chain
-from typing import Any, NotRequired, Required, Self, TypedDict, Unpack
+from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ext.commands._types import BotT
-from discord.ext.commands.context import Context
 from sqlmodel import Session, select
 
 from winter_dragon.bot.core.app_command_cache import AppCommandCache
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.errors.factory import ErrorFactory
-from winter_dragon.bot.patches.cog import CogMeta
-from winter_dragon.database import engine
+from winter_dragon.database.constants import engine
 from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.disabled_commands import DisabledCommands
 from winter_dragon.logging import LoggerMixin
+
+
+if TYPE_CHECKING:
+    from discord.ext.commands._types import BotT
+    from discord.ext.commands.context import Context
+
+    from winter_dragon.bot.core.bot import WinterDragon
 
 
 class BotArgs(TypedDict):
@@ -26,7 +31,7 @@ class BotArgs(TypedDict):
     bot: Required[WinterDragon]
     db_session: NotRequired[Session]
 
-class Cog(commands.Cog, LoggerMixin, metaclass=CogMeta):
+class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
 
     Args:
@@ -36,12 +41,14 @@ class Cog(commands.Cog, LoggerMixin, metaclass=CogMeta):
 
     """
 
-    bot: WinterDragon
+    bot: ClassVar[WinterDragon]
+    cache: ClassVar[AppCommandCache]
+    has_app_command_mentions: bool = False
 
-    def __init_subclass__(cls: type[Self], *, auto_load: bool = False, **kwargs: Any) -> None:  # noqa: ANN401
+    def __init_subclass__(cls: type[Self], *, auto_load: bool = False) -> None:
         """Automatically load the cog if auto_load is True."""
-        super().__init_subclass__(**kwargs)
-        cls.__cog_auto_load__ = auto_load
+        super().__init_subclass__()
+        cls._should_auto_load = auto_load
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
@@ -50,11 +57,13 @@ class Cog(commands.Cog, LoggerMixin, metaclass=CogMeta):
         """
         self.bot = kwargs.get("bot")
         self.session = kwargs.get("db_session", Session(engine))
-        self.cache = AppCommandCache(self.bot)
+
+        if not getattr(Cog, "cache", None):
+            Cog.cache = AppCommandCache(self.bot)
 
         # Expose cache methods on the cog for easier access
-        self.get_app_command = self.cache.get_app_command
-        self.get_command_mention = self.cache.get_command_mention
+        self.get_app_command = Cog.cache.get_app_command
+        self.get_command_mention = Cog.cache.get_command_mention
 
         if not self.has_error_handler():
             # Mention class name from the inheriting subclass.
@@ -65,6 +74,11 @@ class Cog(commands.Cog, LoggerMixin, metaclass=CogMeta):
 
         for listener in self.get_listeners():
             self.logger.debug(listener)
+
+        # Don't start the auto_load loop for the abstract/base Cog classes
+        # (we only want concrete subclasses to be able to auto-load themselves).
+        if self.__class__ not in (Cog, GroupCog):  # type: ignore[name-defined]
+            self.bot.loop.create_task(self.auto_load())
 
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
@@ -107,20 +121,19 @@ class Cog(commands.Cog, LoggerMixin, metaclass=CogMeta):
         self.add_mentions.start()
         self.add_disabled_check.start()
 
-    @loop(count=1)
     async def auto_load(self) -> None:
-        """Automatically load the cog if __cog_auto_load__ is True."""
-        if self.__cog_auto_load__:
-            self.logger.info(f"Auto-loading {self.__class__.__name__}")
+        """Load the cog if __cog_auto_load__ is True."""
+        self.logger.info(f"Auto-loading Cog {self.__class__.__name__}: {self.__class__._should_auto_load}")  # noqa: SLF001
+        if self.__class__._should_auto_load:  # noqa: SLF001
             await self.bot.add_cog(self)
 
     @loop(count=1)
     async def add_mentions(self) -> None:
         """Add app command mentions to the bot if it hasn't been done yet."""
-        if not self.bot.has_app_command_mentions:
-            self.logger.debug(f"Adding app_commands cache to {self.bot}")
-            await self.bot.update_app_commands_cache()
-            self.bot.has_app_command_mentions = True
+        if not self.has_app_command_mentions:
+            self.logger.debug(f"Adding app_commands to cache. {Cog.cache=}")
+            await Cog.cache.update_app_commands_cache()
+            self.has_app_command_mentions = True
 
     @loop(count=1)
     async def add_disabled_check(self) -> None:

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
 
 def ensure_log_directory(directory: str = "logs") -> Path:
@@ -23,9 +22,8 @@ class LoggerMixin:
     __log_format = "<%(asctime)s> | [%(name)s | %(levelname)s] : %(message)s"
     __date_format = "%Y-%m-%d %H:%M:%S"
 
-    def __init_subclass__(cls, **kwargs: Any) -> None:  # noqa: ANN401
+    def __init_subclass__(cls) -> None:
         """Initialize any subclass, setting up the logger. Uses a hierarchical naming convention."""
-        super().__init_subclass__(**kwargs)
         # Update the furthest child name with the current subclass name
         LoggerMixin.__furthest_child_name = cls.__name__
         # Update the logger for all classes in the hierarchy to reflect the furthest child
@@ -87,6 +85,7 @@ class LoggerMixin:
 
         # Add handler to logger
         logger.addHandler(file_handler)
+        logger.addHandler(logging.StreamHandler()) # Also log to console
 
     @property
     def logger(self) -> logging.Logger:

@@ -1,28 +1,33 @@
 """Module to handle Sentry setup."""
 
-from configparser import ConfigParser
-from pathlib import Path
+import enum
+from enum import auto
 
 import sentry_sdk
-from confkit import Config
+from confkit import Enum
+
+from .config import Config
 
 
-if not Config._parser: # pyright: ignore[reportPrivateUsage]  # noqa: SLF001
-    Config.set_parser(ConfigParser())
-Config.set_file(Path(__file__).parent / "sentry_config.ini")
+class Environments(enum.StrEnum):
+    """Enum for different environments."""
+
+    development = auto()
+    production = auto()
+    staging = auto()
 
 class Sentry:
     """A class to handle Sentry setup."""
 
     Telemetry = Config(default=True)
     dsn = Config("")
-    environment = Config("development")
+    environment = Config(Enum(Environments.development))
 
 
     def __init__(self) -> None:
         """Initialize Sentry."""
         sentry_sdk.init(
-            environment=self.environment,
+            environment=self.environment.value,
             dsn=self.dsn,
             # Add data like request headers and IP for users,
             # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info

@@ -4,10 +4,10 @@ import asyncio
 from confkit.data_types import Hex
 from discord import Embed, Interaction, app_commands
 from sqlmodel import select
-from winter_dragon.bot.config import Config
 
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamScraper
 from winter_dragon.bot.extensions.user.steam.user_notifier import SteamSaleNotifier
@@ -19,7 +19,7 @@ from winter_dragon.database.tables.user import Users
 STEAM_SEND_PERIOD = 3600 * 3 # 3 hour cooldown on updates in seconds
 OUTDATED_DELTA = STEAM_SEND_PERIOD * 10 # 30 hours.
 
-class SteamSales(GroupCog):
+class SteamSales(GroupCog, auto_load=True):
     """Steam Sales cog for Discord bot."""
 
     steam_sales_update_interval = Config(STEAM_SEND_PERIOD)
@@ -151,9 +151,3 @@ class SteamSales(GroupCog):
         sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
         notifier.add_sales(sales)
         await interaction.followup.send(embed=notifier.embed)
-
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(SteamSales(bot=bot))

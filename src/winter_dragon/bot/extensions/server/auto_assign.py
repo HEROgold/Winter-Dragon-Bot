@@ -2,15 +2,14 @@
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot.config import Config
 
-from winter_dragon.bot.core.bot import WinterDragon
+from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.database.tables import AutoAssignRole
 from winter_dragon.database.tables import Roles as DbRole
 
 
-class AutoAssign(GroupCog):
+class AutoAssign(GroupCog, auto_load=True):
     """Cog for automatically assigning roles to new members."""
 
     auto_assign_reason = Config("Member joined. Adding auto-assign roles")
@@ -97,8 +96,3 @@ class AutoAssign(GroupCog):
             if role := member.guild.get_role(auto_assign.role_id):
                 await member.add_roles(role, reason=self.auto_assign_reason)
                 self.logger.debug(f"Added AutoAssign role {role} to new member {member.mention}")
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(AutoAssign(bot=bot))

@@ -2,22 +2,21 @@
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot.config import Config
 
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.config import Config
 from winter_dragon.database.tables import Welcome as WelcomeDb
 
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(administrator=True)
-class Welcome(GroupCog):
+class Welcome(GroupCog, auto_load=True):
     """"Cog to contain the welcome commands."""
 
     allowed_welcome_dm = Config(default=True)
 
 
-    @Cog.listener()
+    @GroupCog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         """Send a welcome message to the user when they join the server."""
         self.logger.debug(f"{member} joined {member.guild}")
@@ -103,8 +102,3 @@ class Welcome(GroupCog):
             data.message = message
             data.enabled = enabled
         self.session.commit()
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Welcome(bot=bot))

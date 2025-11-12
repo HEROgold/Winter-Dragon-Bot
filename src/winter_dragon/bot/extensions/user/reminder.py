@@ -5,18 +5,17 @@ import discord
 from discord import app_commands
 from discord.app_commands import Choice
 from sqlmodel import select
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.constants import WEEKS_IN_MONTH
-from winter_dragon.bot.tools.time import get_seconds
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database.tables import Reminder as ReminderDb
 from winter_dragon.database.tables.reminder import TimedReminder
 
 
-class Reminder(Cog):
+WEEKS_IN_MONTH = 4
+
+class Reminder(Cog, auto_load=True):
     """Cog for setting reminders."""
 
     reminder_check_interval = Config(60)
@@ -71,7 +70,7 @@ class Reminder(Cog):
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
             return
 
-        seconds = get_seconds(seconds=0, minutes=minutes, hours=hours, days=days)
+        seconds = minutes * 60 + hours * 3600 + days * 86400
         member = interaction.user
         time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
         self.session.add(ReminderDb(
@@ -133,7 +132,3 @@ class Reminder(Cog):
             for reminder in self.session.exec(query).all()
             if reminder.user_id == interaction.user.id
         ]
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Reminder(bot=bot))

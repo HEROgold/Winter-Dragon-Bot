@@ -1,17 +1,14 @@
 """A cog for announcing messages."""
 import datetime
-import random
 
 import discord
 from discord import app_commands
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.tools import rainbow
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.bot.core.config import Config
 
 
-class Announce(Cog):
+class Announce(Cog, auto_load=True):
     """A cog for announcing messages about the bot to all servers."""
 
     mention_all = Config(default=True)
@@ -24,15 +21,10 @@ class Announce(Cog):
         """Send an announcement to all servers."""
         member = interaction.user
         avatar = member.avatar.url if member.avatar else member.default_avatar.url
-        emb = discord.Embed(title="Announcement!", description=f"{message}", color=random.choice(rainbow.RAINBOW))  # noqa: S311
+        emb = discord.Embed(title="Announcement!", description=f"{message}")
         emb.set_author(name=(member.display_name), icon_url=avatar)
         emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)
         if self.mention_all:
             mass_ping = await interaction.channel.send("<@everyone>") # type: ignore[reportAttributeAccessIssue]
             await mass_ping.delete()
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Announce(bot=bot))

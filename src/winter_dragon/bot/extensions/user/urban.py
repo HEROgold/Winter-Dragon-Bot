@@ -6,14 +6,16 @@ import urllib.parse
 import discord
 import requests
 from discord import app_commands
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.constants import UD_DEFINE_URL, UD_RANDOM_URL
 
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.config import Config
 
 
-class Urban(GroupCog):
+UD_DEFINE_URL = "https://api.urbandictionary.com/v0/define?term="
+UD_RANDOM_URL = "https://api.urbandictionary.com/v0/random"
+
+class Urban(GroupCog, auto_load=True):
     """Urban Dictionary cog for Discord bot."""
 
     allow_random = Config(default=True)
@@ -92,8 +94,3 @@ class Urban(GroupCog):
             await interaction.response.send_message(embed=emb)
         else:
             await interaction.response.send_message("No results found.")
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Urban(bot=bot))

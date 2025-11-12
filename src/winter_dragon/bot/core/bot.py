@@ -6,20 +6,25 @@ WinterDragon has additional attributes and methods.
 from __future__ import annotations
 
 import datetime
+import inspect
 import os
-from collections.abc import Awaitable, Callable, Iterable
+import sys
+from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
+from importlib.util import module_from_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, override
 
 import discord
 from discord import Message, app_commands
 from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.bot import BotBase
+from discord.ext.commands.errors import ExtensionFailed
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 
 from winter_dragon.bot import Settings
 from winter_dragon.logging import LoggerMixin
 
+from .cogs import Cog
 from .config import Config
 from .paths import EXTENSIONS, ROOT_DIR
 
@@ -27,6 +32,8 @@ from .paths import EXTENSIONS, ROOT_DIR
 if TYPE_CHECKING:
     from asyncio import Task
     from collections.abc import Coroutine
+    from importlib.machinery import ModuleSpec
+    from types import ModuleType
 
     from discord.ext.commands.context import Context
 
@@ -63,7 +70,6 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
     """
 
     launch_time: datetime.datetime
-    has_app_command_mentions: bool = False
     log_saver: Task[Coroutine[Any, Any, None]] | None = None
 
     def __init__(
@@ -114,21 +120,45 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         self.logger.exception(f"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 
-    async def get_extensions(self) -> list[str]:
+    async def get_extensions(self) -> AsyncGenerator[str]:
         """Get all the extensions in the extensions directory. Ignores extensions that start with _."""
-        extensions = []
         for root, _, files in os.walk(EXTENSIONS):
             for file in files:
                 if file.endswith(".py") and not file.startswith("_"):
                     extension = Path(root) / file
-                    extension_path = (
+                    yield (
                         extension.as_posix()
                         .replace(f"{ROOT_DIR.parent.as_posix()}/", "")
                         .replace("/", ".")
                         .replace(".py", "")
                     )
-                    extensions.append(extension_path)
-        return extensions
+
+    @override
+    async def _load_from_module_spec(self, spec: ModuleSpec, key: str) -> None:
+        """Version that does not check if `def setup` is present."""
+        lib = module_from_spec(spec)
+        sys.modules[key] = lib
+        try:
+            spec.loader.exec_module(lib)
+        except Exception as e:
+            del sys.modules[key]
+            raise ExtensionFailed(key, e) from e
+
+        try:
+            await self._init_cogs(lib)
+        except Exception as e:
+            del sys.modules[key]
+            await self._remove_module_references(lib.__name__)
+            await self._call_module_finalizers(lib, key)
+            raise ExtensionFailed(key, e) from e
+        else:
+            self._BotBase__extensions[key] = lib
+
+    async def _init_cogs(self, lib: ModuleType) -> None:
+        """Set up a cog by calling its cog_load method if it exists."""
+        for obj in lib.__dict__.values():
+            if inspect.isclass(obj) and issubclass(obj, Cog):
+                obj(bot=self)
 
     async def load_extensions(self) -> None:
         """Load all the extensions in the extensions directory."""
@@ -136,7 +166,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             self.logger.critical(f"{EXTENSIONS=} not found.")
             return
         self.logger.debug(f"Found {EXTENSIONS=}")
-        for extension in await self.get_extensions():
+        async for extension in self.get_extensions():
             self.logger.info(f"Loading {extension}")
             try:
                 await self.load_extension(extension, package="winter_dragon.bot")
@@ -145,10 +175,9 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             else:
                 self.logger.info(f"Loaded {extension}")
 
-    @Config.as_kwarg("Tokens", "discord_token")
+    @Config.with_kwarg("Tokens", "discord_token")
     async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs: str) -> None:
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
-        # TODO: Validate configuration file!
         token = token or kwargs.get("discord_token")
         if token is None:
             msg = "No token provided"

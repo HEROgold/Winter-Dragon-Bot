@@ -7,10 +7,9 @@ from discord import (
     AutoModRuleActionType,
     app_commands,
 )
-from winter_dragon.bot.settings import Settings
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.settings import Settings
 from winter_dragon.database.tables import Infractions as InfractionsDb
 
 
@@ -22,7 +21,7 @@ _rule_severities = {
 }
 
 @app_commands.guilds(Settings.support_guild_id)
-class Infractions(GroupCog):
+class Infractions(GroupCog, auto_load=True):
     """Track automod interaction from discord, keep track of amount of violations
     (Infractions) Ban users when X amount have reached. (Per guild configurable).
 
@@ -67,9 +66,3 @@ class Infractions(GroupCog):
         severity = self.get_severity(action)
         self.logger.debug(f"{action.type=} {duration=} {user=}")
         InfractionsDb.add_infraction_count(user.id, severity)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    return
-    await bot.add_cog(Infractions(bot=bot))

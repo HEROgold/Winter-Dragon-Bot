@@ -8,22 +8,18 @@ import discord
 from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from sqlmodel import select
-from winter_dragon.bot._types.kwargs import BotArgs
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.core.log import LoggerMixin
-from winter_dragon.bot.settings import Settings
-from winter_dragon.bot.tools import rainbow
 
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.cogs import BotArgs, Cog, GroupCog
+from winter_dragon.bot.core.config import Config
+from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.bot.errors import NoneTypeError
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
+from winter_dragon.logging import LoggerMixin
 
 
 if TYPE_CHECKING:
-    from winter_dragon.bot._types.aliases import PermissionsOverwrites
+    from winter_dragon.bot.core.permissions import PermissionsOverwrites
 
 
 STATS = ChannelTypes.STATS
@@ -192,7 +188,7 @@ class StatChannels:
 
 
 @app_commands.guild_only()
-class Stats(GroupCog):
+class Stats(GroupCog, auto_load=True):
     """Cog that contains all guild stats related commands."""
 
     stats_update_interval = Config(3600)
@@ -234,7 +230,7 @@ class Stats(GroupCog):
         """Create all stats channels for a guild."""
         if guild is None:
             msg = "Expected discord.Guild"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         overwrite: PermissionsOverwrites = {
             guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=True),
@@ -277,7 +273,7 @@ class Stats(GroupCog):
         """Remove all stats channels for a guild."""
         if guild is None:
             msg = "Expected discord.guild"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         channels = self.session.exec(
             select(Channels).where(
@@ -387,15 +383,15 @@ class Stats(GroupCog):
         guild = interaction.guild
         if guild is None:
             msg = "Expected Guild"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
         if guild.afk_channel is None:
             msg = "No afk channel found"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         embed = discord.Embed(
             title=f"{guild.name} Stats",
             description=f"Information about {guild.name}",
-            color=random.choice(rainbow.RAINBOW),  # noqa: S311
+            color=random.randint(0, 0xFFFFFF),  # noqa: S311
         )
 
         embed.add_field(
@@ -444,7 +440,7 @@ class Stats(GroupCog):
         """Create stat channels."""
         if interaction.guild is None:
             msg = "Expected Guild"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         if self.session.exec(
             select(Channels).where(
@@ -478,7 +474,7 @@ class Stats(GroupCog):
         """Remove stat channels."""
         if interaction.guild is None:
             msg = "Expected Guild"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         channels = self.session.exec(
             select(Channels).where(
@@ -510,7 +506,7 @@ class Stats(GroupCog):
         """Reset all stats on the stat channels."""
         if interaction.guild is None:
             msg = "Expected Guild"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
 
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         await interaction.response.defer(ephemeral=True)
@@ -536,8 +532,3 @@ class Stats(GroupCog):
             await self.create_stats_channels(guild=guild, reason="Resetting all stats channels")
             self.logger.info(f"Reset stats for: {guild}")
         await interaction.followup.send("Reset all guild stat channels")
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Stats(bot=bot))

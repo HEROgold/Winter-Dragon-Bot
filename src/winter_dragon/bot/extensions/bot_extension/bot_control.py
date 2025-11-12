@@ -2,31 +2,49 @@
 import datetime
 import random
 import time
-from typing import Unpack
+from typing import Protocol, Unpack
 
 import discord
 import psutil
-from discord import Guild, app_commands
+from discord import ActivityType, Guild, Status, app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
 from psutil._common import snetio
-from winter_dragon.bot._types.kwargs import BotArgs
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.constants import METRICS_FILE
-from winter_dragon.bot.enums.activity import ACTIVITY_TYPES, STATUS_TYPES, VALID_RNG_ACTIVITY, VALID_RNG_STATUS
-from winter_dragon.bot.settings import Settings
-from winter_dragon.bot.tools.strings import codeblock
 
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
+from winter_dragon.bot.core.config import Config
+from winter_dragon.bot.core.paths import METRICS_FILE
+from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database.tables.user import Users
+
+
+class SupportsStr(Protocol):
+    """Protocol for types that support str()."""
+
+    def __str__(self) -> str:
+        """Return a string representation of the object."""
+        return "Custom string representation"
+
+def codeblock(language: SupportsStr, text: SupportsStr) -> str:
+    """Return a codeblock with ansi colors."""
+    return f"```{language}\n{text}```"
+
+
+INVALID_RNG_STATUS = [
+    Status.invisible,
+    Status.offline,
+]
+INVALID_RNG_ACTIVITY = [
+    ActivityType.custom,
+    ActivityType.unknown,
+]
 
 
 # TODO: Split into metrics Cog and Activity Cog.
 
 @app_commands.guilds(Settings.support_guild_id)
-class BotC(GroupCog):
+class BotC(GroupCog, auto_load=True):
     """Cog to control the bot."""
 
     timestamps: list[float]
@@ -42,6 +60,7 @@ class BotC(GroupCog):
     periodic_change = Config(default=True)
     periodic_time = Config(180)
     gather_metrics_interval = Config(180)
+    metrics_file = Config("metrics.png")
 
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
@@ -84,8 +103,8 @@ class BotC(GroupCog):
 
     def get_random_activity(self) -> tuple[discord.Status, discord.Activity]:
         """Get a random valid activity and status."""
-        status = random.choice(VALID_RNG_STATUS)  # noqa: S311
-        activity_type = random.choice(VALID_RNG_ACTIVITY)  # noqa: S311
+        status = random.choice([i for i in Status if i not in INVALID_RNG_STATUS])  # noqa: S311
+        activity_type = random.choice([i for i in ActivityType if i not in INVALID_RNG_ACTIVITY])  # noqa: S311
 
         activity = discord.Activity(
             type=activity_type,
@@ -113,10 +132,10 @@ class BotC(GroupCog):
         """Change the bot's activity and status."""
         status = status.lower()
         activity = activity.lower()
-        statuses = ", ".join([i.name for i in STATUS_TYPES])
-        activities = ", ".join([i.name for i in ACTIVITY_TYPES])
+        statuses = ", ".join([i.name for i in Status])
+        activities = ", ".join([i.name for i in ActivityType])
 
-        if status not in [i.name.lower() for i in STATUS_TYPES]:
+        if status not in [i.name.lower() for i in Status]:
             await interaction.response.send_message(f"Status not found, can only be\n{statuses}", ephemeral=True)
             return
 
@@ -156,7 +175,7 @@ class BotC(GroupCog):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         """Autocomplete for the status command."""
-        statuses = [i.name for i in STATUS_TYPES]
+        statuses = [i.name for i in Status]
         return [
             app_commands.Choice(name=stat, value=stat)
             for stat in statuses
@@ -171,7 +190,7 @@ class BotC(GroupCog):
         current: str,
     ) -> list[app_commands.Choice[str]]:
         """Autocomplete for the activity command."""
-        activities = [i.name for i in ACTIVITY_TYPES]
+        activities = [i.name for i in ActivityType]
         return [
             app_commands.Choice(name=activity, value=activity)
             for activity in activities
@@ -475,9 +494,3 @@ class BotC(GroupCog):
     async def before_update(self) -> None:
         """Wait until the bot is ready before starting the loops."""
         await self.bot.wait_until_ready()
-
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(BotC(bot=bot))

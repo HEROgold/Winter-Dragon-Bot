@@ -3,17 +3,16 @@
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot.config import Config
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
+from winter_dragon.bot.core.config import Config
 from winter_dragon.database.tables import AutoReAssign as AutoReAssignDb
 from winter_dragon.database.tables import UserRoles
 from winter_dragon.database.tables.associations.guild_roles import GuildRoles
 from winter_dragon.database.tables.role import Roles
 
 
-class AutoReAssign(GroupCog):
+class AutoReAssign(GroupCog, auto_load=True):
     """Cog to help re-assigning user roles when they leave and rejoin the server."""
 
     auto_reassign_reason = Config("Member joined again, AutoAssigned roles the user had previously")
@@ -70,7 +69,3 @@ class AutoReAssign(GroupCog):
             ).first(),
         )
         self.session.commit()
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(AutoReAssign(bot=bot))

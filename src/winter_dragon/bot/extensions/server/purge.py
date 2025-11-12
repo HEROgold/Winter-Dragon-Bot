@@ -1,20 +1,53 @@
 """A cog that provides a command to purge messages."""
 
+from __future__ import annotations
+
 import contextlib
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import discord
-from discord import Interaction, app_commands
-from winter_dragon.bot._types.aliases import PrunableChannel
-from winter_dragon.bot._types.protocols import Prunable
-from winter_dragon.bot.config import Config
+from discord import Interaction, Message, StageChannel, TextChannel, Thread, VoiceChannel, app_commands
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.bot.core.config import Config
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from discord.abc import SnowflakeTime
+
+
+type PrunableChannel = VoiceChannel | StageChannel | TextChannel | Thread
+
+_MISSING: Any = object()
+"""Special sentinel for Protocol signature"""
+
+@runtime_checkable
+class Prunable(Protocol):
+    """A protocol that defines a prunable object.
+
+    This protocol is used to define objects that can be purged from memory or storage.
+    """
+
+    async def purge(  # noqa: D102, PLR0913
+        self,
+        *,
+        limit: int | None = 100,
+        check: Callable[[Message], bool] = _MISSING,
+        before: SnowflakeTime | None = None,
+        after: SnowflakeTime | None = None,
+        around: SnowflakeTime | None = None,
+        oldest_first: bool | None = None,
+        bulk: bool = True,
+        reason: str | None = None,
+    ) -> list[Message]:
+        ...
 
 
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(manage_messages=True)
-class Purge(Cog):
+class Purge(Cog, auto_load=True):
     """A cog that provides a command to purge messages."""
 
     limit = Config(100)
@@ -78,8 +111,3 @@ class Purge(Cog):
                 await message.delete()
             messages.append(message)
         return messages
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Purge(bot=bot))

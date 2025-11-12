@@ -1,32 +1,48 @@
 """Module for an Abstract class, for questionnaire like games."""
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Unpack
+from typing import Any, Generic, TypeVar, Unpack
 
 import discord
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
-from winter_dragon.bot._types.kwargs import BotArgs
 
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games, Suggestions
 
 
-class BaseQuestionGame[T: SQLModel](GroupCog):
+MISSING: Any = object()
+T = TypeVar("T", bound=SQLModel)
+class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
     """Base class for question-based games like Never Have I Ever and Would You Rather."""
 
     # Constants to be overridden by subclasses
-    GAME_NAME: str
-    GAME_DISPLAY_NAME: str
-    QUESTION_MODEL: type[T]
-    BASE_QUESTIONS: list[str]
+    GAME_NAME: str = MISSING
+    GAME_DISPLAY_NAME: str = MISSING
+    QUESTION_MODEL: type[T] = MISSING
+    BASE_QUESTIONS: list[str] = MISSING
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the game with a session and set default data."""
         super().__init__(**kwargs)
+        self._validate_game_constants()
         self.game = Games.fetch_game_by_name(self.GAME_NAME)
         self.set_default_data()
+
+    def _validate_game_constants(self) -> None:
+        """Validate that required game constants are properly defined."""
+        if not isinstance(self.GAME_NAME, str): # pyright: ignore[reportUnnecessaryIsInstance]
+            msg = "GAME_NAME must be defined as a string in the subclass."
+            raise TypeError(msg)
+        if not isinstance(self.GAME_DISPLAY_NAME, str): # pyright: ignore[reportUnnecessaryIsInstance]
+            msg = "GAME_DISPLAY_NAME must be defined as a string in the subclass."
+            raise TypeError(msg)
+        if not issubclass(self.QUESTION_MODEL, SQLModel): # pyright: ignore[reportUnnecessaryIsInstance]
+            msg = "QUESTION_MODEL must be defined as a subclass of SQLModel in the subclass."
+            raise TypeError(msg)
+        if not isinstance(self.BASE_QUESTIONS, list) or not all(isinstance(q, str) for q in self.BASE_QUESTIONS): # pyright: ignore[reportUnnecessaryIsInstance]
+            msg = "BASE_QUESTIONS must be defined as a list of strings in the subclass."
+            raise TypeError(msg)
 
     def set_default_data(self) -> None:
         """Set default data to the database if it doesn't exist."""
@@ -104,8 +120,3 @@ class BaseQuestionGame[T: SQLModel](GroupCog):
             self.session.add(self.QUESTION_MODEL(value=question.content))
         self.session.commit()
         await interaction.response.send_message("Added all verified questions", ephemeral=True)
-
-
-async def setup(_bot: WinterDragon) -> None:
-    """Return and avoid loading exceptions as we don't need to load this module."""
-    return

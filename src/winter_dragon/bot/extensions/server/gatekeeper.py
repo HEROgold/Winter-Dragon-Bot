@@ -4,12 +4,11 @@ import discord
 from discord import ButtonStyle, Guild, Interaction, Member, Permissions, Role, app_commands
 from discord.ui import Button, View
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog, GroupCog
 
 
 @app_commands.guild_only()
-class Gatekeeper(GroupCog):
+class Gatekeeper(GroupCog, auto_load=True):
     """Gatekeeper cog for limiting the amount of bot/spam users that can join."""
 
     @app_commands.command(name="enable", description="Enables the gatekeeper system.")
@@ -76,8 +75,3 @@ class Gatekeeper(GroupCog):
         """Check if the user has accepted the rules."""
         msg = "This method should check if the user has accepted the rules."
         raise NotImplementedError(msg)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    # await bot.add_cog(Gatekeeper(bot=bot))

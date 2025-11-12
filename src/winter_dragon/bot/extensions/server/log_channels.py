@@ -25,17 +25,22 @@ from collections.abc import AsyncGenerator, Sequence
 from typing import cast
 
 import discord
-from discord import AuditLogAction, CategoryChannel, ClientUser, Guild, TextChannel, app_commands
+from discord import (
+    AuditLogAction,
+    CategoryChannel,
+    ClientUser,
+    Guild,
+    TextChannel,
+    app_commands,
+)
 from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select
-from winter_dragon.bot._types.aliases import PermissionsOverwrites
-from winter_dragon.bot.config import Config
-from winter_dragon.bot.settings import Settings
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.errors import NoneTypeError
+from winter_dragon.bot.core.config import Config
+from winter_dragon.bot.core.permissions import PermissionsOverwrites
+from winter_dragon.bot.core.settings import Settings
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 
@@ -43,7 +48,7 @@ from winter_dragon.database.tables import Channels
 LOGS = ChannelTypes.LOGS
 MAX_CATEGORY_SIZE = 50
 
-class LogChannels(GroupCog):
+class LogChannels(GroupCog, auto_load=True):
     """Manage log channel/category provisioning and synchronization.
 
     All runtime event logging is handled by modules in ``winter_dragon.bot.events``.
@@ -95,10 +100,10 @@ class LogChannels(GroupCog):
         bot_user = self.bot.user
         if guild is None:
             msg = "Guild is None"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
         if bot_user is None:
             msg = "Bot user is None"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
         categories = guild.categories
         logging_categories = [
             category
@@ -144,10 +149,10 @@ class LogChannels(GroupCog):
         bot_user = self.bot.user
         if guild is None:
             msg = "Guild is None"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
         if bot_user is None:
             msg = "Bot user is None"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
         channels = self.get_db_log_channels(guild) or [channel[1] async for channel in self.detect_channels(interaction)]
         if len(channels) > 0:
             await interaction.response.send_message("Log channels are already set up.")
@@ -235,7 +240,7 @@ class LogChannels(GroupCog):
         guild = interaction.guild
         if guild is None:
             msg = "Guild is None"
-            raise NoneTypeError(msg)
+            raise TypeError(msg)
         result = self.session.exec(select(Channels).where(
             Channels.type == LOGS,
             Channels.guild_id == guild.id,
@@ -254,7 +259,7 @@ class LogChannels(GroupCog):
             dc_channel = self.bot.get_channel(channel.id) or discord.utils.get(guild.channels, id=channel.id)
             if dc_channel is None or isinstance(dc_channel, PrivateChannel):
                 msg = "Channel is None"
-                raise NoneTypeError(msg)
+                raise TypeError(msg)
             await dc_channel.delete()
             self.session.delete(channel)
         self.session.commit()
@@ -339,7 +344,7 @@ class LogChannels(GroupCog):
                 bot_user = self.bot.user
                 if bot_user is None:
                     msg = "Bot user is None"
-                    raise NoneTypeError(msg)
+                    raise TypeError(msg)
                 category_channel = await guild.create_category(
                     name=f"{bot_user.display_name} Log {i+1}",
                     overwrites= {
@@ -366,7 +371,3 @@ class LogChannels(GroupCog):
 # ------------
 # Commands End
 # ------------
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(LogChannels(bot=bot))

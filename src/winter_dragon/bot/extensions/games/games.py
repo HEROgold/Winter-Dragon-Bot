@@ -5,15 +5,13 @@ from typing import Unpack
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot._types.kwargs import BotArgs
 
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import Suggestions
 
 
-class Games(GroupCog):
+class Games(GroupCog, auto_load=True):
     """Cog that tracks known games and allows users to suggest new ones."""
 
     games: Sequence[GamesDB]
@@ -44,8 +42,3 @@ class Games(GroupCog):
         ))
         self.session.commit()
         await interaction.response.send_message(f"Added `{name}` for review", ephemeral=True)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Games(bot=bot))

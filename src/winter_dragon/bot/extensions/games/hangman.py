@@ -8,12 +8,10 @@ import aiohttp
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot._types.kwargs import BotArgs
+
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.ui.button import Button
 from winter_dragon.bot.ui.modal import Modal
-
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables import AssociationUserHangman as AUH  # noqa: N817
 from winter_dragon.database.tables import Games
@@ -371,7 +369,7 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
         return hangman_db
 
 
-class Hangman(GroupCog):
+class Hangman(GroupCog, auto_load=True):
     """A cog that plays the hangman game in a discord chat message."""
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
@@ -386,8 +384,3 @@ class Hangman(GroupCog):
         btn = HangmanButton(label="Add Letter", style=discord.ButtonStyle.primary)
         view.add_item(btn)
         await interaction.response.send_message(f"{HANGMEN[0]}", view=view)
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Hangman(bot=bot))

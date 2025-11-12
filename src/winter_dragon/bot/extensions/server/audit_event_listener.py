@@ -1,14 +1,14 @@
 """Module for handling audit log events."""
 
 from discord import AuditLogEntry
-from winter_dragon.bot.events.base.event_handler import AuditEventHandler
-from winter_dragon.bot.events.base.factory import AuditEventFactory
 
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.bot.events.event_handler import AuditEventHandler
+from winter_dragon.bot.events.factory import AuditEventFactory
 
 
-class EventListener(Cog):
+class EventListener(Cog, auto_load=True):
     """Event listener for audit log entries."""
 
     def __init__(self, bot: WinterDragon) -> None:
@@ -23,8 +23,3 @@ class EventListener(Cog):
         for audit_event in AuditEventFactory.get_events(entry):
             event_handler = AuditEventHandler(audit_event, self.session)
             await event_handler.handle()
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Load the event listener."""
-    await bot.add_cog(EventListener(bot=bot))

@@ -4,18 +4,16 @@ from typing import Unpack
 import discord
 from discord import app_commands
 from sqlmodel import select
-from winter_dragon.bot._types.kwargs import BotArgs
-from winter_dragon.bot.settings import Settings
 
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
+from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.extensions.games.games import Games
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import LookingForGroup
 
 
 @app_commands.guilds(Settings.support_guild_id)
-class Lfg(GroupCog):
+class Lfg(GroupCog, auto_load=True):
     """LFG cog for finding people to play games with."""
 
     slash_suggest = Games.slash_suggest
@@ -80,8 +78,3 @@ class Lfg(GroupCog):
         for user_game in user_games:
             lfg_game = self.session.exec(select(LookingForGroup).where(LookingForGroup.game_id == user_game.game_id)).all()
             self.logger.debug(f"{user_game=}, {lfg_game=}")
-
-
-async def setup(bot: WinterDragon) -> None:
-    """Entrypoint for adding cogs."""
-    await bot.add_cog(Lfg(bot=bot))
