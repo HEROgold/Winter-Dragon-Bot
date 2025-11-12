@@ -19,7 +19,7 @@ from winter_dragon.bot.errors.config import FirstTimeLaunchError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-class Config(CKConfig):
+class Config[T](CKConfig[T]):
     """Config descriptor for WinterDragon."""
 
 
