@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from confkit import BaseDataType
 from confkit.data_types import Hex, List
@@ -15,7 +14,7 @@ GENERATED_MSG = "AutomaticallyGenerated"
 class Combined(BaseDataType[str]):
     """A data type that combines multiple Config data types."""
 
-    def __init__(self, *args: Config[Any]) -> None:
+    def __init__(self, *args: Config[str]) -> None:
         """Initialize with multiple Config arguments."""
         self.args = args
 
@@ -25,7 +24,7 @@ class Combined(BaseDataType[str]):
 
     def __str__(self) -> str:
         """Return a string representation of the combined data types."""
-        return f"Combined({', '.join(str(arg) for arg in self.args)})"
+        return ", ".join(str(arg) for arg in self.args)
 
 class Settings:
     """Application wide Settings."""
@@ -64,7 +63,7 @@ class Settings:
 
     TIME_FORMAT = Config("%H:%M:%S")
     DATE_FORMAT = Config("%Y-%m-%d")
-    DATETIME_FORMAT = Config("%Y-%m-%d, %H:%M:%S")
+    DATETIME_FORMAT = Config(Combined(DATE_FORMAT, TIME_FORMAT))
 
     OAUTH_SCOPE = Config(List([
         "relationships.read",
