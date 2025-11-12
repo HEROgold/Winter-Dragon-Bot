@@ -124,6 +124,9 @@ class Cog(commands.Cog, LoggerMixin):
     async def auto_load(self) -> None:
         """Load the cog if __cog_auto_load__ is True."""
         self.logger.info(f"Auto-loading Cog {self.__class__.__name__}: {self.__class__._should_auto_load}")  # noqa: SLF001
+        if self in self.bot.cogs.values():
+            # prevent discord.py from raising an error (simply cleans up logs :) )
+            return
         if self.__class__._should_auto_load:  # noqa: SLF001
             await self.bot.add_cog(self)
 

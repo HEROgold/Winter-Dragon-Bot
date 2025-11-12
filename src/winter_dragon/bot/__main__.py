@@ -1,7 +1,6 @@
 """Main file for the bot."""
 
 import asyncio
-import logging
 import signal
 import sys
 from typing import Any
@@ -23,7 +22,6 @@ if not config.is_valid():
         {', '.join(config.get_invalid())}"""
     raise ConfigError(msg)
 
-bot_logger = logging.getLogger(Settings.bot_name)
 
 bot = WinterDragon(
     intents=INTENTS,
@@ -40,7 +38,7 @@ async def on_ready() -> None:
     Settings.bot_invite = invite_link.replace("%", "%%")
     Config.write()
 
-    bot_logger.info(f"Logged on as {bot.user}!")
+    bot.logger.info(f"Logged on as {bot.user}!")
 
 
 
@@ -50,17 +48,17 @@ async def slash_shutdown(interaction: discord.Interaction) -> None:
     """Shutdown the bot."""
     try:
         await interaction.response.send_message("Shutting down.", ephemeral=True)
-        bot_logger.info("shutdown by command.")
+        bot.logger.info("shutdown by command.")
         await bot.close()
         terminate()
     except Exception:
-        bot_logger.exception("")
+        bot.logger.exception("")
 
 
 def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401 Catch all arguments to log before termination.
     """Terminate the bot."""
-    bot_logger.warning(f"{args=}, {kwargs=}")
-    bot_logger.info("terminated")
+    bot.logger.warning(f"{args=}, {kwargs=}")
+    bot.logger.info("terminated")
     try:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(bot.close())
