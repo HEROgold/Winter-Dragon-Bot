@@ -3,6 +3,7 @@ from collections.abc import Iterable
 from textwrap import dedent
 
 from discord import Embed, Member, NotFound, User
+from herogold.log import LoggerMixin
 from sqlmodel import Session, select
 
 from winter_dragon.bot.core.bot import WinterDragon
@@ -10,7 +11,6 @@ from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamURL
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 from winter_dragon.database.tables.steamuser import SteamUsers
-from winter_dragon.logging import LoggerMixin
 
 
 class SteamSaleNotifier(LoggerMixin):

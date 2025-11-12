@@ -5,6 +5,7 @@ from typing import override
 
 import discord
 from discord import AuditLogAction, Thread, app_commands
+from herogold.log import LoggerMixin
 from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import Cog
@@ -13,7 +14,6 @@ from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables import AssociationUserCommand as AUC  # noqa: N817
 from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, Presence, Roles, Users
-from winter_dragon.logging import LoggerMixin
 
 
 # For every existing action, create a generic event listener

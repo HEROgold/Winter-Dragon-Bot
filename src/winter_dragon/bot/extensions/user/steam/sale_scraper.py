@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING
 
 import requests
 from bs4 import BeautifulSoup, Tag
+from herogold.log import LoggerMixin
 
 from winter_dragon.bot.core.config import Config
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
-from winter_dragon.logging import LoggerMixin
 
 
 if TYPE_CHECKING:

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, NoReturn, Unpack
 import discord
 from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
+from herogold.log import LoggerMixin
 from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import BotArgs, Cog, GroupCog
@@ -15,7 +16,6 @@ from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
-from winter_dragon.logging import LoggerMixin
 
 
 if TYPE_CHECKING:

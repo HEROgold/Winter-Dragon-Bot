@@ -1,7 +1,6 @@
 from discord.ui import Modal as DiscordModal
 from discord.utils import MISSING
-
-from winter_dragon.logging import LoggerMixin
+from herogold.log import LoggerMixin
 
 
 class Modal(DiscordModal, LoggerMixin):

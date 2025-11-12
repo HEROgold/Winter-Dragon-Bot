@@ -7,8 +7,7 @@ from typing import Any
 
 from discord.ext import tasks
 from discord.utils import MISSING
-
-from winter_dragon.logging import LoggerMixin
+from herogold.log import LoggerMixin
 
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]

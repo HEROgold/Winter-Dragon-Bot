@@ -1,7 +1,6 @@
 from discord import ButtonStyle, Emoji, PartialEmoji
 from discord.ui import Button as DiscordButton
-
-from winter_dragon.logging import LoggerMixin
+from herogold.log import LoggerMixin
 
 
 class Button(DiscordButton, LoggerMixin):
@@ -17,7 +16,7 @@ class Button(DiscordButton, LoggerMixin):
         row: int | None = None,
         sku_id: int | None = None,
         id_: int | None = None,
-    ):
+    ) -> None:
         """Initialize the button with various parameters."""
         super().__init__(
             style=style,

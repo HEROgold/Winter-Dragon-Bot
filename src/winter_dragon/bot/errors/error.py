@@ -7,9 +7,9 @@ from discord.app_commands.errors import AppCommandError
 from discord.ext.commands import Context
 from discord.ext.commands.bot import BotBase
 from discord.ext.commands.errors import CommandError
+from herogold.log import LoggerMixin
 
 from winter_dragon.bot.core.bot import BotT
-from winter_dragon.logging import LoggerMixin
 
 from .alias import DiscordCommandError
 from .factory import ErrorFactory

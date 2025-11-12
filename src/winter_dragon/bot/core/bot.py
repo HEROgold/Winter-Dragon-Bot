@@ -20,9 +20,9 @@ from discord.ext.commands import AutoShardedBot, CommandError
 from discord.ext.commands.bot import BotBase
 from discord.ext.commands.errors import ExtensionFailed
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
+from herogold.log import LoggerMixin
 
 from winter_dragon.bot import Settings
-from winter_dragon.logging import LoggerMixin
 
 from .cogs import Cog
 from .config import Config

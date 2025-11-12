@@ -1,6 +1,6 @@
 """Module for the Error handler."""
 
-from winter_dragon.logging import LoggerMixin
+from herogold.log import LoggerMixin
 
 from .error import DiscordError
 

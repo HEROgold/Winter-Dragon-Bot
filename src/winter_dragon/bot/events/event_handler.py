@@ -2,10 +2,10 @@
 
 import discord
 from discord import AuditLogAction, Embed, Guild
+from herogold.log import LoggerMixin
 from sqlmodel import Session, select
 
 from winter_dragon.database.tables.channel import Channels
-from winter_dragon.logging import LoggerMixin
 
 from .audit_event import AuditEvent
 

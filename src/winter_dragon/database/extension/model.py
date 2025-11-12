@@ -7,6 +7,7 @@ import logging
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
+from herogold.log import LoggerMixin
 from pydantic import ConfigDict
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
@@ -14,7 +15,6 @@ from sqlmodel import SQLModel as BaseSQLModel
 
 from winter_dragon.database.constants import session as db_session
 from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
-from winter_dragon.logging import LoggerMixin
 
 
 models: set[type["BaseModel"]] = set()
