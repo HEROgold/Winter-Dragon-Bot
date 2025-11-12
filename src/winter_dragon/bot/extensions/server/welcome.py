@@ -23,7 +23,7 @@ class Welcome(GroupCog, auto_load=True):
         welcome = self.session.exec(select(WelcomeDb).where(WelcomeDb.guild_id == member.guild.id)).first()
         message = welcome.message if welcome else None
         channel = member.guild.system_channel
-        cmd = self.bot.get_app_command("help")
+        cmd = self.get_app_command("help")
         mention = cmd.mention if cmd else "the help command"
         default_message = f"Welcome {member.mention} to {member.guild},\nyou may use {mention} to see what commands I have!"
         if channel is not None and self.allowed_welcome_dm is False:
