@@ -20,11 +20,11 @@ class Combined(BaseDataType[str]):
 
     def convert(self, value: str) -> str:
         """Convert from a string to the combined data type."""
-        return "".join(arg.convert(value) for arg in self.args)
+        return ",".join(arg.convert(value) for arg in self.args)
 
     def __str__(self) -> str:
         """Return a string representation of the combined data types."""
-        return ", ".join(str(arg) for arg in self.args)
+        return ",".join(str(arg) for arg in self.args)
 
 class Settings:
     """Application wide Settings."""
