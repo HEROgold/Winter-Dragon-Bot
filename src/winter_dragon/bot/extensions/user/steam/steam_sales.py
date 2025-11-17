@@ -70,7 +70,7 @@ class SteamSales(GroupCog, auto_load=True):
         ]
 
 
-    @loop()
+    @loop()  # Interval is set in cog_load
     async def update(self) -> None:
         """Create a discord Embed object to send and notify users of new 100% sales.
 
