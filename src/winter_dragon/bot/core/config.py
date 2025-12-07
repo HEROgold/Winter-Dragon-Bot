@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from confkit import Config as CKConfig
 
 from winter_dragon.bot.core.paths import BOT_CONFIG
-from winter_dragon.bot.errors.config import FirstTimeLaunchError
+from winter_dragon.config import FirstTimeLaunchError
 
 
 if TYPE_CHECKING:

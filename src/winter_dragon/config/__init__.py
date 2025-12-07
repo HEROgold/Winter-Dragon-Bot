@@ -8,18 +8,27 @@ It also provides a way to set default values and to set config values using deco
 from __future__ import annotations
 
 import configparser
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from confkit import Config
-
-from winter_dragon.bot.core.paths import BOT_CONFIG
-from winter_dragon.bot.errors.config import FirstTimeLaunchError
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-# TODO: remove dependency on winter_dragon.bot files.
+
+class ConfigError(Exception):
+    """Base class for all configuration-related exceptions."""
+
+
+class FirstTimeLaunchError(Exception):
+    """Raised when it's detected that WinterDragon is launched for the first time."""
+
+
+BOT_CONFIG = Path("config.ini")
+
+
 class ConfigParser(configparser.ConfigParser):
     """Custom config parser that handles the config file."""
 
@@ -58,7 +67,7 @@ class ConfigParser(configparser.ConfigParser):
                 if self[section][setting] == "!!":
                     yield f"{section}:{setting}"
 
+
 config = ConfigParser()
 Config.set_parser(config)
 Config.set_file(BOT_CONFIG)
-

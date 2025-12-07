@@ -12,7 +12,7 @@ from winter_dragon.bot.core.bot import INTENTS, WinterDragon
 from winter_dragon.bot.core.config import Config, config
 from winter_dragon.bot.core.sentry import Environments, Sentry
 from winter_dragon.bot.core.settings import Settings
-from winter_dragon.bot.errors.config import ConfigError
+from winter_dragon.config import ConfigError
 from winter_dragon.database import SQLModel
 from winter_dragon.database.constants import engine
 
