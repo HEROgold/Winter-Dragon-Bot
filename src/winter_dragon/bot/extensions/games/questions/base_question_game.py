@@ -24,6 +24,8 @@ class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the game with a session and set default data."""
+        if self.__class__ is BaseQuestionGame:
+            return
         super().__init__(**kwargs)
         self._validate_game_constants()
         self.game = Games.fetch_game_by_name(self.GAME_NAME)
