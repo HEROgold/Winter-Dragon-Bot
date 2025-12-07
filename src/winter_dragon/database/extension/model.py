@@ -116,6 +116,9 @@ class BaseModel(BaseSQLModel, LoggerMixin):
         for field, value in self.__class__.model_fields.items():
             if field == "id":
                 continue
+            if value.annotation is None:
+                # Filter out fields without type annotations. Filters out optional fields too.
+                continue
             # Get the actual value from the instance, and not field info
             # Use value.annotation to match the types.
             field_value = self.__dict__[field]
