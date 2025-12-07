@@ -31,16 +31,16 @@ class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
 
     def _validate_game_constants(self) -> None:
         """Validate that required game constants are properly defined."""
-        if not isinstance(self.GAME_NAME, str): # pyright: ignore[reportUnnecessaryIsInstance]
+        if self.GAME_NAME is MISSING:
             msg = "GAME_NAME must be defined as a string in the subclass."
             raise TypeError(msg)
-        if not isinstance(self.GAME_DISPLAY_NAME, str): # pyright: ignore[reportUnnecessaryIsInstance]
+        if self.GAME_DISPLAY_NAME is MISSING:
             msg = "GAME_DISPLAY_NAME must be defined as a string in the subclass."
             raise TypeError(msg)
-        if not issubclass(self.QUESTION_MODEL, SQLModel): # pyright: ignore[reportUnnecessaryIsInstance]
+        if self.QUESTION_MODEL is MISSING:
             msg = "QUESTION_MODEL must be defined as a subclass of SQLModel in the subclass."
             raise TypeError(msg)
-        if not isinstance(self.BASE_QUESTIONS, list) or not all(isinstance(q, str) for q in self.BASE_QUESTIONS): # pyright: ignore[reportUnnecessaryIsInstance]
+        if self.BASE_QUESTIONS is MISSING:
             msg = "BASE_QUESTIONS must be defined as a list of strings in the subclass."
             raise TypeError(msg)
 
