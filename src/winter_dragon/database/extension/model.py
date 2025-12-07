@@ -125,7 +125,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
             instance_field_type = type(field_value)
             expected_field_type = value.annotation
 
-            if expected_field_type is instance_field_type:
+            if repr(instance_field_type) in repr(expected_field_type):
                 setattr(known, field, field_value)
             else:
                 msg = f"Field {field=} has wrong type: {expected_field_type} != {instance_field_type}"
