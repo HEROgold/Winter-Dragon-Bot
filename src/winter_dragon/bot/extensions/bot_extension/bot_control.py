@@ -472,6 +472,7 @@ class BotC(GroupCog, auto_load=True):
             label="RAM Usage (%)",
         )
 
+        METRICS_FILE.parent.mkdir(parents=True, exist_ok=True)
         plt.xlabel("Time (seconds)")
         plt.ylabel("Value")
         plt.title("System Metrics Over Time")
