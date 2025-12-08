@@ -10,7 +10,6 @@ from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.events.audit_event import AuditEvent
-from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables import AssociationUserCommand as AUC  # noqa: N817
 from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, Presence, Roles, Users
@@ -127,7 +126,6 @@ class OnGuildChannelUpdate(AuditEvent, action=AuditLogAction.channel_update):
         Channels.update(Channels(
             id = after.id,
             name = after.name,
-            type = ChannelTypes.UNKNOWN,
             guild_id = after.guild.id,
         ))
 
