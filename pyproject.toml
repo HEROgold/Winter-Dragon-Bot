@@ -20,10 +20,10 @@ classifiers = [
 ]
 dependencies = [
     "bs4>=0.0.2",
-    "confkit==0.6.0",
+    "confkit==0.7.0",
     "discord-ext-prometheus>=0.2.1",
     "discord-py>=2.6.3",
-    "herogold>=0.1.2",
+    "herogold>=0.4.0",
     "matplotlib>=3.10.7",
     "psutil>=7.1.0",
     "psycopg2-binary>=2.9.11",

@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
 from herogold.log import LoggerMixin
+from herogold.typing.check import is_sub_type
 from pydantic import ConfigDict
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
@@ -119,17 +120,10 @@ class BaseModel(BaseSQLModel, LoggerMixin):
             if value.annotation is None:
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
-            # Get the actual value from the instance, and not field info
-            # Use value.annotation to match the types.
-            field_value = self.__dict__[field]
-            instance_field_type = type(field_value)
-            expected_field_type = value.annotation
-
-            if repr(instance_field_type) in repr(expected_field_type):
-                setattr(known, field, field_value)
-            else:
-                msg = f"Field {field=} has wrong type: {expected_field_type} != {instance_field_type}"
-                raise TypeError(msg)
+            if is_sub_type(value, value.annotation):
+                self.logger.warning(f"{value=}, {value.annotation=}, {is_sub_type(value, value.annotation)=}")
+                # Set the actual value from the instance, not from field info
+                setattr(known, field, self.__dict__[field])
         session.add(known)
         session.commit()
 
