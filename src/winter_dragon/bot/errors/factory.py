@@ -44,7 +44,7 @@ class ErrorFactory:
     ) -> Generator[DiscordError]:
         """Get the Error error class for a category."""
         if error_type not in cls.registry:
-            msg = f"Error for {error_type} not implemented"
+            msg = f"Error for `{error_type}` not implemented"
             raise NotImplementedError(msg)
         if not (interaction or ctx):
             msg = "Missing interaction or ctx kwarg"
