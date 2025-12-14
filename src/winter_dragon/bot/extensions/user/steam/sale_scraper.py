@@ -173,6 +173,28 @@ class SteamScraper(LoggerMixin):
                 continue
             yield await self.get_sale_from_steam(sale_tag, percent)
 
+    async def get_games_from_bundle(self, url: SteamURL) -> AsyncGenerator[SteamURL]:
+        """Get all games from a steam bundle page."""
+        class_ = "package_landing_page_item_list"
+        item_tag = "tab_item tablet_list_item"
+        app_id_attribute = "data-ds-appid"
+
+        html = await self._get_html(str(url))
+        soup = BeautifulSoup(html.text, "html.parser")
+
+        item_container = soup.find(class_=class_)
+        if item_container is None:
+            self.logger.warning(f"Bundle container not found for {url=}")
+            return []
+
+        items = item_container.find_all(class_=item_tag)
+
+        for item in items:
+            app_id = item.get(app_id_attribute)
+            if app_id is None:
+                self.logger.warning(f"App ID not found for bundle item in {url=}")
+                continue
+            yield SteamURL(f"https://store.steampowered.com/app/{app_id}/")
 
     async def get_sale_from_steam(self, sale_tag: Tag, percent: int) -> SteamSale | None:
         """Get a single sale from the steam search page."""
@@ -209,20 +231,21 @@ class SteamScraper(LoggerMixin):
         title = title.get_text()
         self.logger.debug(f"SteamSale found: {url=}, {title=}, {price=}, {sale_percentage=}, {app_id=}")
 
-        # TODO: Mark as bundle, if multiple app ids
-        # TODO: regex the url sub/(\d+)/ to determine if bundle
-        # if "," in app_id:
-        #     # url: sub/66335 # bundle of multiple ga,es with id.
-        #     SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
-        #     # Sale for multiple games, should be a bundle
-        #     sale = SteamSale(
-        #         id = int(str(app_id).split(",")[0]),
-        #         title = title,
-        #         url = str(url),
-        #         sale_percent = sale_percentage,
-        #         final_price = price_to_num(price),
-        #         update_datetime = datetime.now(tz=UTC),
-        #     )
+        if "sub" in str(url) or "bundle" in str(url):
+            # Note: .com/sub/    is used in searchable bundles. As seen in https://store.steampowered.com/sub/66335
+            # Note: .com/bundle/ is used for game related bundles. Seen in https://store.steampowered.com/bundle/62652
+            self.logger.debug(f"Found bundle or sub: {url=}, processing bundle items")
+            async for item in self.get_games_from_bundle(SteamURL(str(url))):
+                self.logger.debug(f"Processing bundle item: {item=}")
+            SteamSaleProperties(steam_sale_id=int(str(app_id)), property=SaleTypes.BUNDLE)
+            return SteamSale(
+                id = int(str(app_id).split(",")[0]),
+                title = title,
+                url = str(url),
+                sale_percent = sale_percentage,
+                final_price = price_to_num(price),
+                update_datetime = datetime.now(tz=UTC),
+            )
 
         return SteamSale(
             id = int(str(app_id)),
