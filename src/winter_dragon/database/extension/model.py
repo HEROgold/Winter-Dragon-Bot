@@ -120,10 +120,8 @@ class BaseModel(BaseSQLModel, LoggerMixin):
             if info.annotation is None:
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
-            self.logger.warning(f"{name=}, {info=}, {info.annotation=}")
             value = getattr(self, name)
             if type(value) is info.annotation or is_sub_type(info, info.annotation):
-                self.logger.warning(f"{info=}, {info.annotation=}, {is_sub_type(info, info.annotation)=}")
                 # Set the actual value from the instance, not from field info
                 setattr(known, name, value)
         session.add(known)
