@@ -114,17 +114,18 @@ class BaseModel(BaseSQLModel, LoggerMixin):
         """Update known, with the values from self."""
         self.logger.debug(f"Updating record: {self}")
         session = self._get_session(session)
-        for field, value in self.__class__.model_fields.items():
-            if field == "id":
+        for name, info in self.__class__.model_fields.items():
+            if name == "id":
                 continue
-            if value.annotation is None:
+            if info.annotation is None:
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
-            self.logger.warning(f"{field=}, {value=}, {value.annotation=}")
-            if type(value) is value.annotation or is_sub_type(value, value.annotation):
-                self.logger.warning(f"{value=}, {value.annotation=}, {is_sub_type(value, value.annotation)=}")
+            self.logger.warning(f"{name=}, {info=}, {info.annotation=}")
+            value = getattr(self, name)
+            if type(value) is info.annotation or is_sub_type(info, info.annotation):
+                self.logger.warning(f"{info=}, {info.annotation=}, {is_sub_type(info, info.annotation)=}")
                 # Set the actual value from the instance, not from field info
-                setattr(known, field, self.__dict__[field])
+                setattr(known, name, value)
         session.add(known)
         session.commit()
 
