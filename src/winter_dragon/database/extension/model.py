@@ -122,9 +122,9 @@ class BaseModel(BaseSQLModel):
             if info.annotation is None or type(value) is NoneType:
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
-            self.logger.warning(f"{type(value)}: {type(value) is info.annotation=}")
+            self.logger.debug(f"{type(value)}: {type(value) is info.annotation=}")
             if type(value) is not info.annotation:
-                self.logger.warning(f"{is_sub_type(info, info.annotation)=}")
+                self.logger.debug(f"{is_sub_type(info, info.annotation)=}")
             if type(value) is info.annotation or is_sub_type(info, info.annotation):
                 # Set the actual value from the instance, not from field info
                 setattr(known, name, value)
