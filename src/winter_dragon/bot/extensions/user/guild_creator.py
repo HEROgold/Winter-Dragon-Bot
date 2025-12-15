@@ -50,7 +50,7 @@ class GuildCreator(GroupCog, auto_load=True):
         for guild in self.bot.guilds:
             if guild.owner == self.bot.user or guild.name.startswith(self.INIT_NAME):
                 self.logger.warning(f"Guild {guild.name} ({guild.id}) is initializing, and not yet claimed!")
-                owners = list(self.bot.owner_ids) if self.bot.owner_ids is not None else [self.bot.owner_id]
+                owners = list(self.bot.owner_ids) if self.bot.owner_ids else [self.bot.owner_id]
                 new_owner_id = random.choice(owners)  # noqa: S311
                 if not new_owner_id:
                     self.logger.warning("No owner IDs found.")
