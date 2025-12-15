@@ -121,7 +121,7 @@ class BaseModel(BaseSQLModel, LoggerMixin):
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
             value = getattr(self, name)
-            self.logger.warning(f"{type(value) is info.annotation=}")
+            self.logger.warning(f"{type(value)}: {type(value) is info.annotation=}")
             if type(value) is not info.annotation:
                 self.logger.warning(f"{is_sub_type(info, info.annotation)=}")
             if type(value) is info.annotation or is_sub_type(info, info.annotation):
