@@ -97,19 +97,11 @@ class SteamURL(LoggerMixin):
         """Return the url as a string."""
         return self.url
 
-# TODO: Implement these scrapers, resulting in better separation of concerns.
-class BundleScraper(LoggerMixin): pass # Bundle pages for store.steampowered.com/bundle/<id> or store.steampowered.com/sub/<id>
-class SearchScraper(LoggerMixin): pass # Search results for store.steampowered.com/search/
-class BrowseScraper(LoggerMixin): pass # Browse results for store.steampowered.com
-class AppScraper(LoggerMixin): pass # App scraper for store.steampowered.com/app/<id>
-
-class SteamScraper(LoggerMixin):
-    """Scrape Steam sales. from their website using a set url."""
-
-    search_url = Config("https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1&supportedlang=english")
+class AppScraper(LoggerMixin):
+    """Scraper for individual Steam app pages (store.steampowered.com/app/<id>)."""
 
     def __init__(self) -> None:
-        """Initialize the SteamScraper."""
+        """Initialize the AppScraper."""
         self.loop = asyncio.get_event_loop()
 
     async def _get_html(self, url: str) -> requests.Response:
@@ -123,7 +115,17 @@ class SteamScraper(LoggerMixin):
         return buy_area if isinstance(buy_area, Tag) else None
 
     async def get_game_sale(self, url: SteamURL) -> SteamSale | None:
-        """Get a single game sale from specific url."""
+        """Get a single game sale from specific url.
+
+        Args:
+        ----
+            url (SteamURL): URL of the Steam game
+
+        Returns:
+        -------
+            SteamSale | None: Steam sale information or None if not found
+
+        """
         if not url.is_valid_game_url():
             msg = "Invalid Steam Game URL"
             raise ValueError(msg)
@@ -163,23 +165,29 @@ class SteamScraper(LoggerMixin):
             SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
         return steam_sale
 
-    async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[SteamSale | None]:
-        """Scrape sales from https://store.steampowered.com/search/.
 
-        With the search options: Ascending price, Special deals, English.
-        """
-        self.logger.debug(f"Scraping Steam sales: {percent=}")
-        html = await self._get_html(self.search_url)
-        soup = BeautifulSoup(html.text, "html.parser")
+class BundleScraper(LoggerMixin):
+    """Scraper for Steam bundle pages (store.steampowered.com/bundle/<id> or store.steampowered.com/sub/<id>)."""
 
-        for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
-            if not isinstance(sale_tag, Tag): # pyright: ignore[reportUnnecessaryIsInstance]
-                self.logger.warning(f"Sale tag not found for {sale_tag=}, Expected Tag, got {type(sale_tag)}")
-                continue
-            yield await self.get_sale_from_steam(sale_tag, percent)
+    def __init__(self) -> None:
+        """Initialize the BundleScraper."""
+        self.loop = asyncio.get_event_loop()
+
+    async def _get_html(self, url: str) -> requests.Response:
+        return await self.loop.run_in_executor(None, requests.get, url)
 
     async def get_games_from_bundle(self, url: SteamURL) -> AsyncGenerator[SteamURL]:
-        """Get all games from a steam bundle page."""
+        """Get all games from a steam bundle page.
+
+        Args:
+        ----
+            url (SteamURL): URL of the Steam bundle
+
+        Yields:
+        ------
+            SteamURL: URLs of individual games in the bundle
+
+        """
         class_ = "package_landing_page_item_list"
         item_tag = "tab_item tablet_list_item"
         app_id_attribute = "data-ds-appid"
@@ -190,7 +198,7 @@ class SteamScraper(LoggerMixin):
         item_container = soup.find(class_=class_)
         if item_container is None:
             self.logger.warning(f"Bundle container not found for {url=}")
-            return []
+            return
 
         items = item_container.find_all(class_=item_tag)
 
@@ -201,8 +209,55 @@ class SteamScraper(LoggerMixin):
                 continue
             yield SteamURL(f"https://store.steampowered.com/app/{app_id}/")
 
-    async def get_sale_from_steam(self, sale_tag: Tag, percent: int) -> SteamSale | None:
-        """Get a single sale from the steam search page."""
+
+class SearchScraper(LoggerMixin):
+    """Scraper for Steam search results (store.steampowered.com/search/)."""
+
+    def __init__(self) -> None:
+        """Initialize the SearchScraper."""
+        self.loop = asyncio.get_event_loop()
+        self.app_scraper = AppScraper()
+        self.bundle_scraper = BundleScraper()
+
+    async def _get_html(self, url: str) -> requests.Response:
+        return await self.loop.run_in_executor(None, requests.get, url)
+
+    async def get_sales_from_search(self, search_url: str, percent: int) -> AsyncGenerator[SteamSale | None]:
+        """Scrape sales from a Steam search URL.
+
+        Args:
+        ----
+            search_url (str): URL of the Steam search page
+            percent (int): Minimum sale percentage to filter
+
+        Yields:
+        ------
+            SteamSale | None: Steam sale information or None if not found
+
+        """
+        self.logger.debug(f"Scraping Steam sales: {percent=}")
+        html = await self._get_html(search_url)
+        soup = BeautifulSoup(html.text, "html.parser")
+
+        for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
+            if not isinstance(sale_tag, Tag): # pyright: ignore[reportUnnecessaryIsInstance]
+                self.logger.warning(f"Sale tag not found for {sale_tag=}, Expected Tag, got {type(sale_tag)}")
+                continue
+            yield await self.get_sale_from_search(sale_tag, percent)
+
+    async def get_sale_from_search(self, sale_tag: Tag, percent: int) -> SteamSale | None:
+        """Get a single sale from the steam search page.
+
+        Args:
+        ----
+            sale_tag (Tag): BeautifulSoup tag containing sale information
+            percent (int): Minimum sale percentage to filter
+
+        Returns:
+        -------
+            SteamSale | None: Steam sale information or None if not found
+
+        """
         a_tag = sale_tag.find_parent("a", href=True)
 
         if not isinstance(a_tag, Tag):
@@ -223,7 +278,7 @@ class SteamScraper(LoggerMixin):
         discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
 
         if discount_perc is None: # Check game's page
-            return await self.get_game_sale(SteamURL(str(url)))
+            return await self.app_scraper.get_game_sale(SteamURL(str(url)))
 
         sale_percentage = int(discount_perc.text[1:-1]) # strip the - and % from the tag
 
@@ -240,7 +295,7 @@ class SteamScraper(LoggerMixin):
             # Note: .com/sub/    is used in searchable bundles. As seen in https://store.steampowered.com/sub/66335
             # Note: .com/bundle/ is used for game related bundles. Seen in https://store.steampowered.com/bundle/62652
             self.logger.debug(f"Found bundle or sub: {url=}, processing bundle items")
-            async for item in self.get_games_from_bundle(SteamURL(str(url))):
+            async for item in self.bundle_scraper.get_games_from_bundle(SteamURL(str(url))):
                 self.logger.debug(f"Processing bundle item: {item=}")
             SteamSaleProperties(steam_sale_id=int(str(app_id)), property=SaleTypes.BUNDLE)
             return SteamSale(
@@ -260,3 +315,79 @@ class SteamScraper(LoggerMixin):
             final_price = price_to_num(price),
             update_datetime = datetime.now(tz=UTC),
         )
+
+
+class BrowseScraper(LoggerMixin):
+    """Scraper for Steam browse results (store.steampowered.com).
+
+    Note: This is a placeholder for future browse functionality.
+    Currently not used by the main SteamScraper.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the BrowseScraper."""
+        self.loop = asyncio.get_event_loop()
+
+    async def _get_html(self, url: str) -> requests.Response:
+        return await self.loop.run_in_executor(None, requests.get, url)
+
+class SteamScraper(LoggerMixin):
+    """Scrape Steam sales from their website using a set url.
+
+    This class now delegates to specialized scrapers for better separation of concerns.
+    """
+
+    search_url = Config("https://store.steampowered.com/search/?sort_by=Price_ASC&specials=1&supportedlang=english")
+
+    def __init__(self) -> None:
+        """Initialize the SteamScraper."""
+        self.loop = asyncio.get_event_loop()
+        self.search_scraper = SearchScraper()
+        self.app_scraper = AppScraper()
+        self.bundle_scraper = BundleScraper()
+
+    async def get_game_sale(self, url: SteamURL) -> SteamSale | None:
+        """Get a single game sale from specific url.
+
+        Args:
+        ----
+            url (SteamURL): URL of the Steam game
+
+        Returns:
+        -------
+            SteamSale | None: Steam sale information or None if not found
+
+        """
+        return await self.app_scraper.get_game_sale(url)
+
+    async def get_sales_from_steam(self, percent: int) -> AsyncGenerator[SteamSale | None]:
+        """Scrape sales from https://store.steampowered.com/search/.
+
+        With the search options: Ascending price, Special deals, English.
+
+        Args:
+        ----
+            percent (int): Minimum sale percentage to filter
+
+        Yields:
+        ------
+            SteamSale | None: Steam sale information or None if not found
+
+        """
+        async for sale in self.search_scraper.get_sales_from_search(self.search_url, percent):
+            yield sale
+
+    async def get_games_from_bundle(self, url: SteamURL) -> AsyncGenerator[SteamURL]:
+        """Get all games from a steam bundle page.
+
+        Args:
+        ----
+            url (SteamURL): URL of the Steam bundle
+
+        Yields:
+        ------
+            SteamURL: URLs of individual games in the bundle
+
+        """
+        async for game_url in self.bundle_scraper.get_games_from_bundle(url):
+            yield game_url
