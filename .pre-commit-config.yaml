@@ -1,19 +1,10 @@
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
-  # Package management hooks (global)
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.9.17
     hooks:
       - id: uv-lock
-  - repo: https://github.com/tsvikas/sync-with-uv
-    rev: v0.5.0
-    hooks:
-      - id: sync-with-uv
-  - repo: https://github.com/pre-commit/sync-pre-commit-deps
-    rev: v0.0.3
-    hooks:
-      - id: sync-pre-commit-deps
 
   # General hooks (apply globally)
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -29,12 +20,23 @@ repos:
       - id: detect-private-key
       # File validation
       - id: check-json
+        exclude: ^(postgres/|\.vscode/|\.obsidian/)
       - id: check-toml
+        exclude: ^postgres/
       - id: check-xml
+        exclude: ^postgres/
       - id: check-yaml
+        exclude: ^postgres/
       - id: pretty-format-json
         exclude_types: [jupyter]
-        exclude: ^frontend/
+        exclude: ^(frontend/|postgres/)
+      # Python sanity checks
+      - id: check-ast
+        files: ^src/.*\.py$
+      - id: check-docstring-first
+        files: ^src/.*\.py$
+      - id: debug-statements
+        files: ^src/.*\.py$
 
   # Spell checking (global)
   - repo: https://github.com/codespell-project/codespell
@@ -42,63 +44,52 @@ repos:
     hooks:
       - id: codespell
 
-  # Markdown files (global)
-  - repo: https://github.com/hukkin/mdformat
-    rev: 1.0.0
+  # Validate packaging metadata early
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.24.1
     hooks:
-      - id: mdformat
-        additional_dependencies:
-          - mdformat-gfm
-          - mdformat-frontmatter
-          - mdformat-footnote
-          - mdformat-gfm-alerts
+      - id: validate-pyproject
 
-  # Python hooks (for bot and database directories)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: check-ast
-        files: ^(bot|database)/.*\.py$
-      - id: check-docstring-first
-        files: ^(bot|database)/.*\.py$
-      - id: debug-statements
-        files: ^(bot|database)/.*\.py$
+  # Python hooks (source tree)
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
       - id: python-check-blanket-noqa
-        files: ^(bot|database)/.*\.py$
+        files: ^src/.*\.py$
       - id: python-check-mock-methods
-        files: ^(bot|database)/.*\.py$
+        files: ^src/.*\.py$
       - id: python-no-eval
-        files: ^(bot|database)/.*\.py$
+        files: ^src/.*\.py$
       - id: python-no-log-warn
-        files: ^(bot|database)/.*\.py$
+        files: ^src/.*\.py$
       - id: python-use-type-annotations
-        files: ^(bot|database)/.*\.py$
+        files: ^src/.*\.py$
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.0
+    hooks:
+      - id: pyupgrade
+        args: [--py313-plus]
+        files: ^src/.*\.py$
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.9
+    rev: v0.7.0
     hooks:
-      - id: ruff-check
-        alias: ruff-isort
-        name: ruff isort
-        args: [--select, I001, --fix]
-        files: ^(bot|database)/.*\.py$
-      - id: ruff-check
-        files: ^(bot|database)/.*\.py$
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+      - id: ruff
+        name: ruff lint
+        args: [--fix]
+        files: ^src/.*\.py$
+      - id: ruff-format
+        files: ^src/.*\.py$
+
+  - repo: local
     hooks:
-      - id: mypy
-        name: mypy (without imports)
-        args:
-          [
-            --config-file,
-            "",
-            --ignore-missing-imports,
-            --disable-error-code=import-untyped,
-          ]
-        files: ^(bot|database)/.*\.py$
+      - id: ty-check
+        name: uvx ty check
+        language: system
+        entry: uvx ty check
+        pass_filenames: false
+        files: ^src/.*\.py$
 
   # TypeScript/React hooks (for frontend directory)
   - repo: https://github.com/pre-commit/mirrors-eslint
@@ -114,6 +105,7 @@ repos:
           - typescript@5.3.3
           - '@typescript-eslint/eslint-plugin@6.15.0'
           - '@typescript-eslint/parser@6.15.0'
+
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
@@ -125,8 +117,6 @@ repos:
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.36.0
     hooks:
-      - id: check-github-actions
-        files: ^\.github/
       - id: check-github-workflows
         files: ^\.github/workflows/
 
