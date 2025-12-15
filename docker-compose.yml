@@ -18,17 +18,6 @@ services:
       retries: 6
       start_period: 10s
 
-  migrations:
-    container_name: alembic-migrations
-    build:
-      context: .
-      dockerfile: migrations.dockerfile
-    volumes:
-      - .:/app
-    depends_on:
-      postgres:
-        condition: service_healthy
-    working_dir: /app
 
   bot:
     container_name: discord-bot
@@ -36,10 +25,9 @@ services:
       context: .
       dockerfile: bot/dockerfile
     volumes:
-      - ./bot:/bot
-      - ./database:/database
-      - ./config.ini:/config.ini
-      - ./logs:/logs
+      - ./src:/app/src
+      - ./config.ini:/app/config.ini
+      - ./logs:/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,8 +38,8 @@ services:
       context: .
       dockerfile: backend/dockerfile
     volumes:
-      - ./database:/database
-      - ./backend:/backend
+      - ./src:/app/src
+      - ./backend:/app/backend
     expose:
       - 8000
     # WARNING!: Ports should only be opened to the host for development

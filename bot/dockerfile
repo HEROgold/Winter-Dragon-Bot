@@ -1,11 +1,32 @@
+# Bot Dockerfile
 FROM python:3.13-slim
 
-ADD config.ini config.ini
-ADD database/ database/
-ADD bot/ bot/
+# Set working directory
+WORKDIR /app
 
-# Ensure that we install db first, as its a dependency of the bot
-RUN pip3.13 install database/
-RUN pip3.13 install bot/
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-CMD ["python3", "-m", "winter_dragon.bot"]
+# Copy requirements
+COPY pyproject.toml uv.lock ./
+
+# Install uv for dependency management
+RUN pip install uv
+
+# Install dependencies
+RUN uv sync --frozen
+
+# Copy the source code
+COPY src/ ./src/
+COPY config.ini ./
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Set Python path to include src directory
+ENV PYTHONPATH=/app/src
+
+# Run the bot
+CMD ["uv", "run", "python", "-m", "winter_dragon.bot"]
