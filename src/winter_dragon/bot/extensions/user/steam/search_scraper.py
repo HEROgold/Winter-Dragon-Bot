@@ -6,14 +6,15 @@ from bs4 import BeautifulSoup, Tag
 from winter_dragon.bot.extensions.user.steam.app_scraper import AppScraper
 from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
 from winter_dragon.bot.extensions.user.steam.bundle_scraper import BundleScraper
-from winter_dragon.bot.extensions.user.steam.sale_scraper import (
+from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
+from winter_dragon.bot.extensions.user.steam.tags import (
     DATA_APPID,
+    DISCOUNT_FINAL_PRICE,
     DISCOUNT_PERCENT,
     DISCOUNT_PRICES,
     SEARCH_GAME_TITLE,
+    price_to_num,
 )
-from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
-from winter_dragon.bot.extensions.user.steam.tags import DISCOUNT_FINAL_PRICE, price_to_num
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 
 
