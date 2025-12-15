@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.settings import Settings
-from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamURL
+from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 from winter_dragon.database.tables.steamuser import SteamUsers
 
