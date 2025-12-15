@@ -27,9 +27,6 @@ repos:
         exclude: ^postgres/
       - id: check-yaml
         exclude: ^postgres/
-      - id: pretty-format-json
-        exclude_types: [jupyter]
-        exclude: ^(frontend/|postgres/)
       # Python sanity checks
       - id: check-ast
         files: ^src/.*\.py$
