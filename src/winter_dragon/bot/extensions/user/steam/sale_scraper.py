@@ -185,7 +185,7 @@ class SteamScraper(LoggerMixin):
         item_container = soup.find(class_=class_)
         if item_container is None:
             self.logger.warning(f"Bundle container not found for {url=}")
-            return []
+            return
 
         items = item_container.find_all(class_=item_tag)
 
