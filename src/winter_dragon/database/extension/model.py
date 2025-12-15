@@ -5,6 +5,7 @@ This module should make the SQLModel classes more like a `Repository` pattern.
 
 import logging
 from collections.abc import Sequence
+from types import NoneType
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
 from herogold.log import LoggerMixin
@@ -117,10 +118,10 @@ class BaseModel(BaseSQLModel):
         for name, info in self.__class__.model_fields.items():
             if name == "id":
                 continue
-            if info.annotation is None:
+            value = getattr(self, name)
+            if info.annotation is None or type(value) is NoneType:
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
-            value = getattr(self, name)
             self.logger.warning(f"{type(value)}: {type(value) is info.annotation=}")
             if type(value) is not info.annotation:
                 self.logger.warning(f"{is_sub_type(info, info.annotation)=}")
