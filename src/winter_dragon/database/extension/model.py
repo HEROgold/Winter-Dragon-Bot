@@ -27,14 +27,14 @@ class ModelLogger(LoggerMixin):
     """
 
 
-class BaseModel(BaseSQLModel, LoggerMixin):
+class BaseModel(BaseSQLModel):
     """Base model class with custom methods."""
 
     if TYPE_CHECKING:
         id: int | None | Any
 
     session: ClassVar[Session] = db_session
-    logger: ClassVar[logging.Logger] = ModelLogger().logger # type: ignore[reportIncompatibleVariableOverride]
+    logger: ClassVar[logging.Logger] = ModelLogger().logger
 
     def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]) -> None:
         """Register subclass in models set."""
