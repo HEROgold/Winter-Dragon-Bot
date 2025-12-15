@@ -45,7 +45,7 @@ class BotActivity(GroupCog, auto_load=True):
     @loop()
     async def activity_switch(self) -> None:
         """Switch the bot's activity and status periodically. Uses activity.periodic_time config."""
-        if self.random_activity:
+        if not self.random_activity:
             self.activity_switch.stop()
             return
         status, activity = self.get_random_activity()
@@ -92,7 +92,7 @@ class BotActivity(GroupCog, auto_load=True):
             await interaction.response.send_message(f"Status not found, can only be\n{statuses}", ephemeral=True)
             return
 
-        if activity not in activities:
+        if activity not in [i.name.lower() for i in ActivityType]:
             await interaction.response.send_message(f"Activity not found, can only be\n{activities}", ephemeral=True)
             return
 
@@ -108,7 +108,7 @@ class BotActivity(GroupCog, auto_load=True):
             return
 
         status_attr = discord.Status[status] or discord.Status.online
-        activity_type = discord.Status[activity] or discord.ActivityType.playing
+        activity_type = discord.ActivityType[activity] or discord.ActivityType.playing
         activity_obj = discord.Activity(type=activity_type, name=msg)
 
         await self.bot.change_presence(status=status_attr, activity=activity_obj)
