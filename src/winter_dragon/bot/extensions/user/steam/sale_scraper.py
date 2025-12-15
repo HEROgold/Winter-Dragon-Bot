@@ -97,6 +97,11 @@ class SteamURL(LoggerMixin):
         """Return the url as a string."""
         return self.url
 
+# TODO: Implement these scrapers, resulting in better separation of concerns.
+class BundleScraper(LoggerMixin): pass # Bundle pages for store.steampowered.com/bundle/<id> or store.steampowered.com/sub/<id>
+class SearchScraper(LoggerMixin): pass # Search results for store.steampowered.com/search/
+class BrowseScraper(LoggerMixin): pass # Browse results for store.steampowered.com
+class AppScraper(LoggerMixin): pass # App scraper for store.steampowered.com/app/<id>
 
 class SteamScraper(LoggerMixin):
     """Scrape Steam sales. from their website using a set url."""
