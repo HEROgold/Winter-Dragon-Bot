@@ -42,6 +42,29 @@ def price_to_num(s: str) -> float:
     except ValueError:
         return float(s.strip(CURRENCY_LABELS))
 
+
+class BaseScraper(LoggerMixin):
+    """Base class for all Steam scrapers with common functionality."""
+
+    def __init__(self) -> None:
+        """Initialize the BaseScraper."""
+        self.loop = asyncio.get_event_loop()
+
+    async def _get_html(self, url: str) -> requests.Response:
+        """Fetch HTML content from a URL.
+
+        Args:
+        ----
+            url (str): URL to fetch
+
+        Returns:
+        -------
+            requests.Response: HTTP response object
+
+        """
+        return await self.loop.run_in_executor(None, requests.get, url)
+
+
 # FIXME ValueError: invalid literal for int() with base 10: '357070,366420,546090,701470,1836120'
 class SteamURL(LoggerMixin):
     """Class to handle Steam URLs."""
@@ -97,15 +120,8 @@ class SteamURL(LoggerMixin):
         """Return the url as a string."""
         return self.url
 
-class AppScraper(LoggerMixin):
+class AppScraper(BaseScraper):
     """Scraper for individual Steam app pages (store.steampowered.com/app/<id>)."""
-
-    def __init__(self) -> None:
-        """Initialize the AppScraper."""
-        self.loop = asyncio.get_event_loop()
-
-    async def _get_html(self, url: str) -> requests.Response:
-        return await self.loop.run_in_executor(None, requests.get, url)
 
     async def _get_buy_area(self, soup: BeautifulSoup) -> Tag | None:
         add_to_cart = soup.find(class_="btn_addtocart")
@@ -166,15 +182,8 @@ class AppScraper(LoggerMixin):
         return steam_sale
 
 
-class BundleScraper(LoggerMixin):
+class BundleScraper(BaseScraper):
     """Scraper for Steam bundle pages (store.steampowered.com/bundle/<id> or store.steampowered.com/sub/<id>)."""
-
-    def __init__(self) -> None:
-        """Initialize the BundleScraper."""
-        self.loop = asyncio.get_event_loop()
-
-    async def _get_html(self, url: str) -> requests.Response:
-        return await self.loop.run_in_executor(None, requests.get, url)
 
     async def get_games_from_bundle(self, url: SteamURL) -> AsyncGenerator[SteamURL]:
         """Get all games from a steam bundle page.
@@ -210,17 +219,14 @@ class BundleScraper(LoggerMixin):
             yield SteamURL(f"https://store.steampowered.com/app/{app_id}/")
 
 
-class SearchScraper(LoggerMixin):
+class SearchScraper(BaseScraper):
     """Scraper for Steam search results (store.steampowered.com/search/)."""
 
     def __init__(self) -> None:
         """Initialize the SearchScraper."""
-        self.loop = asyncio.get_event_loop()
+        super().__init__()
         self.app_scraper = AppScraper()
         self.bundle_scraper = BundleScraper()
-
-    async def _get_html(self, url: str) -> requests.Response:
-        return await self.loop.run_in_executor(None, requests.get, url)
 
     async def get_sales_from_search(self, search_url: str, percent: int) -> AsyncGenerator[SteamSale | None]:
         """Scrape sales from a Steam search URL.
@@ -317,19 +323,12 @@ class SearchScraper(LoggerMixin):
         )
 
 
-class BrowseScraper(LoggerMixin):
+class BrowseScraper(BaseScraper):
     """Scraper for Steam browse results (store.steampowered.com).
 
     Note: This is a placeholder for future browse functionality.
     Currently not used by the main SteamScraper.
     """
-
-    def __init__(self) -> None:
-        """Initialize the BrowseScraper."""
-        self.loop = asyncio.get_event_loop()
-
-    async def _get_html(self, url: str) -> requests.Response:
-        return await self.loop.run_in_executor(None, requests.get, url)
 
 class SteamScraper(LoggerMixin):
     """Scrape Steam sales from their website using a set url.
