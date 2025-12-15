@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 
 from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
 from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
+from winter_dragon.bot.extensions.user.steam.tags import BUNDLE_ITEM, BUNDLE_ITEM_CONTAINER, DATA_APPID
 
 
 class BundleScraper(BaseScraper):
@@ -21,22 +22,18 @@ class BundleScraper(BaseScraper):
             SteamURL: URLs of individual games in the bundle
 
         """
-        class_ = "package_landing_page_item_list"
-        item_tag = "tab_item tablet_list_item"
-        app_id_attribute = "data-ds-appid"
-
         html = await self._get_html(str(url))
         soup = BeautifulSoup(html.text, "html.parser")
 
-        item_container = soup.find(class_=class_)
+        item_container = soup.find(class_=BUNDLE_ITEM_CONTAINER)
         if item_container is None:
             self.logger.warning(f"Bundle container not found for {url=}")
             return
 
-        items = item_container.find_all(class_=item_tag)
+        items = item_container.find_all(class_=BUNDLE_ITEM)
 
         for item in items:
-            app_id = item.get(app_id_attribute)
+            app_id = item.get(DATA_APPID)
             if app_id is None:
                 self.logger.warning(f"App ID not found for bundle item in {url=}")
                 continue
