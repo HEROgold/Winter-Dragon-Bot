@@ -3,16 +3,22 @@ line-length = 128
 target-version = "py313"
 unsafe-fixes = true
 
+[format]
+indent-style = "space"
+line-ending = "auto"
+quote-style = "double"
+skip-magic-trailing-comma = false
+
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
 ignore = [
-    "COM812",
-    "G004", # Allow f-string in log messages
-    "D203", # Prefer blank line before class (use D203)
-    "D213", # Prefer multi-line summary on second line (use D213)
-    "D105", # Missing docstring in magic method. We don't care about documenting dunder str, repr etc. methods
-    "TD003", # We don't mind TODO's not having an issue link. Extensions like TODO Tree in VSCode can help find them.
+  "COM812",
+  "G004", # Allow f-string in log messages
+  "D203", # Prefer blank line before class (use D203)
+  "D213", # Prefer multi-line summary on second line (use D213)
+  "D105", # Missing docstring in magic method. We don't care about documenting dunder str, repr etc. methods
+  "TD003" # We don't mind TODO's not having an issue link. Extensions like TODO Tree in VSCode can help find them.
 ]
 
 [lint.isort]
@@ -23,9 +29,3 @@ lines-after-imports = 2
 "*/tables/*/*.py" = ["D"] # ignore docstring for db table models.
 "*/tables/*.py" = ["D"] # ignore docstring for db table models.
 "*/bot/events/base/factory.py" = ["E701"]
-
-[format]
-indent-style = "space"
-line-ending = "auto"
-quote-style = "double"
-skip-magic-trailing-comma = false
