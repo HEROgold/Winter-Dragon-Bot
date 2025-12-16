@@ -7,7 +7,11 @@ unsafe-fixes = true
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
 ignore = [
-    "G004" # Allow f-string in log messages
+    "COM812",
+    "G004", # Allow f-string in log messages
+    "D203", # Prefer blank line before class (use D203)
+    "D213", # Prefer multi-line summary on second line (use D213)
+    "D105", # Missing docstring in magic method. We don't care about documenting dunder str, repr etc. methods
 ]
 
 [lint.isort]
