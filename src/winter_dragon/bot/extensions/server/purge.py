@@ -56,7 +56,7 @@ class History(Protocol):
 
 
 @runtime_checkable
-class PrunableHistory(Prunable, History):
+class PrunableHistory(Prunable, History, Protocol):
     """A protocol that defines a prunable channel with history."""
 
 
@@ -111,7 +111,7 @@ class Purge(Cog, auto_load=True):
             purged_count < count
             and self.allow_history
             and use_history
-            and isinstance(interaction.channel, PrunableHistory)
+            and isinstance(interaction.channel, PrunableHistory) # pyright: ignore[reportUnnecessaryIsInstance]
         ):
         # fmt: on
             history_messages = await self.history_delete(interaction.channel, count=(count - purged_count))
