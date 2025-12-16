@@ -2,9 +2,10 @@
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Any, Generic, TypeVar, Unpack
+from typing import Generic, TypeVar, Unpack
 
 import discord
+from herogold.sentinel import MISSING
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
 
@@ -12,7 +13,6 @@ from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games, Suggestions
 
 
-MISSING: Any = object()
 T = TypeVar("T", bound=SQLModel)
 
 

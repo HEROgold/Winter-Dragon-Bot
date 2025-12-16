@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from confkit import BaseDataType
 from confkit.data_types import Hex, List
@@ -13,10 +14,10 @@ from .config import Config
 GENERATED_MSG = "AutomaticallyGenerated"
 
 
-class Combined(BaseDataType[str]):
+class Combined(BaseDataType[Any]):
     """A data type that combines multiple Config data types."""
 
-    def __init__(self, *args: Config[str]) -> None:
+    def __init__(self, *args: Config[Any]) -> None:
         """Initialize with multiple Config arguments."""
         self.args = args
 

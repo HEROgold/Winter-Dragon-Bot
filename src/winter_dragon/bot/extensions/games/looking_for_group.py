@@ -48,7 +48,7 @@ class Lfg(GroupCog, auto_load=True):
         for i in lfg:
             self.session.delete(i)
         self.session.commit()
-        c_mention = await self.get_command_mention(self.slash_lfg_join)
+        c_mention = self.get_command_mention(self.slash_lfg_join)
         await interaction.response.send_message(
             f"Removed you from all lfg queues, use {c_mention} to join one again.",
             ephemeral=True,

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from functools import partial
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Relationship, func, select
@@ -8,6 +9,10 @@ from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.user import Users
+
+
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import ColumnElement
 
 
 class AssociationUserCommand(SQLModel, table=True):
@@ -26,9 +31,11 @@ class AssociationUserCommand(SQLModel, table=True):
             select(cls.user_id).having(func.count() > track_amount),
         ).all()
 
+        timestamp_column = cast("ColumnElement[datetime]", cls.timestamp)
+
         for user_id in users:
             known = cls.session.exec(
-                select(cls).where(cls.user_id == user_id).order_by(cls.timestamp.desc()).limit(track_amount),
+                select(cls).where(cls.user_id == user_id).order_by(timestamp_column.desc()).limit(track_amount),
             ).all()
 
             for record in known:

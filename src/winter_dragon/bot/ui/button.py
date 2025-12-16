@@ -1,43 +1,35 @@
 """UI primitives built on top of discord.py's button component."""
 
-from typing import TypedDict
-
 from discord import ButtonStyle, Emoji, PartialEmoji
 from discord.ui import Button as DiscordButton
 from herogold.log import LoggerMixin
 
 
-class ButtonProperties(TypedDict):
-    """Properties for a Discord button."""
-
-    style: ButtonStyle
-    label: str | None
-    disabled: bool
-    custom_id: str | None
-    url: str | None
-    emoji: str | Emoji | PartialEmoji | None
-    row: int | None
-    sku_id: int | None
-    id_: int | None
-
-
 class Button(DiscordButton, LoggerMixin):
     """Discord button with logging and consistent defaults."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
-        properties: ButtonProperties,
+        style: ButtonStyle = ButtonStyle.secondary,
+        label: str | None = None,
+        disabled: bool = False,
+        custom_id: str | None = None,
+        url: str | None = None,
+        emoji: str | Emoji | PartialEmoji | None = None,
+        row: int | None = None,
+        sku_id: int | None = None,
+        id_: int | None = None,
     ) -> None:
         """Initialize the button with various parameters."""
         super().__init__(
-            style=properties.style,
-            label=properties.label,
-            disabled=properties.disabled,
-            custom_id=properties.custom_id,
-            url=properties.url,
-            emoji=properties.emoji,
-            row=properties.row,
-            sku_id=properties.sku_id,
-            id=properties.id_,
+            style=style,
+            label=label,
+            disabled=disabled,
+            custom_id=custom_id,
+            url=url,
+            emoji=emoji,
+            row=row,
+            sku_id=sku_id,
+            id=id_,
         )

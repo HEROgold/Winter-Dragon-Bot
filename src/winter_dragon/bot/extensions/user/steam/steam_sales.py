@@ -77,24 +77,23 @@ class SteamSales(GroupCog, auto_load=True):
         self._setup_notifier_messages(notifier)
         embed = notifier.add_sales(new_sales)
 
-    def _set_notify_messages(self) -> None:
+    def _get_notify_messages(self) -> tuple[str, ...]:
         """Update the notify messages."""
-        SteamSales.sub_mention_remove = self.get_command_mention(self.slash_remove)
-        SteamSales.sub_mention_show = self.get_command_mention(self.slash_show)
-        SteamSales.disable_message = f"You can disable this message by using {SteamSales.sub_mention_remove}"
-        SteamSales.all_sale_message = (
-            f"You can see other sales by using {SteamSales.sub_mention_show}, followed by a percentage"
+        mention_remove = self.get_command_mention(self.slash_remove)
+        mention_show = self.get_command_mention(self.slash_show)
+        return (
+            mention_remove,
+            mention_show,
+            f"You can disable this message by using {mention_remove}",
+            (f"You can see other sales by using {mention_show}, followed by a percentage"),
         )
 
     def _setup_notifier_messages(self, notifier: SteamSaleNotifier) -> None:
         """Set up the notifier messages."""
-        self._set_notify_messages()
-        notifier.set_messages(
-            SteamSales.sub_mention_remove,
-            SteamSales.sub_mention_show,
-            SteamSales.disable_message,
-            SteamSales.all_sale_message,
-        )
+        if hasattr(self, "_setup_notifier_msgs"):
+            return
+        notifier.set_messages(*self._get_notify_messages())
+        self._setup_notifier_msgs = True
 
     @update.before_loop
     async def before_update(self) -> None:

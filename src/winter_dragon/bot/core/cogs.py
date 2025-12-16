@@ -43,7 +43,7 @@ class Cog(commands.Cog, LoggerMixin):
 
     """
 
-    bot: ClassVar[WinterDragon]
+    bot: WinterDragon
     cache: ClassVar[AppCommandCache]
     has_app_command_mentions: bool = False
 
@@ -57,7 +57,7 @@ class Cog(commands.Cog, LoggerMixin):
 
         Sets up a error handler, app command error handler, and logger for the cog.
         """
-        self.bot = kwargs.get("bot")
+        self.bot = kwargs["bot"]
         self.session = kwargs.get("db_session", Session(engine))
 
         if not getattr(Cog, "cache", None):
@@ -159,7 +159,7 @@ class Cog(commands.Cog, LoggerMixin):
         await self.bot.wait_until_ready()
 
     # Documentation mentions that `error` is CommandError, however it's type hinted with Exception?
-    async def cog_command_error(self, ctx: Context[BotT], error: commands.CommandError) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def cog_command_error(self, ctx: Context[BotT], error: commands.CommandError) -> None:  # type: ignore[invalid-method-override]
         """Handle errors that occur during command invocation."""
         for handler in ErrorFactory.get_handlers(self.bot, error, ctx=ctx):
             await handler.handle()

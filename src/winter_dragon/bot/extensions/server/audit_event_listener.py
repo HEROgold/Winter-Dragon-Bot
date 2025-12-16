@@ -14,7 +14,6 @@ class EventListener(Cog, auto_load=True):
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the event listener."""
         super().__init__(bot=bot)
-        self.bot = bot
 
     @Cog.listener()
     async def on_audit_log_entry_create(self, entry: AuditLogEntry) -> None:

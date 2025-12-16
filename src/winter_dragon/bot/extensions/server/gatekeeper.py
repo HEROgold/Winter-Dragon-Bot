@@ -55,7 +55,7 @@ class Gatekeeper(GroupCog, auto_load=True):
     async def send_verification_message(self, member: Member) -> None:
         """Send a verification message to the member."""
         view = View()
-        verify_button = Button[view](label="Accept Rules", style=ButtonStyle.green)
+        verify_button = Button[View](label="Accept Rules", style=ButtonStyle.green)
         view.add_item(verify_button)
 
         async def button_callback(interaction: Interaction) -> None:
@@ -64,7 +64,7 @@ class Gatekeeper(GroupCog, auto_load=True):
                 await member.add_roles(member_role)
                 await interaction.response.send_message("Welcome! You now have access to the guild.", ephemeral=True)
 
-        verify_button.callback = button_callback
+        verify_button.callback = button_callback  # ty:ignore[invalid-assignment]
 
         await member.send("Please accept the rules to gain access to the guild.", view=view)
 

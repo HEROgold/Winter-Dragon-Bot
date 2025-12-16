@@ -24,7 +24,9 @@ from winter_dragon.bot.extensions.server.stats import Stats
 from winter_dragon.bot.extensions.server.welcome import Welcome
 
 
-class GuildCreator(GroupCog, auto_load=True):
+# Deprecated on discord's end. Keeping for historical purposes.
+# Will be merged into the website (might need to "abuse" webhooks?)
+class GuildCreator(GroupCog, auto_load=False):
     """Cog for creating a new guild."""
 
     INIT_NAME = "Initializing guild"
@@ -34,7 +36,7 @@ class GuildCreator(GroupCog, auto_load=True):
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:
         """Listen for when a member joins the guild."""
-        if member.id != self.bot.user.id and member.guild.owner == self.bot.user:
+        if self.bot.user and member.id != self.bot.user.id and member.guild.owner == self.bot.user:
             await member.guild.edit(owner=member, reason="Transferring ownership to first joined member.")
 
     async def cog_load(self) -> None:
@@ -60,7 +62,8 @@ class GuildCreator(GroupCog, auto_load=True):
                     self.logger.warning(f"Owner ID {new_owner_id} not found.")
                     continue
                 invite = await guild.channels[0].create_invite(reason="Transferring ownership to a bot owner.")
-                await new_owner.dm_channel.send(f"Transferring ownership of guild to you. {invite.url}")
+                dm = new_owner.dm_channel or await new_owner.create_dm()
+                await dm.send(f"Transferring ownership of guild to you. {invite.url}")
 
     @app_commands.checks.cooldown(1, WEEK)
     @app_commands.command(name="create", description="Updates the current guild, assuming it is newly created.")
@@ -76,7 +79,7 @@ class GuildCreator(GroupCog, auto_load=True):
     ) -> None:
         """Update the current guild for the user, then invite the user."""
         await interaction.response.defer(thinking=True, ephemeral=True)
-        guild = interaction.guild
+        guild = await self.bot.create_guild(name=self.INIT_NAME)
         invite = await guild.channels[0].create_invite()
         await interaction.followup.send(invite.url)
         rules_channel = await guild.create_text_channel(

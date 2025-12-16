@@ -18,6 +18,8 @@ class PermissionsNotifier:
 
     async def notify(self) -> None:
         """Notify the user about missing permissions, roles or overwrites."""
+        if not isinstance(self.interaction.user, Member):
+            return
         bot_permissions = self.interaction.app_permissions
         user_permissions = self.interaction.user.resolved_permissions
         if user_permissions is None:

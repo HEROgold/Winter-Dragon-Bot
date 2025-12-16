@@ -82,12 +82,19 @@ class SyncedBans(GroupCog, auto_load=True):
             .where(SyncBanUser.user_id == Users.id, SyncBanGuild.guild_id == Guilds.id)
         )
         for result in self.session.exec(query).all():
-            reason, user, guild = result
-            guild = self.bot.get_guild(guild.id)
-            member = interaction.guild.get_member(user.id)
-            if member is None:
+            reason, user, db_guild = result
+            target_guild = self.bot.get_guild(db_guild.id)
+            if target_guild is None:
+                self.logger.warning(f"Guild with ID {db_guild.id} not found in bot guilds.")
                 continue
-            await interaction.guild.ban(
+            member = target_guild.get_member(user.id)
+            if member is None:
+                self.logger.warning(f"Member with ID {user.id} not found in guild {target_guild.name}.")
+                continue
+            await target_guild.ban(
                 member,
-                reason=f"Syncing bans: {reason or 'No reason provided'} from {guild.name if guild else 'Unknown Guild'}",
+                reason=(
+                    f"Syncing bans: {reason or 'No reason provided'} "
+                    f"from {interaction.guild.name if interaction.guild else 'Unknown Guild'}"
+                ),
             )

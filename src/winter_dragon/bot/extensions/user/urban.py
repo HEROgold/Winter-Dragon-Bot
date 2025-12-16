@@ -24,7 +24,7 @@ class Urban(GroupCog, auto_load=True):
 
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the Urban cog."""
-        self.bot = bot
+        super().__init__(bot=bot)
         self.loop = asyncio.get_event_loop()
 
     async def _get_response(self, url: str) -> requests.Response:

@@ -41,7 +41,8 @@ if TYPE_CHECKING:
 type MaybeAwaitable[T] = T | Awaitable[T]
 type MaybeAwaitableFunc[**P, T] = Callable[P, MaybeAwaitable[T]]
 type _Prefix = Iterable[str] | str
-type _PrefixCallable[BotT: BotBase] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
+# Ty has some issues with this. Ignore them for now.
+type _PrefixCallable[BotT: BotBase] = MaybeAwaitableFunc[[BotT, Message], _Prefix]  # ty: ignore
 type PrefixType[BotT: BotBase] = _Prefix | _PrefixCallable[BotT]
 
 type BotT[T: BotBase] = T
@@ -126,7 +127,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         """Get all the extensions in the extensions directory. Ignores extensions that start with _."""
         for root, _, files in os.walk(EXTENSIONS):
             for file in files:
-                if file.endswith(".py") and not file.startswith("_"):
+                if file.endswith(".py") and not file.startswith("_"):  # ty:ignore[unresolved-attribute]
                     extension = Path(root) / file
                     yield (
                         extension.as_posix().replace(f"{ROOT_DIR.parent.as_posix()}/", "").replace("/", ".").replace(".py", "")
@@ -138,7 +139,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         lib = module_from_spec(spec)
         sys.modules[key] = lib
         try:
-            spec.loader.exec_module(lib)
+            spec.loader.exec_module(lib)  # ty:ignore[possibly-missing-attribute]
         except Exception as e:
             del sys.modules[key]
             raise ExtensionFailed(key, e) from e
@@ -151,7 +152,11 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             await self._call_module_finalizers(lib, key)
             raise ExtensionFailed(key, e) from e
         else:
-            self._BotBase__extensions[key] = lib
+            # Store the loaded extension in the mangled __extensions attribute
+            # This is required, because discord.py _load_from_module_spec is internal
+            # And we want to change how extensions are loaded without calling setup()
+            # we use auto_load on Cogs to initialize them
+            self._BotBase__extensions[key] = lib  # ty:ignore[unresolved-attribute]
 
     async def _init_cogs(self, lib: ModuleType) -> None:
         """Set up a cog by calling its cog_load method if it exists."""

@@ -244,7 +244,7 @@ class LogChannels(GroupCog, auto_load=True):
         )
         channels = list(result.all())
         if not channels:
-            c_mention = await self.get_command_mention(self.slash_log_add)
+            c_mention = self.get_command_mention(self.slash_log_add)
             await interaction.followup.send(f"Can't find LogChannels. Try using {c_mention}")
             return
 

@@ -3,7 +3,7 @@
 import math
 import random
 from collections.abc import Sequence
-from typing import cast
+from typing import TypedDict, cast
 
 import discord
 from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
@@ -17,7 +17,11 @@ from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 
 
-type TeamDict = dict[str, int | list[Member]]
+class TeamDict(TypedDict):
+    """Dictionary representing a team."""
+
+    id: int
+    members: list[Member]
 
 
 @app_commands.guild_only()
@@ -69,10 +73,10 @@ class Team(GroupCog, auto_load=True):
         # create teams, and fill members with amount of users
         # (evenly split among each team)
         teams: list[TeamDict] = [
-            {
-                "id": i + 1,
-                "members": [members[j + i * members_count] for j in range(members_count)],
-            }
+            TeamDict(
+                id=i + 1,
+                members=[members[j + i * members_count] for j in range(members_count)],
+            )
             for i in range(team_count)
         ]
 
