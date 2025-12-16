@@ -12,7 +12,8 @@ class ForumDupeFinder(GroupCog, auto_load=True):
     def __init__(self, bot: WinterDragon) -> None:
         """Initialize the ForumDupeFinder with the bot instance."""
         super().__init__(bot=bot)
-        self.forum_posts: list[str] = []  # TODO: replace with actual forum posts titles, preferably from database.
+        self.forum_posts: list[str] = []
+        # TODO(Herogold, #4): Replace this list with forum post titles from the database.  # noqa: FIX002
 
     def get_ratio(self, a: str, b: str) -> float:
         """Calculate the similarity ratio between two strings."""

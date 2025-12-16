@@ -38,5 +38,5 @@ class Fuel(GroupCog, auto_load=True):
         fuels = self.session.exec(select(DbFuel).where(DbFuel.user_id == interaction.user.id)).all()
         fuels = sorted(fuels, key=lambda x: x.timestamp)
         fuels = [(x.timestamp, x.distance / x.amount) for x in fuels]
-        # TODO: plot a graph
+        # TODO(Herogold, #6): plot a graph.  # noqa: FIX002
         await interaction.response.send_message(fuels, ephemeral=True)

@@ -1,3 +1,5 @@
+"""Scraper utilities for Steam bundle listings."""
+
 from collections.abc import AsyncGenerator
 
 from bs4 import BeautifulSoup

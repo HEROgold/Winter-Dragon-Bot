@@ -1,3 +1,5 @@
+"""Common helpers for Steam scraping implementations."""
+
 import asyncio
 
 import requests

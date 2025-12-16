@@ -12,7 +12,7 @@ from winter_dragon.database.tables import Welcome as WelcomeDb
 @app_commands.guild_only()
 @app_commands.checks.has_permissions(administrator=True)
 class Welcome(GroupCog, auto_load=True):
-    """Cog to contain the welcome commands."""
+    """Cog containing the welcome commands."""
 
     allowed_welcome_dm = Config(default=True)
 

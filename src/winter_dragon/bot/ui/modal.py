@@ -1,3 +1,5 @@
+"""UI primitives built on top of discord.py modals."""
+
 from discord.ui import Modal as DiscordModal
 from discord.utils import MISSING
 from herogold.log import LoggerMixin

@@ -1,3 +1,5 @@
+"""Base error helpers for Discord command handling."""
+
 from abc import ABC, abstractmethod
 from typing import Self, overload
 

@@ -1,3 +1,5 @@
+"""Scrapers for individual Steam store app pages."""
+
 from datetime import UTC, datetime
 
 from bs4 import BeautifulSoup, Tag

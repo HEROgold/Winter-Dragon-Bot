@@ -117,7 +117,7 @@ class LogChannels(GroupCog, auto_load=True):
             Channels.update(log_channel)
             yield channel, log_channel
 
-    # FIXME: This requires the bot to have Administrator
+    # TODO(Herogold, #5): This requires the bot to have Administrator.  # noqa: FIX002
     # Failing case: Command user is guild owner, and has administrator due to a role
     # The bot does have manage_channels, but not administrator permissions
     # This will cause the command to fail, raising 403 forbidden.

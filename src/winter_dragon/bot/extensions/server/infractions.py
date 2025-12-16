@@ -26,9 +26,12 @@ class Infractions(GroupCog, auto_load=True):
     """Track automod interaction from discord, keep track of amount of violations
     (Infractions) Ban users when X amount have reached. (Per guild configurable).
 
-    TODO: Add automod rules to keep track of,
-    TODO: On automod trigger, add infraction (Delete old ones)
-    TODO: Make rules that can trigger an infraction.
+    TODO(Herogold, #8):
+        Add automod rules to keep track of.
+    TODO(Herogold, #9):
+        On automod trigger, add infraction (delete old ones).
+    TODO(Herogold, #10):
+        Make rules that can trigger an infraction.
         IE: Spamming the same message in more then X amount of channels
     """  # noqa: D205
 

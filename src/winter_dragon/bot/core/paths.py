@@ -1,3 +1,5 @@
+"""Centralized filesystem paths shared across the bot codebase."""
+
 from pathlib import Path
 
 

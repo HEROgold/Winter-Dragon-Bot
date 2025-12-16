@@ -39,9 +39,9 @@ def migrate_steam_sale_properties() -> None:
         if sale.id is None:
             continue
         properties = []
-        if sale.is_dlc:
+        if getattr(sale, "is_dlc", False):
             properties.append(SaleTypes.DLC)
-        if sale.is_bundle:
+        if getattr(sale, "is_bundle", False):
             properties.append(SaleTypes.BUNDLE)
         for prop in properties:
             new_property = SteamSaleProperties(steam_sale_id=sale.id, property=prop)

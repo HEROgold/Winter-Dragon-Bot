@@ -1,3 +1,5 @@
+"""Scraper utilities for Steam search result pages."""
+
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 
@@ -96,24 +98,33 @@ class SearchScraper(BaseScraper):
         if "sub" in str(url) or "bundle" in str(url):
             # Note: .com/sub/    is used in searchable bundles. As seen in https://store.steampowered.com/sub/66335
             # Note: .com/bundle/ is used for game related bundles. Seen in https://store.steampowered.com/bundle/62652
-            self.logger.debug(f"Found bundle or sub: {url=}, processing bundle items")
-            async for item in self.bundle_scraper.get_games_from_bundle(SteamURL(str(url))):
-                self.logger.debug(f"Processing bundle item: {item=}")
-            SteamSaleProperties(steam_sale_id=int(str(app_id)), property=SaleTypes.BUNDLE)
-            return SteamSale(
-                id=int(str(app_id).split(",")[0]),
+            await self._extract_bundle_sale(a_tag, sale_percentage)
+        else:
+            steam_sale = SteamSale(
+                id=int(str(app_id)),
                 title=title,
                 url=str(url),
                 sale_percent=sale_percentage,
                 final_price=price_to_num(price),
                 update_datetime=datetime.now(tz=UTC),
             )
+        return steam_sale
 
+    async def _extract_bundle_sale(self, a_tag: Tag, sale_percentage: int) -> SteamSale:
+        price = a_tag.find(class_=DISCOUNT_FINAL_PRICE)
+        title = a_tag.find(class_=SEARCH_GAME_TITLE)
+        app_id = a_tag.get(DATA_APPID)
+        url = a_tag.get("href")
+
+        self.logger.debug(f"Found bundle or sub: {url=}, processing bundle items")
+        async for item in self.bundle_scraper.get_games_from_bundle(SteamURL(str(url))):
+            self.logger.debug(f"Processing bundle item: {item=}")
+        SteamSaleProperties(steam_sale_id=int(str(app_id)), property=SaleTypes.BUNDLE)
         return SteamSale(
-            id=int(str(app_id)),
-            title=title,
+            id=int(str(app_id).split(",")[0]),
+            title=title.get_text() or "Bundle",
             url=str(url),
             sale_percent=sale_percentage,
-            final_price=price_to_num(price),
+            final_price=price_to_num(price.get_text()) if price else 0.0,
             update_datetime=datetime.now(tz=UTC),
         )

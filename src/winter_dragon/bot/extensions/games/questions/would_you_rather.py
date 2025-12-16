@@ -81,7 +81,10 @@ class WouldYouRather(BaseQuestionGame[WyrQuestion], auto_load=True):
         "Would you rather wear a wedding dress/tuxedo every single day or wear a bathing suit every single day?",
         "Would you rather be unable to move your body every time it rains or not be able to stop moving while the sun is out?",
         "Would you rather have all dogs try to attack you when they see you or all birds try to attack you when they see you?",
-        "Would you rather be compelled to high five everyone you meet or be compelled to give wedgies to anyone in a green shirt?",
+        (
+            "Would you rather be compelled to high five everyone you meet or be compelled "
+            "to give wedgies to anyone in a green shirt?"
+        ),
         "Would you rather have skin that changes color based on your emotions or tattoos appear all over your body depicting what you did yesterday?",  # noqa: E501
         "Would you rather randomly time travel +/- 20 years every time you fart or teleport to a different place on earth (on land, not water) every time you sneeze?",  # noqa: E501
         "Would you rather there be a perpetual water balloon war going on in your city/town or a perpetual food fight?",

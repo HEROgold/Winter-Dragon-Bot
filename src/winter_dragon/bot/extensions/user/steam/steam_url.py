@@ -1,9 +1,11 @@
+"""Utility helpers for parsing Steam store URLs."""
+
 import re
 
 from herogold.log import LoggerMixin
 
 
-# FIXME ValueError: invalid literal for int() with base 10: '357070,366420,546090,701470,1836120'
+# TODO(Herogold, #7): Handle multi-id strings returned by Steam (e.g. "357070,366420,546090").  # noqa: FIX002
 class SteamURL(LoggerMixin):
     """Class to handle Steam URLs."""
 

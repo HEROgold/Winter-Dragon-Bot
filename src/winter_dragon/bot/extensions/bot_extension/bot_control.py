@@ -43,7 +43,7 @@ INVALID_RNG_ACTIVITY = [
 ]
 
 
-# TODO: Split into metrics Cog and Activity Cog.
+# TODO(Herogold, #2): Split into metrics Cog and Activity Cog.  # noqa: FIX002
 
 
 @app_commands.guilds(Settings.support_guild_id)
