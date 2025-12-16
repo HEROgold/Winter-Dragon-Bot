@@ -16,13 +16,13 @@ class Environments(enum.StrEnum):
     production = auto()
     staging = auto()
 
+
 class Sentry:
     """A class to handle Sentry setup."""
 
     Telemetry = Config(default=True)
     dsn = Config("")
     environment = Config(Enum(Environments.development))
-
 
     def __init__(self) -> None:
         """Initialize Sentry."""
@@ -35,5 +35,5 @@ class Sentry:
             _experiments={
                 "enable_logs": True,
             },
-            traces_sample_rate=1, # 100% of error traces will be sent
+            traces_sample_rate=1,  # 100% of error traces will be sent
         )

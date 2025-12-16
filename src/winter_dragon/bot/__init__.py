@@ -1,4 +1,3 @@
-
 from . import ui
 from .core.config import Config
 from .core.settings import Settings

@@ -21,6 +21,7 @@ from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 
 models: set[type["BaseModel"]] = set()
 
+
 class ModelLogger(LoggerMixin):
     """Polymorphic logger for model, on cls level methods.
 
@@ -55,9 +56,7 @@ class BaseModel(BaseSQLModel):
         self.logger.debug(f"Record update requested: {self}")
         session = self._get_session(session)
         if known := session.exec(
-            select(self.__class__)
-            .where(self.__class__.id == self.id)
-            .with_for_update(),
+            select(self.__class__).where(self.__class__.id == self.id).with_for_update(),
         ).first():
             return self._update_record(known, session)
         return self._create_record(session)
@@ -69,9 +68,7 @@ class BaseModel(BaseSQLModel):
         session = cls._get_session(session)
 
         if known := session.exec(
-            select(cls).where(cls.id == id_).with_for_update()
-            if with_for_update
-            else select(cls).where(cls.id == id_),
+            select(cls).where(cls.id == id_).with_for_update() if with_for_update else select(cls).where(cls.id == id_),
         ).first():
             return known
         msg = f"Record with {cls.__name__}.id={id_} not found."
@@ -95,9 +92,7 @@ class BaseModel(BaseSQLModel):
         self.logger.debug(f"Deleting record: {self}")
         session = self._get_session(session)
         if known := session.exec(
-            select(self.__class__)
-            .where(self.__class__.id == self.id)
-            .with_for_update(),
+            select(self.__class__).where(self.__class__.id == self.id).with_for_update(),
         ).first():
             session.delete(known)
             session.commit()
@@ -136,6 +131,7 @@ class SQLModel(BaseModel):
     """Base SQLModel class with custom methods."""
 
     id: int | None = Field(default=None, primary_key=True, index=True, unique=True)
+
 
 class DiscordID(BaseModel):
     """Model with a Discord ID as primary key."""

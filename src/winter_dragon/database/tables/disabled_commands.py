@@ -9,7 +9,6 @@ from winter_dragon.database.tables.user import Users
 
 
 class DisabledCommands(SQLModel, table=True):
-
     command_id: int = Field(foreign_key=get_foreign_key(Commands), primary_key=True)
     user_id: int = Field(foreign_key=get_foreign_key(Users), nullable=True)
     channel_id: int = Field(foreign_key=get_foreign_key(Channels), nullable=True)
@@ -37,7 +36,6 @@ class DisabledCommands(SQLModel, table=True):
         if sum([bool(user_id), bool(channel_id), bool(guild_id)]) > 1:
             raise ValueError("Only one of user_id, channel_id, or guild_id can be set!")  # noqa: EM101, TRY003
         super().__init__(**kw)
-
 
     @property
     def target_id(self) -> int:

@@ -1,4 +1,5 @@
 """Module for an Abstract class, for questionnaire like games."""
+
 from abc import abstractmethod
 from collections.abc import Sequence
 from typing import Any, Generic, TypeVar, Unpack
@@ -13,6 +14,8 @@ from winter_dragon.database.tables import Games, Suggestions
 
 MISSING: Any = object()
 T = TypeVar("T", bound=SQLModel)
+
+
 class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
     """Base class for question-based games like Never Have I Ever and Would You Rather."""
 
@@ -96,11 +99,13 @@ class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
 
     async def add(self, interaction: discord.Interaction, question: str) -> None:
         """Add a new question to the game."""
-        self.session.add(Suggestions(
-            id=None,
-            type=self.GAME_NAME,
-            content=question,
-        ))
+        self.session.add(
+            Suggestions(
+                id=None,
+                type=self.GAME_NAME,
+                content=question,
+            ),
+        )
         self.session.commit()
         await interaction.response.send_message(
             f"The question ```{question}``` is added, it will be verified later.",
@@ -109,10 +114,12 @@ class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
 
     async def add_verified(self, interaction: discord.Interaction) -> None:
         """Add all verified questions to the game."""
-        result = self.session.exec(select(Suggestions).where(
-            Suggestions.type == self.GAME_NAME,
-            Suggestions.verified_at is not None,
-        ))
+        result = self.session.exec(
+            select(Suggestions).where(
+                Suggestions.type == self.GAME_NAME,
+                Suggestions.verified_at is not None,
+            ),
+        )
         questions = result.all()
         if not questions:
             await interaction.response.send_message("No questions to add", ephemeral=True)

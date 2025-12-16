@@ -108,8 +108,9 @@ class GuildCreator(GroupCog, auto_load=True):
                 widget_enabled=True,
                 widget_channel=await guild.create_text_channel("widget", position=0, topic="Widget channel"),
             )
-        await system_channel.send(dedent(
-            f"""Guild initialized!
+        await system_channel.send(
+            dedent(
+                f"""Guild initialized!
             Use {self.get_command_mention(LogChannels.slash_log_add)} to setup logging channels.
             Use {self.get_command_mention(LogChannels.slash_log_remove)} to remove logging channels.
             Use {self.get_command_mention(Stats.slash_stats_category_add)} to add stat channels (i.e. Member count).
@@ -117,7 +118,8 @@ class GuildCreator(GroupCog, auto_load=True):
             Use {self.get_command_mention(Welcome.slash_set_msg)} to set a custom welcome message.
             Use {self.get_command_mention(Welcome.slash_enable)} to enable welcome messages.
             Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages.""",
-        ))
+            ),
+        )
         await guild.edit(
             reason="Initializing guild",
             name=name,
@@ -126,16 +128,16 @@ class GuildCreator(GroupCog, auto_load=True):
             rules_channel=rules_channel,
             public_updates_channel=guild.public_updates_channel,
             afk_channel=afk_channel,
-            #/icon=guild.icon,
-            #/banner=guild.banner,
-            #/splash=guild.splash,
-            #/discovery_splash=guild.discovery_splash,
+            # /icon=guild.icon,
+            # /banner=guild.banner,
+            # /splash=guild.splash,
+            # /discovery_splash=guild.discovery_splash,
             owner=interaction.user,
             afk_timeout=600,
             default_notifications=NotificationLevel.only_mentions,
             verification_level=VerificationLevel.highest,
             explicit_content_filter=ContentFilter.all_members,
-            #/vanity_code=None,
+            # /vanity_code=None,
             system_channel=system_channel,
             system_channel_flags=SystemChannelFlags(join_notifications=True, premium_subscriptions=True),
             preferred_locale=Locale.british_english,

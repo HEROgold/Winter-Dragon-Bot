@@ -1,4 +1,5 @@
 """Module for storing and managing fuel data."""
+
 import discord
 from discord import app_commands
 from sqlmodel import select
@@ -20,12 +21,14 @@ class Fuel(GroupCog, auto_load=True):
         Distance: The distance traveled since the last refuel.
         Amount: The amount of fuel added.
         """
-        self.session.add(DbFuel(
-            user_id=interaction.user.id,
-            amount=amount,
-            distance=distance,
-            price=price,
-        ))
+        self.session.add(
+            DbFuel(
+                user_id=interaction.user.id,
+                amount=amount,
+                distance=distance,
+                price=price,
+            ),
+        )
         self.session.commit()
         await interaction.response.send_message(f"Stored {price=}, {distance=}, {amount=}", ephemeral=True)
 

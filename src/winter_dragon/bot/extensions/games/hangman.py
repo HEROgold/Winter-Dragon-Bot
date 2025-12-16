@@ -193,7 +193,7 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
                     Guesses: {hidden_word}
                     Word: {self.hangman_db.word}
                     {hangman}`
-                    Letters: {self.hangman_db.letters}"""    ,
+                    Letters: {self.hangman_db.letters}""",
                 ),
                 view=None,
             )
@@ -266,10 +266,12 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
             self.logger.warning(msg)
             raise ValueError(msg)
 
-        self.hangman_db = self.session.exec(
-                select(HangmanDb)
-                .where(HangmanDb.message_id == self.interaction.message.id),
-            ).first() or await self.new_hangman_game()
+        self.hangman_db = (
+            self.session.exec(
+                select(HangmanDb).where(HangmanDb.message_id == self.interaction.message.id),
+            ).first()
+            or await self.new_hangman_game()
+        )
 
     def calculate_placement(self, hangman_players: list[AUH], player: AUH) -> int:
         """Calculate the placement of the player."""
@@ -278,6 +280,7 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
     def rank_hangman_players(self, hangman_players: list[AUH]) -> None:
         """Rank the hangman players."""
         try:
+
             def sort_key(x: AUH) -> int:
                 return x.score
 
@@ -293,9 +296,8 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
             raise ValueError(msg)
 
         hangman_players = self.session.exec(
-                select(AUH)
-                .where(AUH.hangman_id == self.interaction.message.id),
-            ).all()
+            select(AUH).where(AUH.hangman_id == self.interaction.message.id),
+        ).all()
         self.logger.debug(f"{hangman_players=}")
         return list(hangman_players)
 
@@ -309,11 +311,7 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
 
     def validate_guessed_letters(self) -> list[bool]:
         """Validate guessed letters."""
-        checks: list[bool] = [
-            truthy
-            for letter in self.hangman_db.word
-            if (truthy := letter in self.hangman_db.letters)
-        ]
+        checks: list[bool] = [truthy for letter in self.hangman_db.word if (truthy := letter in self.hangman_db.letters)]
         self.logger.debug(f"{checks=}")
         return checks
 
@@ -325,11 +323,11 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
             raise ValueError(msg)
 
         player = self.session.exec(
-                select(AUH).where(
-                    AUH.hangman_id == self.interaction.message.id,
-                    AUH.user_id == self.interaction.user.id,
-                ),
-            ).first()
+            select(AUH).where(
+                AUH.hangman_id == self.interaction.message.id,
+                AUH.user_id == self.interaction.user.id,
+            ),
+        ).first()
         return player or self.create_player_record()
 
     def create_player_record(self) -> AUH:

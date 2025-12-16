@@ -48,6 +48,7 @@ from winter_dragon.database.tables import Channels
 LOGS = ChannelTypes.LOGS
 MAX_CATEGORY_SIZE = 50
 
+
 class LogChannels(GroupCog, auto_load=True):
     """Manage log channel/category provisioning and synchronization.
 
@@ -56,9 +57,9 @@ class LogChannels(GroupCog, auto_load=True):
 
     log_channel_name = Config("LOG-CATEGORY")
 
-# ----------------------
-# Helper Functions Start
-# ----------------------
+    # ----------------------
+    # Helper Functions Start
+    # ----------------------
 
     def get_log_category(self, category_channels: list[CategoryChannel], current_count: int) -> CategoryChannel:
         """Get the log category for the current count of log channels."""
@@ -67,31 +68,29 @@ class LogChannels(GroupCog, auto_load=True):
         self.logger.debug(f"{category_channels=}, {channel_locator=}")
 
         if channel_locator + len(category_channel.channels) > MAX_CATEGORY_SIZE:
-            channel_location = (len(category_channel.channels) + channel_locator)
+            channel_location = len(category_channel.channels) + channel_locator
             return self.get_log_category(category_channels, channel_location)
         return category_channel
-
 
     # NOTE: All previous embed construction & log dispatch helpers removed.
     # Event dispatch now happens in winter_dragon.bot.events.* modules.
 
-# ----------------------
-# Helper Functions End
-# ----------------------
+    # ----------------------
+    # Helper Functions End
+    # ----------------------
 
     # Removed legacy @Cog.listener() methods; see winter_dragon.bot.events.*
 
-# ---------------
-# Commands Start
-# ---------------
+    # ---------------
+    # Commands Start
+    # ---------------
 
     @app_commands.command(name="detect", description="Finds already existing log channels from this bot in the guild.")
     async def slash_detect(self, interaction: discord.Interaction) -> None:
         """Detect existing log channels in the guild."""
         await interaction.response.defer(ephemeral=True)
         await interaction.followup.send(
-            f"Found log channels:\n"
-            f"{"".join([channel[0].mention async for channel in self.detect_channels(interaction)])}",
+            f"Found log channels:\n{''.join([channel[0].mention async for channel in self.detect_channels(interaction)])}",
         )
 
     async def detect_channels(self, interaction: discord.Interaction) -> AsyncGenerator[tuple[TextChannel, Channels]]:
@@ -105,16 +104,8 @@ class LogChannels(GroupCog, auto_load=True):
             msg = "Bot user is None"
             raise TypeError(msg)
         categories = guild.categories
-        logging_categories = [
-            category
-            for category in categories
-            if f"{bot_user.display_name} Log " in category.name
-        ]
-        logging_channels = [
-            channel
-            for category in logging_categories
-            for channel in category.text_channels
-        ]
+        logging_categories = [category for category in categories if f"{bot_user.display_name} Log " in category.name]
+        logging_channels = [channel for category in logging_categories for channel in category.text_channels]
         # Update the database with the found channels
         for channel in logging_channels:
             log_channel = Channels(
@@ -140,8 +131,8 @@ class LogChannels(GroupCog, auto_load=True):
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     @app_commands.command(
-        name = "add",
-        description = "Enables automatic moderation/logging for this guild, and creates a channel for all logs.",
+        name="add",
+        description="Enables automatic moderation/logging for this guild, and creates a channel for all logs.",
     )
     async def slash_log_add(self, interaction: discord.Interaction) -> None:
         """Create log channels for the guild. Creates category channels, to insert the channels into."""
@@ -171,7 +162,7 @@ class LogChannels(GroupCog, auto_load=True):
         category_mention = ", ".join(i.mention for i in category_channels)
         await interaction.followup.send(
             f"Set up Log category and channels under {category_mention}",
-            )
+        )
         self.logger.info(f"Setup Log for {interaction.guild}")
 
     async def create_categories(
@@ -187,18 +178,20 @@ class LogChannels(GroupCog, auto_load=True):
 
         for i in range(category_count):
             category_channel = await guild.create_category(
-                name=f"{bot_user.display_name} Log {i+1}",
+                name=f"{bot_user.display_name} Log {i + 1}",
                 overwrites=overwrites,
                 position=99,
                 reason="Adding Log channels",
             )
             category_channels.append(category_channel)
-            Channels.update(Channels(
-                id = category_channel.id,
-                name = self.log_channel_name,
-                type = LOGS,
-                guild_id = category_channel.guild.id,
-            ))
+            Channels.update(
+                Channels(
+                    id=category_channel.id,
+                    name=self.log_channel_name,
+                    type=LOGS,
+                    guild_id=category_channel.guild.id,
+                ),
+            )
         return category_channels
 
     async def create_log_channels(self, category_channels: list[CategoryChannel]) -> None:
@@ -211,12 +204,14 @@ class LogChannels(GroupCog, auto_load=True):
                 name=f"{log_category_name.lower()}",
                 reason="Adding Log channels",
             )
-            Channels.update(Channels(
-                id = text_channel.id,
-                name = log_category_name,
-                type = LOGS,
-                guild_id = text_channel.guild.id,
-            ))
+            Channels.update(
+                Channels(
+                    id=text_channel.id,
+                    name=log_category_name,
+                    type=LOGS,
+                    guild_id=text_channel.guild.id,
+                ),
+            )
 
     def get_db_log_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all log channels from the database."""
@@ -227,24 +222,26 @@ class LogChannels(GroupCog, auto_load=True):
             ),
         ).all()
 
-
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.checks.cooldown(1, 100)
     @app_commands.command(
         name="remove",
-        description="Disables automatic moderation for this guild, and removes the log channels.")
-    async def slash_log_remove(self, interaction:discord.Interaction) -> None:
+        description="Disables automatic moderation for this guild, and removes the log channels.",
+    )
+    async def slash_log_remove(self, interaction: discord.Interaction) -> None:
         """Remove all log channels for this guild."""
         guild = interaction.guild
         if guild is None:
             msg = "Guild is None"
             raise TypeError(msg)
-        result = self.session.exec(select(Channels).where(
-            Channels.type == LOGS,
-            Channels.guild_id == guild.id,
-        ))
+        result = self.session.exec(
+            select(Channels).where(
+                Channels.type == LOGS,
+                Channels.guild_id == guild.id,
+            ),
+        )
         channels = list(result.all())
         if not channels:
             c_mention = await self.get_command_mention(self.slash_log_add)
@@ -267,11 +264,10 @@ class LogChannels(GroupCog, auto_load=True):
         await interaction.followup.send("Removed LogChannels")
         self.logger.info(f"Removed Log for {interaction.guild}")
 
-
     @app_commands.guilds(Settings.support_guild_id)
     @commands.is_owner()
-    @app_commands.command(name = "update", description = "Update Log channels")
-    async def slash_log_update(self, interaction: discord.Interaction, guild_id: int | None=None) -> None:
+    @app_commands.command(name="update", description="Update Log channels")
+    async def slash_log_update(self, interaction: discord.Interaction, guild_id: int | None = None) -> None:
         """Update all log channels for the guild."""
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
@@ -280,22 +276,21 @@ class LogChannels(GroupCog, auto_load=True):
         await self.update_log(guild=guild)
         await interaction.followup.send("Updated Log channels on all servers!")
 
-
     async def update_log(self, guild: discord.Guild | None = None) -> None:
         """Update log channels for a guild."""
         self.logger.debug(f"Updating Log for {guild=}")
         if guild is None:
-            guild_id = (
-                self.session.exec(select(Channels.guild_id)
-                    .where(Channels.type == LOGS),
-                    ).first()
-            )
+            guild_id = self.session.exec(
+                select(Channels.guild_id).where(Channels.type == LOGS),
+            ).first()
             return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
 
-        channels = self.session.exec(select(Channels).where(
-            Channels.type == LOGS,
-            Channels.guild_id == guild.id,
-        )).all()
+        channels = self.session.exec(
+            select(Channels).where(
+                Channels.type == LOGS,
+                Channels.guild_id == guild.id,
+            ),
+        ).all()
 
         div, mod = divmod(len(AuditLogAction), MAX_CATEGORY_SIZE)
         required_category_count = div + (1 if mod > 0 else 0)
@@ -305,10 +300,7 @@ class LogChannels(GroupCog, auto_load=True):
         difference: list[str] = []
         known_names = [channel.name.lower() for channel in channels]
 
-        difference.extend(
-            j for j in [i.name.lower() for i in AuditLogAction]
-            if j not in known_names
-        )
+        difference.extend(j for j in [i.name.lower() for i in AuditLogAction] if j not in known_names)
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
 
         for i, channel_name in enumerate(difference):
@@ -316,27 +308,27 @@ class LogChannels(GroupCog, auto_load=True):
 
             new_log_channel = await category_channel.create_text_channel(channel_name, reason="Log update")
             self.logger.info(f"Updated Log for {guild=} with {new_log_channel=}")
-            Channels.update(Channels(
-                id = new_log_channel.id,
-                name = channel_name,
-                type = LOGS,
-                guild_id = category_channel.guild.id,
-            ))
+            Channels.update(
+                Channels(
+                    id=new_log_channel.id,
+                    name=channel_name,
+                    type=LOGS,
+                    guild_id=category_channel.guild.id,
+                ),
+            )
         self.session.commit()
         return None
 
-
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
         """Update the required category count for the guild."""
-        categories = self.session.exec(select(Channels).where(
-            Channels.name == self.log_channel_name,
-            Channels.type == LOGS,
-            Channels.guild_id == guild.id,
-        )).all()
-        category_channels = [
-            discord.utils.get(guild.categories, id=category.id)
-            for category in categories
-        ]
+        categories = self.session.exec(
+            select(Channels).where(
+                Channels.name == self.log_channel_name,
+                Channels.type == LOGS,
+                Channels.guild_id == guild.id,
+            ),
+        ).all()
+        category_channels = [discord.utils.get(guild.categories, id=category.id) for category in categories]
         current_category_count = len(category_channels) or len(categories)
 
         if current_category_count < required_category_count:
@@ -346,8 +338,8 @@ class LogChannels(GroupCog, auto_load=True):
                     msg = "Bot user is None"
                     raise TypeError(msg)
                 category_channel = await guild.create_category(
-                    name=f"{bot_user.display_name} Log {i+1}",
-                    overwrites= {
+                    name=f"{bot_user.display_name} Log {i + 1}",
+                    overwrites={
                         guild.default_role: discord.PermissionOverwrite(view_channel=False),
                         guild.me: discord.PermissionOverwrite.from_pair(
                             discord.Permissions.all(),
@@ -358,15 +350,18 @@ class LogChannels(GroupCog, auto_load=True):
                     reason="Adding Log channels",
                 )
                 category_channels.append(category_channel)
-                Channels.update(Channels(
-                    id = category_channel.id,
-                    name = self.log_channel_name,
-                    type = LOGS,
-                    guild_id = category_channel.guild.id,
-                ))
+                Channels.update(
+                    Channels(
+                        id=category_channel.id,
+                        name=self.log_channel_name,
+                        type=LOGS,
+                        guild_id=category_channel.guild.id,
+                    ),
+                )
         self.session.commit()
 
         return cast("list[CategoryChannel]", category_channels)
+
 
 # ------------
 # Commands End

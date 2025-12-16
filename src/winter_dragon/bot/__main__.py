@@ -19,7 +19,7 @@ from winter_dragon.database.constants import engine
 
 if not config.is_valid():
     msg = f"""Config is not yet updated!, update the following:
-        {', '.join(config.get_invalid())}"""
+        {", ".join(config.get_invalid())}"""
     raise ConfigError(msg)
 
 
@@ -30,6 +30,7 @@ bot = WinterDragon(
 )
 tree = bot.tree
 
+
 @bot.event
 async def on_ready() -> None:
     """Log when the bot is ready. Note that this may happen multiple times per boot."""
@@ -39,7 +40,6 @@ async def on_ready() -> None:
     Config.write()
 
     bot.logger.info(f"Logged on as {bot.user}!")
-
 
 
 @commands.is_owner()

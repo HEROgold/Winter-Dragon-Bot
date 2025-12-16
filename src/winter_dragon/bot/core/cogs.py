@@ -1,4 +1,5 @@
 """Module that contains Cogs, which are extended classes of discord.ext.commands.Cog/GroupCog."""
+
 from __future__ import annotations
 
 from itertools import chain
@@ -30,6 +31,7 @@ class BotArgs(TypedDict):
 
     bot: Required[WinterDragon]
     db_session: NotRequired[Session]
+
 
 class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
@@ -80,7 +82,6 @@ class Cog(commands.Cog, LoggerMixin):
         if self.__class__ not in (Cog, GroupCog):  # type: ignore[name-defined]
             self.bot.loop.create_task(self.auto_load())
 
-
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         """Check if a command is disabled for a guild, channel, or user."""
         if interaction.message is None or not isinstance(interaction, commands.Context):
@@ -99,13 +100,17 @@ class Cog(commands.Cog, LoggerMixin):
         guild_id = interaction.guild.id if interaction.guild else None
 
         # Check if command is disabled for user, channel, or guild
-        statement = select(DisabledCommands).join(Commands).where(
-            (Commands.qual_name == qual_name) &
-            (
-                (DisabledCommands.target_id == user_id) |
-                (DisabledCommands.target_id == channel_id) |
-                (DisabledCommands.target_id == guild_id)
-            ),
+        statement = (
+            select(DisabledCommands)
+            .join(Commands)
+            .where(
+                (Commands.qual_name == qual_name)
+                & (
+                    (DisabledCommands.target_id == user_id)
+                    | (DisabledCommands.target_id == channel_id)
+                    | (DisabledCommands.target_id == guild_id)
+                ),
+            )
         )
 
         # Return True if any matching disabled command exists
@@ -154,7 +159,7 @@ class Cog(commands.Cog, LoggerMixin):
         await self.bot.wait_until_ready()
 
     # Documentation mentions that `error` is CommandError, however it's type hinted with Exception?
-    async def cog_command_error(self, ctx: Context[BotT], error: commands.CommandError) -> None: # pyright: ignore[reportIncompatibleMethodOverride]
+    async def cog_command_error(self, ctx: Context[BotT], error: commands.CommandError) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
         """Handle errors that occur during command invocation."""
         for handler in ErrorFactory.get_handlers(self.bot, error, ctx=ctx):
             await handler.handle()

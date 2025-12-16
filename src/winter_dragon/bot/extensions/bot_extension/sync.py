@@ -1,4 +1,5 @@
 """Module to sync slash commands with the Discord API."""
+
 from typing import TYPE_CHECKING
 
 import discord
@@ -35,7 +36,6 @@ class Sync(Cog, auto_load=True):
         local_list = [command.name for command in local_sync]
         local_list.sort()
         await interaction.followup.send(f"Sync complete\nSynced: {local_list} to {guild}")
-
 
     @commands.is_owner()
     @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")

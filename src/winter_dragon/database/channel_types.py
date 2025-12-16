@@ -1,4 +1,5 @@
 """Module containing channel types for the database."""
+
 from enum import Enum, auto
 
 

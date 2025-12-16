@@ -40,10 +40,15 @@ class AutoReAssign(GroupCog, auto_load=True):
     async def on_member_join(self, member: discord.Member) -> None:
         """When a member joins, check if they have any roles to be auto-assigned."""
         guild = member.guild
-        for role in self.session.exec(select(Roles).join(UserRoles).join(GuildRoles).where(
-            UserRoles.user_id == member.id,
-            GuildRoles.guild_id == guild.id,
-        )).all():
+        for role in self.session.exec(
+            select(Roles)
+            .join(UserRoles)
+            .join(GuildRoles)
+            .where(
+                UserRoles.user_id == member.id,
+                GuildRoles.guild_id == guild.id,
+            ),
+        ).all():
             if role.id is None:
                 self.logger.critical(f"on_member_join: Role ID is none for role {role=}, {guild=}")
                 continue
@@ -56,7 +61,7 @@ class AutoReAssign(GroupCog, auto_load=True):
     @app_commands.command(name="enable", description="Enable the AutoReAssign feature")
     async def slash_enable(self, interaction: discord.Interaction) -> None:
         """Enable the AutoReAssign feature for the guild."""
-        self.session.add(AutoReAssignDb(guild_id=interaction.guild.id)) # type: ignore[reportOptionalMemberAccess]
+        self.session.add(AutoReAssignDb(guild_id=interaction.guild.id))  # type: ignore[reportOptionalMemberAccess]
         self.session.commit()
 
     @app_commands.command(name="disable", description="Disable the AutoReAssign feature")
@@ -64,8 +69,7 @@ class AutoReAssign(GroupCog, auto_load=True):
         """Disable the AutoReAssign feature for the guild."""
         self.session.delete(
             self.session.exec(
-                select(AutoReAssignDb)
-                .where(AutoReAssignDb.guild_id == interaction.guild.id), # type: ignore[reportOptionalMemberAccess]
+                select(AutoReAssignDb).where(AutoReAssignDb.guild_id == interaction.guild.id),  # type: ignore[reportOptionalMemberAccess]
             ).first(),
         )
         self.session.commit()

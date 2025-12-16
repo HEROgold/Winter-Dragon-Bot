@@ -39,7 +39,7 @@ class ChannelUtils(GroupCog, auto_load=True):
         if not interaction.channel:
             await interaction.response.send_message("This command can only be used in a channel.", ephemeral=True)
             return
-        if isinstance(interaction.channel, (Thread, DMChannel, GroupChannel)):
+        if isinstance(interaction.channel, Thread | DMChannel | GroupChannel):
             await interaction.response.send_message("You cannot lock or unlock this channel.", ephemeral=True)
             return
 
@@ -51,7 +51,8 @@ class ChannelUtils(GroupCog, auto_load=True):
             reason=f"Channel {'locked' if lock else 'unlocked'} for {target} by {interaction.user.mention}",
         )
         await interaction.response.send_message(
-            f"{'Locked' if lock else 'Unlocked'} this channel for {target.mention}", ephemeral=True,
+            f"{'Locked' if lock else 'Unlocked'} this channel for {target.mention}",
+            ephemeral=True,
         )
 
     @app_commands.command(name="lock", description="Lock a channel")

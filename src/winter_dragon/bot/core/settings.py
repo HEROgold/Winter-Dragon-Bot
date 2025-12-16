@@ -1,4 +1,5 @@
 """Module that contains Configuration."""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +11,7 @@ from .config import Config
 
 
 GENERATED_MSG = "AutomaticallyGenerated"
+
 
 class Combined(BaseDataType[str]):
     """A data type that combines multiple Config data types."""
@@ -26,6 +28,7 @@ class Combined(BaseDataType[str]):
         """Return a string representation of the combined data types."""
         return ",".join(str(arg) for arg in self.args)
 
+
 class Settings:
     """Application wide Settings."""
 
@@ -41,20 +44,24 @@ class Settings:
     changed_color = Config(Hex(0xFFFF00))
     deleted_color = Config(Hex(0xFF0000))
 
-    bot_status_messages = Config(List([
-        "Licking a wedding cake",
-        "Eating a wedding cake",
-        "Comparing wedding cakes",
-        "Taste testing a wedding cake",
-        "Crashing a wedding to eat their cake",
-        "Getting married to eat a cake",
-        "Throwing a wedding cake",
-        "Devouring a wedding cake",
-        "Sniffing wedding cakes",
-        "Touching a wedding cake",
-        "Magically spawning a wedding cake",
-        "Wanting to eat a wedding cake and have one too",
-    ]))
+    bot_status_messages = Config(
+        List(
+            [
+                "Licking a wedding cake",
+                "Eating a wedding cake",
+                "Comparing wedding cakes",
+                "Taste testing a wedding cake",
+                "Crashing a wedding to eat their cake",
+                "Getting married to eat a cake",
+                "Throwing a wedding cake",
+                "Devouring a wedding cake",
+                "Sniffing wedding cakes",
+                "Touching a wedding cake",
+                "Magically spawning a wedding cake",
+                "Wanting to eat a wedding cake and have one too",
+            ],
+        ),
+    )
 
     PROTOCOL_PREFIX = Config("https://")
     SERVER_IP = Config("localhost")
@@ -65,19 +72,26 @@ class Settings:
     DATE_FORMAT = Config("%Y-%m-%d")
     DATETIME_FORMAT = Config(Combined(DATE_FORMAT, TIME_FORMAT))
 
-    OAUTH_SCOPE = Config(List([
-        "relationships.read",
-        "guilds.members.read",
-        "connections",
-        "email",
-        "activities.read",
-        "identify",
-        "guilds",
-        "applications.commands",
-        "applications.commands.permissions.update",
-    ]))
+    OAUTH_SCOPE = Config(
+        List(
+            [
+                "relationships.read",
+                "guilds.members.read",
+                "connections",
+                "email",
+                "activities.read",
+                "identify",
+                "guilds",
+                "applications.commands",
+                "applications.commands.permissions.update",
+            ],
+        ),
+    )
 
-    BOT_SCOPE = Config(List([
-        "bot",
-    ]))
-
+    BOT_SCOPE = Config(
+        List(
+            [
+                "bot",
+            ],
+        ),
+    )

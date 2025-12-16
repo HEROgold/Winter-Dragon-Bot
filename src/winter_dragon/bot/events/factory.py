@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
     from .audit_event import AuditEvent
 
+
 class AuditEventFactory:
     """Factory for creating audit events."""
 

@@ -1,10 +1,12 @@
 """Module for handling permission related things in Discord bot interactions."""
+
 from collections.abc import Mapping
 
 from discord import Interaction, Member, Object, PermissionOverwrite, Permissions, Role
 
 
 type PermissionsOverwrites = Mapping[Role | Member | Object, PermissionOverwrite]
+
 
 class PermissionsNotifier:
     """Notify users about missing permissions, roles or overwrites."""

@@ -1,4 +1,5 @@
 """A cog for announcing messages."""
+
 import datetime
 
 import discord
@@ -14,10 +15,11 @@ class Announce(Cog, auto_load=True):
     mention_all = Config(default=True)
 
     @app_commands.command(
-            name="announcement",
-            description="Using this command will ping everyone and put your message in a clean embed!")
+        name="announcement",
+        description="Using this command will ping everyone and put your message in a clean embed!",
+    )
     @app_commands.checks.has_permissions(mention_everyone=True)
-    async def announce(self, interaction: discord.Interaction, message:str) -> None:
+    async def announce(self, interaction: discord.Interaction, message: str) -> None:
         """Send an announcement to all servers."""
         member = interaction.user
         avatar = member.avatar.url if member.avatar else member.default_avatar.url
@@ -26,5 +28,5 @@ class Announce(Cog, auto_load=True):
         emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)
         if self.mention_all:
-            mass_ping = await interaction.channel.send("<@everyone>") # type: ignore[reportAttributeAccessIssue]
+            mass_ping = await interaction.channel.send("<@everyone>")  # type: ignore[reportAttributeAccessIssue]
             await mass_ping.delete()

@@ -7,6 +7,7 @@ from .error import DiscordError
 
 GLOBAL = "GLOBAL"
 
+
 class ErrorHandler(LoggerMixin):
     """Class for handling Errors."""
 

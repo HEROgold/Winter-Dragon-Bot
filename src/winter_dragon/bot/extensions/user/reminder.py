@@ -1,4 +1,5 @@
 """Module for reminding users of things."""
+
 import datetime
 
 import discord
@@ -15,6 +16,7 @@ from winter_dragon.database.tables.reminder import TimedReminder
 
 WEEKS_IN_MONTH = 4
 
+
 class Reminder(Cog, auto_load=True):
     """Cog for setting reminders."""
 
@@ -27,13 +29,11 @@ class Reminder(Cog, auto_load=True):
         self.send_reminder.change_interval(seconds=self.reminder_check_interval)
         self.send_reminder.start()
 
-
     @loop()
     async def send_reminder(self) -> None:
         """Task to send reminders to users."""
         results = self.session.exec(
-            select(ReminderDb)
-            .where(ReminderDb.timestamp <= datetime.datetime.now(datetime.UTC)),
+            select(ReminderDb).where(ReminderDb.timestamp <= datetime.datetime.now(datetime.UTC)),
         )
         if not results.all():
             return
@@ -49,14 +49,12 @@ class Reminder(Cog, auto_load=True):
             self.session.delete(i)
         self.session.commit()
 
-
     @send_reminder.before_loop
     async def before_send_reminder(self) -> None:
         """Wait until the bot is ready before starting the loop."""
         await self.bot.wait_until_ready()
 
-
-    @app_commands.command(name="remind", description = "Set a reminder for yourself!")
+    @app_commands.command(name="remind", description="Set a reminder for yourself!")
     async def slash_reminder(
         self,
         interaction: discord.Interaction,
@@ -72,12 +70,14 @@ class Reminder(Cog, auto_load=True):
 
         seconds = minutes * 60 + hours * 3600 + days * 86400
         member = interaction.user
-        time = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds))
-        self.session.add(ReminderDb(
-            content = reminder,
-            user_id = member.id,
-            timestamp = time,
-        ))
+        time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds)
+        self.session.add(
+            ReminderDb(
+                content=reminder,
+                user_id=member.id,
+                timestamp=time,
+            ),
+        )
         self.session.commit()
         epoch = int(time.timestamp())
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
@@ -100,13 +100,15 @@ class Reminder(Cog, auto_load=True):
 
         repeat = datetime.timedelta(minutes=minutes, hours=hours, days=days, weeks=weeks + years * WEEKS_IN_MONTH)
         member = interaction.user
-        time = (datetime.datetime.now(datetime.UTC) + repeat)
-        self.session.add(TimedReminder(
-            content=reminder,
-            user_id=member.id,
-            timestamp=time,
-            repeat_every=repeat,
-        ))
+        time = datetime.datetime.now(datetime.UTC) + repeat
+        self.session.add(
+            TimedReminder(
+                content=reminder,
+                user_id=member.id,
+                timestamp=time,
+                repeat_every=repeat,
+            ),
+        )
         self.session.commit()
         epoch = int(time.timestamp())
         await interaction.response.send_message(f"at <t:{epoch}> I will remind you of \n`{reminder}`", ephemeral=True)
@@ -118,13 +120,9 @@ class Reminder(Cog, auto_load=True):
     @slash_remove_reminder.autocomplete("reminder")
     async def autocomplete_active_reminders(self, interaction: discord.Interaction, current: str) -> list[Choice]:
         """Autocomplete active reminders for the user."""
-        query = (
-            select(ReminderDb, TimedReminder)
-            .where(
-                interaction.user.id in (ReminderDb.user_id, TimedReminder.user_id),
-                current.casefold() in ReminderDb.content.casefold()
-                or current.casefold() in TimedReminder.content.casefold(),
-            )
+        query = select(ReminderDb, TimedReminder).where(
+            interaction.user.id in (ReminderDb.user_id, TimedReminder.user_id),
+            current.casefold() in ReminderDb.content.casefold() or current.casefold() in TimedReminder.content.casefold(),
         )
 
         return [

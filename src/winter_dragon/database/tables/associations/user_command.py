@@ -11,7 +11,6 @@ from winter_dragon.database.tables.user import Users
 
 
 class AssociationUserCommand(SQLModel, table=True):
-
     timestamp: datetime = Field(default_factory=partial(datetime.now, tz=UTC), index=True)
     user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE")))
     command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands))))
@@ -24,16 +23,12 @@ class AssociationUserCommand(SQLModel, table=True):
         """Clean the database to keep track of (at most) 1k commands for each user."""
         track_amount = 1000
         users = cls.session.exec(
-            select(cls.user_id)
-            .having(func.count() > track_amount),
+            select(cls.user_id).having(func.count() > track_amount),
         ).all()
 
         for user_id in users:
             known = cls.session.exec(
-                select(cls)
-                .where(cls.user_id == user_id)
-                .order_by(cls.timestamp.desc())
-                .limit(track_amount),
+                select(cls).where(cls.user_id == user_id).order_by(cls.timestamp.desc()).limit(track_amount),
             ).all()
 
             for record in known:

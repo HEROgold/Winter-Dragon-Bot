@@ -1,4 +1,5 @@
 """Module for managing teams and respective voice channels."""
+
 import math
 import random
 from collections.abc import Sequence
@@ -31,7 +32,7 @@ class Team(GroupCog, auto_load=True):
         channels = self.session.exec(select(Channels).where(Channels.type == ChannelTypes.TEAM_VOICE)).all()
         for channel in channels:
             discord_channel = self.bot.get_channel(channel.id)
-            if isinstance(discord_channel, (CategoryChannel, PrivateChannel)) or discord_channel is None:
+            if isinstance(discord_channel, CategoryChannel | PrivateChannel) or discord_channel is None:
                 self.logger.debug(f"skipping invalid channel: {discord_channel=}")
                 continue
             if len(discord_channel.members) != 0:
@@ -46,14 +47,12 @@ class Team(GroupCog, auto_load=True):
         """Wait until the bot is ready. before cleaning up empty channels."""
         await self.bot.wait_until_ready()
 
-
     async def cog_load(self) -> None:
         """Start the cog."""
         await super().cog_load()
         # Configure loop interval from config
         self.delete_empty_team_channels.change_interval(seconds=self.team_cleanup_interval)
         self.delete_empty_team_channels.start()
-
 
     def split_teams(
         self,
@@ -65,16 +64,14 @@ class Team(GroupCog, auto_load=True):
         # find divide and module by desired team size,
         # and found amount of users
         divide, modulo = divmod(len(members), team_count)
-        members_count = math.ceil(divide+modulo)
+        members_count = math.ceil(divide + modulo)
 
         # create teams, and fill members with amount of users
         # (evenly split among each team)
         teams: list[TeamDict] = [
             {
-                "id": i+1,
-                "members": [
-                    members[j+i*members_count] for j in range(members_count)
-                ],
+                "id": i + 1,
+                "members": [members[j + i * members_count] for j in range(members_count)],
             }
             for i in range(team_count)
         ]
@@ -82,13 +79,11 @@ class Team(GroupCog, auto_load=True):
         self.logger.debug(f"created teams: {teams}")
         return teams
 
-
     async def move_team(self, team: TeamDict, channel: VoiceChannel) -> None:
         """Move a whole team to its channel."""
         self.logger.debug(f"moving {team['members']} to {channel}")
         for user in team["members"]:
             await user.move_to(channel)
-
 
     async def create_team_channels(
         self,
@@ -102,49 +97,52 @@ class Team(GroupCog, auto_load=True):
             self.logger.debug(f"creating voice for {team}")
             voice = await category.create_voice_channel(name=f"Team {team['id']}")
             discord_channels.append(voice)
-            db_channels.append(Channels(
-                id = voice.id,
-                name = voice.name,
-                type = ChannelTypes.TEAM_VOICE,
-                guild_id = voice.guild.id,
-            ))
+            db_channels.append(
+                Channels(
+                    id=voice.id,
+                    name=voice.name,
+                    type=ChannelTypes.TEAM_VOICE,
+                    guild_id=voice.guild.id,
+                ),
+            )
 
         self.session.add_all(db_channels)
         self.session.commit()
         return db_channels, discord_channels
 
-
     def get_team_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all team channels from winter_dragon.database."""
-        return self.session.exec(select(Channels).where(
-            Channels.type == ChannelTypes.TEAM_VOICE,
-            Channels.guild_id == guild.id,
-        )).all()
-
+        return self.session.exec(
+            select(Channels).where(
+                Channels.type == ChannelTypes.TEAM_VOICE,
+                Channels.guild_id == guild.id,
+            ),
+        ).all()
 
     def get_teams_category(self, guild: Guild) -> CategoryChannel | None:
         """Find a category channel."""
-        if channel := self.session.exec(select(Channels).where(
-            Channels.type == ChannelTypes.TEAM_CATEGORY,
-            Channels.guild_id == guild.id,
-        )).first():
+        if channel := self.session.exec(
+            select(Channels).where(
+                Channels.type == ChannelTypes.TEAM_CATEGORY,
+                Channels.guild_id == guild.id,
+            ),
+        ).first():
             return cast("CategoryChannel", self.bot.get_channel(channel.id))
         return None
-
 
     async def create_teams_category(self, guild: Guild) -> CategoryChannel:
         """Create a category channel, and a lobby voice channel."""
         channel = await guild.create_category(name="teams", reason="Creating team category for splitting into teams")
-        self.session.add(Channels(
-            id = channel.id,
-            name = channel.name,
-            type = ChannelTypes.TEAM_CATEGORY,
-            guild_id = guild.id,
-        ),
+        self.session.add(
+            Channels(
+                id=channel.id,
+                name=channel.name,
+                type=ChannelTypes.TEAM_CATEGORY,
+                guild_id=guild.id,
+            ),
         )
         self.session.commit()
         return channel
-
 
     async def fetch_teams_category(self, guild: Guild) -> CategoryChannel:
         """Find a category channel, if it doesn't find any, create it."""
@@ -152,36 +150,36 @@ class Team(GroupCog, auto_load=True):
             return category
         return await self.create_teams_category(guild)
 
-
     def get_teams_lobby(self, guild: Guild) -> VoiceChannel | None:
         """Find a lobby channel."""
-        if channel := self.session.exec(select(Channels).where(
-            Channels.type == ChannelTypes.TEAM_LOBBY,
-            Channels.guild_id == guild.id,
-        )).first():
+        if channel := self.session.exec(
+            select(Channels).where(
+                Channels.type == ChannelTypes.TEAM_LOBBY,
+                Channels.guild_id == guild.id,
+            ),
+        ).first():
             return cast("VoiceChannel", self.bot.get_channel(channel.id))
         return None
-
 
     async def create_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:
         """Create a lobby channel."""
         voice = await category.create_voice_channel(name="Lobby", reason="Creating lobby channel for moving users.")
-        self.session.add(Channels(
-            id = voice.id,
-            name = voice.name,
-            type = ChannelTypes.TEAM_LOBBY,
-            guild_id = category.guild.id,
-        ))
+        self.session.add(
+            Channels(
+                id=voice.id,
+                name=voice.name,
+                type=ChannelTypes.TEAM_LOBBY,
+                guild_id=category.guild.id,
+            ),
+        )
         self.session.commit()
         return voice
-
 
     async def fetch_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:
         """Find a lobby channel, if not found create it."""
         if lobby := self.get_teams_lobby(category.guild):
             return lobby
         return await self.create_teams_lobby(category)
-
 
     async def move_from_category(self, teams: list[TeamDict], channel: VoiceChannel) -> None:
         """Handle moving members, if member not in teams lobby, they won't get moved."""
@@ -202,7 +200,6 @@ class Team(GroupCog, auto_load=True):
                 continue
 
             await self.move_team(team_to_move, channel)
-
 
     @app_commands.checks.has_permissions(manage_channels=True)
     @app_commands.command(name="lobby", description="Find the lobby channel, or creates one for teams")
@@ -231,7 +228,6 @@ class Team(GroupCog, auto_load=True):
             return
         await self.send_lobby_info(interaction)
 
-
     async def send_lobby_info(self, interaction: Interaction) -> None:
         """Send lobby info to user."""
         if not interaction.guild:
@@ -254,7 +250,6 @@ class Team(GroupCog, auto_load=True):
         category = await self.fetch_teams_category(interaction.guild)
         if lobby := await self.fetch_teams_lobby(category):
             await interaction.response.send_message(f"Join the teams lobby here: {lobby.mention}")
-
 
     @app_commands.command(name="voice", description="Randomly split all users from your voice chat, in teams")
     async def slash_team_voice(
@@ -287,7 +282,6 @@ class Team(GroupCog, auto_load=True):
         for channel in channels:
             await self.move_from_category(teams, channel)
         await interaction.edit_original_response(content="Users from your voice split among teams")
-
 
     @app_commands.command(name="text", description="Randomly split all users, shows teams in message")
     async def slash_team_text(

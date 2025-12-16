@@ -1,4 +1,5 @@
 """Cog for automatically assigning roles to new members."""
+
 import discord
 from discord import app_commands
 from sqlmodel import select
@@ -21,9 +22,7 @@ class AutoAssign(GroupCog, auto_load=True):
             self.logger.warning("AutoAssign command was not used in a guild")
             await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
             return
-        aar = self.session.exec(
-            select(AutoAssignRole)
-            .where(AutoAssignRole.guild_id == interaction.guild.id)).first()
+        aar = self.session.exec(select(AutoAssignRole).where(AutoAssignRole.guild_id == interaction.guild.id)).first()
         if aar is None:
             self.logger.warning("AutoAssign command didn't find any assignable roles")
             await interaction.response.send_message("No auto assign role is set.", ephemeral=True)
@@ -49,7 +48,6 @@ class AutoAssign(GroupCog, auto_load=True):
 
         await interaction.response.send_message(f"Adding {role.mention} when a new member joins", ephemeral=True)
 
-
     @app_commands.command(name="remove", description="Stop AutoAssigning role(s) to new members")
     async def slash_assign_remove(self, interaction: discord.Interaction, role: discord.Role | None = None) -> None:
         """Remove a role from the list of roles to be assigned to new members."""
@@ -61,20 +59,20 @@ class AutoAssign(GroupCog, auto_load=True):
         await self.remove_all_roles(interaction)
         await interaction.response.send_message("I will not be adding any roles to new members", ephemeral=True)
 
-
     async def remove_specified_role(self, interaction: discord.Interaction, role: discord.Role) -> None:
         """Remove a specific role from the list of roles to be assigned to new members."""
         self.logger.info(f"Removing AutoAssign role {role} from {interaction.guild=}")
         if interaction.guild is None:
             self.logger.warning("AutoAssign command was not used in a guild")
             return
-        if auto_assign := self.session.exec(select(AutoAssignRole).where(
-            AutoAssignRole.guild_id == interaction.guild.id,
-            AutoAssignRole.role_id == role.id,
-        )).first():
+        if auto_assign := self.session.exec(
+            select(AutoAssignRole).where(
+                AutoAssignRole.guild_id == interaction.guild.id,
+                AutoAssignRole.role_id == role.id,
+            ),
+        ).first():
             self.session.delete(auto_assign)
         self.session.commit()
-
 
     async def remove_all_roles(self, interaction: discord.Interaction) -> None:
         """Remove all roles from the list of roles to be assigned to new members."""
@@ -83,11 +81,10 @@ class AutoAssign(GroupCog, auto_load=True):
             return
         self.logger.info(f"Removing all AutoAssign roles from {interaction.guild=}")
         for auto_assign in self.session.exec(
-            select(AutoAssignRole)
-            .where(AutoAssignRole.guild_id == interaction.guild.id)).all():
+            select(AutoAssignRole).where(AutoAssignRole.guild_id == interaction.guild.id),
+        ).all():
             self.session.delete(auto_assign)
         self.session.commit()
-
 
     @Cog.listener()
     async def on_member_join(self, member: discord.Member) -> None:

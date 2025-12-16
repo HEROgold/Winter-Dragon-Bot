@@ -18,6 +18,7 @@ from winter_dragon.database.tables import Channels, Commands, Guilds, Messages, 
 # For every existing action, create a generic event listener
 # that just logs the action
 for action in AuditLogAction:
+
     class EventListener(AuditEvent, action=action):
         """Generic audit event listener for a single audit log action."""
 
@@ -37,6 +38,7 @@ for action in AuditLogAction:
             embed.set_footer(text=f"ID: {self.entry.id}")
             return embed
 
+
 class _EventListenerHelper(SessionMixin, LoggerMixin):
     """Helper class for audit event listeners."""
 
@@ -50,23 +52,27 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
         if self.session.exec(select(Messages).where(Messages.id == message.id)).first() is None:
             self.logger.debug(f"Adding new {message=} to Messages table")
 
-            self.session.add(Messages(
-                id = message.id,
-                content = message.clean_content,
-                user_id = message.author.id,
-                channel_id = message.channel.id,
-            ))
+            self.session.add(
+                Messages(
+                    id=message.id,
+                    content=message.clean_content,
+                    user_id=message.author.id,
+                    channel_id=message.channel.id,
+                ),
+            )
             self.session.commit()
 
     def add_db_channel(self, channel: discord.abc.GuildChannel | Thread) -> None:
         if self.session.exec(select(Channels).where(Channels.id == channel.id)).first() is None:
             self.logger.info(f"Adding new {channel=} to Channels table")
-            self.session.add(Channels(
-                id = channel.id,
-                name = f"{channel.name}",
-                type = None,
-                guild_id = channel.guild.id,
-            ))
+            self.session.add(
+                Channels(
+                    id=channel.id,
+                    name=f"{channel.name}",
+                    type=None,
+                    guild_id=channel.guild.id,
+                ),
+            )
             self.session.commit()
 
     def add_db_user(self, user: discord.Member | discord.User) -> None:
@@ -101,7 +107,7 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
         self.session.add(
             AUC(
                 user_id=user.id,
-                command_id=command.id, # type: ignore[has-id]
+                command_id=command.id,  # type: ignore[has-id]
             ),
         )
         self.session.commit()
@@ -111,6 +117,7 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
         self.logger.info(f"Deleting all data related to {user} from the database.")
         self.session.delete(select(Users).where(Users.id == user.id))
         self.session.commit()
+
 
 class OnGuildChannelUpdate(AuditEvent, action=AuditLogAction.channel_update):
     """Event listener for guild channel updates."""
@@ -123,11 +130,13 @@ class OnGuildChannelUpdate(AuditEvent, action=AuditLogAction.channel_update):
         if not isinstance(after, discord.abc.GuildChannel):
             helper.logger.warning(f"Audit log target is not a GuildChannel: {after=}")
             return
-        Channels.update(Channels(
-            id = after.id,
-            name = after.name,
-            guild_id = after.guild.id,
-        ))
+        Channels.update(
+            Channels(
+                id=after.id,
+                name=after.name,
+                guild_id=after.guild.id,
+            ),
+        )
 
     @override
     def create_embed(self) -> discord.Embed:
@@ -154,6 +163,7 @@ class OnRoleCreate(AuditEvent, action=AuditLogAction.role_create):
             helper.session.add(Roles(id=role.id, name=role.name))
             helper.session.commit()
 
+
 class OnRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
     """Event listener for role deletion."""
 
@@ -170,6 +180,7 @@ class OnRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
             helper.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
             helper.session.delete(db_role)
             helper.session.commit()
+
 
 class OnMessageDelete(AuditEvent, action=AuditLogAction.message_delete):
     """Event listener for message deletion."""
@@ -189,6 +200,7 @@ class OnMessageDelete(AuditEvent, action=AuditLogAction.message_delete):
             helper.session.delete(db_msg)
         helper.session.commit()
 
+
 class OnGuildRoleCreate(AuditEvent, action=AuditLogAction.role_create):
     """Event listener for guild role creation."""
 
@@ -205,6 +217,7 @@ class OnGuildRoleCreate(AuditEvent, action=AuditLogAction.role_create):
             helper.logger.debug(f"Adding new {role=} to Roles table")
             helper.session.add(Roles(id=role.id, name=role.name))
             helper.session.commit()
+
 
 class OnGuildRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
     """Event listener for guild role deletion."""
@@ -223,6 +236,7 @@ class OnGuildRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
             helper.session.delete(db_role)
             helper.session.commit()
 
+
 class OnGuildRoleUpdate(AuditEvent, action=AuditLogAction.role_update):
     """Event listener for guild role updates."""
 
@@ -240,6 +254,7 @@ class OnGuildRoleUpdate(AuditEvent, action=AuditLogAction.role_update):
             helper.logger.debug(f"Updating {before=} to {after=} in Roles table")
             db_role.name = after.name
             helper.session.commit()
+
 
 class OnPresenceUpdate(AuditEvent, action=AuditLogAction.member_update):
     """Event listener for presence updates."""
@@ -265,23 +280,26 @@ class OnPresenceUpdate(AuditEvent, action=AuditLogAction.member_update):
         helper.logger.debug(f"presence update for {member}, at {date_time}")
         # Every guild a member is in calls this event.
         # Filter out updates from <10 seconds ago
-        if (
-            presences := helper.session.exec(select(Presence).where(
+        if presences := helper.session.exec(
+            select(Presence).where(
                 Presence.user_id == member.id,
                 Presence.date_time >= ten_sec_ago,
-            )).all()
-        ):
+            ),
+        ).all():
             for presence in presences:
                 if member.status.name == presence.status:
                     return
 
             helper.logger.debug(f"adding presence update to database for {member}")
-            helper.session.add(Presence(
-                user_id = member.id,
-                status = member.status.name,
-                date_time = date_time,
-            ))
+            helper.session.add(
+                Presence(
+                    user_id=member.id,
+                    status=member.status.name,
+                    date_time=date_time,
+                ),
+            )
             helper.session.commit()
+
 
 class CogEvents(Cog, auto_load=True):
     """Cog to register event listeners for audit log events, that are unable to be tracked via Audit Logs."""
@@ -291,11 +309,7 @@ class CogEvents(Cog, auto_load=True):
         """When a message is sent by any user, add it to the database."""
         helper = _EventListenerHelper()
         helper.logger.info(f"Message created: {message.id} in channel {message.channel} of guild {message.guild}")
-        if isinstance(message.channel, (
-            discord.DMChannel,
-            discord.GroupChannel,
-            discord.PartialMessageable,
-        )):
+        if isinstance(message.channel, discord.DMChannel | discord.GroupChannel | discord.PartialMessageable):
             return
 
         if not message.guild:
@@ -306,7 +320,6 @@ class CogEvents(Cog, auto_load=True):
         helper.add_db_channel(message.channel)
         helper.add_db_user(message.author)
         helper.add_db_message(message)
-
 
     @Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction) -> None:
@@ -326,5 +339,5 @@ class CogEvents(Cog, auto_load=True):
             return
 
         helper.add_db_user(user)
-        db_cmd = helper.fetch_db_command(command) # type: ignore  # noqa: PGH003
+        db_cmd = helper.fetch_db_command(command)  # type: ignore  # noqa: PGH003
         helper.link_user_db_command(user, db_cmd)

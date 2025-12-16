@@ -15,6 +15,7 @@ from winter_dragon.bot.core.config import Config
 UD_DEFINE_URL = "https://api.urbandictionary.com/v0/define?term="
 UD_RANDOM_URL = "https://api.urbandictionary.com/v0/random"
 
+
 class Urban(GroupCog, auto_load=True):
     """Urban Dictionary cog for Discord bot."""
 
@@ -50,7 +51,6 @@ class Urban(GroupCog, auto_load=True):
                 self.logger.debug(f"word: {word}, definition: {definition}")
                 emb.add_field(name=word, value=f"{definition}\n{urban_url}", inline=True)
         await interaction.response.send_message(embed=emb)
-
 
     @app_commands.command(
         name="search",

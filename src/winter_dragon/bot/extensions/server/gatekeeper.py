@@ -19,7 +19,6 @@ class Gatekeeper(GroupCog, auto_load=True):
         msg = f"Please use {self.get_command_mention(self.slash_setup)} first."
         await interaction.response.send_message(msg, ephemeral=True)
 
-
     @app_commands.command(name="disable", description="Disables the gatekeeper system.")
     async def slash_disable_gatekeeper(self, interaction: Interaction) -> None:
         """Disable the gatekeeper system. for the guild."""
@@ -39,14 +38,12 @@ class Gatekeeper(GroupCog, auto_load=True):
         msg = f"Roles have been setup. You can now use {self.get_command_mention(self.slash_enable_gatekeeper)}"
         await interaction.response.send_message(msg, ephemeral=True)
 
-
     async def setup_roles(self, guild: Guild, member_role: Role | None = None) -> None:
         """Copy the default role permissions to the member role and removes all permissions from the default role."""
         base_role = guild.default_role
         role = member_role or await guild.create_role(name="Member", permissions=base_role.permissions)
         await role.edit(permissions=base_role.permissions)
         await base_role.edit(permissions=Permissions.none())
-
 
     @Cog.listener()
     async def on_member_join(self, member: Member) -> None:

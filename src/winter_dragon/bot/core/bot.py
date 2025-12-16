@@ -3,6 +3,7 @@
 WinterDragon is a subclass of AutoShardedBot from discord.ext.commands.
 WinterDragon has additional attributes and methods.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -58,10 +59,11 @@ INTENTS.auto_moderation_execution = True
 INTENTS.voice_states = True
 GUILD_OWNERSHIP_LIMIT = 0
 
-BOT_PERMISSIONS = 70368744177655 # All bot permissions
+BOT_PERMISSIONS = 70368744177655  # All bot permissions
 
 OAUTH2 = "https://discord.com/api/oauth2"
 DISCORD_AUTHORIZE = f"{OAUTH2}/authorize"
+
 
 class WinterDragon(AutoShardedBot, LoggerMixin):
     """WinterDragon is a subclass of AutoShardedBot.
@@ -107,7 +109,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             DISCORD_AUTHORIZE
             + f"?client_id={self.application_id}"
             + f"&permissions={BOT_PERMISSIONS}"
-            + f"&scope={"+".join(Settings.BOT_SCOPE)}"
+            + f"&scope={'+'.join(Settings.BOT_SCOPE)}"
         )
 
     async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:
@@ -127,10 +129,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
                 if file.endswith(".py") and not file.startswith("_"):
                     extension = Path(root) / file
                     yield (
-                        extension.as_posix()
-                        .replace(f"{ROOT_DIR.parent.as_posix()}/", "")
-                        .replace("/", ".")
-                        .replace(".py", "")
+                        extension.as_posix().replace(f"{ROOT_DIR.parent.as_posix()}/", "").replace("/", ".").replace(".py", "")
                     )
 
     @override

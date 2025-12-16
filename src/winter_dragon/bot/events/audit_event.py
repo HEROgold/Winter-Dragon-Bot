@@ -1,4 +1,5 @@
 """Module for abstracting audit events."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -14,6 +15,7 @@ from .factory import AuditEventFactory
 
 if TYPE_CHECKING:
     from discord import AuditLogAction, AuditLogEntry
+
 
 class AuditEvent(ABC):
     """Base class for audit events."""
@@ -34,7 +36,7 @@ class AuditEvent(ABC):
     def db_entry(self) -> AuditLog:
         """Get the database entry. lazily evaluated."""
         if not self._db_entry:
-            self._db_entry = AuditLog.from_audit_log(self.entry) # creates the entry in the database, and returns the entry.
+            self._db_entry = AuditLog.from_audit_log(self.entry)  # creates the entry in the database, and returns the entry.
         return self._db_entry
 
     @abstractmethod
@@ -46,13 +48,13 @@ class AuditEvent(ABC):
         target = self.entry.target.mention if hasattr(self.entry.target, "mention") else self.entry.target
 
         return Embed(
-            colour = None,
-            color = None,
-            title = f"{self.entry.action}",
-            type = "rich",
-            url = None,
-            description = f"Performed by {self.entry.user} with target {target}. with extra {self.entry.extra}",
-            timestamp = datetime.now(UTC),
+            colour=None,
+            color=None,
+            title=f"{self.entry.action}",
+            type="rich",
+            url=None,
+            description=f"Performed by {self.entry.user} with target {target}. with extra {self.entry.extra}",
+            timestamp=datetime.now(UTC),
         )
 
     def __init_subclass__(cls: type[Self], action: AuditLogAction) -> None:

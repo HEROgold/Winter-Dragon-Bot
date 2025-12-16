@@ -20,6 +20,7 @@ _rule_severities = {
     AutoModRuleActionType.block_member_interactions: 0,
 }
 
+
 @app_commands.guilds(Settings.support_guild_id)
 class Infractions(GroupCog, auto_load=True):
     """Track automod interaction from discord, keep track of amount of violations
@@ -35,22 +36,18 @@ class Infractions(GroupCog, auto_load=True):
     async def on_automod_rule_create(self, rule: AutoModRule) -> None:
         """Track new automod rules."""
 
-
     @Cog.listener()
     async def on_automod_rule_update(self, rule: AutoModRule) -> None:
         """Update automod rules."""
-
 
     @Cog.listener()
     async def on_automod_rule_delete(self, rule: AutoModRule) -> None:
         """Remove deleted automod rules."""
 
-
     @staticmethod
     def get_severity(action: AutoModRuleAction) -> int:
         """Get the severity of the action."""
         return _rule_severities.get(action.type, 0)
-
 
     @Cog.listener()
     async def on_automod_execution(self, execution: AutoModAction) -> None:

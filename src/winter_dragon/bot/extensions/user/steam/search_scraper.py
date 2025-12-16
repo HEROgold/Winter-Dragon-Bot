@@ -45,9 +45,6 @@ class SearchScraper(BaseScraper):
         soup = BeautifulSoup(html.text, "html.parser")
 
         for sale_tag in soup.find_all(class_=DISCOUNT_PRICES):
-            if not isinstance(sale_tag, Tag): # pyright: ignore[reportUnnecessaryIsInstance]
-                self.logger.warning(f"Sale tag not found for {sale_tag=}, Expected Tag, got {type(sale_tag)}")
-                continue
             yield await self.get_sale_from_search(sale_tag, percent)
 
     async def get_sale_from_search(self, sale_tag: Tag, percent: int) -> SteamSale | None:
@@ -82,10 +79,10 @@ class SearchScraper(BaseScraper):
         # Can sale_tag.parent be a_tag?
         discount_perc = sale_tag.parent.find(class_=DISCOUNT_PERCENT)
 
-        if discount_perc is None: # Check game's page
+        if discount_perc is None:  # Check game's page
             return await self.app_scraper.get_game_sale(SteamURL(str(url)))
 
-        sale_percentage = int(discount_perc.text[1:-1]) # strip the - and % from the tag
+        sale_percentage = int(discount_perc.text[1:-1])  # strip the - and % from the tag
 
         if sale_percentage < percent:
             self.logger.debug(f"{sale_percentage=} is lower than target {percent=}, skipping")
@@ -104,19 +101,19 @@ class SearchScraper(BaseScraper):
                 self.logger.debug(f"Processing bundle item: {item=}")
             SteamSaleProperties(steam_sale_id=int(str(app_id)), property=SaleTypes.BUNDLE)
             return SteamSale(
-                id = int(str(app_id).split(",")[0]),
-                title = title,
-                url = str(url),
-                sale_percent = sale_percentage,
-                final_price = price_to_num(price),
-                update_datetime = datetime.now(tz=UTC),
+                id=int(str(app_id).split(",")[0]),
+                title=title,
+                url=str(url),
+                sale_percent=sale_percentage,
+                final_price=price_to_num(price),
+                update_datetime=datetime.now(tz=UTC),
             )
 
         return SteamSale(
-            id = int(str(app_id)),
-            title = title,
-            url = str(url),
-            sale_percent = sale_percentage,
-            final_price = price_to_num(price),
-            update_datetime = datetime.now(tz=UTC),
+            id=int(str(app_id)),
+            title=title,
+            url=str(url),
+            sale_percent=sale_percentage,
+            final_price=price_to_num(price),
+            update_datetime=datetime.now(tz=UTC),
         )

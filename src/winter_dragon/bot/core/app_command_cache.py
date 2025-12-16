@@ -1,4 +1,5 @@
 """A cache for storing application commands, both globally and per guild."""
+
 from collections.abc import Sequence
 
 import discord
@@ -35,6 +36,7 @@ class AppCommandCache:
 
         This app command may be a group or app_command or None
         """
+
         def search_dict(d: AppCommandStore) -> MentionableCommand | None:
             return d.get(value, None)
 
@@ -94,13 +96,6 @@ class AppCommandCache:
         msg = f"Can't find {full_name}"
         raise ValueError(msg)
 
-    def _validate_command(self, command: Command | str) -> None:
-        """Validate the command type."""
-        if not isinstance(command, (Command, str)):  # type:ignore[reportUnnecessaryIsInstance]
-            msg = f"Expected `app_commands.commands.Command` or `str` but got {type(command)}"
-            raise TypeError(msg)
-
     def get_command_mention(self, command: Command | str) -> str:
         """Return a command string from a given functiontype. (Decorated with app_commands.command)."""
-        self._validate_command(command)
         return self._get_cmd_mention(command)

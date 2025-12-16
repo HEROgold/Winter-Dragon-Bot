@@ -8,7 +8,6 @@ from winter_dragon.database.tables.user import Users
 
 
 class Infractions(SQLModel, table=True):
-
     user_id: int = Field(foreign_key=get_foreign_key(Users), primary_key=True)
     infraction_count: int = Field(default=0)
 

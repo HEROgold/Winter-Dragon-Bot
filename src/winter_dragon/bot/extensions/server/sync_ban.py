@@ -61,9 +61,7 @@ class SyncedBans(GroupCog, auto_load=True):
             return
 
         self.session.delete(
-            self.session.exec(
-                select(SyncBanGuild)
-                .where(SyncBanGuild.guild_id == guild.id)).first(),
+            self.session.exec(select(SyncBanGuild).where(SyncBanGuild.guild_id == guild.id)).first(),
         )
         self.session.commit()
 

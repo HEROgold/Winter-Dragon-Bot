@@ -8,6 +8,5 @@ from .lobbystatus import LobbyStatus
 
 
 class Lobbies(SQLModel, table=True):
-
     game_id: int | None = Field(foreign_key=get_foreign_key(Games), nullable=True)
     status: LobbyStatus

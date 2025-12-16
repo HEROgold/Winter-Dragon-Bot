@@ -18,6 +18,7 @@ CURRENCY_LABELS = "-$€£¥₣₹د.كد.ك﷼₻₽₾₺₼₸₴₷฿원₫
 BUNDLE_ITEM_CONTAINER = "package_landing_page_item_list"
 BUNDLE_ITEM = "tab_item tablet_list_item"
 
+
 def price_to_num(s: str) -> float:
     """Convert a price string to a float."""
     s = s.strip()

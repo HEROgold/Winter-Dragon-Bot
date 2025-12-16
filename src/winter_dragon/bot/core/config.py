@@ -19,6 +19,7 @@ from winter_dragon.config import FirstTimeLaunchError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+
 class Config[T](CKConfig[T]):
     """Config descriptor for WinterDragon."""
 
@@ -61,7 +62,7 @@ class ConfigParser(configparser.ConfigParser):
                 if self[section][setting] == "!!":
                     yield f"{section}:{setting}"
 
+
 config = ConfigParser()
 Config.set_parser(config)
 Config.set_file(BOT_CONFIG)
-

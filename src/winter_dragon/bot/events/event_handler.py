@@ -12,6 +12,7 @@ from .audit_event import AuditEvent
 
 GLOBAL = "GLOBAL"
 
+
 class AuditEventHandler(LoggerMixin):
     """Class for handling audit events."""
 
@@ -34,10 +35,12 @@ class AuditEventHandler(LoggerMixin):
         """Send logs to the appropriate channel."""
         category_name = audit_action.name
 
-        channel = self.session.exec(select(Channels).where(
+        channel = self.session.exec(
+            select(Channels).where(
                 Channels.guild_id == guild.id,
                 Channels.name == category_name,
-            )).first()
+            ),
+        ).first()
 
         if channel is None:
             self.logger.debug(f"Found no logs channel: {channel=}, {guild=}, {embed=}")
@@ -54,10 +57,12 @@ class AuditEventHandler(LoggerMixin):
         embed: Embed,
     ) -> None:
         """Send logs to the global log channel."""
-        channel = self.session.exec(select(Channels).where(
-            Channels.guild_id == guild.id,
-            Channels.name == GLOBAL,
-        )).first()
+        channel = self.session.exec(
+            select(Channels).where(
+                Channels.guild_id == guild.id,
+                Channels.name == GLOBAL,
+            ),
+        ).first()
 
         if not channel:
             self.logger.warning(f"No global log channel found for {guild}")
@@ -70,12 +75,11 @@ class AuditEventHandler(LoggerMixin):
 
         self.logger.debug(f"Send logs to {global_log_channel=}")
 
-
     async def send_channel_logs(
         self,
         guild: Guild,
         embed: Embed,
-        audit_action: AuditLogAction | None=None,
+        audit_action: AuditLogAction | None = None,
     ) -> tuple[None, None]:
         """Send logs to their appropriate channel and global log channel."""
         if not guild:

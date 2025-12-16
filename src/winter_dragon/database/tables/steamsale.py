@@ -13,8 +13,8 @@ class SaleTypes(Enum):
     DLC = auto()
     BUNDLE = auto()
 
-class SteamSale(SQLModel, table=True):
 
+class SteamSale(SQLModel, table=True):
     title: str
     url: str
     sale_percent: int
@@ -24,6 +24,7 @@ class SteamSale(SQLModel, table=True):
     def is_outdated(self, seconds: int) -> bool:
         """Check if a sale has recently updated within the given time frame."""
         return self.update_datetime.astimezone(UTC) + timedelta(seconds=seconds) <= datetime.now(tz=UTC)
+
 
 class SteamSaleProperties(SQLModel, table=True):
     """associate sale types"""

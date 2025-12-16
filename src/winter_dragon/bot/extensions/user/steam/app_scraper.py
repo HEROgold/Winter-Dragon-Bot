@@ -63,12 +63,12 @@ class AppScraper(BaseScraper):
 
         sale_id = url.id
         steam_sale = SteamSale(
-            id = sale_id,
-            title = title.get_text(),
-            url = str(url),
-            sale_percent = sale_perc.text[1:-1], # strip '-' and '%' from sale tag
-            final_price = price_to_num(price.get_text()[:-1].replace(",", ".")),
-            update_datetime = datetime.now(tz=UTC),
+            id=sale_id,
+            title=title.get_text(),
+            url=str(url),
+            sale_percent=sale_perc.text[1:-1],  # strip '-' and '%' from sale tag
+            final_price=price_to_num(price.get_text()[:-1].replace(",", ".")),
+            update_datetime=datetime.now(tz=UTC),
         )
         self.logger.info(f"SteamSale found: {steam_sale=}")
         if bool(soup.find("div", class_="content")):

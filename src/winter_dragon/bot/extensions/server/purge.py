@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 type PrunableChannel = VoiceChannel | StageChannel | TextChannel | Thread
 
+
 @runtime_checkable
 class Prunable(Protocol):
     """A protocol that defines a prunable object.
@@ -39,8 +40,7 @@ class Prunable(Protocol):
         oldest_first: bool | None = None,
         bulk: bool = True,
         reason: str | None = None,
-    ) -> list[Message]:
-        ...
+    ) -> list[Message]: ...
 
 
 @app_commands.guild_only()
@@ -88,16 +88,11 @@ class Purge(Cog, auto_load=True):
         purged = await interaction.channel.purge(limit=count)
         purged_count = len(purged)
         self.logger.debug(f"Purged: {purged_count}")
-        if (
-            purged_count < count
-            and self.allow_history
-            and use_history
-        ):
+        if purged_count < count and self.allow_history and use_history:
             history_messages = await self.history_delete(interaction.channel, count=(count - purged_count))
             history_messages_count = len(history_messages)
             self.logger.debug(f"History killed: {history_messages_count}")
         await interaction.followup.send(f"{interaction.user.mention} Killed {history_messages_count + purged_count} Messages")
-
 
     async def history_delete(self, channel: PrunableChannel, count: int) -> list[discord.Message]:
         """Delete messages from the channel history. Rather than messages in cache. (Older messages)."""

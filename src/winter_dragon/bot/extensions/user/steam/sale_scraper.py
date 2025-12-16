@@ -1,4 +1,5 @@
 """Module to scrap the steam website to find sales."""
+
 from __future__ import annotations
 
 import asyncio

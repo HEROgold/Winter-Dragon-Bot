@@ -1,4 +1,5 @@
 """Module that contains relevant classes to display stats about the guild."""
+
 import random
 from abc import ABC, ABCMeta, abstractmethod
 from collections.abc import Generator
@@ -46,6 +47,7 @@ class StatChannel(LoggerMixin, ABC, metaclass=ABCMeta):
     async def update(self) -> None:
         """Update the channel name to display the current values."""
 
+
 class PeakStat(StatChannel):
     """Class for the peak stat channel."""
 
@@ -73,6 +75,7 @@ class PeakStat(StatChannel):
         self.logger.debug(f"Updating peak channel name: {self.channel.name} -> {new_name}")
         await self.channel.edit(name=new_name, reason=self.update_reason)
 
+
 class GuildStat(StatChannel):
     """Class for the guild creation date channel."""
 
@@ -87,6 +90,7 @@ class GuildStat(StatChannel):
         self.logger.debug(f"Updating guild channel name: {self.channel.name} -> {new_name}")
         await self.channel.edit(name=new_name, reason=self.update_reason)
 
+
 class BotStat(StatChannel):
     """Class for the bot stat channel."""
 
@@ -100,6 +104,7 @@ class BotStat(StatChannel):
             return
         self.logger.debug(f"Updating bot channel name: {self.channel.name} -> {new_name}")
         await self.channel.edit(name=new_name, reason=self.update_reason)
+
 
 class UserStat(StatChannel):
     """Class for the user stat channel."""
@@ -124,6 +129,7 @@ class UserStat(StatChannel):
         self.logger.debug(f"Updating user channel name: {self.channel.name} -> {new_name}")
         await self.channel.edit(name=new_name, reason=self.update_reason)
 
+
 class OnlineStat(StatChannel):
     """Class for the online stat channel."""
 
@@ -146,7 +152,6 @@ class OnlineStat(StatChannel):
             return
         self.logger.debug(f"Updating online channel name: {self.channel.name} -> {new_name}")
         await self.channel.edit(name=new_name, reason=self.update_reason)
-
 
 
 class StatChannels:
@@ -186,7 +191,6 @@ class StatChannels:
         return (self.peak_channel, self.guild_channel, self.bot_channel, self.user_channel, self.online_channel)
 
 
-
 @app_commands.guild_only()
 class Stats(GroupCog, auto_load=True):
     """Cog that contains all guild stats related commands."""
@@ -197,8 +201,7 @@ class Stats(GroupCog, auto_load=True):
         """Initialize the stats cog."""
         super().__init__(**kwargs)
         self.stat_channels: dict[Guild, StatChannels] = {
-            i: StatChannels(*self.get_guild_stats_channels(i))
-            for i in self.bot.guilds
+            i: StatChannels(*self.get_guild_stats_channels(i)) for i in self.bot.guilds
         }
 
     @Cog.listener()
@@ -375,7 +378,6 @@ class Stats(GroupCog, auto_load=True):
                     raise ValueError(msg)
         self.logger.debug(f"Returning stat channels, {peak_channel, guild_channel, bot_channel, user_channel, online_channel}")
         return peak_channel, guild_channel, bot_channel, user_channel, online_channel
-
 
     @app_commands.command(name="show", description="Get some information about the guild!")
     async def slash_stats_show(self, interaction: discord.Interaction) -> None:

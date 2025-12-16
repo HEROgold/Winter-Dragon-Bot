@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field
 

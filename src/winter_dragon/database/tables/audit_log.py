@@ -11,12 +11,11 @@ if TYPE_CHECKING:
 
 
 class AuditLog(DiscordID, table=True):
-
-    action: int # AuditLogAction
+    action: int  # AuditLogAction
     reason: str | None = Field(default=None, nullable=True)
     created_at: datetime
     target_id: str
-    category: int # AuditLogActionCategory
+    category: int  # AuditLogActionCategory
 
     @classmethod
     def from_audit_log(cls, entry: "AuditLogEntry") -> Self:

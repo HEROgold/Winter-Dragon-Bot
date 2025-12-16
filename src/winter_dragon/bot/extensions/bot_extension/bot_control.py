@@ -1,4 +1,5 @@
 """Module that contains interfaces to control the bot using discord."""
+
 import datetime
 import random
 import time
@@ -26,6 +27,7 @@ class SupportsStr(Protocol):
         """Return a string representation of the object."""
         return "Custom string representation"
 
+
 def codeblock(language: SupportsStr, text: SupportsStr) -> str:
     """Return a codeblock with ansi colors."""
     return f"```{language}\n{text}```"
@@ -42,6 +44,7 @@ INVALID_RNG_ACTIVITY = [
 
 
 # TODO: Split into metrics Cog and Activity Cog.
+
 
 @app_commands.guilds(Settings.support_guild_id)
 class BotC(GroupCog, auto_load=True):
@@ -62,7 +65,6 @@ class BotC(GroupCog, auto_load=True):
     gather_metrics_interval = Config(180)
     metrics_file = Config("metrics.png")
 
-
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the bot control cog."""
         super().__init__(**kwargs)
@@ -75,7 +77,6 @@ class BotC(GroupCog, auto_load=True):
         self.packets_sent = []
         self.packets_received = []
 
-
     async def cog_load(self) -> None:
         """When the cog loads, start collecting metrics and activity statuses."""
         await super().cog_load()
@@ -84,7 +85,6 @@ class BotC(GroupCog, auto_load=True):
         self.activity_switch.change_interval(seconds=self.periodic_time)
         self.activity_switch.start()
         self.gather_metrics_loop.start()
-
 
     @loop()
     async def activity_switch(self) -> None:
@@ -100,7 +100,6 @@ class BotC(GroupCog, auto_load=True):
             self.activity_switch.stop()
             return
 
-
     def get_random_activity(self) -> tuple[discord.Status, discord.Activity]:
         """Get a random valid activity and status."""
         status = random.choice([i for i in Status if i not in INVALID_RNG_STATUS])  # noqa: S311
@@ -112,13 +111,11 @@ class BotC(GroupCog, auto_load=True):
         )
         return status, activity
 
-
     async def _start_randomizer(self, interaction: discord.Interaction) -> None:
         self.periodic_change = True
         self.logger.info(f"Turned on periodic activity change by {interaction.user}")
         await interaction.response.send_message("I will randomly change my status and activity", ephemeral=True)
         self.activity_switch.start()
-
 
     @commands.is_owner()
     @app_commands.command(name="activity", description="change bot activity")
@@ -167,7 +164,6 @@ class BotC(GroupCog, auto_load=True):
         self.activity_switch.stop()
         return
 
-
     @slash_bot_activity.autocomplete("status")
     async def activity_autocomplete_status(
         self,
@@ -176,12 +172,9 @@ class BotC(GroupCog, auto_load=True):
     ) -> list[app_commands.Choice[str]]:
         """Autocomplete for the status command."""
         statuses = [i.name for i in Status]
-        return [
-            app_commands.Choice(name=stat, value=stat)
-            for stat in statuses
-            if current.lower() in stat.lower()
-        ] or [app_commands.Choice(name=stat, value=stat) for stat in statuses]
-
+        return [app_commands.Choice(name=stat, value=stat) for stat in statuses if current.lower() in stat.lower()] or [
+            app_commands.Choice(name=stat, value=stat) for stat in statuses
+        ]
 
     @slash_bot_activity.autocomplete("activity")
     async def activity_autocomplete_activity(
@@ -192,11 +185,8 @@ class BotC(GroupCog, auto_load=True):
         """Autocomplete for the activity command."""
         activities = [i.name for i in ActivityType]
         return [
-            app_commands.Choice(name=activity, value=activity)
-            for activity in activities
-            if current.lower() in activity.lower()
+            app_commands.Choice(name=activity, value=activity) for activity in activities if current.lower() in activity.lower()
         ] or [app_commands.Choice(name=activity, value=activity) for activity in activities]
-
 
     @commands.is_owner()
     @app_commands.guild_only()
@@ -217,7 +207,6 @@ class BotC(GroupCog, auto_load=True):
             return
         await guild.public_updates_channel.send(msg)
 
-
     @app_commands.command(name="ping", description="show latency")
     @commands.is_owner()
     async def slash_ping(self, interaction: discord.Interaction) -> None:
@@ -237,19 +226,27 @@ class BotC(GroupCog, auto_load=True):
         colored_api_response, _ = results[1]
         colored_database, _ = results[2]
 
-        embed = discord.Embed(
-            title=":ping_pong: Pong!",
-            color=color,
-            timestamp=datetime.datetime.now(datetime.UTC),
-        ).add_field(
-            name="Websocket", value=codeblock(colored_websocket, f"{latency} ms"),
-            inline=False,
-        ).add_field(
-            name="Response", value=codeblock(colored_api_response, f"{response} ms"),
-            inline=False,
-        ).add_field(
-            name="Database", value=codeblock(colored_database, f"{database} ms"),
-            inline=False,
+        embed = (
+            discord.Embed(
+                title=":ping_pong: Pong!",
+                color=color,
+                timestamp=datetime.datetime.now(datetime.UTC),
+            )
+            .add_field(
+                name="Websocket",
+                value=codeblock(colored_websocket, f"{latency} ms"),
+                inline=False,
+            )
+            .add_field(
+                name="Response",
+                value=codeblock(colored_api_response, f"{response} ms"),
+                inline=False,
+            )
+            .add_field(
+                name="Database",
+                value=codeblock(colored_database, f"{database} ms"),
+                inline=False,
+            )
         )
 
         await interaction.followup.send(embed=embed)
@@ -269,8 +266,7 @@ class BotC(GroupCog, auto_load=True):
         database = round(measured_time * 1000)
         return latency, response, database
 
-
-    @app_commands.command( name="performance", description="Show bot's Performance (Bot developer only)")
+    @app_commands.command(name="performance", description="Show bot's Performance (Bot developer only)")
     async def slash_performance(self, interaction: discord.Interaction) -> None:
         """Show the bot's performance."""
         embed = discord.Embed(
@@ -296,14 +292,16 @@ class BotC(GroupCog, auto_load=True):
         bytes_idx = 4
         packets_idx = 6
 
-        for i, value in enumerate([
-            psutil.cpu_percent(),
-            psutil.virtual_memory().percent,
-            net_counters.bytes_sent,
-            net_counters.bytes_recv,
-            net_counters.packets_sent,
-            net_counters.packets_recv,
-        ]):
+        for i, value in enumerate(
+            [
+                psutil.cpu_percent(),
+                psutil.virtual_memory().percent,
+                net_counters.bytes_sent,
+                net_counters.bytes_recv,
+                net_counters.packets_sent,
+                net_counters.packets_recv,
+            ],
+        ):
             self.logger.debug(f"{i=}, {value=}")
 
             ansi_color, color = "", 0
@@ -320,12 +318,12 @@ class BotC(GroupCog, auto_load=True):
             worst_color = colors[0]
 
             embed.add_field(
-                name=f"{field_names[i]}", value=codeblock(ansi_color, value),
+                name=f"{field_names[i]}",
+                value=codeblock(ansi_color, value),
                 inline=False,
             )
         embed.color = worst_color
         await interaction.response.send_message(embed=embed)
-
 
     @commands.is_owner()
     @app_commands.command(name="performance_graph", description="Show bot's Performance (Bot developer only)")
@@ -342,7 +340,6 @@ class BotC(GroupCog, auto_load=True):
             self.logger.exception("Error when creating a graph.")
             file = None
             await interaction.followup.send("Could not make a graph to show.")
-
 
     @staticmethod
     def get_colors(value: float, max_amount: int) -> tuple[str, int]:
@@ -384,12 +381,10 @@ class BotC(GroupCog, auto_load=True):
         """Get colors based on packets."""
         return cls.get_colors(packets_count, 1000000000)
 
-
     @loop()
     async def gather_metrics_loop(self) -> None:
         """Gather system metrics every second."""
         self.gather_system_metrics()
-
 
     def gather_system_metrics(self) -> None:
         """Gather system metrics like cpu, ram and network traffic."""
@@ -426,7 +421,6 @@ class BotC(GroupCog, auto_load=True):
         if timestamp - self.timestamps[0] > hour:
             self._remove_oldest_system_metrics()
 
-
     def plot_system_metrics(self) -> None:
         """Plot the system metrics on a graph."""
         plt.plot(
@@ -453,12 +447,14 @@ class BotC(GroupCog, auto_load=True):
         # Make the cpu and ram % fit the full scale of the plot/graph
         values: list[int] = []
         for net_io in self.net_io_counters:
-            values.extend((
-                net_io.bytes_sent,
-                net_io.bytes_recv,
-                net_io.packets_sent,
-                net_io.packets_recv,
-            ))
+            values.extend(
+                (
+                    net_io.bytes_sent,
+                    net_io.bytes_recv,
+                    net_io.packets_sent,
+                    net_io.packets_recv,
+                ),
+            )
         max_scaler = max(values)
 
         plt.plot(

@@ -16,6 +16,7 @@ DATABASE_URL = URL.create(
 engine = create_engine(DATABASE_URL, echo=False)
 session = Session(engine)
 
+
 class SessionMixin:
     """Mixin class to provide a session for database operations."""
 

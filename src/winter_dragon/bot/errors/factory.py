@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from .error import DiscordError
 
 
-
 class ErrorFactory:
     """Factory for creating Error errors."""
 

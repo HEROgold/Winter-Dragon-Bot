@@ -1,4 +1,5 @@
 """Module for tracking games."""
+
 from collections.abc import Sequence
 from typing import Unpack
 
@@ -21,12 +22,10 @@ class Games(GroupCog, auto_load=True):
         super().__init__(**kwargs)
         self.games = self.session.exec(select(GamesDB)).all()
 
-
     @app_commands.command(name="list", description="Get a list of known games")
     async def slash_list(self, interaction: discord.Interaction) -> None:
         """Get a list of known games."""
         await interaction.response.send_message(", ".join(map(str, self.games)), ephemeral=True)
-
 
     @app_commands.command(name="suggest", description="Suggest a new game to be added")
     async def slash_suggest(self, interaction: discord.Interaction, name: str) -> None:
@@ -35,10 +34,12 @@ class Games(GroupCog, auto_load=True):
             if suggestion.content == name:
                 await interaction.response.send_message("That game is already in review", ephemeral=True)
 
-        self.session.add(Suggestions(
-            type = "game",
-            verified_at = None,
-            content = name,
-        ))
+        self.session.add(
+            Suggestions(
+                type="game",
+                verified_at=None,
+                content=name,
+            ),
+        )
         self.session.commit()
         await interaction.response.send_message(f"Added `{name}` for review", ephemeral=True)

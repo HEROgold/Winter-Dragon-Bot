@@ -1,4 +1,5 @@
 """The database package for the Winter Dragon project."""
+
 from sqlmodel import SQLModel
 
 from .constants import SessionMixin, session

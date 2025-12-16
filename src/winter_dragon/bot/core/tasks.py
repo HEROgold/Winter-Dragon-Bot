@@ -12,6 +12,7 @@ from herogold.log import LoggerMixin
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
 
+
 class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
     """Loop is a subclass of discord.ext.tasks.Loop that adds logging to the loop task."""
 
@@ -34,7 +35,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         exception = args[-1]
         self.logger.error(
             "Unhandled exception in internal background task %r.",
-            self.coro.__name__, # type: ignore[reportUnknownArgumentType]
+            self.coro.__name__,  # type: ignore[reportUnknownArgumentType]
             exc_info=exception,
         )
         return await super()._error(*args)
@@ -59,6 +60,7 @@ def loop[FT: CoroutineFunction](  # noqa: PLR0913
     name: str | None = None,
 ) -> Callable[[FT], Loop[FT]]:
     """Schedule a new task to run every N seconds, minutes, or hours."""
+
     # FT generic type is used here and in the Loop class to ensure the coroutine function type is preserved.
     def decorator(func: FT) -> Loop[FT]:
         return Loop[FT](

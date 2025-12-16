@@ -1,4 +1,5 @@
 """Module to Notify users about Steam sales."""
+
 from collections.abc import Iterable
 from textwrap import dedent
 
@@ -24,7 +25,7 @@ class SteamSaleNotifier(LoggerMixin):
         self.embed = embed
         self.users: set[User] = set()
 
-    def set_messages(self, sub_mention_remove: str ,sub_mention_show: str, disable_message: str, all_sale_message: str) -> None:
+    def set_messages(self, sub_mention_remove: str, sub_mention_show: str, disable_message: str, all_sale_message: str) -> None:
         """Add messages to the embed."""
         self.sub_mention_remove = sub_mention_remove
         self.sub_mention_show = sub_mention_show
@@ -43,8 +44,7 @@ class SteamSaleNotifier(LoggerMixin):
 
         for i, sale in enumerate(sales):
             properties = self.session.exec(
-                select(SteamSaleProperties)
-                .where(SteamSaleProperties.steam_sale_id == sale.id),
+                select(SteamSaleProperties).where(SteamSaleProperties.steam_sale_id == sale.id),
             ).all()
             install_url = f"{Settings.WEBSITE_URL}/redirect?redirect_url=steam://install/{SteamURL(sale.url).id}"
             embed_text = f"""
@@ -57,9 +57,9 @@ class SteamSaleNotifier(LoggerMixin):
                 Install game: [Click here]({install_url})
             """
             self.embed.add_field(
-                name = f"Game {i+1}",
-                value = dedent(embed_text),
-                inline = False,
+                name=f"Game {i + 1}",
+                value=dedent(embed_text),
+                inline=False,
             )
             self.logger.debug(f"Populated embed with: {sale=}")
 

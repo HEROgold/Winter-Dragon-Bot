@@ -8,7 +8,6 @@ from winter_dragon.database.tables.user import Users
 
 
 class Messages(DiscordID, table=True):
-
     content: str
     user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE")))
     channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels)), nullable=True))
