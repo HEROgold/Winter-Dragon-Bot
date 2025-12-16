@@ -94,7 +94,7 @@ repos:
     hooks:
       - id: ruff
         name: ruff lint
-        args: [--fix --unsafe-fixes]
+        args: ["--fix", "--unsafe-fixes"]
         files: ^src/.*\.py$
         stages: [pre-push, pre-commit]
       - id: ruff-format
