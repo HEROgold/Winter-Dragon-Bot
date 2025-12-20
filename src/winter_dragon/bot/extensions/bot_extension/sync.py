@@ -56,17 +56,17 @@ class Sync(Cog, auto_load=True):
         if len(command.name) > self.COMMAND_NAME_LIMIT:
             command.name = command.name[: self.COMMAND_NAME_LIMIT - 3] + "..."
             self.logger.info(
-                    "Fixed name for command `%s` to fit within limit.",
-                    command.qualified_name,
-                )
+                "Fixed name for command `%s` to fit within limit.",
+                command.qualified_name,
+            )
 
     def _fix_description(self, command: app_commands.Command | app_commands.Group) -> None:
         if len(command.description or "") > self.COMMAND_DESCRIPTION_LIMIT:
             command.description = command.description[: self.COMMAND_DESCRIPTION_LIMIT - 3] + "..."
             self.logger.info(
-                    "Fixed description for command `%s` to fit within limit.",
-                    command.qualified_name,
-                )
+                "Fixed description for command `%s` to fit within limit.",
+                command.qualified_name,
+            )
 
     @app_commands.command(name="sync", description="Sync all commands on this guild")
     async def slash_sync(self, interaction: discord.Interaction) -> None:
