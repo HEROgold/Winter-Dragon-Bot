@@ -165,6 +165,55 @@ class LogChannels(GroupCog, auto_load=True):
         )
         self.logger.info(f"Setup Log for {interaction.guild}")
 
+    @app_commands.guild_only()
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.checks.bot_has_permissions(manage_channels=True)
+    @app_commands.command(
+        name="set",
+        description="Set an existing text channel to handle a specific log type.",
+    )
+    async def slash_log_set(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel,
+        log_type: str,
+    ) -> None:
+        """Bind a Discord text channel to a given audit log action."""
+        # TODO: Change signature to allow for multiple log types on the same channel.
+        guild = interaction.guild
+        if guild is None:
+            msg = "Guild is None"
+            raise TypeError(msg)
+
+        if channel.guild.id != guild.id:
+            await interaction.response.send_message("Select a channel from this guild.", ephemeral=True)
+            return
+
+        normalized = log_type.lower()
+        try:
+            audit_action = AuditLogAction[normalized]
+        except KeyError:
+            available = ", ".join(action.name.title() for action in AuditLogAction)
+            await interaction.response.send_message(
+                f"Unknown log type. Available types: {available}",
+                ephemeral=True,
+            )
+            return
+
+        audit_name = audit_action.name.title()
+        Channels.update(
+            Channels(
+                id=channel.id,
+                name=audit_name,
+                type=LOGS,
+                guild_id=guild.id,
+            ),
+        )
+        await interaction.response.send_message(
+            f"Linked {channel.mention} to `{audit_name}` events.",
+            ephemeral=True,
+        )
+
     async def create_categories(
         self,
         guild: Guild,
@@ -361,6 +410,25 @@ class LogChannels(GroupCog, auto_load=True):
         self.session.commit()
 
         return cast("list[CategoryChannel]", category_channels)
+
+    @slash_log_set.autocomplete("log_type")
+    async def log_type_autocomplete(
+        self,
+        interaction: discord.Interaction,  # noqa: ARG002
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        """Autocomplete available audit log types for the set command."""
+        term = current.lower()
+        actions = AuditLogAction
+        actions.global_ = -1  # ty:ignore[unresolved-attribute]
+        choices = [
+            app_commands.Choice(name=action.name.replace("_", " ").title(), value=action.name)
+            for action in actions
+            if not term or term in action.name.lower() or term in action.name.replace("_", " ").lower()
+        ]
+        return choices[:25] or [
+            app_commands.Choice(name=action.name.replace("_", " ").title(), value=action.name) for action in list(actions)[:25]
+        ]
 
 
 # ------------
