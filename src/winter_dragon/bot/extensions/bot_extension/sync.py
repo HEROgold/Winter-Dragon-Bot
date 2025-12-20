@@ -1,6 +1,6 @@
 """Module to sync slash commands with the Discord API."""
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import discord
 from discord import Guild, app_commands
@@ -16,9 +16,62 @@ if TYPE_CHECKING:
 class Sync(Cog, auto_load=True):
     """Sync slash commands with the Discord API."""
 
+    COMMAND_DESCRIPTION_LIMIT: ClassVar[int] = 100
+    COMMAND_NAME_LIMIT: ClassVar[int] = 32
+
+    def _fix_invalid_commands(self) -> None:
+        invalid_found = False
+        for command in self.bot.tree.walk_commands():
+            name_len = len(command.name)
+            desc_len = len(command.description or "")
+            if name_len > self.COMMAND_NAME_LIMIT:
+                invalid_found = True
+                self.logger.error(
+                    "Command `%s` exceeds name limit (%s > %s)",
+                    command.qualified_name,
+                    name_len,
+                    self.COMMAND_NAME_LIMIT,
+                )
+                self._fix_name(command)
+            if desc_len > self.COMMAND_DESCRIPTION_LIMIT:
+                invalid_found = True
+                self.logger.error(
+                    "Command `%s` exceeds description limit (%s > %s): %r",
+                    command.qualified_name,
+                    desc_len,
+                    self.COMMAND_DESCRIPTION_LIMIT,
+                    command.description,
+                )
+                self._fix_description(command)
+            self.logger.debug(
+                "Command `%s`: name=%s chars, description=%s chars",
+                command.qualified_name,
+                name_len,
+                desc_len,
+            )
+        if not invalid_found:
+            self.logger.debug("All commands satisfy current Discord limits.")
+
+    def _fix_name(self, command: app_commands.Command | app_commands.Group) -> None:
+        if len(command.name) > self.COMMAND_NAME_LIMIT:
+            command.name = command.name[: self.COMMAND_NAME_LIMIT - 3] + "..."
+            self.logger.info(
+                    "Fixed name for command `%s` to fit within limit.",
+                    command.qualified_name,
+                )
+
+    def _fix_description(self, command: app_commands.Command | app_commands.Group) -> None:
+        if len(command.description or "") > self.COMMAND_DESCRIPTION_LIMIT:
+            command.description = command.description[: self.COMMAND_DESCRIPTION_LIMIT - 3] + "..."
+            self.logger.info(
+                    "Fixed description for command `%s` to fit within limit.",
+                    command.qualified_name,
+                )
+
     @app_commands.command(name="sync", description="Sync all commands on this guild")
     async def slash_sync(self, interaction: discord.Interaction) -> None:
         """Sync all commands on the current guild."""
+        self._fix_invalid_commands()
         await interaction.response.defer(ephemeral=True)
         user = interaction.author if isinstance(interaction, commands.Context) else interaction.user
         is_allowed = await self.bot.is_owner(user)
@@ -41,6 +94,7 @@ class Sync(Cog, auto_load=True):
     @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")
     async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
         """Sync all commands on all servers. This is a ctx and slash command (hybrid)."""
+        self._fix_invalid_commands()
         msg = "Synced commands: "
         guild = ctx.guild
 
