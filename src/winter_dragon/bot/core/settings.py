@@ -39,6 +39,8 @@ class Settings:
     prefix = Config("$")
     application_id = Config(None)
     bot_invite = Config(GENERATED_MSG)
+    auto_reload_extensions = Config(default=False)
+    auto_reload_poll_seconds = Config(5)
 
     # Colors
     created_color = Config(Hex(0x00FF00))
