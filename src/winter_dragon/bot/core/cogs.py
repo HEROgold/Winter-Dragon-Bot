@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-import inspect
-from dataclasses import dataclass
 from itertools import chain
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
 
 import discord
@@ -16,7 +12,7 @@ from herogold.log import LoggerMixin
 from sqlmodel import Session, select
 
 from winter_dragon.bot.core.app_command_cache import AppCommandCache
-from winter_dragon.bot.core.settings import Settings
+from winter_dragon.bot.core.auto_reload import AutoReloadWatcher
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.errors.factory import ErrorFactory
 from winter_dragon.database.constants import engine
@@ -38,16 +34,6 @@ class BotArgs(TypedDict):
     db_session: NotRequired[Session]
 
 
-@dataclass(slots=True)
-class _ExtensionWatch:
-    """Runtime data for tracking an extension file's modification time."""
-
-    path: Path
-    task: asyncio.Task[None]
-    refs: int
-    mtime_ns: int
-
-
 class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
 
@@ -61,12 +47,13 @@ class Cog(commands.Cog, LoggerMixin):
     bot: WinterDragon
     cache: ClassVar[AppCommandCache]
     has_app_command_mentions: bool = False
-    _module_watchers: ClassVar[dict[str, _ExtensionWatch]] = {}
+    _should_auto_reload: ClassVar[bool] = True
 
-    def __init_subclass__(cls: type[Self], *, auto_load: bool = False) -> None:
-        """Automatically load the cog if auto_load is True."""
+    def __init_subclass__(cls: type[Self], *, auto_load: bool = False, auto_reload: bool = True) -> None:
+        """Configure loader and hot-reload behavior for subclasses."""
         super().__init_subclass__()
         cls._should_auto_load = auto_load
+        cls._should_auto_reload = auto_reload
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
@@ -75,7 +62,11 @@ class Cog(commands.Cog, LoggerMixin):
         """
         self.bot = kwargs["bot"]
         self.session = kwargs.get("db_session", Session(engine))
-        self._auto_reload_module: str | None = None
+        self._auto_reloader = AutoReloadWatcher(
+            bot=self.bot,
+            cog_cls=self.__class__,
+            enabled=self.__class__._should_auto_reload,
+        )
 
         if not getattr(Cog, "cache", None):
             Cog.cache = AppCommandCache(self.bot)
@@ -98,7 +89,7 @@ class Cog(commands.Cog, LoggerMixin):
         # (we only want concrete subclasses to be able to auto-load themselves).
         if self.__class__ not in (Cog, GroupCog):  # type: ignore[name-defined]
             self.bot.loop.create_task(self.auto_load())
-            self._register_auto_reload()
+            self._auto_reloader.register()
 
     def is_command_disabled(self, interaction: discord.Interaction) -> bool:
         """Check if a command is disabled for a guild, channel, or user."""
@@ -159,7 +150,7 @@ class Cog(commands.Cog, LoggerMixin):
             self.add_mentions.stop()
         if self.add_disabled_check.is_running():
             self.add_disabled_check.stop()
-        self._deregister_auto_reload()
+        self._auto_reloader.deregister()
 
     @loop(count=1)
     async def add_mentions(self) -> None:
@@ -198,104 +189,6 @@ class Cog(commands.Cog, LoggerMixin):
         """Handle the errors that occur during app command invocation."""
         for handler in ErrorFactory.get_handlers(self.bot, error, interaction=interaction):
             await handler.handle()
-
-    def _register_auto_reload(self) -> None:
-        """Start watching the cog's module for file modifications if enabled."""
-        if not Settings.auto_reload_extensions:
-            return
-        module_name = self.__module__
-        if not module_name.startswith("winter_dragon.bot.extensions"):
-            return
-        path = self._resolve_module_path()
-        if path is None:
-            return
-        self._auto_reload_module = module_name
-        entry = Cog._module_watchers.get(module_name)
-        if entry:
-            entry.refs += 1
-            return
-        task = self.bot.loop.create_task(self._watch_extension_file(module_name))
-        Cog._module_watchers[module_name] = _ExtensionWatch(
-            path=path,
-            task=task,
-            refs=1,
-            mtime_ns=self._get_file_mtime(path),
-        )
-        self.logger.debug(f"Enabled auto-reload watcher for {module_name} -> {path}")
-
-    def _resolve_module_path(self) -> Path | None:
-        try:
-            return Path(inspect.getfile(self.__class__)).resolve()
-        except (OSError, TypeError) as exc:
-            self.logger.warning(
-                "Cannot enable auto-reload for %s because its file path could not be resolved: %s",
-                self.__module__,
-                exc,
-            )
-            return None
-
-    def _deregister_auto_reload(self) -> None:
-        module_name = self._auto_reload_module
-        if module_name is None:
-            return
-        entry = Cog._module_watchers.get(module_name)
-        if entry is None:
-            self._auto_reload_module = None
-            return
-        entry.refs -= 1
-        if entry.refs <= 0:
-            Cog._module_watchers.pop(module_name, None)
-            current_task = None
-            try:
-                current_task = asyncio.current_task()
-            except RuntimeError:
-                current_task = None
-            if entry.task is not current_task:
-                entry.task.cancel()
-        self._auto_reload_module = None
-
-    @staticmethod
-    def _get_file_mtime(path: Path) -> int:
-        try:
-            return path.stat().st_mtime_ns
-        except OSError:
-            return 0
-
-    async def _watch_extension_file(self, module_name: str) -> None:
-        interval = float(Settings.auto_reload_poll_seconds or 1.5)
-        if interval <= 0:
-            interval = 1.5
-        self.logger.debug(f"Watching {module_name} for changes every {interval}s")
-        try:
-            while True:
-                entry = Cog._module_watchers.get(module_name)
-                if entry is None:
-                    return
-                await asyncio.sleep(interval)
-                entry = Cog._module_watchers.get(module_name)
-                if entry is None:
-                    return
-                current_mtime = self._get_file_mtime(entry.path)
-                if current_mtime <= entry.mtime_ns:
-                    continue
-                entry.mtime_ns = current_mtime
-                await self._reload_extension(module_name)
-                if module_name not in Cog._module_watchers:
-                    return
-        except asyncio.CancelledError:
-            self.logger.debug(f"Stopped watching {module_name} for changes")
-            raise
-        except Exception:
-            self.logger.exception(f"Auto-reload watcher for {module_name} crashed")
-
-    async def _reload_extension(self, module_name: str) -> None:
-        self.logger.info(f"Detected change in {module_name}. Reloading extension.")
-        try:
-            reload_result = self.bot.reload_extension(module_name)
-            if inspect.isawaitable(reload_result):
-                await reload_result
-        except Exception:
-            self.logger.exception(f"Failed to reload extension {module_name}")
 
 
 class GroupCog(Cog):
