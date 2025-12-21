@@ -14,19 +14,20 @@ from .config import Config
 GENERATED_MSG = "AutomaticallyGenerated"
 
 
-class Combined(BaseDataType[Any]):
-    """A data type that combines multiple Config data types."""
+class Combined(BaseDataType[str]):
+    """A data type that combines multiple Config descriptors and literals."""
 
-    def __init__(self, *args: Config[Any]) -> None:
-        """Initialize with multiple Config arguments."""
+    def __init__(self, *args: Config[Any] | str | float) -> None:
+        """Initialize with Config descriptors and/or literal fragments."""
+        super().__init__(default="")
         self.args = args
 
     def convert(self, value: str) -> str:
         """Convert from a string to the combined data type."""
-        return ",".join(arg.convert(value) for arg in self.args)
+        return value
 
     def __str__(self) -> str:
-        """Return a string representation of the combined data types."""
+        """Return a lightweight description for debugging/serialization."""
         return ",".join(str(arg) for arg in self.args)
 
 
@@ -69,11 +70,11 @@ class Settings:
     PROTOCOL_PREFIX = Config("https://")
     SERVER_IP = Config("localhost")
     WEBSITE_PORT = Config(80)
-    WEBSITE_URL = Config(Combined(PROTOCOL_PREFIX, SERVER_IP, WEBSITE_PORT))
+    WEBSITE_URL = Config(Combined(PROTOCOL_PREFIX, SERVER_IP, ":", WEBSITE_PORT))
 
     TIME_FORMAT = Config("%H:%M:%S")
     DATE_FORMAT = Config("%Y-%m-%d")
-    DATETIME_FORMAT = Config(Combined(DATE_FORMAT, TIME_FORMAT))
+    DATETIME_FORMAT = Config(Combined(DATE_FORMAT, " ", TIME_FORMAT))
 
     OAUTH_SCOPE = Config(
         List(
