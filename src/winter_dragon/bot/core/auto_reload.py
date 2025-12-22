@@ -88,11 +88,7 @@ class AutoReloadWatcher(LoggerMixin):
         self._registered = False
 
     def _should_watch(self) -> bool:
-        return (
-            self._enabled
-            and Settings.auto_reload_extensions
-            and self.module_name.startswith("winter_dragon.bot.extensions")
-        )
+        return self._enabled and Settings.auto_reload_extensions and self.module_name.startswith("winter_dragon.bot.extensions")
 
     def _resolve_module_path(self) -> Path | None:
         try:
