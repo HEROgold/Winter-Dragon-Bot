@@ -130,7 +130,15 @@ class BaseModel(BaseSQLModel):
 class SQLModel(BaseModel):
     """Base SQLModel class with custom methods."""
 
-    id: int | None = Field(default=None, primary_key=True, index=True, unique=True)
+    id: int | None = Field(
+        default=None,
+        sa_type=BigInteger,
+        primary_key=True,
+        index=True,
+        unique=True,
+        nullable=False,
+        sa_column_kwargs={"autoincrement": True},
+    )
 
 
 class DiscordID(BaseModel):
