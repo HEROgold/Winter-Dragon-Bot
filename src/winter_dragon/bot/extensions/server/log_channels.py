@@ -419,15 +419,14 @@ class LogChannels(GroupCog, auto_load=True):
     ) -> list[app_commands.Choice[str]]:
         """Autocomplete available audit log types for the set command."""
         term = current.lower()
-        actions = AuditLogAction
-        actions.global_ = -1  # ty:ignore[unresolved-attribute]
+        actions: list[str] = ["global"] + [action.name for action in AuditLogAction]
         choices = [
-            app_commands.Choice(name=action.name.replace("_", " ").title(), value=action.name)
+            app_commands.Choice(name=action.replace("_", " ").title(), value=action)
             for action in actions
-            if not term or term in action.name.lower() or term in action.name.replace("_", " ").lower()
+            if not term or term in action.lower() or term in action.replace("_", " ").lower()
         ]
         return choices[:25] or [
-            app_commands.Choice(name=action.name.replace("_", " ").title(), value=action.name) for action in list(actions)[:25]
+            app_commands.Choice(name=action.replace("_", " ").title(), value=action) for action in actions[:25]
         ]
 
 
