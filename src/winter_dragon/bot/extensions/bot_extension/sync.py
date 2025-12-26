@@ -6,7 +6,7 @@ import discord
 from discord import Guild, app_commands
 from discord.ext import commands
 
-from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.discord.cogs import Cog
 
 
 if TYPE_CHECKING:

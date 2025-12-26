@@ -24,8 +24,8 @@ from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 from herogold.log import LoggerMixin
 
 from winter_dragon.bot import Settings
+from winter_dragon.discord.cogs import Cog
 
-from .cogs import Cog
 from .config import Config
 from .paths import EXTENSIONS, ROOT_DIR
 

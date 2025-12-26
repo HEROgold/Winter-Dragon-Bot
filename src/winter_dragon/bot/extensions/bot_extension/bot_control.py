@@ -6,8 +6,8 @@ import discord
 from discord import Guild, app_commands
 from discord.ext import commands
 
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.settings import Settings
+from winter_dragon.discord.cogs import BotArgs, GroupCog
 
 
 @app_commands.guilds(Settings.support_guild_id)

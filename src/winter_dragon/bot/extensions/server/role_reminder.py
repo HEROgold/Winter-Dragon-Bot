@@ -4,12 +4,12 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 
-from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.database.tables import AutoReAssign as AutoReAssignDb
 from winter_dragon.database.tables import UserRoles
 from winter_dragon.database.tables.associations.guild_roles import GuildRoles
 from winter_dragon.database.tables.role import Roles
+from winter_dragon.discord.cogs import Cog, GroupCog
 
 
 class AutoReAssign(GroupCog, auto_load=True):

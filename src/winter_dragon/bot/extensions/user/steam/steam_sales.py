@@ -7,7 +7,6 @@ from discord import Embed, Interaction, app_commands
 from sqlmodel import select
 
 from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamScraper
@@ -15,6 +14,7 @@ from winter_dragon.bot.extensions.user.steam.user_notifier import SteamSaleNotif
 from winter_dragon.database.tables.steamsale import SteamSale
 from winter_dragon.database.tables.steamuser import SteamUsers
 from winter_dragon.database.tables.user import Users
+from winter_dragon.discord.cogs import GroupCog
 
 
 STEAM_SEND_PERIOD = 3600 * 3  # 3 hour cooldown on updates in seconds

@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import logging
 from dataclasses import dataclass
+from enum import IntEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -16,7 +17,24 @@ from winter_dragon.bot.core.settings import Settings
 
 if TYPE_CHECKING:
     from winter_dragon.bot.core.bot import WinterDragon
-    from winter_dragon.bot.core.cogs import Cog
+    from winter_dragon.discord.cogs import Cog
+
+
+class WatcherFlags(IntEnum):
+    """States for the auto-reload watcher."""
+
+    Enabled = auto()
+    """Flag to indicate that the watcher is enabled."""
+    Registered = auto()
+    """Flag to indicate that the watcher is currently registered to a cog."""
+
+    @property
+    def is_enabled(self) -> bool:
+        """Check if the Enabled flag is set."""
+        return bool(self & WatcherFlags.Enabled)
+
+
+default_flags = WatcherFlags.Enabled
 
 
 @dataclass(slots=True)
@@ -36,13 +54,12 @@ class AutoReloadWatcher(LoggerMixin):
 
     _entries: ClassVar[dict[str, _WatchEntry]] = {}
 
-    def __init__(self, *, bot: WinterDragon, cog_cls: type[Cog], enabled: bool) -> None:
+    def __init__(self, *, bot: WinterDragon, cog_cls: type[Cog], flags: WatcherFlags = default_flags) -> None:
         """Initialize the auto-reload watcher for a specific cog class."""
         self.bot = bot
         self.cog_cls = cog_cls
         self.module_name = cog_cls.__module__
-        self._enabled = enabled
-        self._registered = False
+        self.flags = flags
 
     def register(self) -> None:
         """Start watching the cog's backing module."""
@@ -89,7 +106,7 @@ class AutoReloadWatcher(LoggerMixin):
 
     def _should_watch(self) -> bool:
         return (
-            self._enabled
+            self.flags.is_enabled
             and Settings.auto_reload_extensions
             and self.module_name.startswith("winter_dragon.bot.extensions")
         )

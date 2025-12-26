@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+from enum import IntEnum, auto
 from itertools import chain
 from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
+
+from herogold.log import LoggerMixin
+from sqlmodel import Session, select
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from herogold.log import LoggerMixin
-from sqlmodel import Session, select
-
 from winter_dragon.bot.core.app_command_cache import AppCommandCache
 from winter_dragon.bot.core.auto_reload import AutoReloadWatcher
 from winter_dragon.bot.core.tasks import loop
@@ -23,7 +24,6 @@ from winter_dragon.database.tables.disabled_commands import DisabledCommands
 if TYPE_CHECKING:
     from discord.ext.commands._types import BotT
     from discord.ext.commands.context import Context
-
     from winter_dragon.bot.core.bot import WinterDragon
 
 
@@ -33,6 +33,17 @@ class BotArgs(TypedDict):
     bot: Required[WinterDragon]
     db_session: NotRequired[Session]
 
+class CogFlags(IntEnum):
+    """Flags for Cog behavior."""
+
+    AutoLoad = auto()
+    """Flag to indicate that the cog should be auto-loaded."""
+    AutoReload = auto()
+    """Flag to indicate that the cog should be auto-reloaded on file changes."""
+    HasAppCommandMentions = auto()
+    """Flag to indicate that the cog has app command mentions."""
+
+default_flags = CogFlags.AutoLoad | CogFlags.AutoReload
 
 class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
@@ -47,13 +58,11 @@ class Cog(commands.Cog, LoggerMixin):
     bot: WinterDragon
     cache: ClassVar[AppCommandCache]
     has_app_command_mentions: bool = False
-    _should_auto_reload: ClassVar[bool] = True
 
-    def __init_subclass__(cls: type[Self], *, auto_load: bool = False, auto_reload: bool = True) -> None:
+    def __init_subclass__(cls: type[Self], *, flags: CogFlags) -> None:
         """Configure loader and hot-reload behavior for subclasses."""
         super().__init_subclass__()
-        cls._should_auto_load = auto_load
-        cls._should_auto_reload = auto_reload
+        cls.flags = flags
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
@@ -65,7 +74,6 @@ class Cog(commands.Cog, LoggerMixin):
         self._auto_reloader = AutoReloadWatcher(
             bot=self.bot,
             cog_cls=self.__class__,
-            enabled=self.__class__._should_auto_reload,
         )
 
         if not getattr(Cog, "cache", None):
@@ -137,11 +145,12 @@ class Cog(commands.Cog, LoggerMixin):
 
     async def auto_load(self) -> None:
         """Load the cog if __cog_auto_load__ is True."""
-        self.logger.info(f"Auto-loading Cog {self.__class__.__name__}: {self.__class__._should_auto_load}")  # noqa: SLF001
+        cls = self.__class__
+        self.logger.info(f"Auto-loading Cog {cls.__name__}: {cls.flags & CogFlags.AutoLoad=}")
         if self.__cog_name__ in self.bot.cogs:
             # prevent discord.py from raising an error (simply cleans up logs :) )
             return
-        if self.__class__._should_auto_load:  # noqa: SLF001
+        if cls.flags & CogFlags.AutoLoad:
             await self.bot.add_cog(self)
 
     def cog_unload(self) -> None:  # type: ignore[override]

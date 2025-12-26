@@ -7,11 +7,11 @@ from discord import app_commands
 from discord.app_commands import Choice
 from sqlmodel import select
 
-from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database.tables import Reminder as ReminderDb
 from winter_dragon.database.tables.reminder import TimedReminder
+from winter_dragon.discord.cogs import Cog
 
 
 WEEKS_IN_MONTH = 4

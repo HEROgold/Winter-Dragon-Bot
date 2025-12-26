@@ -37,12 +37,12 @@ from discord.abc import PrivateChannel
 from discord.ext import commands
 from sqlmodel import select
 
-from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.permissions import PermissionsOverwrites
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
+from winter_dragon.discord.cogs import GroupCog
 
 
 LOGS = ChannelTypes.LOGS

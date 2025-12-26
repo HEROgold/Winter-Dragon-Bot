@@ -7,9 +7,9 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import Suggestions
+from winter_dragon.discord.cogs import BotArgs, GroupCog
 
 
 class Games(GroupCog, auto_load=True):
