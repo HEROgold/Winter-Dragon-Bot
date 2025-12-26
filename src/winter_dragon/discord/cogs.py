@@ -45,7 +45,7 @@ class CogFlags(IntEnum):
     """Flag to indicate that the cog has app command mentions."""
 
 
-default_flags = CogFlags.AutoLoad | CogFlags.AutoReload
+default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
 
 
 class Cog(commands.Cog, LoggerMixin):
@@ -60,9 +60,13 @@ class Cog(commands.Cog, LoggerMixin):
 
     bot: WinterDragon
     cache: ClassVar[AppCommandCache]
-    has_app_command_mentions: bool = False
 
-    def __init_subclass__(cls: type[Self], *, flags: CogFlags) -> None:
+    @property
+    def has_app_command_mentions(self) -> bool:
+        """Indicates whether the cog has app command mentions."""
+        return bool(self.flags & CogFlags.HasAppCommandMentions)
+
+    def __init_subclass__(cls: type[Self], *, flags: CogFlags = default_flags) -> None:
         """Configure loader and hot-reload behavior for subclasses."""
         super().__init_subclass__()
         cls.flags = flags
@@ -170,7 +174,7 @@ class Cog(commands.Cog, LoggerMixin):
         if not self.has_app_command_mentions:
             self.logger.debug(f"Adding app_commands to cache. {Cog.cache=}")
             await Cog.cache.update_app_commands_cache()
-            self.has_app_command_mentions = True
+            self.flags |= CogFlags.HasAppCommandMentions
 
     @loop(count=1)
     async def add_disabled_check(self) -> None:
