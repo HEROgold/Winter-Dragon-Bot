@@ -179,7 +179,6 @@ class LogChannels(GroupCog, auto_load=True):
         log_type: str,
     ) -> None:
         """Bind a Discord text channel to a given audit log action."""
-        # TODO: Change signature to allow for multiple log types on the same channel.
         guild = interaction.guild
         if guild is None:
             msg = "Guild is None"
@@ -201,6 +200,7 @@ class LogChannels(GroupCog, auto_load=True):
             return
 
         audit_name = audit_action.name.title()
+        # TODO: Update db schema to allow for multiple log types on the same channel.
         Channels.update(
             Channels(
                 id=channel.id,
