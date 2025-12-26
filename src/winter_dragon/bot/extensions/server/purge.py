@@ -9,8 +9,8 @@ import discord
 from discord import Interaction, Message, app_commands
 from herogold.sentinel import MISSING
 
+from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.config import Config
-from winter_dragon.discord.cogs import Cog
 
 
 if TYPE_CHECKING:

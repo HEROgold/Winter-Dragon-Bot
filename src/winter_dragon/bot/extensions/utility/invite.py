@@ -3,8 +3,8 @@
 import discord
 from discord import app_commands
 
+from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.settings import Settings
-from winter_dragon.discord.cogs import GroupCog
 
 
 class Invite(GroupCog, auto_load=True):

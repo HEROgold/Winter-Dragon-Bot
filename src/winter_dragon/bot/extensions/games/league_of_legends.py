@@ -1,6 +1,6 @@
 """Module for league of legends related Cogs."""
 
-from winter_dragon.discord.cogs import Cog
+from winter_dragon.bot.core.cogs import Cog
 
 
 class LeagueOfLegends(Cog, auto_load=True):

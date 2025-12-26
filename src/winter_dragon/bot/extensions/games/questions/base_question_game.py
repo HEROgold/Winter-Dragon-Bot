@@ -9,8 +9,8 @@ from herogold.sentinel import MISSING
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
 
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games, Suggestions
-from winter_dragon.discord.cogs import BotArgs, GroupCog
 
 
 T = TypeVar("T", bound=SQLModel)

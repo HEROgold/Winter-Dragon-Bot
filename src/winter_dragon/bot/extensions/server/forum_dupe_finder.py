@@ -3,7 +3,7 @@
 from difflib import SequenceMatcher
 
 from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.discord.cogs import GroupCog
+from winter_dragon.bot.core.cogs import GroupCog
 
 
 class ForumDupeFinder(GroupCog, auto_load=True):

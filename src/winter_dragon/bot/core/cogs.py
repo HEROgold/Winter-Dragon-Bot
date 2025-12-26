@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from enum import IntEnum, auto
+from enum import IntFlag, auto
 from itertools import chain
 from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
-
-from herogold.log import LoggerMixin
-from sqlmodel import Session, select
 
 import discord
 from discord import app_commands
 from discord.ext import commands
+from herogold.log import LoggerMixin
+from sqlmodel import Session, select
+
 from winter_dragon.bot.core.app_command_cache import AppCommandCache
 from winter_dragon.bot.core.auto_reload import AutoReloadWatcher
 from winter_dragon.bot.core.tasks import loop
@@ -24,6 +24,7 @@ from winter_dragon.database.tables.disabled_commands import DisabledCommands
 if TYPE_CHECKING:
     from discord.ext.commands._types import BotT
     from discord.ext.commands.context import Context
+
     from winter_dragon.bot.core.bot import WinterDragon
 
 
@@ -34,7 +35,7 @@ class BotArgs(TypedDict):
     db_session: NotRequired[Session]
 
 
-class CogFlags(IntEnum):
+class CogFlags(IntFlag):
     """Flags for Cog behavior."""
 
     AutoLoad = auto()
@@ -60,6 +61,7 @@ class Cog(commands.Cog, LoggerMixin):
 
     bot: WinterDragon
     cache: ClassVar[AppCommandCache]
+    flags: ClassVar[CogFlags]
 
     @property
     def has_app_command_mentions(self) -> bool:
@@ -69,7 +71,8 @@ class Cog(commands.Cog, LoggerMixin):
     def __init_subclass__(cls: type[Self], *, auto_load: bool = True, flags: CogFlags = default_flags) -> None:
         """Configure loader and hot-reload behavior for subclasses."""
         super().__init_subclass__()
-        cls.flags = flags | (CogFlags.AutoLoad if auto_load else 0)
+        cls.flags = flags
+        cls.flags |= CogFlags.AutoLoad if auto_load else ~CogFlags.AutoLoad
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.

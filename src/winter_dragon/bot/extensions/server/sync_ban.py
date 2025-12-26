@@ -4,11 +4,11 @@ import discord
 from discord import app_commands
 from sqlmodel import select
 
+from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import SyncBanGuild, SyncBanUser
 from winter_dragon.database.tables.guild import Guilds
 from winter_dragon.database.tables.sync_ban.sync_ban_banned_by import SyncBanBannedBy
 from winter_dragon.database.tables.user import Users
-from winter_dragon.discord.cogs import GroupCog
 
 
 class SyncedBans(GroupCog, auto_load=True):

@@ -6,7 +6,7 @@ import asyncio
 import inspect
 import logging
 from dataclasses import dataclass
-from enum import IntEnum, auto
+from enum import IntFlag, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -17,10 +17,10 @@ from winter_dragon.bot.core.settings import Settings
 
 if TYPE_CHECKING:
     from winter_dragon.bot.core.bot import WinterDragon
-    from winter_dragon.discord.cogs import Cog
+    from winter_dragon.bot.core.cogs import Cog
 
 
-class WatcherFlags(IntEnum):
+class WatcherFlags(IntFlag):
     """States for the auto-reload watcher."""
 
     Enabled = auto()
@@ -58,6 +58,7 @@ class AutoReloadWatcher(LoggerMixin):
         """Initialize the auto-reload watcher for a specific cog class."""
         self.bot = bot
         self.cog_cls = cog_cls
+        flags = flags | (WatcherFlags.Enabled if cog_cls.flags & cog_cls.flags.AutoReload else 0)
         self.module_name = cog_cls.__module__
         self.flags = flags
 

@@ -8,9 +8,9 @@ from discord import (
     app_commands,
 )
 
+from winter_dragon.bot.core.cogs import Cog, GroupCog
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.database.tables import Infractions as InfractionsDb
-from winter_dragon.discord.cogs import Cog, GroupCog
 
 
 _rule_severities = {

@@ -4,9 +4,9 @@ import logging
 
 from discord.ext.prometheus import PrometheusCog
 
+from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.discord.cogs import Cog
 
 
 class Prometheus(Cog, auto_load=False):

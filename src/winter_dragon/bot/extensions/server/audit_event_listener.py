@@ -3,9 +3,9 @@
 from discord import AuditLogEntry
 
 from winter_dragon.bot.core.bot import WinterDragon
+from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.events.event_handler import AuditEventHandler
 from winter_dragon.bot.events.factory import AuditEventFactory
-from winter_dragon.discord.cogs import Cog
 
 
 class EventListener(Cog, auto_load=True):

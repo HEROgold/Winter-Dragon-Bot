@@ -10,11 +10,11 @@ from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, a
 from discord.abc import PrivateChannel
 from sqlmodel import select
 
+from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
-from winter_dragon.discord.cogs import GroupCog
 
 
 class TeamDict(TypedDict):
