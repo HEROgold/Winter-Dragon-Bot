@@ -66,10 +66,10 @@ class Cog(commands.Cog, LoggerMixin):
         """Indicates whether the cog has app command mentions."""
         return bool(self.flags & CogFlags.HasAppCommandMentions)
 
-    def __init_subclass__(cls: type[Self], *, flags: CogFlags = default_flags) -> None:
+    def __init_subclass__(cls: type[Self], *, auto_load: bool = True, flags: CogFlags = default_flags) -> None:
         """Configure loader and hot-reload behavior for subclasses."""
         super().__init_subclass__()
-        cls.flags = flags
+        cls.flags = flags | (CogFlags.AutoLoad if auto_load else 0)
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
@@ -151,9 +151,9 @@ class Cog(commands.Cog, LoggerMixin):
         self.add_disabled_check.start()
 
     async def auto_load(self) -> None:
-        """Load the cog if __cog_auto_load__ is True."""
+        """Load the cog if auto_load is True."""
         cls = self.__class__
-        self.logger.info(f"Auto-loading Cog {cls.__name__}: {cls.flags & CogFlags.AutoLoad=}")
+        self.logger.info(f"Auto-loading Cog {cls.__name__}: {bool(cls.flags & CogFlags.AutoLoad)}")
         if self.__cog_name__ in self.bot.cogs:
             # prevent discord.py from raising an error (simply cleans up logs :) )
             return

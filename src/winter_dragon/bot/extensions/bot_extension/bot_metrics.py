@@ -38,6 +38,7 @@ class BotMetrics(GroupCog, auto_load=True):
     packets_received: list[int]
 
     gather_metrics_interval = Config(180)
+    cleanup_interval = Config(3600)
     metrics_file = Config("metrics.png")
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
@@ -269,8 +270,7 @@ class BotMetrics(GroupCog, auto_load=True):
         self.packets_received.append(packets_received_value)
 
         # Check if an hour has passed and update the data for the last hour
-        hour = 3600
-        if timestamp - self.timestamps[0] > hour:
+        if timestamp - self.timestamps[0] > self.cleanup_interval:
             self._remove_oldest_system_metrics()
 
     def plot_system_metrics(self) -> None:

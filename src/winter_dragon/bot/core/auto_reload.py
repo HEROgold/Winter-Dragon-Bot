@@ -61,6 +61,19 @@ class AutoReloadWatcher(LoggerMixin):
         self.module_name = cog_cls.__module__
         self.flags = flags
 
+    # Tech Debt: Replace all callers with bitfield checks
+    @property
+    def _registered(self) -> bool:
+        """Indicates whether the watcher is currently registered."""
+        return (self.flags & WatcherFlags.Registered) != 0
+
+    @_registered.setter
+    def _registered(self, value: bool) -> None:
+        if value:
+            self.flags |= WatcherFlags.Registered
+        else:
+            self.flags &= ~WatcherFlags.Registered
+
     def register(self) -> None:
         """Start watching the cog's backing module."""
         if self._registered or not self._should_watch():
