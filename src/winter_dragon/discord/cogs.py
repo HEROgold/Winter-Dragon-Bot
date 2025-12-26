@@ -33,6 +33,7 @@ class BotArgs(TypedDict):
     bot: Required[WinterDragon]
     db_session: NotRequired[Session]
 
+
 class CogFlags(IntEnum):
     """Flags for Cog behavior."""
 
@@ -43,7 +44,9 @@ class CogFlags(IntEnum):
     HasAppCommandMentions = auto()
     """Flag to indicate that the cog has app command mentions."""
 
+
 default_flags = CogFlags.AutoLoad | CogFlags.AutoReload
+
 
 class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
