@@ -16,7 +16,7 @@ from winter_dragon.database.tables import Games, Suggestions
 T = TypeVar("T", bound=SQLModel)
 
 
-class BaseQuestionGame(Generic[T], GroupCog, auto_load=False):
+class BaseQuestionGame(GroupCog, Generic[T], auto_load=False):
     """Base class for question-based games like Never Have I Ever and Would You Rather."""
 
     # Constants to be overridden by subclasses
