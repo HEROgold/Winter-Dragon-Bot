@@ -29,7 +29,7 @@ class Lfg(GroupCog, auto_load=True):
     async def slash_lfg_join(self, interaction: discord.Interaction, game: str) -> None:
         """Join a search queue for finding people for the same game."""
         game_db = GamesDB.fetch_game_by_name(game)
-        total = self.session.exec(select(LookingForGroup).where(LookingForGroup.game_id == game)).all()
+        total = self.session.exec(select(LookingForGroup).where(LookingForGroup.game_id == game_db.id)).all()
         self.session.add(
             LookingForGroup(
                 user_id=interaction.user.id,

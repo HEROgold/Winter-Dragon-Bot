@@ -8,12 +8,11 @@ from typing import TypedDict, cast
 import discord
 from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
 from discord.abc import PrivateChannel
-from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.database.channel_types import ChannelTypes
+from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
 
 
@@ -33,8 +32,10 @@ class Team(GroupCog, auto_load=True):
     @loop()
     async def delete_empty_team_channels(self) -> None:
         """Delete any empty team channel."""
-        channels = self.session.exec(select(Channels).where(Channels.type == ChannelTypes.TEAM_VOICE)).all()
+        channels = Channels.get_by_tag(self.session, Tags.TEAM_VOICE)
         for channel in channels:
+            if channel.id is None:
+                continue
             discord_channel = self.bot.get_channel(channel.id)
             if isinstance(discord_channel, CategoryChannel | PrivateChannel) or discord_channel is None:
                 self.logger.debug(f"skipping invalid channel: {discord_channel=}")
@@ -105,48 +106,42 @@ class Team(GroupCog, auto_load=True):
                 Channels(
                     id=voice.id,
                     name=voice.name,
-                    type=ChannelTypes.TEAM_VOICE,
                     guild_id=voice.guild.id,
                 ),
             )
 
         self.session.add_all(db_channels)
         self.session.commit()
+
+        for db_channel in db_channels:
+            db_channel.link_tag(self.session, Tags.TEAM_VOICE)
+
         return db_channels, discord_channels
 
     def get_team_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all team channels from winter_dragon.database."""
-        return self.session.exec(
-            select(Channels).where(
-                Channels.type == ChannelTypes.TEAM_VOICE,
-                Channels.guild_id == guild.id,
-            ),
-        ).all()
+        return Channels.get_by_tag(self.session, Tags.TEAM_VOICE, guild.id)
 
     def get_teams_category(self, guild: Guild) -> CategoryChannel | None:
         """Find a category channel."""
-        if channel := self.session.exec(
-            select(Channels).where(
-                Channels.type == ChannelTypes.TEAM_CATEGORY,
-                Channels.guild_id == guild.id,
-            ),
-        ).first():
+        channels = Channels.get_by_tag(self.session, Tags.TEAM_CATEGORY, guild.id)
+        if channels:
+            channel = channels[0]
             return cast("CategoryChannel", self.bot.get_channel(channel.id))
         return None
 
     async def create_teams_category(self, guild: Guild) -> CategoryChannel:
         """Create a category channel, and a lobby voice channel."""
-        channel = await guild.create_category(name="teams", reason="Creating team category for splitting into teams")
-        self.session.add(
-            Channels(
-                id=channel.id,
-                name=channel.name,
-                type=ChannelTypes.TEAM_CATEGORY,
-                guild_id=guild.id,
-            ),
+        category = await guild.create_category(name="teams", reason="Creating team category for splitting into teams")
+        db_channel = Channels(
+            id=category.id,
+            name=category.name,
+            guild_id=guild.id,
         )
+        self.session.add(db_channel)
         self.session.commit()
-        return channel
+        db_channel.link_tag(self.session, Tags.TEAM_CATEGORY)
+        return category
 
     async def fetch_teams_category(self, guild: Guild) -> CategoryChannel:
         """Find a category channel, if it doesn't find any, create it."""
@@ -156,27 +151,22 @@ class Team(GroupCog, auto_load=True):
 
     def get_teams_lobby(self, guild: Guild) -> VoiceChannel | None:
         """Find a lobby channel."""
-        if channel := self.session.exec(
-            select(Channels).where(
-                Channels.type == ChannelTypes.TEAM_LOBBY,
-                Channels.guild_id == guild.id,
-            ),
-        ).first():
+        if channels := Channels.get_by_tag(self.session, Tags.TEAM_LOBBY, guild.id):
+            channel = channels[0]
             return cast("VoiceChannel", self.bot.get_channel(channel.id))
         return None
 
     async def create_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:
         """Create a lobby channel."""
         voice = await category.create_voice_channel(name="Lobby", reason="Creating lobby channel for moving users.")
-        self.session.add(
-            Channels(
-                id=voice.id,
-                name=voice.name,
-                type=ChannelTypes.TEAM_LOBBY,
-                guild_id=category.guild.id,
-            ),
+        db_channel = Channels(
+            id=voice.id,
+            name=voice.name,
+            guild_id=category.guild.id,
         )
+        self.session.add(db_channel)
         self.session.commit()
+        db_channel.link_tag(self.session, Tags.TEAM_LOBBY)
         return voice
 
     async def fetch_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:

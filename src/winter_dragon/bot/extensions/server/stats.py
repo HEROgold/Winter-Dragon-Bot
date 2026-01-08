@@ -15,7 +15,7 @@ from winter_dragon.bot.core.cogs import BotArgs, Cog, GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
-from winter_dragon.database.channel_types import ChannelTypes
+from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
 
 
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from winter_dragon.bot.core.permissions import PermissionsOverwrites
 
 
-STATS = ChannelTypes.STATS
 
 
 def get_peak_count(channel: Channels | discord.abc.GuildChannel) -> int:
@@ -240,7 +239,7 @@ class Stats(GroupCog, auto_load=True):
             guild.me: discord.PermissionOverwrite(connect=True),
         }
 
-        category = await guild.create_category(name=STATS.name.capitalize(), overwrites=overwrite, position=0)
+        category = await guild.create_category(name=Tags.STATS.name.capitalize(), overwrites=overwrite, position=0)
         user_channel = await category.create_voice_channel(name="Total Users:", reason=reason)
         online_channel = await category.create_voice_channel(name="Online Users:", reason=reason)
         bot_channel = await category.create_voice_channel(name="Total Bots:", reason=reason)
@@ -257,14 +256,13 @@ class Stats(GroupCog, auto_load=True):
         }
 
         for k, v in channels.items():
-            Channels.update(
-                Channels(
-                    id=v.id,
-                    guild_id=guild.id,
-                    type=ChannelTypes.STATS,
-                    name=k,
-                ),
+            channel_record = Channels(
+                id=v.id,
+                guild_id=guild.id,
+                name=k,
             )
+            Channels.update(channel_record)
+            channel_record.link_tag(self.session, Tags.STATS)
         self.session.commit()
         self.logger.info(f"Created stats channels for: guild='{guild}'")
 
@@ -278,12 +276,7 @@ class Stats(GroupCog, auto_load=True):
             msg = "Expected discord.guild"
             raise TypeError(msg)
 
-        channels = self.session.exec(
-            select(Channels).where(
-                Channels.guild_id == guild.id,
-                Channels.type == STATS,
-            ),
-        ).all()
+        channels = Channels.get_by_tag(self.session, Tags.STATS, guild.id)
 
         self.logger.debug(f"{channels=}")
         self.logger.info(f"Removing stats channels for: guild='{guild}', channels='{channels}'")
@@ -314,12 +307,7 @@ class Stats(GroupCog, auto_load=True):
         self.logger.info("Updating all stat channels")
         guilds = self.bot.guilds
         for guild in guilds:
-            if not self.session.exec(
-                select(Channels).where(
-                    Channels.guild_id == guild.id,
-                    Channels.type == STATS,
-                ),
-            ).first():
+            if not Channels.get_by_tag(self.session, Tags.STATS, guild.id):
                 continue
             self.logger.info(f"Updating stat channels: guild='{guild}'")
             channels = self.get_guild_stats_channels(guild)
@@ -350,12 +338,7 @@ class Stats(GroupCog, auto_load=True):
         bot_channel = None
         peak_channel = None
         guild_channel = None
-        channels = self.session.exec(
-            select(Channels).where(
-                Channels.type == STATS,
-                Channels.guild_id == guild.id,
-            ),
-        ).all()
+        channels = Channels.get_by_tag(self.session, Tags.STATS, guild.id)
 
         for channel in channels:
             self.logger.debug(f"check if stats channel: {channel=}")
@@ -444,12 +427,7 @@ class Stats(GroupCog, auto_load=True):
             msg = "Expected Guild"
             raise TypeError(msg)
 
-        if self.session.exec(
-            select(Channels).where(
-                Channels.guild_id == interaction.guild.id,
-                Channels.type == STATS,
-            ),
-        ).all():
+        if Channels.get_by_tag(self.session, Tags.STATS, interaction.guild.id):
             rem_mention = self.get_command_mention(self.slash_stats_category_remove)
             await interaction.response.send_message(
                 f"Stats channels already set up use {rem_mention} to remove them",
@@ -478,12 +456,7 @@ class Stats(GroupCog, auto_load=True):
             msg = "Expected Guild"
             raise TypeError(msg)
 
-        channels = self.session.exec(
-            select(Channels).where(
-                Channels.guild_id == interaction.guild.id,
-                Channels.type == STATS,
-            ),
-        ).all()
+        channels = Channels.get_by_tag(self.session, Tags.STATS, interaction.guild.id)
         if not channels:
             add_mention = self.get_command_mention(self.slash_stats_category_add)
             await interaction.response.send_message(
@@ -513,12 +486,7 @@ class Stats(GroupCog, auto_load=True):
         self.logger.warning(f"Resetting all guild/stats channels > by: {interaction.user}")
         await interaction.response.defer(ephemeral=True)
 
-        channels = self.session.exec(
-            select(Channels).where(
-                Channels.guild_id == interaction.guild.id,
-                Channels.type == STATS,
-            ),
-        ).all()
+        channels = Channels.get_by_tag(self.session, Tags.STATS, interaction.guild.id)
 
         seen = []
 
