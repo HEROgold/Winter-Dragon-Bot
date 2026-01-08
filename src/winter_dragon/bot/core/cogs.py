@@ -50,18 +50,11 @@ default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
 
 
 class Cog(commands.Cog, LoggerMixin):
-    """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot.
-
-    Args:
-    ----
-        bot (WinterDragon): The instance of the WinterDragon bot.
-        logger (logging.Logger): The logger for the cog.
-
-    """
+    """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot."""
 
     bot: WinterDragon
     cache: ClassVar[AppCommandCache]
-    flags: ClassVar[CogFlags]
+    flags: ClassVar[CogFlags] = default_flags
 
     @property
     def has_app_command_mentions(self) -> bool:

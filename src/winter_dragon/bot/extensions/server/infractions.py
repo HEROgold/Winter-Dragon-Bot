@@ -23,17 +23,18 @@ _rule_severities = {
 
 @app_commands.guilds(Settings.support_guild_id)
 class Infractions(GroupCog, auto_load=True):
-    """Track automod interaction from discord, keep track of amount of violations
-    (Infractions) Ban users when X amount have reached. (Per guild configurable).
+    """Track automod interaction from discord.
 
-    TODO(Herogold, #8):
-        Add automod rules to keep track of.
-    TODO(Herogold, #9):
-        On automod trigger, add infraction (delete old ones).
-    TODO(Herogold, #10):
-        Make rules that can trigger an infraction.
-        IE: Spamming the same message in more then X amount of channels
-    """  # noqa: D205
+    (Infractions) Ban users when X amount have reached. (Per guild configurable).
+    """
+
+    # TODO(Herogold, #8):
+    #     Add automod rules to keep track of.
+    # TODO(Herogold, #9):
+    #     On automod trigger, add infraction (delete old ones).
+    # TODO(Herogold, #10):
+    #     Make rules that can trigger an infraction.
+    #     IE: Spamming the same message in more then X amount of channels
 
     @Cog.listener()
     async def on_automod_rule_create(self, rule: AutoModRule) -> None:

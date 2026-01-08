@@ -1,6 +1,5 @@
 """Module to sync slash commands with the Discord API."""
 
-
 from logging import Logger
 from typing import Protocol
 
@@ -17,6 +16,7 @@ from winter_dragon.bot.core.cogs import Cog
 COMMAND_DESCRIPTION_LIMIT = 100
 COMMAND_NAME_LIMIT = 32
 
+
 class CommandLike(Protocol):
     """Protocol for command like objects."""
 
@@ -24,34 +24,37 @@ class CommandLike(Protocol):
     def name(self) -> str:
         """Command name."""
         ...
+
     @name.setter
     def name(self, value: str) -> None:
         """Set command name."""
         ...
+
     @property
     def qualified_name(self) -> str:
         """Fully qualified command name."""
         ...
+
     @property
     def description(self) -> str:
         """Command description."""
         ...
+
     @description.setter
     def description(self, value: str) -> None:
         """Set command description."""
         ...
+
 
 def sync_name(command: CommandLike, logger: Logger) -> str:
     """Return the name used for syncing the command."""
     name_len = len(command.name)
     if name_len >= COMMAND_NAME_LIMIT:
         logger.critical("Command name too long: %s", command.qualified_name)
-        logger.warning(
-        "Fixing command name too long: %s (%d > %d)",
-            command.qualified_name, name_len, COMMAND_NAME_LIMIT
-        )
-        return command.name[:COMMAND_NAME_LIMIT - 3] + "..."
+        logger.warning("Fixing command name too long: %s (%d > %d)", command.qualified_name, name_len, COMMAND_NAME_LIMIT)
+        return command.name[: COMMAND_NAME_LIMIT - 3] + "..."
     return command.name
+
 
 def sync_description(command: CommandLike, logger: Logger) -> str:
     """Return the description used for syncing the command."""
@@ -59,11 +62,11 @@ def sync_description(command: CommandLike, logger: Logger) -> str:
     desc_len = len(desc)
     if desc_len > COMMAND_DESCRIPTION_LIMIT:
         logger.warning(
-            "Fixing command description too long: %s (%d > %d)",
-            command.qualified_name, desc_len, COMMAND_DESCRIPTION_LIMIT
+            "Fixing command description too long: %s (%d > %d)", command.qualified_name, desc_len, COMMAND_DESCRIPTION_LIMIT
         )
-        return desc[:COMMAND_DESCRIPTION_LIMIT - 3] + "..."
+        return desc[: COMMAND_DESCRIPTION_LIMIT - 3] + "..."
     return command.description
+
 
 class LenFixer(LoggerMixin):
     """Context manager to temporarily fix command name/description length."""
