@@ -2,10 +2,13 @@ from .associations import (
     AssociationUserCommand,
     AssociationUserHangman,
     AssociationUserLobby,
+    ChannelsTags,
     GuildCommands,
     GuildRoles,
 )
 from .associations.auto_assign_role import AutoAssignRole
+from .associations.channel_lobby import ChannelLobby
+from .associations.guild_audit_log import GuildAuditLog
 from .associations.user_roles import UserRoles
 from .audit_log import AuditLog
 from .auto_reassign import AutoReAssign
@@ -48,11 +51,14 @@ __all__ = [
     "AutoChannels",
     "AutoReAssign",
     "CarFuels",
+    "ChannelLobby",
     "Channels",
+    "ChannelsTags",
     "CommandGroups",
     "Commands",
     "DisabledCommands",
     "Games",
+    "GuildAuditLog",
     "GuildCommands",
     "GuildRoles",
     "Guilds",
