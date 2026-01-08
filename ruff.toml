@@ -29,3 +29,4 @@ lines-after-imports = 2
 "*/tables/*/*.py" = ["D"] # ignore docstring for db table models.
 "*/tables/*.py" = ["D"] # ignore docstring for db table models.
 "*/bot/events/base/factory.py" = ["E701"]
+"*/database/tables/*.py" = ["PLC0415"] # Allow lazy imports to avoid circular dependencies

@@ -13,7 +13,7 @@ class Channels(DiscordID, table=True):
 
     def link_tag(self, session: Session, tag: Tags) -> None:
         """Link this channel to a specific tag through the association table."""
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         if session.exec(
             select(ChannelsTags).where(
@@ -38,7 +38,7 @@ class Channels(DiscordID, table=True):
         """
         from sqlalchemy import delete
 
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         if tag is None:
             stmt = delete(ChannelsTags).where(col(ChannelsTags.channel_id) == self.id)
@@ -53,7 +53,7 @@ class Channels(DiscordID, table=True):
 
     def get_tags(self, session: Session) -> list[Tags]:
         """Get all tags associated with this channel."""
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         associations = session.exec(select(ChannelsTags).where(ChannelsTags.channel_id == self.id)).all()
 
@@ -61,7 +61,7 @@ class Channels(DiscordID, table=True):
 
     def has_tag(self, session: Session, tag: Tags) -> bool:
         """Check if this channel has a specific tag."""
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         return (
             session.exec(
@@ -83,7 +83,7 @@ class Channels(DiscordID, table=True):
 
         from sqlalchemy import func
 
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         stmt = select(func.count()).where(
             ChannelsTags.channel_id == self.id,
@@ -95,7 +95,7 @@ class Channels(DiscordID, table=True):
     @staticmethod
     def get_by_tag(session: Session, tag: Tags, guild_id: int | None = None) -> list["Channels"]:
         """Get all channels with a specific tag, optionally filtered by guild."""
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         query = select(Channels).join(ChannelsTags).where(ChannelsTags.tag == tag)
 
@@ -118,7 +118,7 @@ class Channels(DiscordID, table=True):
 
         from sqlalchemy import func
 
-        from winter_dragon.database.tables.associations.channel_types import ChannelsTags
+        from winter_dragon.database.tables.associations.channel_tags import ChannelsTags
 
         stmt = select(col(ChannelsTags.channel_id)).where(col(ChannelsTags.tag).in_(tags))
 
