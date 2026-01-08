@@ -51,11 +51,15 @@ class SteamSales(GroupCog, auto_load=True):
         known_sales = SteamSale.get_all()
         steam_sales = self.scraper.get_sales_from_steam(percent=percent)
 
+        skipped_sales = 0
         async for sale in steam_sales:
             if sale is None:
-                self.logger.debug("Got None sale, skipping")
+                skipped_sales += 1
                 continue
             sale.update()
+
+        if skipped_sales:
+            self.logger.debug(f"Skipped {skipped_sales} empty sale results from scraper run")
 
         self.logger.debug(f"checking for new sales, {known_sales=}, {steam_sales=}")
 

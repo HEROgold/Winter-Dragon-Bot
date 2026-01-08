@@ -284,11 +284,11 @@ wheels = [
 
 [[package]]
 name = "confkit"
-version = "0.9.0"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/90/88/8f457b24e94bde0083525bbfb5c7b1bcf97c053d3744cf63a62d582cff25/confkit-0.9.0.tar.gz", hash = "sha256:766d75d0ec3ce2dbec78faba328dd46701a278dc9d149326748eb060aa6bd185", size = 90653, upload-time = "2025-12-12T15:24:05.803Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/b4/fe1ef0efa1ee56180a94ecce0c849ecf0c090e43d2697b6de8d0df5308c9/confkit-0.10.0.tar.gz", hash = "sha256:65af03eeb3319af82ecfef2fed8dc18eb680d5c707a18213def1550527e51efc", size = 45143, upload-time = "2025-12-29T14:23:28.487Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/d9/f9f96d91c82f89cb8aa4518b7156d40f00a3096e7f1c294ccd679a9af586/confkit-0.9.0-py3-none-any.whl", hash = "sha256:fbdd122db7edd56710c21a85084771210470b855406b784a559f4a55261a9186", size = 12569, upload-time = "2025-12-12T15:24:04.468Z" },
+    { url = "https://files.pythonhosted.org/packages/83/b5/1c0a41d351a58dd4dee5c284fd26e375afe42a7af59bfd75f680b7fd9c6a/confkit-0.10.0-py3-none-any.whl", hash = "sha256:a82b9063032e8edd9278de5acaac74a7f917f73927a2e909b30fb1f1f31587e4", size = 13635, upload-time = "2025-12-29T14:23:26.991Z" },
 ]
 
 [[package]]
@@ -1259,7 +1259,7 @@ api = [
 [package.metadata]
 requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
-    { name = "confkit", specifier = "==0.9.0" },
+    { name = "confkit", specifier = "==0.10.0" },
     { name = "discord-ext-prometheus", specifier = ">=0.2.1" },
     { name = "discord-py", specifier = ">=2.6.3" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.115.0" },
