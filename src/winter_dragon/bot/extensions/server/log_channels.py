@@ -45,7 +45,8 @@ from winter_dragon.database.channel_types import ChannelTypes
 from winter_dragon.database.tables import Channels
 
 
-LOGS = ChannelTypes.LOGS
+LOGS = Tags.LOGS
+GLOBAL = Tags.LOG_GLOBAL
 MAX_CATEGORY_SIZE = 50
 
 
@@ -117,15 +118,6 @@ class LogChannels(GroupCog, auto_load=True):
             Channels.update(log_channel)
             yield channel, log_channel
 
-    # TODO(Herogold, #5): This requires the bot to have Administrator.  # noqa: FIX002
-    # Failing case: Command user is guild owner, and has administrator due to a role
-    # The bot does have manage_channels, but not administrator permissions
-    # This will cause the command to fail, raising 403 forbidden.
-    # When the bot is given administrator, it works.
-    #
-    # NOTE: Permission nuance — some guild owners report HTTP 403 when the bot lacks
-    # Administrator but has Manage Channels. If reproducible, adjust the decorator
-    # checks to reflect the minimal required scope.
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.checks.bot_has_permissions(manage_channels=True)
@@ -153,7 +145,17 @@ class LogChannels(GroupCog, auto_load=True):
 
         overwrites: PermissionsOverwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
-            guild.me: discord.PermissionOverwrite.from_pair(discord.Permissions.all(), discord.Permissions.none()),
+            guild.me: discord.PermissionOverwrite.from_pair(
+            discord.Permissions(
+                view_channel=True,
+                manage_channels=True,
+                send_messages=True,
+                embed_links=True,
+                attach_files=True,
+                read_message_history=True,
+                manage_messages=True,
+            ),
+            discord.Permissions.none()),
         }
 
         category_channels = await self.create_categories(guild, bot_user, overwrites)
@@ -391,7 +393,15 @@ class LogChannels(GroupCog, auto_load=True):
                     overwrites={
                         guild.default_role: discord.PermissionOverwrite(view_channel=False),
                         guild.me: discord.PermissionOverwrite.from_pair(
-                            discord.Permissions.all(),
+                            discord.Permissions(
+                                view_channel=True,
+                                manage_channels=True,
+                                send_messages=True,
+                                embed_links=True,
+                                attach_files=True,
+                                read_message_history=True,
+                                manage_messages=True,
+                            ),
                             discord.Permissions.none(),
                         ),
                     },
