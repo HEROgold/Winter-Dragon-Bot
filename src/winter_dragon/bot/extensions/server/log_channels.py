@@ -35,18 +35,15 @@ from discord import (
 )
 from discord.abc import PrivateChannel
 from discord.ext import commands
-from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.permissions import PermissionsOverwrites
 from winter_dragon.bot.core.settings import Settings
-from winter_dragon.database.channel_types import ChannelTypes
+from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
 
 
-LOGS = Tags.LOGS
-GLOBAL = Tags.LOG_GLOBAL
 MAX_CATEGORY_SIZE = 50
 
 
@@ -56,7 +53,7 @@ class LogChannels(GroupCog, auto_load=True):
     All runtime event logging is handled by modules in ``winter_dragon.bot.events``.
     """
 
-    log_channel_name = Config("LOG-CATEGORY")
+    log_category_name = Config("LOG-CATEGORY")
 
     # ----------------------
     # Helper Functions Start
@@ -112,10 +109,10 @@ class LogChannels(GroupCog, auto_load=True):
             log_channel = Channels(
                 id=channel.id,
                 name=channel.name,
-                type=LOGS,
                 guild_id=channel.guild.id,
             )
             Channels.update(log_channel)
+            log_channel.link_tag(self.session, Tags.LOGS)
             yield channel, log_channel
 
     @app_commands.guild_only()
@@ -146,22 +143,23 @@ class LogChannels(GroupCog, auto_load=True):
         overwrites: PermissionsOverwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             guild.me: discord.PermissionOverwrite.from_pair(
-            discord.Permissions(
-                view_channel=True,
-                manage_channels=True,
-                send_messages=True,
-                embed_links=True,
-                attach_files=True,
-                read_message_history=True,
-                manage_messages=True,
+                discord.Permissions(
+                    view_channel=True,
+                    manage_channels=True,
+                    send_messages=True,
+                    embed_links=True,
+                    attach_files=True,
+                    read_message_history=True,
+                    manage_messages=True,
+                ),
+                discord.Permissions.none(),
             ),
-            discord.Permissions.none()),
         }
 
-        category_channels = await self.create_categories(guild, bot_user, overwrites)
+        category_channels: list[CategoryChannel] = await self.create_categories(guild, bot_user, overwrites)
         await self.create_log_channels(category_channels)
 
-        category_mention = ", ".join(i.mention for i in category_channels)
+        category_mention = " ".join(i.mention for i in category_channels)
         await interaction.followup.send(
             f"Set up Log category and channels under {category_mention}",
         )
@@ -202,15 +200,13 @@ class LogChannels(GroupCog, auto_load=True):
             return
 
         audit_name = audit_action.name.title()
-        # TODO: Update db schema to allow for multiple log types on the same channel.
-        Channels.update(
-            Channels(
-                id=channel.id,
-                name=audit_name,
-                type=LOGS,
-                guild_id=guild.id,
-            ),
+        db_channel = Channels(
+            id=channel.id,
+            name=audit_name,
+            guild_id=guild.id,
         )
+        Channels.update(db_channel)
+        db_channel.link_tag(self.session, Tags.LOGS)
         await interaction.response.send_message(
             f"Linked {channel.mention} to `{audit_name}` events.",
             ephemeral=True,
@@ -235,43 +231,42 @@ class LogChannels(GroupCog, auto_load=True):
                 reason="Adding Log channels",
             )
             category_channels.append(category_channel)
-            Channels.update(
-                Channels(
-                    id=category_channel.id,
-                    name=self.log_channel_name,
-                    type=LOGS,
-                    guild_id=category_channel.guild.id,
-                ),
+            db_category = Channels(
+                id=category_channel.id,
+                name=self.log_category_name,
+                guild_id=category_channel.guild.id,
             )
+            Channels.update(db_category)
+            db_category.link_tag(self.session, Tags.LOGS)
         return category_channels
 
     async def create_log_channels(self, category_channels: list[CategoryChannel]) -> None:
         """Create log channels in the logging categories."""
-        for i, audit_action in enumerate(AuditLogAction):
-            log_category_name = audit_action.name.title()
+        category_types: list[str] = ["global"] + [i.name for i in AuditLogAction]
+        for i, audit_action in enumerate(category_types):
+            log_category_name = audit_action.title()
             category_channel = self.get_log_category(category_channels, i)
 
             text_channel = await category_channel.create_text_channel(
                 name=f"{log_category_name.lower()}",
                 reason="Adding Log channels",
             )
-            Channels.update(
-                Channels(
-                    id=text_channel.id,
-                    name=log_category_name,
-                    type=LOGS,
-                    guild_id=text_channel.guild.id,
-                ),
+            db_channel = Channels(
+                id=text_channel.id,
+                name=log_category_name,
+                guild_id=text_channel.guild.id,
             )
+            Channels.update(db_channel)
+            # Tag global channel with both LOGS and GLOBAL
+            if i == 0:  # First channel is global
+                db_channel.link_tag(self.session, Tags.LOGS)
+                db_channel.link_tag(self.session, Tags.AGGREGATE)
+            else:
+                db_channel.link_tag(self.session, Tags.LOGS)
 
     def get_db_log_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all log channels from the database."""
-        return self.session.exec(
-            select(Channels).where(
-                Channels.type == LOGS,
-                Channels.guild_id == guild.id,
-            ),
-        ).all()
+        return Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
 
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
@@ -287,13 +282,7 @@ class LogChannels(GroupCog, auto_load=True):
         if guild is None:
             msg = "Guild is None"
             raise TypeError(msg)
-        result = self.session.exec(
-            select(Channels).where(
-                Channels.type == LOGS,
-                Channels.guild_id == guild.id,
-            ),
-        )
-        channels = list(result.all())
+        channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
         if not channels:
             c_mention = self.get_command_mention(self.slash_log_add)
             await interaction.followup.send(f"Can't find LogChannels. Try using {c_mention}")
@@ -304,6 +293,9 @@ class LogChannels(GroupCog, auto_load=True):
         channels.sort(key=lambda channel: isinstance(discord.utils.get(guild.channels, id=channel.id), CategoryChannel))
 
         for channel in channels:
+            if channel.id is None:
+                self.logger.warning("Channel's ID is None, %s", channel)
+                continue
             dc_channel = self.bot.get_channel(channel.id) or discord.utils.get(guild.channels, id=channel.id)
             if dc_channel is None or isinstance(dc_channel, PrivateChannel):
                 msg = "Channel is None"
@@ -331,26 +323,26 @@ class LogChannels(GroupCog, auto_load=True):
         """Update log channels for a guild."""
         self.logger.debug(f"Updating Log for {guild=}")
         if guild is None:
-            guild_id = self.session.exec(
-                select(Channels.guild_id).where(Channels.type == LOGS),
-            ).first()
-            return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
+            all_log_channels = Channels.get_by_tag(self.session, Tags.LOGS)
+            guild_id = all_log_channels[0].guild_id if all_log_channels else None
+            if guild_id:
+                return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
+            return None
 
-        channels = self.session.exec(
-            select(Channels).where(
-                Channels.type == LOGS,
-                Channels.guild_id == guild.id,
-            ),
-        ).all()
-
+        channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
         div, mod = divmod(len(AuditLogAction), MAX_CATEGORY_SIZE)
         required_category_count = div + (1 if mod > 0 else 0)
-
         category_channels = await self.update_required_category_count(guild, required_category_count)
+        await self.ensure_aggregate_channel_first(guild, category_channels)
+        channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
 
-        difference: list[str] = []
         known_names = [channel.name.lower() for channel in channels]
 
+        # Add 'global' to known names since we ensured it exists
+        if "global" not in known_names:
+            known_names.append("global")
+
+        difference: list[str] = []
         difference.extend(j for j in [i.name.lower() for i in AuditLogAction] if j not in known_names)
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
 
@@ -359,26 +351,85 @@ class LogChannels(GroupCog, auto_load=True):
 
             new_log_channel = await category_channel.create_text_channel(channel_name, reason="Log update")
             self.logger.info(f"Updated Log for {guild=} with {new_log_channel=}")
-            Channels.update(
-                Channels(
-                    id=new_log_channel.id,
-                    name=channel_name,
-                    type=LOGS,
-                    guild_id=category_channel.guild.id,
-                ),
+            channel_record = Channels(
+                id=new_log_channel.id,
+                name=channel_name,
+                guild_id=category_channel.guild.id,
             )
+            Channels.update(channel_record)
+            channel_record.link_tag(self.session, Tags.LOGS)
         self.session.commit()
         return None
 
+    async def ensure_aggregate_channel_first(
+        self,
+        guild: discord.Guild,
+        category_channels: list[CategoryChannel],
+    ) -> None:
+        """Ensure the aggregate logging channel is at the top of the first category."""
+        if not category_channels:
+            return
+
+        first_category = category_channels[0]
+        global_channels = Channels.get_by_tags(
+            self.session,
+            [Tags.AGGREGATE, Tags.LOGS],
+            guild.id,
+            match_all=True,
+        )
+        db_channel = global_channels[0] if global_channels else None
+
+        if db_channel:
+            global_channel = discord.utils.get(guild.text_channels, id=db_channel.id)
+
+            if global_channel and global_channel.category_id == first_category.id:
+                if global_channel != first_category.channels[0]:
+                    self.logger.info(f"Moving global channel to top of {first_category.name}")
+                    await global_channel.edit(position=0, reason="Ensuring global channel is first")
+            elif global_channel and global_channel.category_id != first_category.id:
+                self.logger.info(f"Moving global channel to first category {first_category.name}")
+                if len(first_category.channels) >= MAX_CATEGORY_SIZE:
+                    last_channel = max(
+                        (ch for ch in first_category.text_channels),
+                        key=lambda ch: ch.position,
+                    )
+                    if len(category_channels) > 1:
+                        second_category = category_channels[1]
+                        self.logger.info(f"Moving {last_channel.name} to second category to make room")
+                        await last_channel.edit(category=second_category, position=0, reason="Making room for global channel")
+                await global_channel.edit(category=first_category, position=0, reason="Moving global to first position")
+        else:
+            self.logger.info("Creating missing global channel at top of first category")
+
+            # If first category is full, move last channel to second category
+            if len(first_category.channels) >= MAX_CATEGORY_SIZE and len(category_channels) > 1:
+                last_channel = max(
+                    (ch for ch in first_category.text_channels),
+                    key=lambda ch: ch.position,
+                )
+                second_category = category_channels[1]
+                self.logger.info(f"Moving {last_channel.name} to second category to make room")
+                await last_channel.edit(category=second_category, position=0, reason="Making room for global channel")
+
+            global_channel = await first_category.create_text_channel(
+                name="global",
+                position=0,
+                reason="Creating global log channel",
+            )
+            channel_record = Channels(
+                id=global_channel.id,
+                name="Global",
+                guild_id=guild.id,
+            )
+            Channels.update(channel_record)
+            channel_record.link_tag(self.session, Tags.LOGS)
+            channel_record.link_tag(self.session, Tags.AGGREGATE)
+            self.session.commit()
+
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
         """Update the required category count for the guild."""
-        categories = self.session.exec(
-            select(Channels).where(
-                Channels.name == self.log_channel_name,
-                Channels.type == LOGS,
-                Channels.guild_id == guild.id,
-            ),
-        ).all()
+        all_log_channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
+        categories = [c for c in all_log_channels if c.name == self.log_category_name]
         category_channels = [discord.utils.get(guild.categories, id=category.id) for category in categories]
         current_category_count = len(category_channels) or len(categories)
 
@@ -409,14 +460,13 @@ class LogChannels(GroupCog, auto_load=True):
                     reason="Adding Log channels",
                 )
                 category_channels.append(category_channel)
-                Channels.update(
-                    Channels(
-                        id=category_channel.id,
-                        name=self.log_channel_name,
-                        type=LOGS,
-                        guild_id=category_channel.guild.id,
-                    ),
+                db_category = Channels(
+                    id=category_channel.id,
+                    name=self.log_category_name,
+                    guild_id=category_channel.guild.id,
                 )
+                Channels.update(db_category)
+                db_category.link_tag(self.session, Tags.LOGS)
         self.session.commit()
 
         return cast("list[CategoryChannel]", category_channels)
