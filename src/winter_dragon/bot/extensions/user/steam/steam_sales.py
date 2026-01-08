@@ -8,10 +8,10 @@ from sqlmodel import select
 
 from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamScraper
 from winter_dragon.bot.extensions.user.steam.user_notifier import SteamSaleNotifier
+from winter_dragon.config import Config
 from winter_dragon.database.tables.steamsale import SteamSale
 from winter_dragon.database.tables.steamuser import SteamUsers
 from winter_dragon.database.tables.user import Users

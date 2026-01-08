@@ -10,8 +10,8 @@ from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, a
 from discord.abc import PrivateChannel
 
 from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.config import Config
 from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
 

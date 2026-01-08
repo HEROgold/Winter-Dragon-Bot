@@ -8,9 +8,9 @@ from discord import ActivityType, Status, app_commands
 from discord.ext import commands
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.config import Config
 
 
 INVALID_RNG_STATUS = [

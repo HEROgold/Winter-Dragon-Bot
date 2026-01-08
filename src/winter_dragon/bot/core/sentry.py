@@ -6,7 +6,7 @@ from enum import auto
 import sentry_sdk
 from confkit import Enum
 
-from .config import Config
+from winter_dragon.config import Config
 
 
 class Environments(enum.StrEnum):

@@ -8,7 +8,7 @@ from typing import Any
 from confkit import BaseDataType
 from confkit.data_types import Hex, List
 
-from .config import Config
+from winter_dragon.config import Config
 
 
 GENERATED_MSG = "AutomaticallyGenerated"

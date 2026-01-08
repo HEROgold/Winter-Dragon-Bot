@@ -11,7 +11,7 @@ import configparser
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from confkit import Config
+from confkit import Config as CKConfig
 
 
 if TYPE_CHECKING:
@@ -26,7 +26,11 @@ class FirstTimeLaunchError(Exception):
     """Raised when it's detected that WinterDragon is launched for the first time."""
 
 
-BOT_CONFIG = Path("config.ini")
+CONFIG_FILE = Path("config.ini")
+
+
+class Config[T](CKConfig[T]):
+    """Config descriptor for WinterDragon."""
 
 
 class ConfigParser(configparser.ConfigParser):
@@ -36,20 +40,20 @@ class ConfigParser(configparser.ConfigParser):
         """Initialize the config parser."""
         super().__init__()
         try:
-            with BOT_CONFIG.open():
+            with CONFIG_FILE.open():
                 pass
         except FileNotFoundError as e:
-            BOT_CONFIG.touch(exist_ok=True)
+            CONFIG_FILE.touch(exist_ok=True)
             self._write_defaults()
-            msg = f"First time launch detected, please edit settings with value !! in {BOT_CONFIG}"
+            msg = f"First time launch detected, please edit settings with value !! in {CONFIG_FILE}"
             raise FirstTimeLaunchError(msg) from e
-        self.read(BOT_CONFIG)
+        self.read(CONFIG_FILE)
 
     def _write_defaults(self) -> None:
         self["Tokens"] = {
             "discord_token": "!!",
         }
-        with BOT_CONFIG.open("w") as fp:
+        with CONFIG_FILE.open("w") as fp:
             self.write(fp)
 
     def is_valid(self) -> bool:
@@ -70,4 +74,4 @@ class ConfigParser(configparser.ConfigParser):
 
 config = ConfigParser()
 Config.set_parser(config)
-Config.set_file(BOT_CONFIG)
+Config.set_file(CONFIG_FILE)

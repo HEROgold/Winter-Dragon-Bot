@@ -12,10 +12,10 @@ from matplotlib import pyplot as plt
 from psutil._common import snetio
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.paths import METRICS_FILE
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.config import Config
 from winter_dragon.database.tables.user import Users
 
 

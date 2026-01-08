@@ -17,11 +17,11 @@ from discord import (
 )
 
 from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.server.log_channels import LogChannels
 from winter_dragon.bot.extensions.server.stats import Stats
 from winter_dragon.bot.extensions.server.welcome import Welcome
+from winter_dragon.config import Config
 
 
 # Deprecated on discord's end. Keeping for historical purposes.

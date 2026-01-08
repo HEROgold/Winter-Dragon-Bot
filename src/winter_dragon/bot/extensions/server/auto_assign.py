@@ -5,7 +5,7 @@ from discord import app_commands
 from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.bot.core.config import Config
+from winter_dragon.config import Config
 from winter_dragon.database.tables import AutoAssignRole
 from winter_dragon.database.tables import Roles as DbRole
 

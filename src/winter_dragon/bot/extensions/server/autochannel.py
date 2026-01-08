@@ -12,7 +12,7 @@ from discord import (
 from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.bot.core.config import Config
+from winter_dragon.config import Config
 from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
 from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
 from winter_dragon.database.tables.channel import Channels

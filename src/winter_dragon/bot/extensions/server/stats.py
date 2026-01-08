@@ -12,9 +12,9 @@ from herogold.log import LoggerMixin
 from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import BotArgs, Cog, GroupCog
-from winter_dragon.bot.core.config import Config
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
+from winter_dragon.config import Config
 from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
 

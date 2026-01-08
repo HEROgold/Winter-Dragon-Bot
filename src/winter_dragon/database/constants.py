@@ -3,15 +3,28 @@
 from sqlalchemy import URL
 from sqlmodel import Session, create_engine
 
+from winter_dragon.config import Config
+
+
+class DbUrl:
+    """Class containing database URL components."""
+
+    drivername = Config("postgresql")
+    username = Config("postgres")
+    password = Config("SECURE_PASSWORD")
+    host = Config("postgres")
+    port = Config(5432)
+    database = Config("winter_dragon")
+
 
 CASCADE = "CASCADE"
 DATABASE_URL = URL.create(
-    drivername="postgresql",
-    username="postgres",
-    password="fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3",  # noqa: S106
-    host="postgres",
-    port=5432,
-    database="winter_dragon",
+    DbUrl.drivername,
+    username=DbUrl.username,
+    password=DbUrl.password,
+    host=DbUrl.host,
+    port=DbUrl.port,
+    database=DbUrl.database,
 )
 engine = create_engine(DATABASE_URL, echo=False)
 session = Session(engine)
