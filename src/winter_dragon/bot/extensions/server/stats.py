@@ -23,8 +23,6 @@ if TYPE_CHECKING:
     from winter_dragon.bot.core.permissions import PermissionsOverwrites
 
 
-
-
 def get_peak_count(channel: Channels | discord.abc.GuildChannel) -> int:
     """Get the peak count from the channel name."""
     try:

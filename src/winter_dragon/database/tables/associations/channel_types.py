@@ -9,5 +9,6 @@ from winter_dragon.database.tables.channel import Channels
 
 class ChannelsTags(SQLModel, table=True):
     """Association table linking channels to their tags."""
+
     channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels), ondelete="CASCADE"), primary_key=True))
     tag: Tags

@@ -102,18 +102,7 @@ class SearchScraper(BaseScraper):
         self.bundle_scraper = BundleScraper()
 
     async def get_sales_from_search(self, search_url: str, percent: int) -> AsyncGenerator[SteamSale | None]:
-        """Scrape sales from a Steam search URL.
-
-        Args:
-        ----
-            search_url (str): URL of the Steam search page
-            percent (int): Minimum sale percentage to filter
-
-        Yields:
-        ------
-            SteamSale | None: Steam sale information or None if not found
-
-        """
+        """Scrape sales from a Steam search URL."""
         diagnostics = SteamSearchDiagnostics(percent_threshold=percent)
         self.logger.debug(f"Scraping Steam sales: {percent=}")
         html = await self._get_html(search_url)
@@ -131,18 +120,7 @@ class SearchScraper(BaseScraper):
         percent: int,
         diagnostics: SteamSearchDiagnostics,
     ) -> SteamSale | None:
-        """Get a single sale from the steam search page.
-
-        Args:
-        ----
-            sale_tag (Tag): BeautifulSoup tag containing sale information
-            percent (int): Minimum sale percentage to filter
-
-        Returns:
-        -------
-            SteamSale | None: Steam sale information or None if not found
-
-        """
+        """Get a single sale from the steam search page."""
         diagnostics.record_examined()
         a_tag = sale_tag.find_parent("a", href=True)
 

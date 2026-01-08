@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Session, col, select
 
@@ -56,9 +55,7 @@ class Channels(DiscordID, table=True):
         """Get all tags associated with this channel."""
         from winter_dragon.database.tables.associations.channel_types import ChannelsTags
 
-        associations = session.exec(
-            select(ChannelsTags).where(ChannelsTags.channel_id == self.id)
-        ).all()
+        associations = session.exec(select(ChannelsTags).where(ChannelsTags.channel_id == self.id)).all()
 
         return [assoc.tag for assoc in associations]
 
@@ -100,11 +97,7 @@ class Channels(DiscordID, table=True):
         """Get all channels with a specific tag, optionally filtered by guild."""
         from winter_dragon.database.tables.associations.channel_types import ChannelsTags
 
-        query = (
-            select(Channels)
-            .join(ChannelsTags)
-            .where(ChannelsTags.tag == tag)
-        )
+        query = select(Channels).join(ChannelsTags).where(ChannelsTags.tag == tag)
 
         if guild_id is not None:
             query = query.where(Channels.guild_id == guild_id)
