@@ -1,6 +1,7 @@
 """A cache for storing application commands, both globally and per guild."""
 
 from collections.abc import Sequence
+from typing import ClassVar
 
 import discord
 from discord.abc import Snowflake
@@ -15,11 +16,8 @@ type MentionableCommand = AppCommand | AppCommandGroup
 class AppCommandCache:
     """A cache for storing application commands, both globally and per guild."""
 
-    def __init__(self, bot: BotBase) -> None:
-        """Initialize the AppCommandCache with a reference to the bot instance."""
-        self._global_app_commands: AppCommandStore = {}
-        self._guild_app_commands: dict[int, AppCommandStore] = {}
-        self.bot = bot
+    _global_app_commands: ClassVar[AppCommandStore] = {}
+    _guild_app_commands: ClassVar[dict[int, AppCommandStore]] = {}
 
     def __repr__(self) -> str:
         return f"AppCommandCache(global={self._global_app_commands}, guilds={self._guild_app_commands})"
@@ -68,6 +66,7 @@ class AppCommandCache:
 
     async def update_app_commands_cache(
         self,
+        bot: BotBase,
         commands: list[AppCommand] | None = None,
         guild: Snowflake | int | None = None,
     ) -> None:
@@ -81,7 +80,7 @@ class AppCommandCache:
         # commands.Bot has a built-in tree
         # this should be point to your tree if using discord.Client
         if not commands:
-            commands = await self.bot.tree.fetch_commands(guild=_guild)
+            commands = await bot.tree.fetch_commands(guild=_guild)
 
         if _guild:
             self._guild_app_commands[_guild.id].update(self._unpack_app_commands(commands))

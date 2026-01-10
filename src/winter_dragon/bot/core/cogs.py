@@ -53,8 +53,12 @@ class Cog(commands.Cog, LoggerMixin):
     """Cog is a subclass of commands.Cog that represents a cog in the WinterDragon bot."""
 
     bot: WinterDragon
-    cache: ClassVar[AppCommandCache]
+    cache: ClassVar[AppCommandCache] = AppCommandCache()
     flags: ClassVar[CogFlags] = default_flags
+
+    # Expose cache methods on the cog for easier access
+    get_app_command = cache.get_app_command
+    get_command_mention = cache.get_command_mention
 
     @property
     def has_app_command_mentions(self) -> bool:
@@ -78,13 +82,6 @@ class Cog(commands.Cog, LoggerMixin):
             bot=self.bot,
             cog_cls=self.__class__,
         )
-
-        if not getattr(Cog, "cache", None):
-            Cog.cache = AppCommandCache(self.bot)
-
-        # Expose cache methods on the cog for easier access
-        self.get_app_command = Cog.cache.get_app_command
-        self.get_command_mention = Cog.cache.get_command_mention
 
         if not self.has_error_handler():
             # Mention class name from the inheriting subclass.
@@ -169,7 +166,7 @@ class Cog(commands.Cog, LoggerMixin):
         """Add app command mentions to the bot if it hasn't been done yet."""
         if not self.has_app_command_mentions:
             self.logger.debug(f"Adding app_commands to cache. {Cog.cache=}")
-            await Cog.cache.update_app_commands_cache()
+            await Cog.cache.update_app_commands_cache(self.bot)
             self.flags |= CogFlags.HasAppCommandMentions
 
     @loop(count=1)
