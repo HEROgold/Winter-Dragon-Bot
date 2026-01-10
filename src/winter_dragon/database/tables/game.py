@@ -26,5 +26,5 @@ class Games(SQLModel, table=True):
         inst = cls(name=name)
         cls.session.add(inst)
         cls.session.commit()
-        cls.id: int  # type: ignore[reportIncompatibleVariableOverride]  # noqa: B032
+        cls.id: int  # noqa: B032
         return inst

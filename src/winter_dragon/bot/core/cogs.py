@@ -95,7 +95,7 @@ class Cog(commands.Cog, LoggerMixin):
 
         # Don't start the auto_load loop for the abstract/base Cog classes
         # (we only want concrete subclasses to be able to auto-load themselves).
-        if self.__class__ not in (Cog, GroupCog):  # type: ignore[name-defined]
+        if self.__class__ not in (Cog, GroupCog):
             self.bot.loop.create_task(self.auto_load())
             self._auto_reloader.register()
 

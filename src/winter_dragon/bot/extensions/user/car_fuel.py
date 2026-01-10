@@ -52,7 +52,7 @@ class Fuel(GroupCog, auto_load=True):
 
         # Create the plot
         plt.figure(figsize=(10, 6))
-        plt.plot(timestamps, efficiencies, marker="o", linestyle="-", linewidth=2, markersize=6)  # type: ignore[arg-type]
+        plt.plot(timestamps, efficiencies, marker="o", linestyle="-", linewidth=2, markersize=6)
         plt.xlabel("Date")
         plt.ylabel("Efficiency (distance per unit)")
         plt.title("Fuel Efficiency Over Time")

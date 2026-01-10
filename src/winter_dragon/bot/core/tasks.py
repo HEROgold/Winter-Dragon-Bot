@@ -35,7 +35,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         exception = args[-1]
         self.logger.error(
             "Unhandled exception in internal background task %r.",
-            self.coro.__name__,  # type: ignore[reportUnknownArgumentType]
+            self.coro.__name__,
             exc_info=exception,
         )
         return await super()._error(*args)

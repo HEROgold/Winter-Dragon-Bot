@@ -106,7 +106,7 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
         self.session.add(
             AUC(
                 user_id=user.id,
-                command_id=command.id,  # type: ignore[has-id]
+                command_id=command.id,
             ),
         )
         self.session.commit()
@@ -338,5 +338,5 @@ class CogEvents(Cog, auto_load=True):
             return
 
         helper.add_db_user(user)
-        db_cmd = helper.fetch_db_command(command)  # type: ignore  # noqa: PGH003
+        db_cmd = helper.fetch_db_command(command)
         helper.link_user_db_command(user, db_cmd)

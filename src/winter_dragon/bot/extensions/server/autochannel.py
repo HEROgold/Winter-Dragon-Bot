@@ -104,7 +104,7 @@ class AutomaticChannels(GroupCog, auto_load=True):
             voice_channel = await member.guild.create_voice_channel(
                 name,
                 category=category,
-                overwrites=overwrites,  # type: ignore[reportUnknownArgumentType]
+                overwrites=overwrites,
                 reason=self.create_reason,
             )
 
