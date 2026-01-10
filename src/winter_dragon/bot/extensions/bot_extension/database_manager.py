@@ -69,7 +69,6 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
                 Channels(
                     id=channel.id,
                     name=f"{channel.name}",
-                    type=None,
                     guild_id=channel.guild.id,
                 ),
             )
