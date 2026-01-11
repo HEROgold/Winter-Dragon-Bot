@@ -54,7 +54,7 @@ class Cog(commands.Cog, LoggerMixin):
 
     bot: WinterDragon
     cache: ClassVar[AppCommandCache] = AppCommandCache()
-    flags: ClassVar[CogFlags] = default_flags
+    flags: CogFlags
 
     # Expose cache methods on the cog for easier access
     get_app_command = cache.get_app_command
