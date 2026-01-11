@@ -192,7 +192,7 @@ class LogChannels(GroupCog, auto_load=True):
         try:
             audit_action = AuditLogAction[normalized]
         except KeyError:
-            available = ", ".join(action.name.title() for action in AuditLogAction)
+            available = self.get_valid_log_actions()
             await interaction.response.send_message(
                 f"Unknown log type. Available types: {available}",
                 ephemeral=True,
@@ -479,7 +479,7 @@ class LogChannels(GroupCog, auto_load=True):
     ) -> list[app_commands.Choice[str]]:
         """Autocomplete available audit log types for the set command."""
         term = current.lower()
-        actions: list[str] = ["global"] + [action.name for action in AuditLogAction]
+        actions: list[str] = self.get_valid_log_actions()
         choices = [
             app_commands.Choice(name=action.replace("_", " ").title(), value=action)
             for action in actions
@@ -488,6 +488,10 @@ class LogChannels(GroupCog, auto_load=True):
         return choices[:25] or [
             app_commands.Choice(name=action.replace("_", " ").title(), value=action) for action in actions[:25]
         ]
+
+    def get_valid_log_actions(self) -> list[str]:
+        """Get a list of valid audit log actions."""
+        return ["global"] + [action.name for action in AuditLogAction]
 
 
 # ------------

@@ -111,5 +111,4 @@
     ],
     "todo-tree.tree.showCountsInTree": true,
     "editor.acceptSuggestionOnEnter": "on",
-    "python.languageServer": "None",
 }
