@@ -190,7 +190,8 @@ class LogChannels(GroupCog, auto_load=True):
 
         normalized = log_type.lower()
         try:
-            audit_action = AuditLogAction[normalized]
+            audit_action = "global" if normalized == "global" else AuditLogAction[normalized].name
+            audit_name = audit_action.title()
         except KeyError:
             available = self.get_valid_log_actions()
             await interaction.response.send_message(
@@ -199,7 +200,6 @@ class LogChannels(GroupCog, auto_load=True):
             )
             return
 
-        audit_name = audit_action.name.title()
         db_channel = Channels(
             id=channel.id,
             name=audit_name,
