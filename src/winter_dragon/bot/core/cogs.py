@@ -21,12 +21,6 @@ from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.disabled_commands import DisabledCommands
 
 
-_="" # < Trick for ruff. so that imports below don't get auto-sorted.
-# Eagerly import all error handlers.
-# These register themselfs with the ErrorFactory using __init_subclass__.
-from winter_dragon.bot.errors.handlers import *  # noqa: E402, F403
-
-
 if TYPE_CHECKING:
     from discord.ext.commands._types import BotT
     from discord.ext.commands.context import Context
