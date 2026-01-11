@@ -1,4 +1,4 @@
-from .channel_tags import ChannelsTags
+from .channel_tags import ChannelTag
 from .guild_commands import GuildCommands
 from .guild_roles import GuildRoles
 from .user_command import AssociationUserCommand
@@ -10,7 +10,7 @@ __all__ = [
     "AssociationUserCommand",
     "AssociationUserHangman",
     "AssociationUserLobby",
-    "ChannelsTags",
+    "ChannelTag",
     "GuildCommands",
     "GuildRoles",
 ]

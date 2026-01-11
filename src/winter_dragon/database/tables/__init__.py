@@ -2,7 +2,7 @@ from .associations import (
     AssociationUserCommand,
     AssociationUserHangman,
     AssociationUserLobby,
-    ChannelsTags,
+    ChannelTag,
     GuildCommands,
     GuildRoles,
 )
@@ -52,8 +52,8 @@ __all__ = [
     "AutoReAssign",
     "CarFuels",
     "ChannelLobby",
+    "ChannelTag",
     "Channels",
-    "ChannelsTags",
     "CommandGroups",
     "Commands",
     "DisabledCommands",
