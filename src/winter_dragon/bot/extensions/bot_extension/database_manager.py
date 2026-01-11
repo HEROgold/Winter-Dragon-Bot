@@ -5,6 +5,7 @@ from typing import override
 
 import discord
 from discord import AuditLogAction, Thread, app_commands
+from discord.app_commands import ContextMenu
 from herogold.log import LoggerMixin
 from sqlmodel import select
 
@@ -103,6 +104,9 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
 
     def link_user_db_command(self, user: discord.Member | discord.User, command: Commands) -> None:
         """Link a database user to a command when used."""
+        if command.id is None:
+            self.logger.error(f"Cannot link user to command, command ID is None: {command=}")
+            return
         self.session.add(
             AUC(
                 user_id=user.id,
@@ -335,6 +339,8 @@ class CogEvents(Cog, auto_load=True):
         command = interaction.command
         if command is None:
             helper.logger.warning("interaction's Command is None, cannot add command to database.")
+            return
+        if isinstance(command, ContextMenu):
             return
 
         helper.add_db_user(user)
