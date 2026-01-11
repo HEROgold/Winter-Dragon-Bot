@@ -9,7 +9,6 @@ class Tags(Enum):
     UNKNOWN = auto()
     STATS = auto()
     LOGS = auto()
-    AGGREGATE = auto()
     TICKETS = auto()
     TEAM_VOICE = auto()
     TEAM_CATEGORY = auto()

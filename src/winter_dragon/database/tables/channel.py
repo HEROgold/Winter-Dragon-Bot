@@ -1,3 +1,4 @@
+from discord import AuditLogAction
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Session, col, select
 
@@ -139,3 +140,43 @@ class Channels(DiscordID, table=True):
         if not channel_ids:
             return []
         return list(session.exec(select(Channels).where(col(Channels.id).in_(channel_ids))).all())
+
+    def link_audit_action(self, session: Session, audit_action: AuditLogAction) -> None:
+        """Link this channel to a specific audit action through the association table."""
+        from winter_dragon.database.tables.associations.channel_audit import ChannelAudit
+
+        if session.exec(
+            select(ChannelAudit).where(
+                ChannelAudit.channel_id == self.id,
+                ChannelAudit.audit_action == audit_action,
+            )
+        ).first():
+            return
+
+        association = ChannelAudit(
+            channel_id=self.id,
+            audit_action=audit_action,
+        )
+        session.add(association)
+        session.commit()
+
+    def unlink_audit_action(self, session: Session, audit_action: AuditLogAction | None = None) -> None:
+        """Remove audit action associations from this channel.
+
+        If audit_action is None, removes all audit action associations.
+        Uses bulk delete for efficiency instead of fetching and deleting records individually.
+        """
+        from sqlalchemy import delete
+
+        from winter_dragon.database.tables.associations.channel_audit import ChannelAudit
+
+        if audit_action is None:
+            stmt = delete(ChannelAudit).where(col(ChannelAudit.channel_id) == self.id)
+        else:
+            stmt = delete(ChannelAudit).where(
+                col(ChannelAudit.channel_id) == self.id,
+                col(ChannelAudit.audit_action) == audit_action,
+            )
+
+        session.exec(stmt)
+        session.commit()

@@ -45,6 +45,7 @@ from winter_dragon.database.tables import Channels
 
 
 MAX_CATEGORY_SIZE = 50
+GLOBAL = "global"
 
 
 class LogChannels(GroupCog, auto_load=True):
@@ -188,9 +189,9 @@ class LogChannels(GroupCog, auto_load=True):
             await interaction.response.send_message("Select a channel from this guild.", ephemeral=True)
             return
 
-        normalized = log_type.lower()
+        log_type = log_type.lower()
         try:
-            audit_action = "global" if normalized == "global" else AuditLogAction[normalized].name
+            audit_action = GLOBAL if log_type == GLOBAL else AuditLogAction[log_type].name
             audit_name = audit_action.title()
         except KeyError:
             available = self.get_valid_log_actions()
@@ -207,6 +208,7 @@ class LogChannels(GroupCog, auto_load=True):
         )
         Channels.update(db_channel)
         db_channel.link_tag(self.session, Tags.LOGS)
+        self._setup_log_channel(db_channel, audit_name)
         await interaction.response.send_message(
             f"Linked {channel.mention} to `{audit_name}` events.",
             ephemeral=True,
@@ -242,7 +244,7 @@ class LogChannels(GroupCog, auto_load=True):
 
     async def create_log_channels(self, category_channels: list[CategoryChannel]) -> None:
         """Create log channels in the logging categories."""
-        category_types: list[str] = ["global"] + [i.name for i in AuditLogAction]
+        category_types: list[str] = [GLOBAL] + [i.name for i in AuditLogAction]
         for i, audit_action in enumerate(category_types):
             log_category_name = audit_action.title()
             category_channel = self.get_log_category(category_channels, i)
@@ -257,12 +259,24 @@ class LogChannels(GroupCog, auto_load=True):
                 guild_id=text_channel.guild.id,
             )
             Channels.update(db_channel)
-            # Tag global channel with both LOGS and GLOBAL
-            if i == 0:  # First channel is global
-                db_channel.link_tag(self.session, Tags.LOGS)
-                db_channel.link_tag(self.session, Tags.AGGREGATE)
-            else:
-                db_channel.link_tag(self.session, Tags.LOGS)
+            self._setup_log_channel(db_channel, audit_action)
+
+    def _setup_log_channel(self, db_channel: Channels, audit_action: str) -> None:
+        """Set up channel tags and audit action links."""
+        # Tag global channel with both LOGS and GLOBAL
+        if audit_action == GLOBAL:
+            self._setup_aggregate_channel_links(db_channel)
+        else:
+            db_channel.link_tag(self.session, Tags.LOGS)
+            db_channel.link_audit_action(self.session, AuditLogAction[audit_action.lower()])
+
+    def _setup_aggregate_channel_links(self, db_channel: Channels) -> None:
+        """Set up the aggregate channel links for the global log channel."""
+        db_channel.link_tag(self.session, Tags.LOGS)
+        # Link all audit actions to the global channel
+        # This allows for sending all logs to the global channel
+        for j in AuditLogAction:
+            db_channel.link_audit_action(self.session, j)
 
     def get_db_log_channels(self, guild: Guild) -> Sequence[Channels]:
         """Get all log channels from the database."""
@@ -330,15 +344,8 @@ class LogChannels(GroupCog, auto_load=True):
         div, mod = divmod(len(AuditLogAction), MAX_CATEGORY_SIZE)
         required_category_count = div + (1 if mod > 0 else 0)
         category_channels = await self.update_required_category_count(guild, required_category_count)
-        await self.ensure_aggregate_channel_first(guild, category_channels)
-        channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
 
         known_names = [channel.name.lower() for channel in channels]
-
-        # Add 'global' to known names since we ensured it exists
-        if "global" not in known_names:
-            known_names.append("global")
-
         difference: list[str] = []
         difference.extend(j for j in [i.name.lower() for i in AuditLogAction] if j not in known_names)
         self.logger.debug(f"{channels=}, {known_names=}, {difference=}")
@@ -356,71 +363,6 @@ class LogChannels(GroupCog, auto_load=True):
             Channels.update(channel_record)
             channel_record.link_tag(self.session, Tags.LOGS)
         self.session.commit()
-
-    async def ensure_aggregate_channel_first(
-        self,
-        guild: discord.Guild,
-        category_channels: list[CategoryChannel],
-    ) -> None:
-        """Ensure the aggregate logging channel is at the top of the first category."""
-        if not category_channels:
-            return
-
-        first_category = category_channels[0]
-        global_channels = Channels.get_by_tags(
-            self.session,
-            [Tags.AGGREGATE, Tags.LOGS],
-            guild.id,
-            match_all=True,
-        )
-        db_channel = global_channels[0] if global_channels else None
-
-        if db_channel:
-            global_channel = discord.utils.get(guild.text_channels, id=db_channel.id)
-
-            if global_channel and global_channel.category_id == first_category.id:
-                if global_channel != first_category.channels[0]:
-                    self.logger.info(f"Moving global channel to top of {first_category.name}")
-                    await global_channel.edit(position=0, reason="Ensuring global channel is first")
-            elif global_channel and global_channel.category_id != first_category.id:
-                self.logger.info(f"Moving global channel to first category {first_category.name}")
-                if len(first_category.channels) >= MAX_CATEGORY_SIZE:
-                    last_channel = max(
-                        (ch for ch in first_category.text_channels),
-                        key=lambda ch: ch.position,
-                    )
-                    if len(category_channels) > 1:
-                        second_category = category_channels[1]
-                        self.logger.info(f"Moving {last_channel.name} to second category to make room")
-                        await last_channel.edit(category=second_category, position=0, reason="Making room for global channel")
-                await global_channel.edit(category=first_category, position=0, reason="Moving global to first position")
-        else:
-            self.logger.info("Creating missing global channel at top of first category")
-
-            # If first category is full, move last channel to second category
-            if len(first_category.channels) >= MAX_CATEGORY_SIZE and len(category_channels) > 1:
-                last_channel = max(
-                    (ch for ch in first_category.text_channels),
-                    key=lambda ch: ch.position,
-                )
-                second_category = category_channels[1]
-                self.logger.info(f"Moving {last_channel.name} to second category to make room")
-                await last_channel.edit(category=second_category, position=0, reason="Making room for global channel")
-
-            global_channel = await first_category.create_text_channel(
-                name="global",
-                position=0,
-                reason="Creating global log channel",
-            )
-            channel_record = Channels(
-                id=global_channel.id,
-                name="Global",
-                guild_id=guild.id,
-            )
-            Channels.update(channel_record)
-            channel_record.link_tag(self.session, Tags.LOGS)
-            channel_record.link_tag(self.session, Tags.AGGREGATE)
-            self.session.commit()
 
     async def update_required_category_count(self, guild: discord.Guild, required_category_count: int) -> list[CategoryChannel]:
         """Update the required category count for the guild."""
@@ -487,7 +429,7 @@ class LogChannels(GroupCog, auto_load=True):
 
     def get_valid_log_actions(self) -> list[str]:
         """Get a list of valid audit log actions."""
-        return ["global"] + [action.name for action in AuditLogAction]
+        return [GLOBAL] + [action.name for action in AuditLogAction]
 
 
 # ------------
