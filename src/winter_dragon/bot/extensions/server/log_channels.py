@@ -315,20 +315,17 @@ class LogChannels(GroupCog, auto_load=True):
         # defer here to avoid timeout
         await interaction.response.defer(ephemeral=True)
 
-        guild = discord.utils.get(self.bot.guilds, id=guild_id) if guild_id else None
-        await self.update_log(guild=guild)
-        await interaction.followup.send("Updated Log channels on all servers!")
+        if guild := discord.utils.get(self.bot.guilds, id=guild_id):
+            await self.update_log(guild=guild)
+            await interaction.followup.send(f"Updated Log channels on {guild.name}!")
+        else:
+            for guild in self.bot.guilds:
+                await self.update_log(guild=guild)
+            await interaction.followup.send(f"Updated Log channels on all servers! {len(self.bot.guilds)} guilds updated.")
 
-    async def update_log(self, guild: discord.Guild | None = None) -> None:
+    async def update_log(self, guild: discord.Guild) -> None:
         """Update log channels for a guild."""
         self.logger.debug(f"Updating Log for {guild=}")
-        if guild is None:
-            all_log_channels = Channels.get_by_tag(self.session, Tags.LOGS)
-            guild_id = all_log_channels[0].guild_id if all_log_channels else None
-            if guild_id:
-                return await self.update_log(guild=discord.utils.get(self.bot.guilds, id=guild_id))
-            return None
-
         channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
         div, mod = divmod(len(AuditLogAction), MAX_CATEGORY_SIZE)
         required_category_count = div + (1 if mod > 0 else 0)
@@ -359,7 +356,6 @@ class LogChannels(GroupCog, auto_load=True):
             Channels.update(channel_record)
             channel_record.link_tag(self.session, Tags.LOGS)
         self.session.commit()
-        return None
 
     async def ensure_aggregate_channel_first(
         self,
