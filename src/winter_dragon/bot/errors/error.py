@@ -1,18 +1,23 @@
 """Base error helpers for Discord command handling."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Self, overload
+from typing import TYPE_CHECKING, Self, overload
 
 from discord import DiscordException, Embed, Interaction
-from discord.app_commands.errors import AppCommandError
 from discord.ext.commands import Context
-from discord.ext.commands.bot import BotBase
-from discord.ext.commands.errors import CommandError
 from herogold.log import LoggerMixin
 
-from winter_dragon.bot.core.bot import BotT
-
 from .factory import ErrorFactory
+
+
+if TYPE_CHECKING:
+    from discord.app_commands.errors import AppCommandError
+    from discord.ext.commands.bot import BotBase
+    from discord.ext.commands.errors import CommandError
+
+    from winter_dragon.bot.core.bot import BotT
 
 
 type ResponseTypes = Embed | str
