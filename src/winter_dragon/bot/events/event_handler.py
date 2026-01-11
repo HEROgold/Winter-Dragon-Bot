@@ -5,12 +5,10 @@ from discord import AuditLogAction, Embed, Guild
 from herogold.log import LoggerMixin
 from sqlmodel import Session, select
 
+from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables.channel import Channels
 
 from .audit_event import AuditEvent
-
-
-GLOBAL = "GLOBAL"
 
 
 class AuditEventHandler(LoggerMixin):
@@ -24,7 +22,8 @@ class AuditEventHandler(LoggerMixin):
     async def handle(self) -> None:
         """Handle the audit event."""
         await self.event.handle()
-        await self.send_channel_logs(self.event.entry.guild, self.event.create_embed(), self.event.entry.action)
+        if Channels.get_by_tag(self.session, Tags.LOGS, self.event.entry.guild.id):
+            await self.send_channel_logs(self.event.entry.guild, self.event.create_embed(), self.event.entry.action)
 
     async def send_log_to_category(
         self,
@@ -57,23 +56,25 @@ class AuditEventHandler(LoggerMixin):
         embed: Embed,
     ) -> None:
         """Send logs to the global log channel."""
-        channel = self.session.exec(
-            select(Channels).where(
-                Channels.guild_id == guild.id,
-                Channels.name == GLOBAL,
-            ),
-        ).first()
+        channels = Channels.get_by_tags(
+            self.session,
+            [Tags.LOGS, Tags.AGGREGATE],
+            guild.id,
+            match_all=True,
+        )
 
-        if not channel:
+        if not channels:
             self.logger.warning(f"No global log channel found for {guild}")
             return
-        global_log_channel = discord.utils.get(guild.text_channels, id=channel.id) or None
 
-        self.logger.debug(f"Found: {GLOBAL=} as {global_log_channel=}")
-        if global_log_channel is not None:
-            await global_log_channel.send(embed=embed)
+        for channel in channels:
+            global_log_channel = discord.utils.get(guild.text_channels, id=channel.id)
 
-        self.logger.debug(f"Send logs to {global_log_channel=}")
+            self.logger.debug(f"Found: {(Tags.AGGREGATE, Tags.LOGS)=} as {global_log_channel=}")
+            if global_log_channel is not None:
+                await global_log_channel.send(embed=embed)
+
+            self.logger.debug(f"Send logs to {global_log_channel=}")
 
     async def send_channel_logs(
         self,
@@ -86,7 +87,7 @@ class AuditEventHandler(LoggerMixin):
             self.logger.warning("No guild found to send AuditLogEntry logs to.")
             return None, None
 
-        self.logger.debug(f"Searching for log channels {audit_action=} and {GLOBAL=}")
+        self.logger.debug(f"Searching for log channels {audit_action=} and {Tags.AGGREGATE=}")
 
         if audit_action is not None:
             await self.send_log_to_category(audit_action, guild, embed)

@@ -112,7 +112,11 @@ class Channels(DiscordID, table=True):
         *,
         match_all: bool = False,
     ) -> list["Channels"]:
-        """Get all channels with specific tags, optionally filtered by guild."""
+        """Get all channels with specific tags, optionally filtered by guild.
+
+        If match_all is True, only channels that have all specified tags are returned. (AND)
+        If match_all is False, channels that have any of the specified tags are returned. (OR)
+        """
         if not tags:
             return []
 
