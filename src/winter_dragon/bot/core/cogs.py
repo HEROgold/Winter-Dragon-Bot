@@ -42,8 +42,7 @@ class CogFlags(IntFlag):
     """Flag to indicate that the cog should be auto-loaded."""
     AutoReload = auto()
     """Flag to indicate that the cog should be auto-reloaded on file changes."""
-    HasAppCommandMentions = auto()
-    """Flag to indicate that the cog has app command mentions."""
+    _HasAppCommandMentions = auto()
 
 
 default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
@@ -54,7 +53,7 @@ class Cog(commands.Cog, LoggerMixin):
 
     bot: WinterDragon
     cache: ClassVar[AppCommandCache] = AppCommandCache()
-    flags: CogFlags
+    flags: CogFlags = default_flags
 
     # Expose cache methods on the cog for easier access
     get_app_command = cache.get_app_command
@@ -63,13 +62,17 @@ class Cog(commands.Cog, LoggerMixin):
     @property
     def has_app_command_mentions(self) -> bool:
         """Indicates whether the cog has app command mentions."""
-        return bool(self.flags & CogFlags.HasAppCommandMentions)
+        return bool(self.flags & CogFlags._HasAppCommandMentions)  # noqa: SLF001
 
-    def __init_subclass__(cls: type[Self], *, auto_load: bool = True, flags: CogFlags = default_flags) -> None:
+    def __init_subclass__(cls: type[Self], *, auto_load: bool = True, flags: CogFlags | None = None) -> None:
         """Configure loader and hot-reload behavior for subclasses."""
         super().__init_subclass__()
-        cls.flags = flags
-        cls.flags |= CogFlags.AutoLoad if auto_load else ~CogFlags.AutoLoad
+        if flags:
+            cls.flags = flags
+        if auto_load:
+            cls.flags |= CogFlags.AutoLoad
+        else:
+            cls.flags &= ~CogFlags.AutoLoad
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance.
@@ -167,7 +170,7 @@ class Cog(commands.Cog, LoggerMixin):
         if not self.has_app_command_mentions:
             self.logger.debug(f"Adding app_commands to cache. {Cog.cache=}")
             await Cog.cache.update_app_commands_cache(self.bot)
-            self.flags |= CogFlags.HasAppCommandMentions
+            self.flags |= CogFlags._HasAppCommandMentions  # noqa: SLF001
 
     @loop(count=1)
     async def add_disabled_check(self) -> None:
