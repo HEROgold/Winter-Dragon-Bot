@@ -1,4 +1,3 @@
-from discord import AuditLogAction
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field
 
@@ -13,4 +12,4 @@ class ChannelAudit(SQLModel, table=True):
     # This means that the channel MUST have LOGS tag as well.
 
     channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels), ondelete="CASCADE"), primary_key=True))
-    audit_action: AuditLogAction
+    audit_action: int

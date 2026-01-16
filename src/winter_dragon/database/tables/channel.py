@@ -148,7 +148,7 @@ class Channels(DiscordID, table=True):
         if session.exec(
             select(ChannelAudit).where(
                 ChannelAudit.channel_id == self.id,
-                ChannelAudit.audit_action == audit_action,
+                ChannelAudit.audit_action == audit_action.value,
             )
         ).first():
             return
@@ -175,7 +175,7 @@ class Channels(DiscordID, table=True):
         else:
             stmt = delete(ChannelAudit).where(
                 col(ChannelAudit.channel_id) == self.id,
-                col(ChannelAudit.audit_action) == audit_action,
+                col(ChannelAudit.audit_action) == audit_action.value,
             )
 
         session.exec(stmt)

@@ -45,7 +45,7 @@ class AuditEventHandler(LoggerMixin):
             .where(
                 Channels.guild_id == guild.id,
                 ChannelTag.tag == Tags.LOGS,
-                ChannelAudit.audit_action == audit_action,
+                ChannelAudit.audit_action == audit_action.value,
             )
         ).all()
 
