@@ -47,7 +47,9 @@ class DiscordError(ABC, LoggerMixin):
         self.bot = bot
         self.interaction = interaction
         self.command_error = command_error
-        self.logger.debug(f"Initialized {self.__class__.__name__} at {self.timestamp} for {command_error!r}")
+        self.logger.debug(
+            f"Initialized {self.__class__.__name__} at {self.timestamp} for {command_error!r}", exc_info=command_error
+        )
 
     async def handle(self) -> None:
         """Handle the Error.
