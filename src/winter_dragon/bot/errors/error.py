@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Self, overload
 
 from discord import DiscordException, Embed, Interaction
@@ -42,10 +43,11 @@ class DiscordError(ABC, LoggerMixin):
         command_error: DiscordException,
     ) -> None:
         """Initialize the Error."""
-        super().__init__()
+        self.timestamp = datetime.now(UTC)
         self.bot = bot
         self.interaction = interaction
         self.command_error = command_error
+        self.logger.debug(f"Initialized {self.__class__.__name__} at {self.timestamp} for {command_error!r}")
 
     async def handle(self) -> None:
         """Handle the Error.
