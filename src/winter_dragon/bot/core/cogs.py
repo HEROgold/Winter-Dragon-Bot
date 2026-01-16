@@ -156,7 +156,7 @@ class Cog(commands.Cog, LoggerMixin):
             self.logger.debug(f"Auto loaded Cog {cls.__name__}")
             await self.bot.add_cog(self)
 
-    def cog_unload(self) -> None:  # type: ignore[override]
+    async def cog_unload(self) -> None:
         """Stop background loops and unregister any auto-reload watcher."""
         if self.add_mentions.is_running():
             self.add_mentions.stop()
