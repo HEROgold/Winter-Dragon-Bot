@@ -22,7 +22,6 @@ BUNDLE_ITEM = "tab_item tablet_list_item"
 def price_to_num(s: str) -> float:
     """Convert a price string to a float."""
     s = s.strip()
-    try:
-        return float(s)
-    except ValueError:
-        return float(s.strip(CURRENCY_LABELS))
+    s = s.strip(CURRENCY_LABELS)
+    s = s.replace(",", ".")
+    return float(s)

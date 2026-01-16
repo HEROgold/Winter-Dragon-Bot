@@ -200,15 +200,24 @@ class SearchScraper(BaseScraper):
     async def _extract_bundle_sale(self, a_tag: Tag, sale_percentage: int) -> SteamSale:
         price = a_tag.find(class_=DISCOUNT_FINAL_PRICE)
         title = a_tag.find(class_=SEARCH_GAME_TITLE)
-        app_id = a_tag.get(DATA_APPID)
-        url = a_tag.get("href")
+        app_id = str(a_tag.get(DATA_APPID))
+        url = str(a_tag.get("href"))
+
+        # /sub/ holds multiple app ids on the page.
+        # using the id found in the url avoids this problem at this stage.
+        if "sub" in url:
+            url_id = url.split("/sub/")[1].split("/")[0]
+            app_id = url_id
 
         self.logger.debug(f"Found bundle or sub: {url=}, processing bundle items")
-        async for item in self.bundle_scraper.get_games_from_bundle(SteamURL(str(url))):
+        async for item in self.bundle_scraper.get_games_from_bundle(SteamURL(url)):
             self.logger.debug(f"Processing bundle item: {item=}")
-        SteamSaleProperties(steam_sale_id=int(str(app_id)), property=SaleTypes.BUNDLE)
+            if item and (sale := await self.app_scraper.get_game_sale(item)):
+                self.logger.debug(f"Bundle item on sale: {sale=}")
+
+        SteamSaleProperties(steam_sale_id=int(app_id), property=SaleTypes.BUNDLE)
         return SteamSale(
-            id=int(str(app_id).split(",")[0]),
+            id=int(app_id.split(",")[0]),
             title=title.get_text() or "Bundle",
             url=str(url),
             sale_percent=sale_percentage,

@@ -63,7 +63,7 @@ class AppScraper(BaseScraper):
             self.logger.warning(f"Title not found for {url=}")
             return None
 
-        sale_id = url.id
+        sale_id = url.app_id
         steam_sale = SteamSale(
             id=sale_id,
             title=title.get_text(),

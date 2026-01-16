@@ -21,7 +21,7 @@ class SteamURL(LoggerMixin):
         self._id = None
 
     @property
-    def id(self) -> int:
+    def app_id(self) -> int:
         """Get an id from a steam game url.
 
         Args:
@@ -50,7 +50,7 @@ class SteamURL(LoggerMixin):
             url (str): Url to check for
 
         """
-        return bool(self.id)
+        return bool(self.app_id)
 
     def __repr__(self) -> str:
         """Return the url as a string."""
