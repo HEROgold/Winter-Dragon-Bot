@@ -43,6 +43,7 @@ class AutoAssign(GroupCog, auto_load=True):
             return
         if not self.session.exec(select(DbRole).where(DbRole.id == role.id)).first():
             self.session.add(DbRole(id=role.id, name=role.name))
+            self.session.flush()
         self.session.add(AutoAssignRole(role_id=role.id, guild_id=role.guild.id))
         self.session.commit()
 
