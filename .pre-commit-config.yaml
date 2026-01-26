@@ -7,7 +7,7 @@ default_install_hook_types:
   - post-rewrite
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.21
+    rev: 0.9.26
     hooks:
       - id: uv-lock
         stages:
@@ -90,7 +90,7 @@ repos:
         stages: [pre-push, pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
+    rev: v0.14.14
     hooks:
       - id: ruff
         name: ruff lint
@@ -113,7 +113,7 @@ repos:
 
   # TypeScript/React hooks (for frontend directory)
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.0.0-beta.0
+    rev: v10.0.0-rc.1
     hooks:
       - id: eslint
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
@@ -137,7 +137,7 @@ repos:
 
   # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.36.0
+    rev: 0.36.1
     hooks:
       - id: check-github-workflows
         files: ^\.github/workflows/
