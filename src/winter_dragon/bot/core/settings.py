@@ -27,8 +27,15 @@ class Combined(BaseDataType[str]):
         return value
 
     def __str__(self) -> str:
-        """Return a lightweight description for debugging/serialization."""
-        return ",".join(str(arg) for arg in self.args)
+        """Create a full string value from all parts."""
+        parts = []
+        for arg in self.args:
+            match arg:
+                case Config():
+                    parts.append(str(arg._data_type))  # noqa: SLF001
+                case _:
+                    parts.append(str(arg))
+        return "".join(parts)
 
 
 class Settings:
@@ -38,7 +45,7 @@ class Settings:
     bot_name = Config("WinterDragon")
     support_guild_id = Config(0)
     prefix = Config("$")
-    application_id = Config(None)
+    application_id = Config[int | None](None)
     bot_invite = Config(GENERATED_MSG)
     auto_reload_extensions = Config(default=False)
     auto_reload_poll_seconds = Config(5)

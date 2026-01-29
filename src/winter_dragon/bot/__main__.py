@@ -34,8 +34,10 @@ tree = bot.tree
 async def on_ready() -> None:
     """Log when the bot is ready. Note that this may happen multiple times per boot."""
     invite_link = bot.get_bot_invite()
-    Settings.application_id = bot.application_id
-    Settings.bot_invite = invite_link.replace("%", "%%")
+    # setting values requires an instance.
+    settings = Settings()
+    settings.application_id = bot.application_id
+    settings.bot_invite = invite_link.replace("%", "%%")
     Config.write()
 
     bot.logger.info(f"Logged on as {bot.user}!")
