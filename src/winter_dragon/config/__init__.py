@@ -58,11 +58,7 @@ class ConfigParser(configparser.ConfigParser):
 
     def is_valid(self) -> bool:
         """Check if the config is valid."""
-        for section in self.sections():
-            for setting in self.options(section):
-                if self[section][setting] == "!!":
-                    return False
-        return True
+        return all("!!" not in i for i in self.get_invalid())
 
     def get_invalid(self) -> Generator[str]:
         """Get all invalid config values."""
