@@ -41,8 +41,7 @@ if TYPE_CHECKING:
 type MaybeAwaitable[T] = T | Awaitable[T]
 type MaybeAwaitableFunc[**P, T] = Callable[P, MaybeAwaitable[T]]
 type _Prefix = Iterable[str] | str
-# Ty has some issues with this. Ignore them for now.
-type _PrefixCallable[BotT: BotBase] = MaybeAwaitableFunc[[BotT, Message], _Prefix]  # ty: ignore
+type _PrefixCallable[BotT: BotBase] = MaybeAwaitableFunc[[BotT, Message], _Prefix]
 type PrefixType[BotT: BotBase] = _Prefix | _PrefixCallable[BotT]
 
 type BotT[T: BotBase] = T
@@ -127,7 +126,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         """Get all the extensions in the extensions directory. Ignores extensions that start with _."""
         for root, _, files in os.walk(EXTENSIONS):
             for file in files:
-                if file.endswith(".py") and not file.startswith("_"):  # ty:ignore[unresolved-attribute]
+                if file.endswith(".py") and not file.startswith("_"):
                     extension = Path(root) / file
                     yield (
                         extension.as_posix().replace(f"{ROOT_DIR.parent.as_posix()}/", "").replace("/", ".").replace(".py", "")
