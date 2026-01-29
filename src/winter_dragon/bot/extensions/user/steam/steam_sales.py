@@ -25,6 +25,9 @@ class SteamSales(GroupCog, auto_load=True):
     """Steam Sales cog for Discord bot."""
 
     steam_sales_update_interval = Config(STEAM_SEND_PERIOD)
+    """How often to check for new steam sales in seconds."""
+    outdated_delta = Config(OUTDATED_DELTA)
+    """When a sale is considered outdated in seconds."""
     embed_color = Config(Hex(0x094D7F))
 
     def __init__(self, bot: WinterDragon) -> None:
@@ -63,7 +66,7 @@ class SteamSales(GroupCog, auto_load=True):
 
         self.logger.debug(f"checking for new sales, {known_sales=}, {steam_sales=}")
 
-        outdated = [i for i in known_sales if i.is_outdated(OUTDATED_DELTA)]
+        outdated = [i for i in known_sales if i.is_outdated(self.outdated_delta)]
 
         return [sale async for sale in steam_sales if sale and sale in outdated]
 
@@ -140,10 +143,8 @@ class SteamSales(GroupCog, auto_load=True):
     async def slash_show(self, interaction: Interaction, percent: int = 100) -> None:
         """Get a list of steam games that are on sale for the given percentage or higher."""
         await interaction.response.defer()
-
         embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=self.embed_color)
         notifier = SteamSaleNotifier(self.bot, self.session, embed)
 
-        sales = [i async for i in self.scraper.get_sales_from_steam(percent=percent) if i is not None]
-        notifier.add_sales(sales)
+        notifier.add_sales([s for s in SteamSale.get_all() if s.sale_percent >= percent])
         await interaction.followup.send(embed=notifier.embed)
