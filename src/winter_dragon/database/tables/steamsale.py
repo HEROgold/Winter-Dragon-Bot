@@ -21,6 +21,9 @@ class SteamSale(SQLModel, table=True):
     final_price: float
     update_datetime: datetime
 
+    def __hash__(self) -> int:
+        return hash((self.title, self.url, self.sale_percent, self.final_price))
+
     def is_outdated(self, seconds: int) -> bool:
         """Check if a sale has recently updated within the given time frame."""
         return self.update_datetime.astimezone(UTC) + timedelta(seconds=seconds) <= datetime.now(tz=UTC)
