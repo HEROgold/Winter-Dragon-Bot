@@ -1,6 +1,7 @@
 """Module to notify users of steam sales."""
 
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 from confkit.data_types import Hex
 from discord import Embed, Interaction, app_commands
@@ -79,7 +80,9 @@ class SteamSales(GroupCog, auto_load=True):
             filtered_sales = [i for i in new_sales if i.sale_percent >= user.sale_threshold]
             notifier.add_sales(filtered_sales)
             notifier.build_embed(embed)
-            await notifier.notify_user(user)
+            notification_cutoff = datetime.now(UTC) - timedelta(seconds=self.steam_sales_update_interval)
+            if user.last_notification <= notification_cutoff:
+                await notifier.notify_user(user)
 
     @loop()  # Interval is set in cog_load
     async def update(self) -> None:
