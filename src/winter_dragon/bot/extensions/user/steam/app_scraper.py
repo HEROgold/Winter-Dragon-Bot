@@ -72,6 +72,7 @@ class AppScraper(BaseScraper):
             final_price=price_to_num(price.get_text()[:-1].replace(",", ".")),
             update_datetime=datetime.now(tz=UTC),
         )
+        # TODO: Schedule a re-check for this sale to a ~minute after the app-page mentions the sale ending!
         self.logger.info(f"SteamSale found: {steam_sale=}")
         if bool(soup.find("div", class_="content")):
             SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)
