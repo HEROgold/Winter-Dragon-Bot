@@ -66,8 +66,8 @@ class GuildCreator(GroupCog, auto_load=False):
                 await dm.send(f"Transferring ownership of guild to you. {invite.url}")
 
     @app_commands.checks.cooldown(1, WEEK)
-    @app_commands.command(name="create", description="Updates the current guild, assuming it is newly created.")
-    async def slash_create(  # noqa: PLR0913
+    @app_commands.command(name="generate", description="Updates the current guild, assuming it is newly created.")
+    async def slash_generate(  # noqa: PLR0913
         self,
         interaction: discord.Interaction,
         name: str,
@@ -79,14 +79,17 @@ class GuildCreator(GroupCog, auto_load=False):
     ) -> None:
         """Update the current guild for the user, then invite the user."""
         await interaction.response.defer(thinking=True, ephemeral=True)
-        guild = await self.bot.create_guild(name=self.INIT_NAME)
+        guild = interaction.guild
+        if not guild:
+            await interaction.followup.send("This command can only be used in a guild.")
+            return
         invite = await guild.channels[0].create_invite()
         await interaction.followup.send(invite.url)
         rules_channel = await guild.create_text_channel(
             "rules",
             position=0,
             topic="Rules channel",
-            overwrites={guild.default_role: PermissionOverwrite(view_channel=True)},
+            overwrites={guild.default_role: PermissionOverwrite(view_channel=True, send_messages=False)},
         )
         afk_channel = await guild.create_voice_channel(
             "AFK",
@@ -103,6 +106,7 @@ class GuildCreator(GroupCog, auto_load=False):
             "safety-alerts",
             position=0,
             topic="Safety alerts channel",
+            overwrites={guild.default_role: PermissionOverwrite(view_channel=False)},
         )
         if invite_code:
             await guild.edit(vanity_code=invite_code)

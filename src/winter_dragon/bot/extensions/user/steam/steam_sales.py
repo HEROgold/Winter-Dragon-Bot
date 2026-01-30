@@ -81,7 +81,7 @@ class SteamSales(GroupCog, auto_load=True):
             notifier.add_sales(filtered_sales)
             notifier.build_embed(embed)
             notification_cutoff = datetime.now(UTC) - timedelta(seconds=self.steam_sales_update_interval)
-            if user.last_notification <= notification_cutoff:
+            if filtered_sales and user.last_notification <= notification_cutoff:
                 await notifier.notify_user(user)
 
     @loop()  # Interval is set in cog_load
@@ -121,7 +121,7 @@ class SteamSales(GroupCog, auto_load=True):
         if result.first():
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
             return
-        self.session.add(SteamUsers(user_id=interaction.user.id))
+        self.session.add(SteamUsers(user_id=interaction.user.id, last_notification=datetime.now(UTC)))
         self.session.commit()
         sub_mention = self.get_command_mention(self.slash_show)
         msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
@@ -134,6 +134,12 @@ class SteamSales(GroupCog, auto_load=True):
         """Set the percentage for steam sale notifications."""
         query = select(SteamUsers).where(SteamUsers.user_id == interaction.user.id).with_for_update()
         user = self.session.exec(query).first()
+        if not user:
+            await interaction.response.send_message(
+                f"You are not in the list of recipients. Use {self.get_command_mention(self.slash_add)} add to subscribe.",
+                ephemeral=True,
+            )
+            return
         user.sale_threshold = percent
         self.session.add(user)
         self.session.commit()
