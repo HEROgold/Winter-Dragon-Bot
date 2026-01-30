@@ -1,7 +1,5 @@
 """The database package for the Winter Dragon project."""
 
-from sqlmodel import SQLModel
-
 from winter_dragon.bot.extensions.server.infractions import Infractions
 from winter_dragon.bot.extensions.server.welcome import Welcome
 from winter_dragon.bot.extensions.user.reminder import Reminder
@@ -53,6 +51,7 @@ from winter_dragon.database.tables.steamsale import SteamSaleProperties
 from winter_dragon.database.tables.sync_ban.sync_ban_banned_by import SyncBanBannedBy
 
 from .constants import SessionMixin, session
+from .extension.model import SQLModel
 
 
 __all__ = [

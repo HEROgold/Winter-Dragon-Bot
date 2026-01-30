@@ -70,6 +70,17 @@ class SteamSales(GroupCog, auto_load=True):
 
         return [sale async for sale in steam_sales if sale and sale in outdated]
 
+    async def notify_users(self, new_sales: list[SteamSale]) -> None:
+        """Notify all subscribed users of new steam sales."""
+        for user in SteamUsers.get_all(self.session):
+            embed = Embed(title="Free Steam Game's", description="New Steam Sales have been found!", color=0x094D7F)
+            notifier = SteamSaleNotifier(self.bot, self.session)
+            notifier.set_messages(*self._get_notify_messages())
+            filtered_sales = [i for i in new_sales if i.sale_percent >= user.sale_threshold]
+            notifier.add_sales(filtered_sales)
+            notifier.build_embed(embed)
+            await notifier.notify_user(user)
+
     @loop()  # Interval is set in cog_load
     async def update(self) -> None:
         """Create a discord Embed object to send and notify users of new 100% sales.
@@ -77,12 +88,8 @@ class SteamSales(GroupCog, auto_load=True):
         Expected amount of sales should be low enough it'll never reach embed size limit.
         """
         self.logger.info("updating sales")
-
-        embed = Embed(title="Free Steam Game's", description="New free Steam Games have been found!", color=0x094D7F)
         new_sales = await self.get_new_steam_sales(percent=100)
-        notifier = SteamSaleNotifier(self.bot, self.session, embed)
-        self._setup_notifier_messages(notifier)
-        embed = notifier.add_sales(new_sales)
+        await self.notify_users(new_sales)
 
     def _get_notify_messages(self) -> tuple[str, ...]:
         """Update the notify messages."""
@@ -94,13 +101,6 @@ class SteamSales(GroupCog, auto_load=True):
             f"You can disable this message by using {mention_remove}",
             (f"You can see other sales by using {mention_show}, followed by a percentage"),
         )
-
-    def _setup_notifier_messages(self, notifier: SteamSaleNotifier) -> None:
-        """Set up the notifier messages."""
-        if hasattr(self, "_setup_notifier_msgs"):
-            return
-        notifier.set_messages(*self._get_notify_messages())
-        self._setup_notifier_msgs = True
 
     @update.before_loop
     async def before_update(self) -> None:
@@ -124,6 +124,18 @@ class SteamSales(GroupCog, auto_load=True):
         msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
         await interaction.response.send_message(msg, ephemeral=True)
 
+    @app_commands.command(
+        name="percentage", description="Get notified of steam games on sale for the given percentage or higher"
+    )
+    async def slash_set_percentage(self, interaction: Interaction, percent: int) -> None:
+        """Set the percentage for steam sale notifications."""
+        query = select(SteamUsers).where(SteamUsers.user_id == interaction.user.id).with_for_update()
+        user = self.session.exec(query).first()
+        user.sale_threshold = percent
+        self.session.add(user)
+        self.session.commit()
+        await interaction.response.send_message(f"Changed your sale notification threshold to {percent}%.", ephemeral=True)
+
     @app_commands.command(name="remove", description="No longer get notified of free steam games")
     async def slash_remove(self, interaction: Interaction) -> None:
         """Remove a user from the list of recipients for free steam games."""
@@ -144,7 +156,7 @@ class SteamSales(GroupCog, auto_load=True):
         """Get a list of steam games that are on sale for the given percentage or higher."""
         await interaction.response.defer()
         embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=self.embed_color)
-        notifier = SteamSaleNotifier(self.bot, self.session, embed)
-
+        notifier = SteamSaleNotifier(self.bot, self.session)
         notifier.add_sales([s for s in SteamSale.get_all() if s.sale_percent >= percent])
+        notifier.build_embed(embed)
         await interaction.followup.send(embed=notifier.embed)
