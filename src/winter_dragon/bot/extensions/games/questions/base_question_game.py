@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Generic, TypeVar, Unpack
+from typing import TypeVar, Unpack
 
 import discord
 from herogold.sentinel import MISSING
@@ -16,7 +16,7 @@ from winter_dragon.database.tables import Games, Suggestions
 T = TypeVar("T", bound=SQLModel)
 
 
-class BaseQuestionGame(GroupCog, Generic[T], auto_load=False):
+class BaseQuestionGame[T](GroupCog, auto_load=False):
     """Base class for question-based games like Never Have I Ever and Would You Rather."""
 
     # Constants to be overridden by subclasses

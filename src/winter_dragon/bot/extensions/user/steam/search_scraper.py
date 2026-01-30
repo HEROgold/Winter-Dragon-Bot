@@ -4,6 +4,7 @@ from collections import Counter, defaultdict
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from logging import Logger
 
 from bs4 import BeautifulSoup, Tag
 
@@ -47,7 +48,7 @@ class SteamSearchDiagnostics:
         """Increment the number of examined sale tags."""
         self.examined += 1
 
-    def record_yield(self, *, url: str | None, title: str | None, sale_percentage: int | None) -> None:
+    def record_yield(self) -> None:
         """Record a successful sale extraction."""
         self.yielded += 1
 
@@ -66,7 +67,7 @@ class SteamSearchDiagnostics:
         if len(samples) < self.sample_limit:
             samples.append(SkipSample(url=url, title=title, sale_percentage=sale_percentage, extra=extra))
 
-    def emit(self, logger) -> None:
+    def emit(self, logger: Logger) -> None:
         """Write the aggregated diagnostics to the provided logger."""
         total_skipped = sum(self.skip_counts.values())
         logger.info(
@@ -114,7 +115,7 @@ class SearchScraper(BaseScraper):
 
         diagnostics.emit(self.logger)
 
-    async def get_sale_from_search(
+    async def get_sale_from_search(  # noqa: PLR0911
         self,
         sale_tag: Tag,
         percent: int,
@@ -128,6 +129,7 @@ class SearchScraper(BaseScraper):
             diagnostics.record_skip("missing_anchor", extra=f"type={type(a_tag)!r}")
             self.logger.warning(f"Tag not found for {sale_tag=}. Expected Tag got, {type(a_tag)}")
             return None
+
         price = a_tag.find(class_=DISCOUNT_FINAL_PRICE)
         title = a_tag.find(class_=SEARCH_GAME_TITLE)
         app_id = a_tag.get(DATA_APPID)
@@ -194,7 +196,7 @@ class SearchScraper(BaseScraper):
                 update_datetime=datetime.now(tz=UTC),
             )
 
-        self._record_sale_success(diagnostics, steam_sale)
+        diagnostics.record_yield()
         return steam_sale
 
     async def _extract_bundle_sale(self, a_tag: Tag, sale_percentage: int) -> SteamSale:
@@ -235,13 +237,5 @@ class SearchScraper(BaseScraper):
         if sale is None:
             diagnostics.record_skip("app_page_lookup_failed", url=str(steam_url), title=title)
             return None
-        self._record_sale_success(diagnostics, sale)
+        diagnostics.record_yield()
         return sale
-
-    @staticmethod
-    def _record_sale_success(diagnostics: SteamSearchDiagnostics, sale: SteamSale) -> None:
-        try:
-            sale_percent = int(sale.sale_percent) if sale.sale_percent is not None else None
-        except (TypeError, ValueError):
-            sale_percent = None
-        diagnostics.record_yield(url=sale.url, title=sale.title, sale_percentage=sale_percent)
