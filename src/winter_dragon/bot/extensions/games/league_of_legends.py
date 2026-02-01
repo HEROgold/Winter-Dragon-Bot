@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
 
 import cassiopeia as cass
 import discord
@@ -12,9 +12,6 @@ from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables.lol_account import LoLAccount
-
-if TYPE_CHECKING:
-    from winter_dragon.bot.core.bot import WinterDragon
 
 
 # Riot API regions
@@ -182,8 +179,13 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
+            msg_prefix = (
+                "You have"
+                if target_user == interaction.user
+                else f"{target_user.mention} has"
+            )
             await interaction.followup.send(
-                f"{'You have' if target_user == interaction.user else f'{target_user.mention} has'} not linked a League of Legends account yet.",
+                f"{msg_prefix} not linked a League of Legends account yet.",
             )
             return
 
@@ -250,8 +252,13 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
+            msg_prefix = (
+                "You have"
+                if target_user == interaction.user
+                else f"{target_user.mention} has"
+            )
             await interaction.followup.send(
-                f"{'You have' if target_user == interaction.user else f'{target_user.mention} has'} not linked a League of Legends account yet.",
+                f"{msg_prefix} not linked a League of Legends account yet.",
             )
             return
 
@@ -330,8 +337,13 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
+            msg_prefix = (
+                "You have"
+                if target_user == interaction.user
+                else f"{target_user.mention} has"
+            )
             await interaction.followup.send(
-                f"{'You have' if target_user == interaction.user else f'{target_user.mention} has'} not linked a League of Legends account yet.",
+                f"{msg_prefix} not linked a League of Legends account yet.",
             )
             return
 

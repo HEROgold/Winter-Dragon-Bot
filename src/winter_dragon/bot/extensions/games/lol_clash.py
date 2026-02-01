@@ -6,7 +6,7 @@ Allows for LFG (Looking For Group) for the Clash event in League of Legends.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Unpack
+from typing import Unpack
 
 import cassiopeia as cass
 import discord
@@ -16,8 +16,10 @@ from sqlmodel import select
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables.lol_account import LoLAccount
 
-if TYPE_CHECKING:
-    from winter_dragon.bot.core.bot import WinterDragon
+
+# Constants for team analysis
+FULL_TEAM_SIZE = 5
+TEAM_DATA_WITH_CHAMPS_LEN = 4
 
 
 class Clash(GroupCog, auto_load=True):
@@ -70,11 +72,10 @@ class Clash(GroupCog, auto_load=True):
             for tournament in tournaments[:5]:  # Limit to 5 tournaments
                 try:
                     # Get schedule for the tournament
-                    schedule_info = []
-                    for phase in tournament.phases:
-                        schedule_info.append(
-                            f"Day {phase.id}: <t:{int(phase.registration_time.timestamp())}:F>",
-                        )
+                    schedule_info = [
+                        f"Day {phase.id}: <t:{int(phase.registration_time.timestamp())}:F>"
+                        for phase in tournament.phases
+                    ]
 
                     embed.add_field(
                         name=tournament.name_key_secondary or "Clash Tournament",
@@ -98,7 +99,7 @@ class Clash(GroupCog, auto_load=True):
         player4="Fourth player (optional)",
         player5="Fifth player (optional)",
     )
-    async def team_analysis(
+    async def team_analysis(  # noqa: C901, PLR0913, PLR0912
         self,
         interaction: discord.Interaction,
         player1: discord.User,
@@ -168,7 +169,7 @@ class Clash(GroupCog, auto_load=True):
 
         # Build embed with team data
         for data in team_data:
-            if len(data) == 4:
+            if len(data) == TEAM_DATA_WITH_CHAMPS_LEN:
                 name, summoner, rank, champs = data
                 embed.add_field(
                     name=name,
@@ -185,10 +186,10 @@ class Clash(GroupCog, auto_load=True):
 
         # Add general suggestions
         suggestions = []
-        if len(players) >= 5:
+        if len(players) >= FULL_TEAM_SIZE:
             suggestions.append("✅ Full team!")
         else:
-            suggestions.append(f"⚠️ Team is missing {5 - len(players)} player(s)")
+            suggestions.append(f"⚠️ Team is missing {FULL_TEAM_SIZE - len(players)} player(s)")
 
         if suggestions:
             embed.add_field(
@@ -217,8 +218,13 @@ class Clash(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
+            msg_prefix = (
+                "You have"
+                if target_user == interaction.user
+                else f"{target_user.mention} has"
+            )
             await interaction.followup.send(
-                f"{'You have' if target_user == interaction.user else f'{target_user.mention} has'} not linked a League of Legends account yet.",
+                f"{msg_prefix} not linked a League of Legends account yet.",
             )
             return
 
@@ -237,7 +243,10 @@ class Clash(GroupCog, auto_load=True):
                 # This is a basic implementation showing the structure
                 embed.add_field(
                     name="Status",
-                    value="Clash statistics are available through the Riot API. This feature tracks your Clash performance over time.",
+                    value=(
+                        "Clash statistics are available through the Riot API. This "
+                        "feature tracks your Clash performance over time."
+                    ),
                     inline=False,
                 )
 
