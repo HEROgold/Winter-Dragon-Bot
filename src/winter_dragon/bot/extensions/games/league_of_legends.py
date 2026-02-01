@@ -179,11 +179,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
-            msg_prefix = (
-                "You have"
-                if target_user == interaction.user
-                else f"{target_user.mention} has"
-            )
+            msg_prefix = "You have" if target_user == interaction.user else f"{target_user.mention} has"
             await interaction.followup.send(
                 f"{msg_prefix} not linked a League of Legends account yet.",
             )
@@ -252,11 +248,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
-            msg_prefix = (
-                "You have"
-                if target_user == interaction.user
-                else f"{target_user.mention} has"
-            )
+            msg_prefix = "You have" if target_user == interaction.user else f"{target_user.mention} has"
             await interaction.followup.send(
                 f"{msg_prefix} not linked a League of Legends account yet.",
             )
@@ -293,12 +285,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                     deaths = max(participant.stats.deaths, 1)
                     kda_ratio = (participant.stats.kills + participant.stats.assists) / deaths
 
-                    field_value = (
-                        f"{win}\n"
-                        f"Champion: {champion}\n"
-                        f"KDA: {kda} ({kda_ratio:.2f}:1)\n"
-                        f"Mode: {game_mode}"
-                    )
+                    field_value = f"{win}\nChampion: {champion}\nKDA: {kda} ({kda_ratio:.2f}:1)\nMode: {game_mode}"
 
                     embed.add_field(
                         name=f"Match {i}",
@@ -337,11 +324,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
-            msg_prefix = (
-                "You have"
-                if target_user == interaction.user
-                else f"{target_user.mention} has"
-            )
+            msg_prefix = "You have" if target_user == interaction.user else f"{target_user.mention} has"
             await interaction.followup.send(
                 f"{msg_prefix} not linked a League of Legends account yet.",
             )

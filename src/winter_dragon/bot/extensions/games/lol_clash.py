@@ -73,8 +73,7 @@ class Clash(GroupCog, auto_load=True):
                 try:
                     # Get schedule for the tournament
                     schedule_info = [
-                        f"Day {phase.id}: <t:{int(phase.registration_time.timestamp())}:F>"
-                        for phase in tournament.phases
+                        f"Day {phase.id}: <t:{int(phase.registration_time.timestamp())}:F>" for phase in tournament.phases
                     ]
 
                     embed.add_field(
@@ -157,12 +156,14 @@ class Clash(GroupCog, auto_load=True):
                 except Exception:
                     self.logger.exception("Error fetching champion mastery")
 
-                team_data.append((
-                    player.display_name,
-                    f"{summoner.name}#{lol_account.tag_line}",
-                    ranked_tier,
-                    ", ".join(top_champs) if top_champs else "N/A",
-                ))
+                team_data.append(
+                    (
+                        player.display_name,
+                        f"{summoner.name}#{lol_account.tag_line}",
+                        ranked_tier,
+                        ", ".join(top_champs) if top_champs else "N/A",
+                    )
+                )
             except Exception:
                 self.logger.exception("Error fetching data for %s", player.display_name)
                 team_data.append((player.display_name, "Error", "N/A"))
@@ -218,11 +219,7 @@ class Clash(GroupCog, auto_load=True):
         ).first()
 
         if not lol_account:
-            msg_prefix = (
-                "You have"
-                if target_user == interaction.user
-                else f"{target_user.mention} has"
-            )
+            msg_prefix = "You have" if target_user == interaction.user else f"{target_user.mention} has"
             await interaction.followup.send(
                 f"{msg_prefix} not linked a League of Legends account yet.",
             )
