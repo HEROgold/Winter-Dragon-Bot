@@ -58,7 +58,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
     @app_commands.command(name="link", description="Link your League of Legends account")
     @app_commands.describe(
         summoner_name="Your summoner name",
-        tag_line="Your tag line (e.g., NA1)",
+        tag_line="Your tag line (e.g., the part after # in PlayerName#TAG)",
         region="Your region",
     )
     async def link_account(

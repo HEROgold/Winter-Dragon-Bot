@@ -164,7 +164,7 @@ class Clash(GroupCog, auto_load=True):
                     ", ".join(top_champs) if top_champs else "N/A",
                 ))
             except Exception:
-                self.logger.exception(f"Error fetching data for {player.display_name}")
+                self.logger.exception("Error fetching data for %s", player.display_name)
                 team_data.append((player.display_name, "Error", "N/A"))
 
         # Build embed with team data
