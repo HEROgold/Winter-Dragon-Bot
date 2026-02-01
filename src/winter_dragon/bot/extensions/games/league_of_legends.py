@@ -1,4 +1,4 @@
-"""Module for league of legends related Cogs."""
+"""Module for League of Legends related Cogs."""
 
 from __future__ import annotations
 
