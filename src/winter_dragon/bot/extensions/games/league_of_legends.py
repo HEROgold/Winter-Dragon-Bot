@@ -14,24 +14,24 @@ from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables.lol_account import LoLAccount
 
 
-# Riot API regions
+# Riot API regions (cassiopeia v5 format)
 REGIONS = [
-    "BR1",  # Brazil
-    "EUN1",  # Europe Nordic & East
-    "EUW1",  # Europe West
-    "JP1",  # Japan
+    "BR",  # Brazil
+    "EUNE",  # Europe Nordic & East
+    "EUW",  # Europe West
+    "JP",  # Japan
     "KR",  # Korea
-    "LA1",  # Latin America North
-    "LA2",  # Latin America South
-    "NA1",  # North America
-    "OC1",  # Oceania
-    "TR1",  # Turkey
+    "LAN",  # Latin America North
+    "LAS",  # Latin America South
+    "NA",  # North America
+    "OCE",  # Oceania
+    "TR",  # Turkey
     "RU",  # Russia
-    "PH2",  # Philippines
-    "SG2",  # Singapore
-    "TH2",  # Thailand
-    "TW2",  # Taiwan
-    "VN2",  # Vietnam
+    "PH",  # Philippines
+    "SG",  # Singapore
+    "TH",  # Thailand
+    "TW",  # Taiwan
+    "VN",  # Vietnam
 ]
 
 
@@ -81,11 +81,12 @@ class LeagueOfLegends(GroupCog, auto_load=True):
             return
 
         try:
-            # Set region for cassiopeia
-            cass.set_default_region(region_upper)
+            # Get account info using Riot ID (name + tag)
+            # In cassiopeia v5, use Account class for name#tag lookups
+            account = cass.Account(name=summoner_name, tagline=tag_line, region=region_upper)
 
-            # Get summoner info using Riot ID (name + tag)
-            summoner = cass.Summoner(name=summoner_name, region=region_upper)
+            # Get summoner from the account
+            summoner = account.summoner
 
             # Check if account already exists
             existing = self.session.exec(
@@ -97,7 +98,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                 existing.summoner_name = summoner_name
                 existing.tag_line = tag_line
                 existing.region = region_upper
-                existing.puuid = summoner.puuid
+                existing.puuid = account.puuid
                 existing.summoner_id = summoner.id
                 existing.account_id = summoner.account_id
                 existing.profile_icon_id = summoner.profile_icon.id
@@ -111,7 +112,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                     summoner_name=summoner_name,
                     tag_line=tag_line,
                     region=region_upper,
-                    puuid=summoner.puuid,
+                    puuid=account.puuid,
                     summoner_id=summoner.id,
                     account_id=summoner.account_id,
                     profile_icon_id=summoner.profile_icon.id,
@@ -186,15 +187,12 @@ class LeagueOfLegends(GroupCog, auto_load=True):
             return
 
         try:
-            # Set region
-            cass.set_default_region(lol_account.region)
-
-            # Get summoner
-            summoner = cass.Summoner(name=lol_account.summoner_name, region=lol_account.region)
+            # Get summoner by PUUID (most reliable method in v5)
+            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Create embed
             embed = discord.Embed(
-                title=f"{summoner.name}#{lol_account.tag_line}",
+                title=f"{lol_account.summoner_name}#{lol_account.tag_line}",
                 color=discord.Color.blue(),
             )
             embed.add_field(name="Region", value=lol_account.region, inline=True)
@@ -255,11 +253,8 @@ class LeagueOfLegends(GroupCog, auto_load=True):
             return
 
         try:
-            # Set region
-            cass.set_default_region(lol_account.region)
-
-            # Get summoner
-            summoner = cass.Summoner(name=lol_account.summoner_name, region=lol_account.region)
+            # Get summoner by PUUID
+            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Get match history
             match_history = summoner.match_history[:count]
@@ -269,7 +264,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                 return
 
             embed = discord.Embed(
-                title=f"Match History - {summoner.name}#{lol_account.tag_line}",
+                title=f"Match History - {lol_account.summoner_name}#{lol_account.tag_line}",
                 color=discord.Color.blue(),
             )
 
@@ -331,11 +326,8 @@ class LeagueOfLegends(GroupCog, auto_load=True):
             return
 
         try:
-            # Set region
-            cass.set_default_region(lol_account.region)
-
-            # Get summoner
-            summoner = cass.Summoner(name=lol_account.summoner_name, region=lol_account.region)
+            # Get summoner by PUUID
+            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Get champion masteries
             masteries = summoner.champion_masteries[:count]
@@ -345,7 +337,7 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                 return
 
             embed = discord.Embed(
-                title=f"Champion Mastery - {summoner.name}#{lol_account.tag_line}",
+                title=f"Champion Mastery - {lol_account.summoner_name}#{lol_account.tag_line}",
                 color=discord.Color.gold(),
             )
 
