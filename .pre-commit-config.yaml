@@ -7,7 +7,7 @@ default_install_hook_types:
   - post-rewrite
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.26
+    rev: 0.9.28
     hooks:
       - id: uv-lock
         stages:
@@ -61,7 +61,7 @@ repos:
 
   # Validate packaging metadata early
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.24.1
+    rev: v0.25
     hooks:
       - id: validate-pyproject
         stages: [pre-push, pre-commit]
@@ -113,7 +113,7 @@ repos:
 
   # TypeScript/React hooks (for frontend directory)
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.0.0-rc.1
+    rev: v10.0.0-rc.2
     hooks:
       - id: eslint
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
