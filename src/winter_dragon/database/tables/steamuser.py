@@ -14,5 +14,5 @@ class SteamUsers(SQLModel, table=True):
     user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), primary_key=True))
     sale_threshold: int = Field(default=100, description="Minimum discount percentage required before notifying the user.")
     last_notification: datetime = Field(
-        datetime(2000, 1, 1, 0, 0, 0, tzinfo=UTC), description="Timestamp of the last notification sent to the user."
+        default=datetime(2000, 1, 1, 0, 0, 0, tzinfo=UTC), description="Timestamp of the last notification sent to the user."
     )

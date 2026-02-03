@@ -2,7 +2,6 @@
 
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
-
 import logging
 from collections.abc import Sequence
 from types import NoneType
@@ -11,7 +10,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 from herogold.log import LoggerMixin
 from herogold.typing.check import is_sub_type
 from pydantic import ConfigDict
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, ScalarResult
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
 
@@ -126,6 +126,12 @@ class BaseModel(BaseSQLModel):
         session.add(known)
         session.commit()
 
+    @classmethod
+    def from_[T](cls, column: Mapped[T], value: T, session: Session | None = None) -> ScalarResult[Self]:
+        """Get a record from Database by field and value."""
+        cls.logger.debug(f"Getting record from field: {cls=}, {column=} == {value=}")
+        session = cls._get_session(session)
+        return session.exec(select(cls).where(column == value))
 
 class SQLModel(BaseModel):
     """Base SQLModel class with custom methods."""
