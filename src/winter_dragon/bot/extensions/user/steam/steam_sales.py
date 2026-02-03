@@ -122,7 +122,7 @@ class SteamSales(GroupCog, auto_load=True):
         if result.first():
             await interaction.response.send_message("Already in the list of recipients", ephemeral=True)
             return
-        self.session.add(SteamUsers(user_id=interaction.user.id))
+        self.session.add(SteamUsers(user_id=interaction.user.id, last_notification=datetime.now(UTC)))
         self.session.commit()
         sub_mention = self.get_command_mention(self.slash_show)
         msg = f"I will notify you of new steam games!\nUse {sub_mention} to view current sales."
@@ -138,7 +138,7 @@ class SteamSales(GroupCog, auto_load=True):
         if not user:
             await interaction.response.send_message(
                 f"You are not in the list of recipients. Use {self.get_command_mention(self.slash_add)} to subscribe.",
-                ephemeral=True
+                ephemeral=True,
             )
             return
         user.sale_threshold = percent

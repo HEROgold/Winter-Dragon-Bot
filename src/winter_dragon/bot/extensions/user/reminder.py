@@ -20,13 +20,13 @@ WEEKS_IN_MONTH = 4
 class Reminder(Cog, auto_load=True):
     """Cog for setting reminders."""
 
-    reminder_check_interval = Config(60)
+    check_interval = Config(60)
 
     async def cog_load(self) -> None:
         """Load the cog."""
         await super().cog_load()
         # Configure loop interval from config
-        self.send_reminder.change_interval(seconds=self.reminder_check_interval)
+        self.send_reminder.change_interval(seconds=self.check_interval)
         self.send_reminder.start()
 
     @loop()
@@ -116,17 +116,46 @@ class Reminder(Cog, auto_load=True):
     @app_commands.command(name="remove_reminder")
     async def slash_remove_reminder(self, interaction: discord.Interaction, reminder: str) -> None:
         """Let a user remove any of their reminders."""
+        reminder_query = select(ReminderDb).where(
+            ReminderDb.user_id == interaction.user.id,
+            ReminderDb.content == reminder,
+        )
+        timed_reminder_query = select(TimedReminder).where(
+            TimedReminder.user_id == interaction.user.id,
+            TimedReminder.content == reminder,
+        )
+
+        reminder_result = self.session.exec(reminder_query).first()
+        timed_reminder_result = self.session.exec(timed_reminder_query).first()
+
+        if reminder_result:
+            self.session.delete(reminder_result)
+            self.session.commit()
+            await interaction.response.send_message(f"Removed reminder `{reminder}`", ephemeral=True)
+            return
+
+        if timed_reminder_result:
+            self.session.delete(timed_reminder_result)
+            self.session.commit()
+            await interaction.response.send_message(f"Removed timed reminder `{reminder}`", ephemeral=True)
+            return
+
+        await interaction.response.send_message(f"No reminder found with content `{reminder}`", ephemeral=True)
 
     @slash_remove_reminder.autocomplete("reminder")
     async def autocomplete_active_reminders(self, interaction: discord.Interaction, current: str) -> list[Choice]:
         """Autocomplete active reminders for the user."""
-        query = select(ReminderDb, TimedReminder).where(
-            interaction.user.id in (ReminderDb.user_id, TimedReminder.user_id),
-            current.casefold() in ReminderDb.content.casefold() or current.casefold() in TimedReminder.content.casefold(),
+        reminder = select(ReminderDb).where(
+            interaction.user.id == ReminderDb.user_id,
+            current.casefold() in ReminderDb.content.casefold(),
+        )
+        timed_reminder = select(TimedReminder).where(
+            interaction.user.id == TimedReminder.user_id,
+            current.casefold() in TimedReminder.content.casefold(),
         )
 
         return [
-            Choice(name=reminder.content, value=reminder.id)
-            for reminder in self.session.exec(query).all()
-            if reminder.user_id == interaction.user.id
+            Choice(name=i.content, value=i.content)
+            for i in (*self.session.exec(timed_reminder).all(), *self.session.exec(reminder).all())
+            if i.user_id == interaction.user.id
         ]

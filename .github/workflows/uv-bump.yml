@@ -6,32 +6,24 @@ on:
     branches: [master]
 
 jobs:
-  bump-uv:
+  bump-version:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    needs: bump-version
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: Bump Version
+        id: bump-version
+        uses: conjikidow/bump-version@v2.0.0
         with:
-          version: "latest"
+          label-major: 'Major'
+          label-minor: 'Minor'
+          label-patch: 'Patch'
+          create-release: 'false'
 
-      - name: Determine new version
-        id: semver
+      - name: Debug outputs
         run: |
-          labels=$(jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" 2>/dev/null || true)
-          semver=""
-          for want in major minor patch; do
-            if echo "$labels" | tr '[:upper:]' '[:lower:]' | grep -q "$want"; then
-              semver=$want
-              break
-            fi
-          done
-          if [ -z "$semver" ]; then
-            semver=patch
-          fi
-          echo "type=$semver" >> "$GITHUB_OUTPUT"
-        shell: bash
-
-      - name: Bump uv version
-        run: uv version --bump ${{ steps.semver.outputs.type }}
+          echo "version-bumped=${{ steps.bump-version.outputs.version-bumped }}"
+          echo "new-version=${{ steps.bump-version.outputs.new-version }}"

@@ -111,5 +111,5 @@
     ],
     "todo-tree.tree.showCountsInTree": true,
     "editor.acceptSuggestionOnEnter": "on",
-    "python.languageServer": "Default",
+    "python.languageServer": "Pylance",
 }

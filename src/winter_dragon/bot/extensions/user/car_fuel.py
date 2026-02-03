@@ -17,13 +17,13 @@ class Fuel(GroupCog, auto_load=True):
     graph = app_commands.Group(name="graph", description="Show a graph containing fuel insights.")
 
     @app_commands.command(name="add", description="Store some data about tanking fuel")
-    async def slash_add(self, interaction: discord.Interaction, price: int, distance: int, amount: int) -> None:
-        """Store some data about tanking fuel.
-
-        Price: The total price paid for the fuel.
-        Distance: The distance traveled since the last refuel.
-        Amount: The amount of fuel added.
-        """
+    @app_commands.describe(
+        price="The total price paid for the fuel.",
+        distance="The distance traveled since the last refuel.",
+        amount="The amount of fuel added.",
+    )
+    async def slash_add(self, interaction: discord.Interaction, price: float, distance: float, amount: float) -> None:
+        """Store some data about tanking fuel."""
         self.session.add(
             DbFuel(
                 user_id=interaction.user.id,

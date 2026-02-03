@@ -33,12 +33,4 @@ session = Session(engine)
 class SessionMixin:
     """Mixin class to provide a session for database operations."""
 
-    session: Session
-
-    def __init_subclass__(cls) -> None:
-        """Initialize the subclass with a database session."""
-        cls.session = Session(engine)
-
-    def __del__(self) -> None:
-        """Close the database session."""
-        self.session.close()
+    session: Session = session
