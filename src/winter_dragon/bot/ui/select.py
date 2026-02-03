@@ -22,6 +22,7 @@ class SelectArgs[T](TypedDict, total=False):
     row: int | None
     on_interact: InteractEvent[T]
 
+
 default_args: SelectArgs = {
     "custom_id": None,
     "placeholder": None,
@@ -33,6 +34,7 @@ default_args: SelectArgs = {
     "row": None,
     "on_interact": default_interact,
 }
+
 
 class Select[T](DiscordSelect, LoggerMixin):
     """Enhanced select menu with logging and callbacks."""

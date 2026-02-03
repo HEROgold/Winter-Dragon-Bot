@@ -2,6 +2,7 @@
 
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
+
 import logging
 from collections.abc import Sequence
 from types import NoneType
@@ -132,6 +133,7 @@ class BaseModel(BaseSQLModel):
         cls.logger.debug(f"Getting record from field: {cls=}, {column=} == {value=}")
         session = cls._get_session(session)
         return session.exec(select(cls).where(column == value))
+
 
 class SQLModel(BaseModel):
     """Base SQLModel class with custom methods."""

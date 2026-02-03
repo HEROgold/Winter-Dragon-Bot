@@ -1,4 +1,5 @@
 """Pagination components for navigating through large datasets."""
+
 from collections.abc import Callable
 
 import discord

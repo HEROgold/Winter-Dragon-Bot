@@ -1,4 +1,5 @@
 """UI primitives built on top of discord.py's button component."""
+
 from typing import Unpack, override
 
 from discord import ButtonStyle, Emoji, Interaction, PartialEmoji
@@ -25,6 +26,7 @@ class ButtonArgs[T](TypedDict, total=False):
     id: int | None
     on_interact: InteractEvent[T]
 
+
 default_args: ButtonArgs[None] = {
     "style": ButtonStyle.secondary,
     "label": None,
@@ -38,6 +40,7 @@ default_args: ButtonArgs[None] = {
     "on_interact": default_interact,
 }
 
+
 class Button[T = None](DiscordButton, LoggerMixin):
     """Discord button with logging and consistent defaults."""
 
@@ -48,7 +51,7 @@ class Button[T = None](DiscordButton, LoggerMixin):
         """Initialize the button with various parameters."""
         args: ButtonArgs[T] = {**default_args, **kwargs}
         self.on_interact = args.pop("on_interact")
-        super().__init__(**args) # pyright: ignore[reportCallIssue] # pyright says on_interact is still present.
+        super().__init__(**args)  # pyright: ignore[reportCallIssue] # pyright says on_interact is still present.
 
     async def callback(self, interaction: Interaction) -> None:
         """Handle the button click event."""
@@ -57,6 +60,7 @@ class Button[T = None](DiscordButton, LoggerMixin):
         await self.on_interact(interaction)
         self.disabled = False
         await interaction.response.edit_message(view=self.view)
+
 
 class ToggleArgs[T](TypedDict, total=False):
     """Arguments for creating a toggle button."""
@@ -80,13 +84,7 @@ class ToggleButton[T = None](Button[T]):
         **kwargs: Unpack[ToggleArgs[T]],
     ) -> None:
         """Initialize the button with various parameters."""
-        super().__init__(
-            style=ButtonStyle.danger,
-            label="Off",
-            disabled=False,
-            emoji=self.emojis[self.state],
-            **kwargs
-        )
+        super().__init__(style=ButtonStyle.danger, label="Off", disabled=False, emoji=self.emojis[self.state], **kwargs)
 
     @override
     async def callback(self, interaction: Interaction) -> None:

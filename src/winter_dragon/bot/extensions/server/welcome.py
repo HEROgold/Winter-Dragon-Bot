@@ -1,4 +1,5 @@
 """Module to hold welcoming cogs."""
+
 import discord
 from discord import Interaction, app_commands
 from sqlmodel import Session, col, select
@@ -14,7 +15,7 @@ from winter_dragon.database.tables import Welcome as WelcomeDb
 class WelcomeMenu(Menu, SessionMixin):
     """Menu for configuring welcome settings."""
 
-    def __init__(self, interaction: discord.Interaction, timeout: float = 300.0 ) -> None:
+    def __init__(self, interaction: discord.Interaction, timeout: float = 300.0) -> None:
         """Initialize the welcome menu."""
         super().__init__(timeout=timeout)
         if not interaction.guild:
@@ -23,11 +24,7 @@ class WelcomeMenu(Menu, SessionMixin):
 
         self.guild = interaction.guild
         self.interaction = interaction
-        welcome = WelcomeDb.from_(
-            col(WelcomeDb.guild_id),
-            interaction.guild.id,
-            self.session
-        ).first()
+        welcome = WelcomeDb.from_(col(WelcomeDb.guild_id), interaction.guild.id, self.session).first()
         if not welcome:
             msg = f"No welcome data found for guild {interaction.guild.id}"
             raise ValueError(msg)
@@ -44,11 +41,7 @@ class WelcomeMenu(Menu, SessionMixin):
         toggle_button.on_interact = on_toggle
 
         async def on_edit_message(interaction: discord.Interaction) -> None:
-            await interaction.response.send_modal(WelcomeMessageModal(
-                self.welcome,
-                interaction,
-                self.session
-            ))
+            await interaction.response.send_modal(WelcomeMessageModal(self.welcome, interaction, self.session))
 
         edit_button = Button(
             label="Edit Message",
@@ -61,7 +54,6 @@ class WelcomeMenu(Menu, SessionMixin):
         self.add_item(toggle_button)
         self.add_item(edit_button)
 
-
     def embed(self) -> discord.Embed:
         """Build the welcome settings embed."""
         embed = discord.Embed(
@@ -70,11 +62,7 @@ class WelcomeMenu(Menu, SessionMixin):
             colour=discord.Colour.blurple(),
         )
 
-        embed.add_field(
-            name="Status",
-            value="✅ Enabled" if self.welcome.enabled else "❌ Disabled",
-            inline=False
-        )
+        embed.add_field(name="Status", value="✅ Enabled" if self.welcome.enabled else "❌ Disabled", inline=False)
 
         embed.add_field(
             name="Current Message",
@@ -90,6 +78,7 @@ class WelcomeMenu(Menu, SessionMixin):
             )
 
         return embed
+
 
 class WelcomeMessageModal(Modal):
     """Modal for editing the welcome message."""
@@ -121,9 +110,7 @@ class WelcomeMessageModal(Modal):
         if data := self.session.exec(select(WelcomeDb).where(WelcomeDb.guild_id == self.guild.id)).first():
             data.message = self.message_input.value
             self.session.commit()
-            self.logger.info(
-                f"Welcome message updated for {self.guild=} by {interaction.user=})"
-            )
+            self.logger.info(f"Welcome message updated for {self.guild=} by {interaction.user=})")
         else:
             msg = f"No welcome data found for guild {self.guild.id}"
             self.logger.error(msg)
@@ -165,9 +152,7 @@ class Welcome(Cog, auto_load=True):
                 await member.send(default_message)
                 self.logger.info(f"Sent default welcome message via DM to new member {member}")
         else:
-            self.logger.warning(
-                f"Welcome failed for {member=}: {channel=}, {self.allowed_welcome_dm=}, {member.bot=}"
-            )
+            self.logger.warning(f"Welcome failed for {member=}: {channel=}, {self.allowed_welcome_dm=}, {member.bot=}")
 
     @app_commands.command(name="welcome", description="Configure welcome messages")
     async def welcome(self, interaction: discord.Interaction) -> None:

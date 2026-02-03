@@ -1,6 +1,5 @@
 """Action menus for interactive settings and options."""
 
-
 from herogold.log import LoggerMixin
 
 from .view import View

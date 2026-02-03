@@ -14,13 +14,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
-      - name: Install pre-commit
-        run: |
-          pip install pre-commit
+
       - name: Run pre-commit
         run: |
-          pre-commit run --all-files --color always --show-diff-on-failure
+          uvx prek run --all-files --color always --show-diff-on-failure
