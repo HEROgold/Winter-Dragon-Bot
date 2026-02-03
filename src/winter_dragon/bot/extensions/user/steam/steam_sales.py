@@ -11,6 +11,7 @@ from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.user.steam.sale_scraper import SteamScraper
+from winter_dragon.bot.extensions.user.steam.steam_sales_menu import create_sales_paginator
 from winter_dragon.bot.extensions.user.steam.user_notifier import SteamSaleNotifier
 from winter_dragon.config import Config
 from winter_dragon.database.tables.steamsale import SteamSale
@@ -81,7 +82,7 @@ class SteamSales(GroupCog, auto_load=True):
             notifier.add_sales(filtered_sales)
             notifier.build_embed(embed)
             notification_cutoff = datetime.now(UTC) - timedelta(seconds=self.steam_sales_update_interval)
-            if filtered_sales and user.last_notification <= notification_cutoff:
+            if notifier.sales and user.last_notification <= notification_cutoff:
                 await notifier.notify_user(user)
 
     @loop()  # Interval is set in cog_load
@@ -91,8 +92,8 @@ class SteamSales(GroupCog, auto_load=True):
         Expected amount of sales should be low enough it'll never reach embed size limit.
         """
         self.logger.info("updating sales")
-        new_sales = await self.get_new_steam_sales(percent=100)
-        await self.notify_users(new_sales)
+        if new_sales := await self.get_new_steam_sales(percent=100):
+            await self.notify_users(new_sales)
 
     def _get_notify_messages(self) -> tuple[str, ...]:
         """Update the notify messages."""
@@ -136,7 +137,7 @@ class SteamSales(GroupCog, auto_load=True):
         user = self.session.exec(query).first()
         if not user:
             await interaction.response.send_message(
-                f"You are not in the list of recipients. Use {self.get_command_mention(self.slash_add)} add to subscribe.",
+                f"You are not in the list of recipients. Use {self.get_command_mention(self.slash_add)} to subscribe.",
                 ephemeral=True,
             )
             return
@@ -163,9 +164,20 @@ class SteamSales(GroupCog, auto_load=True):
     )
     async def slash_show(self, interaction: Interaction, percent: int = 100) -> None:
         """Get a list of steam games that are on sale for the given percentage or higher."""
+        sales = [s for s in SteamSale.get_all() if s.sale_percent >= percent]
+
+        if not sales:
+            await interaction.response.send_message(
+                f"No steam games found with sales {percent}% or higher.",
+                ephemeral=True,
+            )
+            return
+
         await interaction.response.defer()
-        embed = Embed(title="Steam Games", description=f"Steam Games with sales {percent}% or higher", color=self.embed_color)
-        notifier = SteamSaleNotifier(self.bot, self.session)
-        notifier.add_sales([s for s in SteamSale.get_all() if s.sale_percent >= percent])
-        notifier.build_embed(embed)
-        await interaction.followup.send(embed=notifier.embed)
+        paginator = await create_sales_paginator(
+            sales=sales,
+            session=self.session,
+            color=self.embed_color,
+            items_per_page=5,
+        )
+        await paginator.start(interaction)

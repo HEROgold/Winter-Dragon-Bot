@@ -45,14 +45,14 @@ class CommandLike(Protocol):
         """Set command description."""
         ...
 
+ellipses = "..."
 
 def sync_name(command: CommandLike, logger: Logger) -> str:
     """Return the name used for syncing the command."""
     name_len = len(command.name)
     if name_len >= COMMAND_NAME_LIMIT:
-        logger.critical("Command name too long: %s", command.qualified_name)
         logger.warning("Fixing command name too long: %s (%d > %d)", command.qualified_name, name_len, COMMAND_NAME_LIMIT)
-        return command.name[: COMMAND_NAME_LIMIT - 3] + "..."
+        return command.name[: COMMAND_NAME_LIMIT - len(ellipses)] + ellipses
     return command.name
 
 
@@ -64,8 +64,8 @@ def sync_description(command: CommandLike, logger: Logger) -> str:
         logger.warning(
             "Fixing command description too long: %s (%d > %d)", command.qualified_name, desc_len, COMMAND_DESCRIPTION_LIMIT
         )
-        return desc[: COMMAND_DESCRIPTION_LIMIT - 3] + "..."
-    return command.description
+        return desc[: COMMAND_DESCRIPTION_LIMIT - len(ellipses)] + ellipses
+    return desc
 
 
 class LenFixer(LoggerMixin):
@@ -96,8 +96,10 @@ class LenFixer(LoggerMixin):
 
             if (
                 isinstance(i, ContextMenu)
-                or len(i.name) < COMMAND_NAME_LIMIT
-                or len(i.description) <= COMMAND_DESCRIPTION_LIMIT
+                or (
+                    len(i.name) < COMMAND_NAME_LIMIT
+                    and len(i.description) <= COMMAND_DESCRIPTION_LIMIT
+                )
             ):
                 continue
 
