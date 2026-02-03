@@ -18,7 +18,6 @@ repos:
       - id: uv-sync
         args: ["--locked", "--all-extras"]
         stages:
-        - pre-commit
         - post-checkout
         - post-merge
         - post-rewrite
