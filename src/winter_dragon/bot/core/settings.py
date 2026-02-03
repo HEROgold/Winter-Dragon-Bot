@@ -78,6 +78,7 @@ class Settings:
     SERVER_IP = Config("localhost")
     WEBSITE_PORT = Config(80)
     WEBSITE_URL = Config(Combined(PROTOCOL_PREFIX, SERVER_IP, ":", WEBSITE_PORT))
+    steam_redirect = Config("steam://")
 
     TIME_FORMAT = Config("%H:%M:%S")
     DATE_FORMAT = Config("%Y-%m-%d")

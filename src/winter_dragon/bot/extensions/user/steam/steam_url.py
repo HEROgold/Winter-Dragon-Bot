@@ -38,7 +38,7 @@ class SteamURL(LoggerMixin):
         # example: https://store.steampowered.com/app/1168660/Barro_2020/
         regex_game_id = r"(?:https?:\/\/)?store\.steampowered\.com\/app\/(\d+)\/[a-zA-Z0-9_\/]+"
         matches = re.findall(regex_game_id, self.url)
-        self.logger.debug(f"game id: {matches=}, {matches=}")
+        self.logger.debug(f"game id: {matches=}")
         self._id = int(matches[0]) if matches else 0
         return self._id
 
