@@ -6,6 +6,7 @@ import discord
 from discord.interactions import InteractionMessage
 from herogold.log import LoggerMixin
 
+from .page_navigation_modal import PageNavigationModal
 from .view import View
 
 
@@ -68,14 +69,7 @@ class EmbedPageSource(PageSource[discord.Embed]):
     """Page source for displaying pre-made embeds."""
 
     def __init__(self, embeds: list[discord.Embed]) -> None:
-        """Initialize the embed page source.
-
-        Parameters
-        ----------
-        embeds : list[discord.Embed]
-            List of embeds to paginate.
-
-        """
+        """Initialize the embed page source."""
         self.embeds = embeds
 
     async def get_page(self, page_number: int) -> discord.Embed:
@@ -149,6 +143,15 @@ class Paginator(View, LoggerMixin):
         prev_button.callback = self._prev_button_callback  # ty:ignore[invalid-assignment]
         self.add_item(prev_button)
 
+        # Add go to page button
+        go_to_button = discord.ui.Button(
+            label="⋯",
+            custom_id="paginator_goto",
+            style=discord.ButtonStyle.secondary,
+        )
+        go_to_button.callback = self._goto_page_callback  # ty:ignore[invalid-assignment]
+        self.add_item(go_to_button)
+
         # Add info button
         info_button = discord.ui.Button(
             label=f"{self.current_page + 1}/{self.total_pages}",
@@ -193,6 +196,30 @@ class Paginator(View, LoggerMixin):
             await self.show_page(interaction, self.current_page - 1)
         else:
             await interaction.response.defer()
+
+    async def _goto_page_callback(self, interaction: discord.Interaction) -> None:
+        """Go to page button callback."""
+        if self.total_pages is None:
+            await interaction.response.defer()
+            return
+
+        modal = PageNavigationModal(self.total_pages)
+        await interaction.response.send_modal(modal)
+
+        # Wait for modal submission
+        await modal.wait()
+
+        if modal.selected_page is not None and self.message:
+            page_data = await self.source.get_page(modal.selected_page)
+            content, embed = await self.source.format_page(page_data, modal.selected_page)
+
+            self.current_page = modal.selected_page
+            await self._update_buttons()
+
+            if self.on_page_change_callback:
+                await self.on_page_change_callback(self.current_page)
+
+            await self.message.edit(content=content or "\u200b", embed=embed, view=self)
 
     async def _info_button_callback(self, interaction: discord.Interaction) -> None:
         """Info button callback."""

@@ -11,10 +11,12 @@ from discord.ext import commands
 from herogold.log import LoggerMixin
 
 from winter_dragon.bot.core.cogs import Cog
+from winter_dragon.bot.ui.paginator import PageSource, Paginator
 
 
 COMMAND_DESCRIPTION_LIMIT = 100
 COMMAND_NAME_LIMIT = 32
+EMBED_FIELD_DESC_LIMIT = 100  # Max chars for embed field values in paginator
 
 
 class CommandLike(Protocol):
@@ -70,6 +72,63 @@ def sync_description(command: CommandLike, logger: Logger) -> str:
     return desc
 
 
+class SyncedCommandsPageSource(PageSource[list[dict[str, str]]]):
+    """Page source for displaying synced commands in an embed."""
+
+    def __init__(self, commands_list: list[AppCommand], title: str = "Synced Commands") -> None:
+        """Initialize the synced commands page source."""
+        # Create a sorted list of command data
+        self.commands_data = [
+            {
+                "name": cmd.name,
+                "description": cmd.description or "No description",
+            }
+            for cmd in sorted(commands_list, key=lambda c: c.name)
+        ]
+        self.items_per_page = 10
+        self.title = title
+
+    async def get_page(self, page_number: int) -> list[dict[str, str]]:
+        """Get a page of commands."""
+        start = page_number * self.items_per_page
+        end = start + self.items_per_page
+        return self.commands_data[start:end]
+
+    async def get_page_count(self) -> int:
+        """Get total page count."""
+        return (len(self.commands_data) + self.items_per_page - 1) // self.items_per_page
+
+    async def format_page(
+        self,
+        page_data: list[dict[str, str]],
+        page_number: int,
+    ) -> tuple[str, discord.Embed]:
+        """Format the page as an embed with command listings."""
+        total_pages = await self.get_page_count()
+        total_commands = len(self.commands_data)
+
+        embed = discord.Embed(
+            title=self.title,
+            description=f"Displaying {len(page_data)} of {total_commands} commands",
+            colour=discord.Colour.green(),
+        )
+
+        for cmd in page_data:
+            # Truncate description if needed for embed field value limits (1024 chars)
+            desc = cmd["description"]
+            if len(desc) > EMBED_FIELD_DESC_LIMIT:
+                desc = desc[: EMBED_FIELD_DESC_LIMIT - len(ellipses)] + ellipses
+            embed.add_field(
+                name=f"/{cmd['name']}",
+                value=desc,
+                inline=False,
+            )
+
+        embed.set_footer(text=f"Page {page_number + 1}/{total_pages} • Total: {total_commands} commands")
+
+        return "", embed
+
+
 class LenFixer(LoggerMixin):
     """Context manager to temporarily fix command name/description length."""
 
@@ -93,15 +152,9 @@ class LenFixer(LoggerMixin):
     def __enter__(self) -> None:
         """Enter the context manager."""
         for i in self._all_commands():
-            old_name = i.name
-            old_desc = i.description
-
-            if isinstance(i, ContextMenu) or (
-                len(i.name) < COMMAND_NAME_LIMIT and len(i.description) <= COMMAND_DESCRIPTION_LIMIT
-            ):
+            if isinstance(i, ContextMenu):
                 continue
-
-            self._stored_commands.append((i, old_name, old_desc))
+            self._stored_commands.append((i, i.name, i.description))
             i.name = sync_name(i, self.logger)
             i.description = sync_description(i, self.logger)
 
@@ -140,26 +193,43 @@ class Sync(Cog, auto_load=True):
 
         self.logger.warning(f"{user} Synced slash commands!")
         self.logger.debug(f"Synced commands: {local_sync}")
-        local_list = [command.name for command in local_sync]
-        local_list.sort()
-        await interaction.followup.send(f"Sync complete\nSynced: {local_list} to {guild}")
+
+        # Use paginator to display synced commands
+        if not local_sync:
+            await interaction.followup.send("No commands were synced.", ephemeral=True)
+            return
+
+        page_source = SyncedCommandsPageSource(local_sync, title=f"Synced Commands - {guild.name}")
+        paginator = Paginator(page_source)
+        await paginator.start(interaction)
 
     @commands.is_owner()
     @commands.hybrid_command(name="sync_ctx", description="Sync all commands on all servers (Bot dev only)")
     async def slash_sync_hybrid(self, ctx: commands.Context) -> None:
         """Sync all commands on all servers. This is a ctx and slash command (hybrid)."""
-        msg = "Synced commands: "
-        guild = ctx.guild
+        await ctx.defer(ephemeral=True)
 
-        synced_commands = await self.sync_global()
-        msg += "".join([i.name for i in synced_commands]) + "\n"
+        synced_commands: list[AppCommand] = []
+        synced_commands.extend(await self.sync_global())
+
         for guild in self.bot.guilds:
-            synced_commands = await self.sync_local(guild)
-            msg += "".join([i.name for i in synced_commands]) + "\n"
+            synced_commands.extend(await self.sync_local(guild))
 
         self.logger.warning(f"{ctx.author} Synced slash commands!")
-        self.logger.debug(msg)
-        await ctx.send(msg, ephemeral=True)
+
+        if not synced_commands:
+            await ctx.send("No commands were synced.", ephemeral=True)
+            return
+
+        # Use paginator to display synced commands
+        page_source = SyncedCommandsPageSource(synced_commands, title="All Synced Commands (Global + Local)")
+        paginator = Paginator(page_source)
+
+        if ctx.interaction:
+            await paginator.start(ctx.interaction)
+        else:
+            # Fallback for non-slash command context
+            await ctx.send("Synced commands paginator started.", ephemeral=True)
 
     async def sync_local(self, guild: Guild) -> list[AppCommand]:
         """Sync all commands on a specific guild."""

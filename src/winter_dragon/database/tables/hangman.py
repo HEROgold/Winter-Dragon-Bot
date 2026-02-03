@@ -1,3 +1,4 @@
+from sqlalchemy import BigInteger
 from sqlmodel import Field
 
 from winter_dragon.database.extension.model import SQLModel
@@ -6,6 +7,6 @@ from winter_dragon.database.tables.message import Messages
 
 
 class Hangmen(SQLModel, table=True):
-    message_id: int = Field(foreign_key=get_foreign_key(Messages), primary_key=True)
+    message_id: int = Field(sa_type=BigInteger, foreign_key=get_foreign_key(Messages), primary_key=True)
     word: str
     letters: str

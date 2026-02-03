@@ -177,9 +177,18 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
         self.logger.debug(f"Submitting {self.letter.value=}")
         self.interaction = interaction
         await self.get_hangman_game()
+
+        # Check if letter was already chosen before adding it
+        letter_already_chosen = self.letter.value in self.hangman_db.letters
+
+        if letter_already_chosen:
+            await self.notify_already_chosen()
+            return
+
         await self.notify_chosen_letter()
-        player = self.get_player_record()
+
         self.track_wrong_guesses()
+        player = self.get_player_record()
 
         hangman = get_hangman(guess_amount=len(self.wrong_after))
         self.add_player_score(player, 2 if self.is_wrong else -1)
@@ -192,11 +201,12 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
                     f"""Game Lost...
                     Guesses: {hidden_word}
                     Word: {self.hangman_db.word}
-                    {hangman}`
+                    {hangman}
                     Letters: {self.hangman_db.letters}""",
                 ),
                 view=None,
             )
+            self.session.commit()
             return
 
         checks = self.validate_guessed_letters()
@@ -253,11 +263,19 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
 
     async def notify_chosen_letter(self) -> None:
         """Notify the user about the chosen letter."""
-        if self.letter.value in self.hangman_db.letters:
-            self.logger.debug(f"Already chosen: {self.letter.value=}, {self.interaction.user=}")
-            await self.interaction.response.send_message("Letter already chosen.", ephemeral=True)
-        else:
-            await self.interaction.response.send_message(f"Chosen letter: {self.letter.value}", ephemeral=True)
+        await self.interaction.response.send_message(f"Chosen letter: {self.letter.value}", ephemeral=True)
+
+    async def notify_already_chosen(self) -> None:
+        """Notify the user that the letter was already chosen."""
+        # Calculate how many wrong guesses so far
+        wrong_count = len([i for i in self.hangman_db.letters if i not in self.hangman_db.word])
+        hidden_word = self.get_hidden_word()
+        hangman = get_hangman(guess_amount=wrong_count)
+        await self.interaction.response.send_message("Letter already chosen.", ephemeral=True)
+        # Still update the main message so it shows current state
+        await self.interaction.edit_original_response(
+            content=f"Word: {hidden_word}\n{hangman}\nLetters: {self.hangman_db.letters}",
+        )
 
     async def get_hangman_game(self) -> None:
         """Get the hangman game. Creates a new one if it doesn't exist."""

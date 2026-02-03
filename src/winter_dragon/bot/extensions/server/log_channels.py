@@ -16,13 +16,14 @@ Current scope:
             * Removing all log channels (``/remove``)
             * Updating / backfilling missing channels (``/update``)
             * Internal helpers for category selection and ensuring required counts.
+            * Aggregating logs to a global log channel with persistent pagination
 
 If you need to modify how events are transformed into embeds or how they are
 sent, look in ``winter_dragon.bot.events`` instead of re-adding listeners here.
 """
 
 from collections.abc import AsyncGenerator, Sequence
-from typing import cast
+from typing import Unpack, cast
 
 import discord
 from discord import (
@@ -36,12 +37,15 @@ from discord import (
 from discord.abc import PrivateChannel
 from discord.ext import commands
 
-from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.permissions import PermissionsOverwrites
 from winter_dragon.bot.core.settings import Settings
+from winter_dragon.bot.ui.paginator import Paginator
 from winter_dragon.config import Config
 from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
+
+from .log_aggregator import LogAggregator
 
 
 MAX_CATEGORY_SIZE = 50
@@ -55,6 +59,18 @@ class LogChannels(GroupCog, auto_load=True):
     """
 
     log_category_name = Config("LOG-CATEGORY")
+
+    def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
+        """Initialize LogChannels cog with log aggregators."""
+        super().__init__(**kwargs)
+        # Maintain per-guild aggregators for log pagination
+        self.guild_aggregators: dict[int, LogAggregator] = {}
+
+    def get_or_create_aggregator(self, guild_id: int) -> LogAggregator:
+        """Get or create a log aggregator for a guild."""
+        if guild_id not in self.guild_aggregators:
+            self.guild_aggregators[guild_id] = LogAggregator()
+        return self.guild_aggregators[guild_id]
 
     # ----------------------
     # Helper Functions Start
@@ -71,8 +87,52 @@ class LogChannels(GroupCog, auto_load=True):
             return self.get_log_category(category_channels, channel_location)
         return category_channel
 
+    async def dispatch_aggregated_log(
+        self,
+        guild: discord.Guild,
+        embed: discord.Embed,
+        action: str,
+    ) -> None:
+        """Dispatch a log to the global aggregated channel.
+
+        This method:
+        1. Adds the log to the guild's aggregator
+        2. Finds the global log channel
+        3. Updates the message with the latest logs using pagination
+
+        Parameters
+        ----------
+        guild : discord.Guild
+            The guild where the log occurred.
+        embed : discord.Embed
+            The embed representing the audit event.
+        action : str
+            The audit action name for the log entry.
+
+        """
+        aggregator = self.get_or_create_aggregator(guild.id)
+        aggregator.add_log(embed, action)
+
+        # Get the global log channel
+        channels = Channels.get_by_tag(self.session, Tags.LOGS, guild.id)
+        global_channels = [c for c in channels if c.name == GLOBAL.title()]
+
+        if not global_channels:
+            self.logger.debug(f"No global log channel found for guild {guild.id}")
+            return
+
+        global_channel = discord.utils.get(guild.text_channels, id=global_channels[0].id)
+        if not global_channel:
+            self.logger.warning(f"Could not find global log channel {global_channels[0].id} in guild {guild.id}")
+            return
+
+        # Create paginator and update the message
+        paginator = Paginator(await aggregator.create_page_source())
+        await aggregator.update_global_log_message(global_channel, paginator)
+
     # NOTE: All previous embed construction & log dispatch helpers removed.
     # Event dispatch now happens in winter_dragon.bot.events.* modules.
+    # Logs are now aggregated to the global channel via dispatch_aggregated_log.
 
     # ----------------------
     # Helper Functions End
@@ -243,32 +303,36 @@ class LogChannels(GroupCog, auto_load=True):
         return category_channels
 
     async def create_log_channels(self, category_channels: list[CategoryChannel]) -> None:
-        """Create log channels in the logging categories."""
-        category_types: list[str] = [GLOBAL] + [i.name for i in AuditLogAction]
-        for i, audit_action in enumerate(category_types):
-            log_category_name = audit_action.title()
-            category_channel = self.get_log_category(category_channels, i)
+        """Create log channels in the logging categories.
 
-            text_channel = await category_channel.create_text_channel(
-                name=f"{log_category_name.lower()}",
-                reason="Adding Log channels",
-            )
-            db_channel = Channels(
-                id=text_channel.id,
-                name=log_category_name,
-                guild_id=text_channel.guild.id,
-            )
-            Channels.update(db_channel)
-            self._setup_log_channel(db_channel, audit_action)
+        Currently only creates a single global log channel that aggregates all logs.
+        Individual action-specific channels are no longer created; instead, logs are
+        aggregated into the global channel with pagination support.
+        """
+        log_category_name = GLOBAL.title()
+        category_channel = category_channels[0]
+
+        text_channel = await category_channel.create_text_channel(
+            name=f"{log_category_name.lower()}",
+            reason="Adding Log channels",
+        )
+        db_channel = Channels(
+            id=text_channel.id,
+            name=log_category_name,
+            guild_id=text_channel.guild.id,
+        )
+        Channels.update(db_channel)
+        self._setup_log_channel(db_channel, GLOBAL)
 
     def _setup_log_channel(self, db_channel: Channels, audit_action: str) -> None:
         """Set up channel tags and audit action links."""
         # Tag global channel with both LOGS and GLOBAL
+        audit_action = audit_action.casefold()
         if audit_action == GLOBAL:
             self._setup_aggregate_channel_links(db_channel)
         else:
             db_channel.link_tag(self.session, Tags.LOGS)
-            db_channel.link_audit_action(self.session, AuditLogAction[audit_action.lower()])
+            db_channel.link_audit_action(self.session, AuditLogAction[audit_action])
 
     def _setup_aggregate_channel_links(self, db_channel: Channels) -> None:
         """Set up the aggregate channel links for the global log channel."""
