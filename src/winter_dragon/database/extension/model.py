@@ -9,7 +9,7 @@ from types import NoneType
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
 from herogold.log import LoggerMixin
-from herogold.typing.check import is_sub_type
+from herogold.typing.check import contains_sub_type
 from pydantic import ConfigDict
 from sqlalchemy import BigInteger, ScalarResult
 from sqlalchemy.orm import Mapped
@@ -120,8 +120,8 @@ class BaseModel(BaseSQLModel):
                 continue
             self.logger.debug(f"{type(value)}: {type(value) is info.annotation=}, {self=}")
             if type(value) is not info.annotation:
-                self.logger.debug(f"{is_sub_type(info, info.annotation)=}")
-            if type(value) is info.annotation or is_sub_type(info, info.annotation):
+                self.logger.debug(f"{contains_sub_type(info, info.annotation)=}")
+            if type(value) is info.annotation or contains_sub_type(info, info.annotation):
                 # Set the actual value from the instance, not from field info
                 setattr(known, name, value)
         session.add(known)
