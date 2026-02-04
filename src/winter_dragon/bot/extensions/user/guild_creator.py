@@ -122,9 +122,8 @@ class GuildCreator(GroupCog, auto_load=False):
             Use {self.get_command_mention(LogChannels.slash_log_remove)} to remove logging channels.
             Use {self.get_command_mention(Stats.slash_stats_category_add)} to add stat channels (i.e. Member count).
             Use {self.get_command_mention(Stats.slash_stats_category_remove)} to remove stat channels
-            Use {self.get_command_mention(Welcome.slash_set_msg)} to set a custom welcome message.
-            Use {self.get_command_mention(Welcome.slash_enable)} to enable welcome messages.
-            Use {self.get_command_mention(Welcome.slash_disable)} to disable welcome messages.""",
+            Use {self.get_command_mention(Welcome.slash_welcome)} to set a custom welcome message.
+            """,
             ),
         )
         await guild.edit(

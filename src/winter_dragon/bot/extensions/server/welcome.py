@@ -155,7 +155,7 @@ class Welcome(Cog, auto_load=True):
             self.logger.warning(f"Welcome failed for {member=}: {channel=}, {self.allowed_welcome_dm=}, {member.bot=}")
 
     @app_commands.command(name="welcome", description="Configure welcome messages")
-    async def welcome(self, interaction: discord.Interaction) -> None:
+    async def slash_welcome(self, interaction: discord.Interaction) -> None:
         """Configure welcome message settings with an interactive menu."""
         if interaction.guild is None:
             msg = "Guild is None"

@@ -9,7 +9,7 @@ import discord
 from discord.ext import commands
 
 from winter_dragon.bot.core.bot import INTENTS, WinterDragon
-from winter_dragon.bot.core.sentry import Environments, Sentry
+from winter_dragon.bot.core.sentry import Sentry
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.config import Config, ConfigError, config
 from winter_dragon.database import SQLModel
@@ -77,8 +77,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    if Sentry.environment != Environments.development:
-        Sentry()
+    Sentry()
     signal.signal(signal.SIGINT, terminate)
     signal.signal(signal.SIGTERM, terminate)
     asyncio.run(main())

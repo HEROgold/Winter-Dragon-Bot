@@ -20,5 +20,5 @@ class EventListener(Cog, auto_load=True):
         """Handle the audit log entry."""
         self.logger.debug(f"Received audit log entry: {entry.id} - {entry.action.name} - {entry.target}")
         for audit_event in AuditEventFactory.get_events(entry):
-            event_handler = AuditEventHandler(audit_event, self.session)
+            event_handler = AuditEventHandler(audit_event, self.session, self.bot)
             await event_handler.handle()
