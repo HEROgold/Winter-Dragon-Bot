@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from enum import StrEnum
 from typing import Unpack
 
 import cassiopeia as cass
@@ -14,25 +15,26 @@ from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables.lol_account import LoLAccount
 
 
-# Riot API regions (cassiopeia v5 format)
-REGIONS = [
-    "BR",  # Brazil
-    "EUNE",  # Europe Nordic & East
-    "EUW",  # Europe West
-    "JP",  # Japan
-    "KR",  # Korea
-    "LAN",  # Latin America North
-    "LAS",  # Latin America South
-    "NA",  # North America
-    "OCE",  # Oceania
-    "TR",  # Turkey
-    "RU",  # Russia
-    "PH",  # Philippines
-    "SG",  # Singapore
-    "TH",  # Thailand
-    "TW",  # Taiwan
-    "VN",  # Vietnam
-]
+class Region(StrEnum):
+    """Riot API regions for League of Legends."""
+
+    BR = "BR"  # Brazil
+    EUNE = "EUNE"  # Europe Nordic & East
+    EUW = "EUW"  # Europe West
+    JP = "JP"  # Japan
+    KR = "KR"  # Korea
+    LAN = "LAN"  # Latin America North
+    LAS = "LAS"  # Latin America South
+    NA = "NA"  # North America
+    OCE = "OCE"  # Oceania
+    TR = "TR"  # Turkey
+    RU = "RU"  # Russia
+    PH = "PH"  # Philippines
+    SG = "SG"  # Singapore
+    TH = "TH"  # Thailand
+    TW = "TW"  # Taiwan
+    VN = "VN"  # Vietnam
+
 
 
 class LeagueOfLegends(GroupCog, auto_load=True):
@@ -66,16 +68,16 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         interaction: discord.Interaction,
         summoner_name: str,
         tag_line: str,
-        region: str,
+        region: Region,
     ) -> None:
         """Link a League of Legends account to the user's Discord account."""
         await interaction.response.defer(ephemeral=True)
 
         # Validate region
         region_upper = region.upper()
-        if region_upper not in REGIONS:
+        if region_upper not in Region.__members__:
             await interaction.followup.send(
-                f"Invalid region. Please choose from: {', '.join(REGIONS)}",
+                f"Invalid region. Please choose from: {', '.join(Region.__members__.keys())}",
                 ephemeral=True,
             )
             return
@@ -98,11 +100,11 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                 existing.summoner_name = summoner_name
                 existing.tag_line = tag_line
                 existing.region = region_upper
-                existing.puuid = account.puuid
-                existing.summoner_id = summoner.id
-                existing.account_id = summoner.account_id
-                existing.profile_icon_id = summoner.profile_icon.id
-                existing.summoner_level = summoner.level
+                existing.puuid = account.puuid()
+                existing.summoner_id = summoner.id()
+                existing.account_id = summoner.account_id()
+                existing.profile_icon_id = summoner.profile_icon().id
+                existing.summoner_level = int(summoner.level())
                 existing.last_updated = int(time.time())
                 self.session.add(existing)
             else:
@@ -111,12 +113,12 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                     id=interaction.user.id,
                     summoner_name=summoner_name,
                     tag_line=tag_line,
-                    region=region_upper,
-                    puuid=account.puuid,
-                    summoner_id=summoner.id,
-                    account_id=summoner.account_id,
-                    profile_icon_id=summoner.profile_icon.id,
-                    summoner_level=summoner.level,
+                    region=region.value,
+                    puuid=account.puuid(),
+                    summoner_id=summoner.id(),
+                    account_id=summoner.account_id(),
+                    profile_icon_id=summoner.profile_icon().id,
+                    summoner_level=int(summoner.level()),
                     last_updated=int(time.time()),
                 )
                 self.session.add(lol_account)
@@ -188,6 +190,9 @@ class LeagueOfLegends(GroupCog, auto_load=True):
 
         try:
             # Get summoner by PUUID (most reliable method in v5)
+            if not lol_account.puuid:
+                await interaction.followup.send("Linked account is missing PUUID information.")
+                return
             summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Create embed
@@ -254,10 +259,13 @@ class LeagueOfLegends(GroupCog, auto_load=True):
 
         try:
             # Get summoner by PUUID
+            if not lol_account.puuid:
+                await interaction.followup.send("Linked account is missing PUUID information.")
+                return
             summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Get match history
-            match_history = summoner.match_history[:count]
+            match_history = list(summoner.match_history)[:count]
 
             if not match_history:
                 await interaction.followup.send("No recent matches found.")
@@ -327,6 +335,9 @@ class LeagueOfLegends(GroupCog, auto_load=True):
 
         try:
             # Get summoner by PUUID
+            if not lol_account.puuid:
+                await interaction.followup.send("Linked account is missing PUUID information.")
+                return
             summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Get champion masteries
