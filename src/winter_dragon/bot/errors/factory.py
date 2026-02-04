@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, cast
 
+from herogold.log.logging import getLogger
+
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -22,6 +24,7 @@ class ErrorFactory:
     """Factory for creating Error errors."""
 
     registry: ClassVar[dict[type[DiscordException], list[type[DiscordError]]]] = {}
+    logger: ClassVar = getLogger("ErrorFactory")
 
     @classmethod
     def register(cls, error: type[DiscordException], error_type: type[DiscordError]) -> None:
@@ -44,12 +47,15 @@ class ErrorFactory:
         exc_type = type(exception)
         if exc_type not in cls.registry:
             msg = f"Error for `{exc_type}` not implemented"
+            cls.logger.critical(msg)
             raise NotImplementedError(msg)
         if not (interaction or ctx):
-            msg = "Missing interaction or ctx kwarg"
+            msg = f"Missing interaction or ctx kwarg {exc_type=}"
+            cls.logger.critical(msg)
             raise ValueError(msg)
         if interaction and ctx:
-            msg = "Cannot pass both interaction and ctx"
+            msg = f"Cannot pass both interaction and ctx {exc_type=}"
+            cls.logger.critical(msg)
             raise ValueError(msg)
 
         for handler in cls.registry[exc_type]:
