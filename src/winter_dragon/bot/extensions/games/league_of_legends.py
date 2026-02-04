@@ -36,7 +36,6 @@ class Region(StrEnum):
     VN = "VN"  # Vietnam
 
 
-
 class LeagueOfLegends(GroupCog, auto_load=True):
     """League of Legends game.
 

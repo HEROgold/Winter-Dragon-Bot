@@ -65,6 +65,12 @@ repos:
       - id: validate-pyproject
         stages: [pre-push, pre-commit]
 
+  # Security scanning (global)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+
   # Python hooks (source tree)
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0

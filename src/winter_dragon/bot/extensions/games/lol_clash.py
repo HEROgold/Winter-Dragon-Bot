@@ -2,6 +2,8 @@
 
 Allows for automatic event reminders for the Clash event in League of Legends.
 Allows for LFG (Looking For Group) for the Clash event in League of Legends.
+Integrates with Riot's public CLASH-V1 API to provide tournament schedules and
+Discord scheduled event management.
 """
 
 from __future__ import annotations
@@ -14,6 +16,12 @@ from discord import app_commands
 from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
+from winter_dragon.bot.extensions.games.clash_settings import ClashSettings
+from winter_dragon.bot.extensions.games.riot_clash_api import (
+    DiscordClashEventManager,
+    RiotClashAPIError,
+    RiotClashClient,
+)
 from winter_dragon.database.tables.lol_account import LoLAccount
 
 
@@ -26,69 +34,177 @@ class Clash(GroupCog, auto_load=True):
     """Clash cog for League of Legends."""
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
-        """Initialize the Clash cog."""
+        """Initialize the Clash cog.
+
+        Sets up cassiopeia and the Riot Clash API client for tournament management.
+        """
         super().__init__(**kwargs)
         # Initialize cassiopeia with default settings
         cass.apply_settings(cass.get_default_config())
 
+        # Initialize Riot Clash API client
+        api_key = ClashSettings.riot_api_key
+        if api_key:
+            self.clash_client = RiotClashClient(api_key)
+            self.event_manager = DiscordClashEventManager(self.bot)
+        else:
+            self.logger.warning("RIOT_API_KEY not configured in config.ini. Clash API features will be unavailable.")
+            self.clash_client = None
+            self.event_manager = None
+
     @app_commands.command(name="schedule", description="Display upcoming Clash schedule")
-    @app_commands.describe(region="The region to check")
+    @app_commands.describe(region="The platform region (e.g., na1, euw1, kr)")
     async def clash_schedule(
         self,
         interaction: discord.Interaction,
         region: str | None = None,
     ) -> None:
-        """Display upcoming Clash schedule."""
+        """Display upcoming Clash schedule for a region."""
         await interaction.response.defer()
 
-        # Get region from linked account or parameter
-        if region is None:
+        if not self.clash_client:
+            await interaction.followup.send(
+                "❌ Clash API is not configured. Please set RIOT_API_KEY environment variable.",
+            )
+            return
+
+        # Determine platform region
+        if not region:
             lol_account = self.session.exec(
                 select(LoLAccount).where(LoLAccount.id == interaction.user.id),
             ).first()
-            if lol_account:
-                region = lol_account.region
-            else:
+
+            if not lol_account:
                 await interaction.followup.send(
-                    "Please link your account first or specify a region.",
+                    "Please specify a region or link your League of Legends account.",
                 )
                 return
 
-        try:
-            cass.set_default_region(region.upper())
+            region = lol_account.region
+        else:
+            region = region.lower()
 
-            # Get clash tournaments
-            tournaments = cass.get_clash_tournaments(region=region.upper())
+        try:
+            # Fetch tournaments for the region
+            tournaments = await self.clash_client.get_tournaments(region)
 
             if not tournaments:
-                await interaction.followup.send("No upcoming Clash tournaments found.")
+                embed = discord.Embed(
+                    title="🏆 Clash Schedule",
+                    description=f"No upcoming tournaments found for region **{region.upper()}**",
+                    color=discord.Color.orange(),
+                )
+                await interaction.followup.send(embed=embed)
                 return
 
+            # Create embeds for each tournament
+            embeds = [tournament.to_embed() for tournament in tournaments[:10]]  # Limit to 10
+
+            # Add region info header
+            if embeds:
+                embeds[0].set_footer(text=f"Region: {region.upper()} • {len(tournaments)} tournament(s) found")
+
+            await interaction.followup.send(embeds=embeds)
+
+        except RiotClashAPIError as e:
             embed = discord.Embed(
-                title=f"Upcoming Clash - {region.upper()}",
-                color=discord.Color.orange(),
+                title="❌ Clash Schedule Error",
+                description=f"Failed to fetch tournament schedule: {e!s}",
+                color=discord.Color.red(),
             )
-
-            for tournament in tournaments[:5]:  # Limit to 5 tournaments
-                try:
-                    # Get schedule for the tournament
-                    schedule_info = [
-                        f"Day {phase.id}: <t:{int(phase.registration_time.timestamp())}:F>" for phase in tournament.phases
-                    ]
-
-                    embed.add_field(
-                        name=tournament.name_key_secondary or "Clash Tournament",
-                        value="\n".join(schedule_info) if schedule_info else "Schedule TBA",
-                        inline=False,
-                    )
-                except Exception:
-                    self.logger.exception("Error processing tournament")
-
             await interaction.followup.send(embed=embed)
 
-        except Exception as e:
-            self.logger.exception("Error fetching clash schedule")
-            await interaction.followup.send(f"Error fetching clash schedule: {e!s}")
+    @app_commands.command(
+        name="sync-events",
+        description="Sync upcoming Clash tournaments to Discord scheduled events",
+    )
+    @app_commands.describe(region="The platform region (e.g., na1, euw1, kr)")
+    @app_commands.default_permissions(manage_events=True)
+    async def sync_clash_events(
+        self,
+        interaction: discord.Interaction,
+        region: str | None = None,
+    ) -> None:
+        """Sync Clash tournaments to Discord scheduled events in this guild.
+
+        Creates or updates Discord scheduled events for all upcoming Clash tournaments.
+        Requires manage_events permission.
+
+        Args:
+            interaction: Discord interaction from the command
+            region: Platform region code (optional, defaults to user's linked region)
+
+        """
+        await interaction.response.defer()
+
+        if not self.clash_client or not self.event_manager:
+            await interaction.followup.send(
+                "❌ Clash API is not configured. Please set RIOT_API_KEY environment variable.",
+            )
+            return
+
+        if not interaction.guild:
+            await interaction.followup.send("❌ This command can only be used in a guild.")
+            return
+
+        # Determine platform region
+        if not region:
+            lol_account = self.session.exec(
+                select(LoLAccount).where(LoLAccount.id == interaction.user.id),
+            ).first()
+
+            if not lol_account:
+                await interaction.followup.send(
+                    "Please specify a region or link your League of Legends account.",
+                )
+                return
+
+            region = lol_account.region
+        else:
+            region = region.lower()
+
+        try:
+            # Fetch tournaments for the region
+            tournaments = await self.clash_client.get_tournaments(region)
+
+            if not tournaments:
+                await interaction.followup.send(
+                    f"No upcoming tournaments found for region **{region.upper()}**",
+                )
+                return
+
+            # Sync to Discord events
+            created, failed = await self.event_manager.sync_tournaments_to_events(
+                interaction.guild,
+                tournaments,
+            )
+
+            embed = discord.Embed(
+                title="✅ Clash Events Synced",
+                color=discord.Color.green(),
+            )
+            embed.add_field(
+                name="Created Events",
+                value=f"{len(created)} event(s)",
+                inline=True,
+            )
+            if failed:
+                embed.add_field(
+                    name="Failed",
+                    value=f"{len(failed)} tournament(s)",
+                    inline=True,
+                )
+
+            embed.set_footer(text=f"Region: {region.upper()}")
+            await interaction.followup.send(embed=embed)
+
+        except RiotClashAPIError as e:
+            embed = discord.Embed(
+                title="❌ Sync Error",
+                description=f"Failed to sync tournaments: {e!s}",
+                color=discord.Color.red(),
+            )
+            await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="team-analysis", description="Analyze your Clash team composition")
     @app_commands.describe(
@@ -134,8 +250,12 @@ class Clash(GroupCog, auto_load=True):
                 continue
 
             try:
-                cass.set_default_region(lol_account.region)
-                summoner = cass.Summoner(name=lol_account.summoner_name, region=lol_account.region)
+                # Get summoner by PUUID (most reliable method in v5)
+                if not lol_account.puuid:
+                    team_data.append((player.display_name, "Error", "N/A"))
+                    continue
+
+                summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
                 # Get ranked tier
                 ranked_tier = "Unranked"
@@ -159,7 +279,7 @@ class Clash(GroupCog, auto_load=True):
                 team_data.append(
                     (
                         player.display_name,
-                        f"{summoner.name}#{lol_account.tag_line}",
+                        f"{lol_account.summoner_name}#{lol_account.tag_line}",
                         ranked_tier,
                         ", ".join(top_champs) if top_champs else "N/A",
                     )
@@ -226,11 +346,15 @@ class Clash(GroupCog, auto_load=True):
             return
 
         try:
-            cass.set_default_region(lol_account.region)
-            summoner = cass.Summoner(name=lol_account.summoner_name, region=lol_account.region)
+            # Get summoner by PUUID (most reliable method in v5)
+            if not lol_account.puuid:
+                await interaction.followup.send("Linked account is missing PUUID information.")
+                return
+
+            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             embed = discord.Embed(
-                title=f"Clash Stats - {summoner.name}#{lol_account.tag_line}",
+                title=f"Clash Stats - {lol_account.summoner_name}#{lol_account.tag_line}",
                 color=discord.Color.purple(),
             )
 
@@ -302,8 +426,12 @@ class Clash(GroupCog, auto_load=True):
             return
 
         try:
-            cass.set_default_region(lol_account.region)
-            summoner = cass.Summoner(name=lol_account.summoner_name, region=lol_account.region)
+            # Get summoner by PUUID (most reliable method in v5)
+            if not lol_account.puuid:
+                await interaction.followup.send("Linked account is missing PUUID information.")
+                return
+
+            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
 
             # Get user's champion mastery for the role
             masteries = summoner.champion_masteries[:20]
@@ -346,3 +474,14 @@ class Clash(GroupCog, auto_load=True):
         except Exception as e:
             self.logger.exception("Error generating suggestions")
             await interaction.followup.send(f"Error generating suggestions: {e!s}")
+
+    async def cog_unload(self) -> None:
+        """Clean up resources when the cog is unloaded.
+
+        Closes the Clash API client session and stops any background sync tasks.
+        """
+        if self.clash_client:
+            await self.clash_client.close()
+
+        if self.event_manager:
+            await self.event_manager.stop_sync_task()
