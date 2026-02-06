@@ -9,7 +9,7 @@ from herogold.log import LoggerMixin
 from winter_dragon.bot.ui.abc import InteractEvent, default_interact
 
 
-class SelectArgs[T](TypedDict, total=False):
+class SelectArgs[T](TypedDict, total=False):  # ty: ignore[invalid-argument-type]
     """Arguments for creating a select menu."""
 
     custom_id: str | None

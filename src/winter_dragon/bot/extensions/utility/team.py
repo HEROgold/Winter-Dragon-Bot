@@ -127,7 +127,7 @@ class Team(GroupCog, auto_load=True):
         channels = Channels.get_by_tag(self.session, Tags.TEAM_CATEGORY, guild.id)
         if channels:
             channel = channels[0]
-            return cast("CategoryChannel", self.bot.get_channel(channel.id))
+            return cast("CategoryChannel", self.bot.get_channel(channel.id))  # ty: ignore[invalid-argument-type]
         return None
 
     async def create_teams_category(self, guild: Guild) -> CategoryChannel:
@@ -153,7 +153,7 @@ class Team(GroupCog, auto_load=True):
         """Find a lobby channel."""
         if channels := Channels.get_by_tag(self.session, Tags.TEAM_LOBBY, guild.id):
             channel = channels[0]
-            return cast("VoiceChannel", self.bot.get_channel(channel.id))
+            return cast("VoiceChannel", self.bot.get_channel(channel.id))  # ty: ignore[invalid-argument-type]
         return None
 
     async def create_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:

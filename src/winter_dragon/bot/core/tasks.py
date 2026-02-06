@@ -63,7 +63,7 @@ def loop[FT: CoroutineFunction](  # noqa: PLR0913
 
     # FT generic type is used here and in the Loop class to ensure the coroutine function type is preserved.
     def decorator(func: FT) -> Loop[FT]:
-        return Loop[FT](
+        return Loop[FT](  # ty: ignore[invalid-type-arguments]
             func,
             seconds=seconds,
             minutes=minutes,
