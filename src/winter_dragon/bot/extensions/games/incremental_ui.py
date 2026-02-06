@@ -59,11 +59,11 @@ class GeneratorShopMenu(Menu, SessionMixin):
 
     async def _show_purchase_confirmation(self, interaction: Interaction, generator: Generators) -> None:
         """Show a confirmation dialog for purchasing a generator."""
-        currency_name = generator.cost_currency.currency if generator.cost_currency else "Unknown"
+        currency_name = generator.cost_currency
         current_balance = self.currency_manager.get_balance(self.user_id, currency_name)
         can_afford = current_balance >= generator.cost_amount
 
-        generation_rate = generator.base_per_second.amount if generator.base_per_second else 0.0
+        generation_rate = generator.base_per_second
 
         embed = discord.Embed(
             title=f"Purchase {generator.name}?",
@@ -84,7 +84,7 @@ class GeneratorShopMenu(Menu, SessionMixin):
                 return
 
             # Deduct currency using manager
-            currency_name = generator.cost_currency.currency if generator.cost_currency else "Unknown"
+            currency_name = generator.cost_currency
             self.currency_manager.add_currency(self.user_id, currency_name, -generator.cost_amount)
 
             # Add or increment user generator
@@ -193,7 +193,7 @@ class ProgressMenu(Menu, SessionMixin):
                 # Use generator manager to get generator details
                 generator = self.generator_manager.session.get(Generators, user_gen.generator_id)
                 if generator:
-                    generation_rate = generator.base_per_second.amount if generator.base_per_second else 0.0
+                    generation_rate = generator.base_per_second
                     embed.add_field(
                         name=generator.name,
                         value=f"Owned: {user_gen.count}\nRate: {generation_rate:.6f}/s",
