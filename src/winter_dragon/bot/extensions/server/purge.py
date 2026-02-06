@@ -92,7 +92,7 @@ class Purge(Cog, auto_load=True):
 
     async def _purge(self, interaction: Interaction, count: int, *, use_history: bool) -> None:
         # NoteL Using history will be lots slower, and will cause rate limit (aka, it'll slow down.)
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         history_messages_count = 0
         purged_count = 0
 
@@ -114,17 +114,21 @@ class Purge(Cog, auto_load=True):
             and isinstance(interaction.channel, PrunableHistory) # pyright: ignore[reportUnnecessaryIsInstance]
         ):
         # fmt: on
-            history_messages = await self.history_delete(interaction.channel, count=(count - purged_count))
+            history_messages = await self.history_delete(interaction, count=(count - purged_count))
             history_messages_count = len(history_messages)
             self.logger.debug(f"History killed: {history_messages_count}")
         await interaction.followup.send(f"{interaction.user.mention} Killed {history_messages_count + purged_count} Messages")
 
-    async def history_delete(self, channel: PrunableHistory, count: int) -> list[discord.Message]:
+    async def history_delete(self, interaction: Interaction, count: int) -> list[discord.Message]:
         """Delete messages from the channel history. Rather than messages in cache. (Older messages)."""
         messages = []
 
-        async for message in channel.history(limit=count):
-            message: discord.Message
+        if not isinstance(interaction.channel, History):
+            return messages
+
+        async for message in interaction.channel.history(limit=count):
+            if message == interaction.message:
+                continue  # required to allow bot to update the interaction after the command finished.
             with contextlib.suppress(discord.NotFound):
                 await message.delete()
             messages.append(message)
