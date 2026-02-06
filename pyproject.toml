@@ -35,7 +35,7 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-    "fastapi>=0.128.2",
+  "fastapi>=0.128.2"
 ]
 
 [tool.uv]

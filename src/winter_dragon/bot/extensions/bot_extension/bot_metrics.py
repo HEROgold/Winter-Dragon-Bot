@@ -29,7 +29,7 @@ class BotMetrics(GroupCog, auto_load=True):
 
     timestamps: list[float]
     cpu_percentages: list[float]
-    net_io_counters: list[psutil._ntp.snetio] # pyright: ignore[reportAttributeAccessIssue]
+    net_io_counters: list[psutil._ntp.snetio]  # pyright: ignore[reportAttributeAccessIssue]
     ram_percentages: list[float]
     bytes_sent: list[int]
     bytes_received: list[int]
