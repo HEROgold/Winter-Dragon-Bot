@@ -8,5 +8,5 @@ from winter_dragon.config import Config
 class ClashSettings:
     """Settings for the Clash cog."""
 
-    riot_api_key = Config[str | None](None, optional=True)
+    riot_api_key = Config("", optional=True)
     """Riot API key for accessing the Clash API."""

@@ -9,7 +9,6 @@ import psutil
 from discord import app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
-from psutil._common import snetio
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.paths import METRICS_FILE
@@ -30,7 +29,7 @@ class BotMetrics(GroupCog, auto_load=True):
 
     timestamps: list[float]
     cpu_percentages: list[float]
-    net_io_counters: list[snetio]
+    net_io_counters: list[psutil._ntp.snetio] # pyright: ignore[reportAttributeAccessIssue]
     ram_percentages: list[float]
     bytes_sent: list[int]
     bytes_received: list[int]
