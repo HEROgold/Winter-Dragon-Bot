@@ -51,12 +51,12 @@ class AuditEventHandler(LoggerMixin):
         from winter_dragon.database.channel_types import Tags  # noqa: PLC0415
         from winter_dragon.database.tables import Channels  # noqa: PLC0415
 
-        if not Channels.get_by_tag(self.session, Tags.LOGS, guild.id):
-            self.logger.debug(f"No log channels configured for guild {guild.id}")
-            return
-
-        # Get the LogChannels cog and dispatch through aggregation
         try:
+            if not Channels.get_by_tag(self.session, Tags.LOGS, guild.id):
+                self.logger.debug(f"No log channels configured for guild {guild.id}")
+                return
+
+            # Get the LogChannels cog and dispatch through aggregation
             log_channels_cog: LogChannels = self.bot.get_cog("LogChannels")  # pyright: ignore[reportAssignmentType]  # ty:ignore[invalid-assignment]
             if log_channels_cog:
                 await log_channels_cog.dispatch_aggregated_log(
@@ -69,3 +69,5 @@ class AuditEventHandler(LoggerMixin):
                 self.logger.warning("LogChannels cog not found")
         except Exception:
             self.logger.exception("Error dispatching aggregated log")
+            # Rollback the session to clear the failed transaction state
+            self.session.rollback()
