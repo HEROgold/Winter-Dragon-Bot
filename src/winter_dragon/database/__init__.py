@@ -46,6 +46,15 @@ from winter_dragon.database.tables.incremental import Players, UserMoney
 from winter_dragon.database.tables.incremental.generators import Generators
 from winter_dragon.database.tables.incremental.rates import GeneratorRates
 from winter_dragon.database.tables.incremental.user_generator import AssociationUserGenerator
+
+# Matchmaking system tables
+from winter_dragon.database.tables.matchmaking.game_match import GameMatch
+from winter_dragon.database.tables.matchmaking.match_player import MatchPlayer
+from winter_dragon.database.tables.matchmaking.match_team import MatchTeam
+from winter_dragon.database.tables.matchmaking.player_game_stats import PlayerGameStats
+from winter_dragon.database.tables.matchmaking.player_synergy import PlayerSynergy
+from winter_dragon.database.tables.matchmaking.team_composition import TeamComposition
+from winter_dragon.database.tables.matchmaking.team_composition_player import TeamCompositionPlayer
 from winter_dragon.database.tables.reminder import TimedReminder
 from winter_dragon.database.tables.steamsale import SteamSaleProperties
 from winter_dragon.database.tables.sync_ban.sync_ban_banned_by import SyncBanBannedBy
@@ -72,6 +81,7 @@ __all__ = [
     "CommandGroups",
     "Commands",
     "DisabledCommands",
+    "GameMatch",
     "Games",
     "GeneratorRates",
     "Generators",
@@ -83,8 +93,12 @@ __all__ = [
     "Infractions",
     "Lobbies",
     "LookingForGroup",
+    "MatchPlayer",
+    "MatchTeam",
     "Messages",
     "NhieQuestion",
+    "PlayerGameStats",
+    "PlayerSynergy",
     "Players",
     "Presence",
     "Reminder",
@@ -99,6 +113,8 @@ __all__ = [
     "SyncBanBannedBy",
     "SyncBanGuild",
     "SyncBanUser",
+    "TeamComposition",
+    "TeamCompositionPlayer",
     "TimedReminder",
     "UserMoney",
     "UserRoles",

@@ -354,6 +354,75 @@ class RiotClashClient:
         data = await self._request("GET", url)
         return data if isinstance(data, list) else []
 
+    async def get_team_by_id(
+        self,
+        platform: Platform | str,
+        team_id: str,
+    ) -> dict[str, Any]:
+        """Fetch a specific Clash team by ID.
+
+        Args:
+            platform: Platform routing value
+            team_id: Team ID
+
+        Returns:
+            Team data dictionary
+
+        Raises:
+            RiotClashAPIError: If the API request fails
+
+        """
+        url = self._build_url(platform, f"/teams/{team_id}")
+        return await self._request("GET", url)
+
+    async def get_tournaments_by_team(
+        self,
+        platform: Platform | str,
+        team_id: str,
+    ) -> list[ClashTournament]:
+        """Fetch tournaments that a team is registered in.
+
+        Args:
+            platform: Platform routing value
+            team_id: Team ID
+
+        Returns:
+            List of ClashTournament objects
+
+        Raises:
+            RiotClashAPIError: If the API request fails
+
+        """
+        url = self._build_url(platform, f"/tournaments/by-team/{team_id}")
+        data = await self._request("GET", url)
+
+        if not isinstance(data, list):
+            return []
+
+        return [self._parse_tournament(tournament) for tournament in data if isinstance(tournament, dict)]
+
+    async def get_player(
+        self,
+        platform: Platform | str,
+        summoner_id: str,
+    ) -> list[dict[str, Any]]:
+        """Fetch player Clash data by summoner ID.
+
+        Args:
+            platform: Platform routing value
+            summoner_id: Summoner ID
+
+        Returns:
+            List of player Clash data dictionaries
+
+        Raises:
+            RiotClashAPIError: If the API request fails
+
+        """
+        url = self._build_url(platform, f"/players/by-summoner/{summoner_id}")
+        data = await self._request("GET", url)
+        return data if isinstance(data, list) else []
+
 
 class DiscordClashEventManager:
     """Manages Discord scheduled events for Clash tournaments.
@@ -386,9 +455,25 @@ class DiscordClashEventManager:
             if not tournament.start_time:
                 return None
 
+            # Build description with schedule phases
+            description_parts = [
+                "🏆 Clash Tournament",
+                f"ID: {tournament.tournament_id}",
+                f"Tier: {tournament.tier}",
+            ]
+
+            if tournament.schedule:
+                description_parts.append("\n📅 Schedule:")
+                for phase in tournament.schedule[:3]:  # Limit to first 3 phases
+                    time_str = phase.started_at.strftime("%H:%M")
+                    status = "❌" if phase.cancelled else "✅"
+                    description_parts.append(f"{status} {phase.phase.value}: {time_str}")
+
+            description = "\n".join(description_parts)
+
             return await guild.create_scheduled_event(
                 name=f"🏆 {tournament.name}",
-                description=(f"Upcoming Clash Tournament\nID: {tournament.tournament_id}\nTier: {tournament.tier}"),
+                description=description[:1000],  # Discord limit
                 start_time=tournament.start_time,
                 end_time=tournament.start_time,
                 location="League of Legends",
@@ -418,20 +503,38 @@ class DiscordClashEventManager:
         created = []
         failed = []
 
+        # Get existing events and their tournament IDs
+        existing_events = guild.scheduled_events
+        existing_tournament_ids = set()
+
+        for event in existing_events:
+            if event.name.startswith("🏆") and event.description:
+                # Extract tournament ID from description
+                for line in event.description.split("\n"):
+                    if line.startswith("ID: "):
+                        try:
+                            tournament_id = int(line.split("ID: ")[1])
+                            existing_tournament_ids.add(tournament_id)
+                        except (ValueError, IndexError):
+                            pass
+
         # Clean up old Clash events if requested
         if remove_old:
             try:
-                existing_events = guild.scheduled_events
                 for event in existing_events:
                     if event.name.startswith("🏆"):
                         with contextlib.suppress(discord.DiscordException):
                             await event.delete()
+                existing_tournament_ids.clear()
             except discord.DiscordException:
                 pass
 
-        # Create new events
+        # Create new events (skip if already exists)
         for tournament in tournaments:
             try:
+                if tournament.tournament_id in existing_tournament_ids:
+                    continue  # Skip duplicates
+
                 event = await self.create_event(guild, tournament)
                 if event:
                     created.append(event)
