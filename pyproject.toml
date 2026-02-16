@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
   "bs4>=0.0.2",
   "cassiopeia>=5.2.0",
-  "confkit==1.0.0",
+  "confkit==1.1.0",
   "discord-ext-prometheus>=0.2.1",
   "discord-py>=2.6.4",
   "herogold>=1.1.0",
