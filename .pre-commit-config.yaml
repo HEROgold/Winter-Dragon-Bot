@@ -7,7 +7,7 @@ default_install_hook_types:
   - post-rewrite
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.10.0
+    rev: 0.10.3
     hooks:
       - id: uv-lock
         stages:
@@ -95,7 +95,7 @@ repos:
         stages: [pre-push, pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.0
+    rev: v0.15.1
     hooks:
       - id: ruff
         name: ruff lint
@@ -142,7 +142,7 @@ repos:
 
   # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.36.1
+    rev: 0.36.2
     hooks:
       - id: check-github-workflows
         files: ^\.github/workflows/
