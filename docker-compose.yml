@@ -1,5 +1,30 @@
 services:
 
+  redis:
+    image: redis:8.2.4-alpine3.22
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis-commander:
+    container_name: redis-commander
+    image: ghcr.io/joeferner/redis-commander:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+
   postgres:
     image: postgres:14-alpine
     expose:
@@ -18,17 +43,48 @@ services:
       retries: 6
       start_period: 10s
 
-  bot:
-    container_name: discord-bot
+  worker-autoscaler:
+    container_name: worker-autoscaler
     build:
       context: .
       dockerfile: bot-dockerfile
+    command: uv run python -m winter_dragon.workers.autoscaler
+    environment:
+      - REDIS_HOST=redis
     volumes:
       - ./src:/app/src
       - ./config.ini:/app/config.ini
       - ./logs:/app/logs
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ""
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  bot:
+    container_name: discord-bot
+    build:
+      context: .
+      dockerfile: bot-dockerfile
+    environment:
+      - REDIS_HOST=redis
+    volumes:
+      - ./src:/app/src
+      - ./config.ini:/app/config.ini
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      worker-autoscaler:
         condition: service_healthy
 
   pgadmin:
@@ -45,3 +101,7 @@ services:
       - ./servers.json:/pgadmin4/servers.json
     networks:
       - default
+
+volumes:
+  redis_data:
+    driver: local

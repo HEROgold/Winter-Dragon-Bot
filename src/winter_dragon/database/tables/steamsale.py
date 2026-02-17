@@ -4,6 +4,7 @@ from enum import Enum, auto
 from sqlalchemy import text
 from sqlmodel import Field
 
+from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 from winter_dragon.database.constants import session
 from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
@@ -27,6 +28,11 @@ class SteamSale(SQLModel, table=True):
     def is_outdated(self, seconds: int) -> bool:
         """Check if a sale has recently updated within the given time frame."""
         return self.update_datetime.astimezone(UTC) + timedelta(seconds=seconds) <= datetime.now(tz=UTC)
+
+    @property
+    def app_id(self) -> int | None:
+        """Extract the app ID from the URL if possible."""
+        return SteamURL(self.url).app_id
 
 
 class SteamSaleProperties(SQLModel, table=True):
