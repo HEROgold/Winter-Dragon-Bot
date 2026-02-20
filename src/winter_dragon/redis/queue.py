@@ -130,8 +130,11 @@ class TaskQueue(LoggerMixin):
             int: Number of jobs in queue
 
         """
-        queue = cls.get_queue(queue_name)
-        return len(queue)
+        # Use binary connection to match queue creation
+        redis_conn = RedisConnection.get_connection(decode_responses=False)
+        # RQ stores queues as lists with key "rq:queue:{name}"
+        key = f"rq:queue:{queue_name}"
+        return redis_conn.llen(key)
 
     @classmethod
     def get_queue_stats(cls, queue_name: str = DEFAULT_QUEUE) -> dict[str, int]:

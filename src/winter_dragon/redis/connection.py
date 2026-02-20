@@ -23,7 +23,7 @@ class RedisConfig:
     _port = Config(6379)
     _db = Config(0)
     _password = Config("")
-    decode_responses = Config(default=True)
+    decode_responses = Config(default=False)
     socket_connect_timeout = Config(5)
     socket_timeout = Config(5)
 
@@ -67,7 +67,7 @@ class RedisConnection:
 
         Args:
             decode_responses: Override decode_responses setting.
-                            None uses config default (True).
+                            None uses config default (False).
                             False required for RQ (binary/pickled data).
 
         Returns:

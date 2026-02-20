@@ -100,17 +100,20 @@ class SteamScraperTasks:
         try:
             # Get existing sales from database
             known_sales = session.exec(select(SteamSale)).all()
-            logger.debug(f"Found {len(known_sales)} existing sales in database")
+            logger.info(f"📊 Database check: Found {len(known_sales)} existing sales")
 
             # Scrape new sales from Steam
+            logger.info(f"🔍 Starting to scrape Steam sales with {percent}% discount minimum")
             async for sale in scraper.get_sales_from_steam(percent=percent):
                 if sale is None:
                     skipped_count += 1
+                    logger.debug(f"⏭️  Skipped invalid sale (total skipped: {skipped_count})")
                     continue
 
                 # Update or add the sale
                 sale.update()
                 updated_count += 1
+                logger.debug(f"📝 Updated sale: {sale.title} ({sale.sale_percent}% off) - Total: {updated_count}")
 
                 # Check if this is outdated (needs notification)
                 existing_sale = session.exec(select(SteamSale).where(SteamSale.url == sale.url)).first()
@@ -126,12 +129,14 @@ class SteamScraperTasks:
                             "url": sale.url,
                         }
                     )
+                    logger.info(f"🆕 New sale to notify: {sale.title} - ${sale.final_price}")
 
             session.commit()
+            logger.info("💾 Database commit successful")
 
         except Exception:
             session.rollback()
-            logger.exception("Error during scraping")
+            logger.exception("❌ Error during scraping - rolling back changes")
             raise
         else:
             result: ScrapingResult = {
@@ -146,7 +151,10 @@ class SteamScraperTasks:
                 },
             }
 
-            logger.info(f"Scraping completed: {len(new_sales)} new sales, {skipped_count} skipped")
+            logger.info(
+                f"✅ Scraping completed: {len(new_sales)} new sales, {updated_count} updated, "
+                f"{skipped_count} skipped (total: {updated_count + skipped_count})"
+            )
 
             return result
         finally:
@@ -163,13 +171,21 @@ class SteamScraperTasks:
             SaleDictData | None: Game sale data or None if not found
 
         """
-        logger.info(f"Worker scraping single game: {url}")
+        logger.info(f"🎮 Worker scraping single game: {url}")
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         try:
-            return loop.run_until_complete(SteamScraperTasks._async_scrape_single_game(url))
+            result = loop.run_until_complete(SteamScraperTasks._async_scrape_single_game(url))
+            if result:
+                logger.info(f"✅ Found: {result['title']} - {result['sale_percent']}% off (${result['final_price']})")
+            else:
+                logger.warning(f"⚠️ No sale data found for: {url}")
+            return result
+        except Exception:
+            logger.exception(f"❌ Failed to scrape: {url}")
+            raise
         finally:
             loop.close()
 
@@ -188,19 +204,23 @@ class SteamScraperTasks:
         scraper = SteamScraper()
 
         try:
+            logger.debug(f"🔗 Parsing Steam URL: {url}")
             steam_url = SteamURL(url)
+            logger.debug("📡 Fetching sale data from Steam...")
             sale = await scraper.get_game_sale(steam_url)
 
             if sale is None:
+                logger.debug(f"⚪ No sale data returned for: {url}")
                 return None
 
             # Update the sale in database
+            logger.debug(f"💾 Updating database for: {sale.title}")
             sale.update()
             session.commit()
 
         except Exception:
             session.rollback()
-            logger.exception(f"Error scraping game {url}")
+            logger.exception(f"❌ Error scraping game {url}")
             return None
         else:
             return {

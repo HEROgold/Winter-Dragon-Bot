@@ -75,6 +75,7 @@ class WorkerAutoScaler(LoggerMixin):
         self.last_scale_up = 0.0
         self.last_scale_down = 0.0
         self.is_running = False
+        self._last_logged_state = None  # Track last state for spam reduction
 
         self.logger.info(
             f"Initialized WorkerAutoScaler for queues: {', '.join(self.queue_names)}",
@@ -157,15 +158,19 @@ class WorkerAutoScaler(LoggerMixin):
                 desired_workers = min(WorkerScalingConfig.max_workers, desired_workers)
 
             current_workers = len(self.worker_processes)
+            current_state = (total_items, current_workers, desired_workers)
 
-            self.logger.debug(
-                f"Queue check: {total_items} items, {current_workers} workers, target {desired_workers}",
-                extra={
-                    "queue_items": total_items,
-                    "current_workers": current_workers,
-                    "desired_workers": desired_workers,
-                },
-            )
+            # Only log if state changed (not same as last check)
+            if current_state != self._last_logged_state:
+                self.logger.debug(
+                    f"Queue check: {total_items} items, {current_workers} workers, target {desired_workers}",
+                    extra={
+                        "queue_items": total_items,
+                        "current_workers": current_workers,
+                        "desired_workers": desired_workers,
+                    },
+                )
+                self._last_logged_state = current_state
 
             # Check cooldown periods
             current_time = asyncio.get_event_loop().time()
