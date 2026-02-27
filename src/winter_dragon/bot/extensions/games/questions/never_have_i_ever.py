@@ -5,7 +5,6 @@ from typing import override
 
 import discord
 from discord import app_commands
-
 from winter_dragon.database.tables import NhieQuestion
 
 from .base_question_game import BaseQuestionGame

@@ -1,17 +1,21 @@
 """Module to sync slash commands with the Discord API."""
 
-from logging import Logger
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import discord
 from discord import Guild, app_commands
 from discord.app_commands import ContextMenu
-from discord.app_commands.models import AppCommand
 from discord.ext import commands
 from herogold.log import LoggerMixin
 
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.ui.paginator import PageSource, Paginator
+
+
+if TYPE_CHECKING:
+    from logging import Logger
+
+    from discord.app_commands.models import AppCommand
 
 
 COMMAND_DESCRIPTION_LIMIT = 100

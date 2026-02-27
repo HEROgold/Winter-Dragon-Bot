@@ -1,20 +1,8 @@
 """Module to handle Sentry setup."""
 
-import enum
-from enum import auto
-
 import sentry_sdk
-from confkit import Enum
 
-from winter_dragon.config import Config
-
-
-class Environments(enum.StrEnum):
-    """Enum for different environments."""
-
-    development = auto()
-    production = auto()
-    staging = auto()
+from winter_dragon.config import Config, GlobalSettings
 
 
 class Sentry:
@@ -22,12 +10,11 @@ class Sentry:
 
     Telemetry = Config(default=True)
     dsn = Config("")
-    environment = Config(Enum(Environments.development))
 
     def __init__(self) -> None:
         """Initialize Sentry."""
         sentry_sdk.init(
-            environment=self.environment.value,
+            environment=GlobalSettings.environment.value,
             dsn=self.dsn,
             # Add data like request headers and IP for users,
             # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info

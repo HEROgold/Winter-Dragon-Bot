@@ -1,0 +1,44 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Attach to API Container",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/winter_dragon/api",
+          "remoteRoot": "/app/src/winter_dragon/api"
+        }
+      ]
+    },
+    {
+      "name": "Python: Attach to Bot Container",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5679
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/src/winter_dragon/bot",
+          "remoteRoot": "/app/src/winter_dragon/bot"
+        }
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Attach to Both Python Containers",
+      "configurations": [
+        "Python: Attach to API Container",
+        "Python: Attach to Bot Container"
+      ]
+    }
+  ]
+}

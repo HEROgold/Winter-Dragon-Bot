@@ -8,6 +8,7 @@ It also provides a way to set default values and to set config values using deco
 from __future__ import annotations
 
 import configparser
+from enum import Enum, StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -70,5 +71,19 @@ class ConfigParser(configparser.ConfigParser):
 
 config = ConfigParser()
 # ConfigParser satisfies the interface, but ty doesn't see it as it's not inheriting from CKConfig
-Config.set_parser(config)  # ty:ignore[invalid-argument-type]
+Config.set_parser(config)  # pyright: ignore[reportArgumentType] # ty:ignore[invalid-argument-type]
 Config.set_file(CONFIG_FILE)
+
+
+class Environments(StrEnum):
+    """Enum for different environments."""
+
+    development = auto()
+    production = auto()
+    staging = auto()
+
+
+class GlobalSettings:
+    """Shared settings across apps."""
+
+    environment = Config(Environments.development)

@@ -1,12 +1,16 @@
 """A cache for storing application commands, both globally and per guild."""
 
-from collections.abc import Sequence
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 import discord
-from discord.abc import Snowflake
 from discord.app_commands import AppCommand, AppCommandGroup, Argument, Command
-from discord.ext.commands.bot import BotBase
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from discord.abc import Snowflake
+    from discord.ext.commands.bot import BotBase
 
 
 type AppCommandStore = dict[str, AppCommand | AppCommandGroup]

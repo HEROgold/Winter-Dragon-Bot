@@ -16,8 +16,9 @@ from winter_dragon.config import Config
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
-    from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
     from winter_dragon.database.tables.steamsale import SteamSale
+
+    from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 
 
 class SteamScraper(LoggerMixin):

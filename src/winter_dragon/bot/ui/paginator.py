@@ -1,13 +1,18 @@
 """Pagination components for navigating through large datasets."""
 
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import discord
-from discord.interactions import InteractionMessage
 from herogold.log import LoggerMixin
 
 from .page_navigation_modal import PageNavigationModal
 from .view import View
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from discord.interactions import InteractionMessage
 
 
 class PageSource[T](LoggerMixin):

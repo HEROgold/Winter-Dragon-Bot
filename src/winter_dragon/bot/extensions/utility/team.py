@@ -2,18 +2,21 @@
 
 import math
 import random
-from collections.abc import Sequence
-from typing import TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import discord
 from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
 from discord.abc import PrivateChannel
+from winter_dragon.database.channel_types import Tags
+from winter_dragon.database.tables import Channels
 
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.config import Config
-from winter_dragon.database.channel_types import Tags
-from winter_dragon.database.tables import Channels
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class TeamDict(TypedDict):
@@ -127,7 +130,7 @@ class Team(GroupCog, auto_load=True):
         channels = Channels.get_by_tag(self.session, Tags.TEAM_CATEGORY, guild.id)
         if channels:
             channel = channels[0]
-            return cast("CategoryChannel", self.bot.get_channel(channel.id))  # ty: ignore[invalid-argument-type]
+            return cast("CategoryChannel", self.bot.get_channel(channel.id))
         return None
 
     async def create_teams_category(self, guild: Guild) -> CategoryChannel:
@@ -153,7 +156,7 @@ class Team(GroupCog, auto_load=True):
         """Find a lobby channel."""
         if channels := Channels.get_by_tag(self.session, Tags.TEAM_LOBBY, guild.id):
             channel = channels[0]
-            return cast("VoiceChannel", self.bot.get_channel(channel.id))  # ty: ignore[invalid-argument-type]
+            return cast("VoiceChannel", self.bot.get_channel(channel.id))
         return None
 
     async def create_teams_lobby(self, category: CategoryChannel) -> VoiceChannel:

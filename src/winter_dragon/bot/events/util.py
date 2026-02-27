@@ -1,8 +1,12 @@
 """Utility functions for audit log entries."""
 
-from collections.abc import Generator, Iterable
+from typing import TYPE_CHECKING
 
-from discord import AuditLogEntry, Embed, Member, Role
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Iterable
+
+    from discord import AuditLogEntry, Embed, Member, Role
 
 
 def get_differences(entry: AuditLogEntry, properties: Iterable[str]) -> Generator[str]:

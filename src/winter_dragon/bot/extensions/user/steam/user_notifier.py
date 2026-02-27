@@ -1,18 +1,24 @@
 """Module to Notify users about Steam sales."""
 
-from collections.abc import Iterable
-from datetime import datetime
 from textwrap import dedent
+from typing import TYPE_CHECKING
 
 from discord import Embed
 from herogold.log import LoggerMixin
 from sqlmodel import Session, select
+from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
-from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
-from winter_dragon.database.tables.steamuser import SteamUsers
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+    from datetime import datetime
+
+    from winter_dragon.database.tables.steamuser import SteamUsers
+
+    from winter_dragon.bot.core.bot import WinterDragon
 
 
 def _filter_date(sale: SteamSale) -> datetime:

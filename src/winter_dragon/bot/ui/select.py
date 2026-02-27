@@ -1,15 +1,18 @@
 """Select menu components for Discord interactions."""
 
-from typing import TypedDict, Unpack
+from typing import TYPE_CHECKING, TypedDict, Unpack
 
-from discord import Interaction, SelectOption
 from discord.ui import Select as DiscordSelect
 from herogold.log import LoggerMixin
 
 from winter_dragon.bot.ui.abc import InteractEvent, default_interact
 
 
-class SelectArgs[T](TypedDict, total=False):  # ty: ignore[invalid-argument-type]
+if TYPE_CHECKING:
+    from discord import Interaction, SelectOption
+
+
+class SelectArgs[T](TypedDict, total=False):
     """Arguments for creating a select menu."""
 
     custom_id: str | None

@@ -1,0 +1,54 @@
+# Multi-stage Dockerfile for Bun React Frontend
+# Supports both development (dev) and production (start) environments
+
+# Build stage - only needed for production
+FROM oven/bun:latest AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json bun.lock ./
+COPY bunfig.toml ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy source code
+COPY src ./src
+COPY tsconfig.json bun-env.d.ts ./
+
+# Build for production
+RUN bun run build
+
+# Runtime stage
+FROM oven/bun:latest
+
+WORKDIR /app
+
+# Copy package files for dependency installation
+COPY package.json bun.lock ./
+COPY bunfig.toml ./
+
+# Install dependencies (production installs only in production mode)
+RUN bun install --frozen-lockfile
+
+# Copy source code
+COPY src ./src
+COPY tsconfig.json bun-env.d.ts ./
+
+# Copy built assets from builder stage (for production mode)
+COPY --from=builder /app/dist ./dist
+
+# Expose the port that Bun server listens on
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:3000/api/hello || exit 1
+
+# Default to development, can be overridden with NODE_ENV=production
+ENV NODE_ENV=development
+ENV BUN_ENV=dev
+
+# Use the BUN_ENV variable to determine which script to run
+ENTRYPOINT ["sh", "-c", "if [ \"$BUN_ENV\" = \"start\" ] || [ \"$NODE_ENV\" = \"production\" ]; then bun run start; else bun run dev; fi"]

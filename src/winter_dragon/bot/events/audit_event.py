@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Self
 
 from discord import Embed
-
 from winter_dragon.database.tables.audit_log import AuditLog
 
 from .factory import AuditEventFactory

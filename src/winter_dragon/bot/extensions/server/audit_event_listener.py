@@ -1,11 +1,16 @@
 """Module for handling audit log events."""
 
-from discord import AuditLogEntry
+from typing import TYPE_CHECKING
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.events.event_handler import AuditEventHandler
 from winter_dragon.bot.events.factory import AuditEventFactory
+
+
+if TYPE_CHECKING:
+    from discord import AuditLogEntry
+
+    from winter_dragon.bot.core.bot import WinterDragon
 
 
 class EventListener(Cog, auto_load=True):

@@ -3,17 +3,20 @@
 import asyncio
 import signal
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import discord
 from discord.ext import commands
+from winter_dragon.database import SQLModel
+from winter_dragon.database.constants import engine
 
 from winter_dragon.bot.core.bot import INTENTS, WinterDragon
 from winter_dragon.bot.core.sentry import Sentry
 from winter_dragon.bot.core.settings import Settings
-from winter_dragon.config import Config, ConfigError, config
-from winter_dragon.database import SQLModel
-from winter_dragon.database.constants import engine
+from winter_dragon.config import Config, ConfigError, Environments, GlobalSettings, config
+
+
+if TYPE_CHECKING:
+    import discord
 
 
 if not config.is_valid():
@@ -74,6 +77,17 @@ async def main() -> None:
         SQLModel.metadata.create_all(engine, checkfirst=True)
         await bot.load_extensions()
         await bot.start()
+
+
+# Enable debugpy for remote debugging in development
+if GlobalSettings.environment == Environments.development:
+    try:
+        import debugpy  # pyright: ignore[reportMissingImports] # noqa: T100  # ty:ignore[unresolved-import]
+
+        debugpy.listen(("0.0.0.0", 5679))  # noqa: S104, T100
+        print("debugpy listening on 0.0.0.0:5679")  # noqa: T201
+    except ImportError:
+        print("debugpy not installed; skipping remote debug setup.")  # noqa: T201
 
 
 if __name__ == "__main__":

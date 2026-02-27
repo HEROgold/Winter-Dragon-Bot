@@ -13,17 +13,22 @@ The matchmaking system will try to avoid putting players that have great synergy
 The system takes into account the selected bracket format, and settings on the game.
 """
 
+from typing import TYPE_CHECKING
+
 import discord
 from discord import Interaction, app_commands
-from discord.ext import commands
 from herogold.log import LoggerMixin
+from winter_dragon.database.tables.game import Games
+from winter_dragon.database.tables.user import Users
 
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.extensions.tournament.matchmaking import MatchmakingSystem
 from winter_dragon.bot.extensions.tournament.models import TournamentVote
 from winter_dragon.bot.extensions.tournament.views import TournamentVotingView
-from winter_dragon.database.tables.game import Games
-from winter_dragon.database.tables.user import Users
+
+
+if TYPE_CHECKING:
+    from discord.ext import commands
 
 
 class TournamentVoting(Cog, LoggerMixin):
@@ -389,7 +394,6 @@ class TournamentVoting(Cog, LoggerMixin):
             game_obj = Games.fetch_game_by_name(game)
 
             from sqlmodel import select
-
             from winter_dragon.database.tables.matchmaking.player_game_stats import PlayerGameStats
 
             stats = self.matchmaking.session.exec(
@@ -482,7 +486,6 @@ class TournamentVoting(Cog, LoggerMixin):
             game_obj = Games.fetch_game_by_name(game)
 
             from sqlmodel import select
-
             from winter_dragon.database.tables.matchmaking.player_game_stats import PlayerGameStats
 
             top_players = self.matchmaking.session.exec(

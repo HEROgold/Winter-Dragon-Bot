@@ -3,13 +3,16 @@
 When the signature of any command changes, sync the command to Discord, and update the stored signature for that command.
 """
 
-from collections.abc import Callable
 from inspect import signature
+from typing import TYPE_CHECKING
 
 from herogold.log import LoggerMixin
 from sqlmodel import Field
-
 from winter_dragon.database.extension.model import SQLModel
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class SyncedCommand(SQLModel, table=True):

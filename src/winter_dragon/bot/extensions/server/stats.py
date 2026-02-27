@@ -2,7 +2,6 @@
 
 import random
 from abc import ABC, ABCMeta, abstractmethod
-from collections.abc import Generator
 from typing import TYPE_CHECKING, NoReturn, Unpack
 
 import discord
@@ -10,16 +9,18 @@ from discord import Guild, VoiceChannel, app_commands
 from discord.ext import commands
 from herogold.log import LoggerMixin
 from sqlmodel import select
+from winter_dragon.database.channel_types import Tags
+from winter_dragon.database.tables import Channels
 
 from winter_dragon.bot.core.cogs import BotArgs, Cog, GroupCog
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.config import Config
-from winter_dragon.database.channel_types import Tags
-from winter_dragon.database.tables import Channels
 
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from winter_dragon.bot.core.permissions import PermissionsOverwrites
 
 

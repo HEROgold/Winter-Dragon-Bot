@@ -1,0 +1,33 @@
+# Bot Dockerfile
+FROM python:3.14-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY pyproject.toml uv.lock ./
+
+# Install uv for dependency management
+RUN pip install uv
+
+# Install dependencies
+RUN uv add uvicorn
+RUN uv sync --frozen
+
+# Copy the source code
+COPY src/ ./src/
+COPY config.ini ./
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Set Python path to include src directory
+ENV PYTHONPATH=/app/src
+
+# Start FastAPI app with uvicorn
+CMD ["uv", "run", "python", "-m", "uvicorn", "winter_dragon.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

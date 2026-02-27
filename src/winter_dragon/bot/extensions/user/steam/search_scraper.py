@@ -1,12 +1,12 @@
 """Scraper utilities for Steam search result pages."""
 
 from collections import Counter, defaultdict
-from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from logging import Logger
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup, Tag
+from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
 
 from winter_dragon.bot.extensions.user.steam.app_scraper import AppScraper
 from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
@@ -20,7 +20,11 @@ from winter_dragon.bot.extensions.user.steam.tags import (
     SEARCH_GAME_TITLE,
     price_to_num,
 )
-from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+    from logging import Logger
 
 
 @dataclass

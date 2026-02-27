@@ -1,13 +1,16 @@
 """Add error handling from discord tasks."""
 
 import asyncio
-import datetime
 from collections.abc import Callable, Coroutine, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from discord.ext import tasks
 from discord.utils import MISSING
 from herogold.log import LoggerMixin
+
+
+if TYPE_CHECKING:
+    import datetime
 
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]

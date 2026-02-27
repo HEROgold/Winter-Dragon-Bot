@@ -1,6 +1,6 @@
 """UI primitives built on top of discord.py's button component."""
 
-from typing import Unpack, override
+from typing import TYPE_CHECKING, Unpack, override
 
 from discord import ButtonStyle, Emoji, Interaction, PartialEmoji
 from discord.ui import Button as DiscordButton
@@ -9,10 +9,12 @@ from sqlalchemy.util.typing import TypedDict
 
 from winter_dragon.bot.ui.abc import default_interact
 
-from .abc import InteractEvent
+
+if TYPE_CHECKING:
+    from .abc import InteractEvent
 
 
-class ButtonArgs[T](TypedDict, total=False):  # ty: ignore[invalid-argument-type]
+class ButtonArgs[T](TypedDict, total=False):
     """Arguments for creating a button."""
 
     style: ButtonStyle
@@ -62,7 +64,7 @@ class Button[T = None](DiscordButton, LoggerMixin):
         await interaction.response.edit_message(view=self.view)
 
 
-class ToggleArgs[T](TypedDict, total=False):  # ty: ignore[invalid-argument-type]
+class ToggleArgs[T](TypedDict, total=False):
     """Arguments for creating a toggle button."""
 
     custom_id: str | None

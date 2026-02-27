@@ -18,7 +18,6 @@ from datetime import datetime
 
 from herogold.log import LoggerMixin
 from sqlmodel import Session, select
-
 from winter_dragon.database.constants import session as db_session
 from winter_dragon.database.tables.game import Games
 from winter_dragon.database.tables.matchmaking.game_match import GameMatch

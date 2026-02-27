@@ -1,15 +1,18 @@
 """Module for tracking games."""
 
-from collections.abc import Sequence
-from typing import Unpack
+from typing import TYPE_CHECKING, Unpack
 
 import discord
 from discord import app_commands
 from sqlmodel import select
-
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games as GamesDB
 from winter_dragon.database.tables import Suggestions
+
+from winter_dragon.bot.core.cogs import BotArgs, GroupCog
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class Games(GroupCog, auto_load=True):

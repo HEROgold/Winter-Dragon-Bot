@@ -3,13 +3,13 @@
 import discord
 from discord import Interaction, app_commands
 from sqlmodel import Session, col, select
+from winter_dragon.database.constants import SessionMixin
+from winter_dragon.database.tables import Welcome as WelcomeDb
 
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.ui import Menu, Modal
 from winter_dragon.bot.ui.button import Button, ToggleButton
 from winter_dragon.config import Config
-from winter_dragon.database.constants import SessionMixin
-from winter_dragon.database.tables import Welcome as WelcomeDb
 
 
 class WelcomeMenu(Menu, SessionMixin):

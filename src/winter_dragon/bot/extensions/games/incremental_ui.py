@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 import discord
 from discord import Interaction
 from sqlmodel import select
-
-from winter_dragon.bot.ui import Menu
-from winter_dragon.bot.ui.button import Button
 from winter_dragon.database.constants import SessionMixin
 from winter_dragon.database.tables.incremental.currency import UserMoney
 from winter_dragon.database.tables.incremental.generators import Generators
 from winter_dragon.database.tables.incremental.user_generator import AssociationUserGenerator
+
+from winter_dragon.bot.ui import Menu
+from winter_dragon.bot.ui.button import Button
 
 
 if TYPE_CHECKING:
@@ -25,8 +25,8 @@ class GeneratorShopMenu(Menu, SessionMixin):
         self,
         interaction: Interaction,
         user_id: int,
-        generator_manager: "GeneratorManager",
-        currency_manager: "CurrencyManager",
+        generator_manager: GeneratorManager,
+        currency_manager: CurrencyManager,
         timeout: float = 300.0,
     ) -> None:
         """Initialize the generator shop menu."""
@@ -145,7 +145,7 @@ class ProgressMenu(Menu, SessionMixin):
         self,
         interaction: Interaction,
         user_id: int,
-        generator_manager: "GeneratorManager",
+        generator_manager: GeneratorManager,
         timeout: float = 300.0,
     ) -> None:
         """Initialize the progress menu.

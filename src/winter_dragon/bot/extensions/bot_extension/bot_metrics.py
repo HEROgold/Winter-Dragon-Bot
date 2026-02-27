@@ -9,13 +9,13 @@ import psutil
 from discord import app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
+from winter_dragon.database.tables.user import Users
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.paths import METRICS_FILE
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.config import Config
-from winter_dragon.database.tables.user import Users
 
 
 def codeblock(language: str, text: str | float) -> str:

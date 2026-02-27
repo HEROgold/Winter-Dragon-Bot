@@ -1,5 +1,43 @@
 services:
 
+  api:
+    build:
+      context: .
+      dockerfile: src/winter_dragon/api/dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/openapi.json"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    environment:
+      - BUN_ENV=dev
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/bunfig.toml:/app/bunfig.toml
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+      - ./frontend/bun-env.d.ts:/app/bun-env.d.ts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/hello"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   redis:
     image: redis:8.2.4-alpine3.22
     ports:
@@ -14,7 +52,6 @@ services:
       retries: 5
 
   redis-commander:
-    container_name: redis-commander
     image: ghcr.io/joeferner/redis-commander:latest
     restart: unless-stopped
     environment:
@@ -44,7 +81,6 @@ services:
       start_period: 10s
 
   worker-autoscaler:
-    container_name: worker-autoscaler
     build:
       context: .
       dockerfile: bot-dockerfile
@@ -69,10 +105,9 @@ services:
       start_period: 30s
 
   bot:
-    container_name: discord-bot
     build:
       context: .
-      dockerfile: bot-dockerfile
+      dockerfile: src/winter_dragon/bot/dockerfile
     environment:
       - REDIS_HOST=redis
     volumes:
@@ -89,7 +124,6 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    container_name: pgadmin
     depends_on:
       - postgres
     ports:

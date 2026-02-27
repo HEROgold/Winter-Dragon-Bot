@@ -2,21 +2,25 @@
 
 import asyncio
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from confkit.data_types import Hex
 from discord import Interaction, app_commands
 from sqlmodel import select
-
-from winter_dragon.bot.core.bot import WinterDragon
-from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.core.tasks import loop
-from winter_dragon.bot.extensions.user.steam.steam_sales_menu import create_sales_paginator
-from winter_dragon.config import Config
 from winter_dragon.database.tables.steamsale import SteamSale
 from winter_dragon.database.tables.steamuser import SteamUsers
 from winter_dragon.database.tables.user import Users
 from winter_dragon.redis.queue import TaskQueue
 from winter_dragon.workers.tasks.steam_scraper import scrape_steam_sales
+
+from winter_dragon.bot.core.cogs import GroupCog
+from winter_dragon.bot.core.tasks import loop
+from winter_dragon.bot.extensions.user.steam.steam_sales_menu import create_sales_paginator
+from winter_dragon.config import Config
+
+
+if TYPE_CHECKING:
+    from winter_dragon.bot.core.bot import WinterDragon
 
 
 STEAM_SEND_PERIOD = 3600 * 3  # 3 hour cooldown on updates in seconds

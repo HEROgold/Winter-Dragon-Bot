@@ -2,14 +2,18 @@
 
 import asyncio
 import urllib.parse
+from typing import TYPE_CHECKING
 
 import discord
 import requests
 from discord import app_commands
 
-from winter_dragon.bot.core.bot import WinterDragon
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.config import Config
+
+
+if TYPE_CHECKING:
+    from winter_dragon.bot.core.bot import WinterDragon
 
 
 UD_DEFINE_URL = "https://api.urbandictionary.com/v0/define?term="
