@@ -6,8 +6,8 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 from discord.ext import commands
-from winter_dragon.database import SQLModel
-from winter_dragon.database.constants import engine
+from herogold.orm.constants import engine
+from herogold.orm.model import BaseModel
 
 from winter_dragon.bot.core.bot import INTENTS, WinterDragon
 from winter_dragon.bot.core.sentry import Sentry
@@ -74,7 +74,7 @@ def terminate(*args: Any, **kwargs: Any) -> None:  # noqa: ANN401 Catch all argu
 async def main() -> None:
     """Entrypoint of the program."""
     async with bot:
-        SQLModel.metadata.create_all(engine, checkfirst=True)
+        BaseModel.metadata.create_all(engine, checkfirst=True)
         await bot.load_extensions()
         await bot.start()
 

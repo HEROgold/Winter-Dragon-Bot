@@ -7,15 +7,15 @@ from inspect import signature
 from typing import TYPE_CHECKING
 
 from herogold.log import LoggerMixin
+from herogold.orm.model import BaseModel
 from sqlmodel import Field
-from winter_dragon.database.extension.model import SQLModel
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class SyncedCommand(SQLModel, table=True):
+class SyncedCommand(BaseModel, table=True):
     """Table to track the signatures of commands that have been synced with Discord."""
 
     command_name: str = Field(primary_key=True)

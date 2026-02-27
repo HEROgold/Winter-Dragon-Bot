@@ -4,16 +4,41 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Protocol, Self, TypeIs
 
 from discord import Embed
-from winter_dragon.database.tables.audit_log import AuditLog
+from herogold.orm.model import BaseModel
 
 from .factory import AuditEventFactory
 
 
 if TYPE_CHECKING:
     from discord import AuditLogAction, AuditLogEntry
+
+
+class AuditLog(BaseModel):
+    """Database model for audit logs."""
+
+    action: AuditLogAction
+    user_id: int | None
+    target_id: int | None
+    extra: str | None
+
+    @classmethod
+    def from_audit_log(cls, entry: AuditLogEntry) -> AuditLog:
+        """Create an audit log from a discord audit log entry."""
+        return cls(
+            action=entry.action,
+            user_id=entry.user.id if entry.user else None,
+            target_id=int(entry.target.id) if entry.target and isinstance(entry.target.id, (int, str)) else None,
+            extra=str(entry.extra) if entry.extra else None,
+        )
+
+
+class HasMention(Protocol):
+    """Protocol for objects that have a mention attribute."""
+
+    mention: str
 
 
 class AuditEvent(ABC):
@@ -42,8 +67,15 @@ class AuditEvent(ABC):
     async def handle(self) -> None:
         """Handle the audit event."""
 
+    def _has_mention(self, obj: object) -> TypeIs[HasMention]:
+        """Check if the object has a mention attribute."""
+        return hasattr(obj, "mention")
+
     def create_embed(self) -> Embed:
         """Create an embed for the audit event."""
+        if not self._has_mention(self.entry.target):
+            msg = "Target does not have a mention attribute."
+            raise ValueError(msg)
         target = self.entry.target.mention if hasattr(self.entry.target, "mention") else self.entry.target
 
         return Embed(

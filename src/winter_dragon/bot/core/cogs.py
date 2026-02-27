@@ -10,10 +10,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from herogold.log import LoggerMixin
-from sqlmodel import Session, select
-from winter_dragon.database.constants import engine
-from winter_dragon.database.tables.command import Commands
-from winter_dragon.database.tables.disabled_commands import DisabledCommands
+from herogold.orm.constants import engine
+from herogold.orm.model import BaseModel
+from sqlmodel import Field, Session, select
 
 from winter_dragon.bot.core.app_command_cache import AppCommandCache
 from winter_dragon.bot.core.auto_reload import AutoReloadWatcher
@@ -46,6 +45,19 @@ class CogFlags(IntFlag):
 
 
 default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
+
+
+class Commands(BaseModel):
+    """Table to track the qualified names of commands."""
+
+    qual_name: str = Field(primary_key=True)
+
+
+class DisabledCommands(BaseModel):
+    """Table to track disabled commands for specific targets (users, channels, guilds)."""
+
+    command_qual_name: str = Field(foreign_key="commands.qual_name")
+    target_id: int = Field(index=True)
 
 
 class Cog(commands.Cog, LoggerMixin):
