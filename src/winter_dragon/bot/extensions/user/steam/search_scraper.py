@@ -208,7 +208,7 @@ class SearchScraper(BaseScraper):
         # /sub/ holds multiple app ids on the page.
         # using the id found in the url avoids this problem at this stage.
         if "sub" in url:
-            url_id = url.split("/sub/")[1].split("/")[0]
+            url_id = url.split("/sub/")[1].split("/", maxsplit=1)[0]
             app_id = url_id
 
         self.logger.debug(f"Found bundle or sub: {url=}, processing bundle items")
