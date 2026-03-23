@@ -7,7 +7,7 @@ default_install_hook_types:
   - post-rewrite
 repos:
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.10.10
+    rev: 0.10.12
     hooks:
       - id: uv-lock
         stages:
@@ -67,7 +67,7 @@ repos:
 
   # Security scanning (global)
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.1
+    rev: v8.30.0
     hooks:
       - id: gitleaks
 
@@ -95,7 +95,7 @@ repos:
         stages: [pre-push, pre-commit]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.6
+    rev: v0.15.7
     hooks:
       - id: ruff
         name: ruff lint
@@ -118,7 +118,7 @@ repos:
 
   # TypeScript/React hooks (for frontend directory)
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.0.3
+    rev: v10.1.0
     hooks:
       - id: eslint
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
