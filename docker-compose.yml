@@ -60,6 +60,30 @@ services:
       redis:
         condition: service_healthy
 
+  workers:
+    build:
+      context: .
+      dockerfile: src/winter_dragon/workers/dockerfile
+    command: uv run python -m winter_dragon.workers
+    environment:
+      - REDIS_HOST=redis
+    volumes:
+      - ./src:/app/src
+      - ./config.ini:/app/config.ini
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ""
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
