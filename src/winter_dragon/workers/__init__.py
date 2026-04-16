@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING, Any
 
 from redis import Redis
@@ -29,9 +30,11 @@ class RedisConnection:
     def get_redis_connection() -> Redis:
         """Get or create Redis connection."""
         if RedisConnection._redis_connection is None:
-            redis_host = RedisConnection.HOST
-            redis_port = RedisConnection.PORT
-            redis_db = RedisConnection.DB
+            # Prefer environment variables (Docker) and fall back to Config
+            redis_host = os.getenv("REDIS_HOST") or RedisConnection.HOST
+            redis_port = int(os.getenv("REDIS_PORT") or RedisConnection.PORT)
+            redis_db = int(os.getenv("REDIS_DB") or RedisConnection.DB)
+
             RedisConnection._redis_connection = Redis(
                 host=redis_host,
                 port=redis_port,
