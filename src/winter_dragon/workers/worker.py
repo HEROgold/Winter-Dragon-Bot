@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import argparse
 import multiprocessing
+import os
 import sys
 import uuid
+from datetime import UTC, datetime
 
+import rq
 from herogold.log import LoggerMixin
 from rq import Worker
 
@@ -32,49 +35,65 @@ logger = LoggerMixin().logger
 class LoggingWorker(Worker):
     """Custom Worker class that logs job lifecycle events."""
 
-    def perform_job(self, job, queue):
+    def perform_job(self, job: rq.job.Job, queue: rq.Queue) -> bool:
         """Perform the job with logging."""
         func_name = job.func_name.split(".")[-1] if job.func_name else "unknown"
         args_str = ", ".join(str(arg) for arg in (job.args or [])[:3])
         kwargs_str = ", ".join(f"{k}={v}" for k, v in list((job.kwargs or {}).items())[:3])
         params = ", ".join(filter(None, [args_str, kwargs_str]))
 
+        start_ts = datetime.now(UTC)
+        start_iso = start_ts.isoformat()
+
         logger.info(
-            f"▶️ Job started: {job.id[:8]} | {func_name}({params})",
+            f"▶️ Job started: {job.id[:8]} | {func_name}({params}) | start={start_iso}",
             extra={
                 "job_id": job.id,
                 "function": func_name,
                 "status": "started",
+                "start_time": start_iso,
             },
         )
 
         try:
             result = super().perform_job(job, queue)
-            duration = (job.ended_at - job.started_at).total_seconds() if job.started_at and job.ended_at else 0
+
+            end_ts = datetime.now(UTC)
+            end_iso = end_ts.isoformat()
+            duration = (end_ts - start_ts).total_seconds()
+
             logger.info(
-                f"✅ Job finished: {job.id[:8]} | {func_name} | {duration:.2f}s",
+                f"✅ Job finished: {job.id[:8]} | {func_name} | {duration:.2f}s | end={end_iso}",
                 extra={
                     "job_id": job.id,
                     "function": func_name,
                     "status": "finished",
                     "duration": duration,
+                    "start_time": start_iso,
+                    "end_time": end_iso,
                 },
             )
-            return result
         except Exception as e:
-            duration = (job.ended_at - job.started_at).total_seconds() if job.started_at and job.ended_at else 0
+            end_ts = datetime.now(UTC)
+            end_iso = end_ts.isoformat()
+            duration = (end_ts - start_ts).total_seconds()
+
             logger.exception(
-                f"❌ Job failed: {job.id[:8]} | {func_name} | {duration:.2f}s | {type(e).__name__}: {str(e)[:100]}",
+                f"❌ Job failed: {job.id[:8]} | {func_name} | {duration:.2f}s | end={end_iso} | {type(e).__name__}",
                 extra={
                     "job_id": job.id,
                     "function": func_name,
                     "status": "failed",
                     "duration": duration,
+                    "start_time": start_iso,
+                    "end_time": end_iso,
                     "error_type": type(e).__name__,
                     "error": str(e),
                 },
             )
             raise
+        else:
+            return result
 
 
 class RQWorker(LoggerMixin):
@@ -122,7 +141,7 @@ class RQWorker(LoggerMixin):
 
             self.logger.info(
                 f"🚀 Starting worker to process {len(queues)} queue(s): {', '.join(self.queue_names)}",
-                extra={"queues": self.queue_names, "worker_count": len(queues)},
+                extra={"queues": self.queue_names, "worker_count": len(queues), "pid": os.getpid()},
             )
 
             # Create and start worker with custom logging class
@@ -132,7 +151,10 @@ class RQWorker(LoggerMixin):
                 name=self.worker_name,
             )
 
-            self.logger.info(f"👂 Worker '{self.worker_name}' is listening for jobs...")
+            self.logger.info(
+                f"👂 Worker '{self.worker_name}' is listening for jobs... (pid={os.getpid()})",
+                extra={"worker_name": self.worker_name, "pid": os.getpid()},
+            )
 
             # Start worker (blocking call)
             worker.work(with_scheduler=True)
