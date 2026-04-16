@@ -11,15 +11,9 @@ from discord.ext import commands
 from winter_dragon.bot.core.bot import INTENTS, WinterDragon
 from winter_dragon.bot.core.sentry import Sentry
 from winter_dragon.bot.core.settings import Settings
-from winter_dragon.config import Config, ConfigError, config
+from winter_dragon.config import Config
 from winter_dragon.database import SQLModel
 from winter_dragon.database.constants import engine
-
-
-if not config.is_valid():
-    msg = f"""Config is not yet updated!, update the following:
-        {", ".join(config.get_invalid())}"""
-    raise ConfigError(msg)
 
 
 bot = WinterDragon(

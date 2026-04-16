@@ -68,7 +68,4 @@ class ConfigParser(configparser.ConfigParser):
                     yield f"{section}:{setting}"
 
 
-config = ConfigParser()
-# ConfigParser satisfies the interface, but ty doesn't see it as it's not inheriting from CKConfig
-Config.set_parser(config)  # ty:ignore[invalid-argument-type]
 Config.set_file(CONFIG_FILE)
