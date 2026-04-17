@@ -12,7 +12,7 @@ from winter_dragon.bot.ui.abc import default_interact
 from .abc import InteractEvent
 
 
-class ButtonArgs[T](TypedDict, total=False):  # ty: ignore[invalid-argument-type]
+class ButtonArgs[T](TypedDict, total=False):
     """Arguments for creating a button."""
 
     style: ButtonStyle
@@ -62,7 +62,7 @@ class Button[T = None](DiscordButton, LoggerMixin):
         await interaction.response.edit_message(view=self.view)
 
 
-class ToggleArgs[T](TypedDict, total=False):  # ty: ignore[invalid-argument-type]
+class ToggleArgs[T](TypedDict, total=False):
     """Arguments for creating a toggle button."""
 
     custom_id: str | None

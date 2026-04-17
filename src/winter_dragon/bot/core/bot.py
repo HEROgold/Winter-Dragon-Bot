@@ -138,7 +138,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         lib = module_from_spec(spec)
         sys.modules[key] = lib
         try:
-            spec.loader.exec_module(lib)  # ty:ignore[possibly-missing-attribute]
+            spec.loader.exec_module(lib)  # ty:ignore[unresolved-attribute]
         except Exception as e:
             del sys.modules[key]
             raise ExtensionFailed(key, e) from e
