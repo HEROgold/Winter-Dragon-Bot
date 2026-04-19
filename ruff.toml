@@ -22,6 +22,9 @@ ignore = [
 ]
 
 [lint.isort]
+required-imports = [
+    "from __future__ import annotations",
+]
 lines-after-imports = 2
 
 [lint.per-file-ignores]

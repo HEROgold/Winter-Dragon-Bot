@@ -137,8 +137,12 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         """Version that does not check if `def setup` is present."""
         lib = module_from_spec(spec)
         sys.modules[key] = lib
+        if spec.loader is None:
+            del sys.modules[key]
+            raise ExtensionFailed(key, RuntimeError("Module spec has no loader"))
+
         try:
-            spec.loader.exec_module(lib)  # ty:ignore[unresolved-attribute]
+            spec.loader.exec_module(lib)
         except Exception as e:
             del sys.modules[key]
             raise ExtensionFailed(key, e) from e
@@ -155,7 +159,11 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             # This is required, because discord.py _load_from_module_spec is internal
             # And we want to change how extensions are loaded without calling setup()
             # we use auto_load on Cogs to initialize them
-            self._BotBase__extensions[key] = lib  # ty:ignore[unresolved-attribute]
+            extensions = getattr(self, "_BotBase__extensions", None)
+            if not isinstance(extensions, dict):
+                msg = "Bot extension registry is unavailable"
+                raise RuntimeError(msg)
+            extensions[key] = lib
 
     async def _init_cogs(self, lib: ModuleType) -> None:
         """Set up a cog by calling its cog_load method if it exists."""

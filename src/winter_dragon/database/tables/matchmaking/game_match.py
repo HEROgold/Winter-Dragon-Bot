@@ -1,5 +1,7 @@
 """GameMatch table - stores information about completed matches."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -37,6 +39,6 @@ class GameMatch(SQLModel, table=True):
 
     # Relationships
     if TYPE_CHECKING:
-        game: Mapped["Games"] = relationship()
-        players: Mapped[list["MatchPlayer"]] = relationship(back_populates="match")
-        teams: Mapped[list["MatchTeam"]] = relationship(back_populates="match")
+        game: Mapped[Games] = relationship()
+        players: Mapped[list[MatchPlayer]] = relationship(back_populates="match")
+        teams: Mapped[list[MatchTeam]] = relationship(back_populates="match")

@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 from herogold.log import LoggerMixin
 
+from winter_dragon.bot.extensions.server.log_channels import LogChannels
+
 
 if TYPE_CHECKING:
     import discord
     from discord import AuditLogAction
     from discord.ext.commands.bot import BotBase
     from sqlmodel import Session
-
-    from winter_dragon.bot.extensions.server.log_channels import LogChannels
 
     from .audit_event import AuditEvent
 
@@ -57,8 +57,8 @@ class AuditEventHandler(LoggerMixin):
                 return
 
             # Get the LogChannels cog and dispatch through aggregation
-            log_channels_cog: LogChannels = self.bot.get_cog("LogChannels")  # pyright: ignore[reportAssignmentType]  # ty:ignore[invalid-assignment]
-            if log_channels_cog:
+            log_channels_cog = self.bot.get_cog("LogChannels")
+            if isinstance(log_channels_cog, LogChannels):
                 await log_channels_cog.dispatch_aggregated_log(
                     guild=guild,
                     embed=embed,

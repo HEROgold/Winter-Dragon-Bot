@@ -1,5 +1,7 @@
 """Module for storing and managing fuel data."""
 
+from __future__ import annotations
+
 import discord
 import matplotlib.dates as mdates
 from discord import app_commands

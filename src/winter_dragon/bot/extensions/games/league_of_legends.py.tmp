@@ -19,62 +19,17 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-class CassiopeiaEnumLike(Protocol):
-    """Minimal enum-like object from Cassiopeia with a .value property."""
-
-    value: str
-
-
-class CassiopeiaProfileIcon(Protocol):
-    """Minimal profile icon shape returned by Cassiopeia objects."""
-
-    id: int
-
-
-class CassiopeiaLeagueEntry(Protocol):
-    """Minimal ranked league entry shape."""
-
-    queue: CassiopeiaEnumLike
-    tier: CassiopeiaEnumLike
-    division: CassiopeiaEnumLike
-    league_points: int
-    wins: int
-    losses: int
-
-
-class CassiopeiaChampion(Protocol):
-    """Minimal champion shape returned by Cassiopeia."""
-
-    name: str
-
-
-class CassiopeiaChampionMastery(Protocol):
-    """Minimal champion mastery shape from Cassiopeia."""
-
-    champion: CassiopeiaChampion
-    level: int
-    points: int
-
-
 class CassiopeiaSummoner(Protocol):
     """Minimal League of Legends summoner shape used by the bot."""
 
-    league_entries: Sequence[CassiopeiaLeagueEntry]
+    league_entries: Sequence[Any]
     match_history: Sequence[Any]
-    champion_masteries: Sequence[CassiopeiaChampionMastery]
+    champion_masteries: Sequence[Any]
     level: int
 
-    def id(self) -> int | str:
-        """Return the summoner identifier."""
-        ...
-
-    def account_id(self) -> int | str:
-        """Return the account identifier."""
-        ...
-
-    def profile_icon(self) -> CassiopeiaProfileIcon:
-        """Return the summoner's profile icon."""
-        ...
+    def id(self) -> int: ...
+    def account_id(self) -> int: ...
+    def profile_icon(self) -> Any: ...
 
 
 class CassiopeiaAccount(Protocol):
@@ -82,25 +37,19 @@ class CassiopeiaAccount(Protocol):
 
     summoner: CassiopeiaSummoner
 
-    def puuid(self) -> str:
-        """Return the account's PUUID."""
-        ...
+    def puuid(self) -> str: ...
 
 
 class CassiopeiaAccountFactory(Protocol):
     """Callable Cassiopeia account constructor interface."""
 
-    def __call__(self, *args: object, **kwargs: object) -> CassiopeiaAccount:
-        """Construct and return a Cassiopeia account object."""
-        ...
+    def __call__(self, *args: object, **kwargs: object) -> CassiopeiaAccount: ...
 
 
 class CassiopeiaSummonerFactory(Protocol):
     """Callable Cassiopeia summoner constructor interface."""
 
-    def __call__(self, *args: object, **kwargs: object) -> CassiopeiaSummoner:
-        """Construct and return a Cassiopeia summoner object."""
-        ...
+    def __call__(self, *args: object, **kwargs: object) -> CassiopeiaSummoner: ...
 
 
 class Region(StrEnum):
@@ -188,10 +137,8 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                 existing.tag_line = tag_line
                 existing.region = region_upper
                 existing.puuid = account.puuid()
-                summoner_id = summoner.id()
-                account_id = summoner.account_id()
-                existing.summoner_id = str(summoner_id) if summoner_id is not None else None
-                existing.account_id = str(account_id) if account_id is not None else None
+                existing.summoner_id = summoner.id()
+                existing.account_id = summoner.account_id()
                 existing.profile_icon_id = summoner.profile_icon().id
                 existing.summoner_level = int(summoner.level)
                 existing.last_updated = int(time.time())
@@ -204,8 +151,8 @@ class LeagueOfLegends(GroupCog, auto_load=True):
                     tag_line=tag_line,
                     region=region.value,
                     puuid=account.puuid(),
-                    summoner_id=str(summoner.id()) if summoner.id() is not None else None,
-                    account_id=str(summoner.account_id()) if summoner.account_id() is not None else None,
+                    summoner_id=summoner.id(),
+                    account_id=summoner.account_id(),
                     profile_icon_id=summoner.profile_icon().id,
                     summoner_level=int(summoner.level),
                     last_updated=int(time.time()),
@@ -460,3 +407,14 @@ class LeagueOfLegends(GroupCog, auto_load=True):
         except Exception as e:
             self.logger.exception("Error fetching champion mastery")
             await interaction.followup.send(f"Error fetching champion mastery: {e!s}")
+
+
+
+
+
+
+
+
+
+
+

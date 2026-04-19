@@ -1,5 +1,7 @@
 """Base error handler class for app command errors."""
 
+from __future__ import annotations
+
 from abc import ABC
 from typing import Self, override
 

@@ -1,12 +1,17 @@
 """Select menu components for Discord interactions."""
 
-from typing import TypedDict, Unpack
+from __future__ import annotations
 
-from discord import Interaction, SelectOption
+from typing import TYPE_CHECKING, TypedDict, Unpack
+
 from discord.ui import Select as DiscordSelect
 from herogold.log import LoggerMixin
 
 from winter_dragon.bot.ui.abc import InteractEvent, default_interact
+
+
+if TYPE_CHECKING:
+    from discord import Interaction, SelectOption
 
 
 class SelectArgs[T](TypedDict, total=False):

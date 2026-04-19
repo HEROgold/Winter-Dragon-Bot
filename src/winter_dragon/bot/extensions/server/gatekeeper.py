@@ -1,5 +1,7 @@
 """Gatekeeper cog for managing server roles and permissions, liming the amount of bot/spam users that can join."""
 
+from __future__ import annotations
+
 import discord
 from discord import ButtonStyle, Guild, Interaction, Member, Permissions, Role, app_commands
 from discord.ui import Button, View
@@ -64,7 +66,7 @@ class Gatekeeper(GroupCog, auto_load=True):
                 await member.add_roles(member_role)
                 await interaction.response.send_message("Welcome! You now have access to the guild.", ephemeral=True)
 
-        verify_button.callback = button_callback  # ty:ignore[invalid-assignment]
+        verify_button.callback = button_callback
 
         await member.send("Please accept the rules to gain access to the guild.", view=view)
 

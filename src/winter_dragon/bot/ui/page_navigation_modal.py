@@ -1,5 +1,7 @@
 """Page navigation modal for paginators."""
 
+from __future__ import annotations
+
 import discord
 from discord import ui
 

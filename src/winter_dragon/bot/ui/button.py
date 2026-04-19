@@ -1,6 +1,8 @@
 """UI primitives built on top of discord.py's button component."""
 
-from typing import Unpack, override
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Unpack, override
 
 from discord import ButtonStyle, Emoji, Interaction, PartialEmoji
 from discord.ui import Button as DiscordButton
@@ -9,7 +11,9 @@ from sqlalchemy.util.typing import TypedDict
 
 from winter_dragon.bot.ui.abc import default_interact
 
-from .abc import InteractEvent
+
+if TYPE_CHECKING:
+    from .abc import InteractEvent
 
 
 class ButtonArgs[T](TypedDict, total=False):

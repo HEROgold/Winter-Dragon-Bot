@@ -1,5 +1,7 @@
 """Module to hold welcoming cogs."""
 
+from __future__ import annotations
+
 import discord
 from discord import Interaction, app_commands
 from sqlmodel import Session, col, select

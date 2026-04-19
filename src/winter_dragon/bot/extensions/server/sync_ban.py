@@ -1,5 +1,7 @@
 """Logger mixin for database classes."""
 
+from __future__ import annotations
+
 import discord
 from discord import app_commands
 from sqlmodel import select

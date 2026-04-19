@@ -1,5 +1,7 @@
 """Enhanced Steam sales display using pagination."""
 
+from __future__ import annotations
+
 from textwrap import dedent
 
 from discord import Embed

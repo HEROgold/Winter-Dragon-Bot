@@ -1,5 +1,7 @@
 """Module to contain the Hangman game."""
 
+from __future__ import annotations
+
 import random
 from textwrap import dedent
 from typing import Unpack, override
@@ -224,9 +226,13 @@ class SubmitLetter(Modal, SessionMixin, title="Submit Letter"):
         hangman_players = self.fetch_hangman_players()
         self.rank_hangman_players(hangman_players)
 
+        game = Games.fetch_game_by_name(HANGMAN)
+        if game is None or game.id is None:
+            msg = "Hangman game record is not available."
+            raise ValueError(msg)
+
         for player in hangman_players:
             placement = self.calculate_placement(hangman_players, player)
-            game = Games.fetch_game_by_name(HANGMAN)
             self.session.add(
                 ResultMM(
                     game_id=game.id,

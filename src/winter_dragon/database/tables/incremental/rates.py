@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import timedelta
 
 from sqlmodel import Field
@@ -14,6 +16,14 @@ class GeneratorRates(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     generator_id: int = Field(foreign_key=get_foreign_key(Generators), ondelete="CASCADE")
-    currency: int = Field(foreign_key=get_foreign_key(UserMoney), ondelete="CASCADE")
+    currency: str = Field(foreign_key=get_foreign_key(UserMoney), ondelete="CASCADE")
     amount: float = Field(default=1.0)
     per: timedelta = Field(default=timedelta(hours=1))
+
+    @property
+    def per_second(self) -> float:
+        return self.amount
+
+    @per_second.setter
+    def per_second(self, value: float) -> None:
+        self.amount = value

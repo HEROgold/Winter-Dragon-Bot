@@ -3,6 +3,8 @@ Winter-Dragon API extension initialization.
 This module requires the optional 'winter-dragon[api]' package to be installed.
 """
 
+from __future__ import annotations
+
 import warnings
 from importlib.util import find_spec
 

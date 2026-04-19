@@ -1,5 +1,7 @@
 """Module for bot activity and status management."""
 
+from __future__ import annotations
+
 import random
 from typing import Unpack
 

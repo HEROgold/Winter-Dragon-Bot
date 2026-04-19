@@ -1,4 +1,5 @@
-from datetime import datetime
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Self
 
 from sqlmodel import Field
@@ -7,6 +8,8 @@ from winter_dragon.database.extension.model import DiscordID
 
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from discord import AuditLogEntry
 
 
@@ -18,7 +21,7 @@ class AuditLog(DiscordID, table=True):
     category: int  # AuditLogActionCategory
 
     @classmethod
-    def from_audit_log(cls, entry: "AuditLogEntry") -> Self:
+    def from_audit_log(cls, entry: AuditLogEntry) -> Self:
         """Create an AuditLog instance from a Discord AuditLogEntry."""
         if entry.target is None:
             msg = f"Target should be AuditLogEntry.target type, but is {type(entry.target)}"

@@ -1,5 +1,8 @@
 """Tags used in Steam HTML pages for scraping purposes."""
 
+from __future__ import annotations
+
+
 DISCOUNT_FINAL_PRICE = "discount_final_price"
 DISCOUNT_PERCENT = "discount_pct"
 SEARCH_GAME_TITLE = "title"

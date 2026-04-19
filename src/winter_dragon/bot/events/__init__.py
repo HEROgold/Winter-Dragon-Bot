@@ -1,5 +1,7 @@
 """Package for event basic event classes and handling."""
 
+from __future__ import annotations
+
 from .audit_event import AuditEvent
 from .util import add_differences_to_embed, get_differences, get_member_role_differences
 

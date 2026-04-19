@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .currency import UserMoney
 from .player import Players
 from .user_generator import AssociationUserGenerator

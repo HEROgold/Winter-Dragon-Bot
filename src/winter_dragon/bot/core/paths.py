@@ -1,5 +1,7 @@
 """Centralized filesystem paths shared across the bot codebase."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 

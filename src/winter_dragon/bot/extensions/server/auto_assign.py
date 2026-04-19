@@ -1,5 +1,7 @@
 """Cog for automatically assigning roles to new members."""
 
+from __future__ import annotations
+
 import discord
 from discord import app_commands
 from sqlmodel import select

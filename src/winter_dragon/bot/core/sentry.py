@@ -1,5 +1,7 @@
 """Module to handle Sentry setup."""
 
+from __future__ import annotations
+
 import enum
 from enum import auto
 

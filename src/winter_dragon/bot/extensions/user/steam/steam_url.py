@@ -1,5 +1,7 @@
 """Utility helpers for parsing Steam store URLs."""
 
+from __future__ import annotations
+
 import re
 
 from herogold.log import LoggerMixin

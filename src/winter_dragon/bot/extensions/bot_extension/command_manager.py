@@ -1,12 +1,14 @@
 """Cog for managing command enablement/disablement with interactive UI."""
 
+from __future__ import annotations
+
 import discord
 from discord import Guild, Interaction, app_commands
 from discord.ext import commands
 from sqlmodel import Session, select
 
 from winter_dragon.bot.core.cogs import Cog
-from winter_dragon.bot.ui.button import ToggleButton
+from winter_dragon.bot.ui.button import Button, ToggleButton
 from winter_dragon.bot.ui.paginator import PageSource, Paginator
 from winter_dragon.bot.ui.view import View
 from winter_dragon.database.tables.command import Commands
@@ -34,7 +36,7 @@ class CommandManagementPageSource(PageSource[list[tuple[str, bool]]]):
     def __init__(
         self,
         commands_list: list,
-        view: "CommandManagementView",
+        view: CommandManagementView,
         title: str = "Manage Commands",
     ) -> None:
         """Initialize the command management page source."""
@@ -149,17 +151,18 @@ class CommandManagementView(View):
             self.add_item(button)
 
         # Add apply button on the last row
-        apply_button = discord.ui.Button(
+        apply_button = Button(
             label="Apply Changes",
             emoji="💾",
             style=discord.ButtonStyle.blurple,
             custom_id="cmd_apply",
             row=4,
+            on_interact=self.on_apply,
         )
-        apply_button.callback = self._on_apply  # type: ignore[assignment]
+
         self.add_item(apply_button)
 
-    async def _on_apply(self, interaction: Interaction) -> None:
+    async def on_apply(self, interaction: Interaction) -> None:
         """Handle the apply button click."""
         await interaction.response.defer(ephemeral=True)
 

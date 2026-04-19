@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDi
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.ext.commands.cog import _cog_special_method
 from herogold.log import LoggerMixin
 from sqlmodel import Session, select
 
@@ -102,7 +103,7 @@ class Cog(commands.Cog, LoggerMixin):
             self.bot.loop.create_task(self.auto_load())
             self._auto_reloader.register()
 
-    def is_command_disabled(self, interaction: discord.Interaction) -> bool:
+    def is_command_disabled(self, interaction: discord.Interaction | commands.Context) -> bool:
         """Check if a command is disabled for a guild, channel, or user."""
         if interaction.message is None or not isinstance(interaction, commands.Context):
             user = interaction.user
@@ -137,7 +138,7 @@ class Cog(commands.Cog, LoggerMixin):
         self.logger.debug(f"Checking if command '{qual_name} is disabled for user {user_id=} {channel_id=} {guild_id=}")
         return self.session.exec(statement).first() is not None
 
-    def is_command_enabled(self, interaction: discord.Interaction) -> bool:
+    def is_command_enabled(self, interaction: discord.Interaction | commands.Context) -> bool:
         """Check if a command is enabled for a guild, channel, or user."""
         return not self.is_command_disabled(interaction)
 
@@ -179,7 +180,14 @@ class Cog(commands.Cog, LoggerMixin):
             if isinstance(command, app_commands.Group):
                 continue
             self.logger.debug(f"Adding is_command_disabled check to {command.qualified_name}")
-            command.add_check(self.is_command_enabled)  # type: ignore[reportArgumentType]
+            if isinstance(command, app_commands.Command):
+                command.add_check(self.is_command_enabled)
+            else:
+
+                def _check(context: commands.Context) -> bool:
+                    return self.is_command_enabled(context)
+
+                command.add_check(_check)
 
     @add_mentions.before_loop
     @add_disabled_check.before_loop
@@ -187,9 +195,14 @@ class Cog(commands.Cog, LoggerMixin):
         """Wait until the bot is ready before adding mentions and disabled checks."""
         await self.bot.wait_until_ready()
 
-    # Documentation mentions that `error` is CommandError, however it's type hinted with Exception?
-    async def cog_command_error(self, ctx: Context[BotT], error: commands.CommandError) -> None:  # type: ignore[invalid-method-override]
+    @_cog_special_method
+    async def cog_command_error(self, ctx: Context[BotT], error: Exception) -> None:
         """Handle errors that occur during command invocation."""
+        if not isinstance(error, commands.CommandError):
+            # Documentation mentions that `error` is CommandError, however it's type hinted with Exception?
+            # Just check it here just in case.
+            self.logger.error(f"Non-CommandError passed to cog_command_error: {error}", exc_info=error)
+            return
         for handler in ErrorFactory.get_handlers(self.bot, error, ctx=ctx):
             await handler.handle()
 

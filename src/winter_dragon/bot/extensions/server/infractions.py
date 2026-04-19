@@ -1,5 +1,7 @@
 """Module for tracking infractions on users."""
 
+from __future__ import annotations
+
 from discord import (
     AutoModAction,
     AutoModRule,

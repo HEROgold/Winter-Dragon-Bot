@@ -1,13 +1,20 @@
 """Pagination components for navigating through large datasets."""
 
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import discord
-from discord.interactions import InteractionMessage
 from herogold.log import LoggerMixin
 
 from .page_navigation_modal import PageNavigationModal
 from .view import View
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from discord.interactions import InteractionMessage
 
 
 class PageSource[T](LoggerMixin):
@@ -140,7 +147,7 @@ class Paginator(View, LoggerMixin):
             disabled=self.current_page == 0,
             style=discord.ButtonStyle.secondary,
         )
-        prev_button.callback = self._prev_button_callback  # ty:ignore[invalid-assignment]
+        prev_button.callback = self._prev_button_callback
         self.add_item(prev_button)
 
         # Add go to page button
@@ -149,7 +156,7 @@ class Paginator(View, LoggerMixin):
             custom_id="paginator_goto",
             style=discord.ButtonStyle.secondary,
         )
-        go_to_button.callback = self._goto_page_callback  # ty:ignore[invalid-assignment]
+        go_to_button.callback = self._goto_page_callback
         self.add_item(go_to_button)
 
         # Add info button
@@ -159,7 +166,7 @@ class Paginator(View, LoggerMixin):
             disabled=True,
             style=discord.ButtonStyle.secondary,
         )
-        info_button.callback = self._info_button_callback  # ty:ignore[invalid-assignment]
+        info_button.callback = self._info_button_callback
         self.add_item(info_button)
 
         # Add next button
@@ -169,7 +176,7 @@ class Paginator(View, LoggerMixin):
             disabled=self.current_page >= self.total_pages - 1,
             style=discord.ButtonStyle.secondary,
         )
-        next_button.callback = self._next_button_callback  # ty:ignore[invalid-assignment]
+        next_button.callback = self._next_button_callback
         self.add_item(next_button)
 
     async def show_page(self, interaction: discord.Interaction, page_number: int) -> None:

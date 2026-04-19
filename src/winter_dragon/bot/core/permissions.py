@@ -1,5 +1,7 @@
 """Module for handling permission related things in Discord bot interactions."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 
 from discord import Interaction, Member, Object, PermissionOverwrite, Permissions, Role

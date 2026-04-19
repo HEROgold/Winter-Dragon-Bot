@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from winter_dragon.config import Config
 
 from . import ui

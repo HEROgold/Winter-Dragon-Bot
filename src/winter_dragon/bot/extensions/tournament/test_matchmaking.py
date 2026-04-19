@@ -3,6 +3,8 @@
 Run this script to test the matchmaking system with example data.
 """
 
+from __future__ import annotations
+
 import contextlib
 
 from winter_dragon.bot.extensions.tournament.matchmaking import MatchmakingSystem

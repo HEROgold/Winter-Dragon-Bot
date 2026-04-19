@@ -1,5 +1,7 @@
 """MatchPlayer table - stores player participation in matches."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlmodel import Field
@@ -34,5 +36,5 @@ class MatchPlayer(SQLModel, table=True):
 
     # Relationships
     if TYPE_CHECKING:
-        match: Mapped["GameMatch"] = relationship(back_populates="players")
-        user: Mapped["Users"] = relationship()
+        match: Mapped[GameMatch] = relationship(back_populates="players")
+        user: Mapped[Users] = relationship()

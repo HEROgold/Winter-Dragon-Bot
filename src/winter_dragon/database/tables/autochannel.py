@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlmodel import Field, Relationship
 
 from winter_dragon.database.extension.model import SQLModel

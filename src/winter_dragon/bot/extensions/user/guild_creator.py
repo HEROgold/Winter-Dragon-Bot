@@ -1,5 +1,7 @@
 """Module to help users create a new guild."""
 
+from __future__ import annotations
+
 import random
 from datetime import UTC, datetime, timedelta
 from textwrap import dedent

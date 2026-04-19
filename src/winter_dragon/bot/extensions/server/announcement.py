@@ -1,5 +1,7 @@
 """A cog for announcing messages."""
 
+from __future__ import annotations
+
 import datetime
 
 import discord
@@ -27,6 +29,6 @@ class Announce(Cog, auto_load=True):
         emb.set_author(name=(member.display_name), icon_url=avatar)
         emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)
-        if self.mention_all:
-            mass_ping = await interaction.channel.send("<@everyone>")  # type: ignore[reportAttributeAccessIssue]
+        if self.mention_all and isinstance(interaction.channel, discord.abc.Messageable):
+            mass_ping = await interaction.channel.send("<@everyone>")
             await mass_ping.delete()

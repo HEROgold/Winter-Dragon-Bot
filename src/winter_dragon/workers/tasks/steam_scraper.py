@@ -182,10 +182,11 @@ class SteamScraperTasks:
                 logger.info(f"✅ Found: {result['title']} - {result['sale_percent']}% off (${result['final_price']})")
             else:
                 logger.warning(f"⚠️ No sale data found for: {url}")
-            return result
         except Exception:
             logger.exception(f"❌ Failed to scrape: {url}")
             raise
+        else:
+            return result
         finally:
             loop.close()
 

@@ -61,14 +61,13 @@ def load_all_list(init_path: Path) -> list[str]:  # noqa: C901
                         for elt in value.elts:
                             if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
                                 items.append(elt.value)
-                            elif isinstance(elt, ast.Str):  # ty:ignore[deprecated]
-                                match elt.s:
+                                match elt.value:
                                     case str():
-                                        items.append(elt.s)
+                                        items.append(elt.value)
                                     case bytes():
-                                        items.append(elt.s.decode("utf8"))
+                                        items.append(elt.value.decode("utf8"))
                                     case int():
-                                        items.append(str(elt.s))
+                                        items.append(str(elt.value))
                         return items
     return []
 

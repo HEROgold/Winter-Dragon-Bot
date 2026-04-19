@@ -1,5 +1,7 @@
 """Package holding all UI related code."""
 
+from __future__ import annotations
+
 from .button import Button
 from .menu import Menu
 from .modal import Modal

@@ -1,5 +1,7 @@
 """PlayerSynergy table - tracks player interaction statistics."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlmodel import Field
@@ -41,6 +43,6 @@ class PlayerSynergy(SQLModel, table=True):
 
     # Relationships
     if TYPE_CHECKING:
-        player1: Mapped["Users"] = relationship(foreign_keys=[player1_id])
-        player2: Mapped["Users"] = relationship(foreign_keys=[player2_id])
-        game: Mapped["Games"] = relationship()
+        player1: Mapped[Users] = relationship(foreign_keys=[player1_id])
+        player2: Mapped[Users] = relationship(foreign_keys=[player2_id])
+        game: Mapped[Games] = relationship()

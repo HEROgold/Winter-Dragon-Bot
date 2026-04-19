@@ -22,8 +22,9 @@ If you need to modify how events are transformed into embeds or how they are
 sent, look in ``winter_dragon.bot.events`` instead of re-adding listeners here.
 """
 
-from collections.abc import AsyncGenerator, Sequence
-from typing import Unpack, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Unpack, cast
 
 import discord
 from discord import (
@@ -38,7 +39,6 @@ from discord.abc import PrivateChannel
 from discord.ext import commands
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-from winter_dragon.bot.core.permissions import PermissionsOverwrites
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.ui.paginator import Paginator
 from winter_dragon.config import Config
@@ -46,6 +46,12 @@ from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
 
 from .log_aggregator import LogAggregator
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Sequence
+
+    from winter_dragon.bot.core.permissions import PermissionsOverwrites
 
 
 MAX_CATEGORY_SIZE = 50

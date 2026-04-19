@@ -10,14 +10,18 @@ import asyncio
 import logging
 import math
 import signal
-import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 from herogold.log import LoggerMixin
 
 from winter_dragon.config import Config
 from winter_dragon.redis.connection import RedisConnection
 from winter_dragon.redis.queue import TaskQueue
+
+
+if TYPE_CHECKING:
+    from asyncio.subprocess import Process
 
 
 class WorkerScalingConfig:
@@ -70,7 +74,7 @@ class WorkerAutoScaler(LoggerMixin):
         """
         self.queue_names = queue_names or [TaskQueue.DEFAULT_QUEUE]
         self.worker_command = worker_command
-        self.worker_processes: list[subprocess.Popen] = []
+        self.worker_processes: list[Process] = []
         self.target_workers = WorkerScalingConfig.min_workers
         self.last_scale_up = 0.0
         self.last_scale_down = 0.0
@@ -255,11 +259,11 @@ class WorkerAutoScaler(LoggerMixin):
                 *self.queue_names,
             ]
 
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.DEVNULL,
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.DEVNULL,
             )
 
             self.worker_processes.append(process)
@@ -287,13 +291,13 @@ class WorkerAutoScaler(LoggerMixin):
 
             # Wait briefly for graceful shutdown
             try:
-                process.wait(timeout=WorkerScalingConfig.grace_period)
+                await process.wait(timeout=WorkerScalingConfig.grace_period)
                 self.logger.info(f"Worker {process.pid} stopped gracefully")
-            except subprocess.TimeoutExpired:
+            except TimeoutError:
                 # Force kill if still running
                 self.logger.warning(f"Worker {process.pid} did not stop gracefully, force killing")
                 process.kill()
-                process.wait()
+                await process.wait()
 
         except Exception:
             self.logger.exception(f"Error stopping worker {process.pid}")
@@ -314,7 +318,7 @@ class WorkerAutoScaler(LoggerMixin):
 
 async def main() -> None:
     """."""
-    import argparse
+    import argparse  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(description="RQ Worker Auto-Scaler")
     parser.add_argument(
@@ -331,21 +335,22 @@ async def main() -> None:
     )
 
     args = parser.parse_args()
+    logger = logging.getLogger("autoscaler")
 
     # Test connection if requested
     if args.test_connection:
         if RedisConnection.test_connection():
-            logging.info("✓ Redis connection successful")
+            logger.info("✓ Redis connection successful")
             sys.exit(0)
         else:
-            logging.info("✗ Redis connection failed")
+            logger.info("✗ Redis connection failed")
             sys.exit(1)
 
     # Create and start auto-scaler
     scaler = WorkerAutoScaler(queue_names=args.queues)
 
     # Handle shutdown signals
-    def signal_handler(signum: int, frame: object) -> None:
+    def signal_handler(signum: int, _frame: object) -> None:
         scaler.logger.info(f"Received signal {signum}, shutting down")
         task = asyncio.create_task(scaler.stop())
         task.add_done_callback(lambda _: None)

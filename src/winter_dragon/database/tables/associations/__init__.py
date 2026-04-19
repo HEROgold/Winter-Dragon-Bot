@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .channel_tags import ChannelTag
 from .guild_commands import GuildCommands
 from .guild_roles import GuildRoles

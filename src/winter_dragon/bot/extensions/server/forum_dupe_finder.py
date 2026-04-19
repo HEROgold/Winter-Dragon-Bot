@@ -1,9 +1,15 @@
 """Module for helping find duplicate forum posts."""
 
-from difflib import SequenceMatcher
+from __future__ import annotations
 
-from winter_dragon.bot.core.bot import WinterDragon
+from difflib import SequenceMatcher
+from typing import TYPE_CHECKING
+
 from winter_dragon.bot.core.cogs import GroupCog
+
+
+if TYPE_CHECKING:
+    from winter_dragon.bot.core.bot import WinterDragon
 
 
 class ForumDupeFinder(GroupCog, auto_load=True):

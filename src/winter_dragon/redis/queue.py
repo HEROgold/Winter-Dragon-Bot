@@ -89,11 +89,11 @@ class TaskQueue(LoggerMixin):
         )
 
         logger.info(
-            f"Enqueued task {func.__name__} to queue '{queue_name}' with job_id={job.id}",  # ty:ignore[unresolved-attribute]
+            f"Enqueued task {func.__name__} to queue '{queue_name}' with job_id={job.id}",
             extra={
                 "job_id": job.id,
                 "queue": queue_name,
-                "function": func.__name__,  # ty:ignore[unresolved-attribute]
+                "function": func.__name__,
                 "timeout": job_timeout,
             },
         )

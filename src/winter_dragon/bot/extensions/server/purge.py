@@ -111,7 +111,7 @@ class Purge(Cog, auto_load=True):
             purged_count < count
             and self.allow_history
             and use_history
-            and isinstance(interaction.channel, PrunableHistory) # pyright: ignore[reportUnnecessaryIsInstance]
+            and isinstance(interaction.channel, PrunableHistory)
         ):
         # fmt: on
             history_messages = await self.history_delete(interaction, count=(count - purged_count))

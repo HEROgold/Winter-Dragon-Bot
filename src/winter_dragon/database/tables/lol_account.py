@@ -1,5 +1,7 @@
 """Database table for League of Legends account linking."""
 
+from __future__ import annotations
+
 from sqlmodel import Field
 
 from winter_dragon.database.extension.model import DiscordID

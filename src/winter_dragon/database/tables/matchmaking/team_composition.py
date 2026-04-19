@@ -1,5 +1,7 @@
 """TeamComposition table - tracks historical team compositions and success."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlmodel import Field
@@ -37,5 +39,5 @@ class TeamComposition(SQLModel, table=True):
 
     # Relationships
     if TYPE_CHECKING:
-        game: Mapped["Games"] = relationship()
-        players: Mapped[list["Users"]] = relationship(secondary="team_composition_player", back_populates="team_compositions")
+        game: Mapped[Games] = relationship()
+        players: Mapped[list[Users]] = relationship(secondary="team_composition_player", back_populates="team_compositions")

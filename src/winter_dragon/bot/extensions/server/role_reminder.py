@@ -1,5 +1,7 @@
 """Module to help remembering user roles when they leave and rejoin the server."""
 
+from __future__ import annotations
+
 import discord
 from discord import app_commands
 from sqlmodel import select
@@ -61,15 +63,25 @@ class AutoReAssign(GroupCog, auto_load=True):
     @app_commands.command(name="enable", description="Enable the AutoReAssign feature")
     async def slash_enable(self, interaction: discord.Interaction) -> None:
         """Enable the AutoReAssign feature for the guild."""
-        self.session.add(AutoReAssignDb(guild_id=interaction.guild.id))  # type: ignore[reportOptionalMemberAccess]
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("This command can only be used in a guild.", ephemeral=True)
+            return
+
+        self.session.add(AutoReAssignDb(guild_id=guild.id))
         self.session.commit()
 
     @app_commands.command(name="disable", description="Disable the AutoReAssign feature")
     async def slash_disable(self, interaction: discord.Interaction) -> None:
         """Disable the AutoReAssign feature for the guild."""
+        guild = interaction.guild
+        if guild is None:
+            await interaction.response.send_message("This command can only be used in a guild.", ephemeral=True)
+            return
+
         self.session.delete(
             self.session.exec(
-                select(AutoReAssignDb).where(AutoReAssignDb.guild_id == interaction.guild.id),  # type: ignore[reportOptionalMemberAccess]
+                select(AutoReAssignDb).where(AutoReAssignDb.guild_id == guild.id),
             ).first(),
         )
         self.session.commit()

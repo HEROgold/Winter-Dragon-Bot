@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .command_invoke_error import AppCommandInvokeError
 from .not_found import CommandNotFoundError
 

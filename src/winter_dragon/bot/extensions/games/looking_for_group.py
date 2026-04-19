@@ -1,5 +1,7 @@
 """Module containing the looking for group cog."""
 
+from __future__ import annotations
+
 from typing import Unpack
 
 import discord

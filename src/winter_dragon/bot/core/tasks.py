@@ -1,13 +1,18 @@
 """Add error handling from discord tasks."""
 
+from __future__ import annotations
+
 import asyncio
-import datetime
 from collections.abc import Callable, Coroutine, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from discord.ext import tasks
 from discord.utils import MISSING
 from herogold.log import LoggerMixin
+
+
+if TYPE_CHECKING:
+    import datetime
 
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
@@ -31,7 +36,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         """Initialize the Loop class."""
         super().__init__(coro, seconds, hours, minutes, time, count, reconnect, name)
 
-    async def _error(self, *args: Exception) -> None:
+    async def _error(self, *args: Any) -> None:
         exception = args[-1]
         self.logger.error(
             "Unhandled exception in internal background task %r.",
@@ -63,7 +68,7 @@ def loop[FT: CoroutineFunction](  # noqa: PLR0913
 
     # FT generic type is used here and in the Loop class to ensure the coroutine function type is preserved.
     def decorator(func: FT) -> Loop[FT]:
-        return Loop[FT](
+        return Loop(
             func,
             seconds=seconds,
             minutes=minutes,

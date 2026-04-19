@@ -1,8 +1,9 @@
 """Module for an Abstract class, for questionnaire like games."""
 
+from __future__ import annotations
+
 from abc import abstractmethod
-from collections.abc import Sequence
-from typing import TypeVar, Unpack
+from typing import TYPE_CHECKING, TypeVar, Unpack
 
 import discord
 from herogold.sentinel import MISSING
@@ -11,6 +12,10 @@ from sqlmodel import SQLModel, select
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.database.tables import Games, Suggestions
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 T = TypeVar("T", bound=SQLModel)

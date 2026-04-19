@@ -1,8 +1,9 @@
 """Module that contains relevant classes to display stats about the guild."""
 
+from __future__ import annotations
+
 import random
 from abc import ABC, ABCMeta, abstractmethod
-from collections.abc import Generator
 from typing import TYPE_CHECKING, NoReturn, Unpack
 
 import discord
@@ -20,6 +21,8 @@ from winter_dragon.database.tables import Channels
 
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from winter_dragon.bot.core.permissions import PermissionsOverwrites
 
 

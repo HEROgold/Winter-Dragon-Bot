@@ -1,11 +1,13 @@
 """Scrapers for individual Steam store app pages."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup, Tag
 
 from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
-from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 from winter_dragon.bot.extensions.user.steam.tags import (
     DISCOUNT_FINAL_PRICE,
     DISCOUNT_PERCENT,
@@ -14,6 +16,10 @@ from winter_dragon.bot.extensions.user.steam.tags import (
     price_to_num,
 )
 from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
+
+
+if TYPE_CHECKING:
+    from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 
 
 class AppScraper(BaseScraper):
@@ -68,11 +74,11 @@ class AppScraper(BaseScraper):
             id=sale_id,
             title=title.get_text(),
             url=str(url),
-            sale_percent=sale_perc.text[1:-1],  # strip '-' and '%' from sale tag
+            sale_percent=int(sale_perc.text[1:-1]),  # strip '-' and '%' from sale tag
             final_price=price_to_num(price.get_text()[:-1].replace(",", ".")),
             update_datetime=datetime.now(tz=UTC),
         )
-        # TODO: Schedule a re-check for this sale to a ~minute after the app-page mentions the sale ending!
+        # TODO(HEROgold): #197 Schedule a re-check for this sale to a ~minute after the app-page mentions the sale ending!
         self.logger.info(f"SteamSale found: {steam_sale=}")
         if bool(soup.find("div", class_="content")):
             SteamSaleProperties(steam_sale_id=sale_id, property=SaleTypes.DLC)

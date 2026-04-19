@@ -1,3 +1,7 @@
+"""Defines protocols and utilities for interaction handling in the bot's UI components."""
+
+from __future__ import annotations
+
 from collections.abc import Callable
 from types import CoroutineType
 from typing import Protocol

@@ -1,5 +1,7 @@
 """Common helpers for Steam scraping implementations."""
 
+from __future__ import annotations
+
 import asyncio
 
 import requests

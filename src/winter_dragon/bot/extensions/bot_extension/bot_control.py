@@ -1,5 +1,7 @@
 """Module that contains interfaces to control the bot using discord."""
 
+from __future__ import annotations
+
 from typing import Unpack
 
 import discord

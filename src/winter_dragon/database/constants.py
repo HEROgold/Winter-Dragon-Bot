@@ -1,5 +1,7 @@
 """Module for containing constants and configuration for the database package."""
 
+from __future__ import annotations
+
 from sqlalchemy import URL
 from sqlmodel import Session, create_engine
 

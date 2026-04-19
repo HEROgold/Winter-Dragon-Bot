@@ -1,5 +1,7 @@
 """PlayerGameStats table - aggregated statistics per player per game."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlmodel import Field
@@ -39,5 +41,5 @@ class PlayerGameStats(SQLModel, table=True):
 
     # Relationships
     if TYPE_CHECKING:
-        user: Mapped["Users"] = relationship()
-        game: Mapped["Games"] = relationship()
+        user: Mapped[Users] = relationship()
+        game: Mapped[Games] = relationship()

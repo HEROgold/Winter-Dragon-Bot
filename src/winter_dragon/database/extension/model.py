@@ -3,16 +3,14 @@
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
 
-import logging
-from collections.abc import Sequence
+from __future__ import annotations
+
 from types import NoneType
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
 from herogold.log import LoggerMixin
 from herogold.typing.check import contains_sub_type
-from pydantic import ConfigDict
 from sqlalchemy import BigInteger, ScalarResult
-from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
 
@@ -20,7 +18,15 @@ from winter_dragon.database.constants import session as db_session
 from winter_dragon.database.errors import AlreadyExistsError, NotFoundError
 
 
-models: set[type["BaseModel"]] = set()
+if TYPE_CHECKING:
+    import logging
+    from collections.abc import Sequence
+
+    from pydantic import ConfigDict
+    from sqlalchemy.orm import Mapped
+
+
+models: set[type[BaseModel]] = set()
 
 
 class ModelLogger(LoggerMixin):

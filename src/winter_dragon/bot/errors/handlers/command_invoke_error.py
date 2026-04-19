@@ -1,5 +1,7 @@
 """Handler for CommandInvokeError - catches unhandled exceptions in commands."""
 
+from __future__ import annotations
+
 from discord.app_commands.errors import CommandInvokeError
 
 from .base import BaseError

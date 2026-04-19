@@ -1,11 +1,17 @@
 """UI primitives built on top of discord.py modals."""
 
-import asyncio
+from __future__ import annotations
 
-from discord import Interaction
+import asyncio
+from typing import TYPE_CHECKING
+
 from discord.ui import Modal as DiscordModal
 from discord.utils import MISSING
 from herogold.log import LoggerMixin
+
+
+if TYPE_CHECKING:
+    from discord import Interaction
 
 
 class Modal(DiscordModal, LoggerMixin):

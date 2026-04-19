@@ -8,7 +8,7 @@ Discord scheduled event management.
 
 from __future__ import annotations
 
-from typing import Unpack
+from typing import TYPE_CHECKING, Protocol, Unpack, cast
 
 import cassiopeia as cass
 import discord
@@ -17,6 +17,60 @@ from sqlmodel import select
 
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.extensions.games.clash_settings import ClashSettings
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+
+class CassiopeiaEnumLike(Protocol):
+    """Minimal enum-like object from Cassiopeia with a .value property."""
+
+    value: str
+
+
+class CassiopeiaChampion(Protocol):
+    """Minimal champion shape returned by Cassiopeia."""
+
+    name: str
+
+
+class CassiopeiaLeagueEntry(Protocol):
+    """Minimal ranked league entry shape."""
+
+    queue: CassiopeiaEnumLike
+    tier: CassiopeiaEnumLike
+    division: CassiopeiaEnumLike
+    wins: int
+    losses: int
+
+
+class CassiopeiaChampionMastery(Protocol):
+    """Minimal champion mastery shape from Cassiopeia."""
+
+    champion: CassiopeiaChampion
+    points: int
+
+
+class CassiopeiaSummoner(Protocol):
+    """Minimal League of Legends summoner shape used by the bot."""
+
+    league_entries: Sequence[CassiopeiaLeagueEntry]
+    champion_masteries: Sequence[CassiopeiaChampionMastery]
+
+
+class CassiopeiaAccount(Protocol):
+    """Minimal League of Legends account shape used by the bot."""
+
+    def puuid(self) -> str: ...
+
+
+class CassiopeiaSummonerFactory(Protocol):
+    """Callable Cassiopeia summoner constructor interface."""
+
+    def __call__(self, *args: object, **kwargs: object) -> CassiopeiaSummoner: ...
+
+
 from winter_dragon.bot.extensions.games.riot_clash_api import (
     DiscordClashEventManager,
     RiotClashAPIError,
@@ -255,7 +309,7 @@ class Clash(GroupCog, auto_load=True):
                     team_data.append((player.display_name, "Error", "N/A"))
                     continue
 
-                summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
+                summoner = cast("CassiopeiaSummonerFactory", cass.Summoner)(puuid=lol_account.puuid, region=lol_account.region)
 
                 # Get ranked tier
                 ranked_tier = "Unranked"
@@ -351,7 +405,7 @@ class Clash(GroupCog, auto_load=True):
                 await interaction.followup.send("Linked account is missing PUUID information.")
                 return
 
-            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
+            summoner = cast("CassiopeiaSummonerFactory", cass.Summoner)(puuid=lol_account.puuid, region=lol_account.region)
 
             embed = discord.Embed(
                 title=f"Clash Stats - {lol_account.summoner_name}#{lol_account.tag_line}",
@@ -431,7 +485,7 @@ class Clash(GroupCog, auto_load=True):
                 await interaction.followup.send("Linked account is missing PUUID information.")
                 return
 
-            summoner = cass.Summoner(puuid=lol_account.puuid, region=lol_account.region)
+            summoner = cast("CassiopeiaSummonerFactory", cass.Summoner)(puuid=lol_account.puuid, region=lol_account.region)
 
             # Get user's champion mastery for the role
             masteries = summoner.champion_masteries[:20]

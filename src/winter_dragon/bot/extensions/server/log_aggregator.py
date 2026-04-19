@@ -8,6 +8,8 @@ The aggregator maintains an in-memory cache of recent logs and provides paginati
 through the EmbedPageSource interface used by the Paginator view.
 """
 
+from __future__ import annotations
+
 from collections import deque
 from datetime import UTC, datetime
 from typing import NamedTuple

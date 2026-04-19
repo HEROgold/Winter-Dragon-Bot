@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .associations import (
     AssociationUserCommand,
     AssociationUserHangman,
@@ -36,6 +38,11 @@ from .steamsale import SteamSale
 from .steamuser import SteamUsers
 from .suggestion import Suggestions
 from .sync_ban import SyncBanGuild, SyncBanUser
+from .tournament_signup import (
+    TournamentSignupConfig,
+    TournamentSignupEvent,
+    TournamentSignupParticipant,
+)
 from .user import Users
 from .welcome import Welcome
 from .wyr_question import WyrQuestion
@@ -78,6 +85,9 @@ __all__ = [
     "Suggestions",
     "SyncBanGuild",
     "SyncBanUser",
+    "TournamentSignupConfig",
+    "TournamentSignupEvent",
+    "TournamentSignupParticipant",
     "UserRoles",
     "Users",
     "Welcome",

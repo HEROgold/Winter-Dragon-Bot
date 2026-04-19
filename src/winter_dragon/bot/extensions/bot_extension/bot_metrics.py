@@ -1,5 +1,7 @@
 """Module for bot performance metrics and monitoring."""
 
+from __future__ import annotations
+
 import datetime
 import time
 from typing import Unpack
@@ -29,7 +31,7 @@ class BotMetrics(GroupCog, auto_load=True):
 
     timestamps: list[float]
     cpu_percentages: list[float]
-    net_io_counters: list[psutil._ntp.snetio]  # pyright: ignore[reportAttributeAccessIssue]
+    net_io_counters: list[psutil._ntp.snetio]
     ram_percentages: list[float]
     bytes_sent: list[int]
     bytes_received: list[int]

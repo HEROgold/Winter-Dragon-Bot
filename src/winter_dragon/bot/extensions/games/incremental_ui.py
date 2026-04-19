@@ -1,5 +1,7 @@
 """UI components for the incremental game."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import discord
@@ -25,8 +27,8 @@ class GeneratorShopMenu(Menu, SessionMixin):
         self,
         interaction: Interaction,
         user_id: int,
-        generator_manager: "GeneratorManager",
-        currency_manager: "CurrencyManager",
+        generator_manager: GeneratorManager,
+        currency_manager: CurrencyManager,
         timeout: float = 300.0,
     ) -> None:
         """Initialize the generator shop menu."""
@@ -88,6 +90,8 @@ class GeneratorShopMenu(Menu, SessionMixin):
             self.currency_manager.add_currency(self.user_id, currency_name, -generator.cost_amount)
 
             # Add or increment user generator
+            assert generator.id is not None
+
             user_gen = self.session.exec(
                 select(AssociationUserGenerator).where(
                     AssociationUserGenerator.user_id == self.user_id,
@@ -100,7 +104,7 @@ class GeneratorShopMenu(Menu, SessionMixin):
             else:
                 user_gen = AssociationUserGenerator(
                     user_id=self.user_id,
-                    generator_id=generator.id,  # pyright: ignore[reportArgumentType]
+                    generator_id=generator.id,
                     count=1,
                 )
                 self.session.add(user_gen)
@@ -145,7 +149,7 @@ class ProgressMenu(Menu, SessionMixin):
         self,
         interaction: Interaction,
         user_id: int,
-        generator_manager: "GeneratorManager",
+        generator_manager: GeneratorManager,
         timeout: float = 300.0,
     ) -> None:
         """Initialize the progress menu.

@@ -109,7 +109,11 @@ class AutomaticChannels(GroupCog, auto_load=True):
             )
 
             await member.move_to(voice_channel)
-            await voice_channel.set_permissions(self.bot.user, connect=True, read_messages=True)  # type: ignore  # noqa: PGH003
+            bot_member = member.guild.me
+            if bot_member is None:
+                msg = "Bot member not available in guild"
+                raise RuntimeError(msg)
+            await voice_channel.set_permissions(bot_member, connect=True, read_messages=True)
             await voice_channel.set_permissions(member, connect=True, read_messages=True)
             await voice_channel.edit(name=name, user_limit=limit)
             self.session.add(

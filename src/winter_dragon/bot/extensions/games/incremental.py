@@ -1,5 +1,7 @@
 """Incremental game cog for the Winter Dragon bot."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -142,7 +144,7 @@ class RateManager:
         if rate:
             rate.per_second = per_second
         else:
-            rate = GeneratorRates(generator_id=generator_id, currency=currency, per_second=per_second)
+            rate = GeneratorRates(generator_id=generator_id, currency=currency, amount=per_second)
             self.session.add(rate)
 
         self.session.commit()

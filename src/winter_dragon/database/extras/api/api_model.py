@@ -1,11 +1,17 @@
 """Module that provides a base APIModel class for API interactions with SQLModel instances."""
 
+from __future__ import annotations
+
 import logging
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, status
 
 from winter_dragon.database.extension.model import BaseModel
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class APIModel[T: type[BaseModel]]:

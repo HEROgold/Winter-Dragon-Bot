@@ -1,5 +1,7 @@
 """Module containing a cog for showing bot uptime."""
 
+from __future__ import annotations
+
 import discord
 from discord import app_commands
 

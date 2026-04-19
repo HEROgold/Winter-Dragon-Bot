@@ -1,9 +1,10 @@
 """Module for managing teams and respective voice channels."""
 
+from __future__ import annotations
+
 import math
 import random
-from collections.abc import Sequence
-from typing import TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import discord
 from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
@@ -14,6 +15,10 @@ from winter_dragon.bot.core.tasks import loop
 from winter_dragon.config import Config
 from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.tables import Channels
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class TeamDict(TypedDict):

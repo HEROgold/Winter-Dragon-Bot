@@ -1,5 +1,7 @@
 """."""
 
+from __future__ import annotations
+
 import logging
 
 from discord.ext.prometheus import PrometheusCog

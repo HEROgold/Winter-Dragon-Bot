@@ -1,11 +1,12 @@
 """Main file for the bot."""
 
+from __future__ import annotations
+
 import asyncio
 import signal
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import discord
 from discord.ext import commands
 
 from winter_dragon.bot.core.bot import INTENTS, WinterDragon
@@ -14,6 +15,10 @@ from winter_dragon.bot.core.settings import Settings
 from winter_dragon.config import Config
 from winter_dragon.database import SQLModel
 from winter_dragon.database.constants import engine
+
+
+if TYPE_CHECKING:
+    import discord
 
 
 bot = WinterDragon(

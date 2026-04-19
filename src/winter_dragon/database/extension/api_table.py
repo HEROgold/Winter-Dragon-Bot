@@ -1,12 +1,17 @@
 """Extension for databases, integrating api's with the database layer."""
 
+from __future__ import annotations
+
 from abc import abstractmethod
-from typing import Any, ClassVar, Required, Self, TypedDict, Unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
 
 import requests
-from pydantic import ConfigDict
 
 from .model import SQLModel
+
+
+if TYPE_CHECKING:
+    from pydantic import ConfigDict
 
 
 class ApiArguments(TypedDict):
@@ -92,7 +97,7 @@ class ApiTable(SQLModel, table=True):
         response.raise_for_status()
         return response
 
-    def validate(self) -> None:  # pyright: ignore[reportIncompatibleMethodOverride] # ty:ignore[invalid-method-override]  BaseModel.validate from pydantic is deprecated. We can use it as we require for validation of required parameters.
+    def validate(self) -> None:
         """Validate that all required parameters are set."""
         missing_params = [param for param in self.required_params if not hasattr(self, param) or getattr(self, param) is None]
         if missing_params:

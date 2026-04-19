@@ -1,5 +1,7 @@
 """Voting views and components for tournament system."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import discord
@@ -18,7 +20,7 @@ if TYPE_CHECKING:
 class GameVoteSelect(Select):
     """Select menu for voting on games."""
 
-    def __init__(self, available_games: list[str], vote_tracker: "TournamentVote") -> None:
+    def __init__(self, available_games: list[str], vote_tracker: TournamentVote) -> None:
         """Initialize the game vote select menu.
 
         Args:
@@ -78,7 +80,7 @@ class GameVoteSelect(Select):
 class BracketFormatSelect(Select):
     """Select menu for choosing bracket format."""
 
-    def __init__(self, available_formats: list[str], vote_tracker: "TournamentVote") -> None:
+    def __init__(self, available_formats: list[str], vote_tracker: TournamentVote) -> None:
         """Initialize the bracket format select menu.
 
         Args:
@@ -139,7 +141,7 @@ class BracketFormatSelect(Select):
 class JoinTournamentButton(Button):
     """Button for joining the tournament after voting concludes."""
 
-    def __init__(self, vote_tracker: "TournamentVote") -> None:
+    def __init__(self, vote_tracker: TournamentVote) -> None:
         """Initialize the join tournament button.
 
         Args:
@@ -186,7 +188,7 @@ class JoinTournamentButton(Button):
 class ConcludeVotingButton(Button):
     """Button for concluding the voting phase (admin only)."""
 
-    def __init__(self, vote_tracker: "TournamentVote", admin_id: int) -> None:
+    def __init__(self, vote_tracker: TournamentVote, admin_id: int) -> None:
         """Initialize the conclude voting button.
 
         Args:
@@ -259,7 +261,7 @@ class ConcludeVotingButton(Button):
 class StartTournamentButton(Button):
     """Button for starting the tournament and generating brackets."""
 
-    def __init__(self, vote_tracker: "TournamentVote", admin_id: int) -> None:
+    def __init__(self, vote_tracker: TournamentVote, admin_id: int) -> None:
         """Initialize the start tournament button.
 
         Args:
@@ -326,7 +328,7 @@ class TournamentVotingView(View, LoggerMixin):
 
     def __init__(
         self,
-        vote_tracker: "TournamentVote",
+        vote_tracker: TournamentVote,
         available_games: list[str],
         available_formats: list[str] | None = None,
         admin_id: int = 0,
