@@ -23,7 +23,7 @@ ignore = [
 
 [lint.isort]
 required-imports = [
-    "from __future__ import annotations",
+  "from __future__ import annotations"
 ]
 lines-after-imports = 2
 
