@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 from typing import Self
 
@@ -26,5 +26,4 @@ class Games(SQLModel, table=True):
         inst = cls(name=name)
         cls.session.add(inst)
         cls.session.commit()
-        cls.id: int  # noqa: B032
         return inst

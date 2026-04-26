@@ -1,10 +1,10 @@
 """Database tables for tournament signup and registration."""
 
-from __future__ import annotations
+
 
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, Column, ForeignKey
+from sqlalchemy import BigInteger
 from sqlmodel import Field, SQLModel
 
 from winter_dragon.database.keys import get_foreign_key
@@ -39,7 +39,9 @@ class TournamentSignupParticipant(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True, index=True)
     event_id: int = Field(
-        sa_column=Column(BigInteger, ForeignKey(get_foreign_key(TournamentSignupEvent)), nullable=False),
+        foreign_key=get_foreign_key(TournamentSignupEvent),
+        sa_type=BigInteger,
+        nullable=False,
         index=True,
     )
     user_id: int = Field(sa_type=BigInteger, index=True)

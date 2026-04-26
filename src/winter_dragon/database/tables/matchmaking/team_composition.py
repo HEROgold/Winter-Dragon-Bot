@@ -1,6 +1,6 @@
 """TeamComposition table - tracks historical team compositions and success."""
 
-from __future__ import annotations
+
 
 from typing import TYPE_CHECKING
 
@@ -10,8 +10,7 @@ from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, relationship
 
     from winter_dragon.database.tables.game import Games
     from winter_dragon.database.tables.user import Users
@@ -26,8 +25,6 @@ class TeamComposition(SQLModel, table=True):
     Players are linked via TeamCompositionPlayer association table.
     """
 
-    __tablename__ = "team_composition"
-
     game_id: int = Field(foreign_key=get_foreign_key(Games), index=True)
 
     # Statistics for this exact composition
@@ -38,6 +35,5 @@ class TeamComposition(SQLModel, table=True):
     avg_team_score: float = Field(default=0.0)
 
     # Relationships
-    if TYPE_CHECKING:
         game: Mapped[Games] = relationship()
         players: Mapped[list[Users]] = relationship(secondary="team_composition_player", back_populates="team_compositions")

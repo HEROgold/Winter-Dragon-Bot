@@ -1,6 +1,6 @@
 """Association table for team composition players."""
 
-from __future__ import annotations
+
 
 from sqlmodel import Field
 
@@ -15,8 +15,6 @@ class TeamCompositionPlayer(SQLModel, table=True):
 
     This represents a many-to-many relationship between team compositions and users.
     """
-
-    __tablename__ = "team_composition_player"
 
     composition_id: int = Field(foreign_key=get_foreign_key(TeamComposition), primary_key=True, index=True)
     user_id: int = Field(foreign_key=get_foreign_key(Users), primary_key=True, index=True)

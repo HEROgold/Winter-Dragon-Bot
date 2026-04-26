@@ -1,16 +1,12 @@
-from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
 
+from datetime import datetime
+from typing import Self
+
+from discord import AuditLogEntry
 from sqlmodel import Field
 
 from winter_dragon.database.extension.model import DiscordID
-
-
-if TYPE_CHECKING:
-    from datetime import datetime
-
-    from discord import AuditLogEntry
 
 
 class AuditLog(DiscordID, table=True):

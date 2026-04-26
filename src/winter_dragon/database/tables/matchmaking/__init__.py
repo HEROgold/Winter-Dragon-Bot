@@ -1,6 +1,6 @@
 """Matchmaking database tables module."""
 
-from __future__ import annotations
+
 
 from .game_match import GameMatch
 from .match_player import MatchPlayer

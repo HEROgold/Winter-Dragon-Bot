@@ -65,6 +65,7 @@
         "jsonify",
         "keycap",
         "levelname",
+        "lobbystatus",
         "matplotlib",
         "MEMBERJOINED",
         "MEMBERLEFT",

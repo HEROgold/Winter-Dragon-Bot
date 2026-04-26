@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 from datetime import UTC, datetime
 from functools import partial
@@ -13,8 +13,7 @@ from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.user import Users
 
 
-if TYPE_CHECKING:
-    from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.elements import ColumnElement
 
 
 class AssociationUserCommand(SQLModel, table=True):

@@ -1,6 +1,6 @@
 """MatchTeam table - stores team-level statistics for matches."""
 
-from __future__ import annotations
+
 
 from typing import TYPE_CHECKING
 
@@ -10,8 +10,7 @@ from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, relationship
 
     from winter_dragon.database.tables.matchmaking.game_match import GameMatch
 else:
@@ -24,13 +23,10 @@ class MatchTeam(SQLModel, table=True):
     6NF: Only facts about team performance in a specific match.
     """
 
-    __tablename__ = "match_team"
-
     match_id: int = Field(foreign_key=get_foreign_key(GameMatch), index=True)
     team_number: int = Field(default=1)
     team_score: int | None = Field(default=None)  # Total team score
     won: bool = Field(default=False)
 
     # Relationships
-    if TYPE_CHECKING:
         match: Mapped[GameMatch] = relationship(back_populates="teams")

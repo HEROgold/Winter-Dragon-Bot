@@ -1,19 +1,12 @@
-from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from discord import AuditLogAction
 from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Session, col, select
 
+from winter_dragon.database.channel_types import Tags
 from winter_dragon.database.extension.model import DiscordID
 from winter_dragon.database.keys import get_foreign_key
 from winter_dragon.database.tables.guild import Guilds
-
-
-if TYPE_CHECKING:
-    from discord import AuditLogAction
-
-    from winter_dragon.database.channel_types import Tags
 
 
 class Channels(DiscordID, table=True):
@@ -102,7 +95,7 @@ class Channels(DiscordID, table=True):
         return count == len(tags)
 
     @staticmethod
-    def get_by_tag(session: Session, tag: Tags, guild_id: int | None = None) -> list[Channels]:
+    def get_by_tag(session: Session, tag: Tags, guild_id: int | None = None) -> list["Channels"]:
         """Get all channels with a specific tag, optionally filtered by guild."""
         from winter_dragon.database.tables.associations.channel_tags import ChannelTag
 
@@ -120,7 +113,7 @@ class Channels(DiscordID, table=True):
         guild_id: int | None = None,
         *,
         match_all: bool = False,
-    ) -> list[Channels]:
+    ) -> list["Channels"]:
         """Get all channels with specific tags, optionally filtered by guild.
 
         If match_all is True, only channels that have all specified tags are returned. (AND)

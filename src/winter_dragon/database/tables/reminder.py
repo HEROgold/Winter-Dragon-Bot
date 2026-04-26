@@ -1,16 +1,13 @@
-from __future__ import annotations
 
-from typing import TYPE_CHECKING
+
+
+from datetime import datetime, timedelta
 
 from sqlmodel import Field
 
 from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 from winter_dragon.database.tables.user import Users
-
-
-if TYPE_CHECKING:
-    from datetime import datetime, timedelta
 
 
 class Reminder(SQLModel, table=True):

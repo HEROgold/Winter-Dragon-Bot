@@ -1,4 +1,4 @@
-from __future__ import annotations
+
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field
