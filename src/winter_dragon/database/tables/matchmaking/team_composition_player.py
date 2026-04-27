@@ -1,7 +1,5 @@
 """Association table for team composition players."""
 
-
-
 from sqlmodel import Field
 
 from winter_dragon.database.extension.model import SQLModel
