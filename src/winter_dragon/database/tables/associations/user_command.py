@@ -1,5 +1,3 @@
-
-
 from datetime import UTC, datetime
 from functools import partial
 from typing import TYPE_CHECKING, cast
@@ -13,7 +11,8 @@ from winter_dragon.database.tables.command import Commands
 from winter_dragon.database.tables.user import Users
 
 
-from sqlalchemy.sql.elements import ColumnElement
+if TYPE_CHECKING:
+    from sqlalchemy.sql.elements import ColumnElement
 
 
 class AssociationUserCommand(SQLModel, table=True):

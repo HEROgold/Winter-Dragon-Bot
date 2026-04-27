@@ -1,6 +1,3 @@
-
-
-
 class NotFoundError(ValueError):
     """Custom exception for records not found in the database."""
 
