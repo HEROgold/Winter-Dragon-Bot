@@ -1,17 +1,13 @@
 """PlayerSynergy table - tracks player interaction statistics."""
 
-
-
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 
-
-from sqlalchemy.orm import Mapped, relationship
-
+if TYPE_CHECKING:
     from winter_dragon.database.tables.game import Games
     from winter_dragon.database.tables.user import Users
 else:
@@ -39,6 +35,6 @@ class PlayerSynergy(SQLModel, table=True):
     rivalry_factor: float = Field(default=0.0)  # How often player1 beats player2
 
     # Relationships
-        player1: Mapped[Users] = relationship(foreign_keys="PlayerSynergy.player1_id")
-        player2: Mapped[Users] = relationship(foreign_keys="PlayerSynergy.player2_id")
-        game: Mapped[Games] = relationship()
+    player1: Users = Relationship(sa_relationship_kwargs={"foreign_keys": "PlayerSynergy.player1_id"})
+    player2: Users = Relationship(sa_relationship_kwargs={"foreign_keys": "PlayerSynergy.player2_id"})
+    game: Games = Relationship()

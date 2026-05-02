@@ -10,6 +10,8 @@ from winter_dragon.database.tables.channel import Channels
 class ChannelAudit(SQLModel, table=True):
     """Association table linking channels to their audit log settings."""
 
+    model_config = {"arbitrary_types_allowed": True}
+
     # This means that the channel MUST have LOGS tag as well.
 
     channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels), ondelete="CASCADE"), primary_key=True))

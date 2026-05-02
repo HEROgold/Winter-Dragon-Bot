@@ -1,22 +1,17 @@
 """MatchPlayer table - stores player participation in matches."""
 
-
-
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 
-
-from sqlalchemy.orm import Mapped, relationship
-
+if TYPE_CHECKING:
     from winter_dragon.database.tables.matchmaking.game_match import GameMatch
     from winter_dragon.database.tables.user import Users
 else:
     from winter_dragon.database.tables import Users
-    from winter_dragon.database.tables.matchmaking import GameMatch
 
 
 class MatchPlayer(SQLModel, table=True):
@@ -25,12 +20,12 @@ class MatchPlayer(SQLModel, table=True):
     6NF: Only facts about player participation in this specific match.
     """
 
-    match_id: int = Field(foreign_key=get_foreign_key(GameMatch), index=True)
+    match_id: int = Field(foreign_key="gamematch.id", index=True)
     user_id: int = Field(foreign_key=get_foreign_key(Users), index=True)
     team_number: int = Field(default=1)  # Which team they were on (1, 2, etc.)
     individual_score: int | None = Field(default=None)  # Score/kills/points in this match
     won: bool = Field(default=False)
 
     # Relationships
-        match: Mapped[GameMatch] = relationship(back_populates="players")
-        user: Mapped[Users] = relationship()
+    match: "GameMatch" = Relationship(back_populates="players")
+    user: Users = Relationship()

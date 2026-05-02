@@ -1,17 +1,13 @@
 """PlayerGameStats table - aggregated statistics per player per game."""
 
-
-
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field
+from sqlmodel import Field, Relationship
 
 from winter_dragon.database.extension.model import SQLModel
 from winter_dragon.database.keys import get_foreign_key
 
-
-from sqlalchemy.orm import Mapped, relationship
-
+if TYPE_CHECKING:
     from winter_dragon.database.tables.game import Games
     from winter_dragon.database.tables.user import Users
 else:
@@ -37,5 +33,5 @@ class PlayerGameStats(SQLModel, table=True):
     skill_rating: float = Field(default=1000.0)  # ELO-like rating
 
     # Relationships
-        user: Mapped[Users] = relationship()
-        game: Mapped[Games] = relationship()
+    user: Users = Relationship()
+    game: Games = Relationship()
