@@ -97,6 +97,39 @@ services:
     networks:
       - default
 
+  frontend:
+    container_name: winter-dragon-frontend
+    build:
+      context: ./frontend
+    environment:
+      - PORT=3000
+      - API_BACKEND_URL=http://api:8001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    container_name: winter-dragon-api
+    build:
+      context: .
+      dockerfile: bot-dockerfile
+    command: uv run python -m winter_dragon.bot.api.server
+    environment:
+      - DATABASE_URL=postgresql://postgres:fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3@postgres:5432/winter_dragon
+      - REDIS_HOST=redis
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-your-client-id}
+      - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI:-http://localhost:3000}
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   redis_data:
     driver: local
