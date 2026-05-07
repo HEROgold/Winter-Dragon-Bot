@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Header, status
+from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel
+
 
 router = APIRouter(prefix="/api", tags=["oauth"])
 
@@ -77,8 +78,7 @@ def _verify_token(authorization: str | None) -> str:
 async def discord_callback(
     request: OAuthCallbackRequest,
 ) -> OAuthCallbackResponse:
-    """
-    Handle Discord OAuth callback.
+    """Handle Discord OAuth callback.
 
     In production, exchange code for token via Discord API.
     """
@@ -119,7 +119,7 @@ async def discord_login() -> dict[str, str]:
 @router.get("/user/{discord_id}")
 async def get_user(
     discord_id: str,
-    authorization: str | None = Header(None),
+    authorization: Annotated[str | None, Header()] = None,
 ) -> UserDataResponse:
     """Fetch user profile and data summary."""
     user_id = _verify_token(authorization)
@@ -143,7 +143,7 @@ async def get_user(
 async def delete_user_data(
     discord_id: str,
     request: DeleteDataRequest,
-    authorization: str | None = Header(None),
+    authorization: Annotated[str | None, Header()] = None,
 ) -> DeleteDataResponse:
     """Soft delete user data with audit trail."""
     user_id = _verify_token(authorization)
@@ -164,7 +164,7 @@ async def delete_user_data(
 @router.get("/user/{discord_id}/audit")
 async def get_user_audit(
     discord_id: str,
-    authorization: str | None = Header(None),
+    authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
     """Fetch user data deletion audit trail."""
     user_id = _verify_token(authorization)

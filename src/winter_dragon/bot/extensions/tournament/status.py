@@ -1,4 +1,5 @@
 """Module for managing the status of a tournament match using a state machine."""
+
 from __future__ import annotations
 
 from enum import Enum, auto
@@ -18,6 +19,7 @@ class MatchStatus(Enum):
     POST = auto()
     FORFEIT = auto()
 
+
 class Events(Enum):
     """Events that can occur during a match, used for state transitions in the state machine."""
 
@@ -28,8 +30,10 @@ class Events(Enum):
     GAME_ENDED = auto()
     FORFEIT = auto()
 
+
 @dataclass
 class Context:
     """Context for a match, can hold any relevant information about the match."""
+
 
 match_controller = StateMachine[MatchStatus, Events, Context]()
