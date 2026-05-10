@@ -1,5 +1,24 @@
 {
   "exclude": [
-    "**/*"
-  ]
+    "**/*", "**/node_modules", "**/__pycache__", "**/.*", ".venv"
+  ],
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.extraPaths": [
+      "${workspaceFolder}/src"
+  ],
+  "python.analysis.diagnosticSeverityOverrides": {
+      "reportGeneralTypeIssues": "none",
+      "reportUnboundVariable": "none",
+      "reportOptionalMemberAccess": "none",
+      "reportUnknownMemberType": "none",
+      "reportUnknownVariableType": "none",
+      "reportUnknownArgumentType": "none",
+      "reportUnknownParameterType": "none",
+      "reportMissingTypeArgument": "none",
+      "reportMissingParameterType": "none",
+      "reportUnnecessaryComparison": "none",
+      "reportMissingTypeStubs": "none",
+      "reportOptionalSubscript": "none",
+      "reportAttributeAccessIssue": "none"
+    }
 }

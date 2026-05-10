@@ -1,6 +1,6 @@
 indent-width = 4
 line-length = 128
-target-version = "py313"
+target-version = "py315"
 unsafe-fixes = true
 
 [format]
@@ -12,22 +12,10 @@ skip-magic-trailing-comma = false
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
-ignore = [
-  "COM812",
-  "G004", # Allow f-string in log messages
-  "D203", # Prefer blank line before class (use D203)
-  "D213", # Prefer multi-line summary on second line (use D213)
-  "D105", # Missing docstring in magic method. We don't care about documenting dunder str, repr etc. methods
-  "TD003" # We don't mind TODO's not having an issue link. Extensions like TODO Tree in VSCode can help find them.
-]
+ignore = []
 
 [lint.isort]
-required-imports = []
+required-imports = [
+  "from __future__ import annotations",
+]
 lines-after-imports = 2
-
-[lint.per-file-ignores]
-"*/__init__.py" = ["D"]
-"*/tables/*/*.py" = ["D"] # ignore docstring for db table models.
-"*/tables/*.py" = ["D"] # ignore docstring for db table models.
-"*/bot/events/base/factory.py" = ["E701"]
-"*/database/tables/*.py" = ["PLC0415"] # Allow lazy imports to avoid circular dependencies

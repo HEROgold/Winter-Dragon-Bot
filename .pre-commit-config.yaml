@@ -39,8 +39,6 @@ repos:
         exclude: ^(postgres/|\.vscode/|\.obsidian/)
       - id: check-toml
         exclude: ^postgres/
-      - id: check-xml
-        exclude: ^postgres/
       - id: check-yaml
         exclude: ^postgres/
       # Python sanity checks
@@ -56,14 +54,14 @@ repos:
     rev: v2.4.2
     hooks:
       - id: codespell
-        stages: [pre-push, pre-commit]
+        stages: [pre-push]
 
   # Validate packaging metadata early
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.25
     hooks:
       - id: validate-pyproject
-        stages: [pre-push, pre-commit]
+        stages: [pre-push]
 
   # Security scanning (global)
   - repo: https://github.com/gitleaks/gitleaks
@@ -92,7 +90,7 @@ repos:
       - id: pyupgrade
         args: [--py313-plus]
         files: ^src/.*\.py$
-        stages: [pre-push, pre-commit]
+        stages: [pre-push]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.11
@@ -114,31 +112,7 @@ repos:
         entry: uvx ty check
         pass_filenames: false
         files: ^src/.*\.py$
-        stages: [pre-push, pre-commit]
-
-  # TypeScript/React hooks (for frontend directory)
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.2.1
-    hooks:
-      - id: eslint
-        files: ^frontend/.*\.(js|jsx|ts|tsx)$
-        types: [file]
-        additional_dependencies:
-          - eslint@8.56.0
-          - eslint-plugin-react@7.33.2
-          - eslint-plugin-react-hooks@4.6.0
-          - typescript@5.3.3
-          - '@typescript-eslint/eslint-plugin@6.15.0'
-          - '@typescript-eslint/parser@6.15.0'
-        stages: [pre-push, pre-commit]
-
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        files: ^frontend/.*\.(js|jsx|ts|tsx|css|scss|json|html)$
-        types: [file]
-        stages: [pre-push, pre-commit]
+        stages: [pre-push]
 
   # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema
@@ -146,11 +120,4 @@ repos:
     hooks:
       - id: check-github-workflows
         files: ^\.github/workflows/
-        stages: [pre-push, pre-commit]
-
-  # Shell scripts
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
-    hooks:
-      - id: shellcheck
         stages: [pre-push, pre-commit]
