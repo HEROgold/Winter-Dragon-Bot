@@ -28,9 +28,25 @@ declare module "react-dom/client" {
   };
 }
 
+interface TournamentPlayer {
+  name: string;
+  intendedPick: string;
+}
+
+interface TournamentTeam {
+  players: TournamentPlayer[];
+}
+
+interface TournamentSnapshot {
+  guildId: number;
+  status: string;
+  teams: TournamentTeam[];
+}
+
 declare module "*.tsrx" {
   export const App: unknown;
   export const Dashboard: unknown;
+  export const TournamentPanel: unknown;
   export default App;
 }
 

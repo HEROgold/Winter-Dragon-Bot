@@ -9,6 +9,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Header, HTTPException, status
 from pydantic import BaseModel
 
+from winter_dragon.bot.extensions.tournament.store import registry
+
 
 router = APIRouter(prefix="/api", tags=["oauth"])
 
@@ -48,6 +50,27 @@ class DeleteDataResponse(BaseModel):
 
     success: bool
     message: str
+
+
+class TournamentPlayerResponse(BaseModel):
+    """Tournament player payload."""
+
+    name: str
+    intendedPick: str
+
+
+class TournamentTeamResponse(BaseModel):
+    """Tournament team payload."""
+
+    players: list[TournamentPlayerResponse]
+
+
+class TournamentMatchResponse(BaseModel):
+    """Tournament match payload."""
+
+    guildId: int
+    status: str
+    teams: list[TournamentTeamResponse]
 
 
 # In-memory session store (use Redis in production)
@@ -184,3 +207,16 @@ async def get_user_audit(
             }
         ]
     }
+
+
+@router.get("/tournaments/{guild_id}")
+async def get_tournament(guild_id: int) -> TournamentMatchResponse:
+    """Fetch the current tournament snapshot for a guild."""
+    snapshot = registry.snapshot(guild_id)
+    teams = [
+        TournamentTeamResponse(
+            players=[TournamentPlayerResponse(name=player.name, intendedPick=player.intended_pick) for player in team.players],
+        )
+        for team in snapshot.teams
+    ]
+    return TournamentMatchResponse(guildId=snapshot.guild_id, status=snapshot.status.name, teams=teams)

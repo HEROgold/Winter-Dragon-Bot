@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from winter_dragon.bot.extensions.tournament.status import MatchStatus, match_controller
 
@@ -18,4 +18,4 @@ class Teams:
 class MatchInformation:
     teams: list[Teams]
     status: MatchStatus
-    controller = match_controller
+    controller: object = field(default=match_controller, repr=False, compare=False)
