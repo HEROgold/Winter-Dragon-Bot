@@ -1,5 +1,3 @@
-
-
 from datetime import UTC, datetime
 
 from sqlalchemy import Column, ForeignKey
