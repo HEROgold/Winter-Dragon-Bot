@@ -1,7 +1,5 @@
 """Database tables for tournament signup and registration."""
 
-
-
 from datetime import UTC, datetime
 
 from sqlalchemy import BigInteger
