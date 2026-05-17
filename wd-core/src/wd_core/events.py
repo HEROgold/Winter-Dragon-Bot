@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, ClassVar, Self, TypeIs
+from typing import TYPE_CHECKING, ClassVar, Self
 
-from discord import Member, Role, Thread, User
 from discord.abc import GuildChannel, Messageable
-from discord.app_commands import AppCommand
 from discord.embeds import Embed
 from herogold.log import LoggerMixin
 from herogold.orm.model import BaseModel
+from wd_types.protocol import Mentionable
 
 
 if TYPE_CHECKING:
@@ -19,19 +18,6 @@ if TYPE_CHECKING:
     from discord.enums import AuditLogAction
     from discord.ext.commands.bot import BotBase
     from sqlalchemy.orm import Session
-
-type MentionableTargetType = (
-    AppCommand
-    | GuildChannel
-    | Member
-    | Role
-    | Thread
-    | User
-)
-
-def mentionable(obj: object) -> TypeIs[MentionableTargetType]:
-    """Determine if an object is mentionable."""
-    return isinstance(obj, (AppCommand, GuildChannel, Member, Role, Thread, User))
 
 class AuditLog(BaseModel):
     """Database model for audit logs."""
@@ -96,7 +82,7 @@ class AuditEvent(ABC):
 
     async def create_embed(self) -> Embed:
         """Create an embed for the audit event."""
-        target = self.entry.target.mention if mentionable(self.entry.target) else self.entry.target
+        target = self.entry.target.mention if isinstance(self.entry.target, Mentionable) else self.entry.target
 
         return Embed(
             colour=None,

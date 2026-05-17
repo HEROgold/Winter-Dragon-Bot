@@ -1,0 +1,10 @@
+project-excludes = [
+    "**/*",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    ".venv",
+]
+preset = "strict"
+infer-with-first-use = false
+hover-enabled = false

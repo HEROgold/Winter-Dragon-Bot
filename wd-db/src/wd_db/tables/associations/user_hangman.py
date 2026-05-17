@@ -1,0 +1,15 @@
+
+
+from sqlmodel import Field
+
+from wd_db.extension.model import SQLModel
+from wd_db.keys import get_foreign_key
+from wd_db.tables.hangman import Hangmen
+from wd_db.tables.user import Users
+
+
+# don't use our SQLModel, as we have primary keys defined here.
+class AssociationUserHangman(SQLModel, table=True):
+    hangman_id: int = Field(foreign_key=get_foreign_key(Hangmen), primary_key=True, index=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE", primary_key=True, index=True)
+    score: int

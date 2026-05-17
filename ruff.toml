@@ -12,7 +12,7 @@ skip-magic-trailing-comma = false
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
-ignore = []
+ignore = ["D105"]
 
 [lint.isort]
 required-imports = [

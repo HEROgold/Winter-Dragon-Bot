@@ -1,0 +1,41 @@
+"""PlayerSynergy table - tracks player interaction statistics."""
+
+from typing import TYPE_CHECKING
+
+from sqlmodel import Field, Relationship
+
+from wd_db.extension.model import SQLModel
+from wd_db.keys import get_foreign_key
+
+
+if TYPE_CHECKING:
+    from wd_db.tables.game import Games
+    from wd_db.tables.user import Users
+else:
+    from wd_db.tables import Games, Users
+
+
+class PlayerSynergy(SQLModel, table=True):
+    """Tracks synergy/rivalry between two players in a specific game.
+
+    6NF: Only facts about the interaction between two specific players in a game.
+    """
+
+    player1_id: int = Field(foreign_key=get_foreign_key(Users), index=True)
+    player2_id: int = Field(foreign_key=get_foreign_key(Users), index=True)
+    game_id: int = Field(foreign_key=get_foreign_key(Games), index=True)
+
+    # Teammate statistics
+    matches_as_teammates: int = Field(default=0)
+    wins_as_teammates: int = Field(default=0)
+    teammate_synergy: float = Field(default=0.0)  # Win rate when together
+
+    # Opponent statistics
+    matches_as_opponents: int = Field(default=0)
+    player1_wins_vs_player2: int = Field(default=0)
+    rivalry_factor: float = Field(default=0.0)  # How often player1 beats player2
+
+    # Relationships
+    player1: Users = Relationship(sa_relationship_kwargs={"foreign_keys": "PlayerSynergy.player1_id"})
+    player2: Users = Relationship(sa_relationship_kwargs={"foreign_keys": "PlayerSynergy.player2_id"})
+    game: Games = Relationship()

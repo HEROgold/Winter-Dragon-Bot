@@ -11,6 +11,7 @@ from importlib import metadata
 class PackageVersion(str):
     """A string representing a package version."""
 
+    __slots__ = ()
 
 def get_package_version(package_name: str) -> PackageVersion:
     """Get the version of a package."""

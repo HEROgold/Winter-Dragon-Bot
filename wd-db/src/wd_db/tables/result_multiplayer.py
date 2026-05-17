@@ -1,0 +1,14 @@
+
+
+from sqlmodel import Field
+
+from wd_db.extension.model import SQLModel
+from wd_db.keys import get_foreign_key
+from wd_db.tables.game import Games
+from wd_db.tables.user import Users
+
+
+class ResultMassiveMultiplayer(SQLModel, table=True):
+    game_id: int = Field(foreign_key=get_foreign_key(Games))
+    player: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE")
+    placement: int

@@ -1,5 +1,13 @@
 {
     "cSpell.words": [
         "Messageable"
-    ]
+    ],
+    "ty.disableLanguageServices": true,
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.variableTypes": true,
+    "python.analysis.inlayHints.pytestParameters": true,
+    "python.analysis.inlayHints.callArgumentNames": "all",
+    "python.analysis.typeEvaluation.strictParameterNoneValue": true,
+    "python.analysis.typeEvaluation.analyzeUnannotatedFunctions": true,
+    "python.analysis.disableTaggedHints": false,
 }

@@ -2,6 +2,7 @@
   "exclude": [
     "**/*", "**/node_modules", "**/__pycache__", "**/.*", ".venv"
   ],
+  "pythonVersion": "3.15",
   "python.analysis.typeCheckingMode": "strict",
   "python.analysis.extraPaths": [
       "${workspaceFolder}/src"

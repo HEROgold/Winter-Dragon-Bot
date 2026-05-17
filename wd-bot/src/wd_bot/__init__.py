@@ -1,2 +1,1 @@
-def hello() -> str:
-    return "Hello from wd-bot!"
+"""Core bot functionality."""
