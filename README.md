@@ -72,6 +72,16 @@ JSON endpoints require Bearer token authentication (except login/callback).
 4. Set OAuth2 Redirect URL to `http://localhost:8001/api/auth/discord/callback` (local)
 5. Set `DISCORD_REDIRECT_URI` environment variable to the exact same callback URL
 
+### Clerk Components (Safe UI Auth Components)
+
+To render Clerk sign-in/user components in the dashboard templates, set:
+
+```bash
+CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+
+When this key is present, login/dashboard pages mount Clerk components for authorization UI.
+
 ### Database Schema
 
 **New Tables:**

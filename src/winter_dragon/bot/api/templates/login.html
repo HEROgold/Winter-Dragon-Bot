@@ -36,8 +36,25 @@
 <body>
     <main class="card">
         <h1>WinterDragon Data Dashboard</h1>
+        {% if use_clerk %}
+        <p>Sign in safely with Clerk.</p>
+        <div id="clerk-sign-in"></div>
+        <script
+            async
+            crossorigin="anonymous"
+            data-clerk-publishable-key="{{ clerk_publishable_key }}"
+            src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        ></script>
+        <script>
+            window.addEventListener("load", async () => {
+                await window.Clerk.load();
+                window.Clerk.mountSignIn(document.getElementById("clerk-sign-in"));
+            });
+        </script>
+        {% else %}
         <p>Sign in with Discord to view your data and request deletion.</p>
         <a href="/api/auth/discord/login">Continue with Discord</a>
+        {% endif %}
     </main>
 </body>
 </html>

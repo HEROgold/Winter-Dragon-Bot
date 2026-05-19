@@ -46,6 +46,21 @@
     <header class="card">
         <h1>WinterDragon Dashboard</h1>
         <p>Signed in as <strong>{{ username }}</strong> ({{ discord_id }})</p>
+        {% if use_clerk %}
+        <div id="clerk-user-button"></div>
+        <script
+            async
+            crossorigin="anonymous"
+            data-clerk-publishable-key="{{ clerk_publishable_key }}"
+            src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        ></script>
+        <script>
+            window.addEventListener("load", async () => {
+                await window.Clerk.load();
+                window.Clerk.mountUserButton(document.getElementById("clerk-user-button"));
+            });
+        </script>
+        {% endif %}
         <form action="/api/auth/logout" method="post">
             <button type="submit">Sign out</button>
         </form>

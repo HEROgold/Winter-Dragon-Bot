@@ -6,19 +6,23 @@ import os
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Annotated, Any, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, TypedDict
 from urllib.parse import urlencode
 
 import requests
 from fastapi import APIRouter, Form, Header, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel import Session, select
 
 from winter_dragon.database.constants import engine
 from winter_dragon.database.tables.user import Users
 from winter_dragon.database.tables.user_data_deletion import UserDataDeletion
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 router = APIRouter(prefix="/api", tags=["oauth"])
@@ -29,6 +33,8 @@ OAUTH_STATE_DURATION = timedelta(minutes=10)
 
 
 class SessionData(TypedDict):
+    """Session payload stored in memory."""
+
     discord_id: str
     username: str
     discord_access_token: str
@@ -46,18 +52,22 @@ class OAuthCallbackRequest(BaseModel):
 class OAuthCallbackResponse(BaseModel):
     """OAuth callback response payload."""
 
-    accessToken: str
-    discordId: str
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    access_token: str = Field(serialization_alias="accessToken")
+    discord_id: str = Field(serialization_alias="discordId")
     username: str
 
 
 class UserDataResponse(BaseModel):
     """User data response payload."""
 
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
     id: str
     username: str
-    joinedAt: str
-    recordCount: int
+    joined_at: str = Field(serialization_alias="joinedAt")
+    record_count: int = Field(serialization_alias="recordCount")
 
 
 class DeleteDataRequest(BaseModel):
@@ -272,13 +282,9 @@ def _ensure_user_row(discord_id: str) -> None:
             session.commit()
 
 
-def _get_deletions(discord_id: str) -> list[UserDataDeletion]:
+def _get_deletions(discord_id: str) -> Sequence[UserDataDeletion]:
     with Session(engine) as session:
-        return session.exec(
-            select(UserDataDeletion)
-            .where(UserDataDeletion.user_id == int(discord_id))
-            .order_by(UserDataDeletion.deleted_at.desc()),
-        ).all()
+        return session.exec(select(UserDataDeletion).where(UserDataDeletion.user_id == int(discord_id))).all()
 
 
 def _record_deletion(discord_id: str, reason: str) -> None:
@@ -293,27 +299,40 @@ def _build_user_data(discord_id: str, username: str, joined_at: datetime) -> Use
     return UserDataResponse(
         id=discord_id,
         username=username,
-        joinedAt=joined_at.isoformat(),
-        recordCount=len(deletions),
+        joined_at=joined_at.isoformat(),
+        record_count=len(deletions),
     )
 
 
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
 def login_page(request: Request) -> HTMLResponse:
     """Render the login page."""
-    return templates.TemplateResponse("login.html", {"request": request})
+    clerk_publishable_key = os.environ.get("CLERK_PUBLISHABLE_KEY", "")
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={
+            "request": request,
+            "clerk_publishable_key": clerk_publishable_key,
+            "use_clerk": bool(clerk_publishable_key),
+        },
+    )
 
 
 @router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
 def dashboard_page(request: Request) -> HTMLResponse:
     """Render the HTMX dashboard."""
     session_data = _get_session_from_cookie(request)
+    clerk_publishable_key = os.environ.get("CLERK_PUBLISHABLE_KEY", "")
     return templates.TemplateResponse(
-        "dashboard.html",
-        {
+        request=request,
+        name="dashboard.html",
+        context={
             "request": request,
             "username": session_data["username"],
             "discord_id": session_data["discord_id"],
+            "clerk_publishable_key": clerk_publishable_key,
+            "use_clerk": bool(clerk_publishable_key),
         },
     )
 
@@ -367,8 +386,8 @@ def discord_callback_api(request: OAuthCallbackRequest) -> OAuthCallbackResponse
     discord_user = _get_discord_user(discord_access_token)
     token = _create_session(discord_user=discord_user, discord_access_token=discord_access_token)
     return OAuthCallbackResponse(
-        accessToken=token,
-        discordId=discord_user.id,
+        access_token=token,
+        discord_id=discord_user.id,
         username=discord_user.username,
     )
 
@@ -383,8 +402,9 @@ def htmx_user_data(request: Request) -> HTMLResponse:
         joined_at=session_data["signed_in_at"],
     )
     return templates.TemplateResponse(
-        "partials/user_data.html",
-        {"request": request, "user_data": user_data},
+        request=request,
+        name="partials/user_data.html",
+        context={"request": request, "user_data": user_data},
     )
 
 
@@ -394,8 +414,9 @@ def htmx_user_audit(request: Request) -> HTMLResponse:
     session_data = _get_session_from_cookie(request)
     deletions = _get_deletions(session_data["discord_id"])
     return templates.TemplateResponse(
-        "partials/audit.html",
-        {"request": request, "deletions": deletions},
+        request=request,
+        name="partials/audit.html",
+        context={"request": request, "deletions": deletions},
     )
 
 
@@ -408,8 +429,9 @@ def htmx_delete_data(
     session_data = _get_session_from_cookie(request)
     _record_deletion(session_data["discord_id"], reason.strip() or "User requested deletion")
     return templates.TemplateResponse(
-        "partials/delete_result.html",
-        {"request": request, "message": "Deletion request submitted and audited."},
+        request=request,
+        name="partials/delete_result.html",
+        context={"request": request, "message": "Deletion request submitted and audited."},
     )
 
 
