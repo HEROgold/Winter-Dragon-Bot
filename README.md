@@ -70,7 +70,7 @@ JSON endpoints require Bearer token authentication (except login/callback).
 2. Copy the Client ID and set `DISCORD_CLIENT_ID`
 3. Copy the Client Secret and set `DISCORD_CLIENT_SECRET`
 4. Set OAuth2 Redirect URL to `http://localhost:8001/api/auth/discord/callback` (local)
-5. Set `DISCORD_REDIRECT_URI` environment variable
+5. Set `DISCORD_REDIRECT_URI` environment variable to the exact same callback URL
 
 ### Database Schema
 

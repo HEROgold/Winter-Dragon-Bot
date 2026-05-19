@@ -25,12 +25,14 @@ router = APIRouter(prefix="/api", tags=["oauth"])
 templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
 SESSION_COOKIE = "wd_session"
 SESSION_DURATION = timedelta(hours=24)
+OAUTH_STATE_DURATION = timedelta(minutes=10)
 
 
 class SessionData(TypedDict):
     discord_id: str
     username: str
     discord_access_token: str
+    signed_in_at: datetime
     expires_at: datetime
 
 
@@ -78,8 +80,9 @@ class DiscordUser(BaseModel):
     username: str
 
 
+# In-memory stores for local/dev use only; use Redis or another shared store in production.
 _sessions: dict[str, SessionData] = {}
-_oauth_states: set[str] = set()
+_oauth_states: dict[str, datetime] = {}
 
 
 def _utc_now() -> datetime:
@@ -91,6 +94,21 @@ def _cleanup_expired_sessions() -> None:
     for token, session_data in list(_sessions.items()):
         if session_data["expires_at"] <= now:
             del _sessions[token]
+
+
+def _cookie_secure_enabled() -> bool:
+    configured = os.environ.get("COOKIE_SECURE")
+    if configured is not None:
+        return configured.lower() == "true"
+    redirect_uri = os.environ.get("DISCORD_REDIRECT_URI", "http://localhost:8001/api/auth/discord/callback")
+    return redirect_uri.startswith("https://")
+
+
+def _cleanup_expired_oauth_states() -> None:
+    now = _utc_now()
+    for state, expires_at in list(_oauth_states.items()):
+        if expires_at <= now:
+            del _oauth_states[state]
 
 
 def _get_oauth_settings() -> tuple[str, str, str]:
@@ -125,25 +143,37 @@ def _build_discord_auth_url(state: str, client_id: str, redirect_uri: str) -> st
 
 
 def _exchange_code_for_token(code: str, state: str) -> str:
+    _cleanup_expired_oauth_states()
     if state not in _oauth_states:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OAuth state",
         )
-    _oauth_states.discard(state)
+    _oauth_states.pop(state, None)
     client_id, client_secret, redirect_uri = _get_oauth_settings()
-    response = requests.post(
-        "https://discord.com/api/oauth2/token",
-        data={
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": redirect_uri,
-        },
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        timeout=15,
-    )
+    try:
+        response = requests.post(
+            "https://discord.com/api/oauth2/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": redirect_uri,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=15,
+        )
+    except requests.Timeout as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Discord OAuth service timed out",
+        ) from exc
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Discord OAuth service unavailable",
+        ) from exc
     if not response.ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -160,11 +190,22 @@ def _exchange_code_for_token(code: str, state: str) -> str:
 
 
 def _get_discord_user(discord_access_token: str) -> DiscordUser:
-    response = requests.get(
-        "https://discord.com/api/users/@me",
-        headers={"Authorization": f"Bearer {discord_access_token}"},
-        timeout=15,
-    )
+    try:
+        response = requests.get(
+            "https://discord.com/api/users/@me",
+            headers={"Authorization": f"Bearer {discord_access_token}"},
+            timeout=15,
+        )
+    except requests.Timeout as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Discord user profile request timed out",
+        ) from exc
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Discord user profile request failed",
+        ) from exc
     if not response.ok:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -188,6 +229,7 @@ def _create_session(discord_user: DiscordUser, discord_access_token: str) -> str
         discord_id=discord_user.id,
         username=discord_user.username,
         discord_access_token=discord_access_token,
+        signed_in_at=_utc_now(),
         expires_at=_utc_now() + SESSION_DURATION,
     )
     return token
@@ -245,14 +287,14 @@ def _record_deletion(discord_id: str, reason: str) -> None:
         session.commit()
 
 
-def _build_user_data(discord_id: str, username: str) -> UserDataResponse:
+def _build_user_data(discord_id: str, username: str, joined_at: datetime) -> UserDataResponse:
     _ensure_user_row(discord_id)
     deletions = _get_deletions(discord_id)
     return UserDataResponse(
         id=discord_id,
         username=username,
-        joinedAt=_utc_now().isoformat(),
-        recordCount=1 + len(deletions),
+        joinedAt=joined_at.isoformat(),
+        recordCount=len(deletions),
     )
 
 
@@ -292,7 +334,8 @@ def discord_login(mode: str | None = None) -> RedirectResponse | dict[str, str]:
     """Start Discord OAuth flow."""
     client_id, _, redirect_uri = _get_oauth_settings()
     state = secrets.token_urlsafe(24)
-    _oauth_states.add(state)
+    _cleanup_expired_oauth_states()
+    _oauth_states[state] = _utc_now() + OAUTH_STATE_DURATION
     oauth_url = _build_discord_auth_url(state=state, client_id=client_id, redirect_uri=redirect_uri)
     if mode == "url":
         return {"url": oauth_url}
@@ -311,7 +354,7 @@ def discord_callback_web(code: str, state: str) -> RedirectResponse:
         token,
         max_age=int(SESSION_DURATION.total_seconds()),
         httponly=True,
-        secure=False,
+        secure=_cookie_secure_enabled(),
         samesite="lax",
     )
     return response
@@ -337,6 +380,7 @@ def htmx_user_data(request: Request) -> HTMLResponse:
     user_data = _build_user_data(
         discord_id=session_data["discord_id"],
         username=session_data["username"],
+        joined_at=session_data["signed_in_at"],
     )
     return templates.TemplateResponse(
         "partials/user_data.html",
@@ -382,7 +426,11 @@ def get_user(
             detail="Cannot access other user's data",
         )
     token = authorization[7:] if authorization else ""
-    return _build_user_data(discord_id=discord_id, username=_sessions[token]["username"])
+    return _build_user_data(
+        discord_id=discord_id,
+        username=_sessions[token]["username"],
+        joined_at=_sessions[token]["signed_in_at"],
+    )
 
 
 @router.delete("/user/{discord_id}/data")
