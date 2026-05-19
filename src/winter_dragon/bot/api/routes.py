@@ -246,8 +246,8 @@ def _get_session_from_cookie(request: Request) -> SessionData:
     return _sessions[token]
 
 
-def _verify_token(authorization: str | None) -> str:
-    """Verify Bearer token and return Discord ID."""
+def _verify_token(authorization: str | None) -> SessionData:
+    """Verify Bearer token and return session data."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -262,7 +262,7 @@ def _verify_token(authorization: str | None) -> str:
             detail="Invalid or expired token",
         )
 
-    return _sessions[token]["discord_id"]
+    return _sessions[token]
 
 
 def _ensure_user_row(discord_id: str) -> None:
@@ -419,17 +419,16 @@ def get_user(
     authorization: Annotated[str | None, Header()] = None,
 ) -> UserDataResponse:
     """Fetch user profile and data summary."""
-    user_id = _verify_token(authorization)
-    if user_id != discord_id:
+    session_data = _verify_token(authorization)
+    if session_data["discord_id"] != discord_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot access other user's data",
         )
-    token = authorization[7:] if authorization else ""
     return _build_user_data(
         discord_id=discord_id,
-        username=_sessions[token]["username"],
-        joined_at=_sessions[token]["signed_in_at"],
+        username=session_data["username"],
+        joined_at=session_data["signed_in_at"],
     )
 
 
@@ -440,8 +439,8 @@ def delete_user_data(
     authorization: Annotated[str | None, Header()] = None,
 ) -> DeleteDataResponse:
     """Soft delete user data with audit trail."""
-    user_id = _verify_token(authorization)
-    if user_id != discord_id:
+    session_data = _verify_token(authorization)
+    if session_data["discord_id"] != discord_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot delete other user's data",
@@ -459,8 +458,8 @@ def get_user_audit(
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
     """Fetch user data deletion audit trail."""
-    user_id = _verify_token(authorization)
-    if user_id != discord_id:
+    session_data = _verify_token(authorization)
+    if session_data["discord_id"] != discord_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot access other user's audit logs",
