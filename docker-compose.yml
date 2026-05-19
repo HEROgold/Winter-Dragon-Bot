@@ -97,8 +97,8 @@ services:
     networks:
       - default
 
-  api:
-    container_name: winter-dragon-api
+  frontend:
+    container_name: winter-dragon-frontend
     build:
       context: .
       dockerfile: bot-dockerfile
