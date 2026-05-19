@@ -99,7 +99,7 @@ class RedisConnection:
 
         logger.info(
             f"Creating Redis connection to {RedisConfig.get_host()}:{RedisConfig.get_port()} "
-            f"db={RedisConfig.get_db()} decode_responses={should_decode}"
+            f"db={RedisConfig.get_db()} decode_responses={should_decode}",
         )
 
         # Create connection pool with appropriate decode setting

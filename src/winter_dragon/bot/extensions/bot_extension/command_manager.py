@@ -188,7 +188,7 @@ class CommandManagementView(View):
                 select(DisabledCommands).where(
                     DisabledCommands.command_id == db_cmd.id,
                     DisabledCommands.guild_id == self.guild.id,
-                )
+                ),
             ).first()
 
             if not existing and db_cmd.id is not None:

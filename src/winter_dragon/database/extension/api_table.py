@@ -1,6 +1,6 @@
 """Extension for databases, integrating api's with the database layer."""
 
-
+from __future__ import annotations
 
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
@@ -10,7 +10,8 @@ import requests
 from .model import SQLModel
 
 
-from pydantic import ConfigDict
+if TYPE_CHECKING:
+    from pydantic import ConfigDict
 
 
 class ApiArguments(TypedDict):

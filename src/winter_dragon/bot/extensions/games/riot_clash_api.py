@@ -515,7 +515,7 @@ class DiscordClashEventManager:
                         try:
                             tournament_id = int(line.split("ID: ")[1])
                             existing_tournament_ids.add(tournament_id)
-                        except (ValueError, IndexError):
+                        except ValueError, IndexError:
                             pass
 
         # Clean up old Clash events if requested

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import secrets
 import os
+import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Any, TypedDict
@@ -472,5 +472,5 @@ def get_user_audit(
                 "reason": deletion.reason,
             }
             for deletion in deletions
-        ]
+        ],
     }

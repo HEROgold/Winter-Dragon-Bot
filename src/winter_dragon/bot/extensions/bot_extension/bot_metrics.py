@@ -154,7 +154,7 @@ class BotMetrics(GroupCog, auto_load=True):
                 net_counters.bytes_recv,
                 net_counters.packets_sent,
                 net_counters.packets_recv,
-            ]
+            ],
         ):
             self.logger.debug(f"{i=}, {value=}")
 
@@ -306,7 +306,7 @@ class BotMetrics(GroupCog, auto_load=True):
                     net_io.bytes_recv,
                     net_io.packets_sent,
                     net_io.packets_recv,
-                )
+                ),
             )
         max_scaler = max(values)
 
