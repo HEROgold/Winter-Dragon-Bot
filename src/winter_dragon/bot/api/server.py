@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from winter_dragon.bot.api import router
 
@@ -40,6 +41,10 @@ def create_app() -> FastAPI:
 
     # Include API router
     app.include_router(router)
+
+    @app.get("/", include_in_schema=False)
+    async def root_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/api/login")
 
     return app
 

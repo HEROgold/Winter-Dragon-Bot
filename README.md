@@ -1,53 +1,63 @@
 # Winter Dragon Bot
 
-## Frontend
+## Dashboard
 
-This repository includes a React + Bun tsrx frontend with a user dashboard featuring Discord OAuth integration.
+This repository now includes a FastAPI + HTMX dashboard with Discord OAuth for user self-service.
 
 ### Features
 
-- **Counter Demo**: Local state management showcase on the home page
-- **User Dashboard**: Authenticated view displaying user profile and data
 - **Discord OAuth**: Sign in with Discord to access personalized data
-- **Data Deletion**: GDPR-compliant soft delete with audit trail
+- **HTMX Dashboard**: Server-rendered templates with live partial updates
+- **User Data View**: Authenticated data summary and audit history
+- **Data Deletion Requests**: GDPR-style deletion request logging with audit trail
 
 ### Running with Docker Compose
 
 ```bash
 # Set Discord OAuth credentials
 export DISCORD_CLIENT_ID="your-client-id"
-export DISCORD_REDIRECT_URI="http://localhost:3000"
+export DISCORD_CLIENT_SECRET="your-client-secret"
+export DISCORD_REDIRECT_URI="http://localhost:8001/api/auth/discord/callback"
 
 # Start all services
 docker compose up --build
 ```
 
 Services:
-- **Frontend** (Bun + React): http://localhost:3000
-- **API** (FastAPI): http://localhost:8001
+- **Dashboard + API** (FastAPI + HTMX): http://localhost:8001
 - **Bot** (Discord.py): Connected to Discord
 - **Redis**: Cache/queue backend
 - **PostgreSQL**: Data persistence
 - **PgAdmin**: Database UI at http://localhost:5050
 - **Redis Commander**: Cache UI at http://localhost:8081
 
-### Local Frontend Development
+### Local Dashboard Development
 
 ```bash
-cd frontend
-bun install
-bun run serve
+uv run python -m winter_dragon.bot.api.server
 ```
 
-The app will rebuild on file changes and serve at http://localhost:3000.
+Open `http://localhost:8001` and sign in with Discord.
 
 ### API Endpoints
 
-All endpoints require Bearer token authentication (except `/api/auth/discord/login` and `/api/auth/discord/callback`).
+HTML dashboard routes:
+- `GET /` — Redirects to dashboard login
+- `GET /api/login` — Login page
+- `GET /api/dashboard` — Authenticated HTMX dashboard
+
+JSON endpoints require Bearer token authentication (except login/callback).
 
 #### Authentication
 - `GET /api/auth/discord/login` — Redirect to Discord OAuth
-- `POST /api/auth/discord/callback` — Handle OAuth callback (called from frontend)
+- `GET /api/auth/discord/callback` — Browser OAuth callback handler
+- `POST /api/auth/discord/callback` — API callback handler
+- `POST /api/auth/logout` — Clear session cookie
+
+#### HTMX Endpoints
+- `GET /api/htmx/user-data` — Render user data partial
+- `GET /api/htmx/user-audit` — Render deletion audit partial
+- `POST /api/htmx/delete-data` — Submit deletion request
 
 #### User Data
 - `GET /api/user/{discord_id}` — Fetch user profile and summary
@@ -58,8 +68,9 @@ All endpoints require Bearer token authentication (except `/api/auth/discord/log
 
 1. Create a Discord application at https://discord.com/developers/applications
 2. Copy the Client ID and set `DISCORD_CLIENT_ID`
-3. Set OAuth2 Redirect URL to `http://localhost:3000` (local) or your production URL
-4. Set `DISCORD_REDIRECT_URI` environment variable
+3. Copy the Client Secret and set `DISCORD_CLIENT_SECRET`
+4. Set OAuth2 Redirect URL to `http://localhost:8001/api/auth/discord/callback` (local)
+5. Set `DISCORD_REDIRECT_URI` environment variable
 
 ### Database Schema
 
@@ -75,27 +86,19 @@ All endpoints require Bearer token authentication (except `/api/auth/discord/log
 ### Architecture
 
 ```
-Frontend (Bun + React + TSRX)
-  ├── Home: Counter demo
-  └── Dashboard: OAuth-protected view
-        └── API Proxy to /api/*
-
 API (FastAPI)
-  ├── OAuth routes
-  ├── User data queries
-  └── Soft delete + audit logging
+  ├── Jinja2 templates (login/dashboard)
+  ├── HTMX partial routes
+  ├── Discord OAuth routes
+  └── User data + deletion audit routes
 
 Bot (discord.py)
   ├── Discord commands/events
   └── Background workers
 ```
 
-The frontend proxies `/api/*` requests to the FastAPI server running at `http://api:8001` (Docker) or `http://localhost:8001` (local).
-
 ### Next Steps
 
-- Implement real Discord OAuth token exchange in `/src/winter_dragon/bot/api/routes.py`
-- Connect API endpoints to actual database queries using SQLModel ORM
-- Add authentication tokens (JWT or session-based)
-- Set up audit logging for deletions
-- Create comprehensive e2e tests for OAuth flow
+- Add secure production cookie settings (`secure=True`, HTTPS only)
+- Expand user data exports to more user-scoped tables
+- Add e2e tests for OAuth flow and HTMX dashboard actions

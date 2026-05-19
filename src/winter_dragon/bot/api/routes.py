@@ -2,15 +2,36 @@
 
 from __future__ import annotations
 
+import secrets
 import os
-from datetime import datetime, timedelta
-from typing import Annotated, Any
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Annotated, Any, TypedDict
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Header, HTTPException, status
+import requests
+from fastapi import APIRouter, Form, Header, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from sqlmodel import Session, select
+
+from winter_dragon.database.constants import engine
+from winter_dragon.database.tables.user import Users
+from winter_dragon.database.tables.user_data_deletion import UserDataDeletion
 
 
 router = APIRouter(prefix="/api", tags=["oauth"])
+templates = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
+SESSION_COOKIE = "wd_session"
+SESSION_DURATION = timedelta(hours=24)
+
+
+class SessionData(TypedDict):
+    discord_id: str
+    username: str
+    discord_access_token: str
+    expires_at: datetime
 
 
 class OAuthCallbackRequest(BaseModel):
@@ -50,8 +71,137 @@ class DeleteDataResponse(BaseModel):
     message: str
 
 
-# In-memory session store (use Redis in production)
-_sessions: dict[str, dict[str, Any]] = {}
+class DiscordUser(BaseModel):
+    """Discord user payload."""
+
+    id: str
+    username: str
+
+
+_sessions: dict[str, SessionData] = {}
+_oauth_states: set[str] = set()
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _cleanup_expired_sessions() -> None:
+    now = _utc_now()
+    for token, session_data in list(_sessions.items()):
+        if session_data["expires_at"] <= now:
+            del _sessions[token]
+
+
+def _get_oauth_settings() -> tuple[str, str, str]:
+    client_id = os.environ.get("DISCORD_CLIENT_ID", "")
+    client_secret = os.environ.get("DISCORD_CLIENT_SECRET", "")
+    redirect_uri = os.environ.get("DISCORD_REDIRECT_URI", "http://localhost:8001/api/auth/discord/callback")
+    if not client_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="DISCORD_CLIENT_ID is not configured",
+        )
+    if not client_secret:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="DISCORD_CLIENT_SECRET is not configured",
+        )
+    return client_id, client_secret, redirect_uri
+
+
+def _build_discord_auth_url(state: str, client_id: str, redirect_uri: str) -> str:
+    params = urlencode(
+        {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "identify",
+            "state": state,
+            "prompt": "consent",
+        },
+    )
+    return f"https://discord.com/api/oauth2/authorize?{params}"
+
+
+def _exchange_code_for_token(code: str, state: str) -> str:
+    if state not in _oauth_states:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OAuth state",
+        )
+    _oauth_states.discard(state)
+    client_id, client_secret, redirect_uri = _get_oauth_settings()
+    response = requests.post(
+        "https://discord.com/api/oauth2/token",
+        data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=15,
+    )
+    if not response.ok:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Discord OAuth token exchange failed",
+        )
+    payload = response.json()
+    token = payload.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Discord OAuth token missing in response",
+        )
+    return token
+
+
+def _get_discord_user(discord_access_token: str) -> DiscordUser:
+    response = requests.get(
+        "https://discord.com/api/users/@me",
+        headers={"Authorization": f"Bearer {discord_access_token}"},
+        timeout=15,
+    )
+    if not response.ok:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Failed to fetch Discord user profile",
+        )
+    payload = response.json()
+    user_id = payload.get("id")
+    username = payload.get("username")
+    if not user_id or not username:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Discord user profile response",
+        )
+    return DiscordUser(id=user_id, username=username)
+
+
+def _create_session(discord_user: DiscordUser, discord_access_token: str) -> str:
+    _cleanup_expired_sessions()
+    token = secrets.token_urlsafe(32)
+    _sessions[token] = SessionData(
+        discord_id=discord_user.id,
+        username=discord_user.username,
+        discord_access_token=discord_access_token,
+        expires_at=_utc_now() + SESSION_DURATION,
+    )
+    return token
+
+
+def _get_session_from_cookie(request: Request) -> SessionData:
+    _cleanup_expired_sessions()
+    token = request.cookies.get(SESSION_COOKIE)
+    if not token or token not in _sessions:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Please sign in with Discord first",
+        )
+    return _sessions[token]
 
 
 def _verify_token(authorization: str | None) -> str:
@@ -63,124 +213,217 @@ def _verify_token(authorization: str | None) -> str:
         )
 
     token = authorization[7:]
-
-    # Simple token validation (in production, verify against Discord API or JWT)
+    _cleanup_expired_sessions()
     if token not in _sessions:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
         )
 
-    return _sessions[token]["discordId"]
+    return _sessions[token]["discord_id"]
 
 
-@router.post("/auth/discord/callback")
-async def discord_callback(
-    request: OAuthCallbackRequest,
-) -> OAuthCallbackResponse:
-    """Handle Discord OAuth callback.
+def _ensure_user_row(discord_id: str) -> None:
+    with Session(engine) as session:
+        if not session.exec(select(Users).where(Users.id == int(discord_id))).first():
+            session.add(Users(id=int(discord_id)))
+            session.commit()
 
-    In production, exchange code for token via Discord API.
-    """
-    # TODO: Exchange code for Discord token
-    # For now, mock the response
-    discord_id = "123456789"
-    username = "TestUser"
-    access_token = f"token_{discord_id}_{int(datetime.now().timestamp())}"
 
-    _sessions[access_token] = {
-        "discordId": discord_id,
-        "username": username,
-        "expiresAt": datetime.now() + timedelta(hours=24),
-    }
+def _get_deletions(discord_id: str) -> list[UserDataDeletion]:
+    with Session(engine) as session:
+        return session.exec(
+            select(UserDataDeletion)
+            .where(UserDataDeletion.user_id == int(discord_id))
+            .order_by(UserDataDeletion.deleted_at.desc()),
+        ).all()
 
-    return OAuthCallbackResponse(
-        accessToken=access_token,
-        discordId=discord_id,
+
+def _record_deletion(discord_id: str, reason: str) -> None:
+    with Session(engine) as session:
+        session.add(UserDataDeletion(user_id=int(discord_id), reason=reason))
+        session.commit()
+
+
+def _build_user_data(discord_id: str, username: str) -> UserDataResponse:
+    _ensure_user_row(discord_id)
+    deletions = _get_deletions(discord_id)
+    return UserDataResponse(
+        id=discord_id,
         username=username,
+        joinedAt=_utc_now().isoformat(),
+        recordCount=1 + len(deletions),
     )
+
+
+@router.get("/login", response_class=HTMLResponse, include_in_schema=False)
+def login_page(request: Request) -> HTMLResponse:
+    """Render the login page."""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@router.get("/dashboard", response_class=HTMLResponse, include_in_schema=False)
+def dashboard_page(request: Request) -> HTMLResponse:
+    """Render the HTMX dashboard."""
+    session_data = _get_session_from_cookie(request)
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "username": session_data["username"],
+            "discord_id": session_data["discord_id"],
+        },
+    )
+
+
+@router.post("/auth/logout", include_in_schema=False)
+def logout(request: Request) -> RedirectResponse:
+    """Clear auth session and return to login."""
+    token = request.cookies.get(SESSION_COOKIE)
+    if token:
+        _sessions.pop(token, None)
+    response = RedirectResponse(url="/api/login", status_code=status.HTTP_303_SEE_OTHER)
+    response.delete_cookie(SESSION_COOKIE)
+    return response
 
 
 @router.get("/auth/discord/login")
-async def discord_login() -> dict[str, str]:
-    """Redirect to Discord OAuth authorization."""
-    client_id = os.getenv("DISCORD_CLIENT_ID", "your-client-id")
-    redirect_uri = os.getenv("DISCORD_REDIRECT_URI", "http://localhost:3000")
-    oauth_url = (
-        f"https://discord.com/api/oauth2/authorize"
-        f"?client_id={client_id}"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_type=code"
-        f"&scope=identify%20email"
+def discord_login(mode: str | None = None) -> RedirectResponse | dict[str, str]:
+    """Start Discord OAuth flow."""
+    client_id, _, redirect_uri = _get_oauth_settings()
+    state = secrets.token_urlsafe(24)
+    _oauth_states.add(state)
+    oauth_url = _build_discord_auth_url(state=state, client_id=client_id, redirect_uri=redirect_uri)
+    if mode == "url":
+        return {"url": oauth_url}
+    return RedirectResponse(url=oauth_url, status_code=status.HTTP_302_FOUND)
+
+
+@router.get("/auth/discord/callback", include_in_schema=False)
+def discord_callback_web(code: str, state: str) -> RedirectResponse:
+    """Handle browser Discord OAuth callback."""
+    discord_access_token = _exchange_code_for_token(code=code, state=state)
+    discord_user = _get_discord_user(discord_access_token)
+    token = _create_session(discord_user=discord_user, discord_access_token=discord_access_token)
+    response = RedirectResponse(url="/api/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=int(SESSION_DURATION.total_seconds()),
+        httponly=True,
+        secure=False,
+        samesite="lax",
     )
-    return {"url": oauth_url}
+    return response
+
+
+@router.post("/auth/discord/callback")
+def discord_callback_api(request: OAuthCallbackRequest) -> OAuthCallbackResponse:
+    """Handle API Discord OAuth callback."""
+    discord_access_token = _exchange_code_for_token(code=request.code, state=request.state)
+    discord_user = _get_discord_user(discord_access_token)
+    token = _create_session(discord_user=discord_user, discord_access_token=discord_access_token)
+    return OAuthCallbackResponse(
+        accessToken=token,
+        discordId=discord_user.id,
+        username=discord_user.username,
+    )
+
+
+@router.get("/htmx/user-data", response_class=HTMLResponse, include_in_schema=False)
+def htmx_user_data(request: Request) -> HTMLResponse:
+    """Render authenticated user data panel."""
+    session_data = _get_session_from_cookie(request)
+    user_data = _build_user_data(
+        discord_id=session_data["discord_id"],
+        username=session_data["username"],
+    )
+    return templates.TemplateResponse(
+        "partials/user_data.html",
+        {"request": request, "user_data": user_data},
+    )
+
+
+@router.get("/htmx/user-audit", response_class=HTMLResponse, include_in_schema=False)
+def htmx_user_audit(request: Request) -> HTMLResponse:
+    """Render audit history panel."""
+    session_data = _get_session_from_cookie(request)
+    deletions = _get_deletions(session_data["discord_id"])
+    return templates.TemplateResponse(
+        "partials/audit.html",
+        {"request": request, "deletions": deletions},
+    )
+
+
+@router.post("/htmx/delete-data", response_class=HTMLResponse, include_in_schema=False)
+def htmx_delete_data(
+    request: Request,
+    reason: Annotated[str, Form()] = "User requested deletion",
+) -> HTMLResponse:
+    """Record a user data deletion request."""
+    session_data = _get_session_from_cookie(request)
+    _record_deletion(session_data["discord_id"], reason.strip() or "User requested deletion")
+    return templates.TemplateResponse(
+        "partials/delete_result.html",
+        {"request": request, "message": "Deletion request submitted and audited."},
+    )
 
 
 @router.get("/user/{discord_id}")
-async def get_user(
+def get_user(
     discord_id: str,
     authorization: Annotated[str | None, Header()] = None,
 ) -> UserDataResponse:
     """Fetch user profile and data summary."""
     user_id = _verify_token(authorization)
-
     if user_id != discord_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot access other user's data",
         )
-
-    # TODO: Fetch from database
-    return UserDataResponse(
-        id=discord_id,
-        username="TestUser",
-        joinedAt="2025-01-15T10:30:00Z",
-        recordCount=42,
-    )
+    token = authorization[7:] if authorization else ""
+    return _build_user_data(discord_id=discord_id, username=_sessions[token]["username"])
 
 
 @router.delete("/user/{discord_id}/data")
-async def delete_user_data(
+def delete_user_data(
     discord_id: str,
     request: DeleteDataRequest,
     authorization: Annotated[str | None, Header()] = None,
 ) -> DeleteDataResponse:
     """Soft delete user data with audit trail."""
     user_id = _verify_token(authorization)
-
     if user_id != discord_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot delete other user's data",
         )
-
-    # TODO: Soft delete from database and create audit entry
+    _record_deletion(discord_id, request.reason.strip() or "User requested deletion")
     return DeleteDataResponse(
         success=True,
-        message="Your data has been marked for deletion",
+        message="Your data deletion request has been recorded",
     )
 
 
 @router.get("/user/{discord_id}/audit")
-async def get_user_audit(
+def get_user_audit(
     discord_id: str,
     authorization: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
     """Fetch user data deletion audit trail."""
     user_id = _verify_token(authorization)
-
     if user_id != discord_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot access other user's audit logs",
         )
-
-    # TODO: Fetch from database
+    deletions = _get_deletions(discord_id)
     return {
         "deletions": [
             {
-                "timestamp": "2025-01-20T14:22:00Z",
-                "reason": "User requested deletion",
+                "timestamp": deletion.deleted_at.isoformat(),
+                "reason": deletion.reason,
             }
+            for deletion in deletions
         ]
     }

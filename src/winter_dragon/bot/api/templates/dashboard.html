@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinterDragon Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            background: #0f111a;
+            color: #f3f4f6;
+        }
+        header, main {
+            width: min(860px, 92vw);
+            margin: 1.5rem auto;
+        }
+        .card {
+            background: #1a1f2e;
+            border: 1px solid #30374a;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        button {
+            background: #f59e0b;
+            color: #111827;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            padding: 0.55rem 0.85rem;
+            cursor: pointer;
+        }
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid #4b5563;
+            background: #111827;
+            color: #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <header class="card">
+        <h1>WinterDragon Dashboard</h1>
+        <p>Signed in as <strong>{{ username }}</strong> ({{ discord_id }})</p>
+        <form action="/api/auth/logout" method="post">
+            <button type="submit">Sign out</button>
+        </form>
+    </header>
+    <main>
+        <section id="user-data" class="card" hx-get="/api/htmx/user-data" hx-trigger="load">
+            Loading user data...
+        </section>
+        <section id="audit-data" class="card" hx-get="/api/htmx/user-audit" hx-trigger="load">
+            Loading audit history...
+        </section>
+        <section class="card">
+            <h2>Request data deletion</h2>
+            <form hx-post="/api/htmx/delete-data" hx-target="#delete-result" hx-swap="innerHTML">
+                <label for="reason">Reason</label>
+                <input id="reason" name="reason" value="User requested deletion">
+                <p><button type="submit">Request deletion</button></p>
+            </form>
+            <div id="delete-result"></div>
+        </section>
+    </main>
+</body>
+</html>
