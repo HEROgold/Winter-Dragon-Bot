@@ -44,7 +44,10 @@ dependencies = [
 
 [project.optional-dependencies]
 api = [
-  "fastapi>=0.136.0"
+  "fastapi>=0.136.0",
+  "jinja2>=3.1.6",
+  # Required by FastAPI Form() parsing for user-data deletion form posts.
+  "python-multipart>=0.0.20",
 ]
 
 [tool.uv]

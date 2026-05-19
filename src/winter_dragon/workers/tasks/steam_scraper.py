@@ -127,7 +127,7 @@ class SteamScraperTasks:
                             "sale_percent": sale.sale_percent,
                             "final_price": sale.final_price,
                             "url": sale.url,
-                        }
+                        },
                     )
                     logger.info(f"🆕 New sale to notify: {sale.title} - ${sale.final_price}")
 
@@ -153,7 +153,7 @@ class SteamScraperTasks:
 
             logger.info(
                 f"✅ Scraping completed: {len(new_sales)} new sales, {updated_count} updated, "
-                f"{skipped_count} skipped (total: {updated_count + skipped_count})"
+                f"{skipped_count} skipped (total: {updated_count + skipped_count})",
             )
 
             return result

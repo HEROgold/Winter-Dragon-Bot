@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from discord import AuditLogAction
 from sqlalchemy import Column, Enum, ForeignKey
 from sqlmodel import Field

@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from enum import Enum, auto
@@ -38,7 +38,7 @@ class SteamSale(SQLModel, table=True):
 
 
 class SteamSaleProperties(SQLModel, table=True):
-    """associate sale types"""
+    """associate sale types."""
 
     steam_sale_id: int = Field(foreign_key=get_foreign_key(SteamSale))
     property: SaleTypes

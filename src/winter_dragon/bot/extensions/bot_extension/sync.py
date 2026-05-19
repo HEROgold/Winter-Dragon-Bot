@@ -72,7 +72,10 @@ def sync_description(command: CommandLike, logger: Logger) -> str:
     desc_len = len(desc)
     if desc_len > COMMAND_DESCRIPTION_LIMIT:
         logger.warning(
-            "Fixing command description too long: %s (%d > %d)", command.qualified_name, desc_len, COMMAND_DESCRIPTION_LIMIT
+            "Fixing command description too long: %s (%d > %d)",
+            command.qualified_name,
+            desc_len,
+            COMMAND_DESCRIPTION_LIMIT,
         )
         return desc[: COMMAND_DESCRIPTION_LIMIT - len(ellipses)] + ellipses
     return desc

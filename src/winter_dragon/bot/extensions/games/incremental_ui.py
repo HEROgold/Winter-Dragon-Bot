@@ -96,7 +96,7 @@ class GeneratorShopMenu(Menu, SessionMixin):
                 select(AssociationUserGenerator).where(
                     AssociationUserGenerator.user_id == self.user_id,
                     AssociationUserGenerator.generator_id == generator.id,
-                )
+                ),
             ).first()
 
             if user_gen:
@@ -187,7 +187,7 @@ class ProgressMenu(Menu, SessionMixin):
 
         # Get user's generators
         user_generators = self.session.exec(
-            select(AssociationUserGenerator).where(AssociationUserGenerator.user_id == self.user_id)
+            select(AssociationUserGenerator).where(AssociationUserGenerator.user_id == self.user_id),
         ).all()
 
         if not user_generators:

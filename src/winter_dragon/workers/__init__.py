@@ -52,6 +52,7 @@ class RedisConnection:
 
         Returns:
             Queue instance
+
         """
         return Queue(name, connection=RedisConnection.get_redis_connection())
 
@@ -74,6 +75,7 @@ class RedisConnection:
 
         Returns:
             Job ID of the enqueued task
+
         """
         queue = RedisConnection.get_queue(queue_name)
         job = queue.enqueue(func, *args, job_id=job_id, **kwargs)

@@ -102,7 +102,7 @@ class CurrencyManager:
             select(UserMoney).where(
                 UserMoney.user_id == user_id,
                 UserMoney.currency == currency,
-            )
+            ),
         ).first()
         return user_money.value if user_money else 0
 
@@ -112,7 +112,7 @@ class CurrencyManager:
             select(UserMoney).where(
                 UserMoney.user_id == user_id,
                 UserMoney.currency == currency,
-            )
+            ),
         ).first()
 
         if user_money:
@@ -138,7 +138,7 @@ class RateManager:
             select(GeneratorRates).where(
                 GeneratorRates.generator_id == generator_id,
                 GeneratorRates.currency == currency,
-            )
+            ),
         ).first()
 
         if rate:

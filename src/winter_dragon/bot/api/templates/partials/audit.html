@@ -1,0 +1,10 @@
+<h2>Deletion audit trail</h2>
+{% if deletions %}
+<ul>
+    {% for deletion in deletions %}
+    <li>{{ deletion.deleted_at.isoformat() }} — {{ deletion.reason }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No deletion requests recorded yet.</p>
+{% endif %}

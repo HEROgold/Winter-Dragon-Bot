@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from winter_dragon.bot.api import router
 
 
-# Store the running app instance
-_app_instance: FastAPI | None = None
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # noqa: ARG001
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
     """Manage app lifecycle."""
     yield
 
@@ -41,13 +44,15 @@ def create_app() -> FastAPI:
     # Include API router
     app.include_router(router)
 
+    @app.get("/", include_in_schema=False)
+    async def root_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/api/login")
+
     return app
 
 
-async def run_api_server(host: str = "0.0.0.0", port: int = 8001) -> None:
+async def run_api_server(host: str = "0.0.0.0", port: int = 8001) -> None:  # noqa: S104
     """Run the FastAPI server."""
-    import uvicorn
-
     app = create_app()
     config = uvicorn.Config(
         app,
@@ -61,9 +66,7 @@ async def run_api_server(host: str = "0.0.0.0", port: int = 8001) -> None:
 
 def start_api_server() -> FastAPI:
     """Start the API server and return app instance for integration."""
-    global _app_instance
-    _app_instance = create_app()
-    return _app_instance
+    return create_app()
 
 
 if __name__ == "__main__":

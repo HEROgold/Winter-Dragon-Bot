@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinterDragon Dashboard Login</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: #0f111a;
+            color: #f3f4f6;
+        }
+        .card {
+            width: min(480px, 90vw);
+            padding: 2rem;
+            border-radius: 12px;
+            background: #1a1f2e;
+            border: 1px solid #30374a;
+        }
+        a {
+            display: inline-block;
+            margin-top: 1rem;
+            background: #5865f2;
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <h1>WinterDragon Data Dashboard</h1>
+        {% if use_clerk %}
+        <p>Sign in safely with Clerk.</p>
+        <div id="clerk-sign-in"></div>
+        <script
+            async
+            crossorigin="anonymous"
+            data-clerk-publishable-key="{{ clerk_publishable_key }}"
+            src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        ></script>
+        <script>
+            window.addEventListener("load", async () => {
+                await window.Clerk.load();
+                window.Clerk.mountSignIn(document.getElementById("clerk-sign-in"));
+            });
+        </script>
+        {% else %}
+        <p>Sign in with Discord to view your data and request deletion.</p>
+        <a href="/api/auth/discord/login">Continue with Discord</a>
+        {% endif %}
+    </main>
+</body>
+</html>

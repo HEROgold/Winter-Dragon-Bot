@@ -336,7 +336,7 @@ class Clash(GroupCog, auto_load=True):
                         f"{lol_account.summoner_name}#{lol_account.tag_line}",
                         ranked_tier,
                         ", ".join(top_champs) if top_champs else "N/A",
-                    )
+                    ),
                 )
             except Exception:
                 self.logger.exception("Error fetching data for %s", player.display_name)

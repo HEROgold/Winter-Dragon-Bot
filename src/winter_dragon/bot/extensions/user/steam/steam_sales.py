@@ -100,7 +100,8 @@ class SteamSales(GroupCog, auto_load=True):
         await interaction.response.send_message(msg, ephemeral=True)
 
     @app_commands.command(
-        name="percentage", description="Get notified of steam games on sale for the given percentage or higher"
+        name="percentage",
+        description="Get notified of steam games on sale for the given percentage or higher",
     )
     async def slash_set_percentage(self, interaction: Interaction, percent: int) -> None:
         """Set the percentage for steam sale notifications."""
