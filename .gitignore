@@ -5,3 +5,4 @@ postgres
 */build
 config.ini
 logs/*
+.env

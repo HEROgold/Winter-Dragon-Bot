@@ -41,4 +41,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "-m", "winter_dragon.bot"]
+CMD ["python", "-m", "wd_bot.bot"]
