@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+lazy import asyncio
 
 
 async def main() -> None:

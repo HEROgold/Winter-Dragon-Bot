@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
-import signal
-import sys
-from typing import TYPE_CHECKING, Any
+lazy import asyncio
+lazy import signal
+lazy import sys
+lazy from typing import TYPE_CHECKING, Any
 
-from discord.ext import commands
-from wd_bot.bot import WinterDragon
-from wd_bot.settings import Settings
-from wd_config import Config
-from wd_core.constants import INTENTS
-from wd_core.sentry import Sentry
-from wd_db import SQLModel
-from wd_db.constants import engine
+lazy from discord.ext import commands
+lazy from wd_bot.bot import WinterDragon
+lazy from wd_bot.settings import Settings
+lazy from wd_config import Config
+lazy from wd_core.constants import INTENTS
+lazy from wd_core.sentry import Sentry
+lazy from wd_db import SQLModel
+lazy from wd_db.constants import engine
 
 
 if TYPE_CHECKING:

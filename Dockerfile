@@ -35,6 +35,7 @@ COPY --from=builder /app/wd-db/src/wd_db/ /app/wd_db/
 COPY --from=builder /app/wd-discord/src/wd_discord/ /app/wd_discord/
 COPY --from=builder /app/wd-errors/src/wd_errors/ /app/wd_errors/
 COPY --from=builder /app/wd-types/src/wd_types/ /app/wd_types/
+COPY --from=builder /app/discord.py/ /app/discord.py/
 COPY --from=builder /app/config.ini /app/
 
 WORKDIR /app

@@ -27,11 +27,9 @@ class PermissionsNotifier:
 
         msg = ""
         if user_missing_permissions:
-            user_permission_names = [perm[0] for perm in user_missing_permissions]
-            msg += f"You are missing the following permissions to execute this command: {user_permission_names}"
+            msg += f"You are missing the following permissions to execute this command: {set(user_missing_permissions)}"
         if bot_missing_permissions:
-            bot_permission_names = [perm[0] for perm in bot_missing_permissions]
-            msg += f"The bot is missing the following permissions to execute this command: {bot_permission_names}"
+            msg += f"The bot is missing the following permissions to execute this command: {set(bot_missing_permissions)}"
 
         await self.interaction.response.send_message(
             msg,
