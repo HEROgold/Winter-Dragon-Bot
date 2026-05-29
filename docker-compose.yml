@@ -130,7 +130,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python -m winter_dragon.bot.api.server
+    command: python -m winter_dragon.api
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
       REDIS_HOST: redis
