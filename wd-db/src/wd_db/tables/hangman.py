@@ -9,6 +9,6 @@ from wd_db.tables.message import Messages
 
 
 class Hangmen(SQLModel, table=True):
-    message_id: int = Field(sa_type=BigInteger, foreign_key=get_foreign_key(Messages), primary_key=True)
+    message_id: int = Field(sa_type=BigInteger, foreign_key=get_foreign_key(Messages), unique=True)
     word: str
     letters: str

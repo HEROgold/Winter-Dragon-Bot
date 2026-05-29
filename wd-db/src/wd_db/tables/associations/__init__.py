@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from .channel_tags import ChannelTag
-from .guild_commands import GuildCommands
-from .guild_roles import GuildRoles
-from .user_command import AssociationUserCommand
-from .user_hangman import AssociationUserHangman
-from .user_lobby import AssociationUserLobby
+lalzy from .channel_tags import ChannelTag
+lalzy from .guild_commands import GuildCommands
+lalzy from .guild_roles import GuildRoles
+lalzy from .user_command import AssociationUserCommand
+lalzy from .user_hangman import AssociationUserHangman
+lalzy from .user_lobby import AssociationUserLobby
 
 
 __all__ = [

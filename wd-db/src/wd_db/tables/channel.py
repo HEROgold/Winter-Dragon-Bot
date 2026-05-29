@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, ForeignKey, delete, func
-from sqlmodel import Field, Session, col, select
+lazy from sqlalchemy import Column, ForeignKey, delete, func
+lazy from sqlmodel import Field, Session, col, select
 
-from wd_db.extension.model import DiscordID
-from wd_db.keys import get_foreign_key
-from wd_db.tables.associations.channel_audit import ChannelAudit
-from wd_db.tables.associations.channel_tags import ChannelTag
-from wd_db.tables.guild import Guilds
+lazy from wd_db.extension.model import DiscordID
+lazy from wd_db.keys import get_foreign_key
+lazy from wd_db.tables.associations.channel_audit import ChannelAudit
+lazy from wd_db.tables.associations.channel_tags import ChannelTag
+lazy from wd_db.tables.guild import Guilds
 
 
 if TYPE_CHECKING:

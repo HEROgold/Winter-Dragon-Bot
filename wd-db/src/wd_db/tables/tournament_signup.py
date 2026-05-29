@@ -12,7 +12,7 @@ from wd_db.keys import get_foreign_key
 class TournamentSignupConfig(SQLModel, table=True):
     """Guild-specific signup configuration."""
 
-    id: int = Field(sa_type=BigInteger, primary_key=True, index=True, unique=True)
+    id: int = Field(sa_type=BigInteger, unique=True, index=True, unique=True)
     announcement_channel_id: int | None = Field(sa_type=BigInteger, default=None)
     tournament_voice_channel_id: int | None = Field(sa_type=BigInteger, default=None)
 
@@ -20,7 +20,7 @@ class TournamentSignupConfig(SQLModel, table=True):
 class TournamentSignupEvent(SQLModel, table=True):
     """Stores a tournament scheduled event and its signup announcement."""
 
-    id: int | None = Field(default=None, primary_key=True, index=True)
+    id: int | None = Field(default=None, unique=True, index=True)
     guild_id: int = Field(sa_type=BigInteger, index=True)
     scheduled_event_id: int = Field(sa_type=BigInteger, index=True, unique=True)
     announce_message_id: int | None = Field(sa_type=BigInteger, default=None)
@@ -36,7 +36,7 @@ class TournamentSignupEvent(SQLModel, table=True):
 class TournamentSignupParticipant(SQLModel, table=True):
     """Tracks players who joined a tournament signup."""
 
-    id: int | None = Field(default=None, primary_key=True, index=True)
+    id: int | None = Field(default=None, unique=True, index=True)
     event_id: int = Field(
         foreign_key=get_foreign_key(TournamentSignupEvent),
         sa_type=BigInteger,

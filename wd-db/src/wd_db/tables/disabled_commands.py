@@ -11,7 +11,7 @@ from wd_db.tables.user import Users
 
 
 class DisabledCommands(SQLModel, table=True):
-    command_id: int = Field(foreign_key=get_foreign_key(Commands), primary_key=True)
+    command_id: int = Field(foreign_key=get_foreign_key(Commands), unique=True)
     user_id: int = Field(foreign_key=get_foreign_key(Users), nullable=True)
     channel_id: int = Field(foreign_key=get_foreign_key(Channels), nullable=True)
     guild_id: int = Field(foreign_key=get_foreign_key(Guilds), nullable=True)

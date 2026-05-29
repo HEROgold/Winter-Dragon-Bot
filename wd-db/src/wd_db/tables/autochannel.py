@@ -8,5 +8,5 @@ from wd_db.tables.channel import Channels
 
 
 class AutoChannels(SQLModel, table=True):
-    channel_id: int = Field(foreign_key=get_foreign_key(Channels), primary_key=True)
+    channel_id: int = Field(foreign_key=get_foreign_key(Channels), unique=True)
     channel: Channels = Relationship()

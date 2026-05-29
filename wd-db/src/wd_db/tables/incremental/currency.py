@@ -8,6 +8,6 @@ from wd_db.tables.user import Users
 
 
 class UserMoney(SQLModel, table=True):
-    user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE", primary_key=True)
-    currency: str = Field(primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users), ondelete="CASCADE", unique=True)
+    currency: str = Field(unique=True)
     value: int = Field(default=0)

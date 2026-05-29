@@ -10,7 +10,7 @@ from wd_db.tables.guild import Guilds
 
 
 class Welcome(SQLModel, table=True):
-    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), primary_key=True))
-    channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels)), primary_key=True))
+    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), unique=True))
+    channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels)), unique=True))
     message: str
     enabled: bool

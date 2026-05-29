@@ -10,11 +10,11 @@ class DbUrl:
     """Class containing database URL components."""
 
     driver_name = Config("postgresql")
+    database = Config("winter_dragon")
     username = Config("postgres")
     password = Config("SECURE_PASSWORD")
     host = Config("postgres")
     port = Config(5432)
-    database = Config("winter_dragon")
 
 
 CASCADE = "CASCADE"
@@ -26,7 +26,7 @@ DATABASE_URL = URL.create(
     port=DbUrl.port,
     database=DbUrl.database,
 )
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine("sqlite:///winter_dragon.db", echo=False)
 session = Session(engine)
 
 

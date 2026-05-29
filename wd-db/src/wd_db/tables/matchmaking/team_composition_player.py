@@ -13,5 +13,5 @@ class TeamCompositionPlayer(SQLModel, table=True):
     This represents a many-to-many relationship between team compositions and users.
     """
 
-    composition_id: int = Field(foreign_key="teamcomposition.id", primary_key=True, index=True)
-    user_id: int = Field(foreign_key=f"{Users.__tablename__}.id", primary_key=True, index=True)
+    composition_id: int = Field(foreign_key="teamcomposition.id", unique=True, index=True)
+    user_id: int = Field(foreign_key=f"{Users.__tablename__}.id", unique=True, index=True)

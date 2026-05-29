@@ -10,6 +10,6 @@ from wd_db.tables.user import Users
 
 
 class AssociationUserGenerator(SQLModel, table=True):
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), primary_key=True))
-    generator_id: int = Field(foreign_key=get_foreign_key(Generators), primary_key=True)
+    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), unique=True))
+    generator_id: int = Field(foreign_key=get_foreign_key(Generators), unique=True)
     count: int = Field(default=0)

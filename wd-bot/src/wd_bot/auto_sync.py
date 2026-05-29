@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 class SyncedCommand(SQLModel, table=True):
     """Table to track the signatures of commands that have been synced with Discord."""
 
-    command_name: str = Field(primary_key=True)
+    command_name: str = Field(unique=True)
     signature: str
 
 

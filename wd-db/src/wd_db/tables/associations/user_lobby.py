@@ -10,5 +10,5 @@ from wd_db.tables.user import Users
 
 
 class AssociationUserLobby(SQLModel, table=True):
-    lobby_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Lobbies)), primary_key=True))
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), primary_key=True))
+    lobby_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Lobbies)), unique=True))
+    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), unique=True))

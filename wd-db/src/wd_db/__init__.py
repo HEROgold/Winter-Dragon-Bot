@@ -1,7 +1,7 @@
 """The database package for the Winter Dragon project."""
 from __future__ import annotations
 
-from wd_db.tables import (
+lazy from wd_db.tables import (
     GuildAuditLog,
     GuildCommands,
     GuildRoles,
@@ -23,42 +23,42 @@ from wd_db.tables import (
     Users,
     WyrQuestion,
 )
-from wd_db.tables.associations.auto_assign_role import AutoAssignRole
-from wd_db.tables.associations.channel_audit import ChannelAudit
-from wd_db.tables.associations.channel_lobby import ChannelLobby
-from wd_db.tables.associations.channel_tags import ChannelTag
-from wd_db.tables.associations.user_command import AssociationUserCommand
-from wd_db.tables.associations.user_hangman import AssociationUserHangman
-from wd_db.tables.associations.user_lobby import AssociationUserLobby
-from wd_db.tables.audit_log import AuditLog
-from wd_db.tables.auto_reassign import AutoReAssign
-from wd_db.tables.autochannel import AutoChannels
-from wd_db.tables.autochannel_settings import AutoChannelSettings
-from wd_db.tables.car_fuel import CarFuels
-from wd_db.tables.channel import Channels
-from wd_db.tables.command import Commands
-from wd_db.tables.commandgroup import CommandGroups
-from wd_db.tables.disabled_commands import DisabledCommands
-from wd_db.tables.game import Games
-from wd_db.tables.incremental import Players, UserMoney
-from wd_db.tables.incremental.generators import Generators
-from wd_db.tables.incremental.rates import GeneratorRates
-from wd_db.tables.incremental.user_generator import AssociationUserGenerator
+lazy from wd_db.tables.associations.auto_assign_role import AutoAssignRole
+lazy from wd_db.tables.associations.channel_audit import ChannelAudit
+lazy from wd_db.tables.associations.channel_lobby import ChannelLobby
+lazy from wd_db.tables.associations.channel_tags import ChannelTag
+lazy from wd_db.tables.associations.user_command import AssociationUserCommand
+lazy from wd_db.tables.associations.user_hangman import AssociationUserHangman
+lazy from wd_db.tables.associations.user_lobby import AssociationUserLobby
+lazy from wd_db.tables.audit_log import AuditLog
+lazy from wd_db.tables.auto_reassign import AutoReAssign
+lazy from wd_db.tables.autochannel import AutoChannels
+lazy from wd_db.tables.autochannel_settings import AutoChannelSettings
+lazy from wd_db.tables.car_fuel import CarFuels
+lazy from wd_db.tables.channel import Channels
+lazy from wd_db.tables.command import Commands
+lazy from wd_db.tables.commandgroup import CommandGroups
+lazy from wd_db.tables.disabled_commands import DisabledCommands
+lazy from wd_db.tables.game import Games
+lazy from wd_db.tables.incremental import Players, UserMoney
+lazy from wd_db.tables.incremental.generators import Generators
+lazy from wd_db.tables.incremental.rates import GeneratorRates
+lazy from wd_db.tables.incremental.user_generator import AssociationUserGenerator
 
 # Matchmaking system tables
-from wd_db.tables.matchmaking.game_match import GameMatch
-from wd_db.tables.matchmaking.match_player import MatchPlayer
-from wd_db.tables.matchmaking.match_team import MatchTeam
-from wd_db.tables.matchmaking.player_game_stats import PlayerGameStats
-from wd_db.tables.matchmaking.player_synergy import PlayerSynergy
-from wd_db.tables.matchmaking.team_composition import TeamComposition
-from wd_db.tables.matchmaking.team_composition_player import TeamCompositionPlayer
-from wd_db.tables.reminder import TimedReminder
-from wd_db.tables.steamsale import SteamSaleProperties
-from wd_db.tables.sync_ban.sync_ban_banned_by import SyncBanBannedBy
+lazy from wd_db.tables.matchmaking.game_match import GameMatch
+lazy from wd_db.tables.matchmaking.match_player import MatchPlayer
+lazy from wd_db.tables.matchmaking.match_team import MatchTeam
+lazy from wd_db.tables.matchmaking.player_game_stats import PlayerGameStats
+lazy from wd_db.tables.matchmaking.player_synergy import PlayerSynergy
+lazy from wd_db.tables.matchmaking.team_composition import TeamComposition
+lazy from wd_db.tables.matchmaking.team_composition_player import TeamCompositionPlayer
+lazy from wd_db.tables.reminder import TimedReminder
+lazy from wd_db.tables.steamsale import SteamSaleProperties
+lazy from wd_db.tables.sync_ban.sync_ban_banned_by import SyncBanBannedBy
 
-from .constants import SessionMixin, session
-from .extension.model import SQLModel
+lazy from .constants import SessionMixin, session
+lazy from .extension.model import SQLModel
 
 
 __all__ = [

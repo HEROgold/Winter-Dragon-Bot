@@ -8,7 +8,7 @@ from wd_db.extension.model import SQLModel
 class Generators(SQLModel, table=True):
     """Table for storing generator data."""
 
-    id: int | None = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, unique=True)
     name: str
     description: str = Field(default="")
     cost_amount: int = Field(default=100)

@@ -10,7 +10,7 @@ from wd_db.tables.user import Users
 
 
 class Infractions(SQLModel, table=True):
-    user_id: int = Field(foreign_key=get_foreign_key(Users), primary_key=True)
+    user_id: int = Field(foreign_key=get_foreign_key(Users), unique=True)
     infraction_count: int = Field(default=0)
 
     @classmethod

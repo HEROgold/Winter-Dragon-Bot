@@ -10,5 +10,5 @@ from wd_db.tables.user import Users
 
 
 class UserRoles(SQLModel, table=True):
-    role_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Roles)), primary_key=True))
-    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), primary_key=True))
+    role_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Roles)), unique=True))
+    user_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Users), ondelete="CASCADE"), unique=True))

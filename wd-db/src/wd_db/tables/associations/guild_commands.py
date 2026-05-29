@@ -10,5 +10,5 @@ from wd_db.tables.guild import Guilds
 
 
 class GuildCommands(SQLModel, table=True):
-    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), primary_key=True))
-    command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands)), primary_key=True))
+    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), unique=True))
+    command_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Commands)), unique=True))

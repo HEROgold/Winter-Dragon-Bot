@@ -10,5 +10,5 @@ from wd_db.tables.guild import Guilds
 
 
 class GuildAuditLog(SQLModel, table=True):
-    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), primary_key=True))
-    audit_log_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(AuditLog)), primary_key=True))
+    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), unique=True))
+    audit_log_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(AuditLog)), unique=True))

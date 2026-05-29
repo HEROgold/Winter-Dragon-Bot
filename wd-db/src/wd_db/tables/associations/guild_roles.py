@@ -10,5 +10,5 @@ from wd_db.tables.role import Roles
 
 
 class GuildRoles(SQLModel, table=True):
-    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), primary_key=True))
-    role_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Roles)), primary_key=True))
+    guild_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Guilds)), unique=True))
+    role_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Roles)), unique=True))

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import ClassVar
+lazy from typing import ClassVar
 
-from discord import AuditLogAction
-from sqlalchemy import Column, Enum, ForeignKey
-from sqlmodel import Field
+lazy from discord import AuditLogAction
+lazy from sqlalchemy import Column, Enum, ForeignKey
+lazy from sqlmodel import Field
 
-from wd_db.extension.model import SQLModel
-from wd_db.keys import get_foreign_key
-from wd_db.tables.channel import Channels
+lazy from wd_db.extension.model import SQLModel
+lazy from wd_db.keys import get_foreign_key
+lazy from wd_db.tables.channel import Channels
 
 
 class ChannelAudit(SQLModel, table=True):
@@ -18,5 +18,5 @@ class ChannelAudit(SQLModel, table=True):
 
     # This means that the channel MUST have LOGS tag as well.
 
-    channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels), ondelete="CASCADE"), primary_key=True))
+    channel_id: int = Field(sa_column=Column(ForeignKey(get_foreign_key(Channels), ondelete="CASCADE"), unique=True))
     audit_action: AuditLogAction = Field(sa_column=Column(Enum(AuditLogAction)))
