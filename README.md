@@ -29,6 +29,7 @@ Services:
 - **Redis**: Cache/queue backend
 - **PostgreSQL**: Data persistence
 - **PgAdmin**: Database UI at http://localhost:5050
+- **Grafana**: Analytics UI at http://localhost:3002 for PostgreSQL data from `winter_dragon`
 - **Redis Commander**: Cache UI at http://localhost:8081
 
 ### Local Frontend Development

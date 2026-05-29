@@ -15,8 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
-COPY --parents wd-*/ ./
+# Copy project files - explicit paths since glob patterns don't work well
+COPY wd-bot/ wd-bot/
+COPY wd-config/ wd-config/
+COPY wd-core/ wd-core/
+COPY wd-db/ wd-db/
+COPY wd-discord/ wd-discord/
+COPY wd-errors/ wd-errors/
+COPY wd-types/ wd-types/
 COPY discord.py/ discord.py/
 COPY src/ src/
 COPY uv.lock pyproject.toml config.ini README.md LICENSE.md ./
@@ -28,7 +34,14 @@ RUN uv sync --frozen --no-dev
 FROM python:3.15-rc-slim-trixie
 
 COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/wd-*/ /app/wd-*/
+COPY --from=builder /app/wd-bot /app/wd-bot
+COPY --from=builder /app/wd-config /app/wd-config
+COPY --from=builder /app/wd-core /app/wd-core
+COPY --from=builder /app/wd-db /app/wd-db
+COPY --from=builder /app/wd-discord /app/wd-discord
+COPY --from=builder /app/wd-errors /app/wd-errors
+COPY --from=builder /app/wd-types /app/wd-types
+COPY --from=builder /app/src /app/src
 COPY --from=builder /app/config.ini /app/
 
 WORKDIR /app
@@ -36,9 +49,8 @@ WORKDIR /app
 # Create logs directory
 RUN mkdir -p /app/logs
 
-# No need to copy uv to runtime if using venv directly
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "-m", "wd_bot.bot"]
+CMD ["python", "-m", "winter_dragon.bot"]

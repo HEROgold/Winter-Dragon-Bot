@@ -107,6 +107,25 @@ services:
       - default
     restart: unless-stopped
 
+  grafana:
+    image: grafana/grafana-oss:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    restart: unless-stopped
+    networks:
+      - default
+
   api:
     build:
       context: .
@@ -134,6 +153,8 @@ volumes:
   postgres_data:
     driver: local
   pgadmin_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:
