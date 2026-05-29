@@ -32,6 +32,36 @@ Services:
 - **Grafana**: Analytics UI at http://localhost:3002 for PostgreSQL data from `winter_dragon`
 - **Redis Commander**: Cache UI at http://localhost:8081
 
+## Documentation
+
+Complete documentation is available at `docs/` with MkDocs Material theme.
+
+### View Documentation
+
+**Online** (if deployed): https://herogold.github.io/Winter-Dragon-Bot
+
+**Local Development**:
+
+```bash
+# Install docs dependencies
+uv pip install -e ".[docs]"
+
+# Serve documentation locally
+mkdocs serve
+```
+
+Documentation will be available at http://localhost:8000
+
+### Documentation Structure
+
+- **[Getting Started](docs/guide/getting-started.md)** — Installation and setup
+- **[Frontend Guide](docs/guide/frontend.md)** — React + Bun frontend details
+- **[API Usage](docs/guide/api-usage.md)** — REST API endpoints and examples
+- **[Architecture](docs/dev/architecture.md)** — System design and components
+- **[Development Setup](docs/dev/setup.md)** — Local development workflow
+- **[Database Schema](docs/dev/database.md)** — PostgreSQL tables and queries
+- **[API Reference](docs/api-reference.md)** — Complete API documentation
+
 ### Local Frontend Development
 
 ```bash

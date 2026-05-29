@@ -6,3 +6,5 @@ postgres
 config.ini
 logs/*
 .env
+site/
+.venv/
