@@ -98,12 +98,12 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
 
     async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:
         """Log where errors occur during the event loop."""
-        self.logger.exception(f"error in: {event_method}")
+        self.logger.exception(t"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
     async def on_command_error(self, context: Context[Bot], exception: CommandError) -> None:
         """Log where errors occur during command execution."""
-        self.logger.exception(f"error in command: {context}", exc_info=exception)
+        self.logger.exception(t"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 
     async def get_extensions(self) -> AsyncGenerator[str]:
@@ -158,17 +158,17 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
     async def load_extensions(self) -> None:
         """Load all the extensions in the extensions directory."""
         if not EXTENSIONS.exists():
-            self.logger.critical(f"{EXTENSIONS=} not found.")
+            self.logger.critical(t"{EXTENSIONS=} not found.")
             return
-        self.logger.debug(f"Found {EXTENSIONS=}")
+        self.logger.debug(t"Found {EXTENSIONS=}")
         async for extension in self.get_extensions():
-            self.logger.info(f"Loading {extension}")
+            self.logger.info(t"Loading {extension}")
             try:
                 await self.load_extension(extension, package="wd_bot.")
             except Exception:
                 self.logger.exception("")
             else:
-                self.logger.info(f"Loaded {extension}")
+                self.logger.info(t"Loaded {extension}")
 
     @Config.with_kwarg("Tokens", "discord_token")
     async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs: str) -> None:

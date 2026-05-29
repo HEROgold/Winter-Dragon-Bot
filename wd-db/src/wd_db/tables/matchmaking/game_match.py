@@ -1,4 +1,5 @@
 """GameMatch table - stores information about completed matches."""
+from __future__ import annotations
 
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -30,6 +31,6 @@ class GameMatch(SQLModel, table=True):
     bracket_format: str | None = Field(default=None)  # e.g., "1v1", "2v2", "3v3", "ffa"
 
     # Relationships
-    game: "Games" = Relationship()
-    players: list["MatchPlayer"] = Relationship(back_populates="match")
-    teams: list["MatchTeam"] = Relationship(back_populates="match")
+    game: Games = Relationship()
+    players: list[MatchPlayer] = Relationship(back_populates="match")
+    teams: list[MatchTeam] = Relationship(back_populates="match")

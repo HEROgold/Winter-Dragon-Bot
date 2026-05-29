@@ -1,1 +1,0 @@
-"""Internal core bot functionality."""

@@ -1,12 +1,21 @@
+from __future__ import annotations
 
-from discord import AuditLogAction
-from sqlalchemy import Column, ForeignKey
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Column, ForeignKey, delete, func
 from sqlmodel import Field, Session, col, select
 
-from wd_db.channel_types import Tags
 from wd_db.extension.model import DiscordID
 from wd_db.keys import get_foreign_key
+from wd_db.tables.associations.channel_audit import ChannelAudit
+from wd_db.tables.associations.channel_tags import ChannelTag
 from wd_db.tables.guild import Guilds
+
+
+if TYPE_CHECKING:
+    from discord import AuditLogAction
+
+    from wd_db.channel_types import Tags
 
 
 class Channels(DiscordID, table=True):
@@ -15,13 +24,11 @@ class Channels(DiscordID, table=True):
 
     def link_tag(self, session: Session, tag: Tags) -> None:
         """Link this channel to a specific tag through the association table."""
-        from wd_db.tables.associations.channel_tags import ChannelTag
-
         if session.exec(
             select(ChannelTag).where(
                 ChannelTag.channel_id == self.id,
                 ChannelTag.tag == tag,
-            )
+            ),
         ).first():
             return
 
@@ -38,10 +45,6 @@ class Channels(DiscordID, table=True):
         If tag is None, removes all tag associations.
         Uses bulk delete for efficiency instead of fetching and deleting records individually.
         """
-        from sqlalchemy import delete
-
-        from wd_db.tables.associations.channel_tags import ChannelTag
-
         if tag is None:
             stmt = delete(ChannelTag).where(col(ChannelTag.channel_id) == self.id)
         else:
@@ -55,22 +58,18 @@ class Channels(DiscordID, table=True):
 
     def get_tags(self, session: Session) -> list[Tags]:
         """Get all tags associated with this channel."""
-        from wd_db.tables.associations.channel_tags import ChannelTag
-
         associations = session.exec(select(ChannelTag).where(ChannelTag.channel_id == self.id)).all()
 
         return [assoc.tag for assoc in associations]
 
     def has_tag(self, session: Session, tag: Tags) -> bool:
         """Check if this channel has a specific tag."""
-        from wd_db.tables.associations.channel_tags import ChannelTag
-
         return (
             session.exec(
                 select(ChannelTag).where(
                     ChannelTag.channel_id == self.id,
                     ChannelTag.tag == tag,
-                )
+                ),
             ).first()
             is not None
         )
@@ -83,10 +82,6 @@ class Channels(DiscordID, table=True):
         if not tags:
             return True
 
-        from sqlalchemy import func
-
-        from wd_db.tables.associations.channel_tags import ChannelTag
-
         stmt = select(func.count()).where(
             ChannelTag.channel_id == self.id,
             col(ChannelTag.tag).in_(tags),
@@ -95,10 +90,8 @@ class Channels(DiscordID, table=True):
         return count == len(tags)
 
     @staticmethod
-    def get_by_tag(session: Session, tag: Tags, guild_id: int | None = None) -> list["Channels"]:
+    def get_by_tag(session: Session, tag: Tags, guild_id: int | None = None) -> list[Channels]:
         """Get all channels with a specific tag, optionally filtered by guild."""
-        from wd_db.tables.associations.channel_tags import ChannelTag
-
         query = select(Channels).join(ChannelTag).where(ChannelTag.tag == tag)
 
         if guild_id is not None:
@@ -113,7 +106,7 @@ class Channels(DiscordID, table=True):
         guild_id: int | None = None,
         *,
         match_all: bool = False,
-    ) -> list["Channels"]:
+    ) -> list[Channels]:
         """Get all channels with specific tags, optionally filtered by guild.
 
         If match_all is True, only channels that have all specified tags are returned. (AND)
@@ -121,10 +114,6 @@ class Channels(DiscordID, table=True):
         """
         if not tags:
             return []
-
-        from sqlalchemy import func
-
-        from wd_db.tables.associations.channel_tags import ChannelTag
 
         stmt = select(col(ChannelTag.channel_id)).where(col(ChannelTag.tag).in_(tags))
 
@@ -144,13 +133,11 @@ class Channels(DiscordID, table=True):
 
     def link_audit_action(self, session: Session, audit_action: AuditLogAction) -> None:
         """Link this channel to a specific audit action through the association table."""
-        from wd_db.tables.associations.channel_audit import ChannelAudit
-
         if session.exec(
             select(ChannelAudit).where(
                 ChannelAudit.channel_id == self.id,
                 ChannelAudit.audit_action == audit_action.value,
-            )
+            ),
         ).first():
             return
 
@@ -167,10 +154,6 @@ class Channels(DiscordID, table=True):
         If audit_action is None, removes all audit action associations.
         Uses bulk delete for efficiency instead of fetching and deleting records individually.
         """
-        from sqlalchemy import delete
-
-        from wd_db.tables.associations.channel_audit import ChannelAudit
-
         if audit_action is None:
             stmt = delete(ChannelAudit).where(col(ChannelAudit.channel_id) == self.id)
         else:

@@ -1,6 +1,5 @@
 """Database tables for tournament signup and registration."""
-
-
+from __future__ import annotations
 
 from datetime import UTC, datetime
 

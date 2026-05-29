@@ -1,4 +1,5 @@
 """PlayerGameStats table - aggregated statistics per player per game."""
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 

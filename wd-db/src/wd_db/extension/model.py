@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
 from herogold.log import LoggerMixin
 from herogold.typing.check import contains_sub_type
+from httpxyz import Client
 from sqlalchemy import BigInteger, ScalarResult
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
@@ -43,6 +44,7 @@ class BaseModel(BaseSQLModel):
 
     session: ClassVar[Session] = db_session
     logger: ClassVar[logging.Logger] = ModelLogger().logger
+    http_client: ClassVar[Client] = Client(http2=True)
 
     def __init_subclass__(cls, **kwargs: Unpack[ConfigDict]) -> None:
         """Register subclass in models set."""
@@ -51,7 +53,7 @@ class BaseModel(BaseSQLModel):
 
     def add(self: Self, session: Session | None = None) -> None:
         """Add a record to Database."""
-        self.logger.debug(f"Adding record: {self}")
+        self.logger.debug(t"Adding record: {self}")
         if self.id is not None:
             msg = f"Record with {self.__class__.__name__}.id={self.id} already exists."
             raise AlreadyExistsError(msg)
@@ -59,7 +61,7 @@ class BaseModel(BaseSQLModel):
 
     def update(self: Self, session: Session | None = None) -> None:
         """Create or update a record in Database."""
-        self.logger.debug(f"Record update requested: {self}")
+        self.logger.debug(t"Record update requested: {self}")
         session = self._get_session(session)
         if known := session.exec(
             select(self.__class__).where(self.__class__.id == self.id).with_for_update(),
@@ -70,7 +72,7 @@ class BaseModel(BaseSQLModel):
     @classmethod
     def get(cls, id_: int, session: Session | None = None, *, with_for_update: bool = False) -> Self:
         """Get a record from Database."""
-        cls.logger.debug(f"Getting record: {id_=}")
+        cls.logger.debug(t"Getting record: {id_=}")
         session = cls._get_session(session)
 
         if known := session.exec(
@@ -83,19 +85,19 @@ class BaseModel(BaseSQLModel):
     @classmethod
     def get_all(cls: type[Self], session: Session | None = None) -> Sequence[Self]:
         """Get all records from Database."""
-        cls.logger.debug(f"Getting all records: {cls.__name__}")
+        cls.logger.debug(t"Getting all records: {cls.__name__}")
         session = cls._get_session(session)
         return session.exec(select(cls)).all()
 
     @classmethod
     def _get_session(cls, session: Session | None = None) -> Session:
         """Get the usable session, either the provided one or the default."""
-        cls.logger.debug(f"Getting session: {session}")
+        cls.logger.debug(t"Getting session: {session}")
         return session or cls.session
 
     def delete(self, session: Session | None = None) -> None:
         """Delete a record from Database."""
-        self.logger.debug(f"Deleting record: {self}")
+        self.logger.debug(t"Deleting record: {self}")
         session = self._get_session(session)
         if known := session.exec(
             select(self.__class__).where(self.__class__.id == self.id).with_for_update(),
@@ -107,14 +109,14 @@ class BaseModel(BaseSQLModel):
         raise NotFoundError(msg)
 
     def _create_record(self, session: Session | None = None) -> None:
-        self.logger.debug(f"Creating record: {self}")
+        self.logger.debug(t"Creating record: {self}")
         session = self._get_session(session)
         session.add(self)
         session.commit()
 
     def _update_record(self, known: Self, session: Session | None = None) -> None:
         """Update known, with the values from self."""
-        self.logger.debug(f"Updating record: {self}")
+        self.logger.debug(t"Updating record: {self}")
         session = self._get_session(session)
         for name, info in self.__class__.model_fields.items():
             if name == "id":
@@ -123,9 +125,9 @@ class BaseModel(BaseSQLModel):
             if info.annotation is None or type(value) is NoneType:
                 # Filter out fields without type annotations. Filters out optional fields too.
                 continue
-            self.logger.debug(f"{type(value)}: {type(value) is info.annotation=}, {self=}")
+            self.logger.debug(t"{type(value)}: {type(value) is info.annotation=}, {self=}")
             if type(value) is not info.annotation:
-                self.logger.debug(f"{contains_sub_type(info, info.annotation)=}")
+                self.logger.debug(t"{contains_sub_type(info, info.annotation)=}")
             if type(value) is info.annotation or contains_sub_type(info, info.annotation):
                 # Set the actual value from the instance, not from field info
                 setattr(known, name, value)
@@ -135,7 +137,7 @@ class BaseModel(BaseSQLModel):
     @classmethod
     def from_[T](cls, column: Mapped[T], value: T, session: Session | None = None) -> ScalarResult[Self]:
         """Get a record from Database by field and value."""
-        cls.logger.debug(f"Getting record from field: {cls=}, {column=} == {value=}")
+        cls.logger.debug(t"Getting record from field: {cls=}, {column=} == {value=}")
         session = cls._get_session(session)
         return session.exec(select(cls).where(column == value))
 

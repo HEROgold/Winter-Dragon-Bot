@@ -1,4 +1,5 @@
 """Association table for team composition players."""
+from __future__ import annotations
 
 from sqlmodel import Field
 

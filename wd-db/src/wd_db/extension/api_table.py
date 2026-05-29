@@ -4,12 +4,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
 
-import requests
-
 from .model import SQLModel
 
 
 if TYPE_CHECKING:
+    from httpxyz import Response
     from pydantic import ConfigDict
 
 
@@ -66,7 +65,7 @@ class ApiTable(SQLModel, table=True):
         according to the fields defined in cls.fields.
         """
         url = f"{cls.base_url}{cls.route}"
-        cls.logger.debug(f"Making API call to: {url} with params: {params}")
+        cls.logger.debug(t"Making API call to: {url} with params: {params}")
         response = cls._get_response(url)
         return cls(**cls._parse_api_response(response.json()))
 
@@ -78,7 +77,7 @@ class ApiTable(SQLModel, table=True):
             if field_name in data:
                 extracted_data[field_name] = data[field_name]
             else:
-                cls.logger.warning(f"Field '{field_name}' not found in API response")
+                cls.logger.warning(t"Field '{field_name}' not found in API response")
         return extracted_data
 
     @abstractmethod
@@ -91,8 +90,8 @@ class ApiTable(SQLModel, table=True):
         """
 
     @classmethod
-    def _get_response(cls, url: str) -> requests.Response:
-        response = requests.get(url, headers=cls.get_headers(), timeout=10)
+    def _get_response(cls, url: str) -> Response:
+        response = cls.http_client.get(url, headers=cls.get_headers(), timeout=10)
         response.raise_for_status()
         return response
 

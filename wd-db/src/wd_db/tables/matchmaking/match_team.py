@@ -1,4 +1,5 @@
 """MatchTeam table - stores team-level statistics for matches."""
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -25,4 +26,4 @@ class MatchTeam(SQLModel, table=True):
     won: bool = Field(default=False)
 
     # Relationships
-    match: "GameMatch" = Relationship(back_populates="teams")
+    match: GameMatch = Relationship(back_populates="teams")

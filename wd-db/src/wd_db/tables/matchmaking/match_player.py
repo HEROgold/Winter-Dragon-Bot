@@ -1,4 +1,5 @@
 """MatchPlayer table - stores player participation in matches."""
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -28,5 +29,5 @@ class MatchPlayer(SQLModel, table=True):
     won: bool = Field(default=False)
 
     # Relationships
-    match: "GameMatch" = Relationship(back_populates="players")
+    match: GameMatch = Relationship(back_populates="players")
     user: Users = Relationship()

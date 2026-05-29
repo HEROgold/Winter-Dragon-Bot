@@ -1,6 +1,5 @@
 """Module containing tags for the database."""
-
-
+from __future__ import annotations
 
 from enum import Enum, auto
 

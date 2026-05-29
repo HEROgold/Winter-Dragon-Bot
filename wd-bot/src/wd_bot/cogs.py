@@ -71,10 +71,10 @@ class Cog(commands.Cog, LoggerMixin):
 
         if not self.has_error_handler():
             # Mention class name from the inheriting subclass.
-            self.logger.warning(f"{self.__class__} has no error handler!")
+            self.logger.warning(t"{self.__class__} has no error handler!")
         if not self.has_app_command_error_handler():
             # Mention class name from the inheriting subclass.
-            self.logger.warning(f"{self.__class__} has no app command error handler!")
+            self.logger.warning(t"{self.__class__} has no app command error handler!")
 
         for listener in self.get_listeners():
             self.logger.debug(listener)
@@ -132,7 +132,7 @@ class Cog(commands.Cog, LoggerMixin):
         )
 
         # Return True if any matching disabled command exists
-        self.logger.debug(f"Checking if command '{qual_name} is disabled for user {user_id=} {channel_id=} {guild_id=}")
+        self.logger.debug(t"Checking if command '{qual_name} is disabled for user {user_id=} {channel_id=} {guild_id=}")
         return self.session.exec(statement).first() is not None
 
     def is_command_enabled(self, interaction: discord.Interaction | commands.Context) -> bool:
@@ -151,7 +151,7 @@ class Cog(commands.Cog, LoggerMixin):
             # prevent discord.py from raising an error (simply cleans up logs :) )
             return
         if cls.flags & CogFlags.AutoLoad:
-            self.logger.debug(f"Auto loaded Cog {cls.__name__}")
+            self.logger.debug(t"Auto loaded Cog {cls.__name__}")
             await self.bot.add_cog(self)
 
     async def cog_unload(self) -> None:
@@ -166,7 +166,7 @@ class Cog(commands.Cog, LoggerMixin):
     async def add_mentions(self) -> None:
         """Add app command mentions to the bot if it hasn't been done yet."""
         if not self.has_app_command_mentions:
-            self.logger.debug(f"Adding app_commands to cache. {Cog.cache=}")
+            self.logger.debug(t"Adding app_commands to cache. {Cog.cache=}")
             await Cog.cache.update_app_commands_cache(self.bot)
             self.flags |= CogFlags._HasAppCommandMentions  # noqa: SLF001
 
@@ -176,7 +176,7 @@ class Cog(commands.Cog, LoggerMixin):
         for command in chain(self.walk_commands(), self.walk_app_commands()):
             if isinstance(command, app_commands.Group):
                 continue
-            self.logger.debug(f"Adding is_command_disabled check to {command.qualified_name}")
+            self.logger.debug(t"Adding is_command_disabled check to {command.qualified_name}")
             if isinstance(command, app_commands.Command):
                 command.add_check(self.is_command_enabled)
             else:
@@ -198,7 +198,7 @@ class Cog(commands.Cog, LoggerMixin):
         if not isinstance(error, commands.CommandError):
             # Documentation mentions that `error` is CommandError, however it's type hinted with Exception?
             # Just check it here just in case.
-            self.logger.error(f"Non-CommandError passed to cog_command_error: {error}", exc_info=error)
+            self.logger.error(t"Non-CommandError passed to cog_command_error: {error}", exc_info=error)
             return
         for handler in ErrorFactory.get_handlers(self.bot, error, ctx=ctx):
             await handler.handle()

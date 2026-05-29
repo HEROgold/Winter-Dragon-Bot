@@ -1,4 +1,5 @@
 """TeamComposition table - tracks historical team compositions and success."""
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
@@ -35,4 +36,4 @@ class TeamComposition(SQLModel, table=True):
 
     # Relationships
     game: Games = Relationship()
-    players: list["Users"] = Relationship(link_model=TeamCompositionPlayer)
+    players: list[Users] = Relationship(link_model=TeamCompositionPlayer)

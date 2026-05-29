@@ -1,13 +1,16 @@
+from __future__ import annotations
 
-
-
-from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field
 
 from wd_db.extension.model import SQLModel
 from wd_db.keys import get_foreign_key
 from wd_db.tables.user import Users
+
+
+if TYPE_CHECKING:
+    from datetime import datetime, timedelta
 
 
 class Reminder(SQLModel, table=True):

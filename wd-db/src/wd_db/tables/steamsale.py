@@ -5,7 +5,7 @@ from enum import Enum, auto
 
 from sqlalchemy import text
 from sqlmodel import Field
-from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
+from wd_bot.steam_url import SteamURL
 
 from wd_db.constants import session
 from wd_db.extension.model import SQLModel
