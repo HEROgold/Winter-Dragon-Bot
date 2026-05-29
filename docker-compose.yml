@@ -72,7 +72,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: uv run python -m winter_dragon.workers
+    command: python -m winter_dragon.workers
     environment:
       REDIS_HOST: redis
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
