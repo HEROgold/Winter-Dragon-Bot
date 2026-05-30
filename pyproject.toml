@@ -19,8 +19,6 @@ classifiers = [
   "Framework :: AsyncIO"
 ]
 dependencies = [
-  "aiohttp>=3.13.5",
-  "discord-py",
   "wd-bot",
   "wd-config",
   "wd-core",
@@ -41,7 +39,7 @@ docs = [
 package = true
 
 [tool.ty.environment]
-root = ["./src", "./discord.py"]
+root = ["./src"]
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
@@ -56,7 +54,6 @@ members = [
     "wd-errors",
     "wd-types",
     "wd-config",
-    "discord.py",
 ]
 
 [tool.uv.sources]
@@ -67,4 +64,3 @@ wd-db = { workspace = true }
 wd-discord = { workspace = true }
 wd-errors = { workspace = true }
 wd-config = { workspace = true }
-discord-py = { workspace = true }

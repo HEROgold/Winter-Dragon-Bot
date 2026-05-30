@@ -6,5 +6,5 @@ project-excludes = [
     ".venv",
 ]
 preset = "strict"
-infer-with-first-use = false
-hover-enabled = false
+infer-with-first-use = true
+hover-enabled = true

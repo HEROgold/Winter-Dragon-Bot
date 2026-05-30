@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy project files
 COPY --parents wd-*/ ./
-COPY discord.py/ discord.py/
 COPY src/ src/
 COPY uv.lock pyproject.toml config.ini README.md LICENSE.md ./
 
@@ -35,7 +34,6 @@ COPY --from=builder /app/wd-db/src/wd_db/ /app/wd_db/
 COPY --from=builder /app/wd-discord/src/wd_discord/ /app/wd_discord/
 COPY --from=builder /app/wd-errors/src/wd_errors/ /app/wd_errors/
 COPY --from=builder /app/wd-types/src/wd_types/ /app/wd_types/
-COPY --from=builder /app/discord.py/ /app/discord.py/
 COPY --from=builder /app/config.ini /app/
 
 WORKDIR /app

@@ -1,25 +1,23 @@
 {
+  "include": [
+    "src",
+    "wd-bot/src",
+    "wd-config/src",
+    "wd-core/src",
+    "wd-db/src",
+    "wd-discord/src",
+    "wd-errors/src",
+    "wd-types/src",
+    "discord/src",
+  ],
   "exclude": [
-    "**/*", "**/node_modules", "**/__pycache__", "**/.*", ".venv"
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    ".venv"
   ],
+  "venvPath": ".",
+  "venv": ".venv",
   "pythonVersion": "3.15",
-  "python.analysis.typeCheckingMode": "strict",
-  "python.analysis.extraPaths": [
-      "${workspaceFolder}/src"
-  ],
-  "python.analysis.diagnosticSeverityOverrides": {
-      "reportGeneralTypeIssues": "none",
-      "reportUnboundVariable": "none",
-      "reportOptionalMemberAccess": "none",
-      "reportUnknownMemberType": "none",
-      "reportUnknownVariableType": "none",
-      "reportUnknownArgumentType": "none",
-      "reportUnknownParameterType": "none",
-      "reportMissingTypeArgument": "none",
-      "reportMissingParameterType": "none",
-      "reportUnnecessaryComparison": "none",
-      "reportMissingTypeStubs": "none",
-      "reportOptionalSubscript": "none",
-      "reportAttributeAccessIssue": "none"
-    }
+  "typeCheckingMode": "strict",
 }
