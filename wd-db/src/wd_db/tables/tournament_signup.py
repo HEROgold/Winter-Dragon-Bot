@@ -4,15 +4,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
 
+from wd_db import SQLModel
 from wd_db.keys import get_foreign_key
 
 
 class TournamentSignupConfig(SQLModel, table=True):
     """Guild-specific signup configuration."""
 
-    id: int = Field(sa_type=BigInteger, unique=True, index=True, unique=True)
     announcement_channel_id: int | None = Field(sa_type=BigInteger, default=None)
     tournament_voice_channel_id: int | None = Field(sa_type=BigInteger, default=None)
 

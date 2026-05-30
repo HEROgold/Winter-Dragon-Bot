@@ -19,6 +19,7 @@ classifiers = [
   "Framework :: AsyncIO"
 ]
 dependencies = [
+  "aiohttp>=3.13.5",
   "discord-py",
   "wd-bot",
   "wd-config",
