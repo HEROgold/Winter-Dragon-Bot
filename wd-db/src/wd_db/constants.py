@@ -26,7 +26,7 @@ DATABASE_URL = URL.create(
     port=DbUrl.port,
     database=DbUrl.database,
 )
-engine = create_engine("sqlite:///winter_dragon.db", echo=False)
+engine = create_engine(DATABASE_URL, echo=False)
 session = Session(engine)
 
 
