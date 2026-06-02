@@ -16,9 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project files
+COPY uv.lock pyproject.toml config.ini README.md LICENSE.md ./
 COPY --parents wd-*/ ./
 COPY src/ src/
-COPY uv.lock pyproject.toml config.ini README.md LICENSE.md ./
 
 # Build dependencies
 RUN uv sync --frozen --no-dev
@@ -26,7 +26,7 @@ RUN uv sync --frozen --no-dev
 # Runtime stage
 FROM python:3.15-rc-slim-trixie
 
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/config.ini /app/
 COPY --from=builder /app/wd-bot/src/wd_bot/ /app/wd_bot/
 COPY --from=builder /app/wd-config/src/wd_config/ /app/wd_config/
 COPY --from=builder /app/wd-core/src/wd_core/ /app/wd_core/
@@ -34,7 +34,7 @@ COPY --from=builder /app/wd-db/src/wd_db/ /app/wd_db/
 COPY --from=builder /app/wd-discord/src/wd_discord/ /app/wd_discord/
 COPY --from=builder /app/wd-errors/src/wd_errors/ /app/wd_errors/
 COPY --from=builder /app/wd-types/src/wd_types/ /app/wd_types/
-COPY --from=builder /app/config.ini /app/
+COPY --from=builder /app/.venv /app/.venv
 
 WORKDIR /app
 
