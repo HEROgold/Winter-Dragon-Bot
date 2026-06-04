@@ -1,0 +1,32 @@
+"""Module for helping find duplicate forum posts."""
+
+from __future__ import annotations
+
+from difflib import SequenceMatcher
+from typing import TYPE_CHECKING
+
+from winter_dragon.bot.core.cogs import GroupCog
+
+
+if TYPE_CHECKING:
+    from winter_dragon.bot.core.bot import WinterDragon
+
+
+class ForumDupeFinder(GroupCog, auto_load=True):
+    """A class to find duplicate forum posts based on their content."""
+
+    def __init__(self, bot: WinterDragon) -> None:
+        """Initialize the ForumDupeFinder with the bot instance."""
+        super().__init__(bot=bot)
+        self.forum_posts: list[str] = []
+        # TODO(Herogold, #4): Replace this list with forum post titles from the database.  # noqa: FIX002
+
+    def get_ratio(self, a: str, b: str) -> float:
+        """Calculate the similarity ratio between two strings."""
+        return SequenceMatcher(None, a, b).ratio()
+
+    def find_duplicates(self, post_title: str, *, ratio: float = 0.8) -> list[str]:
+        """Find duplicate forum posts based on their content."""
+        duplicates: list[str] = []
+        duplicates.extend(post for post in self.forum_posts if self.get_ratio(post_title, post) > ratio)
+        return duplicates

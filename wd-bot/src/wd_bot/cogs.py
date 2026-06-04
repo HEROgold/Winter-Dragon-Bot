@@ -3,18 +3,13 @@
 from __future__ import annotations
 
 from enum import IntFlag, auto
-from itertools import chain
 from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
 
-import discord
-from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands.cog import _cog_special_method
 from herogold.log import LoggerMixin
-from sqlmodel import Session, select
+from sqlmodel import Session
 from wd_db.constants import engine
-from wd_db.tables.command import Commands
-from wd_db.tables.disabled_commands import DisabledCommands
 from wd_errors.factory import ErrorFactory
 
 from wd_bot.auto_reload import AutoReloadWatcher
@@ -23,6 +18,8 @@ from wd_bot.tasks import loop
 
 
 if TYPE_CHECKING:
+    import discord
+    from discord import app_commands
     from discord.ext.commands._types import BotT
     from discord.ext.commands.context import Context
 
@@ -100,49 +97,9 @@ class Cog(commands.Cog, LoggerMixin):
         """Indicates whether the cog has app command mentions."""
         return bool(self.flags & CogFlags._HasAppCommandMentions)  # noqa: SLF001
 
-    def is_command_disabled(self, interaction: discord.Interaction | commands.Context) -> bool:
-        """Check if a command is disabled for a guild, channel, or user."""
-        if interaction.message is None or isinstance(interaction, discord.Interaction):
-            user = interaction.user  # ty:ignore[unresolved-attribute]
-        else:
-            user = interaction.message.author
-
-        qual_name = None
-        if (isinstance(interaction, commands.Context) and interaction.command) or interaction.command:
-            qual_name = interaction.command.qualified_name
-        if not qual_name:
-            return False
-
-        user_id = user.id if user else None
-        channel_id = interaction.channel.id if interaction.channel else None
-        guild_id = interaction.guild.id if interaction.guild else None
-
-        # Check if command is disabled for user, channel, or guild
-        statement = (
-            select(DisabledCommands)
-            .join(Commands)
-            .where(
-                (Commands.qual_name == qual_name)
-                & (
-                    (DisabledCommands.target_id == user_id)
-                    | (DisabledCommands.target_id == channel_id)
-                    | (DisabledCommands.target_id == guild_id)
-                ),
-            )
-        )
-
-        # Return True if any matching disabled command exists
-        self.logger.debug(t"Checking if command '{qual_name} is disabled for user {user_id=} {channel_id=} {guild_id=}")
-        return self.session.exec(statement).first() is not None
-
-    def is_command_enabled(self, interaction: discord.Interaction | commands.Context) -> bool:
-        """Check if a command is enabled for a guild, channel, or user."""
-        return not self.is_command_disabled(interaction)
-
     async def cog_load(self) -> None:
         """When loaded, start the add_mentions and add_disabled_check loops."""
         self.add_mentions.start()
-        self.add_disabled_check.start()
 
     async def auto_load(self) -> None:
         """Load the cog if auto_load is True."""
@@ -158,8 +115,6 @@ class Cog(commands.Cog, LoggerMixin):
         """Stop background loops and unregister any auto-reload watcher."""
         if self.add_mentions.is_running():
             self.add_mentions.stop()
-        if self.add_disabled_check.is_running():
-            self.add_disabled_check.stop()
         self._auto_reloader.deregister()
 
     @loop(count=1)
@@ -170,24 +125,7 @@ class Cog(commands.Cog, LoggerMixin):
             await Cog.cache.update_app_commands_cache(self.bot)
             self.flags |= CogFlags._HasAppCommandMentions  # noqa: SLF001
 
-    @loop(count=1)
-    async def add_disabled_check(self) -> None:
-        """Add is_command_disabled check to all commands."""
-        for command in chain(self.walk_commands(), self.walk_app_commands()):
-            if isinstance(command, app_commands.Group):
-                continue
-            self.logger.debug(t"Adding is_command_disabled check to {command.qualified_name}")
-            if isinstance(command, app_commands.Command):
-                command.add_check(self.is_command_enabled)
-            else:
-
-                def _check(context: commands.Context) -> bool:
-                    return self.is_command_enabled(context)
-
-                command.add_check(_check)
-
     @add_mentions.before_loop
-    @add_disabled_check.before_loop
     async def before_loops(self) -> None:
         """Wait until the bot is ready before adding mentions and disabled checks."""
         await self.bot.wait_until_ready()

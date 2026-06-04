@@ -26,17 +26,22 @@ RUN uv sync --frozen --no-dev
 # Runtime stage
 FROM python:3.15-rc-slim-trixie
 
-COPY --from=builder /app/config.ini /app/
-COPY --from=builder /app/wd-bot/src/wd_bot/ /app/wd_bot/
-COPY --from=builder /app/wd-config/src/wd_config/ /app/wd_config/
-COPY --from=builder /app/wd-core/src/wd_core/ /app/wd_core/
-COPY --from=builder /app/wd-db/src/wd_db/ /app/wd_db/
-COPY --from=builder /app/wd-discord/src/wd_discord/ /app/wd_discord/
-COPY --from=builder /app/wd-errors/src/wd_errors/ /app/wd_errors/
-COPY --from=builder /app/wd-types/src/wd_types/ /app/wd_types/
-COPY --from=builder /app/.venv /app/.venv
-
 WORKDIR /app
+
+# Copy source packages for production (resolve .pth file warnings)
+COPY --from=builder /app/wd-bot/src /app/wd-bot/src
+COPY --from=builder /app/wd-config/src /app/wd-config/src
+COPY --from=builder /app/wd-core/src /app/wd-core/src
+COPY --from=builder /app/wd-db/src /app/wd-db/src
+COPY --from=builder /app/wd-discord/src /app/wd-discord/src
+COPY --from=builder /app/wd-errors/src /app/wd-errors/src
+COPY --from=builder /app/wd-types/src /app/wd-types/src
+COPY --from=builder /app/wd-cogs/src /app/wd-cogs/src
+
+# Copy other build artifacts
+COPY --from=builder /app/config.ini /app/
+COPY --from=builder /app/src /app/src
+COPY --from=builder /app/.venv /app/.venv
 
 # Create logs directory
 RUN mkdir -p /app/logs

@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import datetime
 import inspect
-import os
+import pkgutil
 import sys
 from importlib.util import module_from_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, override
 
 import discord
@@ -26,7 +25,6 @@ from wd_core.constants import BOT_PERMISSIONS, INTENTS
 from wd_bot.settings import Settings
 
 from .cogs import Cog
-from .paths import EXTENSIONS, ROOT_DIR
 
 
 if TYPE_CHECKING:
@@ -106,15 +104,39 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         self.logger.exception(t"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 
+    def _discover_wd_cogs_modules(self) -> list[str]:
+        """Discover all modules in the wd_cogs package recursively."""
+        modules = []
+        try:
+            import wd_cogs  # noqa: F401, PLC0415
+
+            # Recursively walk through all packages and modules in wd_cogs
+            def walk_packages(package: ModuleType, prefix: str = "") -> None:
+                """Recursively walk through packages and collect module names."""
+                package_path = package.__path__  # type: ignore[attr-defined]
+                for _importer, mod_name, is_package in pkgutil.walk_packages(
+                    path=package_path, prefix=f"{prefix}{package.__name__}.",
+                ):
+                    if not is_package and not mod_name.endswith(".__init__"):
+                        modules.append(mod_name)
+
+            import wd_cogs as wd_cogs_module  # noqa: PLC0415
+
+            walk_packages(wd_cogs_module)
+        except ImportError:
+            self.logger.warning("wd_cogs package not found, skipping cog discovery")
+        except Exception:
+            self.logger.exception("Error discovering wd_cogs modules")
+
+        return modules
+
     async def get_extensions(self) -> AsyncGenerator[str]:
-        """Get all the extensions in the extensions directory. Ignores extensions that start with _."""
-        for root, _, files in os.walk(EXTENSIONS):
-            for file in files:
-                if file.endswith(".py") and not file.startswith("_"):
-                    extension = Path(root) / file
-                    yield (
-                        extension.as_posix().replace(f"{ROOT_DIR.parent.as_posix()}/", "").replace("/", ".").replace(".py", "")
-                    )
+        """Get all extensions from the wd_cogs package.
+
+        Automatically discovers all .py modules in wd_cogs regardless of structure.
+        """
+        for module in self._discover_wd_cogs_modules():
+            yield module
 
     @override
     async def _load_from_module_spec(self, spec: ModuleSpec, key: str) -> None:
@@ -156,19 +178,16 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
                 obj(bot=self)
 
     async def load_extensions(self) -> None:
-        """Load all the extensions in the extensions directory."""
-        if not EXTENSIONS.exists():
-            self.logger.critical(t"{EXTENSIONS=} not found.")
-            return
-        self.logger.debug(t"Found {EXTENSIONS=}")
+        """Load all cogs from the wd_cogs package."""
+        self.logger.debug(t"Starting to load cogs from wd_cogs")
         async for extension in self.get_extensions():
-            self.logger.info(t"Loading {extension}")
+            self.logger.info(t"Loading cog {extension}")
             try:
-                await self.load_extension(extension, package="wd_bot.")
+                await self.load_extension(extension)
             except Exception:
-                self.logger.exception("")
+                self.logger.exception(t"Failed to load cog {extension}")
             else:
-                self.logger.info(t"Loaded {extension}")
+                self.logger.info(t"Loaded cog {extension}")
 
     @Config.with_kwarg("Tokens", "discord_token")
     async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs: str) -> None:

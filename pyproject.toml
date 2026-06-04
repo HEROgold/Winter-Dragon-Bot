@@ -26,6 +26,7 @@ dependencies = [
   "wd-discord",
   "wd-errors",
   "wd-types",
+  "wd-cogs",
 ]
 
 [project.optional-dependencies]
@@ -54,6 +55,7 @@ members = [
     "wd-errors",
     "wd-types",
     "wd-config",
+    "wd-cogs",
 ]
 
 [tool.uv.sources]
@@ -64,3 +66,4 @@ wd-db = { workspace = true }
 wd-discord = { workspace = true }
 wd-errors = { workspace = true }
 wd-config = { workspace = true }
+wd-cogs = { workspace = true }
