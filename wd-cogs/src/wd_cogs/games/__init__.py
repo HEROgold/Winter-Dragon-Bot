@@ -1,4 +1,5 @@
 """Package for games cogs."""
+from __future__ import annotations
 
 from .games import Games
 from .hangman import Hangman

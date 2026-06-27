@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup, Tag
-
 from winter_dragon.bot.extensions.user.steam.app_scraper import AppScraper
 from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
 from winter_dragon.bot.extensions.user.steam.bundle_scraper import BundleScraper

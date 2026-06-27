@@ -6,7 +6,6 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from herogold.log import LoggerMixin
-
 from winter_dragon.bot.extensions.user.steam.app_scraper import AppScraper
 from winter_dragon.bot.extensions.user.steam.bundle_scraper import BundleScraper
 from winter_dragon.bot.extensions.user.steam.search_scraper import SearchScraper

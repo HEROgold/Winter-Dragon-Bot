@@ -7,7 +7,6 @@ import matplotlib.dates as mdates
 from discord import app_commands
 from matplotlib import pyplot as plt
 from sqlmodel import select
-
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.paths import IMG_DIR
 from winter_dragon.database.tables import CarFuels as DbFuel

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from bs4 import BeautifulSoup
-
 from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
 from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 from winter_dragon.bot.extensions.user.steam.tags import BUNDLE_ITEM, BUNDLE_ITEM_CONTAINER, DATA_APPID

@@ -1,4 +1,5 @@
 """Package for Winter Dragon bot Extensions."""
+from __future__ import annotations
 
 from .bot_extension import (
     BotActivity,
@@ -38,33 +39,33 @@ from .utility import (
 
 
 __all__ = [
+    # server
+    "Announce",
+    "AutoAssign",
     # bot_extension
     "BotActivity",
     "BotControl",
     "BotMetrics",
     "CogEvents",
     "CommandManager",
-    "Prometheus",
-    "Sync",
+    # user
+    "Fuel",
     # games
     "Games",
     "Hangman",
-    "LeagueOfLegends",
-    "Love",
-    # server
-    "Announce",
-    "AutoAssign",
-    "Purge",
-    "Stats",
-    "SyncedBans",
-    "Welcome",
-    # tournament
-    "Tournament",
-    # user
-    "Fuel",
-    "Reminder",
     # utility
     "Invite",
+    "LeagueOfLegends",
+    "Love",
+    "Prometheus",
+    "Purge",
+    "Reminder",
+    "Stats",
+    "Sync",
+    "SyncedBans",
     "Team",
+    # tournament
+    "Tournament",
     "Uptime",
+    "Welcome",
 ]

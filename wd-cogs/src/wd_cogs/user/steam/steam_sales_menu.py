@@ -6,7 +6,6 @@ from textwrap import dedent
 
 from discord import Embed
 from sqlmodel import Session, select
-
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 from winter_dragon.bot.ui import EmbedPageSource, Paginator

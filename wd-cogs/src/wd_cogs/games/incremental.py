@@ -8,7 +8,6 @@ from typing import Any
 import discord
 from discord import Interaction, app_commands
 from sqlmodel import Session, select
-
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.extensions.games.incremental_ui import GeneratorShopMenu, ProgressMenu
 from winter_dragon.database.tables.incremental.currency import UserMoney
@@ -102,7 +101,7 @@ class CurrencyManager:
             select(UserMoney).where(
                 UserMoney.user_id == user_id,
                 UserMoney.currency == currency,
-            )
+            ),
         ).first()
         return user_money.value if user_money else 0
 
@@ -112,7 +111,7 @@ class CurrencyManager:
             select(UserMoney).where(
                 UserMoney.user_id == user_id,
                 UserMoney.currency == currency,
-            )
+            ),
         ).first()
 
         if user_money:
@@ -138,7 +137,7 @@ class RateManager:
             select(GeneratorRates).where(
                 GeneratorRates.generator_id == generator_id,
                 GeneratorRates.currency == currency,
-            )
+            ),
         ).first()
 
         if rate:

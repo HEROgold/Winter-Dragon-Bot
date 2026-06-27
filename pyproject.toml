@@ -39,6 +39,21 @@ docs = [
 [tool.uv]
 package = true
 
+[tool.pytest.ini_options]
+# Single config for the whole uv workspace. Add each package's tests dir here as it
+# gains tests; importlib mode keeps same-named test files across packages from clashing.
+asyncio_mode = "auto"
+addopts = ["--import-mode=importlib"]
+testpaths = [
+    "wd-discord/tests",
+    # "wd-bot/tests",
+    # "wd-db/tests",
+    # ...add other wd-* packages as they get tests
+]
+markers = [
+    "integration: live tests that hit external services (need credentials; auto-skip otherwise)",
+]
+
 [tool.ty.environment]
 root = ["./src"]
 

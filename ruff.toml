@@ -12,7 +12,10 @@ skip-magic-trailing-comma = false
 [lint]
 exclude = ["build", "dist", "venv"]
 select = ["ALL"]
-ignore = ["D105"]
+ignore = [
+  "D105",
+  "TD005", # We won't require an GH-issue.
+]
 
 [lint.isort]
 required-imports = [

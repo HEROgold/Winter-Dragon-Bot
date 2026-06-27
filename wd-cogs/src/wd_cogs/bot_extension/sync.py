@@ -9,7 +9,6 @@ from discord import Guild, app_commands
 from discord.app_commands import ContextMenu
 from discord.ext import commands
 from herogold.log import LoggerMixin
-
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.ui.paginator import PageSource, Paginator
 
@@ -72,7 +71,7 @@ def sync_description(command: CommandLike, logger: Logger) -> str:
     desc_len = len(desc)
     if desc_len > COMMAND_DESCRIPTION_LIMIT:
         logger.warning(
-            "Fixing command description too long: %s (%d > %d)", command.qualified_name, desc_len, COMMAND_DESCRIPTION_LIMIT
+            "Fixing command description too long: %s (%d > %d)", command.qualified_name, desc_len, COMMAND_DESCRIPTION_LIMIT,
         )
         return desc[: COMMAND_DESCRIPTION_LIMIT - len(ellipses)] + ellipses
     return desc

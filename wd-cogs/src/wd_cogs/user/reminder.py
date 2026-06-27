@@ -8,7 +8,6 @@ import discord
 from discord import app_commands
 from discord.app_commands import Choice
 from sqlmodel import select
-
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.config import Config

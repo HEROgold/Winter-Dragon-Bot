@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import discord
 import requests
 from discord import app_commands
-
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.config import Config
 

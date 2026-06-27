@@ -5,7 +5,6 @@ from __future__ import annotations
 import discord
 from discord import app_commands
 from sqlmodel import select
-
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.database.tables import SyncBanGuild, SyncBanUser
 from winter_dragon.database.tables.guild import Guilds

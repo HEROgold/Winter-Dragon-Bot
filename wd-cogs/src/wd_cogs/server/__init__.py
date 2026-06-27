@@ -1,4 +1,5 @@
 """Package for server cogs."""
+from __future__ import annotations
 
 from .announcement import Announce
 from .auto_assign import AutoAssign

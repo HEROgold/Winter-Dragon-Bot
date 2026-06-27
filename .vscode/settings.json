@@ -10,4 +10,9 @@
     "python.analysis.typeEvaluation.strictParameterNoneValue": true,
     "python.analysis.typeEvaluation.analyzeUnannotatedFunctions": true,
     "python.analysis.disableTaggedHints": false,
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.cwd": "${workspaceFolder}",
+    "python.testing.pytestArgs": [],
 }

@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import discord
 from discord import Interaction
 from sqlmodel import select
-
 from winter_dragon.bot.ui import Menu
 from winter_dragon.bot.ui.button import Button
 from winter_dragon.database.constants import SessionMixin
@@ -96,7 +95,7 @@ class GeneratorShopMenu(Menu, SessionMixin):
                 select(AssociationUserGenerator).where(
                     AssociationUserGenerator.user_id == self.user_id,
                     AssociationUserGenerator.generator_id == generator.id,
-                )
+                ),
             ).first()
 
             if user_gen:
@@ -187,7 +186,7 @@ class ProgressMenu(Menu, SessionMixin):
 
         # Get user's generators
         user_generators = self.session.exec(
-            select(AssociationUserGenerator).where(AssociationUserGenerator.user_id == self.user_id)
+            select(AssociationUserGenerator).where(AssociationUserGenerator.user_id == self.user_id),
         ).all()
 
         if not user_generators:

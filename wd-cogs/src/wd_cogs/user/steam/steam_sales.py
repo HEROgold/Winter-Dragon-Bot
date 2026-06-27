@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from confkit.data_types import Hex
 from discord import Interaction, app_commands
 from sqlmodel import select
-
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.bot.extensions.user.steam.steam_sales_menu import create_sales_paginator
@@ -100,7 +99,7 @@ class SteamSales(GroupCog, auto_load=True):
         await interaction.response.send_message(msg, ephemeral=True)
 
     @app_commands.command(
-        name="percentage", description="Get notified of steam games on sale for the given percentage or higher"
+        name="percentage", description="Get notified of steam games on sale for the given percentage or higher",
     )
     async def slash_set_percentage(self, interaction: Interaction, percent: int) -> None:
         """Set the percentage for steam sale notifications."""

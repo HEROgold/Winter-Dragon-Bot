@@ -6,7 +6,6 @@ import contextlib
 
 import discord
 from discord import DMChannel, GroupChannel, PermissionOverwrite, Permissions, Thread, app_commands
-
 from winter_dragon.bot.core.cogs import GroupCog
 
 

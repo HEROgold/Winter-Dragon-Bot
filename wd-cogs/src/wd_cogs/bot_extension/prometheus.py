@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 
 from discord.ext.prometheus import PrometheusCog
-
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop

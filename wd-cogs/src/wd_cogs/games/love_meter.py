@@ -6,7 +6,6 @@ import random
 
 import discord
 from discord import app_commands
-
 from winter_dragon.bot.core.cogs import Cog
 
 

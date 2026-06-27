@@ -7,7 +7,6 @@ from typing import Unpack
 import discord
 from discord import app_commands
 from sqlmodel import select
-
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.extensions.games.games import Games

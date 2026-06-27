@@ -6,7 +6,6 @@ import discord
 from discord import Guild, Interaction, app_commands
 from discord.ext import commands
 from sqlmodel import Session, select
-
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.ui.button import Button, ToggleButton
 from winter_dragon.bot.ui.paginator import PageSource, Paginator
@@ -188,7 +187,7 @@ class CommandManagementView(View):
                 select(DisabledCommands).where(
                     DisabledCommands.command_id == db_cmd.id,
                     DisabledCommands.guild_id == self.guild.id,
-                )
+                ),
             ).first()
 
             if not existing and db_cmd.id is not None:

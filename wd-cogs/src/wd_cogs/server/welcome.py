@@ -5,7 +5,6 @@ from __future__ import annotations
 import discord
 from discord import Interaction, app_commands
 from sqlmodel import Session, col, select
-
 from winter_dragon.bot.core.cogs import Cog
 from winter_dragon.bot.ui import Menu, Modal
 from winter_dragon.bot.ui.button import Button, ToggleButton

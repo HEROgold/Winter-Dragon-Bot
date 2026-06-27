@@ -14,7 +14,6 @@ import cassiopeia as cass
 import discord
 from discord import app_commands
 from sqlmodel import select
-
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.extensions.games.clash_settings import ClashSettings
 
@@ -336,7 +335,7 @@ class Clash(GroupCog, auto_load=True):
                         f"{lol_account.summoner_name}#{lol_account.tag_line}",
                         ranked_tier,
                         ", ".join(top_champs) if top_champs else "N/A",
-                    )
+                    ),
                 )
             except Exception:
                 self.logger.exception("Error fetching data for %s", player.display_name)

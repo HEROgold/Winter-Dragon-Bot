@@ -8,7 +8,6 @@ from typing import Unpack
 import discord
 from discord import ActivityType, Status, app_commands
 from discord.ext import commands
-
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.settings import Settings
 from winter_dragon.bot.core.tasks import loop

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, TypedDict, cast
 import discord
 from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
 from discord.abc import PrivateChannel
-
 from winter_dragon.bot.core.cogs import GroupCog
 from winter_dragon.bot.core.tasks import loop
 from winter_dragon.config import Config

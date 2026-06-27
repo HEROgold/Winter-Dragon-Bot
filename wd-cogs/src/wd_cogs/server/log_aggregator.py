@@ -16,7 +16,6 @@ from typing import NamedTuple
 
 import discord
 from herogold.log import LoggerMixin
-
 from winter_dragon.bot.ui.paginator import EmbedPageSource
 
 

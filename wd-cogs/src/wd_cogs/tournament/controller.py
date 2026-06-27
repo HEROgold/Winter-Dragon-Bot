@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Unpack
 
 import discord
 from discord import app_commands
-
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 
 from .status import Context, Events, MatchStatus

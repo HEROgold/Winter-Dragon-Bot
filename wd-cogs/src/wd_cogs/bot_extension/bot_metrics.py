@@ -11,7 +11,6 @@ import psutil
 from discord import app_commands
 from discord.ext import commands
 from matplotlib import pyplot as plt
-
 from winter_dragon.bot.core.cogs import BotArgs, GroupCog
 from winter_dragon.bot.core.paths import METRICS_FILE
 from winter_dragon.bot.core.settings import Settings
@@ -154,7 +153,7 @@ class BotMetrics(GroupCog, auto_load=True):
                 net_counters.bytes_recv,
                 net_counters.packets_sent,
                 net_counters.packets_recv,
-            ]
+            ],
         ):
             self.logger.debug(f"{i=}, {value=}")
 
@@ -306,7 +305,7 @@ class BotMetrics(GroupCog, auto_load=True):
                     net_io.bytes_recv,
                     net_io.packets_sent,
                     net_io.packets_recv,
-                )
+                ),
             )
         max_scaler = max(values)
 

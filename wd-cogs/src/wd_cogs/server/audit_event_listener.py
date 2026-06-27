@@ -11,7 +11,6 @@ from winter_dragon.bot.events.factory import AuditEventFactory
 
 if TYPE_CHECKING:
     from discord import AuditLogEntry
-
     from winter_dragon.bot.core.bot import WinterDragon
 
 
