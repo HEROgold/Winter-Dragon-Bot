@@ -20,9 +20,8 @@ from discord.ext.commands.errors import ExtensionFailed
 from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
 from herogold.log import LoggerMixin
 from wd_config import Config
+from wd_config.bot import Settings
 from wd_core.constants import BOT_PERMISSIONS, INTENTS
-
-from wd_bot.settings import Settings
 
 from .cogs import Cog
 

@@ -2,34 +2,18 @@
 
 from __future__ import annotations
 
-import enum
-from enum import auto
-
 import sentry_sdk
-from confkit import Enum
-from wd_config import Config
-
-
-class Environments(enum.StrEnum):
-    """Enum for different environments."""
-
-    development = auto()
-    production = auto()
-    staging = auto()
+from wd_config.sentry import SentrySettings
 
 
 class Sentry:
     """A class to handle Sentry setup."""
 
-    Telemetry = Config(default=True)
-    dsn = Config("")
-    environment = Config(Enum(Environments.development))
-
     def __init__(self) -> None:
         """Initialize Sentry."""
         sentry_sdk.init(
-            environment=self.environment.value,
-            dsn=self.dsn,
+            environment=SentrySettings.environment.value,
+            dsn=SentrySettings.dsn,
             # Add data like request headers and IP for users,
             # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
             send_default_pii=True,

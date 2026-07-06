@@ -9,7 +9,11 @@ authors = [
 requires-python = ">=3.15"
 dependencies = [
     "herogold[orm]>=3.0.0",
+    "wd-config",
 ]
+
+[tool.uv.sources]
+wd-config = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]

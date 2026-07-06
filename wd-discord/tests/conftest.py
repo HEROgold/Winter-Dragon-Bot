@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Any
 import pytest
 import pytest_asyncio
 from httpxyz import Response
-
 from wd_discord import ApiResponseError, Client
 
 

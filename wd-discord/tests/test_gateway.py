@@ -5,7 +5,6 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
-
 from wd_discord import Activity, Gateway, GatewayActivity, Status
 
 

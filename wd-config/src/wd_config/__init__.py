@@ -7,7 +7,8 @@ It also provides a way to set default values and to set config values using deco
 from __future__ import annotations
 
 from .config import Config
+from .discord import DiscordConfig
 from .parser import ConfigParser
 
 
-__all__ = ["Config", "ConfigParser"]
+__all__ = ["Config", "ConfigParser", "DiscordConfig"]

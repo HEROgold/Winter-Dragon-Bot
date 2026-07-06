@@ -11,8 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from herogold.log import LoggerMixin
-
-from wd_bot.settings import Settings
+from wd_config.bot import Settings
 
 
 if TYPE_CHECKING:

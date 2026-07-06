@@ -8,12 +8,15 @@ authors = [
 ]
 requires-python = ">=3.15"
 dependencies = [
-    "confkit>=2.0.0",
     "herogold>=3.3.0",
     "httpxyz>=0.31.2",
     "pydantic>=2.13.4",
     "websockets>=16.0",
+    "wd-config",
 ]
+
+[tool.uv.sources]
+wd-config = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]

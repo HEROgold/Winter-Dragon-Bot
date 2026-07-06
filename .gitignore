@@ -4,6 +4,7 @@ postgres
 *.egg-info
 */build
 config.ini
+discord.ini
 logs/*
 .env
 site/

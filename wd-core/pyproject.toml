@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.15"
 dependencies = [
     "sentry-sdk>=2.61.0",
+    "wd-config",
     "wd-discord",
 ]
 
@@ -17,4 +18,5 @@ requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.sources]
+wd-config = { workspace = true }
 wd-discord = { workspace = true }

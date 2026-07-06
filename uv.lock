@@ -625,10 +625,14 @@ version = "0.1.0"
 source = { editable = "wd-bot" }
 dependencies = [
     { name = "herogold", extra = ["orm"] },
+    { name = "wd-config" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "herogold", extras = ["orm"], specifier = ">=3.0.0" }]
+requires-dist = [
+    { name = "herogold", extras = ["orm"], specifier = ">=3.0.0" },
+    { name = "wd-config", editable = "wd-config" },
+]
 
 [[package]]
 name = "wd-cogs"
@@ -651,6 +655,12 @@ requires-dist = [
 name = "wd-config"
 version = "0.1.0"
 source = { editable = "wd-config" }
+dependencies = [
+    { name = "confkit" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "confkit", specifier = ">=2.0.0" }]
 
 [[package]]
 name = "wd-core"
@@ -658,12 +668,14 @@ version = "0.1.0"
 source = { editable = "wd-core" }
 dependencies = [
     { name = "sentry-sdk" },
+    { name = "wd-config" },
     { name = "wd-discord" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "sentry-sdk", specifier = ">=2.61.0" },
+    { name = "wd-config", editable = "wd-config" },
     { name = "wd-discord", editable = "wd-discord" },
 ]
 
@@ -671,16 +683,28 @@ requires-dist = [
 name = "wd-db"
 version = "0.1.0"
 source = { editable = "wd-db" }
+dependencies = [
+    { name = "sqlalchemy" },
+    { name = "sqlmodel" },
+    { name = "wd-config" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "sqlalchemy", specifier = ">=2.0.0" },
+    { name = "sqlmodel", specifier = ">=0.0.22" },
+    { name = "wd-config", editable = "wd-config" },
+]
 
 [[package]]
 name = "wd-discord"
 version = "0.1.0"
 source = { editable = "wd-discord" }
 dependencies = [
-    { name = "confkit" },
     { name = "herogold" },
     { name = "httpxyz" },
     { name = "pydantic" },
+    { name = "wd-config" },
     { name = "websockets" },
 ]
 
@@ -692,10 +716,10 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "confkit", specifier = ">=2.0.0" },
     { name = "herogold", specifier = ">=3.3.0" },
     { name = "httpxyz", specifier = ">=0.31.2" },
     { name = "pydantic", specifier = ">=2.13.4" },
+    { name = "wd-config", editable = "wd-config" },
     { name = "websockets", specifier = ">=16.0" },
 ]
 

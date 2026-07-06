@@ -2,7 +2,7 @@
 
 A thin, async wrapper around :mod:`httpxyz` that targets the Discord API v10
 (https://docs.discord.com/developers/reference). It reuses the package's existing
-building blocks: :class:`~wd_discord.endpoints.URLS` for the base URL + version,
+building blocks: :class:`~wd_config.discord.URLS` for the base URL + version,
 the header builders in :mod:`wd_discord.authenticate`, and
 :class:`~wd_discord.errors.ApiResponseError` for parsing failures.
 
@@ -24,6 +24,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Self
 
 from httpxyz import AsyncClient, RequestError
+from wd_config.discord import URLS
 
 from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
 from wd_discord.authenticate import (
@@ -37,7 +38,6 @@ from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
-from wd_discord.endpoints import URLS
 from wd_discord.errors import ApiResponseError
 
 
@@ -95,13 +95,12 @@ class Client:
     ) -> None:
         """Build a client for ``token``.
 
-        ``version`` overrides the API version from :class:`~wd_discord.endpoints.URLS`.
+        ``version`` overrides the API version from :class:`~wd_config.discord.URLS`.
         """
         self.token = Token(token)
         self.token_type = token_type
-        urls = URLS()
-        self.version: int = version if version is not None else urls.version
-        self.base_url = f"{urls.base}/v{self.version}"
+        self.version = version if version is not None else URLS.version
+        self.base_url = f"{URLS.base}/v{self.version}"
         self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
 
     def _default_headers(self) -> dict[str, str]:
