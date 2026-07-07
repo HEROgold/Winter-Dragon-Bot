@@ -4,6 +4,7 @@ from __future__ import annotations
 from enum import IntEnum
 
 from wd_discord.models import DiscordModel
+from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.snowflake import Snowflake
 
 
@@ -50,6 +51,11 @@ class ForumTag(DiscordModel):
     emoji_name: str | None
     """Unicode character of the emoji."""
 
+    @property
+    def emoji(self) -> PartialEmoji | None:
+        """The tag's emoji, or ``None`` if none is set."""
+        return PartialEmoji.from_fields(self.emoji_id, self.emoji_name)
+
 
 class DefaultReaction(DiscordModel):
     """https://docs.discord.com/developers/resources/channel#default-reaction-object."""
@@ -58,3 +64,8 @@ class DefaultReaction(DiscordModel):
     """Id of a guild's custom emoji."""
     emoji_name: str | None
     """Unicode character of the emoji."""
+
+    @property
+    def emoji(self) -> PartialEmoji | None:
+        """The default reaction's emoji, or ``None`` if none is set."""
+        return PartialEmoji.from_fields(self.emoji_id, self.emoji_name)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from wd_discord.models import DiscordModel
+from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.snowflake import Snowflake
 
 
@@ -19,9 +20,10 @@ class WelcomeScreenChannel(DiscordModel):
     """The emoji name if custom, the unicode character if standard, or null if no emoji is set."""
 
     @property
-    def emoji(self) -> Emoji | None:
-        """Emoji object representing the emoji for this welcome screen channel."""
-        # TODO: implement
+    def emoji(self) -> PartialEmoji | None:
+        """Emoji object representing the emoji for this welcome screen channel, or ``None`` if unset."""
+        return PartialEmoji.from_fields(self.emoji_id, self.emoji_name)
+
 
 class WelcomeScreen(DiscordModel):
     """https://docs.discord.com/developers/resources/guild#welcome-screen-object."""

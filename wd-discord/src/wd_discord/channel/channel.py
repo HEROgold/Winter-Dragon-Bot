@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from wd_discord.channel.forum import DefaultReaction, ForumLayoutType, ForumTag, SortOrderType, VideoQualityMode
 from wd_discord.channel.overwrite import PermissionOverwrite
@@ -11,6 +12,10 @@ from wd_discord.models import DiscordModel
 from wd_discord.permissions import ChannelType, PermissionsField
 from wd_discord.snowflake import Snowflake
 from wd_discord.user import User
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class Channel(DiscordModel):
@@ -90,3 +95,14 @@ class Channel(DiscordModel):
     """The default sort order used to order posts in a forum or media channel."""
     default_forum_layout: ForumLayoutType | None = None
     """The default forum layout view used to display posts in a forum channel."""
+
+    @property
+    def applied_forum_tags(self) -> Generator[ForumTag]:
+        """The ForumTag objects for ``applied_tags``, resolved against ``available_tags``.
+
+        Returned in ``applied_tags`` order; empty when either list is absent. ``Snowflake`` is an
+        unhashable dataclass, so this is a linear ``==`` scan (mirroring ``Team.owner``), not a dict lookup.
+        """
+        if not self.applied_tags or not self.available_tags:
+            return
+        yield from (tag for tag_id in self.applied_tags for tag in self.available_tags if tag.id == tag_id)

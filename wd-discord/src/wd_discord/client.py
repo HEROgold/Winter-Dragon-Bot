@@ -193,6 +193,8 @@ class Client:
         result = await self.get("/gateway/bot")
         if isinstance(result, ApiResponseError | RequestError):
             return result
+        # TODO: automatically shard out bot based on GatewayBotInfo.shards and SessionStartLimit
+        # using a ShardManager helper class
         return GatewayBotInfo.model_validate(result.json())
 
     async def get_user(self, user_id: int | str) -> User | ApiResponseError | RequestError:

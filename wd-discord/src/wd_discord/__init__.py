@@ -11,6 +11,7 @@ from wd_discord.errors import ApiResponseError
 from wd_discord.gateway import Gateway, GatewayActivity, GatewayBotInfo, Ready, ShardManager, Status
 from wd_discord.guild import Guild
 from wd_discord.models import DiscordModel
+from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.permissions import ChannelType, Permissions
 from wd_discord.snowflake import Snowflake
 from wd_discord.user import User
@@ -28,6 +29,7 @@ __all__ = [
     "GatewayActivity",
     "GatewayBotInfo",
     "Guild",
+    "PartialEmoji",
     "Permissions",
     "Ready",
     "ShardManager",
