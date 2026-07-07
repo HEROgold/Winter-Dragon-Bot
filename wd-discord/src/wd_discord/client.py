@@ -23,6 +23,7 @@ from __future__ import annotations
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Self
 
+from herogold.log import LoggerMixin
 from httpxyz import AsyncClient, RequestError
 from wd_config.discord import URLS
 
@@ -89,7 +90,7 @@ def _parse_error(response: Response) -> ApiResponseError:
         return ApiResponseError(code=response.status_code, message=response.text)
 
 
-class Client:
+class Client(LoggerMixin):
     """An async Discord REST client pinned to the configured API version (v10 by default)."""
 
     def __init__(
@@ -147,10 +148,19 @@ class Client:
         Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and
         4xx/5xx responses are returned as :class:`ApiResponseError`.
         """
-        response = await self._client.request(method, path, **kwargs)
+        self.logger.debug(t"{method} {path}")
+        try:
+            response = await self._client.request(method, path, **kwargs)
+        except RequestError:
+            # Re-raise so ``returns_known_exception`` converts it to a value; log it first.
+            self.logger.exception(t"network error for {method} {path}")
+            raise
         if response.is_success:
+            self.logger.debug(t"{response.status_code} {method} {path}")
             return response
-        return _parse_error(response)
+        error = _parse_error(response)
+        self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
+        return error
 
     async def get(self, path: str, **kwargs: Any) -> RequestResult:  # noqa: ANN401
         """Send a GET request."""

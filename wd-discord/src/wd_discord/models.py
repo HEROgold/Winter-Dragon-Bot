@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Self
 
 import sentry_sdk
+from herogold.log import getLogger
 from pydantic import BaseModel, ConfigDict, model_validator
 from wd_config.sentry import SentrySettings
 
@@ -19,12 +20,17 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
+logger = getLogger("DiscordModel")
+
+
 def _report_unknown_fields(model_name: str, extra: Mapping[str, object]) -> None:
     """Report undocumented Discord fields to Sentry when telemetry is enabled.
 
-    A no-op when ``sentry_sdk.init`` has not run, and never raises: telemetry must not turn a
-    successful response parse into a failure.
+    Always logs the unknown keys locally (visible in ``logs/`` even when Sentry is disabled or
+    unreachable). The Sentry ``capture_message`` is a no-op when ``sentry_sdk.init`` has not run,
+    and never raises: telemetry must not turn a successful response parse into a failure.
     """
+    logger.warning(t"unknown fields on {model_name}: {extra}")
     if not SentrySettings.Telemetry:
         return
     try:

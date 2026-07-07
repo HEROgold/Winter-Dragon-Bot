@@ -13,6 +13,7 @@ from wd_discord.guild import Guild
 from wd_discord.models import DiscordModel
 from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.permissions import ChannelType, Permissions
+from wd_discord.sentry import Sentry
 from wd_discord.snowflake import Snowflake
 from wd_discord.user import User
 
@@ -32,6 +33,7 @@ __all__ = [
     "PartialEmoji",
     "Permissions",
     "Ready",
+    "Sentry",
     "ShardManager",
     "Snowflake",
     "Status",
