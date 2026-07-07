@@ -46,6 +46,20 @@ Reference examples: [wd-types/src/wd_types/alias.py](../../../wd-types/src/wd_ty
 
 Kwargs are typed with a `TypedDict` + `Unpack`, not `**kwargs: Any` — see `BotArgs` in [wd-bot/src/wd_bot/cogs.py:29](../../../wd-bot/src/wd_bot/cogs.py#L29) (`Required`/`NotRequired` per key).
 
+### Prefer generators for collection-returning helpers
+
+A helper/property that derives a sequence should **yield** and be annotated `Generator[T]` (import from `collections.abc` under `TYPE_CHECKING`), not eagerly build and return a `list`. Consumers that need a materialised list wrap the call with `list(...)`. See `Channel.applied_forum_tags` in [wd-discord/src/wd_discord/channel/channel.py](../../../wd-discord/src/wd_discord/channel/channel.py):
+
+```python
+@property
+def applied_forum_tags(self) -> Generator[ForumTag]:
+    if not self.applied_tags or not self.available_tags:
+        return
+    yield from (tag for tid in self.applied_tags for tag in self.available_tags if tag.id == tid)
+```
+
+This keeps derivation lazy; a `return []`/`[...]` version forces work callers may not need. (Note: `Snowflake` is a non-frozen `@dataclass` and thus unhashable — resolve id→object by linear `==` scan, not a `dict`/`set` lookup.)
+
 ## Errors as values, not exceptions
 
 Functions that can fail return the error instead of raising; the return type is a union the caller must narrow:
