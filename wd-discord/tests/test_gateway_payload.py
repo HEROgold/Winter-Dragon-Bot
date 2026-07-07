@@ -1,8 +1,8 @@
 """Unit tests: gateway presence (object -> API) and READY (API -> object) helpers."""
 from __future__ import annotations
 
-from wd_discord import Activity
 from wd_discord.gateway import GatewayActivity, Status, build_presence, parse_ready
+from wd_errors import Activity
 
 
 def test_activity_to_dict_minimal() -> None:

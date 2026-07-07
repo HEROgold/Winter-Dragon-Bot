@@ -16,13 +16,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 from dataclasses import dataclass, field
 from enum import IntEnum, StrEnum
 from typing import TYPE_CHECKING, Any, Self
 
+from wd_errors import Activity
 from websockets.asyncio.client import connect
-
-from wd_discord.errors import Activity
 
 
 if TYPE_CHECKING:
@@ -39,6 +39,10 @@ class Opcode(IntEnum):
     HEARTBEAT = 1
     IDENTIFY = 2
     PRESENCE_UPDATE = 3
+    RESUME = 6
+    RECONNECT = 7
+    REQUEST_GUILD_MEMBERS = 8
+    INVALID_SESSION = 9
     HELLO = 10
     HEARTBEAT_ACK = 11
 
@@ -98,6 +102,29 @@ def build_presence(
     }
 
 
+def build_identify(
+    token: str,
+    intents: int,
+    *,
+    shard: tuple[int, int] | None = None,
+    presence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the ``d`` payload for an IDENTIFY (object -> API).
+
+    ``shard`` is Discord's ``[shard_id, num_shards]`` pair (zero-based); omitted when not sharding
+    (https://docs.discord.com/developers/events/gateway#sharding).
+    """
+    data: dict[str, Any] = {
+        "token": token,
+        "intents": intents,
+        "properties": {"os": "linux", "browser": "wd-discord", "device": "wd-discord"},
+        "presence": presence,
+    }
+    if shard is not None:
+        data["shard"] = list(shard)
+    return data
+
+
 def parse_ready(payload: dict[str, Any]) -> Ready:
     """Parse a READY dispatch payload into a :class:`Ready` (API -> object)."""
     data = payload.get("d", payload)
@@ -112,11 +139,22 @@ def parse_ready(payload: dict[str, Any]) -> Ready:
 class Gateway:
     """A minimal async Discord gateway client."""
 
-    def __init__(self, token: str, *, intents: int = 0, url: str = DEFAULT_GATEWAY_URL) -> None:
-        """Create a gateway for ``token`` with the given ``intents`` (default: none)."""
+    def __init__(
+        self,
+        token: str,
+        *,
+        intents: int = 0,
+        url: str = DEFAULT_GATEWAY_URL,
+        shard: tuple[int, int] | None = None,
+    ) -> None:
+        """Create a gateway for ``token`` with the given ``intents`` (default: none).
+
+        ``shard`` is the ``(shard_id, num_shards)`` pair sent in IDENTIFY when sharding.
+        """
         self.token = token
         self.intents = intents
         self.url = url
+        self.shard = shard
         self._ws: ClientConnection | None = None
         self._heartbeat_task: asyncio.Task[None] | None = None
         self._seq: int | None = None
@@ -130,10 +168,15 @@ class Gateway:
         await self._ws.send(json.dumps({"op": int(op), "d": data}))
 
     async def _heartbeat_loop(self, interval: float) -> None:
-        """Send op 1 heartbeats every ``interval`` seconds with the last sequence."""
+        """Send op 1 heartbeats every ``interval`` seconds with the last sequence.
+
+        The first beat waits ``interval * jitter`` (random in [0, 1)) as required by
+        https://docs.discord.com/developers/events/gateway#sending-heartbeats.
+        """
+        await asyncio.sleep(interval * random.random())  # noqa: S311
         while True:
-            await asyncio.sleep(interval)
             await self._send(Opcode.HEARTBEAT, self._seq)
+            await asyncio.sleep(interval)
 
     async def connect(
         self,
@@ -149,12 +192,7 @@ class Gateway:
 
         await self._send(
             Opcode.IDENTIFY,
-            {
-                "token": self.token,
-                "intents": self.intents,
-                "properties": {"os": "linux", "browser": "wd-discord", "device": "wd-discord"},
-                "presence": presence,
-            },
+            build_identify(self.token, self.intents, shard=self.shard, presence=presence),
         )
 
         while True:

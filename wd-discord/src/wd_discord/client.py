@@ -38,7 +38,10 @@ from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
-from wd_discord.errors import ApiResponseError
+from wd_discord.errors.api import ApiResponseError
+from wd_discord.gateway.sharding import GatewayBotInfo
+
+from .user import User
 
 
 if TYPE_CHECKING:
@@ -168,27 +171,27 @@ class Client:
 
     # --- Resource helpers (read-only unless noted) -------------------------------------
 
-    async def get_current_user(self) -> RequestResult:
+    async def get_current_user(self) -> User:
         """GET /users/@me - the bot user behind the token."""
-        return await self.get("/users/@me")
+        return User(**await self.get("/users/@me"))
 
-    async def get_current_application(self) -> RequestResult:
+    async def get_current_application(self) -> Application:
         """GET /applications/@me - the current application object."""
         return await self.get("/applications/@me")
 
-    async def get_gateway_bot(self) -> RequestResult:
+    async def get_gateway_bot(self) -> GatewayBotInfo:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
         return await self.get("/gateway/bot")
 
-    async def get_user(self, user_id: int | str) -> RequestResult:
+    async def get_user(self, user_id: int | str) -> User:
         """GET /users/{user_id}."""
         return await self.get(f"/users/{user_id}")
 
-    async def get_guild(self, guild_id: int | str) -> RequestResult:
+    async def get_guild(self, guild_id: int | str) -> Guild:
         """GET /guilds/{guild_id}."""
         return await self.get(f"/guilds/{guild_id}")
 
-    async def get_channel(self, channel_id: int | str) -> RequestResult:
+    async def get_channel(self, channel_id: int | str) -> Channel:
         """GET /channels/{channel_id}."""
         return await self.get(f"/channels/{channel_id}")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, cast
 
-from herogold.log.logging import getLogger
+from herogold.log import getLogger
 
 
 if TYPE_CHECKING:

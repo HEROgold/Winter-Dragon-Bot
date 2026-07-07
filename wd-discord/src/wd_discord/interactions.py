@@ -5,8 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum, StrEnum, auto
 from typing import TYPE_CHECKING, Annotated, get_type_hints
 
-from herogold.errors import with_known_exception
-from herogold.protocols import DataDescriptor
+from wd_discord.utils.strings import LimitedString
 
 
 if TYPE_CHECKING:
@@ -23,63 +22,6 @@ class ApplicationCommandType(IntEnum):
     user = 2
     message = 3
     primary_entry_point = 4
-
-class SizeError(ValueError):
-    """Raised when a value is the wrong size."""
-
-class InexactSizeError(SizeError):
-    """Raised when a string is not the expected length."""
-
-    def __init__(self, expected_size: int, actual_size: int) -> None:
-        """Initialize the error."""
-        super().__init__(f"Expected size {expected_size}, got {actual_size}.")
-
-class TooShortError(SizeError):
-    """Raised when a string is shorter than the minimum length."""
-
-    def __init__(self, min_length: int, actual_length: int) -> None:
-        """Initialize the error."""
-        super().__init__(f"length must be at least {min_length}, got {actual_length}.")
-
-class TooLongError(SizeError):
-    """Raised when a string exceeds the maximum length."""
-
-    def __init__(self, max_length: int, actual_length: int) -> None:
-        """Initialize the error."""
-        super().__init__(f"length must be at most {max_length}, got {actual_length}.")
-
-class BoundsError(SizeError, ExceptionGroup):
-    """Raised when a value is out of bounds."""
-
-    def __init__(self, min_value: int, max_value: int, actual_value: int) -> None:
-        """Initialize the error."""
-        msg = f"value must be between {min_value} and {max_value}, got {actual_value}."
-        errors = [
-            TooShortError(min_value, actual_value),
-            TooLongError(max_value, actual_value),
-        ]
-        super().__init__(msg, errors)
-
-class LimitedString(DataDescriptor[str, object]):
-    """Descriptor for a string with a maximum length."""
-
-    def __init__(self, max_length: int) -> None:
-        """Initialize the descriptor."""
-        self.max_length = max_length
-
-    def __set__(self, instance: object, value: str) -> None:
-        """Set the value of the descriptor."""
-        if not isinstance(value, str):
-            msg = f"Expected a string, got {type(value).__name__}."
-            raise TypeError(msg)
-        if len(value) > self.max_length:
-            raise TooLongError(self.max_length, len(value))
-        self.value = value
-
-    @with_known_exception(AttributeError)
-    def __get__(self, instance: object, owner: type) -> str:
-        """Get the value of the descriptor."""
-        return self.value
 
 @dataclass
 class Locale:
@@ -206,9 +148,9 @@ class CommandOption:
     """
 
     field_type: ApplicationCommandType | None
-    name: str = LimitedString(32)
+    name = LimitedString(32)
     name_localizations: dict[Locale, str] | None = None
-    description: str = LimitedString(100)
+    description = LimitedString(100)
     description_localizations: dict[Locale, str] | None = None
     required: bool = False
     choices: list[object] | None = None
@@ -253,7 +195,7 @@ class ApplicationCommand:
     application_id: Snowflake
     guild_id: Snowflake | None
     version: Snowflake
-    name: str = LimitedString(32)
+    name = LimitedString(32)
     name_localizations: dict[Locale, str] | None = None
     description: Annotated[str, required_if("type_", ApplicationCommandType.chat_input)] = LimitedString(100)
     description_localizations: dict[Locale, str] | None = None
@@ -270,26 +212,26 @@ class ApplicationCommand:
 class ChatInputApplicationCommand(ApplicationCommand):
     """Represents a chat input application command."""
 
-    description: str = LimitedString(100)
+    description = LimitedString(100)
     options: list[CommandOption] = field(default_factory=list)
 
 @dataclass
 class UserApplicationCommand(ApplicationCommand):
     """Represents a user application command."""
 
-    description: str = LimitedString(0)
+    description = LimitedString(0)
     options: None = None
 
 @dataclass
 class MessageApplicationCommand(ApplicationCommand):
     """Represents a message application command."""
 
-    description: str = LimitedString(0)
+    description = LimitedString(0)
     options: None = None
 
 @dataclass
 class PrimaryEntryPointApplicationCommand(ApplicationCommand):
     """Represents a primary entry point application command."""
 
-    description: str = LimitedString(0)
+    description = LimitedString(0)
     options: None = None

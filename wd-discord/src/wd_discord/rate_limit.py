@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING
 
-from wd_discord.errors import BaseError
+from wd_errors.base import BaseError
+
 from wd_discord.utils import XORError, xor
 
 
