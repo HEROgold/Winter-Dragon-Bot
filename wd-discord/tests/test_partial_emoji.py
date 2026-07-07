@@ -92,11 +92,11 @@ def _forum_channel() -> Channel:
 
 
 def test_applied_forum_tags_resolves_in_applied_order() -> None:
-    resolved = _forum_channel().applied_forum_tags
+    resolved = list(_forum_channel().applied_forum_tags)
     assert [tag.name for tag in resolved] == ["Gamma", "Alpha"]
     assert all(isinstance(tag, ForumTag) for tag in resolved)
 
 
 def test_applied_forum_tags_empty_without_lists() -> None:
     channel = Channel.model_validate({"id": "10", "type": 15})
-    assert channel.applied_forum_tags == []
+    assert list(channel.applied_forum_tags) == []
