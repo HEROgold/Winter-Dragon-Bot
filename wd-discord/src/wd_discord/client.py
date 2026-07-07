@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, Self
 from httpxyz import AsyncClient, RequestError
 from wd_config.discord import URLS
 
+from wd_discord.application import Application
 from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
 from wd_discord.authenticate import (
     ContentType,
@@ -38,8 +39,10 @@ from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
+from wd_discord.channel import Channel
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.gateway.sharding import GatewayBotInfo
+from wd_discord.guild import Guild
 
 from .user import User
 
@@ -171,29 +174,47 @@ class Client:
 
     # --- Resource helpers (read-only unless noted) -------------------------------------
 
-    async def get_current_user(self) -> User:
+    async def get_current_user(self) -> User | ApiResponseError | RequestError:
         """GET /users/@me - the bot user behind the token."""
-        return User(**await self.get("/users/@me"))
+        result = await self.get("/users/@me")
+        if isinstance(result, ApiResponseError | RequestError):
+            return result
+        return User.model_validate(result.json())
 
-    async def get_current_application(self) -> Application:
+    async def get_current_application(self) -> Application | ApiResponseError | RequestError:
         """GET /applications/@me - the current application object."""
-        return await self.get("/applications/@me")
+        result = await self.get("/applications/@me")
+        if isinstance(result, ApiResponseError | RequestError):
+            return result
+        return Application.model_validate(result.json())
 
-    async def get_gateway_bot(self) -> GatewayBotInfo:
+    async def get_gateway_bot(self) -> GatewayBotInfo | ApiResponseError | RequestError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
-        return await self.get("/gateway/bot")
+        result = await self.get("/gateway/bot")
+        if isinstance(result, ApiResponseError | RequestError):
+            return result
+        return GatewayBotInfo.model_validate(result.json())
 
-    async def get_user(self, user_id: int | str) -> User:
+    async def get_user(self, user_id: int | str) -> User | ApiResponseError | RequestError:
         """GET /users/{user_id}."""
-        return await self.get(f"/users/{user_id}")
+        result = await self.get(f"/users/{user_id}")
+        if isinstance(result, ApiResponseError | RequestError):
+            return result
+        return User.model_validate(result.json())
 
-    async def get_guild(self, guild_id: int | str) -> Guild:
+    async def get_guild(self, guild_id: int | str) -> Guild | ApiResponseError | RequestError:
         """GET /guilds/{guild_id}."""
-        return await self.get(f"/guilds/{guild_id}")
+        result = await self.get(f"/guilds/{guild_id}")
+        if isinstance(result, ApiResponseError | RequestError):
+            return result
+        return Guild.model_validate(result.json())
 
-    async def get_channel(self, channel_id: int | str) -> Channel:
+    async def get_channel(self, channel_id: int | str) -> Channel | ApiResponseError | RequestError:
         """GET /channels/{channel_id}."""
-        return await self.get(f"/channels/{channel_id}")
+        result = await self.get(f"/channels/{channel_id}")
+        if isinstance(result, ApiResponseError | RequestError):
+            return result
+        return Channel.model_validate(result.json())
 
     async def modify_current_user(
         self,

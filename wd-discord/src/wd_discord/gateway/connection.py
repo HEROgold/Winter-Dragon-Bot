@@ -17,12 +17,15 @@ from __future__ import annotations
 import asyncio
 import json
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum, StrEnum
 from typing import TYPE_CHECKING, Any, Self
 
+from pydantic import Field
 from wd_errors import Activity
 from websockets.asyncio.client import connect
+
+from wd_discord.models import DiscordModel
 
 
 if TYPE_CHECKING:
@@ -76,13 +79,12 @@ class GatewayActivity:
         return data
 
 
-@dataclass
-class Ready:
+class Ready(DiscordModel):
     """The parts of a READY dispatch we care about (API -> object via :func:`parse_ready`)."""
 
     session_id: str
     resume_gateway_url: str
-    user: dict[str, Any] = field(default_factory=dict)
+    user: dict[str, Any] = Field(default_factory=dict) # Could we make this a User object?
     application_id: str | None = None
 
 

@@ -1,19 +1,14 @@
+"""User profile sub-objects: avatar decoration and nameplate collectibles."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 from enum import StrEnum, auto
-from typing import TYPE_CHECKING
 
-from wd_discord import Snowflake
 from wd_discord.image import ImageHash
+from wd_discord.models import DiscordModel
+from wd_discord.snowflake import Snowflake
 
 
-if TYPE_CHECKING:
-    from wd_discord import Snowflake
-    from wd_discord.image import ImageHash
-
-
-class Avatar:
+class Avatar(DiscordModel):
     """https://docs.discord.com/developers/resources/user#avatar-decoration-data-object."""
 
     asset: ImageHash
@@ -38,8 +33,7 @@ class NamePlateBackgroundColor(StrEnum):
     WHITE = auto()
 
 
-@dataclass
-class NamePlate:
+class NamePlate(DiscordModel):
     """https://docs.discord.com/developers/resources/user#nameplate."""
 
     sku_id: Snowflake

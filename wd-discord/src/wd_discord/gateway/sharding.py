@@ -15,18 +15,18 @@ This module provides:
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Self
 
-from httpxyz import RequestError
-
-from wd_discord.errors import ApiResponseError
+from wd_discord.models import DiscordModel
 
 from .connection import Gateway
 
 
 if TYPE_CHECKING:
+    from httpxyz import RequestError
+
     from wd_discord.client import Client
+    from wd_discord.errors import ApiResponseError
 
     from .connection import Ready
 
@@ -57,8 +57,7 @@ def identify_batches(shard_ids: list[int], max_concurrency: int) -> list[list[in
     return [ordered[i : i + max_concurrency] for i in range(0, len(ordered), max_concurrency)]
 
 
-@dataclass
-class SessionStartLimit:
+class SessionStartLimit(DiscordModel):
     """The ``session_start_limit`` object from ``GET /gateway/bot``."""
 
     total: int
@@ -69,8 +68,7 @@ class SessionStartLimit:
     """IDENTIFYs allowed per 5 seconds."""
 
 
-@dataclass
-class GatewayBotInfo:
+class GatewayBotInfo(DiscordModel):
     """The ``GET /gateway/bot`` response (API -> object via :func:`parse_gateway_bot`)."""
 
     url: str
@@ -86,25 +84,16 @@ class GatewayBotInfo:
 
 def parse_gateway_bot(payload: dict[str, Any]) -> GatewayBotInfo:
     """Parse a ``GET /gateway/bot`` JSON body into a :class:`GatewayBotInfo` (API -> object)."""
-    limit = payload["session_start_limit"]
-    return GatewayBotInfo(
-        url=payload["url"],
-        shards=payload["shards"],
-        session_start_limit=SessionStartLimit(
-            total=limit["total"],
-            remaining=limit["remaining"],
-            reset_after=limit["reset_after"],
-            max_concurrency=limit["max_concurrency"],
-        ),
-    )
+    return GatewayBotInfo.model_validate(payload)
 
 
 async def fetch_gateway_bot(client: Client) -> GatewayBotInfo | ApiResponseError | RequestError:
-    """Fetch and parse ``GET /gateway/bot``, passing request errors through as values."""
-    result = await client.get_gateway_bot()
-    if isinstance(result, ApiResponseError | RequestError):
-        return result
-    return parse_gateway_bot(result.json())
+    """Fetch ``GET /gateway/bot``, passing request errors through as values.
+
+    :meth:`Client.get_gateway_bot` already validates the body into a :class:`GatewayBotInfo`,
+    so this is a thin passthrough kept for callers that hold a :class:`Client`.
+    """
+    return await client.get_gateway_bot()
 
 
 class ShardManager:

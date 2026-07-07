@@ -24,6 +24,8 @@ See [authenticate.py](../../../wd-discord/src/wd_discord/authenticate.py): `Toke
 
 When a primitive has internal structure, wrap it and expose the parts as properties. The canonical example is [snowflake.py](../../../wd-discord/src/wd_discord/snowflake.py): `Snowflake` wraps one `int` and decodes `timestamp`, `worker_id`, `process_id`, `increment` via bit operations. All Discord IDs are `Snowflake`, never `int` (see the `ApplicationCommand` fields in [interactions.py](../../../wd-discord/src/wd_discord/interactions.py)).
 
+When such a value type is used as a **field on a pydantic model** (any `DiscordModel`), give it a `__get_pydantic_core_schema__` classmethod so pydantic validates/coerces the wire value into the rich type and serialises it back — `Snowflake` (from `int|str`, back to a decimal `str`) and `ImageHash` (from `str`) both do this. That keeps API data validated without exposing bare primitives on the model. See the [discord-api-models](../discord-api-models/SKILL.md) skill for the recipe and the `PermissionsField`/`Annotated`-metadata patterns.
+
 ## Choosing the Enum flavor
 
 | Flavor | Use when | Repo example |

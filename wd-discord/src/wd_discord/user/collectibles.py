@@ -1,15 +1,11 @@
+"""User collectibles sub-object."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from wd_discord.models import DiscordModel
+from wd_discord.user.profile import NamePlate
 
 
-if TYPE_CHECKING:
-    from wd_discord.user.profile import NamePlate
-
-
-@dataclass
-class Collectibles:
+class Collectibles(DiscordModel):
     """https://docs.discord.com/developers/resources/user#collectibles."""
 
-    nameplate: NamePlate | None
+    nameplate: NamePlate | None = None

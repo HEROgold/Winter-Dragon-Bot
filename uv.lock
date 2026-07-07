@@ -704,6 +704,7 @@ dependencies = [
     { name = "herogold" },
     { name = "httpxyz" },
     { name = "pydantic" },
+    { name = "sentry-sdk" },
     { name = "wd-config" },
     { name = "websockets" },
 ]
@@ -719,6 +720,7 @@ requires-dist = [
     { name = "herogold", specifier = ">=3.3.0" },
     { name = "httpxyz", specifier = ">=0.31.2" },
     { name = "pydantic", specifier = ">=2.13.4" },
+    { name = "sentry-sdk", specifier = ">=2.61.0" },
     { name = "wd-config", editable = "wd-config" },
     { name = "websockets", specifier = ">=16.0" },
 ]

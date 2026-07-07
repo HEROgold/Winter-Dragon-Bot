@@ -22,3 +22,11 @@ required-imports = [
   "from __future__ import annotations",
 ]
 lines-after-imports = 2
+
+[lint.flake8-type-checking]
+# pydantic evaluates annotations at runtime, so field-type imports on these models must stay
+# concrete (not moved into a TYPE_CHECKING block) or validation fails at import time.
+runtime-evaluated-base-classes = [
+  "pydantic.BaseModel",
+  "wd_discord.models.DiscordModel",
+]

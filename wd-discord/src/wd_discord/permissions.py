@@ -8,6 +8,8 @@ from __future__ import annotations
 from enum import IntEnum, IntFlag
 from typing import TYPE_CHECKING, Annotated
 
+from pydantic import BeforeValidator
+
 
 if TYPE_CHECKING:
     from herogold.supports import IsAnnotated
@@ -180,3 +182,8 @@ class Permissions(IntFlag):
     """Allows pinning and unpinning messages  T"""
     BYPASS_SLOWMODE: Annotated[Permissions.BYPASS_SLOWMODE, _CommonChannelTypes] = 1 << 52
     """Allows bypassing slowmode restrictions  T, V, S"""
+
+
+# Discord serialises permission bitfields as decimal STRINGS on the wire; coerce them into the
+# IntFlag before validation. Reuse on every model field that carries a permission bitfield.
+type PermissionsField = Annotated[Permissions, BeforeValidator(lambda value: Permissions(int(value)))]
