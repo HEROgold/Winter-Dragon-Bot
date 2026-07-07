@@ -14,9 +14,10 @@ import asyncio
 import configparser
 import sys
 
-from httpxyz import Response
 from wd_discord.client import Client
 from wd_discord.gateway import Gateway
+from wd_discord.gateway.sharding import GatewayBotInfo
+from wd_discord.user.user import User
 
 
 def load_token() -> str:
@@ -36,18 +37,16 @@ async def main() -> int:
 
     async with Client(token) as client:
         me = await client.get_current_user()
-        if not isinstance(me, Response):
+        if not isinstance(me, User):
             print(f"FAIL: /users/@me -> {me!r}")
             return 1
-        user = me.json()
-        print(f"REST OK: authenticated as {user['username']} (id {user['id']})")
+        print(f"REST OK: authenticated as {me.username} (id {me.id})")
 
         gw_info = await client.get_gateway_bot()
-        if not isinstance(gw_info, Response):
+        if not isinstance(gw_info, GatewayBotInfo):
             print(f"FAIL: /gateway/bot -> {gw_info!r}")
             return 1
-        info = gw_info.json()
-        print(f"REST OK: gateway url {info['url']}, recommended shards {info['shards']}")
+        print(f"REST OK: gateway url {gw_info.url}, recommended shards {gw_info.shards}")
 
     gateway = Gateway(token)
     ready = await asyncio.wait_for(gateway.connect(), timeout=30)
