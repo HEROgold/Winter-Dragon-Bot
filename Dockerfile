@@ -5,7 +5,7 @@ FROM python:3.15-rc-slim-trixie AS builder
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Copy uv binary from official image
-COPY --from=docker.io/astral/uv:latest /uv /uvx /bin/
+COPY --from=docker.io/astral/uv:0.11.7 /uv /uvx /bin/
 
 WORKDIR /app
 
