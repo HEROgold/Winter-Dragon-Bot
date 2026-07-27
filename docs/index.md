@@ -31,6 +31,7 @@ docker compose up --build
 
 ## Documentation Structure
 
+- **[Feature Inventory](features/index.md)** — Every capability the bot offers on `main`, with v2 porting status
 - **[User Guide](guide/getting-started.md)** — How to use the bot and access the dashboard
 - **[Development](dev/architecture.md)** — Architecture, setup, and technical details
 - **[API Reference](api-reference.md)** — REST API endpoints and authentication
@@ -52,4 +53,4 @@ Contributions are welcome! Please refer to the development guides for setup inst
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](../LICENSE.md) for details.
+This project is licensed under the MIT License. See [LICENSE.md](https://github.com/HEROgold/Winter-Dragon-Bot/blob/v2/LICENSE.md) for details.

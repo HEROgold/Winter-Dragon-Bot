@@ -63,6 +63,14 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Features (main branch):
+      - Overview: features/index.md
+      - Bot Core: features/bot-core.md
+      - Moderation & Logging: features/moderation.md
+      - Server Management: features/server-management.md
+      - Games: features/games.md
+      - User Tools: features/user-tools.md
+      - Platform & Services: features/platform.md
   - User Guide:
       - Getting Started: guide/getting-started.md
       - Frontend: guide/frontend.md
