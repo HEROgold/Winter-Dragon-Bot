@@ -96,7 +96,7 @@ class AutoReloadWatcher(LoggerMixin):
             logger=self.logger,
         )
         self._registered = True
-        self.logger.debug("Enabled auto-reload watcher for %s (%s)", self.module_name, path)
+        self.logger.debug(t"Enabled auto-reload watcher for {self.module_name} ({path})")
 
     def deregister(self) -> None:
         """Stop watching the module when no cogs reference it anymore."""
@@ -129,9 +129,7 @@ class AutoReloadWatcher(LoggerMixin):
             return Path(inspect.getfile(self.cog_cls)).resolve()
         except (OSError, TypeError) as exc:
             self.logger.warning(
-                "Cannot enable auto-reload for %s because its file path could not be resolved: %s",
-                self.module_name,
-                exc,
+                t"Cannot enable auto-reload for {self.module_name} because its file path could not be resolved: {exc}",
             )
             return None
 
