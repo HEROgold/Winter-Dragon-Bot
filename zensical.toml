@@ -1,0 +1,80 @@
+[project]
+site_name = "Winter Dragon"
+site_description = "A versatile Discord bot with moderation, utility, and entertainment features"
+site_author = "HEROgold"
+site_url = "https://herogold.github.io/Winter-Dragon-Bot"
+repo_url = "https://github.com/HEROgold/Winter-Dragon-Bot"
+repo_name = "HEROgold/Winter-Dragon-Bot"
+docs_dir = "docs"
+
+nav = [
+  { "Home" = "index.md" },
+  { "Features (main branch)" = [
+    { "Overview" = "features/index.md" },
+    { "Bot Core" = "features/bot-core.md" },
+    { "Moderation & Logging" = "features/moderation.md" },
+    { "Server Management" = "features/server-management.md" },
+    { "Games" = "features/games.md" },
+    { "User Tools" = "features/user-tools.md" },
+    { "Platform & Services" = "features/platform.md" },
+  ] },
+  { "User Guide" = [
+    { "Getting Started" = "guide/getting-started.md" },
+    { "Frontend" = "guide/frontend.md" },
+    { "API Usage" = "guide/api-usage.md" },
+  ] },
+  { "Development" = [
+    { "Architecture" = "dev/architecture.md" },
+    { "Setup" = "dev/setup.md" },
+    { "Database" = "dev/database.md" },
+  ] },
+  { "API Reference" = "api-reference.md" },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "navigation.instant",
+  "navigation.tracking",
+  "navigation.indexes",
+  "navigation.top",
+  "toc.follow",
+  "search.suggest",
+  "search.highlight",
+  "content.code.copy",
+  "content.code.select",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue"
+accent = "blue"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue"
+accent = "blue"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/HEROgold/Winter-Dragon-Bot"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+md_in_html = {}
+toc.permalink = true
+pymdownx.highlight.use_pygments = true
+pymdownx.superfences = {}
+pymdownx.inlinehilite = {}
+pymdownx.snippets = {}
+pymdownx.tabbed.alternate_style = true
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"

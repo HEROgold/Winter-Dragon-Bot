@@ -29,11 +29,9 @@ dependencies = [
   "wd-cogs",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 docs = [
-  "mkdocs>=1.5.0",
-  "mkdocs-material>=9.4.0",
-  "mkdocs-include-markdown-plugin>=6.0.0",
+  "zensical>=0.0.55",
 ]
 
 [tool.uv]

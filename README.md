@@ -34,7 +34,7 @@ Services:
 
 ## Documentation
 
-Complete documentation is available at `docs/` with MkDocs Material theme.
+Complete documentation is available at `docs/` with Zensical.
 
 ### View Documentation
 
@@ -44,10 +44,10 @@ Complete documentation is available at `docs/` with MkDocs Material theme.
 
 ```bash
 # Install docs dependencies
-uv pip install -e ".[docs]"
+uv sync --group docs
 
 # Serve documentation locally
-mkdocs serve
+uv run zensical serve
 ```
 
 Documentation will be available at http://localhost:8000
