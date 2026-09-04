@@ -5,8 +5,6 @@ from __future__ import annotations
 from abc import ABC
 from typing import Self, override
 
-from discord import DiscordException, Embed
-
 from wd_errors.error import DiscordError
 
 

@@ -27,6 +27,7 @@ dependencies = [
   "wd-errors",
   "wd-types",
   "wd-cogs",
+  "herogold>=4.0.0",
 ]
 
 [dependency-groups]
@@ -51,13 +52,6 @@ testpaths = [
 markers = [
     "integration: live tests that hit external services (need credentials; auto-skip otherwise)",
 ]
-
-[tool.ty.environment]
-root = ["./src"]
-
-[build-system]
-requires = ["uv_build>=0.11.7,<0.12.0"]
-build-backend = "uv_build"
 
 [tool.uv.workspace]
 members = [

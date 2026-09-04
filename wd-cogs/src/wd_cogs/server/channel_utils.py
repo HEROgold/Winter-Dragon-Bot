@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import contextlib
 
-import discord
-from discord import DMChannel, GroupChannel, PermissionOverwrite, Permissions, Thread, app_commands
-from winter_dragon.bot.core.cogs import GroupCog
-
 
 @app_commands.guild_only()
 class ChannelUtils(GroupCog, auto_load=True):

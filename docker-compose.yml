@@ -12,11 +12,11 @@ services:
       retries: 5
     networks:
       - default
-    restart: unless-stopped
+    restart: "no"
 
   redis-commander:
     image: ghcr.io/joeferner/redis-commander:latest
-    restart: unless-stopped
+    restart: "no"
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
@@ -44,7 +44,7 @@ services:
       timeout: 30s
       retries: 6
       start_period: 10s
-    restart: unless-stopped
+    restart: "no"
     networks:
       - default
 
@@ -73,7 +73,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: unless-stopped
+    restart: "no"
     networks:
       - default
 
@@ -103,7 +103,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: unless-stopped
+    restart: "no"
     networks:
       - default
 
@@ -123,7 +123,7 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - default
-    restart: unless-stopped
+    restart: "no"
 
   grafana:
     image: grafana/grafana-oss:latest
@@ -140,7 +140,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
-    restart: unless-stopped
+    restart: "no"
     networks:
       - default
 
@@ -174,7 +174,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: unless-stopped
+    restart: "no"
     networks:
       - default
 

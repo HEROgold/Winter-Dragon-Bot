@@ -3,19 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
-
-import discord
-from discord import Interaction, Message, app_commands
-from herogold.sentinel import MISSING
-from winter_dragon.bot.core.cogs import Cog
-from winter_dragon.config import Config
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
-
-    from discord.abc import SnowflakeTime
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable

@@ -2,21 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-import discord
-from discord import Interaction
 from sqlmodel import select
-from winter_dragon.bot.ui import Menu
-from winter_dragon.bot.ui.button import Button
-from winter_dragon.database.constants import SessionMixin
-from winter_dragon.database.tables.incremental.currency import UserMoney
-from winter_dragon.database.tables.incremental.generators import Generators
-from winter_dragon.database.tables.incremental.user_generator import AssociationUserGenerator
-
-
-if TYPE_CHECKING:
-    from winter_dragon.bot.extensions.games.incremental import CurrencyManager, GeneratorManager
 
 
 class GeneratorShopMenu(Menu, SessionMixin):

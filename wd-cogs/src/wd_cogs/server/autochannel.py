@@ -4,18 +4,6 @@ from __future__ import annotations
 
 from textwrap import dedent
 
-import discord
-from discord import (
-    VoiceChannel,
-    app_commands,
-)
-from sqlmodel import select
-from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.config import Config
-from winter_dragon.database.tables import AutoChannels as AC  # noqa: N817
-from winter_dragon.database.tables import AutoChannelSettings as ACS  # noqa: N817
-from winter_dragon.database.tables.channel import Channels
-
 
 @app_commands.guild_only()
 class AutomaticChannels(GroupCog, auto_load=True):
@@ -259,7 +247,7 @@ class AutomaticChannels(GroupCog, auto_load=True):
     @slash_setup.error
     async def info_error(self, interaction: discord.Interaction, error: Exception) -> None:
         """Handle errors for the setup command."""
-        self.logger.exception(error)
+        self.logger.error(error)
         await interaction.response.send_message(
             "An error occurred while setting up the AutoChannel.",
             ephemeral=True,

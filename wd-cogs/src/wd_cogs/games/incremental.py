@@ -5,15 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-import discord
-from discord import Interaction, app_commands
 from sqlmodel import Session, select
-from winter_dragon.bot.core.cogs import Cog
-from winter_dragon.bot.extensions.games.incremental_ui import GeneratorShopMenu, ProgressMenu
-from winter_dragon.database.tables.incremental.currency import UserMoney
-from winter_dragon.database.tables.incremental.generators import Generators
-from winter_dragon.database.tables.incremental.player import Players
-from winter_dragon.database.tables.incremental.rates import GeneratorRates
 
 
 class PlayerManager:

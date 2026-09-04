@@ -6,17 +6,12 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Self, overload
 
-from discord import DiscordException, Embed, Interaction
-from discord.ext.commands import Context
 from herogold.log import LoggerMixin
 
 from .factory import ErrorFactory
 
 
 if TYPE_CHECKING:
-    from discord.app_commands.errors import AppCommandError
-    from discord.ext.commands.bot import BotBase
-    from discord.ext.commands.errors import CommandError
     from wd_types.alias import Bot, ResponseTypes
 
 

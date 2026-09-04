@@ -1,8 +1,4 @@
-"""Module that contains the WinterDragon bot.
-
-WinterDragon is a subclass of AutoShardedBot from discord.ext.commands.
-WinterDragon has additional attributes and methods.
-"""
+"""Module that contains the bot."""
 
 from __future__ import annotations
 
@@ -10,18 +6,22 @@ import datetime
 import inspect
 import pkgutil
 import sys
-from importlib.util import module_from_spec
-from typing import TYPE_CHECKING, Any, override
+from importlib.util import find_spec, module_from_spec
+from typing import TYPE_CHECKING, Any
 
-import discord
-from discord import app_commands
-from discord.ext.commands import AutoShardedBot, CommandError
-from discord.ext.commands.errors import ExtensionFailed
-from discord.ext.commands.help import DefaultHelpCommand, HelpCommand
+from herogold.errors import with_known_exception
 from herogold.log import LoggerMixin
 from wd_config import Config
 from wd_config.bot import Settings
-from wd_core.constants import BOT_PERMISSIONS, INTENTS
+from wd_core.command import CommandTree
+from wd_core.constants import BOT_PERMISSIONS, intents
+from wd_core.intents import Intents
+from wd_discord import Client, GatewayBotInfo
+from wd_discord.user import User
+from wd_errors.extension import ExtensionError
+from wd_errors.startup import StartupError
+
+from wd_bot.help import DefaultHelpCommand, HelpCommand, default_help
 
 from .cogs import Cog
 
@@ -32,20 +32,19 @@ if TYPE_CHECKING:
     from importlib.machinery import ModuleSpec
     from types import ModuleType
 
-    from discord.ext.commands.context import Context
     from wd_types.alias import Bot, PrefixType
 
 class BotConfig:
     """Basic bot configuration values."""
 
-    Intents = Config(INTENTS)
+    Intents = Config(intents)
     Permissions = Config(BOT_PERMISSIONS)
 
 class MissingError(Exception):
     """Raised when a required attribute is missing."""
 
-class WinterDragon(AutoShardedBot, LoggerMixin):
-    """WinterDragon is a subclass of AutoShardedBot.
+class Bot(LoggerMixin):
+    """Bot is a subclass of AutoShardedBot.
 
     this represents a bot with additional attributes and methods specific to the Winter Dragon bot.
     """
@@ -55,31 +54,28 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
 
     def __init__(
         self,
-        command_prefix: PrefixType[WinterDragon],
+        command_prefix: PrefixType[Bot],
         *,
-        help_command: HelpCommand | None = None,
-        tree_cls: type[app_commands.CommandTree[Any]] = app_commands.CommandTree,
+        help_command: HelpCommand = default_help,
+        tree_cls: type[CommandTree[Any]] = CommandTree,
         description: str | None = None,
-        intents: discord.Intents = BotConfig.Intents,
-        **options: Any,  # We match the type of options as defined in AutoShardedBot  # noqa: ANN401
+        intents: Intents = BotConfig.Intents,
     ) -> None:
-        """Initialize the WinterDragon bot.
+        """Initialize the Bot bot.
 
         Adds additional attributes and methods to the AutoShardedBot class.
         Like a global app_commands cache and per guild app_commands cache.
         """
         self.launch_time = datetime.datetime.now(datetime.UTC)
 
-        if help_command is None:
-            help_command = DefaultHelpCommand()
-
+        # TODO; copy from discord.py's bot.__init__, but use our own
+        # intents, permissions, and Client setup.
         super().__init__(
             command_prefix,
             help_command=help_command,
             tree_cls=tree_cls,
             description=description,
             intents=intents,
-            **options,
         )
 
     def get_bot_invite(self) -> str:
@@ -95,12 +91,12 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
 
     async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:
         """Log where errors occur during the event loop."""
-        self.logger.exception(t"error in: {event_method}")
+        self.logger.error(t"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
     async def on_command_error(self, context: Context[Bot], exception: CommandError) -> None:
         """Log where errors occur during command execution."""
-        self.logger.exception(t"error in command: {context}", exc_info=exception)
+        self.logger.error(t"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 
     def _discover_wd_cogs_modules(self) -> list[str]:
@@ -137,20 +133,19 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
         for module in self._discover_wd_cogs_modules():
             yield module
 
-    @override
     async def _load_from_module_spec(self, spec: ModuleSpec, key: str) -> None:
         """Version that does not check if `def setup` is present."""
         lib = module_from_spec(spec)
         sys.modules[key] = lib
         if spec.loader is None:
             del sys.modules[key]
-            raise ExtensionFailed(key, RuntimeError("Module spec has no loader"))
+            raise ExtensionError(key, RuntimeError("Module spec has no loader"))
 
         try:
             spec.loader.exec_module(lib)
         except Exception as e:
             del sys.modules[key]
-            raise ExtensionFailed(key, e) from e
+            raise ExtensionError(key, e) from e
 
         try:
             await self._init_cogs(lib)
@@ -158,7 +153,7 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             del sys.modules[key]
             await self._remove_module_references(lib.__name__)
             await self._call_module_finalizers(lib, key)
-            raise ExtensionFailed(key, e) from e
+            raise ExtensionError(key, e) from e
         else:
             # Store the loaded extension in the mangled __extensions attribute
             # This is required, because discord.py _load_from_module_spec is internal
@@ -176,6 +171,13 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             if inspect.isclass(obj) and issubclass(obj, Cog):
                 obj(bot=self)
 
+    async def load_extension(self, extension: str) -> None:
+        """Load a single extension from the wd_cogs package."""
+        spec = find_spec(f"wd_cogs.{extension}")
+        if not spec:
+            raise ExtensionError(extension, RuntimeError("Extension not found"))
+        await self._load_from_module_spec(spec, extension)
+
     async def load_extensions(self) -> None:
         """Load all cogs from the wd_cogs package."""
         self.logger.debug(t"Starting to load cogs from wd_cogs")
@@ -188,11 +190,25 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
             else:
                 self.logger.info(t"Loaded cog {extension}")
 
+    @with_known_exception(StartupError)
     @Config.with_kwarg("Tokens", "discord_token")
-    async def start(self, token: str | None = None, *, reconnect: bool = True, **kwargs: str) -> None:
+    async def start(self, token: str) -> None:
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
-        token = token or kwargs.get("discord_token")
-        if token is None:
-            msg = "No token provided"
-            raise ValueError(msg)
-        return await super().start(token, reconnect=reconnect)
+        async with Client(token) as client:
+            me = await client.get_current_user()
+            if not isinstance(me, User):
+                msg = "Failed to get current user from Discord API"
+                raise StartupError(msg)
+
+            gw_info = await client.get_gateway_bot()
+            if not isinstance(gw_info, GatewayBotInfo):
+                msg = "Failed to get gateway bot info from Discord API"
+                raise StartupError(msg)
+
+            manager = await client.get_shard_manager(gw_info)
+            async with manager:
+                self.logger.info(t"Bot is running with {len(manager.shards)} shards")
+                # TODO: keep connection alive for every shard.
+                # Currently, the bot simply starts up and then exits
+                # If we want this to be functional, loaded extensions/cogs
+                # Should be able to respond to events from the gateway, and the bot should stay alive until manually stopped.

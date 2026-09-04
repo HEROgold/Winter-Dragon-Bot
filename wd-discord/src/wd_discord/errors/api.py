@@ -16,6 +16,15 @@ class ApiErrorTree(RootModel[ErrorNode | dict[str, "ApiErrorTree"]]):
 
     root: ErrorNode | dict[str, ApiErrorTree]
 
+    def __iter__(self):
+        """Iterate over all error messages in the tree."""
+        match self.root:
+            case ErrorNode() as node:
+                yield from node.errors_list
+            case dict() as children:
+                for child in children.values():
+                    yield from child
+
 ApiErrorTree.model_rebuild()
 
 class ApiResponseError(BaseModel):

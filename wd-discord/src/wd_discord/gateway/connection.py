@@ -70,7 +70,7 @@ class GatewayActivity:
     state: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Serialise to the Discord activity object."""
+        """Serialize to the Discord activity object."""
         data: dict[str, Any] = {"name": self.name, "type": int(self.type)}
         if self.url is not None:
             data["url"] = self.url
@@ -106,7 +106,7 @@ def build_presence(
 
 def build_identify(
     token: str,
-    intents: int,
+    intents: Intents,
     *,
     shard: tuple[int, int] | None = None,
     presence: dict[str, Any] | None = None,
@@ -145,7 +145,7 @@ class Gateway:
         self,
         token: str,
         *,
-        intents: int = 0,
+        intents: Intents = 0,
         url: str = DEFAULT_GATEWAY_URL,
         shard: tuple[int, int] | None = None,
     ) -> None:

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from winter_dragon.bot.extensions.tournament.status import MatchStatus, match_controller
-
 
 @dataclass
 class Player:

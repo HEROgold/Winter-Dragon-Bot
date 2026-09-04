@@ -25,8 +25,11 @@ from typing import TYPE_CHECKING, Any, Self
 
 from herogold.log import LoggerMixin
 from httpxyz import AsyncClient, RequestError
+from wd_bot.tasks import loop
 from wd_config.discord import URLS
+from wd_errors import BaseError
 
+from wd_discord import ShardManager, Snowflake
 from wd_discord.application import Application
 from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
 from wd_discord.authenticate import (
@@ -53,11 +56,14 @@ if TYPE_CHECKING:
 
     from httpxyz import Response
 
+    from wd_discord.image import ImageHash
+
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
 DEFAULT_USER_AGENT_VERSION = "0.1.0"
 
-type RequestResult = Response | ApiResponseError | RequestError
+type NetworkError = ApiResponseError | RequestError
+type RequestResult = Response | NetworkError
 
 
 def returns_known_exception[**P, T, E: Exception](
@@ -148,12 +154,13 @@ class Client(LoggerMixin):
         Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and
         4xx/5xx responses are returned as :class:`ApiResponseError`.
         """
+        # TODO: handle rate limits, retries, and backoff. Currently, the caller must handle 429s and 5xx errors.  # noqa: FIX002, TD002, TD003
         self.logger.debug(t"{method} {path}")
         try:
             response = await self._client.request(method, path, **kwargs)
         except RequestError:
             # Re-raise so ``returns_known_exception`` converts it to a value; log it first.
-            self.logger.exception(t"network error for {method} {path}")
+            self.logger.exception(t"Request error for {method} {path}")
             raise
         if response.is_success:
             self.logger.debug(t"{response.status_code} {method} {path}")
@@ -184,47 +191,50 @@ class Client(LoggerMixin):
 
     # --- Resource helpers (read-only unless noted) -------------------------------------
 
-    async def get_current_user(self) -> User | ApiResponseError | RequestError:
+    async def get_current_user(self) -> User | NetworkError:
         """GET /users/@me - the bot user behind the token."""
         result = await self.get("/users/@me")
         if isinstance(result, ApiResponseError | RequestError):
             return result
         return User.model_validate(result.json())
 
-    async def get_current_application(self) -> Application | ApiResponseError | RequestError:
+    async def get_current_application(self) -> Application | NetworkError:
         """GET /applications/@me - the current application object."""
         result = await self.get("/applications/@me")
-        if isinstance(result, ApiResponseError | RequestError):
+        if isinstance(result, (ApiResponseError, RequestError)):
             return result
         return Application.model_validate(result.json())
 
-    async def get_gateway_bot(self) -> GatewayBotInfo | ApiResponseError | RequestError:
+    async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
         result = await self.get("/gateway/bot")
-        if isinstance(result, ApiResponseError | RequestError):
+        if isinstance(result, (ApiResponseError, RequestError)):
             return result
-        # TODO: automatically shard out bot based on GatewayBotInfo.shards and SessionStartLimit
-        # using a ShardManager helper class
         return GatewayBotInfo.model_validate(result.json())
 
-    async def get_user(self, user_id: int | str) -> User | ApiResponseError | RequestError:
+    async def get_shard_manager(self, info: GatewayBotInfo) -> ShardManager:
+        """Return a :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
+        async with ShardManager(self.token, info) as manager:
+            return manager
+
+    async def get_user(self, user_id: int | str) -> User | NetworkError:
         """GET /users/{user_id}."""
         result = await self.get(f"/users/{user_id}")
-        if isinstance(result, ApiResponseError | RequestError):
+        if isinstance(result, (ApiResponseError, RequestError)):
             return result
         return User.model_validate(result.json())
 
-    async def get_guild(self, guild_id: int | str) -> Guild | ApiResponseError | RequestError:
+    async def get_guild(self, guild_id: int | str) -> Guild | NetworkError:
         """GET /guilds/{guild_id}."""
         result = await self.get(f"/guilds/{guild_id}")
-        if isinstance(result, ApiResponseError | RequestError):
+        if isinstance(result, (ApiResponseError, RequestError)):
             return result
         return Guild.model_validate(result.json())
 
-    async def get_channel(self, channel_id: int | str) -> Channel | ApiResponseError | RequestError:
+    async def get_channel(self, channel_id: int | str) -> Channel | NetworkError:
         """GET /channels/{channel_id}."""
         result = await self.get(f"/channels/{channel_id}")
-        if isinstance(result, ApiResponseError | RequestError):
+        if isinstance(result, (ApiResponseError, RequestError)):
             return result
         return Channel.model_validate(result.json())
 
@@ -232,12 +242,62 @@ class Client(LoggerMixin):
         self,
         *,
         username: str | None = None,
-        avatar: str | None = None,
+        avatar: ImageHash | None = None,
+        banner: ImageHash | None = None,
     ) -> RequestResult:
         """PATCH /users/@me - update the bot's profile (username and/or avatar)."""
         payload: dict[str, str] = {}
         if username is not None:
             payload["username"] = username
         if avatar is not None:
-            payload["avatar"] = avatar
+            payload["avatar"] = str(avatar)
+        if banner is not None:
+            payload["banner"] = str(banner)
         return await self.patch("/users/@me", json=payload)
+
+class BotUser(User):
+    """Wrapper for interacting with the bot's user."""
+
+    def __init__(self, client: Client) -> None:
+        """Initialize the bot user with a reference to the client."""
+        self.client = client
+        self.changed: dict[str, bool] = {}
+
+    @loop()
+    async def __ainit__(self) -> None:
+        """Initialize the bot user, asynchronously."""
+        user = await self.client.get_current_user()
+        if isinstance(user, User):
+            self.user = user
+        elif isinstance(user, ApiResponseError):
+            if user.errors is None:
+                msg = f"Failed to get bot user: {user.code} {user.message}"
+                raise BaseError(msg)
+            errors = [BaseError(f"{err.code}: {err.message}") for err in user.errors]
+            group_msg = "Failed to get bot user"
+            raise ExceptionGroup(group_msg, errors)
+        else:
+            raise user
+
+    @loop(seconds=5)
+    async def _update(self) -> None:
+        """Update the bot user by re-fetching it from the API."""
+        self.changed.clear()
+        await self.client.modify_current_user(
+            username=self.user.username,
+            avatar=self.user.avatar,
+            banner=self.user.banner,
+        )
+
+    def __setattr__(self, name: str, value: object) -> None:
+        """Track changes to the bot user's attributes."""
+        if hasattr(self, "user") and hasattr(self.user, name):
+            old_value = getattr(self.user, name)
+            if old_value != value:
+                self.changed[name] = True
+        super().__setattr__(name, value)
+
+    @property
+    def id(self) -> Snowflake:
+        """Return the bot user's ID, or None if not yet initialized."""
+        return self.user.id

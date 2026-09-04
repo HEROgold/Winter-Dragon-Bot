@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar, Self
 
-from discord.abc import GuildChannel, Messageable
-from discord.embeds import Embed
 from herogold.log import LoggerMixin
 from herogold.orm.model import BaseModel
 from wd_types.protocol import Mentionable
@@ -14,9 +12,6 @@ from wd_types.protocol import Mentionable
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
 
-    from discord import AuditLogEntry
-    from discord.enums import AuditLogAction
-    from discord.ext.commands.bot import BotBase
     from sqlalchemy.orm import Session
 
 class AuditLog(BaseModel):

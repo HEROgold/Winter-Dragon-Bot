@@ -5,10 +5,6 @@ from __future__ import annotations
 import random
 from typing import override
 
-import discord
-from discord import app_commands
-from winter_dragon.database.tables import WyrQuestion
-
 from .base_question_game import BaseQuestionGame
 
 

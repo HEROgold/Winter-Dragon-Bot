@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git=1:2.47.3-0+deb13u1 \
     build-essential=12.12 \
     python3-dev=3.13.5-1 \
-    libssl-dev=3.5.6-1~deb13u2 \
+    libssl-dev=3.5.7-1~deb13u2 \
     libffi-dev=3.4.8-2 \
     && rm -rf /var/lib/apt/lists/*
 

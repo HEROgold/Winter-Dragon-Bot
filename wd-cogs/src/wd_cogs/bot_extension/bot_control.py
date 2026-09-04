@@ -4,12 +4,6 @@ from __future__ import annotations
 
 from typing import Unpack
 
-import discord
-from discord import Guild, app_commands
-from discord.ext import commands
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-from winter_dragon.bot.core.settings import Settings
-
 
 @app_commands.guilds(Settings.support_guild_id)
 class BotControl(GroupCog, auto_load=True):

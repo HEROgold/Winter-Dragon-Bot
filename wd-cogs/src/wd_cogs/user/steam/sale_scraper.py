@@ -3,20 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
 
 from herogold.log import LoggerMixin
-from winter_dragon.bot.extensions.user.steam.app_scraper import AppScraper
-from winter_dragon.bot.extensions.user.steam.bundle_scraper import BundleScraper
-from winter_dragon.bot.extensions.user.steam.search_scraper import SearchScraper
-from winter_dragon.config import Config
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-
-    from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
-    from winter_dragon.database.tables.steamsale import SteamSale
 
 
 class SteamScraper(LoggerMixin):

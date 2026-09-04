@@ -3,22 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
-
-from bs4 import BeautifulSoup, Tag
-from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
-from winter_dragon.bot.extensions.user.steam.tags import (
-    DISCOUNT_FINAL_PRICE,
-    DISCOUNT_PERCENT,
-    GAME_BUY_AREA,
-    SINGLE_GAME_TITLE,
-    price_to_num,
-)
-from winter_dragon.database.tables.steamsale import SaleTypes, SteamSale, SteamSaleProperties
-
-
-if TYPE_CHECKING:
-    from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
 
 
 class AppScraper(BaseScraper):

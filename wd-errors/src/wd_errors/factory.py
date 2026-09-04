@@ -10,10 +10,6 @@ from herogold.log import getLogger
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from discord import DiscordException, Interaction
-    from discord.app_commands.errors import AppCommandError
-    from discord.ext.commands import CommandError, Context
-    from discord.ext.commands.bot import BotBase
     from wd_types.alias import Bot
 
     from .error import DiscordError

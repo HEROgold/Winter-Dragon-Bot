@@ -12,15 +12,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Self
-
-import aiohttp
-import discord
-from discord.ext import tasks
-
-
-if TYPE_CHECKING:
-    from discord.ext.commands.bot import BotBase
+from typing import Any, Self
 
 
 class Region(StrEnum):

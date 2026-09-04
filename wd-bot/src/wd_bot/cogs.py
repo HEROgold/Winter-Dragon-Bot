@@ -5,8 +5,6 @@ from __future__ import annotations
 from enum import IntFlag, auto
 from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
 
-from discord.ext import commands
-from discord.ext.commands.cog import _cog_special_method
 from herogold.log import LoggerMixin
 from sqlmodel import Session
 from wd_db.constants import engine
@@ -18,11 +16,6 @@ from wd_bot.tasks import loop
 
 
 if TYPE_CHECKING:
-    import discord
-    from discord import app_commands
-    from discord.ext.commands._types import BotT
-    from discord.ext.commands.context import Context
-
     from wd_bot.bot import WinterDragon
 
 

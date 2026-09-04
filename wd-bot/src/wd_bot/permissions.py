@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from discord import Interaction, Member, Permissions
-
 
 class PermissionsNotifier:
     """Notify users about missing permissions, roles or overwrites."""

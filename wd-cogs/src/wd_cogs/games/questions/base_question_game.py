@@ -5,12 +5,9 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING, TypeVar, Unpack
 
-import discord
 from herogold.sentinel import MISSING
 from sqlalchemy import func
 from sqlmodel import SQLModel, select
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-from winter_dragon.database.tables import Games, Suggestions
 
 
 if TYPE_CHECKING:

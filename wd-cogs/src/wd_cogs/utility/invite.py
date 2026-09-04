@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-import discord
-from discord import app_commands
-from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.core.settings import Settings
-
 
 class Invite(GroupCog, auto_load=True):
     """Cog for inviting the bot to a guild or getting support."""

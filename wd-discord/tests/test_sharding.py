@@ -118,7 +118,7 @@ def recorded_sleeps(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 
 async def test_start_batches_and_delays(fake_gateway: type[FakeGateway], recorded_sleeps: list[float]) -> None:
     manager = ShardManager("token", _info(shards=5, max_concurrency=2), intents=513)
-    readies = await manager.start()
+    readies = await manager._start()
 
     assert len(readies) == 5
     assert fake_gateway.connect_order == [0, 1, 2, 3, 4]
@@ -131,14 +131,14 @@ async def test_start_batches_and_delays(fake_gateway: type[FakeGateway], recorde
 async def test_start_respects_session_start_budget(fake_gateway: type[FakeGateway]) -> None:
     manager = ShardManager("token", _info(shards=3, remaining=2))
     with pytest.raises(RuntimeError, match="session starts"):
-        await manager.start()
+        await manager._start()
     assert fake_gateway.connect_order == []
 
 
 @pytest.mark.usefixtures("fake_gateway")
 async def test_num_shards_overrides_recommendation(recorded_sleeps: list[float]) -> None:
     manager = ShardManager("token", _info(shards=9, max_concurrency=16), num_shards=2)
-    await manager.start()
+    await manager._start()
     assert [shard.shard for shard in manager.shards] == [(0, 2), (1, 2)]
     assert recorded_sleeps == []  # one batch, no waits
 
@@ -148,14 +148,14 @@ async def test_shard_for_guild_routes_after_start() -> None:
     manager = ShardManager("token", _info(shards=3, max_concurrency=16))
     with pytest.raises(RuntimeError, match="not started"):
         manager.shard_for_guild(1 << 22)
-    await manager.start()
+    await manager._start()
     assert manager.shard_for_guild((4 << 22) | 7).shard == (1, 3)
 
 
 async def test_close_closes_all_shards(fake_gateway: type[FakeGateway], recorded_sleeps: list[float]) -> None:  # noqa: ARG001
     manager = ShardManager("token", _info(shards=2, max_concurrency=16))
-    await manager.start()
-    await manager.close()
+    await manager._start()
+    await manager._close()
     assert len(fake_gateway.instances) == 2
     assert all(shard.closed for shard in fake_gateway.instances)
     assert manager.shards == []

@@ -17,6 +17,6 @@ __all__ = [
 _ = ""  # < Trick for ruff. so that imports below don't get auto-sorted.
 # Eagerly import all error handlers.
 # These register themselves with the ErrorFactory using __init_subclass__.
-# from .handlers import *  # noqa: E402, F403
+# from .handlers import *
 # TODO: ^^^^ Is temporarily commented out, as it depends on discord.py, which we're going to fully replace
 # using wd-discord. Once we have wd-discord fully implemented, we can re-enable this import.

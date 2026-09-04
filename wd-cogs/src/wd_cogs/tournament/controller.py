@@ -2,20 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
-from typing import TYPE_CHECKING, Unpack
-
-import discord
-from discord import app_commands
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-
-from .status import Context, Events, MatchStatus
-from .store import registry
-
-
-if TYPE_CHECKING:
-    from .match_information import MatchInformation
-
 
 STATUS_SEQUENCE: tuple[MatchStatus, ...] = (
     MatchStatus.PRE,

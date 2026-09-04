@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from winter_dragon.config import Config
-
 
 class ClashSettings:
     """Settings for the Clash cog."""

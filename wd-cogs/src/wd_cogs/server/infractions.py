@@ -2,17 +2,6 @@
 
 from __future__ import annotations
 
-from discord import (
-    AutoModAction,
-    AutoModRule,
-    AutoModRuleAction,
-    AutoModRuleActionType,
-    app_commands,
-)
-from winter_dragon.bot.core.cogs import Cog, GroupCog
-from winter_dragon.bot.core.settings import Settings
-from winter_dragon.database.tables import Infractions as InfractionsDb
-
 
 _rule_severities = {
     AutoModRuleActionType.block_message: 3,

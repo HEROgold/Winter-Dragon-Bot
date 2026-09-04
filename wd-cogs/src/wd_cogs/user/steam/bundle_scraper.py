@@ -2,17 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from bs4 import BeautifulSoup
-from winter_dragon.bot.extensions.user.steam.base_scraper import BaseScraper
-from winter_dragon.bot.extensions.user.steam.steam_url import SteamURL
-from winter_dragon.bot.extensions.user.steam.tags import BUNDLE_ITEM, BUNDLE_ITEM_CONTAINER, DATA_APPID
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-
 
 class BundleScraper(BaseScraper):
     """Scraper for Steam bundle pages (store.steampowered.com/bundle/<id> or store.steampowered.com/sub/<id>)."""

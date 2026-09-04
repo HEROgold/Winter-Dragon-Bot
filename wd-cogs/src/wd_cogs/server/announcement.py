@@ -4,11 +4,6 @@ from __future__ import annotations
 
 import datetime
 
-import discord
-from discord import app_commands
-from winter_dragon.bot.core.cogs import Cog
-from winter_dragon.config import Config
-
 
 class Announce(Cog, auto_load=True):
     """A cog for announcing messages about the bot to all servers."""

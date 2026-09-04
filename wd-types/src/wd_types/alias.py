@@ -4,11 +4,6 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
 from typing import Any
 
-from discord import Embed, Member, Message, Object, PermissionOverwrite, Role, Thread
-from discord.abc import GuildChannel, User
-from discord.app_commands import AppCommand, AppCommandGroup
-from discord.ext.commands.bot import BotBase
-
 
 type Store[T] = dict[str, T]
 

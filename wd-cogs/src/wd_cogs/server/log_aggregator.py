@@ -14,10 +14,6 @@ from collections import deque
 from datetime import UTC, datetime
 from typing import NamedTuple
 
-import discord
-from herogold.log import LoggerMixin
-from winter_dragon.bot.ui.paginator import EmbedPageSource
-
 
 class LogEntry(NamedTuple):
     """A single log entry containing an audit event embed."""

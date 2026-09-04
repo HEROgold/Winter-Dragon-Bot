@@ -3,15 +3,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-import discord
-from discord.app_commands import AppCommand, AppCommandGroup, Argument, Command
-
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from discord.abc import Snowflake
-    from discord.ext.commands.bot import BotBase
     from wd_types.alias import CommandStore
     from wd_types.protocol import Mentionable
 

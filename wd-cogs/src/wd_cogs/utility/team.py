@@ -6,15 +6,6 @@ import math
 import random
 from typing import TYPE_CHECKING, TypedDict, cast
 
-import discord
-from discord import CategoryChannel, Guild, Interaction, Member, VoiceChannel, app_commands
-from discord.abc import PrivateChannel
-from winter_dragon.bot.core.cogs import GroupCog
-from winter_dragon.bot.core.tasks import loop
-from winter_dragon.config import Config
-from winter_dragon.database.channel_types import Tags
-from winter_dragon.database.tables import Channels
-
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -123,7 +114,7 @@ class Team(GroupCog, auto_load=True):
         return db_channels, discord_channels
 
     def get_team_channels(self, guild: Guild) -> Sequence[Channels]:
-        """Get all team channels from winter_dragon.database."""
+        """Get all team channels from database."""
         return Channels.get_by_tag(self.session, Tags.TEAM_VOICE, guild.id)
 
     def get_teams_category(self, guild: Guild) -> CategoryChannel | None:

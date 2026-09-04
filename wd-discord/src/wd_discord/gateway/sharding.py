@@ -17,6 +17,8 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any, Self
 
+from herogold.errors import with_known_exception
+
 from wd_discord.models import DiscordModel
 
 from .connection import Gateway
@@ -109,7 +111,7 @@ class ShardManager:
         token: str,
         info: GatewayBotInfo,
         *,
-        intents: int = 0,
+        intents: Intents = 0,
         num_shards: int | None = None,
     ) -> None:
         """Create a manager for ``token``; ``num_shards`` overrides ``info.shards``."""
@@ -119,6 +121,7 @@ class ShardManager:
         self.num_shards = num_shards if num_shards is not None else info.shards
         self.shards: list[Gateway] = []
 
+    @with_known_exception(RuntimeError)
     def shard_for_guild(self, guild_id: int) -> Gateway:
         """Return the started shard handling ``guild_id``'s events."""
         if not self.shards:
@@ -126,7 +129,7 @@ class ShardManager:
             raise RuntimeError(msg)
         return self.shards[shard_id_for_guild(guild_id, self.num_shards)]
 
-    async def start(self, *, presence: dict[str, Any] | None = None) -> list[Ready]:
+    async def _start(self, *, presence: dict[str, Any] | None = None) -> list[Ready]:
         """Connect every shard and return their READYs (in shard-id order).
 
         IDENTIFYs are sent in :func:`identify_batches` order, waiting
@@ -160,16 +163,16 @@ class ShardManager:
             readies += await asyncio.gather(*(self.shards[shard_id].connect(presence=presence) for shard_id in batch))
         return readies
 
-    async def close(self) -> None:
+    async def _close(self) -> None:
         """Close every shard's connection."""
         await asyncio.gather(*(shard.close() for shard in self.shards))
         self.shards = []
 
     async def __aenter__(self) -> Self:
         """Start all shards on context entry."""
-        await self.start()
+        await self._start()
         return self
 
     async def __aexit__(self, *_exc: object) -> None:
         """Close all shards on context exit."""
-        await self.close()
+        await self._close()

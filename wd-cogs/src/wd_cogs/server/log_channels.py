@@ -24,33 +24,7 @@ sent, look in ``winter_dragon.bot.events`` instead of re-adding listeners here.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Unpack, cast
-
-import discord
-from discord import (
-    AuditLogAction,
-    CategoryChannel,
-    ClientUser,
-    Guild,
-    TextChannel,
-    app_commands,
-)
-from discord.abc import PrivateChannel
-from discord.ext import commands
-from winter_dragon.bot.core.cogs import BotArgs, GroupCog
-from winter_dragon.bot.core.settings import Settings
-from winter_dragon.bot.ui.paginator import Paginator
-from winter_dragon.config import Config
-from winter_dragon.database.channel_types import Tags
-from winter_dragon.database.tables import Channels
-
-from .log_aggregator import LogAggregator
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Sequence
-
-    from winter_dragon.bot.core.permissions import PermissionsOverwrites
+from typing import Unpack, cast
 
 
 MAX_CATEGORY_SIZE = 50
