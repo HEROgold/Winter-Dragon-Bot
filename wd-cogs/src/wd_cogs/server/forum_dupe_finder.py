@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from difflib import SequenceMatcher
+lazy from difflib import SequenceMatcher
 
 
 class ForumDupeFinder(GroupCog, auto_load=True):

@@ -5,16 +5,16 @@ When the signature of any command changes, sync the command to Discord, and upda
 
 from __future__ import annotations
 
-from inspect import Signature, signature
-from typing import TYPE_CHECKING
+lazy from inspect import Signature, signature
+lazy from typing import TYPE_CHECKING
 
-from herogold.log import LoggerMixin
-from sqlmodel import Field
-from wd_db.extension.model import SQLModel
+lazy from herogold.log import LoggerMixin
+lazy from sqlmodel import Field
+lazy from wd_db.extension.model import SQLModel
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    lazy from collections.abc import Callable
 
 
 class SyncedCommand(SQLModel, table=True):

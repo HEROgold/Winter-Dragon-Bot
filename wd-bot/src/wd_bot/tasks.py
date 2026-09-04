@@ -1,19 +1,19 @@
-"""Add error handling from discord tasks."""
+"""Add error handling lazy from discord tasks."""
 
 from __future__ import annotations
 
-import asyncio
-from typing import TYPE_CHECKING, Any, override
+lazy import asyncio
+lazy from typing import TYPE_CHECKING, Any, override
 
-from discord.ext import tasks
-from discord.utils import MISSING
-from herogold.log import LoggerMixin
-from wd_types.alias import CoroutineFunction
+lazy from discord.ext import tasks
+lazy from discord.utils import MISSING
+lazy from herogold.log import LoggerMixin
+lazy from wd_types.alias import CoroutineFunction
 
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Callable, Sequence
+    lazy from collections.abc import Callable, Sequence
 
 
 class Loop[FT: CoroutineFunction](tasks.Loop[FT], LoggerMixin):

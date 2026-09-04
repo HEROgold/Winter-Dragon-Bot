@@ -1,9 +1,9 @@
 """Package for utility cogs."""
 from __future__ import annotations
 
-from .invite import Invite
-from .team import Team
-from .uptime import Uptime
+lazy from .invite import Invite
+lazy from .team import Team
+lazy from .uptime import Uptime
 
 
 __all__ = [

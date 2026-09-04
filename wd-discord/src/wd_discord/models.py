@@ -8,16 +8,16 @@ instead of being silently dropped.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
+lazy from typing import TYPE_CHECKING, Self
 
-import sentry_sdk
-from herogold.log import getLogger
-from pydantic import BaseModel, ConfigDict, model_validator
-from wd_config.sentry import SentrySettings
+lazy import sentry_sdk
+lazy from herogold.log import getLogger
+lazy from pydantic import BaseModel, ConfigDict, model_validator
+lazy from wd_config.sentry import SentrySettings
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    lazy from collections.abc import Mapping
 
 
 logger = getLogger("DiscordModel")

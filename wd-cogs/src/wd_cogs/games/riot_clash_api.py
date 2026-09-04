@@ -6,13 +6,13 @@ for fetching Clash tournament schedules, team information, and player details.
 
 from __future__ import annotations
 
-import asyncio
-import contextlib
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from enum import StrEnum
-from http import HTTPStatus
-from typing import Any, Self
+lazy import asyncio
+lazy import contextlib
+lazy from dataclasses import dataclass, field
+lazy from datetime import UTC, datetime
+lazy from enum import StrEnum
+lazy from http import HTTPStatus
+lazy from typing import Any, Self
 
 
 class Region(StrEnum):

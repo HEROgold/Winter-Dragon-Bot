@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import random
+lazy import random
 
 
 class Love(Cog, auto_load=True):

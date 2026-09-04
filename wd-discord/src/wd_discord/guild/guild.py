@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from wd_discord.guild.emoji import Emoji
-from wd_discord.guild.features import (
+lazy from wd_discord.guild.emoji import Emoji
+lazy from wd_discord.guild.features import (
     DefaultMessageNotificationLevel,
     ExplicitContentFilterLevel,
     MFALevel,
@@ -12,13 +12,13 @@ from wd_discord.guild.features import (
     SystemChannelFlags,
     VerificationLevel,
 )
-from wd_discord.guild.role import Role
-from wd_discord.guild.sticker import Sticker
-from wd_discord.guild.welcome_screen import WelcomeScreen
-from wd_discord.image import ImageHash
-from wd_discord.models import DiscordModel
-from wd_discord.permissions import PermissionsField
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.guild.role import Role
+lazy from wd_discord.guild.sticker import Sticker
+lazy from wd_discord.guild.welcome_screen import WelcomeScreen
+lazy from wd_discord.image import ImageHash
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.permissions import PermissionsField
+lazy from wd_discord.snowflake import Snowflake
 
 
 class Guild(DiscordModel):

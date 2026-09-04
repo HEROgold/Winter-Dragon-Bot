@@ -1,15 +1,15 @@
 """Extension for databases, integrating api's with the database layer."""
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
+lazy from abc import abstractmethod
+lazy from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
 
-from .model import SQLModel
+lazy from .model import SQLModel
 
 
 if TYPE_CHECKING:
-    from httpxyz import Response
-    from pydantic import ConfigDict
+    lazy from httpxyz import Response
+    lazy from pydantic import ConfigDict
 
 
 class ApiArguments(TypedDict):

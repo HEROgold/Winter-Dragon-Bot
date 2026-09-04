@@ -1,7 +1,7 @@
 """Unit tests: interaction/application-command concepts and validators."""
 from __future__ import annotations
 
-import pytest
+lazy import pytest
 
 
 # NOTE: wd_discord.interactions imports herogold.protocols, which currently fails to import

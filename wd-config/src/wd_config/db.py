@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .config import Config
+lazy from .config import Config
 
 
 class DbUrl:

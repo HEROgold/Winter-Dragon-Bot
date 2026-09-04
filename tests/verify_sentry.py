@@ -11,12 +11,12 @@ Run this FIRST in a full pass so sentry_sdk.init is live for the other drivers i
 """
 from __future__ import annotations
 
-import sys
+lazy import sys
 
-import sentry_sdk
-from wd_config.sentry import SentrySettings
-from wd_discord import Sentry
-from wd_discord.user import User
+lazy import sentry_sdk
+lazy from wd_config.sentry import SentrySettings
+lazy from wd_discord import Sentry
+lazy from wd_discord.user import User
 
 
 def main() -> int:

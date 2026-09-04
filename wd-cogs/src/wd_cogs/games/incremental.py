@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any
+lazy from datetime import UTC, datetime
+lazy from typing import Any
 
-from sqlmodel import Session, select
+lazy from sqlmodel import Session, select
 
 
 class PlayerManager:

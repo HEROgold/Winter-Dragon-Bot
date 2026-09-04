@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from enum import IntEnum
+lazy from enum import IntEnum
 
-from wd_discord.image import ImageHash
-from wd_discord.models import DiscordModel
-from wd_discord.snowflake import Snowflake
-from wd_discord.user import User
+lazy from wd_discord.image import ImageHash
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.snowflake import Snowflake
+lazy from wd_discord.user import User
 
 
 class MembershipState(IntEnum):

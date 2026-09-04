@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Unpack
+lazy from typing import Unpack
 
 
 @app_commands.guilds(Settings.support_guild_id)

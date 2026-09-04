@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import StrEnum
+lazy from enum import StrEnum
 
 
 class OAuthScopes(StrEnum):

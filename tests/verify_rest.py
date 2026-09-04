@@ -8,17 +8,17 @@ Each request is also traced into logs/Client.log by the new Client logging.
 """
 from __future__ import annotations
 
-import asyncio
-import sys
+lazy import asyncio
+lazy import sys
 
-from _common import load_token, support_guild_id
-from httpxyz import RequestError, Response
-from wd_discord import ApiResponseError, Client
-from wd_discord.application import Application
-from wd_discord.channel import Channel
-from wd_discord.gateway.sharding import GatewayBotInfo
-from wd_discord.guild import Guild
-from wd_discord.user import User
+lazy from _common import load_token, support_guild_id
+lazy from httpxyz import RequestError, Response
+lazy from wd_discord import ApiResponseError, Client
+lazy from wd_discord.application import Application
+lazy from wd_discord.channel import Channel
+lazy from wd_discord.gateway.sharding import GatewayBotInfo
+lazy from wd_discord.guild import Guild
+lazy from wd_discord.user import User
 
 
 def _ok(result: object, expected: type, label: str) -> bool:

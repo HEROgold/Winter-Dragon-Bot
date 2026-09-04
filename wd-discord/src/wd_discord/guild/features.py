@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import IntEnum, IntFlag, StrEnum
+lazy from enum import IntEnum, IntFlag, StrEnum
 
 
 class GuildFeature(StrEnum):

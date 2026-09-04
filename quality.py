@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from random import random
+lazy from random import random
 
 
 class Quality(int):

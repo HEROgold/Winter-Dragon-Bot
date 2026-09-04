@@ -4,7 +4,7 @@ https://docs.discord.com/developers/reference#snowflake-ids-in-pagination
 """
 from __future__ import annotations
 
-from wd_discord.constants import DISCORD_EPOCH
+lazy from wd_discord.constants import DISCORD_EPOCH
 
 
 def snowflake_from_timestamp(timestamp: int) -> int:

@@ -1,15 +1,15 @@
 """Discord CDN image hashes and formats (https://docs.discord.com/developers/reference#image-formatting)."""
 from __future__ import annotations
 
-from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+lazy from enum import StrEnum
+lazy from typing import TYPE_CHECKING, Any
 
-from pydantic_core import core_schema
+lazy from pydantic_core import core_schema
 
 
 if TYPE_CHECKING:
-    from pydantic import GetCoreSchemaHandler
-    from pydantic_core import CoreSchema
+    lazy from pydantic import GetCoreSchemaHandler
+    lazy from pydantic_core import CoreSchema
 
 
 class ImageHash:

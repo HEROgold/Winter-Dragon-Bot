@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import time
-from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Protocol, Unpack, cast
+lazy import time
+lazy from enum import StrEnum
+lazy from typing import TYPE_CHECKING, Any, Protocol, Unpack, cast
 
-from sqlmodel import select
+lazy from sqlmodel import select
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
 
 class CassiopeiaEnumLike(Protocol):

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import math
-import random
-from typing import TYPE_CHECKING, TypedDict, cast
+lazy import math
+lazy import random
+lazy from typing import TYPE_CHECKING, TypedDict, cast
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
 
 class TeamDict(TypedDict):

@@ -1,12 +1,12 @@
 """Package for server cogs."""
 from __future__ import annotations
 
-from .announcement import Announce
-from .auto_assign import AutoAssign
-from .purge import Purge
-from .stats import Stats
-from .sync_ban import SyncedBans
-from .welcome import Welcome
+lazy from .announcement import Announce
+lazy from .auto_assign import AutoAssign
+lazy from .purge import Purge
+lazy from .stats import Stats
+lazy from .sync_ban import SyncedBans
+lazy from .welcome import Welcome
 
 
 __all__ = [

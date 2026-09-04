@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from wd_discord.models import DiscordModel
-from wd_discord.partial_emoji import PartialEmoji
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.partial_emoji import PartialEmoji
+lazy from wd_discord.snowflake import Snowflake
 
 
 class WelcomeScreenChannel(DiscordModel):

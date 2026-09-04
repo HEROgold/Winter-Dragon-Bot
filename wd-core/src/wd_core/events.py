@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, ClassVar, Self
+lazy from abc import ABC, abstractmethod
+lazy from datetime import UTC, datetime
+lazy from typing import TYPE_CHECKING, ClassVar, Self
 
-from herogold.log import LoggerMixin
-from herogold.orm.model import BaseModel
-from wd_types.protocol import Mentionable
+lazy from herogold.log import LoggerMixin
+lazy from herogold.orm.model import BaseModel
+lazy from wd_types.protocol import Mentionable
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable
+    lazy from collections.abc import Generator, Iterable
 
-    from sqlalchemy.orm import Session
+    lazy from sqlalchemy.orm import Session
 
 class AuditLog(BaseModel):
     """Database model for audit logs."""

@@ -6,18 +6,18 @@ are skipped so the unit suite stays green offline and in CI.
 """
 from __future__ import annotations
 
-import configparser
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+lazy import configparser
+lazy from pathlib import Path
+lazy from typing import TYPE_CHECKING, Any
 
-import pytest
-import pytest_asyncio
-from httpxyz import Response
-from wd_discord import ApiResponseError, Client
+lazy import pytest
+lazy import pytest_asyncio
+lazy from httpxyz import Response
+lazy from wd_discord import ApiResponseError, Client
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable
+    lazy from collections.abc import AsyncIterator, Callable
 
 
 def _find_config_ini() -> Path | None:

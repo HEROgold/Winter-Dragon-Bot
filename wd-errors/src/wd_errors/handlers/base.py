@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from abc import ABC
-from typing import Self, override
+lazy from abc import ABC
+lazy from typing import Self, override
 
-from wd_errors.error import DiscordError
+lazy from wd_errors.error import DiscordError
 
 
 class BaseError(DiscordError, ABC, error_type=DiscordException):

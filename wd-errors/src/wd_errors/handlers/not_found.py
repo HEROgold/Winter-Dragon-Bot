@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from discord.app_commands.errors import CommandNotFound
+lazy from discord.app_commands.errors import CommandNotFound
 
-from .base import BaseError
+lazy from .base import BaseError
 
 
 class CommandNotFoundError(BaseError, error_type=CommandNotFound):

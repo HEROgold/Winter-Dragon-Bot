@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlmodel import select
+lazy from sqlmodel import select
 
 
 class GeneratorShopMenu(Menu, SessionMixin):

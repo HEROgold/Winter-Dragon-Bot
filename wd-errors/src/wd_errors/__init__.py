@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .base import Activity, BaseError, ErrorCode, ErrorMessage, ErrorNode, Platform
+lazy from .base import Activity, BaseError, ErrorCode, ErrorMessage, ErrorNode, Platform
 
 
 __all__ = [

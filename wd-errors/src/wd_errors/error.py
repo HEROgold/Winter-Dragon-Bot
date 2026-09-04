@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Self, overload
+lazy from abc import ABC, abstractmethod
+lazy from datetime import UTC, datetime
+lazy from typing import TYPE_CHECKING, Self, overload
 
-from herogold.log import LoggerMixin
+lazy from herogold.log import LoggerMixin
 
-from .factory import ErrorFactory
+lazy from .factory import ErrorFactory
 
 
 if TYPE_CHECKING:
-    from wd_types.alias import Bot, ResponseTypes
+    lazy from wd_types.alias import Bot, ResponseTypes
 
 
 class DiscordError(ABC, LoggerMixin):

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import contextlib
-from typing import Protocol, runtime_checkable
+lazy import contextlib
+lazy from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable

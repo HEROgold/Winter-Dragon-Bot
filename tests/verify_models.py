@@ -8,16 +8,16 @@ PermissionsField round-trips), computed props (Snowflake.timestamp/worker_id/...
 """
 from __future__ import annotations
 
-import asyncio
-import sys
+lazy import asyncio
+lazy import sys
 
-from _common import load_token, support_guild_id
-from httpxyz import RequestError
-from wd_discord import ApiResponseError, Client, Permissions
-from wd_discord.application import Application
-from wd_discord.guild import Guild
-from wd_discord.oauth import OAuthScopes
-from wd_discord.user import User
+lazy from _common import load_token, support_guild_id
+lazy from httpxyz import RequestError
+lazy from wd_discord import ApiResponseError, Client, Permissions
+lazy from wd_discord.application import Application
+lazy from wd_discord.guild import Guild
+lazy from wd_discord.oauth import OAuthScopes
+lazy from wd_discord.user import User
 
 
 def _fail(label: str, detail: object) -> int:

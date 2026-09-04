@@ -1,9 +1,9 @@
 """Base error classes for the wd-discord package."""
 from __future__ import annotations
 
-from enum import IntEnum, StrEnum
+lazy from enum import IntEnum, StrEnum
 
-from pydantic import BaseModel, Field
+lazy from pydantic import BaseModel, Field
 
 
 class ErrorCode(StrEnum):

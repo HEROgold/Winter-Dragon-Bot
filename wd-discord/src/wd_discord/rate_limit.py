@@ -8,19 +8,19 @@ For more information on rate limiting of requests, please see the Rate Limits se
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from enum import StrEnum, auto
-from typing import TYPE_CHECKING
+lazy from dataclasses import dataclass
+lazy from enum import StrEnum, auto
+lazy from typing import TYPE_CHECKING
 
-from wd_errors.base import BaseError
+lazy from wd_errors.base import BaseError
 
-from wd_discord.utils import XORError, xor
+lazy from wd_discord.utils import XORError, xor
 
 
 if TYPE_CHECKING:
-    from datetime import datetime, timedelta
+    lazy from datetime import datetime, timedelta
 
-    from wd_discord.endpoints import Endpoint
+    lazy from wd_discord.endpoints import Endpoint
 
 class Buckets(StrEnum):
     """Represents the different buckets for rate limits."""

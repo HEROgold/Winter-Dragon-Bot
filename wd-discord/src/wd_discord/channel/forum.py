@@ -1,11 +1,11 @@
 """Forum and voice related models and enums for the Discord Channel object."""
 from __future__ import annotations
 
-from enum import IntEnum
+lazy from enum import IntEnum
 
-from wd_discord.models import DiscordModel
-from wd_discord.partial_emoji import PartialEmoji
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.partial_emoji import PartialEmoji
+lazy from wd_discord.snowflake import Snowflake
 
 
 class VideoQualityMode(IntEnum):

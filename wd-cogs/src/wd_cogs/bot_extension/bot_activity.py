@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import random
-from typing import Unpack
+lazy import random
+lazy from typing import Unpack
 
 
 INVALID_RNG_STATUS = [

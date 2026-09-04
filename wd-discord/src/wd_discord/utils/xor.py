@@ -1,13 +1,13 @@
 """Generic utilities for the wd-discord package."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING
 
-from herogold.errors import with_known_exception
+lazy from herogold.errors import with_known_exception
 
 
 if TYPE_CHECKING:
-    from herogold.supports import SupportsBool
+    lazy from herogold.supports import SupportsBool
 
 
 class XORError(ValueError):

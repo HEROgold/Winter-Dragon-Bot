@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import asyncio
+lazy import asyncio
 
-import requests
-from herogold.log import LoggerMixin
+lazy import requests
+lazy from herogold.log import LoggerMixin
 
 
 class BaseScraper(LoggerMixin):

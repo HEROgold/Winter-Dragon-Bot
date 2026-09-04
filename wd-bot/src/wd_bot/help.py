@@ -1,8 +1,8 @@
 """Module for defining the help command."""
 from __future__ import annotations
 
-from wd_core.command import Command
-from wd_core.ui import View
+lazy from wd_core.command import Command
+lazy from wd_core.ui import View
 
 
 class HelpCommand(View, Command):

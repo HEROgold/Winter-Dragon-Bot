@@ -1,10 +1,10 @@
 """Unit tests: Snowflake decoding (API -> object) and pagination round-trip (object -> API)."""
 from __future__ import annotations
 
-from datetime import UTC, datetime
+lazy from datetime import UTC, datetime
 
-from wd_discord import Snowflake
-from wd_discord.pagination import snowflake_from_timestamp
+lazy from wd_discord import Snowflake
+lazy from wd_discord.pagination import snowflake_from_timestamp
 
 
 # Discord's documented example snowflake.

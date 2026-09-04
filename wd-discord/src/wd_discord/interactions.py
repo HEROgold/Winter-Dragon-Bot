@@ -1,18 +1,18 @@
 """Discord Interactions."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum, IntEnum, StrEnum, auto
-from typing import TYPE_CHECKING, Annotated, get_type_hints
+lazy from dataclasses import dataclass, field
+lazy from enum import Enum, IntEnum, StrEnum, auto
+lazy from typing import TYPE_CHECKING, Annotated, get_type_hints
 
-from wd_discord.utils.strings import LimitedString
+lazy from wd_discord.utils.strings import LimitedString
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    lazy from collections.abc import Callable
 
-    from wd_discord.permissions import Permissions
-    from wd_discord.snowflake import Snowflake
+    lazy from wd_discord.permissions import Permissions
+    lazy from wd_discord.snowflake import Snowflake
 
 
 class ApplicationCommandType(IntEnum):

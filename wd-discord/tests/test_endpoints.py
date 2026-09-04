@@ -1,8 +1,8 @@
 """Unit tests: the API base URL and version are pinned to Discord v10."""
 from __future__ import annotations
 
-from wd_config.discord import URLS
-from wd_discord import Client
+lazy from wd_config.discord import URLS
+lazy from wd_discord import Client
 
 
 def test_version_is_10() -> None:

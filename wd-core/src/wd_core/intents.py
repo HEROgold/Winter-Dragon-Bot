@@ -1,13 +1,13 @@
 """Module that contains the Gateway Intents."""
 from __future__ import annotations
 
-from enum import IntFlag
-from functools import wraps
-from typing import TYPE_CHECKING, Any
+lazy from enum import IntFlag
+lazy from functools import wraps
+lazy from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    lazy from collections.abc import Callable
 
 
 class Intents(IntFlag):

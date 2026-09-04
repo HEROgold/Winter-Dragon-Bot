@@ -1,14 +1,14 @@
 """A cache for storing application commands, both globally and per guild."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+lazy from typing import TYPE_CHECKING, ClassVar
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
-    from wd_types.alias import CommandStore
-    from wd_types.protocol import Mentionable
+    lazy from wd_types.alias import CommandStore
+    lazy from wd_types.protocol import Mentionable
 
 class AppCommandCache:
     """A cache for storing application commands, both globally and per guild."""

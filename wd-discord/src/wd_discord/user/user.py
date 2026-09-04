@@ -1,16 +1,16 @@
 """https://docs.discord.com/developers/resources/user#user-object."""
 from __future__ import annotations
 
-from typing import Annotated
+lazy from typing import Annotated
 
-from pydantic import Field
+lazy from pydantic import Field
 
-from wd_discord.image import ImageHash
-from wd_discord.models import DiscordModel
-from wd_discord.oauth import OAuthScopes
-from wd_discord.snowflake import Snowflake
-from wd_discord.user.collectibles import Collectibles
-from wd_discord.user.profile import Avatar
+lazy from wd_discord.image import ImageHash
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.oauth import OAuthScopes
+lazy from wd_discord.snowflake import Snowflake
+lazy from wd_discord.user.collectibles import Collectibles
+lazy from wd_discord.user.profile import Avatar
 
 
 class UserPrimaryGuild(DiscordModel):

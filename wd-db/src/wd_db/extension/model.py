@@ -4,26 +4,26 @@ This module should make the SQLModel classes more like a `Repository` pattern.
 """
 from __future__ import annotations
 
-from types import NoneType
-from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
+lazy from types import NoneType
+lazy from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
-from herogold.log import LoggerMixin
-from herogold.typing.check import contains_sub_type
-from httpxyz import Client
-from sqlalchemy import BigInteger, ScalarResult
-from sqlmodel import Field, Session, select
-from sqlmodel import SQLModel as BaseSQLModel
+lazy from herogold.log import LoggerMixin
+lazy from herogold.typing.check import contains_sub_type
+lazy from httpxyz import Client
+lazy from sqlalchemy import BigInteger, ScalarResult
+lazy from sqlmodel import Field, Session, select
+lazy from sqlmodel import SQLModel as BaseSQLModel
 
-from wd_db.constants import session as db_session
-from wd_db.errors import AlreadyExistsError, NotFoundError
+lazy from wd_db.constants import session as db_session
+lazy from wd_db.errors import AlreadyExistsError, NotFoundError
 
 
 if TYPE_CHECKING:
     import logging
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
-    from pydantic import ConfigDict
-    from sqlalchemy.orm import Mapped
+    lazy from pydantic import ConfigDict
+    lazy from sqlalchemy.orm import Mapped
 
 
 models: set[type[BaseModel]] = set()

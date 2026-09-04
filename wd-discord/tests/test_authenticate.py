@@ -1,8 +1,8 @@
 """Unit tests: header builders render correct, case-sensitive Discord headers."""
 from __future__ import annotations
 
-from wd_discord import Client, Token, TokenType
-from wd_discord.authenticate import (
+lazy from wd_discord import Client, Token, TokenType
+lazy from wd_discord.authenticate import (
     URL,
     ContentType,
     MetaData,

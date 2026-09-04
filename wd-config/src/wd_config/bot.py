@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import logging
+lazy import logging
 
-from confkit.data_types import Hex, List
+lazy from confkit.data_types import Hex, List
 
-from .config import Config
-from .data_types import Combined
+lazy from .config import Config
+lazy from .data_types import Combined
 
 
 GENERATED_MSG = "AutomaticallyGenerated"

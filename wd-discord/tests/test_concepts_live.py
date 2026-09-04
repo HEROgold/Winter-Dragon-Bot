@@ -1,16 +1,16 @@
 """Live tests: read-only connectivity to each major Discord v10 REST concept."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING
 
-import pytest
+lazy import pytest
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
+    lazy from collections.abc import Callable
+    lazy from typing import Any
 
-    from wd_discord import Client
+    lazy from wd_discord import Client
 
 pytestmark = pytest.mark.integration
 

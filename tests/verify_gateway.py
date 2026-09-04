@@ -8,14 +8,14 @@ Also asserts the pure helpers build_identify/build_presence/parse_ready and the 
 """
 from __future__ import annotations
 
-import asyncio
-import sys
+lazy import asyncio
+lazy import sys
 
-from _common import load_token, support_guild_id
-from wd_discord import Client
-from wd_discord.gateway import Gateway, GatewayActivity, Status
-from wd_discord.gateway.connection import build_identify, build_presence, parse_ready
-from wd_discord.gateway.sharding import (
+lazy from _common import load_token, support_guild_id
+lazy from wd_discord import Client
+lazy from wd_discord.gateway import Gateway, GatewayActivity, Status
+lazy from wd_discord.gateway.connection import build_identify, build_presence, parse_ready
+lazy from wd_discord.gateway.sharding import (
     GatewayBotInfo,
     fetch_gateway_bot,
     identify_batches,

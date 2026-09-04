@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from wd_discord.image import ImageHash
-from wd_discord.models import DiscordModel
-from wd_discord.permissions import PermissionsField
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.image import ImageHash
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.permissions import PermissionsField
+lazy from wd_discord.snowflake import Snowflake
 
 
 class RoleTags(DiscordModel):

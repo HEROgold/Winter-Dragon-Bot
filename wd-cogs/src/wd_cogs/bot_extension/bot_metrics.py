@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import datetime
-import time
-from typing import Unpack
+lazy import datetime
+lazy import time
+lazy from typing import Unpack
 
 
 def codeblock(language: str, text: str | float) -> str:
@@ -44,7 +44,7 @@ class BotMetrics(GroupCog, auto_load=True):
     async def cog_load(self) -> None:
         """When the cog loads, start collecting metrics."""
         await super().cog_load()
-        # Configure loop intervals from config
+        # Configure loop intervals lazy from config
         self.gather_metrics_loop.change_interval(seconds=self.gather_metrics_interval)
         self.gather_metrics_loop.start()
 

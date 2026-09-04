@@ -4,9 +4,9 @@ NOT FINISHED.
 """
 from __future__ import annotations
 
-from .collectibles import Collectibles
-from .profile import Avatar, NamePlate
-from .user import User
+lazy from .collectibles import Collectibles
+lazy from .profile import Avatar, NamePlate
+lazy from .user import User
 
 
 __all__ = [

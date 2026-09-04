@@ -1,10 +1,10 @@
 """Unit tests: rate-limit models and scope resolution."""
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+lazy from datetime import UTC, datetime, timedelta
 
-import pytest
-from wd_discord.rate_limit import Buckets, HeaderFormat, ScopeError
+lazy import pytest
+lazy from wd_discord.rate_limit import Buckets, HeaderFormat, ScopeError
 
 
 def _header(*, global_: bool | None = None, scope: str | None = None) -> HeaderFormat:

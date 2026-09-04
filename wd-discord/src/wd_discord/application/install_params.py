@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from wd_discord.models import DiscordModel
-from wd_discord.permissions import PermissionsField
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.permissions import PermissionsField
 
 
 class InstallParams(DiscordModel):

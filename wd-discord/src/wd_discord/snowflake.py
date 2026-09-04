@@ -1,18 +1,18 @@
 """Module for representing Discord Snowflakes, which are unique identifiers used by Discord for various entities."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+lazy from dataclasses import dataclass
+lazy from datetime import UTC, datetime
+lazy from typing import TYPE_CHECKING, Any
 
-from pydantic_core import core_schema
+lazy from pydantic_core import core_schema
 
-from wd_discord.constants import DISCORD_EPOCH
+lazy from wd_discord.constants import DISCORD_EPOCH
 
 
 if TYPE_CHECKING:
-    from pydantic import GetCoreSchemaHandler
-    from pydantic_core import CoreSchema
+    lazy from pydantic import GetCoreSchemaHandler
+    lazy from pydantic_core import CoreSchema
 
 
 @dataclass

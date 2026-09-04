@@ -1,7 +1,7 @@
 """Package for Winter Dragon bot Extensions."""
 from __future__ import annotations
 
-from .bot_extension import (
+lazy from .bot_extension import (
     BotActivity,
     BotControl,
     BotMetrics,
@@ -10,13 +10,13 @@ from .bot_extension import (
     Prometheus,
     Sync,
 )
-from .games import (
+lazy from .games import (
     Games,
     Hangman,
     LeagueOfLegends,
     Love,
 )
-from .server import (
+lazy from .server import (
     Announce,
     AutoAssign,
     Purge,
@@ -24,14 +24,14 @@ from .server import (
     SyncedBans,
     Welcome,
 )
-from .tournament import (
+lazy from .tournament import (
     Tournament,
 )
-from .user import (
+lazy from .user import (
     Fuel,
     Reminder,
 )
-from .utility import (
+lazy from .utility import (
     Invite,
     Team,
     Uptime,

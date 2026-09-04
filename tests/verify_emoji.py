@@ -8,16 +8,16 @@ custom + unicode pairs so the PartialEmoji logic is always covered even if the g
 """
 from __future__ import annotations
 
-import asyncio
-import sys
+lazy import asyncio
+lazy import sys
 
-from _common import load_token, support_guild_id
-from httpxyz import RequestError
-from wd_discord import ApiResponseError, Client
-from wd_discord.guild import Guild
-from wd_discord.guild.welcome_screen import WelcomeScreen
-from wd_discord.partial_emoji import PartialEmoji
-from wd_discord.snowflake import Snowflake
+lazy from _common import load_token, support_guild_id
+lazy from httpxyz import RequestError
+lazy from wd_discord import ApiResponseError, Client
+lazy from wd_discord.guild import Guild
+lazy from wd_discord.guild.welcome_screen import WelcomeScreen
+lazy from wd_discord.partial_emoji import PartialEmoji
+lazy from wd_discord.snowflake import Snowflake
 
 
 def _check_partial_emoji_logic() -> bool:

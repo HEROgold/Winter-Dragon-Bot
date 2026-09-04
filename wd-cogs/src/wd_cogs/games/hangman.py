@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import random
-from textwrap import dedent
-from typing import Unpack, override
+lazy import random
+lazy from textwrap import dedent
+lazy from typing import Unpack, override
 
-from sqlmodel import select
+lazy from sqlmodel import select
 
 
 HANGMAN = "hangman"

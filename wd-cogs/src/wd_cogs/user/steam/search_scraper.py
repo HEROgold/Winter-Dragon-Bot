@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from collections import Counter, defaultdict
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+lazy from collections import Counter, defaultdict
+lazy from dataclasses import dataclass, field
+lazy from datetime import UTC, datetime
+lazy from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
-    from logging import Logger
+    lazy from collections.abc import AsyncGenerator
+    lazy from logging import Logger
 
 
 @dataclass

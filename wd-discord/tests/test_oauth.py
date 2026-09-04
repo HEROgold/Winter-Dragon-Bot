@@ -1,8 +1,8 @@
 """Unit tests: OAuth2 scope enum and combination operator."""
 from __future__ import annotations
 
-import pytest
-from wd_discord.oauth import OAuthScopes
+lazy import pytest
+lazy from wd_discord.oauth import OAuthScopes
 
 
 def test_scope_values() -> None:

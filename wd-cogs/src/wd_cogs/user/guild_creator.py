@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import random
-from datetime import UTC, datetime, timedelta
-from textwrap import dedent
+lazy import random
+lazy from datetime import UTC, datetime, timedelta
+lazy from textwrap import dedent
 
 
 # Deprecated on discord's end. Keeping for historical purposes.

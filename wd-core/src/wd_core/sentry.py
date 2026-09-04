@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import sentry_sdk
-from wd_config.sentry import SentrySettings
+lazy import sentry_sdk
+lazy from wd_config.sentry import SentrySettings
 
 
 class Sentry:

@@ -20,19 +20,19 @@ with ``isinstance`` / ``match`` instead of ``try``/``except``::
 """
 from __future__ import annotations
 
-from functools import wraps
-from typing import TYPE_CHECKING, Any, Self
+lazy from functools import wraps
+lazy from typing import TYPE_CHECKING, Any, Self
 
-from herogold.log import LoggerMixin
-from httpxyz import AsyncClient, RequestError
-from wd_bot.tasks import loop
-from wd_config.discord import URLS
-from wd_errors import BaseError
+lazy from herogold.log import LoggerMixin
+lazy from httpxyz import AsyncClient, RequestError
+lazy from wd_bot.tasks import loop
+lazy from wd_config.discord import URLS
+lazy from wd_errors import BaseError
 
-from wd_discord import ShardManager, Snowflake
-from wd_discord.application import Application
-from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
-from wd_discord.authenticate import (
+lazy from wd_discord import ShardManager, Snowflake
+lazy from wd_discord.application import Application
+lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
+lazy from wd_discord.authenticate import (
     ContentType,
     MetaData,
     Token,
@@ -43,20 +43,20 @@ from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
-from wd_discord.channel import Channel
-from wd_discord.errors.api import ApiResponseError
-from wd_discord.gateway.sharding import GatewayBotInfo
-from wd_discord.guild import Guild
+lazy from wd_discord.channel import Channel
+lazy from wd_discord.errors.api import ApiResponseError
+lazy from wd_discord.gateway.sharding import GatewayBotInfo
+lazy from wd_discord.guild import Guild
 
-from .user import User
+lazy from .user import User
 
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    lazy from collections.abc import Awaitable, Callable
 
-    from httpxyz import Response
+    lazy from httpxyz import Response
 
-    from wd_discord.image import ImageHash
+    lazy from wd_discord.image import ImageHash
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"

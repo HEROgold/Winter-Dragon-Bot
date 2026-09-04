@@ -5,7 +5,7 @@ Using Tasks, the bot wil regularly execute/schedule these routines.
 
 from __future__ import annotations
 
-from .tasks import loop
+lazy from .tasks import loop
 
 
 @loop(minutes=5)

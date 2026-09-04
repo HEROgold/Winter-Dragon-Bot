@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Unpack
+lazy from typing import Unpack
 
-from sqlmodel import select
+lazy from sqlmodel import select
 
 
 @app_commands.guilds(Settings.support_guild_id)

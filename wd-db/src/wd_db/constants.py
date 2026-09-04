@@ -1,9 +1,9 @@
 """Module for containing constants and configuration for the database package."""
 from __future__ import annotations
 
-from sqlalchemy import URL
-from sqlmodel import Session, create_engine
-from wd_config.db import DbUrl
+lazy from sqlalchemy import URL
+lazy from sqlmodel import Session, create_engine
+lazy from wd_config.db import DbUrl
 
 
 CASCADE = "CASCADE"

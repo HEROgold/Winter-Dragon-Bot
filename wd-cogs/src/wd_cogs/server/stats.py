@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import random
-from abc import ABC, ABCMeta, abstractmethod
-from typing import NoReturn, Unpack
+lazy import random
+lazy from abc import ABC, ABCMeta, abstractmethod
+lazy from typing import NoReturn, Unpack
 
 
 def get_peak_count(channel: Channels | discord.abc.GuildChannel) -> int:

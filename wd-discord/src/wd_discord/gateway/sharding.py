@@ -14,23 +14,23 @@ This module provides:
 """
 from __future__ import annotations
 
-import asyncio
-from typing import TYPE_CHECKING, Any, Self
+lazy import asyncio
+lazy from typing import TYPE_CHECKING, Any, Self
 
-from herogold.errors import with_known_exception
+lazy from herogold.errors import with_known_exception
 
-from wd_discord.models import DiscordModel
+lazy from wd_discord.models import DiscordModel
 
-from .connection import Gateway
+lazy from .connection import Gateway
 
 
 if TYPE_CHECKING:
-    from httpxyz import RequestError
+    lazy from httpxyz import RequestError
 
-    from wd_discord.client import Client
-    from wd_discord.errors import ApiResponseError
+    lazy from wd_discord.client import Client
+    lazy from wd_discord.errors import ApiResponseError
 
-    from .connection import Ready
+    lazy from .connection import Ready
 
 # Query string appended to the gateway URL from /gateway/bot (same pinning as DEFAULT_GATEWAY_URL).
 GATEWAY_URL_QUERY = "?v=10&encoding=json"

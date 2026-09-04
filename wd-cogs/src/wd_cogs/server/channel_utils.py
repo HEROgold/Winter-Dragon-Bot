@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import contextlib
+lazy import contextlib
 
 
 @app_commands.guild_only()

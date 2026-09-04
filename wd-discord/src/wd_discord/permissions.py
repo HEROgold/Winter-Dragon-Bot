@@ -5,14 +5,14 @@ https://docs.discord.com/developers/topics/permissions#permissions
 
 from __future__ import annotations
 
-from enum import IntEnum, IntFlag
-from typing import TYPE_CHECKING, Annotated
+lazy from enum import IntEnum, IntFlag
+lazy from typing import TYPE_CHECKING, Annotated
 
-from pydantic import BeforeValidator
+lazy from pydantic import BeforeValidator
 
 
 if TYPE_CHECKING:
-    from herogold.supports import IsAnnotated
+    lazy from herogold.supports import IsAnnotated
 
 
 class ChannelType(IntEnum):

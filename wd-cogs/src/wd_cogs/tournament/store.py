@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+lazy from dataclasses import dataclass
 
-from .match_information import MatchInformation, Teams
-from .status import MatchStatus
+lazy from .match_information import MatchInformation, Teams
+lazy from .status import MatchStatus
 
 
 @dataclass(slots=True)

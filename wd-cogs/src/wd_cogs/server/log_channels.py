@@ -24,7 +24,7 @@ sent, look in ``winter_dragon.bot.events`` instead of re-adding listeners here.
 
 from __future__ import annotations
 
-from typing import Unpack, cast
+lazy from typing import Unpack, cast
 
 
 MAX_CATEGORY_SIZE = 50

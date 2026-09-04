@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from wd_discord.guild import Guild
-from wd_discord.image import ImageHash
-from wd_discord.models import DiscordModel
-from wd_discord.snowflake import Snowflake
-from wd_discord.user import User
+lazy from wd_discord.guild import Guild
+lazy from wd_discord.image import ImageHash
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.snowflake import Snowflake
+lazy from wd_discord.user import User
 
-from .install_params import ApplicationIntegrationTypeConfig, InstallParams
-from .team import Team
+lazy from .install_params import ApplicationIntegrationTypeConfig, InstallParams
+lazy from .team import Team
 
 
 # ``Guild`` lives in the sibling ``guild/`` subpackage, which does NOT import ``application`` -

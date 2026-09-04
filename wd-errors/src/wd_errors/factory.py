@@ -1,18 +1,18 @@
-"""Module for creating Error errors from Error log entries."""
+"""Module for creating Error errors lazy from Error log entries."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, cast
+lazy from typing import TYPE_CHECKING, ClassVar, cast
 
-from herogold.log import getLogger
+lazy from herogold.log import getLogger
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    lazy from collections.abc import Generator
 
-    from wd_types.alias import Bot
+    lazy from wd_types.alias import Bot
 
-    from .error import DiscordError
+    lazy from .error import DiscordError
 
 
 class ErrorFactory:

@@ -1,18 +1,18 @@
 """Live test: connect the Gateway, identify, and send a presence/activity update."""
 from __future__ import annotations
 
-import asyncio
-from typing import TYPE_CHECKING
+lazy import asyncio
+lazy from typing import TYPE_CHECKING
 
-import pytest
-from wd_discord import Activity, Gateway, GatewayActivity, Status
+lazy import pytest
+lazy from wd_discord import Activity, Gateway, GatewayActivity, Status
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
+    lazy from collections.abc import Callable
+    lazy from typing import Any
 
-    from wd_discord import Client
+    lazy from wd_discord import Client
 
 pytestmark = pytest.mark.integration
 

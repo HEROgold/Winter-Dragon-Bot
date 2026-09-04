@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import logging
+lazy import logging
 
 
 class Prometheus(Cog, auto_load=False):

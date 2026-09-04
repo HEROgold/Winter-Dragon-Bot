@@ -1,10 +1,10 @@
 """Unit tests: user profile models and scope validation."""
 from __future__ import annotations
 
-from wd_discord.oauth import OAuthScopes
-from wd_discord.user.collectibles import Collectibles
-from wd_discord.user.profile import NamePlate, NamePlateBackgroundColor
-from wd_discord.user.user import User
+lazy from wd_discord.oauth import OAuthScopes
+lazy from wd_discord.user.collectibles import Collectibles
+lazy from wd_discord.user.profile import NamePlate, NamePlateBackgroundColor
+lazy from wd_discord.user.user import User
 
 
 def test_nameplate_background_color_values() -> None:

@@ -62,9 +62,9 @@ class SyncedBans(GroupCog, auto_load=True):
             ephemeral=True,
         )
 
-    @sync.command(name="sync", description="Ban members banned from other synced guilds.")
+    @sync.command(name="sync", description="Ban members banned lazy from other synced guilds.")
     async def slash_synced_ban_sync(self, interaction: discord.Interaction) -> None:
-        """Ban all members from all guilds that are synced."""
+        """Ban all members lazy from all guilds that are synced."""
         query = (
             select(SyncBanBannedBy, Users, Guilds)
             .join(SyncBanUser)
@@ -87,6 +87,6 @@ class SyncedBans(GroupCog, auto_load=True):
                 member,
                 reason=(
                     f"Syncing bans: {reason or 'No reason provided'} "
-                    f"from {interaction.guild.name if interaction.guild else 'Unknown Guild'}"
+                    f"lazy from {interaction.guild.name if interaction.guild else 'Unknown Guild'}"
                 ),
             )

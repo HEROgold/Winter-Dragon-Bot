@@ -8,13 +8,13 @@ Discord scheduled event management.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, Unpack, cast
+lazy from typing import TYPE_CHECKING, Protocol, Unpack, cast
 
-from sqlmodel import select
+lazy from sqlmodel import select
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
 
 class CassiopeiaEnumLike(Protocol):

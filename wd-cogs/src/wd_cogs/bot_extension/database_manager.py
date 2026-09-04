@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import datetime
-from typing import override
+lazy import datetime
+lazy from typing import override
 
-from herogold.log import LoggerMixin
-from sqlmodel import select
+lazy from herogold.log import LoggerMixin
+lazy from sqlmodel import select
 
 
 # For every existing action, create a generic event listener
@@ -110,7 +110,7 @@ class _EventListenerHelper(SessionMixin, LoggerMixin):
 
     def delete_user_data(self, user: discord.Member) -> None:
         """Delete all data related to a user."""
-        self.logger.info(f"Deleting all data related to {user} from the database.")
+        self.logger.info(f"Deleting all data related to {user} lazy from the database.")
         self.session.delete(select(Users).where(Users.id == user.id))
         self.session.commit()
 
@@ -165,7 +165,7 @@ class OnRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
 
     @override
     async def handle(self) -> None:
-        """When a role is deleted, remove it from the database."""
+        """When a role is deleted, remove it lazy from the database."""
         role = self.entry.target
         helper = _EventListenerHelper()
         if not isinstance(role, discord.Role):
@@ -173,7 +173,7 @@ class OnRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
             return
         helper.logger.info(f"Role deleted: {role} in guild {role.guild}")
         if db_role := helper.session.exec(select(Roles).where(Roles.id == role.id)).first():
-            helper.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
+            helper.logger.debug(f"Deleting lazy from Roles table, role was deleted lazy from discord. {role=}")
             helper.session.delete(db_role)
             helper.session.commit()
 
@@ -183,7 +183,7 @@ class OnMessageDelete(AuditEvent, action=AuditLogAction.message_delete):
 
     @override
     async def handle(self) -> None:
-        """When a message is deleted, remove it from the database."""
+        """When a message is deleted, remove it lazy from the database."""
         message = self.entry.target
         helper = _EventListenerHelper()
         if not isinstance(message, discord.Message):
@@ -192,7 +192,7 @@ class OnMessageDelete(AuditEvent, action=AuditLogAction.message_delete):
         helper.logger.info(f"Message deleted: {message.id} in channel {message.channel} of guild {message.guild}")
         db_msg = helper.session.exec(select(Messages).where(Messages.id == message.id)).first()
         if db_msg is not None:
-            helper.logger.debug(f"Deleting from Messages table, message was deleted from discord. {message=}")
+            helper.logger.debug(f"Deleting lazy from Messages table, message was deleted lazy from discord. {message=}")
             helper.session.delete(db_msg)
         helper.session.commit()
 
@@ -220,7 +220,7 @@ class OnGuildRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
 
     @override
     async def handle(self) -> None:
-        """When a role is deleted, remove it from the database."""
+        """When a role is deleted, remove it lazy from the database."""
         role = self.entry.target
         helper = _EventListenerHelper()
         if not isinstance(role, discord.Role):
@@ -228,7 +228,7 @@ class OnGuildRoleDelete(AuditEvent, action=AuditLogAction.role_delete):
             return
         helper.logger.info(f"Guild role deleted: {role} in guild {role.guild}")
         if db_role := helper.session.exec(select(Roles).where(Roles.id == role.id)).first():
-            helper.logger.debug(f"Deleting from Roles table, role was deleted from discord. {role=}")
+            helper.logger.debug(f"Deleting lazy from Roles table, role was deleted lazy from discord. {role=}")
             helper.session.delete(db_role)
             helper.session.commit()
 
@@ -275,7 +275,7 @@ class OnPresenceUpdate(AuditEvent, action=AuditLogAction.member_update):
         ten_sec_ago = date_time - datetime.timedelta(seconds=10)
         helper.logger.debug(f"presence update for {member}, at {date_time}")
         # Every guild a member is in calls this event.
-        # Filter out updates from <10 seconds ago
+        # Filter out updates lazy from <10 seconds ago
         if presences := helper.session.exec(
             select(Presence).where(
                 Presence.user_id == member.id,

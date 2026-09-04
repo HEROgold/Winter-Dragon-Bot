@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from textwrap import dedent
+lazy from textwrap import dedent
 
 
 @app_commands.guild_only()

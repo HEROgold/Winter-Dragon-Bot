@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-import asyncio
-import inspect
-import logging
-from dataclasses import dataclass
-from enum import IntFlag, auto
-from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+lazy import asyncio
+lazy import inspect
+lazy import logging
+lazy from dataclasses import dataclass
+lazy from enum import IntFlag, auto
+lazy from pathlib import Path
+lazy from typing import TYPE_CHECKING, ClassVar
 
-from herogold.log import LoggerMixin
-from wd_config.bot import Settings
+lazy from herogold.log import LoggerMixin
+lazy from wd_config.bot import Settings
 
 
 if TYPE_CHECKING:
-    from wd_bot.bot import WinterDragon
-    from wd_bot.cogs import Cog
+    lazy from wd_bot.bot import WinterDragon
+    lazy from wd_bot.cogs import Cog
 
 
 class WatcherFlags(IntFlag):

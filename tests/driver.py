@@ -10,14 +10,14 @@ Exits 0 only if both surfaces worked. Never prints the token.
 """
 from __future__ import annotations
 
-import asyncio
-import configparser
-import sys
+lazy import asyncio
+lazy import configparser
+lazy import sys
 
-from wd_discord.client import Client
-from wd_discord.gateway import Gateway
-from wd_discord.gateway.sharding import GatewayBotInfo
-from wd_discord.user.user import User
+lazy from wd_discord.client import Client
+lazy from wd_discord.gateway import Gateway
+lazy from wd_discord.gateway.sharding import GatewayBotInfo
+lazy from wd_discord.user.user import User
 
 
 def load_token() -> str:

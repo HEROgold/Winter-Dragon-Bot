@@ -8,14 +8,14 @@ are actually delivered to Sentry (not just the crafted probe). Exits non-zero on
 """
 from __future__ import annotations
 
-import asyncio
-import sys
+lazy import asyncio
+lazy import sys
 
-import verify_emoji
-import verify_gateway
-import verify_models
-import verify_rest
-import verify_sentry
+lazy import verify_emoji
+lazy import verify_gateway
+lazy import verify_models
+lazy import verify_rest
+lazy import verify_sentry
 
 
 def main() -> int:

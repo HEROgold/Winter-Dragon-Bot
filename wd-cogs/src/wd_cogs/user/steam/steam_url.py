@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import re
+lazy import re
 
-from herogold.log import LoggerMixin
+lazy from herogold.log import LoggerMixin
 
 
 # TODO(Herogold, #7): Handle multi-id strings returned by Steam (e.g. "357070,366420,546090").  # noqa: FIX002

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-from datetime import UTC, datetime
+lazy import asyncio
+lazy from datetime import UTC, datetime
 
-from confkit.data_types import Hex
-from sqlmodel import select
+lazy from confkit.data_types import Hex
+lazy from sqlmodel import select
 
 
 STEAM_SEND_PERIOD = 3600 * 3  # 3 hour cooldown on updates in seconds

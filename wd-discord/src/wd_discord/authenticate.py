@@ -1,12 +1,12 @@
 """Location for all authentication related functions and classes."""
 from __future__ import annotations
 
-from enum import StrEnum
-from typing import TYPE_CHECKING
+lazy from enum import StrEnum
+lazy from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from string.templatelib import Template
+    lazy from string.templatelib import Template
 
 
 class Token(str):

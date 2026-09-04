@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from confkit import Config as CKConfig
+lazy from confkit import Config as CKConfig
 
-from .constants import CONFIG_FILE
+lazy from .constants import CONFIG_FILE
 
 
 class Config[T](CKConfig[T]):

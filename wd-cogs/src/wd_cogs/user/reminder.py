@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+lazy import datetime
 
 
 WEEKS_IN_MONTH = 4

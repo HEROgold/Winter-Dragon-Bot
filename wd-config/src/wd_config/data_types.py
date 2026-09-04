@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+lazy from typing import Any
 
-from confkit.data_types import BaseDataType
+lazy from confkit.data_types import BaseDataType
 
-from .config import Config
+lazy from .config import Config
 
 
 class Combined(BaseDataType[str]):

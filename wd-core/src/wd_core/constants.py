@@ -1,7 +1,7 @@
 """Constants used across the bot."""
 from __future__ import annotations
 
-from wd_core.intents import Intents
+lazy from wd_core.intents import Intents
 
 
 intents = Intents.none() | sum([

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from wd_discord.guild.emoji import Emoji
-from wd_discord.guild.features import (
+lazy from wd_discord.guild.emoji import Emoji
+lazy from wd_discord.guild.features import (
     DefaultMessageNotificationLevel,
     ExplicitContentFilterLevel,
     GuildFeature,
@@ -13,10 +13,10 @@ from wd_discord.guild.features import (
     SystemChannelFlags,
     VerificationLevel,
 )
-from wd_discord.guild.guild import Guild
-from wd_discord.guild.role import Role, RoleColors, RoleTags
-from wd_discord.guild.sticker import Sticker, StickerFormatType, StickerType
-from wd_discord.guild.welcome_screen import WelcomeScreen, WelcomeScreenChannel
+lazy from wd_discord.guild.guild import Guild
+lazy from wd_discord.guild.role import Role, RoleColors, RoleTags
+lazy from wd_discord.guild.sticker import Sticker, StickerFormatType, StickerType
+lazy from wd_discord.guild.welcome_screen import WelcomeScreen, WelcomeScreenChannel
 
 
 __all__ = [

@@ -1,7 +1,7 @@
 """Module containing tags for the database."""
 from __future__ import annotations
 
-from enum import Enum, auto
+lazy from enum import Enum, auto
 
 
 class Tags(Enum):

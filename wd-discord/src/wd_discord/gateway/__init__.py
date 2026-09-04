@@ -1,7 +1,7 @@
 """Discord gateway (WebSocket) support: connection, payload helpers, and sharding."""
 from __future__ import annotations
 
-from .connection import (
+lazy from .connection import (
     DEFAULT_GATEWAY_URL,
     Gateway,
     GatewayActivity,
@@ -12,7 +12,7 @@ from .connection import (
     build_presence,
     parse_ready,
 )
-from .sharding import (
+lazy from .sharding import (
     GatewayBotInfo,
     SessionStartLimit,
     ShardManager,

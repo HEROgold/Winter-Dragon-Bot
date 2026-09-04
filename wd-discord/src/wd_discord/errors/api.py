@@ -1,14 +1,14 @@
 """Error models for Discord API responses."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, RootModel
-from wd_errors import ErrorNode
+lazy from pydantic import BaseModel, RootModel
+lazy from wd_errors import ErrorNode
 
 
 if TYPE_CHECKING:
-    from wd_discord.errors import ApiErrorTree
+    lazy from wd_discord.errors import ApiErrorTree
 
 
 class ApiErrorTree(RootModel[ErrorNode | dict[str, "ApiErrorTree"]]):

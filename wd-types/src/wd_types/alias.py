@@ -1,8 +1,8 @@
 """Contains type aliases for WinterDragon."""
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
-from typing import Any
+lazy from collections.abc import Awaitable, Callable, Coroutine, Iterable, Mapping
+lazy from typing import Any
 
 
 type Store[T] = dict[str, T]

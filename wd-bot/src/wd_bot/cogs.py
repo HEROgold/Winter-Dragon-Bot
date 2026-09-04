@@ -2,21 +2,21 @@
 
 from __future__ import annotations
 
-from enum import IntFlag, auto
-from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
+lazy from enum import IntFlag, auto
+lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
 
-from herogold.log import LoggerMixin
-from sqlmodel import Session
-from wd_db.constants import engine
-from wd_errors.factory import ErrorFactory
+lazy from herogold.log import LoggerMixin
+lazy from sqlmodel import Session
+lazy from wd_db.constants import engine
+lazy from wd_errors.factory import ErrorFactory
 
-from wd_bot.auto_reload import AutoReloadWatcher
-from wd_bot.cache import AppCommandCache
-from wd_bot.tasks import loop
+lazy from wd_bot.auto_reload import AutoReloadWatcher
+lazy from wd_bot.cache import AppCommandCache
+lazy from wd_bot.tasks import loop
 
 
 if TYPE_CHECKING:
-    from wd_bot.bot import WinterDragon
+    lazy from wd_bot.bot import WinterDragon
 
 
 class BotArgs(TypedDict):

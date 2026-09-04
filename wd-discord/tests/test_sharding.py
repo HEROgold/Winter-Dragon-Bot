@@ -1,10 +1,10 @@
 """Unit tests: gateway sharding helpers and ShardManager batching (no sockets)."""
 from __future__ import annotations
 
-from typing import Any
+lazy from typing import Any
 
-import pytest
-from wd_discord.gateway import (
+lazy import pytest
+lazy from wd_discord.gateway import (
     GatewayBotInfo,
     SessionStartLimit,
     ShardManager,
@@ -14,7 +14,7 @@ from wd_discord.gateway import (
     rate_limit_key,
     shard_id_for_guild,
 )
-from wd_discord.gateway import sharding as sharding_module
+lazy from wd_discord.gateway import sharding as sharding_module
 
 
 GATEWAY_BOT_PAYLOAD = {

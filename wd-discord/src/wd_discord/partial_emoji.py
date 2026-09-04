@@ -9,8 +9,8 @@ root (like :mod:`~wd_discord.snowflake` / :mod:`~wd_discord.image`) so both the 
 """
 from __future__ import annotations
 
-from wd_discord.models import DiscordModel
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.snowflake import Snowflake
 
 
 class PartialEmoji(DiscordModel):

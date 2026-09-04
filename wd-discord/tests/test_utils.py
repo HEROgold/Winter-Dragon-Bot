@@ -1,7 +1,7 @@
 """Unit tests: xor helper and the LimitedString descriptor."""
 from __future__ import annotations
 
-import pytest
+lazy import pytest
 
 
 # NOTE: these modules import from herogold (DataDescriptor / with_known_exception),

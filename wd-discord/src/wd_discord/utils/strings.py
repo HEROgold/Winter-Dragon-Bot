@@ -1,9 +1,9 @@
 """Module for string utilities."""
 from __future__ import annotations
 
-from herogold.errors import with_known_exception
-from herogold.protocols import DataDescriptor
-from wd_errors.size import TooLongError
+lazy from herogold.errors import with_known_exception
+lazy from herogold.protocols import DataDescriptor
+lazy from wd_errors.size import TooLongError
 
 
 class LimitedString(DataDescriptor[str, object]):

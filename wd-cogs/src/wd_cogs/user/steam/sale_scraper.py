@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
+lazy import asyncio
 
-from herogold.log import LoggerMixin
+lazy from herogold.log import LoggerMixin
 
 
 class SteamScraper(LoggerMixin):

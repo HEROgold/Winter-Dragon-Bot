@@ -5,7 +5,7 @@ for public extension and internal use.
 """
 from __future__ import annotations
 
-from importlib import metadata
+lazy from importlib import metadata
 
 
 class PackageVersion(str):

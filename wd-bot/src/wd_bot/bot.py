@@ -2,37 +2,37 @@
 
 from __future__ import annotations
 
-import datetime
-import inspect
-import pkgutil
-import sys
-from importlib.util import find_spec, module_from_spec
-from typing import TYPE_CHECKING, Any
+lazy import datetime
+lazy import inspect
+lazy import pkgutil
+lazy import sys
+lazy from importlib.util import find_spec, module_from_spec
+lazy from typing import TYPE_CHECKING, Any
 
-from herogold.errors import with_known_exception
-from herogold.log import LoggerMixin
-from wd_config import Config
-from wd_config.bot import Settings
-from wd_core.command import CommandTree
-from wd_core.constants import BOT_PERMISSIONS, intents
-from wd_core.intents import Intents
-from wd_discord import Client, GatewayBotInfo
-from wd_discord.user import User
-from wd_errors.extension import ExtensionError
-from wd_errors.startup import StartupError
+lazy from herogold.errors import with_known_exception
+lazy from herogold.log import LoggerMixin
+lazy from wd_config import Config
+lazy from wd_config.bot import Settings
+lazy from wd_core.command import CommandTree
+lazy from wd_core.constants import BOT_PERMISSIONS, intents
+lazy from wd_core.intents import Intents
+lazy from wd_discord import Client, GatewayBotInfo
+lazy from wd_discord.user import User
+lazy from wd_errors.extension import ExtensionError
+lazy from wd_errors.startup import StartupError
 
-from wd_bot.help import DefaultHelpCommand, HelpCommand, default_help
+lazy from wd_bot.help import DefaultHelpCommand, HelpCommand, default_help
 
-from .cogs import Cog
+lazy from .cogs import Cog
 
 
 if TYPE_CHECKING:
-    from asyncio import Task
-    from collections.abc import AsyncGenerator, Coroutine
-    from importlib.machinery import ModuleSpec
-    from types import ModuleType
+    lazy from asyncio import Task
+    lazy from collections.abc import AsyncGenerator, Coroutine
+    lazy from importlib.machinery import ModuleSpec
+    lazy from types import ModuleType
 
-    from wd_types.alias import Bot, PrefixType
+    lazy from wd_types.alias import Bot, PrefixType
 
 class BotConfig:
     """Basic bot configuration values."""

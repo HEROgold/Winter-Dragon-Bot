@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import enum
-from enum import auto
+lazy import enum
+lazy from enum import auto
 
-from confkit import Enum
+lazy from confkit import Enum
 
-from .config import Config
+lazy from .config import Config
 
 
 class Environments(enum.StrEnum):

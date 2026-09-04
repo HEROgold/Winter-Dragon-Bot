@@ -10,9 +10,9 @@ through the EmbedPageSource interface used by the Paginator view.
 
 from __future__ import annotations
 
-from collections import deque
-from datetime import UTC, datetime
-from typing import NamedTuple
+lazy from collections import deque
+lazy from datetime import UTC, datetime
+lazy from typing import NamedTuple
 
 
 class LogEntry(NamedTuple):

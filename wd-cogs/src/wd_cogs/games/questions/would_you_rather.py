@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import random
-from typing import override
+lazy import random
+lazy from typing import override
 
-from .base_question_game import BaseQuestionGame
+lazy from .base_question_game import BaseQuestionGame
 
 
 class WouldYouRather(BaseQuestionGame[WyrQuestion], auto_load=True):

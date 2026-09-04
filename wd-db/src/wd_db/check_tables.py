@@ -8,9 +8,9 @@ Prints green for found, yellow for extra's, red for missing. Exits with code 1 i
 
 from __future__ import annotations
 
-import ast
-import sys
-from pathlib import Path
+lazy import ast
+lazy import sys
+lazy from pathlib import Path
 
 
 GREEN = "\x1b[32m"

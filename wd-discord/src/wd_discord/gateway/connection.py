@@ -14,22 +14,22 @@ The presence/READY (de)serialisation is factored into the pure helpers
 """
 from __future__ import annotations
 
-import asyncio
-import json
-import random
-from dataclasses import dataclass
-from enum import IntEnum, StrEnum
-from typing import TYPE_CHECKING, Any, Self
+lazy import asyncio
+lazy import json
+lazy import random
+lazy from dataclasses import dataclass
+lazy from enum import IntEnum, StrEnum
+lazy from typing import TYPE_CHECKING, Any, Self
 
-from pydantic import Field
-from wd_errors import Activity
-from websockets.asyncio.client import connect
+lazy from pydantic import Field
+lazy from wd_errors import Activity
+lazy from websockets.asyncio.client import connect
 
-from wd_discord.models import DiscordModel
+lazy from wd_discord.models import DiscordModel
 
 
 if TYPE_CHECKING:
-    from websockets.asyncio.client import ClientConnection
+    lazy from websockets.asyncio.client import ClientConnection
 
 # Default well-known gateway URL, already pinned to API v10 + JSON encoding.
 DEFAULT_GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from discord.app_commands.errors import CommandInvokeError
+lazy from discord.app_commands.errors import CommandInvokeError
 
-from .base import BaseError
+lazy from .base import BaseError
 
 
 class AppCommandInvokeError(BaseError, error_type=CommandInvokeError):

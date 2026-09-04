@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from wd_discord.models import DiscordModel
-from wd_discord.snowflake import Snowflake
-from wd_discord.user import User
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.snowflake import Snowflake
+lazy from wd_discord.user import User
 
 
 class Emoji(DiscordModel):

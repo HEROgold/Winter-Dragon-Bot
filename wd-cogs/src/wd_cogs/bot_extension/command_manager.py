@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .sync import LenFixer
+lazy from .sync import LenFixer
 
 
 class CommandToggleButton(ToggleButton):

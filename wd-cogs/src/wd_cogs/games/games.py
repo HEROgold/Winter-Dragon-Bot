@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Unpack
+lazy from typing import TYPE_CHECKING, Unpack
 
-from sqlmodel import select
+lazy from sqlmodel import select
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
 
 class Games(GroupCog, auto_load=True):

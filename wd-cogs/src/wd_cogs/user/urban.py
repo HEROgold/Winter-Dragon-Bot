@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
-import urllib.parse
+lazy import asyncio
+lazy import urllib.parse
 
 
 UD_DEFINE_URL = "https://api.urbandictionary.com/v0/define?term="

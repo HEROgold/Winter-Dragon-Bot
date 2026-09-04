@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import configparser
-from typing import TYPE_CHECKING
+lazy import configparser
+lazy from typing import TYPE_CHECKING
 
-from .constants import CONFIG_FILE
-from .errors import FirstTimeLaunchError
+lazy from .constants import CONFIG_FILE
+lazy from .errors import FirstTimeLaunchError
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    lazy from collections.abc import Generator
 
 
 class ConfigParser(configparser.ConfigParser):

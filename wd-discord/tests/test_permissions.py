@@ -1,7 +1,7 @@
 """Unit tests: permission bit values and channel-type concepts."""
 from __future__ import annotations
 
-from wd_discord import ChannelType, Permissions
+lazy from wd_discord import ChannelType, Permissions
 
 
 def test_permission_bit_values() -> None:

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+lazy from typing import TYPE_CHECKING, Protocol
 
-from herogold.log import LoggerMixin
+lazy from herogold.log import LoggerMixin
 
 
 if TYPE_CHECKING:
-    from logging import Logger
+    lazy from logging import Logger
 
 
 COMMAND_DESCRIPTION_LIMIT = 100

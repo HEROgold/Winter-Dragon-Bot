@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from enum import Enum, auto
+lazy from enum import Enum, auto
 
-from herogold.state import StateMachine
-from pydantic.dataclasses import dataclass
+lazy from herogold.state import StateMachine
+lazy from pydantic.dataclasses import dataclass
 
 
 class MatchStatus(Enum):

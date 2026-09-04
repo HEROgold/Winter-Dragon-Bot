@@ -8,8 +8,8 @@ All drivers read the bot token from ``config.ini`` [Tokens] discord_token and ne
 """
 from __future__ import annotations
 
-import configparser
-from pathlib import Path
+lazy import configparser
+lazy from pathlib import Path
 
 
 def _repo_root() -> Path:

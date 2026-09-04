@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import TYPE_CHECKING, TypeVar, Unpack
+lazy from abc import abstractmethod
+lazy from typing import TYPE_CHECKING, TypeVar, Unpack
 
-from herogold.sentinel import MISSING
-from sqlalchemy import func
-from sqlmodel import SQLModel, select
+lazy from herogold.sentinel import MISSING
+lazy from sqlalchemy import func
+lazy from sqlmodel import SQLModel, select
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    lazy from collections.abc import Sequence
 
 
 T = TypeVar("T", bound=SQLModel)

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Protocol
+lazy from dataclasses import dataclass
+lazy from typing import Protocol
 
 
 class UserInfoHelpers(Protocol):

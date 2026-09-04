@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+lazy from dataclasses import dataclass
 
-from confkit.sentinels import UNSET
+lazy from confkit.sentinels import UNSET
 
-from .config import Config
-from .constants import DISCORD_CONFIG_FILE
+lazy from .config import Config
+lazy from .constants import DISCORD_CONFIG_FILE
 
 
 class DiscordConfig[T](Config[T]):

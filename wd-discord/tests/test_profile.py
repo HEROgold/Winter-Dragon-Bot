@@ -1,17 +1,17 @@
 """Live tests: read the bot's profile, and (opt-in) exercise the profile write path."""
 from __future__ import annotations
 
-import os
-from typing import TYPE_CHECKING
+lazy import os
+lazy from typing import TYPE_CHECKING
 
-import pytest
+lazy import pytest
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
+    lazy from collections.abc import Callable
+    lazy from typing import Any
 
-    from wd_discord import Client
+    lazy from wd_discord import Client
 
 pytestmark = pytest.mark.integration
 

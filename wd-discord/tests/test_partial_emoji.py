@@ -1,11 +1,11 @@
 """Unit tests: PartialEmoji and the emoji / applied_forum_tags helper properties."""
 from __future__ import annotations
 
-from wd_discord.channel.channel import Channel
-from wd_discord.channel.forum import DefaultReaction, ForumTag
-from wd_discord.guild.welcome_screen import WelcomeScreenChannel
-from wd_discord.partial_emoji import PartialEmoji
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.channel.channel import Channel
+lazy from wd_discord.channel.forum import DefaultReaction, ForumTag
+lazy from wd_discord.guild.welcome_screen import WelcomeScreenChannel
+lazy from wd_discord.partial_emoji import PartialEmoji
+lazy from wd_discord.snowflake import Snowflake
 
 
 def test_from_fields_custom() -> None:
