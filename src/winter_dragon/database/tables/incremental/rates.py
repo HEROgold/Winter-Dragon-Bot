@@ -1,5 +1,3 @@
-
-
 from datetime import timedelta
 
 from sqlmodel import Field

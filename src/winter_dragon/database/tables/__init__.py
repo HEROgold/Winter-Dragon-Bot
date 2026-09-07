@@ -1,5 +1,3 @@
-
-
 from .associations import (
     AssociationUserCommand,
     AssociationUserHangman,
