@@ -24,7 +24,7 @@ class ButtonArgs[T](TypedDict, total=False):
     disabled: bool
     custom_id: str | None
     url: str | None
-    emoji: None | str | Emoji | PartialEmoji
+    emoji: str | Emoji | PartialEmoji | None
     row: int | None
     sku_id: int | None
     id: int | None

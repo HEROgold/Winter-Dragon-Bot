@@ -1,16 +1,12 @@
 """Extension for databases, integrating api's with the database layer."""
 
-
-
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
+from typing import Any, ClassVar, Required, Self, TypedDict, Unpack
 
 import requests
+from pydantic import ConfigDict
 
 from .model import SQLModel
-
-
-from pydantic import ConfigDict
 
 
 class ApiArguments(TypedDict):
