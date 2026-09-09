@@ -60,7 +60,9 @@ async def test_add_cog_registers_listener_and_dispatch_invokes_it() -> None:
     await asyncio.sleep(0)  # let the create_task'd listener (and the scheduled auto_load) run
 
     assert len(cog.received) == 1
-    assert cog.received[0].content == "hi"
+    received = cog.received[0]
+    assert isinstance(received, Message)
+    assert received.content == "hi"
 
 
 async def test_dispatch_ignores_events_with_no_listeners() -> None:
@@ -68,7 +70,7 @@ async def test_dispatch_ignores_events_with_no_listeners() -> None:
     cog = ExampleCog(bot=bot)
     await bot.add_cog(cog)
 
-    await bot._dispatch("GUILD_CREATE", _message("irrelevant"))  # noqa: SLF001 - exercising internal dispatch
+    await bot._dispatch("MESSAGE_UPDATE", _message("irrelevant"))  # noqa: SLF001 - exercising internal dispatch
     await asyncio.sleep(0)
 
     assert cog.received == []

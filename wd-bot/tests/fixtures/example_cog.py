@@ -14,18 +14,24 @@ lazy from wd_discord.gateway import EventName
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord.gateway import Message
+    lazy from wd_discord import DiscordModel
+    lazy from wd_discord.gateway import GuildCreate, Message
 
 
 class ExampleCog(Cog):
-    """Records every MESSAGE_CREATE it's dispatched."""
+    """Records every MESSAGE_CREATE/GUILD_CREATE it's dispatched."""
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
-        """Initialize the cog with an empty list of received messages."""
+        """Initialize the cog with an empty list of received events."""
         super().__init__(**kwargs)
-        self.received: list[Message] = []
+        self.received: list[DiscordModel] = []
 
     @Cog.listener(EventName.MESSAGE_CREATE)
     async def on_message_create(self, message: Message) -> None:
         """Record a dispatched MESSAGE_CREATE event."""
         self.received.append(message)
+
+    @Cog.listener(EventName.GUILD_CREATE)
+    async def on_guild_create(self, guild: GuildCreate) -> None:
+        """Record a dispatched GUILD_CREATE event."""
+        self.received.append(guild)

@@ -3,53 +3,18 @@
 from __future__ import annotations
 
 lazy from enum import IntFlag, auto
-lazy from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Literal,
-    NotRequired,
-    Protocol,
-    Required,
-    Self,
-    TypedDict,
-    Unpack,
-    cast,
-    overload,
-)
+lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session
 lazy from wd_db.constants import engine
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
+lazy from wd_bot.listener import listener
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable
-
-    lazy from wd_discord.gateway import EventName, GuildCreate, Message
-
     lazy from wd_bot.bot import Bot
-
-
-class _Listener(Protocol):
-    """A Cog method tagged by @listener() - callable, and carrying the event name it's tagged for."""
-
-    __listener_event__: str
-    __name__: str
-
-    async def __call__(self, *args: object, **kwargs: object) -> None: ...
-
-
-type _BoundHandler[T] = Callable[[Any, T], Awaitable[None]]
-"""An (unbound) cog method's call shape: ``(self, payload: T) -> Awaitable[None]``.
-
-``self`` has to be ``Any``, not the owning ``Cog`` subclass: parameter types are contravariant,
-so a decorator expecting some fixed self-type could never accept a method whose ``self`` is a
-*narrower* subclass of it - which is every real method. ``Any`` is the standard way around that
-for exactly this shape of decorator; only the payload parameter is actually being checked here.
-"""
 
 
 class BotArgs(TypedDict):
@@ -69,41 +34,6 @@ class CogFlags(IntFlag):
 
 
 default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
-
-
-@overload
-def listener(name: Literal[EventName.MESSAGE_CREATE]) -> Callable[[_BoundHandler[Message]], _BoundHandler[Message]]: ...
-@overload
-def listener(name: Literal[EventName.GUILD_CREATE]) -> Callable[[_BoundHandler[GuildCreate]], _BoundHandler[GuildCreate]]: ...
-@overload
-def listener[F: Callable[..., Awaitable[None]]](name: str | None = None) -> Callable[[F], F]: ...
-def listener(name: str | None = None) -> Callable[[Callable[..., Awaitable[None]]], Callable[..., Awaitable[None]]]:
-    """Tag a Cog method as a gateway dispatch-event listener.
-
-    Pass a :class:`~wd_discord.gateway.EventName` member explicitly
-    (``@Cog.listener(EventName.MESSAGE_CREATE)``) to get the handler's payload parameter checked
-    against that event's actual payload type - the overloads above reject e.g.
-    ``async def on_message_create(self, message: GuildCreate)``. Called bare (``@Cog.listener()``)
-    the event name is inferred from the method name instead (``on_message_create`` ->
-    ``"MESSAGE_CREATE"``), with no payload-type checking: there's no literal name for an overload
-    to key off, and this is also the only option for events wd_discord.gateway.events doesn't
-    model yet (they only ever reach a listener as a RawEvent, with no EventName member to pass).
-    A plain ``str`` also still works here for exactly that reason - EventName only covers modeled
-    events, and this decorator has to keep working for the ones it doesn't cover yet too.
-
-    TODO: add an overload above for each event wd_discord.gateway.events gains a typed model
-    for (and a matching EventName member there). This is a bare attribute tag at runtime either
-    way - see wd_bot.bot.Bot._listeners for why the registry itself can't be made fully sound (a
-    dict keyed by a runtime string can't statically track which payload type belongs to which
-    key; the type-checking that matters happens here, at registration).
-    """
-
-    def decorator(func: Callable[..., Awaitable[None]]) -> Callable[..., Awaitable[None]]:
-        tagged = cast("_Listener", func)
-        tagged.__listener_event__ = name or tagged.__name__.removeprefix("on_").upper()
-        return func
-
-    return decorator
 
 
 class Cog(LoggerMixin):

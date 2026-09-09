@@ -120,6 +120,13 @@ repos:
         pass_filenames: false
         files: ^wd-discord/(scripts/generate_dispatch_overloads\.py|src/wd_discord/gateway/(events|dispatch)\.pyi?)$
         stages: [pre-push]
+      - id: listener-overloads-check
+        name: Cog.listener overloads up to date (wd-bot)
+        language: system
+        entry: uv run wd-bot/scripts/generate_listener_overloads.py --check
+        pass_filenames: false
+        files: ^(wd-bot/(scripts/generate_listener_overloads\.py|src/wd_bot/listener\.pyi?)|wd-discord/src/wd_discord/gateway/events\.py)$
+        stages: [pre-push]
 
   # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema
