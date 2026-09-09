@@ -1,4 +1,5 @@
 """Discord gateway (WebSocket) support: connection, payload helpers, and sharding."""
+
 from __future__ import annotations
 
 lazy from .connection import (

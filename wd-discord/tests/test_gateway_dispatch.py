@@ -1,6 +1,7 @@
 """Unit tests: dispatch-event parsing (:mod:`wd_discord.gateway.events`) and the continuous
 receive loop (:meth:`Gateway.listen`), no real socket involved.
 """
+
 from __future__ import annotations
 
 lazy import json
@@ -12,10 +13,18 @@ lazy from wd_discord.gateway.connection import Gateway, Opcode
 
 
 def test_parse_dispatch_message_create() -> None:
-    event = parse_dispatch("MESSAGE_CREATE", {
-        "id": "1", "channel_id": "2", "author": {"id": "3", "username": "bot", "discriminator": "0"},
-        "content": "hi", "timestamp": "t", "tts": False, "mention_everyone": False,
-    })
+    event = parse_dispatch(
+        "MESSAGE_CREATE",
+        {
+            "id": "1",
+            "channel_id": "2",
+            "author": {"id": "3", "username": "bot", "discriminator": "0"},
+            "content": "hi",
+            "timestamp": "t",
+            "tts": False,
+            "mention_everyone": False,
+        },
+    )
     assert isinstance(event, Message)
     assert event.content == "hi"
     assert event.author.username == "bot"
@@ -57,16 +66,25 @@ class FakeWebSocket:
 
 async def test_listen_dispatches_and_tracks_sequence() -> None:
     gateway = Gateway("token")
-    gateway._ws = FakeWebSocket([  # noqa: SLF001 - test wiring
-        {
-            "op": Opcode.DISPATCH, "s": 1, "t": "MESSAGE_CREATE",
-            "d": {
-                "id": "1", "channel_id": "2", "author": {"id": "3", "username": "bot", "discriminator": "0"},
-                "content": "hi", "timestamp": "t", "tts": False, "mention_everyone": False,
+    gateway._ws = FakeWebSocket(
+        [  # noqa: SLF001 - test wiring
+            {
+                "op": Opcode.DISPATCH,
+                "s": 1,
+                "t": "MESSAGE_CREATE",
+                "d": {
+                    "id": "1",
+                    "channel_id": "2",
+                    "author": {"id": "3", "username": "bot", "discriminator": "0"},
+                    "content": "hi",
+                    "timestamp": "t",
+                    "tts": False,
+                    "mention_everyone": False,
+                },
             },
-        },
-        {"op": Opcode.DISPATCH, "s": 2, "t": "SOMETHING_UNMODELED", "d": {"foo": "bar"}},
-    ])
+            {"op": Opcode.DISPATCH, "s": 2, "t": "SOMETHING_UNMODELED", "d": {"foo": "bar"}},
+        ]
+    )
 
     received: list[tuple[str, Any]] = []
 

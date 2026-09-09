@@ -1,4 +1,5 @@
 """wd-discord: a small Discord API (v10) client library for Winter Dragon."""
+
 from __future__ import annotations
 
 lazy from wd_config.discord import URLS

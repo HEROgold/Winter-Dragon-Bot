@@ -12,6 +12,7 @@ This module provides:
 * :class:`ShardManager` - creates one :class:`Gateway` per shard and IDENTIFYs them in
   ``max_concurrency``-sized batches spaced 5 seconds apart, as the rate limits require.
 """
+
 from __future__ import annotations
 
 lazy import asyncio
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
     lazy from httpxyz import RequestError
+    lazy from wd_core.intents import Intents
 
     lazy from wd_discord.client import Client
     lazy from wd_discord.errors import ApiResponseError

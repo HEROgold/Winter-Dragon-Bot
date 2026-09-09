@@ -2,37 +2,35 @@
 
 from __future__ import annotations
 
+lazy import asyncio
 lazy import datetime
 lazy import inspect
 lazy import pkgutil
 lazy import sys
 lazy from importlib.util import find_spec, module_from_spec
-lazy from typing import TYPE_CHECKING, Any
+lazy from typing import TYPE_CHECKING
 
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from wd_config import Config
 lazy from wd_config.bot import Settings
-lazy from wd_core.command import CommandTree
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
-lazy from wd_core.intents import Intents
 lazy from wd_discord import Client, GatewayBotInfo
 lazy from wd_discord.user import User
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
-lazy from wd_bot.help import DefaultHelpCommand, HelpCommand, default_help
-
-lazy from .cogs import Cog
+lazy from .cogs import Cog, GroupCog
 
 
 if TYPE_CHECKING:
-    lazy from asyncio import Task
-    lazy from collections.abc import AsyncGenerator, Coroutine
+    lazy from collections.abc import AsyncGenerator, Awaitable, Callable
     lazy from importlib.machinery import ModuleSpec
     lazy from types import ModuleType
 
-    lazy from wd_types.alias import Bot, PrefixType
+    lazy from wd_core.intents import Intents
+    lazy from wd_discord.models import DiscordModel
+
 
 class BotConfig:
     """Basic bot configuration values."""
@@ -40,84 +38,84 @@ class BotConfig:
     Intents = Config(intents)
     Permissions = Config(BOT_PERMISSIONS)
 
+
 class MissingError(Exception):
     """Raised when a required attribute is missing."""
 
-class Bot(LoggerMixin):
-    """Bot is a subclass of AutoShardedBot.
 
-    this represents a bot with additional attributes and methods specific to the Winter Dragon bot.
+class Bot(LoggerMixin):
+    """A forever-running Discord bot: connects to the gateway, loads extensions, dispatches events.
+
+    Built entirely on wd-* packages (wd_discord, wd_core, wd_config) - no discord.py.
     """
 
     launch_time: datetime.datetime
-    log_saver: Task[Coroutine[Any, Any, None]] | None = None
+    loop: asyncio.AbstractEventLoop
+    cogs: dict[str, Cog]
 
     def __init__(
         self,
-        command_prefix: PrefixType[Bot],
         *,
-        help_command: HelpCommand = default_help,
-        tree_cls: type[CommandTree[Any]] = CommandTree,
-        description: str | None = None,
         intents: Intents = BotConfig.Intents,
+        description: str | None = None,
     ) -> None:
-        """Initialize the Bot bot.
-
-        Adds additional attributes and methods to the AutoShardedBot class.
-        Like a global app_commands cache and per guild app_commands cache.
-        """
+        """Initialize the Bot with the given intents and an optional description."""
         self.launch_time = datetime.datetime.now(datetime.UTC)
-
-        # TODO; copy from discord.py's bot.__init__, but use our own
-        # intents, permissions, and Client setup.
-        super().__init__(
-            command_prefix,
-            help_command=help_command,
-            tree_cls=tree_cls,
-            description=description,
-            intents=intents,
-        )
+        self.intents = intents
+        self.description = description
+        self.cogs = {}
+        self._extensions: dict[str, ModuleType] = {}
+        self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
 
     def get_bot_invite(self) -> str:
         """Get the link to invite the bot to a server."""
-        if not self.application_id:
-            msg = "Bot application ID is not set."
+        if not Settings.application_id:
+            msg = "Settings.application_id is not configured."
             raise ValueError(msg)
-        return discord.utils.oauth_url(
-            self.application_id,
-            permissions=BotConfig.Permissions,
-            scopes=Settings.BOT_SCOPE,
+        scope = "%20".join(Settings.BOT_SCOPE)
+        return (
+            "https://discord.com/api/oauth2/authorize"
+            f"?client_id={Settings.application_id}&permissions={int(BotConfig.Permissions)}&scope={scope}"
         )
 
-    async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:
-        """Log where errors occur during the event loop."""
-        self.logger.error(t"error in: {event_method}")
-        return await super().on_error(event_method, *args, **kwargs)
+    async def add_cog(self, cog: Cog) -> None:
+        """Register a cog and any of its @Cog.listener()-tagged methods."""
+        self.cogs[cog.__cog_name__] = cog
+        for _, member in inspect.getmembers(cog, predicate=inspect.iscoroutinefunction):
+            event = getattr(member, "__listener_event__", None)
+            if event:
+                self._listeners.setdefault(event, []).append(member)
+        await cog.cog_load()
 
-    async def on_command_error(self, context: Context[Bot], exception: CommandError) -> None:
-        """Log where errors occur during command execution."""
-        self.logger.error(t"error in command: {context}", exc_info=exception)
-        return await super().on_command_error(context, exception)
+    async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
+        """Fan out a parsed gateway dispatch event to every registered listener for it."""
+        for handler in self._listeners.get(event_name, []):
+            self.loop.create_task(self._invoke_listener(handler, payload))
+
+    async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], payload: DiscordModel) -> None:
+        try:
+            await handler(payload)
+        except Exception:
+            self.logger.exception(t"Unhandled exception in listener {handler!r} for {payload!r}")
 
     def _discover_wd_cogs_modules(self) -> list[str]:
         """Discover all modules in the wd_cogs package recursively."""
         modules = []
         try:
-            import wd_cogs  # noqa: F401, PLC0415
+            import wd_cogs  # noqa: PLC0415
 
             # Recursively walk through all packages and modules in wd_cogs
             def walk_packages(package: ModuleType, prefix: str = "") -> None:
                 """Recursively walk through packages and collect module names."""
                 package_path = package.__path__  # type: ignore[attr-defined]
                 for _importer, mod_name, is_package in pkgutil.walk_packages(
-                    path=package_path, prefix=f"{prefix}{package.__name__}.",
+                    path=package_path,
+                    prefix=f"{prefix}{package.__name__}.",
                 ):
                     if not is_package and not mod_name.endswith(".__init__"):
                         modules.append(mod_name)
 
-            import wd_cogs as wd_cogs_module  # noqa: PLC0415
-
-            walk_packages(wd_cogs_module)
+            walk_packages(wd_cogs)
         except ImportError:
             self.logger.warning("wd_cogs package not found, skipping cog discovery")
         except Exception:
@@ -133,43 +131,27 @@ class Bot(LoggerMixin):
         for module in self._discover_wd_cogs_modules():
             yield module
 
+    async def _init_cogs(self, lib: ModuleType) -> None:
+        """Instantiate every concrete Cog subclass found in a loaded extension module."""
+        for obj in lib.__dict__.values():
+            if inspect.isclass(obj) and issubclass(obj, Cog) and obj not in (Cog, GroupCog):
+                obj(bot=self)
+
     async def _load_from_module_spec(self, spec: ModuleSpec, key: str) -> None:
-        """Version that does not check if `def setup` is present."""
-        lib = module_from_spec(spec)
-        sys.modules[key] = lib
+        """Execute a module spec and instantiate its cogs."""
         if spec.loader is None:
-            del sys.modules[key]
             raise ExtensionError(key, RuntimeError("Module spec has no loader"))
 
+        module = module_from_spec(spec)
+        sys.modules[key] = module
         try:
-            spec.loader.exec_module(lib)
+            spec.loader.exec_module(module)
+            await self._init_cogs(module)
         except Exception as e:
             del sys.modules[key]
             raise ExtensionError(key, e) from e
 
-        try:
-            await self._init_cogs(lib)
-        except Exception as e:
-            del sys.modules[key]
-            await self._remove_module_references(lib.__name__)
-            await self._call_module_finalizers(lib, key)
-            raise ExtensionError(key, e) from e
-        else:
-            # Store the loaded extension in the mangled __extensions attribute
-            # This is required, because discord.py _load_from_module_spec is internal
-            # And we want to change how extensions are loaded without calling setup()
-            # we use auto_load on Cogs to initialize them
-            extensions = getattr(self, "_BotBase__extensions", None)
-            if not isinstance(extensions, dict):
-                msg = "Bot extension registry is unavailable"
-                raise MissingError(msg)
-            extensions[key] = lib
-
-    async def _init_cogs(self, lib: ModuleType) -> None:
-        """Set up a cog by calling its cog_load method if it exists."""
-        for obj in lib.__dict__.values():
-            if inspect.isclass(obj) and issubclass(obj, Cog):
-                obj(bot=self)
+        self._extensions[key] = module
 
     async def load_extension(self, extension: str) -> None:
         """Load a single extension from the wd_cogs package."""
@@ -194,6 +176,7 @@ class Bot(LoggerMixin):
     @Config.with_kwarg("Tokens", "discord_token")
     async def start(self, token: str) -> None:
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
+        self.loop = asyncio.get_running_loop()
         async with Client(token) as client:
             me = await client.get_current_user()
             if not isinstance(me, User):
@@ -205,10 +188,8 @@ class Bot(LoggerMixin):
                 msg = "Failed to get gateway bot info from Discord API"
                 raise StartupError(msg)
 
-            manager = await client.get_shard_manager(gw_info)
+            manager = await client.get_shard_manager(gw_info, intents=self.intents)
+            await self.load_extensions()
             async with manager:
                 self.logger.info(t"Bot is running with {len(manager.shards)} shards")
-                # TODO: keep connection alive for every shard.
-                # Currently, the bot simply starts up and then exits
-                # If we want this to be functional, loaded extensions/cogs
-                # Should be able to respond to events from the gateway, and the bot should stay alive until manually stopped.
+                await manager.serve_forever(self._dispatch)

@@ -1,4 +1,5 @@
 """Unit tests: permission bit values and channel-type concepts."""
+
 from __future__ import annotations
 
 lazy from wd_discord import ChannelType, Permissions
@@ -32,10 +33,7 @@ def test_channel_type_aliases() -> None:
     assert ChannelType.S is ChannelType.Stage
     # The text alias is the OR of every text-like channel type.
     assert ChannelType.T == (
-        ChannelType.GUILD_TEXT
-        | ChannelType.GUILD_ANNOUNCEMENT
-        | ChannelType.GUILD_FORUM
-        | ChannelType.GUILD_MEDIA
+        ChannelType.GUILD_TEXT | ChannelType.GUILD_ANNOUNCEMENT | ChannelType.GUILD_FORUM | ChannelType.GUILD_MEDIA
     )
     assert ChannelType.V == ChannelType.GUILD_VOICE
     assert ChannelType.S == ChannelType.GUILD_STAGE_VOICE

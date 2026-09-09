@@ -411,12 +411,20 @@ source = { editable = "wd-bot" }
 dependencies = [
     { name = "herogold", extra = ["orm"] },
     { name = "wd-config" },
+    { name = "wd-core" },
+    { name = "wd-discord" },
+    { name = "wd-errors" },
+    { name = "wd-types" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "herogold", extras = ["orm"], specifier = ">=3.0.0" },
     { name = "wd-config", editable = "wd-config" },
+    { name = "wd-core", editable = "wd-core" },
+    { name = "wd-discord", editable = "wd-discord" },
+    { name = "wd-errors", editable = "wd-errors" },
+    { name = "wd-types", editable = "wd-types" },
 ]
 
 [[package]]

@@ -1,4 +1,5 @@
 """Unit tests: gateway presence (object -> API) and READY (API -> object) helpers."""
+
 from __future__ import annotations
 
 lazy from wd_discord.gateway import GatewayActivity, Status, build_presence, parse_ready
@@ -53,10 +54,12 @@ def test_parse_ready_with_dispatch_wrapper() -> None:
 
 
 def test_parse_ready_accepts_inner_dict() -> None:
-    ready = parse_ready({
-        "session_id": "s",
-        "resume_gateway_url": "wss://x",
-        "user": {"id": "1", "username": "bot", "discriminator": "0"},
-    })
+    ready = parse_ready(
+        {
+            "session_id": "s",
+            "resume_gateway_url": "wss://x",
+            "user": {"id": "1", "username": "bot", "discriminator": "0"},
+        }
+    )
     assert ready.session_id == "s"
     assert ready.application_id is None

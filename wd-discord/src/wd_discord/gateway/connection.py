@@ -12,6 +12,7 @@ just enough of the v10 gateway (https://docs.discord.com/developers/topics/gatew
 The presence/READY (de)serialisation is factored into the pure helpers
 :func:`build_presence` and :func:`parse_ready` so they can be unit-tested without a socket.
 """
+
 from __future__ import annotations
 
 lazy import asyncio
@@ -26,8 +27,7 @@ lazy from pydantic import Field
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 
-from wd_discord.user import User  # noqa: TC002 - eager: pydantic needs the real class, not a lazy-import proxy, at class-body time (Ready.user below)
-
+from wd_discord.user import User  # eager: pydantic needs the real class, not a lazy proxy, for Ready.user below
 lazy from wd_discord.models import DiscordModel
 
 lazy from .events import parse_dispatch
@@ -36,9 +36,8 @@ lazy from .events import parse_dispatch
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
-    lazy from websockets.asyncio.client import ClientConnection
-
     lazy from wd_core.intents import Intents
+    lazy from websockets.asyncio.client import ClientConnection
 
 # Default well-known gateway URL, already pinned to API v10 + JSON encoding.
 DEFAULT_GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"

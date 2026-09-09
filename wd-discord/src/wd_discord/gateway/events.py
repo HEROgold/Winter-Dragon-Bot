@@ -13,6 +13,7 @@ this same problem internally today (pre-existing, unrelated to this change), so
 :class:`GuildCreate` intentionally does not subclass :class:`~wd_discord.guild.Guild` or type its
 nested collections as ``list[Channel]`` - see the TODO below.
 """
+
 from __future__ import annotations
 
 lazy from typing import Any

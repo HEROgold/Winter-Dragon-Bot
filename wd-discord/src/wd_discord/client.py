@@ -18,6 +18,7 @@ with ``isinstance`` / ``match`` instead of ``try``/``except``::
             case _:
                 user = result.json()
 """
+
 from __future__ import annotations
 
 lazy from functools import wraps
@@ -53,8 +54,8 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
     lazy from httpxyz import Response
-
     lazy from wd_core.intents import Intents
+
     lazy from wd_discord.image import ImageHash
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
@@ -252,4 +253,3 @@ class Client(LoggerMixin):
         if banner is not None:
             payload["banner"] = str(banner)
         return await self.patch("/users/@me", json=payload)
-

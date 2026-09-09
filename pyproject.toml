@@ -45,7 +45,7 @@ asyncio_mode = "auto"
 addopts = ["--import-mode=importlib"]
 testpaths = [
     "wd-discord/tests",
-    # "wd-bot/tests",
+    "wd-bot/tests",
     # "wd-db/tests",
     # ...add other wd-* packages as they get tests
 ]
