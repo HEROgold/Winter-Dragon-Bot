@@ -85,7 +85,7 @@ class Bot(LoggerMixin):
             event = getattr(member, "__listener_event__", None)
             if event:
                 self._listeners.setdefault(event, []).append(member)
-        await cog.cog_load()
+        await cog.load()
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
         """Fan out a parsed gateway dispatch event to every registered listener for it."""

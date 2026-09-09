@@ -80,13 +80,13 @@ class Cog(LoggerMixin):
             self.logger.debug(t"Auto loaded Cog {type(self).__name__}")
             await self.bot.add_cog(self)
 
-    async def cog_load(self) -> None:
+    async def load(self) -> None:
         """Run setup once registered with the bot; a hook for subclasses to override.
 
         No-op by default: there's no CommandTree yet to sync app commands against.
         """
 
-    async def cog_unload(self) -> None:
+    async def unload(self) -> None:
         """Unregister any auto-reload watcher."""
         self._auto_reloader.deregister()
 

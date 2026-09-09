@@ -15,7 +15,7 @@ lazy from wd_config.bot import Settings
 
 
 if TYPE_CHECKING:
-    lazy from wd_bot.bot import WinterDragon
+    lazy from wd_bot.bot import Bot
     lazy from wd_bot.cogs import Cog
 
 
@@ -40,7 +40,7 @@ default_flags = WatcherFlags.Enabled
 class _WatchEntry:
     """Runtime data required to watch and reload an extension module."""
 
-    bot: WinterDragon
+    bot: Bot
     path: Path
     task: asyncio.Task[None]
     refs: int
@@ -53,7 +53,7 @@ class AutoReloadWatcher(LoggerMixin):
 
     _entries: ClassVar[dict[str, _WatchEntry]] = {}
 
-    def __init__(self, *, bot: WinterDragon, cog_cls: type[Cog], flags: WatcherFlags = default_flags) -> None:
+    def __init__(self, *, bot: Bot, cog_cls: type[Cog], flags: WatcherFlags = default_flags) -> None:
         """Initialize the auto-reload watcher for a specific cog class."""
         self.bot = bot
         self.cog_cls = cog_cls
@@ -172,7 +172,7 @@ class AutoReloadWatcher(LoggerMixin):
         getattr(logger, level)(msg, *args)
 
     @staticmethod
-    async def _reload_extension(bot: WinterDragon, module_name: str, logger: logging.Logger) -> None:
+    async def _reload_extension(bot: Bot, module_name: str, logger: logging.Logger) -> None:
         logger.info("Detected change in %s. Reloading extension.", module_name)
         try:
             reload_result = bot.reload_extension(module_name)
