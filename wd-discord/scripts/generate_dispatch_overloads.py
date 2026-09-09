@@ -44,17 +44,17 @@ from wd_discord.gateway.events import EventName
 SCRIPT_PATH = Path(__file__).resolve()
 OUTPUT_PATH = SCRIPT_PATH.parents[1] / "src" / "wd_discord" / "gateway" / "dispatch.pyi"
 
-_HEADER_TEMPLATE = '''\
-"""Typed @overload signatures for wd_discord.gateway.dispatch.parse_dispatch.
-
-GENERATED FILE - do not hand-edit. Regenerate with:
-
-    uv run wd-discord/scripts/generate_dispatch_overloads.py
-
-One overload per EventName member that has a model wired up (EventName.X.model is not None) -
-see generate_dispatch_overloads.py for the naming convention and why members without a model
-aren't listed here individually (they already resolve fine through the general fallback below).
-"""
+_HEADER_TEMPLATE = """\
+# Typed @overload signatures for wd_discord.gateway.dispatch.parse_dispatch.
+#
+# GENERATED FILE - do not hand-edit. Regenerate with:
+#
+#     uv run wd-discord/scripts/generate_dispatch_overloads.py
+#
+# One overload per EventName member that has a model wired up (EventName.X.model is not None) -
+# see generate_dispatch_overloads.py for the naming convention and why members without a model
+# aren't listed here individually (they already resolve fine through the general fallback below).
+# (no module docstring here on purpose - ruff's PYI021 flags docstrings in stub files)
 
 from collections.abc import Mapping
 from typing import Literal, overload
@@ -63,7 +63,7 @@ from wd_discord.models import DiscordModel
 
 from .events import {events_import}
 
-'''
+"""
 
 _FOOTER = """
 @overload
