@@ -22,6 +22,24 @@ def test_event_name_members_carry_their_own_model() -> None:
     assert EventName.GUILD_CREATE.model is GuildCreate
 
 
+def test_event_name_covers_every_dispatch_event_except_ready() -> None:
+    assert "READY" not in EventName.__members__
+    assert len(EventName) > 70  # the full Discord catalog, not just the two modeled events
+
+
+def test_event_name_unmodeled_members_have_no_model_yet() -> None:
+    assert EventName.MESSAGE_UPDATE.model is None
+    assert EventName.TYPING_START.model is None
+
+
+def test_parse_dispatch_falls_back_to_raw_event_for_known_but_unmodeled_name() -> None:
+    """A member with no model yet still dispatches, just as RawEvent, not a crash."""
+    event = parse_dispatch(EventName.MESSAGE_UPDATE, {"id": "1", "content": "edited"})
+    assert isinstance(event, RawEvent)
+    assert event.name == "MESSAGE_UPDATE"
+    assert event.data == {"id": "1", "content": "edited"}
+
+
 def test_parse_dispatch_message_create() -> None:
     event = parse_dispatch(
         EventName.MESSAGE_CREATE,
