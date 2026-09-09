@@ -27,12 +27,12 @@ def test_xor_coerces_non_bool() -> None:
 
 def test_xor_rejects_both_truthy() -> None:
     with pytest.raises(XORError):
-        xor(True, True)
+        raise xor(True, True)
 
 
 def test_xor_rejects_both_falsy() -> None:
     with pytest.raises(XORError):
-        xor(False, False)
+        raise xor(False, False)
 
 
 class _Host:

@@ -6,8 +6,10 @@ lazy from herogold.protocols import DataDescriptor
 lazy from wd_errors.size import TooLongError
 
 
-class LimitedString(DataDescriptor[str, object]):
+class LimitedString(DataDescriptor[str, object], str):
     """Descriptor for a string with a maximum length."""
+
+    __slots__ = ("max_length", "value")
 
     def __init__(self, max_length: int) -> None:
         """Initialize the descriptor."""

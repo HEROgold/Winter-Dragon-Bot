@@ -22,6 +22,7 @@ lazy from wd_discord.gateway import (
     Status,
 )
 lazy from wd_discord.guild import Guild
+lazy from wd_discord.invite import Invite
 lazy from wd_discord.models import DiscordModel
 lazy from wd_discord.partial_emoji import PartialEmoji
 lazy from wd_discord.permissions import ChannelType, Permissions
@@ -44,6 +45,7 @@ __all__ = [
     "GatewayBotInfo",
     "Guild",
     "GuildCreate",
+    "Invite",
     "Message",
     "PartialEmoji",
     "Permissions",

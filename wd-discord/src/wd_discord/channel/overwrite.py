@@ -1,11 +1,12 @@
 """Permission overwrite models for the Discord Channel object."""
+
 from __future__ import annotations
 
 lazy from enum import IntEnum
 
-lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.permissions import PermissionsField
-lazy from wd_discord.snowflake import Snowflake
+from wd_discord.models import DiscordModel
+from wd_discord.permissions import PermissionsField
+from wd_discord.snowflake import Snowflake
 
 
 class OverwriteType(IntEnum):

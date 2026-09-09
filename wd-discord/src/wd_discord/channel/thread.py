@@ -1,10 +1,11 @@
 """Thread metadata and member models for the Discord Channel object."""
+
 from __future__ import annotations
 
-lazy from datetime import datetime
+from datetime import datetime
 
-lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.snowflake import Snowflake
+from wd_discord.models import DiscordModel
+from wd_discord.snowflake import Snowflake
 
 
 class ThreadMetadata(DiscordModel):

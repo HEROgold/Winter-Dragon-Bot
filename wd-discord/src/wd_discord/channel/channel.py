@@ -1,17 +1,18 @@
 """The Discord Channel object model."""
+
 from __future__ import annotations
 
-lazy from datetime import datetime
-lazy from typing import TYPE_CHECKING
+from datetime import datetime
+from typing import TYPE_CHECKING
 
-lazy from wd_discord.channel.forum import DefaultReaction, ForumLayoutType, ForumTag, SortOrderType, VideoQualityMode
-lazy from wd_discord.channel.overwrite import PermissionOverwrite
-lazy from wd_discord.channel.thread import ThreadMember, ThreadMetadata
-lazy from wd_discord.image import ImageHash
-lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.permissions import ChannelType, PermissionsField
-lazy from wd_discord.snowflake import Snowflake
-lazy from wd_discord.user import User
+from wd_discord.channel.forum import DefaultReaction, ForumLayoutType, ForumTag, SortOrderType, VideoQualityMode
+from wd_discord.channel.overwrite import PermissionOverwrite
+from wd_discord.channel.thread import ThreadMember, ThreadMetadata
+from wd_discord.image import ImageHash
+from wd_discord.models import DiscordModel
+from wd_discord.permissions import ChannelType, PermissionsField
+from wd_discord.snowflake import Snowflake
+from wd_discord.user import User
 
 
 if TYPE_CHECKING:

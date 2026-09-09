@@ -7,6 +7,7 @@ lazy from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
 
+    lazy from wd_discord import Snowflake
     lazy from wd_types.alias import CommandStore
     lazy from wd_types.protocol import Mentionable
 

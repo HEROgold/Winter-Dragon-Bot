@@ -44,14 +44,16 @@ lazy from wd_discord.authenticate import (
 )
 lazy from wd_discord.channel import Channel
 lazy from wd_discord.errors.api import ApiResponseError
+lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
 lazy from wd_discord.guild import Guild
+lazy from wd_discord.invite import Invite
 
 lazy from .user import User
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable
+    lazy from collections.abc import Awaitable, Callable, Generator
 
     lazy from httpxyz import Response
     lazy from wd_core.intents import Intents
@@ -236,6 +238,58 @@ class Client(LoggerMixin):
         if isinstance(result, (ApiResponseError, RequestError)):
             return result
         return Channel.model_validate(result.json())
+
+    async def get_guild_channels(self, guild_id: int | str) -> Generator[Channel] | NetworkError:
+        """GET /guilds/{guild_id}/channels - the guild's channels."""
+        result = await self.get(f"/guilds/{guild_id}/channels")
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return (Channel.model_validate(channel) for channel in result.json())
+
+    async def leave_guild(self, guild_id: int | str) -> None | NetworkError:
+        """DELETE /users/@me/guilds/{guild_id} - remove the bot from a guild it doesn't own.
+
+        Discord returns 204 No Content on success, so there's no body to parse - ``None`` is
+        the real result here, not a raw-dict shortcut.
+        """
+        result = await self.delete(f"/users/@me/guilds/{guild_id}", json={})
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return None
+
+    async def create_dm(self, recipient_id: int | str) -> Channel | NetworkError:
+        """POST /users/@me/channels - open (or fetch the existing) DM channel with a user."""
+        result = await self.post("/users/@me/channels", json={"recipient_id": str(recipient_id)})
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return Channel.model_validate(result.json())
+
+    async def create_message(self, channel_id: int | str, content: str) -> Message | NetworkError:
+        """POST /channels/{channel_id}/messages - send a message (works for DM channels too)."""
+        result = await self.post(f"/channels/{channel_id}/messages", json={"content": content})
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return Message.model_validate(result.json())
+
+    async def create_channel_invite(
+        self,
+        channel_id: int | str,
+        *,
+        max_age: int = 86400,
+        max_uses: int = 1,
+        temporary: bool = False,
+        unique: bool = True,
+    ) -> Invite | NetworkError:
+        """POST /channels/{channel_id}/invites - create an instant invite for a channel.
+
+        Defaults to a single-use, 24h invite (``max_age``/``max_uses``) - unlike a permanent
+        vanity invite, this is meant for handing to one specific person.
+        """
+        payload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
+        result = await self.post(f"/channels/{channel_id}/invites", json=payload)
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return Invite.model_validate(result.json())
 
     async def modify_current_user(
         self,
