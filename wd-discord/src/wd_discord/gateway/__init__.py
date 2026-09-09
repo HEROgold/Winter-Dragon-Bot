@@ -13,7 +13,8 @@ lazy from .connection import (
     build_presence,
     parse_ready,
 )
-lazy from .events import EventName, GuildCreate, Message, RawEvent, parse_dispatch
+lazy from .dispatch import parse_dispatch
+lazy from .events import EventName, GuildCreate, Message, RawEvent
 lazy from .sharding import (
     GatewayBotInfo,
     SessionStartLimit,

@@ -113,6 +113,13 @@ repos:
         pass_filenames: false
         files: ^src/.*\.py$
         stages: [pre-push]
+      - id: dispatch-overloads-check
+        name: parse_dispatch overloads up to date (wd-discord)
+        language: system
+        entry: uv run wd-discord/scripts/generate_dispatch_overloads.py --check
+        pass_filenames: false
+        files: ^wd-discord/(scripts/generate_dispatch_overloads\.py|src/wd_discord/gateway/(events|dispatch)\.pyi?)$
+        stages: [pre-push]
 
   # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema

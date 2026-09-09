@@ -30,7 +30,7 @@ lazy from websockets.asyncio.client import connect
 from wd_discord.user import User  # eager: pydantic needs the real class, not a lazy proxy, for Ready.user below
 lazy from wd_discord.models import DiscordModel
 
-lazy from .events import parse_dispatch
+lazy from .dispatch import parse_dispatch
 
 
 if TYPE_CHECKING:
