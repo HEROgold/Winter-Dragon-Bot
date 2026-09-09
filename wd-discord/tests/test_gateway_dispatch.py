@@ -17,6 +17,11 @@ def test_event_name_members_match_discord_wire_format() -> None:
     assert EventName.GUILD_CREATE == "GUILD_CREATE"
 
 
+def test_event_name_members_carry_their_own_model() -> None:
+    assert EventName.MESSAGE_CREATE.model is Message
+    assert EventName.GUILD_CREATE.model is GuildCreate
+
+
 def test_parse_dispatch_message_create() -> None:
     event = parse_dispatch(
         EventName.MESSAGE_CREATE,

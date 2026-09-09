@@ -6,16 +6,22 @@ payloads (mirroring the parsing style already used by :func:`~wd_discord.gateway
 and :func:`~wd_discord.gateway.sharding.parse_gateway_bot`) and falls back to :class:`RawEvent`
 for everything else, so an unmodeled event never crashes the receive loop.
 
-:func:`parse_dispatch` is :func:`~typing.overload`-ed on the event *name* as a
-:class:`~typing.Literal`, so a call site that passes a literal name (e.g.
-``parse_dispatch("MESSAGE_CREATE", data)``) gets both its ``data`` argument checked against
-that event's :class:`~typing.TypedDict` payload shape and a precisely-typed return value
-(``Message``, not the general ``DiscordModel`` union). :meth:`Gateway.listen` itself dispatches
-on a runtime ``str`` it read off the socket, not a literal, so it always resolves to the general
-overload - Python's type system can't narrow a return type off a value only known at runtime;
-overloads-on-literals are the standard way to still get precise types wherever the event name
-*is* known statically (call sites, tests, and - see ``wd_bot.cogs.listener`` - the point where a
-handler is registered for one).
+:class:`EventName` is the single source of truth for a modeled event: each member carries its
+own :class:`DiscordModel` subclass as a real attribute (``EventName.MESSAGE_CREATE.model is
+Message``), via the "data-carrying enum" pattern (a custom ``__new__``) rather than a
+separate name -> model dict living apart from the names themselves.
+
+That covers the *runtime* mapping. The *static* one - :func:`parse_dispatch`'s ``data`` argument
+checked against the right :class:`~typing.TypedDict` payload shape, and its return type narrowed
+to ``Message``/``GuildCreate`` instead of the general ``DiscordModel`` union - still needs
+:func:`~typing.overload` on ``Literal[EventName.X]``. That's not a stylistic choice: Python's
+type checkers have no construct for "the return type is a function of this runtime value" other
+than an overload (or the equivalent under another name, e.g. TypedDict-union narrowing on a
+literal key) - `Annotated` metadata is inert to a checker's control-flow analysis; it's for
+runtime introspection (pydantic, FastAPI, ...), not static return-type inference. This is the
+same mechanism typeshed itself uses for e.g. ``open()``'s mode-dependent return type.
+:meth:`Gateway.listen` dispatches on a runtime ``str`` it read off the socket, not a literal, so
+it always resolves to the general (non-narrowed) overload - there's no literal there to narrow on.
 
 ``User``/``Snowflake``/``Mapping`` are imported eagerly (not via ``lazy from``) because pydantic
 resolves model field annotations to real classes at class-definition time; a still-unresolved
@@ -29,28 +35,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 lazy from enum import StrEnum
-lazy from typing import Literal, NotRequired, TypedDict, overload
+lazy from typing import Literal, NotRequired, Self, TypedDict, overload
 
 lazy from pydantic import Field
 
 from wd_discord.models import DiscordModel
 from wd_discord.snowflake import Snowflake
 from wd_discord.user import User
-
-
-class EventName(StrEnum):
-    """Dispatch event names :mod:`wd_discord.gateway.events` has a typed payload model for.
-
-    Not every event Discord sends - only the ones with an entry in this module (see
-    :data:`_EVENT_MODELS`/the :func:`parse_dispatch` overloads below, and
-    ``wd_bot.cogs.listener``, which key off these same members for compile-time payload
-    checking). An event name absent here still dispatches - just as a :class:`RawEvent`, with
-    no typed model and no listener-signature checking - it doesn't need a member added to work,
-    only to get the stronger typing.
-    """
-
-    MESSAGE_CREATE = "MESSAGE_CREATE"
-    GUILD_CREATE = "GUILD_CREATE"
 
 
 class RawEvent(DiscordModel):
@@ -133,14 +124,32 @@ class GuildCreatePayload(TypedDict):
     presences: NotRequired[list[Mapping[str, object]]]
 
 
-# Runtime-only backing store for the general (non-literal-name) overload below. Keyed by
-# EventName (a str subtype, so plain-str lookups from Gateway.listen() still work) purely for
-# readability/consistency with the members below - the name -> TypedDict/model pairing that
-# actually matters for type-checking lives in the @overload signatures underneath, not here.
-_EVENT_MODELS: dict[str, type[DiscordModel]] = {
-    EventName.GUILD_CREATE: GuildCreate,
-    EventName.MESSAGE_CREATE: Message,
-}
+class EventName(StrEnum):
+    """Dispatch event names :mod:`wd_discord.gateway.events` has a typed payload model for.
+
+    Not every event Discord sends - only the ones modeled here. An event name absent from this
+    enum still dispatches fine, just as a :class:`RawEvent` with no listener-signature checking
+    (see ``wd_bot.cogs.listener``) - it doesn't need a member added to work, only to get the
+    stronger typing.
+
+    Each member carries its own :class:`DiscordModel` subclass as a real attribute
+    (``EventName.MESSAGE_CREATE.model is Message``) via a custom ``__new__``, so the name and its
+    model live in exactly one place. The matching payload TypedDict (``MessageCreatePayload``,
+    ...) *isn't* attached the same way - TypedDicts have no runtime existence to attach; they only
+    exist for the @overload signatures below to check a caller's ``data`` argument against.
+    """
+
+    model: type[DiscordModel]
+
+    def __new__(cls, value: str, model: type[DiscordModel]) -> Self:
+        """Build a member, attaching its ``model`` alongside the usual str ``value``."""
+        member = str.__new__(cls, value)
+        member._value_ = value
+        member.model = model
+        return member
+
+    MESSAGE_CREATE = ("MESSAGE_CREATE", Message)
+    GUILD_CREATE = ("GUILD_CREATE", GuildCreate)
 
 
 @overload
@@ -156,7 +165,8 @@ def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel:
     :func:`~wd_discord.gateway.connection.parse_ready` before the continuous receive loop starts,
     and never appears again on the same connection.
     """
-    model = _EVENT_MODELS.get(name)
-    if model is None:
+    try:
+        event = EventName(name)
+    except ValueError:
         return RawEvent(name=name, data=data)
-    return model.model_validate(data)
+    return event.model.model_validate(data)
