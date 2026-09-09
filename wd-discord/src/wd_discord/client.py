@@ -212,7 +212,7 @@ class Client(LoggerMixin):
             return result
         return GatewayBotInfo.model_validate(result.json())
 
-    async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents = 0) -> ShardManager:
+    async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents | None = None) -> ShardManager:
         """Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
         return ShardManager(self.token, info, intents=intents)
 

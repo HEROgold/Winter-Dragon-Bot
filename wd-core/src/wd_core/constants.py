@@ -19,7 +19,7 @@ intents = Intents.none() | sum(
         Intents.auto_moderation_configuration,
         Intents.auto_moderation_execution,
         Intents.voice_states,
-    ]
+    ],
 )
 
 BOT_PERMISSIONS = Permissions.all()

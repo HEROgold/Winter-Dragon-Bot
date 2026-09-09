@@ -24,7 +24,7 @@ class ExampleCog(Cog):
         super().__init__(**kwargs)
         self.received: list[Message] = []
 
-    @Cog.listener()
+    @Cog.listener("MESSAGE_CREATE")
     async def on_message_create(self, message: Message) -> None:
         """Record a dispatched MESSAGE_CREATE event."""
         self.received.append(message)

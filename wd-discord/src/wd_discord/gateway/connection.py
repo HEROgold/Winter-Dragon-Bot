@@ -20,7 +20,7 @@ lazy import json
 lazy import random
 lazy from dataclasses import dataclass
 lazy from enum import IntEnum, StrEnum
-lazy from typing import TYPE_CHECKING, Any, Self
+lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 lazy from herogold.log import LoggerMixin
 lazy from pydantic import Field
@@ -34,13 +34,56 @@ lazy from .events import parse_dispatch
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable
+    lazy from collections.abc import Awaitable, Callable, Mapping
 
     lazy from wd_core.intents import Intents
     lazy from websockets.asyncio.client import ClientConnection
 
 # Default well-known gateway URL, already pinned to API v10 + JSON encoding.
 DEFAULT_GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"
+
+
+class _DispatchFrame(TypedDict):
+    """A DISPATCH (op 0) frame: the only frame with ``t`` set and a "real" ``d`` payload."""
+
+    op: Literal[Opcode.DISPATCH]
+    t: str
+    s: int
+    d: Mapping[str, object]
+
+
+class _HeartbeatRequestFrame(TypedDict):
+    """Discord asking for an out-of-cycle heartbeat (op 1, server -> client)."""
+
+    op: Literal[Opcode.HEARTBEAT]
+    s: NotRequired[int | None]
+
+
+class _ReconnectFrame(TypedDict):
+    """Discord asking the client to reconnect (op 7)."""
+
+    op: Literal[Opcode.RECONNECT]
+    s: NotRequired[int | None]
+
+
+class _InvalidSessionFrame(TypedDict):
+    """The session is invalid (op 9); ``d`` says whether it's resumable."""
+
+    op: Literal[Opcode.INVALID_SESSION]
+    d: NotRequired[bool]
+    s: NotRequired[int | None]
+
+
+class _HeartbeatAckFrame(TypedDict):
+    """Discord acknowledging our heartbeat (op 11)."""
+
+    op: Literal[Opcode.HEARTBEAT_ACK]
+    s: NotRequired[int | None]
+
+
+type GatewayFrame = _DispatchFrame | _HeartbeatRequestFrame | _ReconnectFrame | _InvalidSessionFrame | _HeartbeatAckFrame
+"""Every frame shape :meth:`Gateway.listen` can receive (post-READY; HELLO/IDENTIFY are handled
+inline by :meth:`Gateway.connect` and never reach ``listen``)."""
 
 
 class Opcode(IntEnum):
@@ -234,20 +277,18 @@ class Gateway(LoggerMixin):
             msg = "Gateway is not connected."
             raise RuntimeError(msg)
         while True:
-            message = json.loads(await self._ws.recv())
+            message = cast("GatewayFrame", json.loads(await self._ws.recv()))
             if (seq := message.get("s")) is not None:
                 self._seq = seq
-            match message["op"]:
-                case Opcode.DISPATCH:
-                    name = message.get("t")
-                    if name:
-                        await dispatch(name, parse_dispatch(name, message.get("d", {})))
-                case Opcode.HEARTBEAT:
+            match message:
+                case {"op": Opcode.DISPATCH, "t": name, "d": data}:
+                    await dispatch(name, parse_dispatch(name, data))
+                case {"op": Opcode.HEARTBEAT}:
                     await self._send(Opcode.HEARTBEAT, self._seq)
-                case Opcode.RECONNECT | Opcode.INVALID_SESSION:
+                case {"op": Opcode.RECONNECT} | {"op": Opcode.INVALID_SESSION}:
                     self.logger.warning(t"Gateway requested reconnect (op {message['op']}); closing shard.")
                     return
-                case Opcode.HEARTBEAT_ACK:
+                case {"op": Opcode.HEARTBEAT_ACK}:
                     pass
 
     async def update_presence(

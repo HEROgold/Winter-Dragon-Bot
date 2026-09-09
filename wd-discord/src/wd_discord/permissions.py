@@ -77,10 +77,7 @@ class Permissions(IntFlag):
 
     def all() -> Permissions:
         """Return a Permissions object with all permissions set."""
-        all_permissions = Permissions.none()
-        for permission in Permissions:
-            all_permissions |= permission
-        return all_permissions
+        return ~Permissions.none()
 
     CREATE_INSTANT_INVITE: Annotated[Permissions.CREATE_INSTANT_INVITE, _CommonChannelTypes] = 1 << 0
     """Allows creation of instant invites  T, V, S"""

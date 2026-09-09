@@ -6,17 +6,29 @@ payloads (mirroring the parsing style already used by :func:`~wd_discord.gateway
 and :func:`~wd_discord.gateway.sharding.parse_gateway_bot`) and falls back to :class:`RawEvent`
 for everything else, so an unmodeled event never crashes the receive loop.
 
-``User``/``Snowflake`` are imported eagerly (not via ``lazy from``) because pydantic resolves
-model field annotations to real classes at class-definition time; a still-unresolved lazy-import
-proxy fails schema generation (``PydanticSchemaGenerationError``). ``Guild``/``Channel`` have
-this same problem internally today (pre-existing, unrelated to this change), so
+:func:`parse_dispatch` is :func:`~typing.overload`-ed on the event *name* as a
+:class:`~typing.Literal`, so a call site that passes a literal name (e.g.
+``parse_dispatch("MESSAGE_CREATE", data)``) gets both its ``data`` argument checked against
+that event's :class:`~typing.TypedDict` payload shape and a precisely-typed return value
+(``Message``, not the general ``DiscordModel`` union). :meth:`Gateway.listen` itself dispatches
+on a runtime ``str`` it read off the socket, not a literal, so it always resolves to the general
+overload - Python's type system can't narrow a return type off a value only known at runtime;
+overloads-on-literals are the standard way to still get precise types wherever the event name
+*is* known statically (call sites, tests, and - see ``wd_bot.cogs.listener`` - the point where a
+handler is registered for one).
+
+``User``/``Snowflake``/``Mapping`` are imported eagerly (not via ``lazy from``) because pydantic
+resolves model field annotations to real classes at class-definition time; a still-unresolved
+lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``). ``Guild``/``Channel``
+have this same problem internally today (pre-existing, unrelated to this change), so
 :class:`GuildCreate` intentionally does not subclass :class:`~wd_discord.guild.Guild` or type its
 nested collections as ``list[Channel]`` - see the TODO below.
 """
 
 from __future__ import annotations
 
-lazy from typing import Any
+from collections.abc import Mapping
+lazy from typing import Literal, NotRequired, TypedDict, overload
 
 lazy from pydantic import Field
 
@@ -29,7 +41,7 @@ class RawEvent(DiscordModel):
     """Fallback for any dispatch event without a dedicated model."""
 
     name: str
-    data: dict[str, Any]
+    data: Mapping[str, object]
 
 
 class GuildCreate(DiscordModel):
@@ -48,10 +60,10 @@ class GuildCreate(DiscordModel):
     large: bool | None = None
     unavailable: bool | None = None
     member_count: int | None = None
-    channels: list[dict[str, Any]] = Field(default_factory=list)
-    members: list[dict[str, Any]] = Field(default_factory=list)
-    voice_states: list[dict[str, Any]] = Field(default_factory=list)
-    presences: list[dict[str, Any]] = Field(default_factory=list)
+    channels: list[Mapping[str, object]] = Field(default_factory=list)
+    members: list[Mapping[str, object]] = Field(default_factory=list)
+    voice_states: list[Mapping[str, object]] = Field(default_factory=list)
+    presences: list[Mapping[str, object]] = Field(default_factory=list)
 
 
 class Message(DiscordModel):
@@ -69,13 +81,58 @@ class Message(DiscordModel):
     # TODO(Phase 2): mentions[]/attachments[]/embeds[]/reactions[] need their own models.
 
 
+class MessageCreatePayload(TypedDict):
+    """The raw ``d`` payload of a MESSAGE_CREATE dispatch, as delivered by the gateway (subset).
+
+    Mirrors :class:`Message`'s fields; kept as a separate TypedDict (rather than typing
+    :func:`parse_dispatch`'s ``data`` param directly off the pydantic model) so callers get a
+    plain-dict shape to construct without needing pydantic, and so the wire shape and the parsed
+    model can diverge (e.g. ``author`` here is the raw nested user object, not a ``User``).
+    """
+
+    id: str
+    channel_id: str
+    guild_id: NotRequired[str]
+    author: Mapping[str, object]
+    content: str
+    timestamp: str
+    edited_timestamp: NotRequired[str | None]
+    tts: bool
+    mention_everyone: bool
+
+
+class GuildCreatePayload(TypedDict):
+    """The raw ``d`` payload of a GUILD_CREATE dispatch, as delivered by the gateway (subset)."""
+
+    id: str
+    name: str
+    owner_id: str
+    joined_at: NotRequired[str]
+    large: NotRequired[bool]
+    unavailable: NotRequired[bool]
+    member_count: NotRequired[int]
+    channels: NotRequired[list[Mapping[str, object]]]
+    members: NotRequired[list[Mapping[str, object]]]
+    voice_states: NotRequired[list[Mapping[str, object]]]
+    presences: NotRequired[list[Mapping[str, object]]]
+
+
+# Runtime-only backing store for the general (non-literal-name) overload below. The
+# name -> TypedDict/model pairing that actually matters for type-checking lives in the
+# @overload signatures underneath, not here - this dict just has to agree with them.
 _EVENT_MODELS: dict[str, type[DiscordModel]] = {
     "GUILD_CREATE": GuildCreate,
     "MESSAGE_CREATE": Message,
 }
 
 
-def parse_dispatch(name: str, data: dict[str, Any]) -> DiscordModel:
+@overload
+def parse_dispatch(name: Literal["MESSAGE_CREATE"], data: MessageCreatePayload) -> Message: ...
+@overload
+def parse_dispatch(name: Literal["GUILD_CREATE"], data: GuildCreatePayload) -> GuildCreate: ...
+@overload
+def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel: ...
+def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel:
     """Parse a dispatch (``t``, ``d``) pair into its typed model, or a :class:`RawEvent` fallback.
 
     READY is intentionally not handled here - it's parsed once via

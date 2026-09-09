@@ -19,6 +19,7 @@ lazy import asyncio
 lazy from typing import TYPE_CHECKING, Any, Self
 
 lazy from herogold.errors import with_known_exception
+lazy from wd_core.intents import Intents
 
 lazy from wd_discord.models import DiscordModel
 
@@ -29,7 +30,6 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
     lazy from httpxyz import RequestError
-    lazy from wd_core.intents import Intents
 
     lazy from wd_discord.client import Client
     lazy from wd_discord.errors import ApiResponseError
@@ -115,13 +115,13 @@ class ShardManager:
         token: str,
         info: GatewayBotInfo,
         *,
-        intents: Intents = 0,
+        intents: Intents | None = None,
         num_shards: int | None = None,
     ) -> None:
         """Create a manager for ``token``; ``num_shards`` overrides ``info.shards``."""
         self.token = token
         self.info = info
-        self.intents = intents
+        self.intents = intents if intents is not None else 0 or Intents(0)
         self.num_shards = num_shards if num_shards is not None else info.shards
         self.shards: list[Gateway] = []
 

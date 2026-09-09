@@ -156,16 +156,26 @@ class Intents(IntFlag):
     TYPING_START = DIRECT_MESSAGE_TYPING & GUILD_MESSAGE_TYPING
     MESSAGE_POLL_VOTE_ADD = DIRECT_MESSAGE_POLLS & GUILD_MESSAGE_POLLS
 
-    def none() -> Intents:
+    @classmethod
+    def none(cls) -> Intents:
         """Return an Intents object with no intents set."""
         return Intents(0)
 
-    def all() -> Intents:
+    @classmethod
+    def all(cls) -> Intents:
         """Return an Intents object with all intents set."""
         all_intents = Intents.none()
         for intent in Intents:
             all_intents |= intent
         return all_intents
+
+    @classmethod
+    def all2(cls) -> Intents:
+        """Return an Intents object with all intents set, except for privileged intents."""
+        all_ = ~cls.none()
+        assert all_ == cls.all()
+        return all_
+
 
 type Decorator[**P, R] = Callable[P, R]
 type DecoratorFactory[**P, R] = Callable[[Callable[P, R]], Decorator[P, R]]

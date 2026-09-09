@@ -117,9 +117,9 @@ class Bot(LoggerMixin):
 
             walk_packages(wd_cogs)
         except ImportError:
-            self.logger.warning("wd_cogs package not found, skipping cog discovery")
+            self.logger.warning(t"wd_cogs package not found, skipping cog discovery")
         except Exception:
-            self.logger.exception("Error discovering wd_cogs modules")
+            self.logger.exception(t"Error discovering wd_cogs modules")
 
         return modules
 
