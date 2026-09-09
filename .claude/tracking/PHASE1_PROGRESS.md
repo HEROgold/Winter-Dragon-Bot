@@ -67,3 +67,76 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
   `Cog` is constructed, since the target of the lazy import is resolved from `sys.modules` first.
 - Uncommented `"wd-bot/tests"` in the root `pyproject.toml`'s `[tool.pytest.ini_options] testpaths` (was already
   present, commented out, inviting exactly this once a package gains tests).
+
+## Post-Phase-1: strict-typing hardening + the pyi-generator pattern
+
+Phase 1 above (commits `73065a0b`..`ff7e26d9`) is done and merged into `v2`. Everything below is
+follow-up work in the same session, done at the user's request after Phase 1 landed — not part of
+the original plan, but directly building on it. All commits are on branch `v2`, in order:
+
+- `ad36d471` — `wd_discord.gateway.connection.Gateway.listen()` reads the raw gateway frame via a
+  `GatewayFrame` `TypedDict` (discriminated union on `op`, matched with `match`/`case` on the dict
+  itself) instead of an untyped `json.loads()` result. `parse_dispatch` (then still in `events.py`)
+  got `@overload`s on `Literal["MESSAGE_CREATE"]`/`Literal["GUILD_CREATE"]` with `TypedDict` payload
+  params (`MessageCreatePayload`/`GuildCreatePayload`), narrowing its return type per event instead
+  of always returning the general `DiscordModel` union. Also fixed unrelated `Intents` default
+  drift the user introduced concurrently in `client.py`/`sharding.py`/`connection.py`.
+- `1aa24c9f` — Replaced the `Literal["MESSAGE_CREATE"]` string literals with a real
+  `wd_discord.gateway.EventName(StrEnum)`, used by both `parse_dispatch` and
+  `wd_bot.cogs.Cog.listener()`'s matching overloads (`@Cog.listener(EventName.MESSAGE_CREATE)`).
+  **Found and worked around a real `ty` bug**: it silently drops `@overload` resolution when the
+  overloaded function is wrapped in `staticmethod()` (always matches the *last* overload
+  regardless of the actual argument) — confirmed with an isolated repro. Fix: `Cog.listener` is a
+  bare class attribute (`listener = listener`), not `staticmethod(listener)` — it was never needed
+  anyway since `Cog.listener(...)` is always accessed via the class, never an instance.
+- `e23e6014` — `EventName` became a "data-carrying enum": each member attaches its own
+  `DiscordModel` subclass via a custom `__new__` (`EventName.MESSAGE_CREATE.model is Message`),
+  replacing a separate `_EVENT_MODELS` dict that could drift from the enum.
+- `dbce3a01` — `EventName` now has a member for **every** dispatch event Discord currently defines
+  (74 total, everything except `READY`). Only `MESSAGE_CREATE`/`GUILD_CREATE` have a real `model`;
+  every other member's `model` is `None` (dispatches as `RawEvent` until built).
+- `7efc7553`, `4ec2d162`, `7f898dbf` — **The generator pattern** (this is the architecturally
+  important part for future work). `wd_discord.gateway.events`/`dispatch` split into three files
+  because a `.pyi` stub shadows its paired `.py` module *entirely* for type checkers (verified with
+  `ty`, including through a re-export chain):
+  - `events.py` — models (`RawEvent`, `GuildCreate`, `Message`, payload `TypedDict`s) + `EventName`.
+    Runtime source of truth, no overloads.
+  - `dispatch.py` — the actual `parse_dispatch(name, data)` implementation, no `@overload`.
+  - `dispatch.pyi` — **GENERATED** by `wd-discord/scripts/generate_dispatch_overloads.py`. Only
+    emits an `@overload` for `EventName` members with `model is not None` (currently just
+    `MESSAGE_CREATE`/`GUILD_CREATE`) — everything else already resolves correctly through the
+    general `(name: str, data: Mapping[str, object]) -> DiscordModel` fallback overload, so a
+    placeholder per unmodeled event would be noise, not signal.
+  - The generator is a **PEP 723 `uv run` script** (not a normal project module) — its dependency
+    (`wd-discord`, to import `EventName`) is declared via `uv add --script <path> --editable
+    ./wd-discord`, which resolves through the script's own `[tool.uv.sources]` block rather than
+    needing the main project venv. Model class names come straight from `member.model.__name__`
+    (no guessing); payload `TypedDict` names follow a `PascalCase(event_name) + "Payload"`
+    convention (not attached to the enum, since payload types have no runtime existence).
+    `uv run <script>` regenerates; `uv run <script> --check` verifies (exits 1 on drift) — wired
+    into `.pre-commit-config.yaml` as a `pre-push` local hook (`dispatch-overloads-check`),
+    verified both ways through `prek` (the tool `.github/workflows/pre-commit.yml` actually runs).
+- `f3f128e5` — **Same pattern applied to `Cog.listener()`**, per explicit user request ("closes the
+  circle"): extracted into `wd_bot/listener.py` (runtime, no overloads) + generated
+  `wd_bot/listener.pyi`, via a **second, separate** generator: `wd-bot/scripts/generate_listener_overloads.py`.
+  Deliberately lives in `wd-bot/scripts/`, not `wd-discord/scripts/` — wd-discord is a lower layer
+  and shouldn't know about wd-bot's file layout, even though both generators read the same
+  `EventName` source of truth. This generator's overloads key off `member.model.__name__` only (no
+  payload `TypedDict` — a listener receives the already-parsed model, never the raw payload dict).
+  Added a matching `listener-overloads-check` pre-push hook. Also fixed the user's in-progress
+  `ExampleCog.on_guild_create` (was missing its `guild: GuildCreate` parameter).
+- `dcdaada9` — Unrelated small cleanup done by the user concurrently: `Cog.cog_load`/`cog_unload`
+  renamed to `Cog.load`/`unload` (redundant `cog_` prefix, no discord.py base to disambiguate from
+  anymore), and `auto_reload.py`'s stale `WinterDragon` type references fixed to `Bot`.
+
+**Current state**: 81 tests passing, same 5 pre-existing/unrelated failures as the Phase 1 baseline
+(`test_shard_for_guild_routes_after_start`, 4 `test_utils.py` XOR/descriptor tests). Two pre-push
+hooks (`dispatch-overloads-check`, `listener-overloads-check`) keep the generated `.pyi` files
+honest going forward - anyone extending `EventName` with a real model for a previously-unmodeled
+event should run both generators afterward (`uv run wd-discord/scripts/generate_dispatch_overloads.py`
+and `uv run wd-bot/scripts/generate_listener_overloads.py`), not hand-edit the `.pyi` files.
+
+**Not done / explicitly deferred** (unchanged from Phase 1, still true): `wd_core.CommandTree` is
+still an empty stub; no `Interaction` model, no interaction-response REST, no slash-command
+registration (all Phase 2); the real `wd_cogs` catalog's own unrelated broken imports are untouched;
+no live smoke test was run (needs a real bot token).
