@@ -8,13 +8,18 @@ lazy import json
 lazy from typing import Any
 
 lazy import pytest
-lazy from wd_discord.gateway import GuildCreate, Message, RawEvent, parse_dispatch
+lazy from wd_discord.gateway import EventName, GuildCreate, Message, RawEvent, parse_dispatch
 lazy from wd_discord.gateway.connection import Gateway, Opcode
+
+
+def test_event_name_members_match_discord_wire_format() -> None:
+    assert EventName.MESSAGE_CREATE == "MESSAGE_CREATE"
+    assert EventName.GUILD_CREATE == "GUILD_CREATE"
 
 
 def test_parse_dispatch_message_create() -> None:
     event = parse_dispatch(
-        "MESSAGE_CREATE",
+        EventName.MESSAGE_CREATE,
         {
             "id": "1",
             "channel_id": "2",
@@ -31,10 +36,27 @@ def test_parse_dispatch_message_create() -> None:
 
 
 def test_parse_dispatch_guild_create() -> None:
-    event = parse_dispatch("GUILD_CREATE", {"id": "1", "name": "My Guild", "owner_id": "9"})
+    event = parse_dispatch(EventName.GUILD_CREATE, {"id": "1", "name": "My Guild", "owner_id": "9"})
     assert isinstance(event, GuildCreate)
     assert event.name == "My Guild"
     assert event.channels == []
+
+
+def test_parse_dispatch_accepts_plain_str_matching_an_event_name() -> None:
+    """Gateway.listen() only ever has a plain ``str`` off the socket, not an EventName member."""
+    event = parse_dispatch(
+        "MESSAGE_CREATE",
+        {
+            "id": "1",
+            "channel_id": "2",
+            "author": {"id": "3", "username": "bot", "discriminator": "0"},
+            "content": "hi",
+            "timestamp": "t",
+            "tts": False,
+            "mention_everyone": False,
+        },
+    )
+    assert isinstance(event, Message)
 
 
 def test_parse_dispatch_falls_back_to_raw_event() -> None:

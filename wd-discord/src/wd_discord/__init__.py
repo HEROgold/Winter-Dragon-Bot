@@ -10,6 +10,7 @@ lazy from wd_discord.channel import Channel
 lazy from wd_discord.client import Client
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import (
+    EventName,
     Gateway,
     GatewayActivity,
     GatewayBotInfo,
@@ -37,6 +38,7 @@ __all__ = [
     "ChannelType",
     "Client",
     "DiscordModel",
+    "EventName",
     "Gateway",
     "GatewayActivity",
     "GatewayBotInfo",

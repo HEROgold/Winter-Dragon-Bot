@@ -28,7 +28,7 @@ lazy from wd_bot.auto_reload import AutoReloadWatcher
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
-    lazy from wd_discord.gateway import GuildCreate, Message
+    lazy from wd_discord.gateway import EventName, GuildCreate, Message
 
     lazy from wd_bot.bot import Bot
 
@@ -72,27 +72,30 @@ default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
 
 
 @overload
-def listener(name: Literal["MESSAGE_CREATE"]) -> Callable[[_BoundHandler[Message]], _BoundHandler[Message]]: ...
+def listener(name: Literal[EventName.MESSAGE_CREATE]) -> Callable[[_BoundHandler[Message]], _BoundHandler[Message]]: ...
 @overload
-def listener(name: Literal["GUILD_CREATE"]) -> Callable[[_BoundHandler[GuildCreate]], _BoundHandler[GuildCreate]]: ...
+def listener(name: Literal[EventName.GUILD_CREATE]) -> Callable[[_BoundHandler[GuildCreate]], _BoundHandler[GuildCreate]]: ...
 @overload
 def listener[F: Callable[..., Awaitable[None]]](name: str | None = None) -> Callable[[F], F]: ...
 def listener(name: str | None = None) -> Callable[[Callable[..., Awaitable[None]]], Callable[..., Awaitable[None]]]:
     """Tag a Cog method as a gateway dispatch-event listener.
 
-    Pass the event name explicitly (``@Cog.listener("MESSAGE_CREATE")``) to get the handler's
-    payload parameter checked against that event's actual payload type - the overloads above
-    reject e.g. ``async def on_message_create(self, message: GuildCreate)``. Called bare
-    (``@Cog.listener()``) the event name is inferred from the method name instead
-    (``on_message_create`` -> ``MESSAGE_CREATE``), with no payload-type checking: there's no
-    literal name for an overload to key off, and this is also the only option for events
-    wd_discord.gateway.events doesn't model yet (they only ever reach a listener as a RawEvent).
+    Pass a :class:`~wd_discord.gateway.EventName` member explicitly
+    (``@Cog.listener(EventName.MESSAGE_CREATE)``) to get the handler's payload parameter checked
+    against that event's actual payload type - the overloads above reject e.g.
+    ``async def on_message_create(self, message: GuildCreate)``. Called bare (``@Cog.listener()``)
+    the event name is inferred from the method name instead (``on_message_create`` ->
+    ``"MESSAGE_CREATE"``), with no payload-type checking: there's no literal name for an overload
+    to key off, and this is also the only option for events wd_discord.gateway.events doesn't
+    model yet (they only ever reach a listener as a RawEvent, with no EventName member to pass).
+    A plain ``str`` also still works here for exactly that reason - EventName only covers modeled
+    events, and this decorator has to keep working for the ones it doesn't cover yet too.
 
     TODO: add an overload above for each event wd_discord.gateway.events gains a typed model
-    for. This is a bare attribute tag at runtime either way - see wd_bot.bot.Bot._listeners for
-    why the registry itself can't be made fully sound (a dict keyed by a runtime string can't
-    statically track which payload type belongs to which key; the type-checking that matters
-    happens here, at registration).
+    for (and a matching EventName member there). This is a bare attribute tag at runtime either
+    way - see wd_bot.bot.Bot._listeners for why the registry itself can't be made fully sound (a
+    dict keyed by a runtime string can't statically track which payload type belongs to which
+    key; the type-checking that matters happens here, at registration).
     """
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Callable[..., Awaitable[None]]:
@@ -109,7 +112,12 @@ class Cog(LoggerMixin):
     bot: Bot
     flags: CogFlags = default_flags
     __cog_name__: ClassVar[str]
-    listener = staticmethod(listener)
+    # Deliberately not staticmethod(listener): `Cog.listener(...)` is always accessed via the
+    # class (never an instance) at class-body-decoration time, so a plain function attribute
+    # already behaves correctly without it - and `ty` currently loses @overload resolution on a
+    # staticmethod-wrapped overloaded function (confirmed: identical overloads type-check fine
+    # as a bare class attribute, wrong as soon as staticmethod() wraps them).
+    listener = listener
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""

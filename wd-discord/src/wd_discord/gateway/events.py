@@ -28,6 +28,7 @@ nested collections as ``list[Channel]`` - see the TODO below.
 from __future__ import annotations
 
 from collections.abc import Mapping
+lazy from enum import StrEnum
 lazy from typing import Literal, NotRequired, TypedDict, overload
 
 lazy from pydantic import Field
@@ -35,6 +36,21 @@ lazy from pydantic import Field
 from wd_discord.models import DiscordModel
 from wd_discord.snowflake import Snowflake
 from wd_discord.user import User
+
+
+class EventName(StrEnum):
+    """Dispatch event names :mod:`wd_discord.gateway.events` has a typed payload model for.
+
+    Not every event Discord sends - only the ones with an entry in this module (see
+    :data:`_EVENT_MODELS`/the :func:`parse_dispatch` overloads below, and
+    ``wd_bot.cogs.listener``, which key off these same members for compile-time payload
+    checking). An event name absent here still dispatches - just as a :class:`RawEvent`, with
+    no typed model and no listener-signature checking - it doesn't need a member added to work,
+    only to get the stronger typing.
+    """
+
+    MESSAGE_CREATE = "MESSAGE_CREATE"
+    GUILD_CREATE = "GUILD_CREATE"
 
 
 class RawEvent(DiscordModel):
@@ -117,19 +133,20 @@ class GuildCreatePayload(TypedDict):
     presences: NotRequired[list[Mapping[str, object]]]
 
 
-# Runtime-only backing store for the general (non-literal-name) overload below. The
-# name -> TypedDict/model pairing that actually matters for type-checking lives in the
-# @overload signatures underneath, not here - this dict just has to agree with them.
+# Runtime-only backing store for the general (non-literal-name) overload below. Keyed by
+# EventName (a str subtype, so plain-str lookups from Gateway.listen() still work) purely for
+# readability/consistency with the members below - the name -> TypedDict/model pairing that
+# actually matters for type-checking lives in the @overload signatures underneath, not here.
 _EVENT_MODELS: dict[str, type[DiscordModel]] = {
-    "GUILD_CREATE": GuildCreate,
-    "MESSAGE_CREATE": Message,
+    EventName.GUILD_CREATE: GuildCreate,
+    EventName.MESSAGE_CREATE: Message,
 }
 
 
 @overload
-def parse_dispatch(name: Literal["MESSAGE_CREATE"], data: MessageCreatePayload) -> Message: ...
+def parse_dispatch(name: Literal[EventName.MESSAGE_CREATE], data: MessageCreatePayload) -> Message: ...
 @overload
-def parse_dispatch(name: Literal["GUILD_CREATE"], data: GuildCreatePayload) -> GuildCreate: ...
+def parse_dispatch(name: Literal[EventName.GUILD_CREATE], data: GuildCreatePayload) -> GuildCreate: ...
 @overload
 def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel: ...
 def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel:

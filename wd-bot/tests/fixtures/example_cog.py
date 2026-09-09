@@ -10,6 +10,7 @@ from __future__ import annotations
 lazy from typing import TYPE_CHECKING, Unpack
 
 lazy from wd_bot.cogs import BotArgs, Cog
+lazy from wd_discord.gateway import EventName
 
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ class ExampleCog(Cog):
         super().__init__(**kwargs)
         self.received: list[Message] = []
 
-    @Cog.listener("MESSAGE_CREATE")
+    @Cog.listener(EventName.MESSAGE_CREATE)
     async def on_message_create(self, message: Message) -> None:
         """Record a dispatched MESSAGE_CREATE event."""
         self.received.append(message)
