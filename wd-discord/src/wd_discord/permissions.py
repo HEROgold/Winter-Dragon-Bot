@@ -71,6 +71,17 @@ class Permissions(IntFlag):
         """Check if the permission is valid for the given channel type."""
         return (not hasattr(self, "__metadata__")) or channel in self.__metadata__
 
+    def none() -> Permissions:
+        """Return a Permissions object with no permissions set."""
+        return Permissions(0)
+
+    def all() -> Permissions:
+        """Return a Permissions object with all permissions set."""
+        all_permissions = Permissions.none()
+        for permission in Permissions:
+            all_permissions |= permission
+        return all_permissions
+
     CREATE_INSTANT_INVITE: Annotated[Permissions.CREATE_INSTANT_INVITE, _CommonChannelTypes] = 1 << 0
     """Allows creation of instant invites  T, V, S"""
     KICK_MEMBERS = 1 << 1

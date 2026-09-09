@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 lazy from wd_discord.gateway import GatewayActivity, Status, build_presence, parse_ready
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Activity
 
 
@@ -40,18 +41,22 @@ def test_parse_ready_with_dispatch_wrapper() -> None:
         "d": {
             "session_id": "abc123",
             "resume_gateway_url": "wss://resume.example",
-            "user": {"id": "42", "username": "bot"},
+            "user": {"id": "42", "username": "bot", "discriminator": "0"},
             "application": {"id": "99"},
         },
     }
     ready = parse_ready(payload)
     assert ready.session_id == "abc123"
     assert ready.resume_gateway_url == "wss://resume.example"
-    assert ready.user["id"] == "42"
+    assert ready.user.id == Snowflake(42)
     assert ready.application_id == "99"
 
 
 def test_parse_ready_accepts_inner_dict() -> None:
-    ready = parse_ready({"session_id": "s", "resume_gateway_url": "wss://x"})
+    ready = parse_ready({
+        "session_id": "s",
+        "resume_gateway_url": "wss://x",
+        "user": {"id": "1", "username": "bot", "discriminator": "0"},
+    })
     assert ready.session_id == "s"
     assert ready.application_id is None

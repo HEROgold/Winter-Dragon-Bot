@@ -44,3 +44,13 @@ def test_channel_type_aliases() -> None:
 def test_validate_channel_returns_bool() -> None:
     # Enum members carry no runtime Annotated metadata, so validation is permissive.
     assert Permissions.SEND_MESSAGES.validate_channel(ChannelType.GUILD_TEXT) is True
+
+
+def test_permissions_none_is_zero() -> None:
+    assert Permissions.none() == 0
+
+
+def test_permissions_all_contains_every_member() -> None:
+    all_permissions = Permissions.all()
+    for permission in Permissions:
+        assert permission in all_permissions

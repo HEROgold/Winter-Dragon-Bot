@@ -25,6 +25,8 @@ lazy from .connection import Gateway
 
 
 if TYPE_CHECKING:
+    lazy from collections.abc import Awaitable, Callable
+
     lazy from httpxyz import RequestError
 
     lazy from wd_discord.client import Client
@@ -162,6 +164,16 @@ class ShardManager:
                 await asyncio.sleep(IDENTIFY_BATCH_DELAY)
             readies += await asyncio.gather(*(self.shards[shard_id].connect(presence=presence) for shard_id in batch))
         return readies
+
+    async def serve_forever(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None:
+        """Run every shard's receive loop until cancelled.
+
+        Call while the manager is started (i.e. inside ``async with manager:``).
+        """
+        if not self.shards:
+            msg = "ShardManager is not started."
+            raise RuntimeError(msg)
+        await asyncio.gather(*(shard.listen(dispatch) for shard in self.shards))
 
     async def _close(self) -> None:
         """Close every shard's connection."""

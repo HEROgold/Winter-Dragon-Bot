@@ -21,15 +21,24 @@ lazy from dataclasses import dataclass
 lazy from enum import IntEnum, StrEnum
 lazy from typing import TYPE_CHECKING, Any, Self
 
+lazy from herogold.log import LoggerMixin
 lazy from pydantic import Field
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 
+from wd_discord.user import User  # noqa: TC002 - eager: pydantic needs the real class, not a lazy-import proxy, at class-body time (Ready.user below)
+
 lazy from wd_discord.models import DiscordModel
+
+lazy from .events import parse_dispatch
 
 
 if TYPE_CHECKING:
+    lazy from collections.abc import Awaitable, Callable
+
     lazy from websockets.asyncio.client import ClientConnection
+
+    lazy from wd_core.intents import Intents
 
 # Default well-known gateway URL, already pinned to API v10 + JSON encoding.
 DEFAULT_GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"
@@ -82,9 +91,13 @@ class GatewayActivity:
 class Ready(DiscordModel):
     """The parts of a READY dispatch we care about (API -> object via :func:`parse_ready`)."""
 
+    v: int
+    user: User
+    guilds: list[dict[str, Any]] = Field(default_factory=list)
+    """Unavailable-guild stubs. TODO(Phase 2): type as PartialGuild."""
     session_id: str
     resume_gateway_url: str
-    user: dict[str, Any] = Field(default_factory=dict) # Could we make this a User object?
+    shard: tuple[int, int] | None = None
     application_id: str | None = None
 
 
@@ -130,15 +143,19 @@ def build_identify(
 def parse_ready(payload: dict[str, Any]) -> Ready:
     """Parse a READY dispatch payload into a :class:`Ready` (API -> object)."""
     data = payload.get("d", payload)
+    shard = data.get("shard")
     return Ready(
+        v=data.get("v", 10),
+        user=User.model_validate(data["user"]),
+        guilds=data.get("guilds", []),
         session_id=data["session_id"],
         resume_gateway_url=data["resume_gateway_url"],
-        user=data.get("user", {}),
+        shard=tuple(shard) if shard else None,
         application_id=data.get("application", {}).get("id"),
     )
 
 
-class Gateway:
+class Gateway(LoggerMixin):
     """A minimal async Discord gateway client."""
 
     def __init__(
@@ -204,6 +221,35 @@ class Gateway:
             if message["op"] == Opcode.DISPATCH and message.get("t") == "READY":
                 self.ready = parse_ready(message)
                 return self.ready
+
+    async def listen(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None:
+        """Receive gateway frames forever, updating ``_seq`` and invoking ``dispatch`` on DISPATCH.
+
+        Must be called after :meth:`connect` has returned (i.e. after READY). Runs until the
+        connection closes, is cancelled, or Discord sends RECONNECT/INVALID_SESSION.
+
+        TODO(Phase 2): implement RESUME (op 6) using ``resume_gateway_url``/``session_id``/``_seq``
+        on RECONNECT/INVALID_SESSION; for now the shard just logs and drops the connection.
+        """
+        if self._ws is None:
+            msg = "Gateway is not connected."
+            raise RuntimeError(msg)
+        while True:
+            message = json.loads(await self._ws.recv())
+            if (seq := message.get("s")) is not None:
+                self._seq = seq
+            match message["op"]:
+                case Opcode.DISPATCH:
+                    name = message.get("t")
+                    if name:
+                        await dispatch(name, parse_dispatch(name, message.get("d", {})))
+                case Opcode.HEARTBEAT:
+                    await self._send(Opcode.HEARTBEAT, self._seq)
+                case Opcode.RECONNECT | Opcode.INVALID_SESSION:
+                    self.logger.warning(t"Gateway requested reconnect (op {message['op']}); closing shard.")
+                    return
+                case Opcode.HEARTBEAT_ACK:
+                    pass
 
     async def update_presence(
         self,

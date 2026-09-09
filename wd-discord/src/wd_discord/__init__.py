@@ -8,7 +8,17 @@ lazy from wd_discord.authenticate import Token, TokenType
 lazy from wd_discord.channel import Channel
 lazy from wd_discord.client import Client
 lazy from wd_discord.errors import ApiResponseError
-lazy from wd_discord.gateway import Gateway, GatewayActivity, GatewayBotInfo, Ready, ShardManager, Status
+lazy from wd_discord.gateway import (
+    Gateway,
+    GatewayActivity,
+    GatewayBotInfo,
+    GuildCreate,
+    Message,
+    RawEvent,
+    Ready,
+    ShardManager,
+    Status,
+)
 lazy from wd_discord.guild import Guild
 lazy from wd_discord.models import DiscordModel
 lazy from wd_discord.partial_emoji import PartialEmoji
@@ -30,8 +40,11 @@ __all__ = [
     "GatewayActivity",
     "GatewayBotInfo",
     "Guild",
+    "GuildCreate",
+    "Message",
     "PartialEmoji",
     "Permissions",
+    "RawEvent",
     "Ready",
     "Sentry",
     "ShardManager",

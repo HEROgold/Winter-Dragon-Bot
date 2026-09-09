@@ -25,11 +25,9 @@ lazy from typing import TYPE_CHECKING, Any, Self
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
-lazy from wd_bot.tasks import loop
 lazy from wd_config.discord import URLS
-lazy from wd_errors import BaseError
 
-lazy from wd_discord import ShardManager, Snowflake
+lazy from wd_discord import ShardManager
 lazy from wd_discord.application import Application
 lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
 lazy from wd_discord.authenticate import (
@@ -56,6 +54,7 @@ if TYPE_CHECKING:
 
     lazy from httpxyz import Response
 
+    lazy from wd_core.intents import Intents
     lazy from wd_discord.image import ImageHash
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
@@ -212,10 +211,9 @@ class Client(LoggerMixin):
             return result
         return GatewayBotInfo.model_validate(result.json())
 
-    async def get_shard_manager(self, info: GatewayBotInfo) -> ShardManager:
-        """Return a :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
-        async with ShardManager(self.token, info) as manager:
-            return manager
+    async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents = 0) -> ShardManager:
+        """Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
+        return ShardManager(self.token, info, intents=intents)
 
     async def get_user(self, user_id: int | str) -> User | NetworkError:
         """GET /users/{user_id}."""
@@ -255,49 +253,3 @@ class Client(LoggerMixin):
             payload["banner"] = str(banner)
         return await self.patch("/users/@me", json=payload)
 
-class BotUser(User):
-    """Wrapper for interacting with the bot's user."""
-
-    def __init__(self, client: Client) -> None:
-        """Initialize the bot user with a reference to the client."""
-        self.client = client
-        self.changed: dict[str, bool] = {}
-
-    @loop()
-    async def __ainit__(self) -> None:
-        """Initialize the bot user, asynchronously."""
-        user = await self.client.get_current_user()
-        if isinstance(user, User):
-            self.user = user
-        elif isinstance(user, ApiResponseError):
-            if user.errors is None:
-                msg = f"Failed to get bot user: {user.code} {user.message}"
-                raise BaseError(msg)
-            errors = [BaseError(f"{err.code}: {err.message}") for err in user.errors]
-            group_msg = "Failed to get bot user"
-            raise ExceptionGroup(group_msg, errors)
-        else:
-            raise user
-
-    @loop(seconds=5)
-    async def _update(self) -> None:
-        """Update the bot user by re-fetching it from the API."""
-        self.changed.clear()
-        await self.client.modify_current_user(
-            username=self.user.username,
-            avatar=self.user.avatar,
-            banner=self.user.banner,
-        )
-
-    def __setattr__(self, name: str, value: object) -> None:
-        """Track changes to the bot user's attributes."""
-        if hasattr(self, "user") and hasattr(self.user, name):
-            old_value = getattr(self.user, name)
-            if old_value != value:
-                self.changed[name] = True
-        super().__setattr__(name, value)
-
-    @property
-    def id(self) -> Snowflake:
-        """Return the bot user's ID, or None if not yet initialized."""
-        return self.user.id

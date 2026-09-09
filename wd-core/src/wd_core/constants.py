@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 lazy from wd_core.intents import Intents
+lazy from wd_discord.permissions import Permissions
 
 
 intents = Intents.none() | sum([
