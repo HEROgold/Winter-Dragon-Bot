@@ -48,6 +48,7 @@ lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
 lazy from wd_discord.guild import Guild
 lazy from wd_discord.invite import Invite
+lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
 
 lazy from .user import User
 
@@ -153,17 +154,31 @@ class Client(LoggerMixin):
     async def request(self, method: str, path: str, **kwargs: Any) -> Response | ApiResponseError:  # noqa: ANN401
         """Send a request, returning the :class:`Response` or a parsed error value.
 
-        Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and
-        4xx/5xx responses are returned as :class:`ApiResponseError`.
+        Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and 4xx/5xx
+        responses are returned as :class:`ApiResponseError`. Before sending, waits on the global
+        and per-route :mod:`wd_discord.rate_limit` limiters so normal operation shouldn't cause a
+        429 in the first place; if one still happens, waits Discord's own ``retry_after`` plus an
+        extra exponential backoff (``2 ** attempt`` seconds) and retries transparently (up to
+        :data:`MAX_RATE_LIMIT_RETRIES` times) rather than surfacing the 429 to the caller.
         """
-        # TODO: handle rate limits, retries, and backoff. Currently, the caller must handle 429s and 5xx errors.  # noqa: FIX002, TD002, TD003
-        self.logger.debug(t"{method} {path}")
+        key = route_key(method, path)
+        handler = RateLimitHandler(key)
+
+        async def send_once() -> Response:
+            self.logger.debug(t"{method} {path}")
+            try:
+                return await self._client.request(method, path, **kwargs)
+            except RequestError:
+                # Re-raise so ``returns_known_exception`` converts it to a value; log it first.
+                self.logger.exception(t"Request error for {method} {path}")
+                raise
+
         try:
-            response = await self._client.request(method, path, **kwargs)
-        except RequestError:
-            # Re-raise so ``returns_known_exception`` converts it to a value; log it first.
-            self.logger.exception(t"Request error for {method} {path}")
-            raise
+            response = await handler.send(send_once)
+        except MaxRetriesExceededError:
+            self.logger.exception(t"Giving up on {method} {path} after {MAX_RATE_LIMIT_RETRIES} rate-limit retries")
+            return ApiResponseError(code=0, message="Exceeded rate-limit retries")
+
         if response.is_success:
             self.logger.debug(t"{response.status_code} {method} {path}")
             return response
