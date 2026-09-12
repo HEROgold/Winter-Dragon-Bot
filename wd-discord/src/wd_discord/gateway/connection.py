@@ -204,7 +204,7 @@ class Gateway(LoggerMixin):
         self,
         token: str,
         *,
-        intents: Intents = 0,
+        intents: Intents | None = None,
         url: str = DEFAULT_GATEWAY_URL,
         shard: tuple[int, int] | None = None,
     ) -> None:
@@ -213,7 +213,7 @@ class Gateway(LoggerMixin):
         ``shard`` is the ``(shard_id, num_shards)`` pair sent in IDENTIFY when sharding.
         """
         self.token = token
-        self.intents = intents
+        self.intents = intents or Intents.none()
         self.url = url
         self.shard = shard
         self._ws: ClientConnection | None = None

@@ -16,6 +16,7 @@ class Environments(enum.StrEnum):
     development = auto()
     production = auto()
     staging = auto()
+    test = auto()
 
 
 class SentrySettings:

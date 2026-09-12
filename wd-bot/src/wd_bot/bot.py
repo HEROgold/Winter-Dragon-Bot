@@ -7,6 +7,7 @@ lazy import datetime
 lazy import inspect
 lazy import pkgutil
 lazy import sys
+lazy from importlib import import_module
 lazy from importlib.util import find_spec, module_from_spec
 lazy from typing import TYPE_CHECKING
 
@@ -58,11 +59,18 @@ class Bot(LoggerMixin):
         *,
         intents: Intents = BotConfig.Intents,
         description: str | None = None,
+        extensions_package: str = "wd_cogs",
     ) -> None:
-        """Initialize the Bot with the given intents and an optional description."""
+        """Initialize the Bot with the given intents and an optional description.
+
+        ``extensions_package`` is the package :meth:`load_extensions` discovers cogs from -
+        defaults to the shared ``wd_cogs`` catalog, but a bot built on its own cog package
+        (e.g. ``winter_dragon.cogs``) can point discovery at that instead.
+        """
         self.launch_time = datetime.datetime.now(datetime.UTC)
         self.intents = intents
         self.description = description
+        self.extensions_package = extensions_package
         self.cogs = {}
         self._extensions: dict[str, ModuleType] = {}
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
@@ -98,37 +106,39 @@ class Bot(LoggerMixin):
         except Exception:
             self.logger.exception(t"Unhandled exception in listener {handler!r} for {payload!r}")
 
-    def _discover_wd_cogs_modules(self) -> list[str]:
-        """Discover all modules in the wd_cogs package recursively."""
+    def _discover_extension_modules(self) -> list[str]:
+        """Discover all modules in :attr:`extensions_package` recursively.
+
+        Names are relative to :attr:`extensions_package` (e.g. ``"heartbeat"``, not
+        ``"winter_dragon.cogs.heartbeat"``) - :meth:`load_extension` prepends the package
+        itself, so a returned name must not already include it.
+        """
         modules = []
         try:
-            import wd_cogs  # noqa: PLC0415
+            package = import_module(self.extensions_package)
 
-            # Recursively walk through all packages and modules in wd_cogs
+            # Recursively walk through all packages and modules in the extensions package
             def walk_packages(package: ModuleType, prefix: str = "") -> None:
                 """Recursively walk through packages and collect module names."""
                 package_path = package.__path__  # type: ignore[attr-defined]
-                for _importer, mod_name, is_package in pkgutil.walk_packages(
-                    path=package_path,
-                    prefix=f"{prefix}{package.__name__}.",
-                ):
+                for _importer, mod_name, is_package in pkgutil.walk_packages(path=package_path, prefix=prefix):
                     if not is_package and not mod_name.endswith(".__init__"):
                         modules.append(mod_name)
 
-            walk_packages(wd_cogs)
+            walk_packages(package)
         except ImportError:
-            self.logger.warning(t"wd_cogs package not found, skipping cog discovery")
+            self.logger.warning(t"{self.extensions_package} package not found, skipping cog discovery")
         except Exception:
-            self.logger.exception(t"Error discovering wd_cogs modules")
+            self.logger.exception(t"Error discovering {self.extensions_package} modules")
 
         return modules
 
     async def get_extensions(self) -> AsyncGenerator[str]:
-        """Get all extensions from the wd_cogs package.
+        """Get all extensions from :attr:`extensions_package`.
 
-        Automatically discovers all .py modules in wd_cogs regardless of structure.
+        Automatically discovers all .py modules in that package regardless of structure.
         """
-        for module in self._discover_wd_cogs_modules():
+        for module in self._discover_extension_modules():
             yield module
 
     async def _init_cogs(self, lib: ModuleType) -> None:
@@ -154,15 +164,15 @@ class Bot(LoggerMixin):
         self._extensions[key] = module
 
     async def load_extension(self, extension: str) -> None:
-        """Load a single extension from the wd_cogs package."""
-        spec = find_spec(f"wd_cogs.{extension}")
+        """Load a single extension from :attr:`extensions_package`."""
+        spec = find_spec(f"{self.extensions_package}.{extension}")
         if not spec:
             raise ExtensionError(extension, RuntimeError("Extension not found"))
         await self._load_from_module_spec(spec, extension)
 
     async def load_extensions(self) -> None:
-        """Load all cogs from the wd_cogs package."""
-        self.logger.debug(t"Starting to load cogs from wd_cogs")
+        """Load all cogs from :attr:`extensions_package`."""
+        self.logger.debug(t"Starting to load cogs from {self.extensions_package}")
         async for extension in self.get_extensions():
             self.logger.info(t"Loading cog {extension}")
             try:
@@ -173,7 +183,7 @@ class Bot(LoggerMixin):
                 self.logger.info(t"Loaded cog {extension}")
 
     @with_known_exception(StartupError)
-    @Config.with_kwarg("Tokens", "discord_token")
+    @Config.with_kwarg("Tokens", "discord_token", name="token")
     async def start(self, token: str) -> None:
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
         self.loop = asyncio.get_running_loop()

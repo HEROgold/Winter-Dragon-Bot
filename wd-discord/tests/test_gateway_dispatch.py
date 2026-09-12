@@ -112,7 +112,7 @@ class FakeWebSocket:
 async def test_listen_dispatches_and_tracks_sequence() -> None:
     gateway = Gateway("token")
     gateway._ws = FakeWebSocket(
-        [  # noqa: SLF001 - test wiring
+        [
             {
                 "op": Opcode.DISPATCH,
                 "s": 1,
@@ -128,7 +128,7 @@ async def test_listen_dispatches_and_tracks_sequence() -> None:
                 },
             },
             {"op": Opcode.DISPATCH, "s": 2, "t": "SOMETHING_UNMODELED", "d": {"foo": "bar"}},
-        ]
+        ],
     )
 
     received: list[tuple[str, Any]] = []
@@ -151,7 +151,7 @@ async def test_listen_replies_to_heartbeat_request() -> None:
     ws = FakeWebSocket([{"op": Opcode.HEARTBEAT, "s": None}])
     gateway._ws = ws  # noqa: SLF001 - test wiring
 
-    async def dispatch(name: str, payload: Any) -> None:  # noqa: ANN401, ARG001
+    async def dispatch(name: str, payload: Any) -> None:  # noqa: ANN401
         pass
 
     with pytest.raises(_EndOfFrames):
@@ -165,7 +165,7 @@ async def test_listen_returns_on_reconnect_request() -> None:
     gateway = Gateway("token")
     gateway._ws = FakeWebSocket([{"op": Opcode.RECONNECT, "s": None}])  # noqa: SLF001 - test wiring
 
-    async def dispatch(name: str, payload: Any) -> None:  # noqa: ANN401, ARG001
+    async def dispatch(name: str, payload: Any) -> None:  # noqa: ANN401
         pass
 
     await gateway.listen(dispatch)  # returns cleanly, does not raise

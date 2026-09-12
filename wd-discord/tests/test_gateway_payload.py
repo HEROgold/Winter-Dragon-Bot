@@ -59,7 +59,7 @@ def test_parse_ready_accepts_inner_dict() -> None:
             "session_id": "s",
             "resume_gateway_url": "wss://x",
             "user": {"id": "1", "username": "bot", "discriminator": "0"},
-        }
+        },
     )
     assert ready.session_id == "s"
     assert ready.application_id is None
