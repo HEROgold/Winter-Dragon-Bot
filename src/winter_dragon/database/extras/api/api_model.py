@@ -1,16 +1,11 @@
 """Module that provides a base APIModel class for API interactions with SQLModel instances."""
 
-
-
 import logging
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
 
 from fastapi import APIRouter, status
 
 from winter_dragon.database.extension.model import BaseModel
-
-
-from collections.abc import Sequence
 
 
 class APIModel[T: type[BaseModel]]:
@@ -43,7 +38,7 @@ class APIModel[T: type[BaseModel]]:
         self.model.add(item)
         return item
 
-    def update(self, item: T) -> None | int:
+    def update(self, item: T) -> int | None:
         """Update an existing record."""
         self.model.logger = logging.getLogger(self.model.__name__)
         if not item.id or not self.model.get(item.id):
