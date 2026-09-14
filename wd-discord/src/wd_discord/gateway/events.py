@@ -17,8 +17,9 @@ letting generated content live next to hand-written runtime logic in the same fi
 own docstring note). Each member carries its own :class:`DiscordModel` subclass as a real
 attribute (``EventName.MESSAGE_CREATE.model is Message``) via the "data-carrying enum" pattern (a
 custom ``__new__``), so the name and its model live in exactly one place - but only
-``MESSAGE_CREATE``/``GUILD_CREATE`` have a real model wired up so far; every other member's
-``model`` is ``None`` (dispatches as :class:`RawEvent`) until its payload/model classes get built
+``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE`` have a real model wired up so far;
+every other member's ``model`` is ``None`` (dispatches as :class:`RawEvent`) until its
+payload/model classes get built
 (add them here, then run the generator - see its own docstring for the naming convention it
 expects).
 
@@ -33,7 +34,7 @@ nested collections as ``list[Channel]`` - see the TODO on :class:`GuildCreate`.
 from __future__ import annotations
 
 from collections.abc import Mapping
-lazy from enum import StrEnum
+lazy from enum import IntEnum, StrEnum
 lazy from typing import NotRequired, Self, TypedDict
 
 lazy from pydantic import Field
@@ -70,6 +71,64 @@ class GuildCreate(DiscordModel):
     members: list[Mapping[str, object]] = Field(default_factory=list)
     voice_states: list[Mapping[str, object]] = Field(default_factory=list)
     presences: list[Mapping[str, object]] = Field(default_factory=list)
+
+
+class InteractionType(IntEnum):
+    """The kind of interaction an INTERACTION_CREATE dispatch carries."""
+
+    PING = 1
+    APPLICATION_COMMAND = 2
+    MESSAGE_COMPONENT = 3
+    APPLICATION_COMMAND_AUTOCOMPLETE = 4
+    MODAL_SUBMIT = 5
+
+
+class ResolvedData(DiscordModel):
+    """The ``resolved`` block of interaction command data - full objects for referenced IDs."""
+
+    users: dict[str, User] | None = None
+
+
+class InteractionDataOption(DiscordModel):
+    """One option value as submitted in an interaction (not the command's *definition* - see CommandOption for that)."""
+
+    name: str
+    type: int
+    value: str | int | bool | None = None
+
+
+class InteractionData(DiscordModel):
+    """The ``data`` block of an application-command INTERACTION_CREATE."""
+
+    id: Snowflake
+    name: str
+    type: int
+    options: list[InteractionDataOption] = Field(default_factory=list)
+    resolved: ResolvedData | None = None
+
+
+class Interaction(DiscordModel):
+    """INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object)."""
+
+    id: Snowflake
+    application_id: Snowflake
+    type: InteractionType
+    data: InteractionData | None = None
+    guild_id: Snowflake | None = None
+    channel_id: Snowflake | None = None
+    member: Mapping[str, object] | None = None
+    user: User | None = None
+    token: str
+    version: int
+
+    @property
+    def invoking_user(self) -> User | None:
+        """The user who triggered this interaction, whether invoked in a guild (``member``) or a DM (``user``)."""
+        if self.user is not None:
+            return self.user
+        if self.member is not None and "user" in self.member:
+            return User.model_validate(self.member["user"])
+        return None
 
 
 class Message(DiscordModel):
@@ -148,6 +207,7 @@ class EventName(StrEnum):
 
     MESSAGE_CREATE = ("MESSAGE_CREATE", Message)
     GUILD_CREATE = ("GUILD_CREATE", GuildCreate)
+    INTERACTION_CREATE = ("INTERACTION_CREATE", Interaction)
 
     RESUMED = "RESUMED"
 
@@ -204,8 +264,6 @@ class EventName(StrEnum):
     INTEGRATION_CREATE = "INTEGRATION_CREATE"
     INTEGRATION_UPDATE = "INTEGRATION_UPDATE"
     INTEGRATION_DELETE = "INTEGRATION_DELETE"
-
-    INTERACTION_CREATE = "INTERACTION_CREATE"
 
     INVITE_CREATE = "INVITE_CREATE"
     INVITE_DELETE = "INVITE_DELETE"

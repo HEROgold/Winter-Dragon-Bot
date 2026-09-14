@@ -14,11 +14,21 @@ from typing import Literal, overload
 
 from wd_discord.models import DiscordModel
 
-from .events import EventName, GuildCreate, GuildCreatePayload, Message, MessageCreatePayload
+from .events import (
+    EventName,
+    GuildCreate,
+    GuildCreatePayload,
+    Interaction,
+    InteractionCreatePayload,
+    Message,
+    MessageCreatePayload,
+)
 
 @overload
 def parse_dispatch(name: Literal[EventName.MESSAGE_CREATE], data: MessageCreatePayload) -> Message: ...
 @overload
 def parse_dispatch(name: Literal[EventName.GUILD_CREATE], data: GuildCreatePayload) -> GuildCreate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.INTERACTION_CREATE], data: InteractionCreatePayload) -> Interaction: ...
 @overload
 def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel: ...
