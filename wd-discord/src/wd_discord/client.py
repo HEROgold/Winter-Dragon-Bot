@@ -26,6 +26,7 @@ lazy from typing import TYPE_CHECKING, Any, Self
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
+lazy from wd_config.bot import Settings
 lazy from wd_config.discord import URLS
 
 lazy from wd_discord import ShardManager
@@ -117,6 +118,7 @@ class Client(LoggerMixin):
         self.version = version if version is not None else URLS.version
         self.base_url = f"{URLS.base}/v{self.version}"
         self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
+        self._application_id: str | None = None
 
     def _default_headers(self) -> dict[str, str]:
         """Render the auth, user-agent and content-type headers into a plain dict.
@@ -220,6 +222,26 @@ class Client(LoggerMixin):
         if isinstance(result, (ApiResponseError, RequestError)):
             return result
         return Application.model_validate(result.json())
+
+    async def _get_application_id(self) -> str | NetworkError:
+        """Return this client's application ID, fetching-and-caching it via the API if unset.
+
+        Prefers an already-configured ``Settings.application_id``; otherwise fetches it once via
+        :meth:`get_current_application` and writes it back into ``Settings`` so future ``Client``
+        instances don't need to fetch it again.
+        """
+        if self._application_id is not None:
+            return self._application_id
+        if Settings.application_id:
+            self._application_id = str(Settings.application_id)
+            return self._application_id
+        app = await self.get_current_application()
+        if isinstance(app, (ApiResponseError, RequestError)):
+            return app
+        application_id = app.model_dump(mode="json")["id"]
+        self._application_id = application_id
+        Settings.application_id = int(application_id)
+        return application_id
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
