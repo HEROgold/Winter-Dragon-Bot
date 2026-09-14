@@ -24,6 +24,7 @@ lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDic
 
 lazy from herogold.log import LoggerMixin
 lazy from pydantic import Field
+lazy from wd_core.intents import Intents
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 
@@ -36,7 +37,6 @@ lazy from .dispatch import parse_dispatch
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Mapping
 
-    lazy from wd_core.intents import Intents
     lazy from websockets.asyncio.client import ClientConnection
 
 # Default well-known gateway URL, already pinned to API v10 + JSON encoding.
