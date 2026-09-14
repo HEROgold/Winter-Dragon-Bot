@@ -42,9 +42,11 @@ lazy from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
+lazy from wd_discord.embed import Embed  # noqa: TC001 - kept eager for consistency with sibling model imports
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
+lazy from wd_discord.interactions import CommandOption, RegisteredCommand
 lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
 lazy from wd_discord.resources.application import Application
 lazy from wd_discord.resources.channel import Channel
@@ -54,11 +56,12 @@ lazy from wd_discord.resources.user import User
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator
+    lazy from collections.abc import Awaitable, Callable, Generator, Sequence
 
     lazy from httpxyz import Response
     lazy from wd_core.intents import Intents
 
+    lazy from wd_discord.gateway.events import Interaction
     lazy from wd_discord.image import ImageHash
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
@@ -97,6 +100,16 @@ def _parse_error(response: Response) -> ApiResponseError:
         return ApiResponseError.model_validate(response.json())
     except Exception:  # noqa: BLE001 - non-JSON or unexpected shape (e.g. a Cloudflare HTML ban page)
         return ApiResponseError(code=response.status_code, message=response.text)
+
+
+def _build_command_payload(name: str, description: str, options: Sequence[CommandOption]) -> dict[str, Any]:
+    """Build the JSON body for creating/editing a chat-input application command."""
+    return {
+        "name": name,
+        "description": description,
+        "type": 1,
+        "options": [option.model_dump(mode="json", exclude_none=True) for option in options],
+    }
 
 
 class Client(LoggerMixin):
@@ -343,3 +356,76 @@ class Client(LoggerMixin):
         if banner is not None:
             payload["banner"] = str(banner)
         return await self.patch("/users/@me", json=payload)
+
+    async def create_interaction_response(
+        self,
+        interaction: Interaction,
+        *,
+        content: str | None = None,
+        embeds: list[Embed] | None = None,
+    ) -> RequestResult:
+        """POST /interactions/{id}/{token}/callback - respond to an interaction (type 4: message with source)."""
+        data: dict[str, Any] = {}
+        if content is not None:
+            data["content"] = content
+        if embeds is not None:
+            data["embeds"] = [embed.model_dump(mode="json", exclude_none=True) for embed in embeds]
+        payload = {"type": 4, "data": data}
+        return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
+
+    async def create_global_command(
+        self,
+        name: str,
+        description: str,
+        options: list[CommandOption] | None = None,
+    ) -> RegisteredCommand | NetworkError:
+        """POST /applications/{application_id}/commands - register a new global chat-input command."""
+        application_id = await self._get_application_id()
+        if isinstance(application_id, (ApiResponseError, RequestError)):
+            return application_id
+        result = await self.post(
+            f"/applications/{application_id}/commands",
+            json=_build_command_payload(name, description, options or []),
+        )
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return RegisteredCommand.model_validate(result.json())
+
+    async def edit_global_command(
+        self,
+        command_id: str,
+        name: str,
+        description: str,
+        options: list[CommandOption] | None = None,
+    ) -> RegisteredCommand | NetworkError:
+        """PATCH /applications/{application_id}/commands/{command_id} - update an existing global command."""
+        application_id = await self._get_application_id()
+        if isinstance(application_id, (ApiResponseError, RequestError)):
+            return application_id
+        result = await self.patch(
+            f"/applications/{application_id}/commands/{command_id}",
+            json=_build_command_payload(name, description, options or []),
+        )
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return RegisteredCommand.model_validate(result.json())
+
+    async def delete_global_command(self, command_id: str) -> NetworkError | None:
+        """DELETE /applications/{application_id}/commands/{command_id} - remove a global command."""
+        application_id = await self._get_application_id()
+        if isinstance(application_id, (ApiResponseError, RequestError)):
+            return application_id
+        result = await self.delete(f"/applications/{application_id}/commands/{command_id}", json={})
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return None
+
+    async def get_global_commands(self) -> Generator[RegisteredCommand] | NetworkError:
+        """GET /applications/{application_id}/commands - every currently-registered global command."""
+        application_id = await self._get_application_id()
+        if isinstance(application_id, (ApiResponseError, RequestError)):
+            return application_id
+        result = await self.get(f"/applications/{application_id}/commands")
+        if isinstance(result, (ApiResponseError, RequestError)):
+            return result
+        return (RegisteredCommand.model_validate(item) for item in result.json())
