@@ -9,6 +9,7 @@ lazy import pytest
 # whole module cleanly until that upstream issue is resolved.
 try:
     from wd_discord.interactions import (
+        ApplicationCommandOptionType,
         ApplicationCommandType,
         CommandHandlerType,
         IntegrationType,
@@ -28,6 +29,12 @@ def test_application_command_type_values() -> None:
     assert ApplicationCommandType.user == 2
     assert ApplicationCommandType.message == 3
     assert ApplicationCommandType.primary_entry_point == 4
+
+
+def test_application_command_option_type_values() -> None:
+    assert ApplicationCommandOptionType.STRING == 3
+    assert ApplicationCommandOptionType.USER == 6
+    assert ApplicationCommandOptionType.SUB_COMMAND == 1
 
 
 def test_integration_type_values() -> None:

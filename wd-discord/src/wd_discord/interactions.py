@@ -6,6 +6,7 @@ lazy from enum import Enum, IntEnum, StrEnum, auto
 lazy from typing import TYPE_CHECKING, Annotated, get_type_hints
 
 lazy from wd_discord.utils.strings import LimitedString
+lazy from wd_errors.size import TooLongError
 
 
 if TYPE_CHECKING:
@@ -22,6 +23,21 @@ class ApplicationCommandType(IntEnum):
     user = 2
     message = 3
     primary_entry_point = 4
+
+class ApplicationCommandOptionType(IntEnum):
+    """Represents the type of an application command option (distinct from the command's own type)."""
+
+    SUB_COMMAND = 1
+    SUB_COMMAND_GROUP = 2
+    STRING = 3
+    INTEGER = 4
+    BOOLEAN = 5
+    USER = 6
+    CHANNEL = 7
+    ROLE = 8
+    MENTIONABLE = 9
+    NUMBER = 10
+    ATTACHMENT = 11
 
 @dataclass
 class Locale:
@@ -147,7 +163,7 @@ class CommandOption:
     ** autocomplete may not be set to true if choices are present
     """
 
-    field_type: ApplicationCommandType | None
+    field_type: ApplicationCommandOptionType | None
     name = LimitedString(32)
     name_localizations: dict[Locale, str] | None = None
     description = LimitedString(100)
