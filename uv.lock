@@ -410,6 +410,7 @@ version = "0.1.0"
 source = { editable = "wd-bot" }
 dependencies = [
     { name = "herogold", extra = ["orm"] },
+    { name = "wd-cogs" },
     { name = "wd-config" },
     { name = "wd-core" },
     { name = "wd-discord" },
@@ -420,6 +421,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "herogold", extras = ["orm"], specifier = ">=3.0.0" },
+    { name = "wd-cogs", editable = "wd-cogs" },
     { name = "wd-config", editable = "wd-config" },
     { name = "wd-core", editable = "wd-core" },
     { name = "wd-discord", editable = "wd-discord" },
