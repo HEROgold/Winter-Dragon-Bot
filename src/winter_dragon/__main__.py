@@ -16,12 +16,12 @@ lazy import sys
 
 lazy from wd_bot.bot import Bot
 
-lazy from . import cogs  # noqa: F401 - imported for its side effect: registers winter_dragon.cogs as a real package
+lazy from . import cogs
 
 
 async def main() -> None:
     """Construct the bot and run it forever."""
-    bot = Bot(extensions_package="winter_dragon.cogs")
+    bot = Bot(extensions_package=cogs)
     # bot.start() is decorated with @Config.with_kwarg("Tokens", "discord_token"), which
     # injects `token` into kwargs at call time - real, but not reflected in its type
     # signature, so `token` still looks required here.

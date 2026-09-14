@@ -34,7 +34,7 @@ lazy from wd_config.sentry import Environments, SentrySettings
 lazy from wd_core.intents import Intents
 lazy from wd_discord import Sentry
 
-lazy from . import cogs  # noqa: F401 - imported for its side effect: registers winter_dragon.cogs as a real package
+lazy from . import cogs
 
 
 RUN_DURATION_SECONDS = 600
@@ -61,7 +61,7 @@ async def main() -> int:
         # message_content/guild_messages are needed for MessageLogger to see anything -
         # the config.ini default (BotConfig.Intents = 0) would leave the bot deaf to both.
         intents = Intents.guilds | Intents.guild_messages | Intents.message_content
-        bot = Bot(intents=intents, extensions_package="winter_dragon.cogs")
+        bot = Bot(intents=intents, extensions_package=cogs)
         try:
             # bot.start() is decorated with @Config.with_kwarg("Tokens", "discord_token"), which
             # injects `token` into kwargs at call time - real, but not reflected in its type

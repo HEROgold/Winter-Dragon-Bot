@@ -7,10 +7,10 @@ lazy import datetime
 lazy import inspect
 lazy import pkgutil
 lazy import sys
-lazy from importlib import import_module
 lazy from importlib.util import find_spec, module_from_spec
 lazy from typing import TYPE_CHECKING
 
+lazy import wd_cogs
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from wd_config import Config
@@ -59,7 +59,7 @@ class Bot(LoggerMixin):
         *,
         intents: Intents = BotConfig.Intents,
         description: str | None = None,
-        extensions_package: str = "wd_cogs",
+        extensions_package: ModuleType = wd_cogs,
     ) -> None:
         """Initialize the Bot with the given intents and an optional description.
 
@@ -115,7 +115,7 @@ class Bot(LoggerMixin):
         """
         modules = []
         try:
-            package = import_module(self.extensions_package)
+            package = self.extensions_package
 
             # Recursively walk through all packages and modules in the extensions package
             def walk_packages(package: ModuleType, prefix: str = "") -> None:
@@ -127,9 +127,9 @@ class Bot(LoggerMixin):
 
             walk_packages(package)
         except ImportError:
-            self.logger.warning(t"{self.extensions_package} package not found, skipping cog discovery")
+            self.logger.warning(t"{self.extensions_package.__name__} package not found, skipping cog discovery")
         except Exception:
-            self.logger.exception(t"Error discovering {self.extensions_package} modules")
+            self.logger.exception(t"Error discovering {self.extensions_package.__name__} modules")
 
         return modules
 
@@ -165,14 +165,14 @@ class Bot(LoggerMixin):
 
     async def load_extension(self, extension: str) -> None:
         """Load a single extension from :attr:`extensions_package`."""
-        spec = find_spec(f"{self.extensions_package}.{extension}")
+        spec = find_spec(f"{self.extensions_package.__name__}.{extension}")
         if not spec:
             raise ExtensionError(extension, RuntimeError("Extension not found"))
         await self._load_from_module_spec(spec, extension)
 
     async def load_extensions(self) -> None:
         """Load all cogs from :attr:`extensions_package`."""
-        self.logger.debug(t"Starting to load cogs from {self.extensions_package}")
+        self.logger.debug(t"Starting to load cogs from {self.extensions_package.__name__}")
         async for extension in self.get_extensions():
             self.logger.info(t"Loading cog {extension}")
             try:
