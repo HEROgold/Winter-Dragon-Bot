@@ -183,6 +183,21 @@ class GuildCreatePayload(TypedDict):
     presences: NotRequired[list[Mapping[str, object]]]
 
 
+class InteractionCreatePayload(TypedDict):
+    """The raw ``d`` payload of an INTERACTION_CREATE dispatch, as delivered by the gateway (subset)."""
+
+    id: str
+    application_id: str
+    type: int
+    data: NotRequired[Mapping[str, object]]
+    guild_id: NotRequired[str]
+    channel_id: NotRequired[str]
+    member: NotRequired[Mapping[str, object]]
+    user: NotRequired[Mapping[str, object]]
+    token: str
+    version: int
+
+
 class EventName(StrEnum):
     """Every dispatch event name Discord currently defines.
 
