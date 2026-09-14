@@ -6,6 +6,7 @@ lazy from wd_config.discord import URLS
 
 lazy from wd_discord.authenticate import Token, TokenType
 lazy from wd_discord.client import Client
+lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import (
     EventName,
@@ -39,6 +40,8 @@ __all__ = [
     "ChannelType",
     "Client",
     "DiscordModel",
+    "Embed",
+    "EmbedField",
     "EventName",
     "Gateway",
     "GatewayActivity",
