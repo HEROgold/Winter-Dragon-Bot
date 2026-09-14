@@ -20,7 +20,7 @@ class Settings:
     bot_name = Config("WinterDragon")
     support_guild_id = Config(0)
     prefix = Config("$")
-    application_id = Config[int | None](None)
+    application_id = Config[int | None](0, optional=True)
     bot_invite = Config(GENERATED_MSG)
     auto_reload_extensions = Config(default=False)
     auto_reload_poll_seconds = Config(5)
