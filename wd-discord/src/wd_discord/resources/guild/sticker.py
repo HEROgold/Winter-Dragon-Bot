@@ -5,8 +5,8 @@ from __future__ import annotations
 lazy from enum import IntEnum
 
 lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.resources.user import User
 lazy from wd_discord.snowflake import Snowflake
-lazy from wd_discord.user import User
 
 
 class StickerType(IntEnum):

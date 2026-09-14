@@ -17,7 +17,7 @@ lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
 lazy from wd_discord import Client, GatewayBotInfo
-lazy from wd_discord.user import User
+lazy from wd_discord.resources.user import User
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 

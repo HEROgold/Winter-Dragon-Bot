@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-lazy from wd_discord.guild import Guild
 lazy from wd_discord.image import ImageHash
 lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.resources.guild import Guild
+lazy from wd_discord.resources.user import User
 lazy from wd_discord.snowflake import Snowflake
-lazy from wd_discord.user import User
 
 lazy from .install_params import ApplicationIntegrationTypeConfig, InstallParams
 lazy from .team import Team

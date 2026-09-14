@@ -1,10 +1,8 @@
 """Unit tests: PartialEmoji and the emoji / applied_forum_tags helper properties."""
 from __future__ import annotations
 
-lazy from wd_discord.channel.channel import Channel
-lazy from wd_discord.channel.forum import DefaultReaction, ForumTag
-lazy from wd_discord.guild.welcome_screen import WelcomeScreenChannel
 lazy from wd_discord.partial_emoji import PartialEmoji
+lazy from wd_discord.resources import Channel, DefaultReaction, ForumTag, WelcomeScreenChannel
 lazy from wd_discord.snowflake import Snowflake
 
 

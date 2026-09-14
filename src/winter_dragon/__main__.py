@@ -18,7 +18,7 @@ lazy import sys
 lazy from wd_discord.client import Client
 lazy from wd_discord.gateway import Gateway
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.user.user import User
+lazy from wd_discord.resources import User
 
 
 def load_token() -> str:

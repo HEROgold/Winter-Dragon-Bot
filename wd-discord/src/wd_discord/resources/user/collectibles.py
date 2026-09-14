@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.user.profile import NamePlate
+lazy from wd_discord.resources.user.profile import NamePlate
 
 
 class Collectibles(DiscordModel):

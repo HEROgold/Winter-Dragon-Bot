@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 lazy from wd_discord.oauth import OAuthScopes
-lazy from wd_discord.user.collectibles import Collectibles
-lazy from wd_discord.user.profile import NamePlate, NamePlateBackgroundColor
-lazy from wd_discord.user.user import User
+lazy from wd_discord.resources import Collectibles, NamePlate, User
+lazy from wd_discord.resources.user.profile import NamePlateBackgroundColor
 
 
 def test_nameplate_background_color_values() -> None:

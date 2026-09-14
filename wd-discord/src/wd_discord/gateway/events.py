@@ -26,7 +26,7 @@ expects).
 resolves model field annotations to real classes at class-definition time; a still-unresolved
 lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``). ``Guild``/``Channel``
 have this same problem internally today (pre-existing, unrelated to this change), so
-:class:`GuildCreate` intentionally does not subclass :class:`~wd_discord.guild.Guild` or type its
+:class:`GuildCreate` intentionally does not subclass :class:`~wd_discord.resources.guild.Guild` or type its
 nested collections as ``list[Channel]`` - see the TODO on :class:`GuildCreate`.
 """
 
@@ -39,8 +39,8 @@ lazy from typing import NotRequired, Self, TypedDict
 lazy from pydantic import Field
 
 from wd_discord.models import DiscordModel
+from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
-from wd_discord.user import User
 
 
 class RawEvent(DiscordModel):
@@ -53,7 +53,7 @@ class RawEvent(DiscordModel):
 class GuildCreate(DiscordModel):
     """GUILD_CREATE (subset - https://docs.discord.com/developers/events/gateway-events#guild-create).
 
-    TODO(Phase 2): should subclass :class:`~wd_discord.guild.Guild` and type ``channels`` as
+    TODO(Phase 2): should subclass :class:`~wd_discord.resources.guild.Guild` and type ``channels`` as
     ``list[Channel]``, but ``Guild``/``Channel`` currently fail pydantic schema generation
     themselves (unresolved ``lazy import`` proxies used as nested field types) - fix that
     alongside the Interaction/CommandTree pydantic port, then merge this into ``Guild``.

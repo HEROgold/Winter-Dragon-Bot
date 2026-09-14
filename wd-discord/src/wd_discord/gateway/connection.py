@@ -27,7 +27,7 @@ lazy from pydantic import Field
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 
-from wd_discord.user import User  # eager: pydantic needs the real class, not a lazy proxy, for Ready.user below
+from wd_discord.resources.user import User  # eager: pydantic needs the real class, not a lazy proxy, for Ready.user below
 lazy from wd_discord.models import DiscordModel
 
 lazy from .dispatch import parse_dispatch

@@ -29,7 +29,6 @@ lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_config.discord import URLS
 
 lazy from wd_discord import ShardManager
-lazy from wd_discord.application import Application
 lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
 lazy from wd_discord.authenticate import (
     ContentType,
@@ -42,15 +41,15 @@ lazy from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
-lazy from wd_discord.channel import Channel
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.guild import Guild
-lazy from wd_discord.invite import Invite
 lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
-
-lazy from .user import User
+lazy from wd_discord.resources.application import Application
+lazy from wd_discord.resources.channel import Channel
+lazy from wd_discord.resources.guild import Guild
+lazy from wd_discord.resources.invite import Invite
+lazy from wd_discord.resources.user import User
 
 
 if TYPE_CHECKING:
@@ -261,7 +260,7 @@ class Client(LoggerMixin):
             return result
         return (Channel.model_validate(channel) for channel in result.json())
 
-    async def leave_guild(self, guild_id: int | str) -> None | NetworkError:
+    async def leave_guild(self, guild_id: int | str) -> NetworkError | None:
         """DELETE /users/@me/guilds/{guild_id} - remove the bot from a guild it doesn't own.
 
         Discord returns 204 No Content on success, so there's no body to parse - ``None`` is

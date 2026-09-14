@@ -1,7 +1,7 @@
 """A minimal emoji reference carried by other Discord objects.
 
 Several Discord objects (welcome-screen channels, forum tags, default reactions) reference an
-emoji not as a full :class:`~wd_discord.guild.emoji.Emoji` resource object but as a bare
+emoji not as a full :class:`~wd_discord.resources.guild.emoji.Emoji` resource object but as a bare
 ``emoji_id`` / ``emoji_name`` pair - a *partial* emoji. :class:`PartialEmoji` turns that pair into
 a single object so callers get one value instead of two loose primitives. It lives at the package
 root (like :mod:`~wd_discord.snowflake` / :mod:`~wd_discord.image`) so both the ``channel`` and

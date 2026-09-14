@@ -8,9 +8,9 @@ lazy from pydantic import Field
 lazy from wd_discord.image import ImageHash
 lazy from wd_discord.models import DiscordModel
 lazy from wd_discord.oauth import OAuthScopes
+lazy from wd_discord.resources.user.collectibles import Collectibles
+lazy from wd_discord.resources.user.profile import Avatar
 lazy from wd_discord.snowflake import Snowflake
-lazy from wd_discord.user.collectibles import Collectibles
-lazy from wd_discord.user.profile import Avatar
 
 
 class UserPrimaryGuild(DiscordModel):
