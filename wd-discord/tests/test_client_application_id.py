@@ -1,21 +1,21 @@
 """Unit tests: Client._get_application_id's fetch-and-cache behavior."""
 from __future__ import annotations
 
+import pytest
+import wd_discord.resources.guild.features as _guild_features
+import wd_discord.snowflake as _snowflake
+from wd_config.bot import Settings
+from wd_discord import Client
+from wd_discord.resources.application import Application
+
+
 # NOTE: on this repo's pinned Python (3.15 beta), pydantic's schema generation for
 # ``Application`` fails unless the ``Snowflake`` and ``VerificationLevel`` lazy imports used
 # (transitively, via ``Guild``) in its own type annotations have already been resolved once
 # elsewhere first - see the "herogold py315 break" memory note for the general issue. Touching
-# them here (before anything imports ``Application``) is a test-local workaround; it doesn't
-# change the behavior under test.
-import wd_discord.resources.guild.features as _features
-import wd_discord.snowflake as _snowflake
-
-_ = (_snowflake.Snowflake, _features.VerificationLevel)
-
-import pytest
-from wd_config.bot import Settings
-from wd_discord import Client
-from wd_discord.resources.application import Application
+# them here (before constructing any ``Application`` below) is a test-local workaround; it
+# doesn't change the behavior under test.
+_ = (_snowflake.Snowflake, _guild_features.VerificationLevel)
 
 _APPLICATION_FIELDS = {
     "id": "999",
