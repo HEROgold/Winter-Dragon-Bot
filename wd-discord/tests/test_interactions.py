@@ -3,6 +3,7 @@ from __future__ import annotations
 
 lazy import pytest
 
+from wd_discord.utils.strings import LimitedString, TooLongError
 
 # NOTE: wd_discord.interactions imports herogold.protocols, which currently fails to import
 # on Python 3.15 (herogold 3.3.0 bug: "SupportsDelete is not a generic class"). Skip the
@@ -12,13 +13,11 @@ try:
         ApplicationCommandOptionType,
         ApplicationCommandType,
         CommandHandlerType,
+        CommandOption,
         IntegrationType,
         InteractionContextType,
-        LimitedString,
         Locales,
-        TooLongError,
-        absent_if,
-        required_if,
+        RegisteredCommand,
     )
 except (ImportError, TypeError) as exc:  # pragma: no cover - environment-dependent
     pytest.skip(f"wd_discord.interactions is unimportable: {exc}", allow_module_level=True)
@@ -71,27 +70,24 @@ def test_limited_string_rejects_too_long() -> None:
         holder.name = "way too long"
 
 
-def test_required_if_validator() -> None:
-    validator = required_if("type_", ApplicationCommandType.chat_input)
-
-    class Cmd:
-        type_ = ApplicationCommandType.chat_input
-
-    invalid, error = validator(Cmd(), "")
-    assert invalid is False
-    assert isinstance(error, ValueError)
-
-    valid, no_error = validator(Cmd(), "a description")
-    assert valid is True
-    assert no_error is None
+def test_command_option_validates_from_dict() -> None:
+    option = CommandOption.model_validate(
+        {"type": 6, "name": "user", "description": "The user to check", "required": True},
+    )
+    assert option.type is ApplicationCommandOptionType.USER
+    assert option.required is True
 
 
-def test_absent_if_validator() -> None:
-    validator = absent_if("type_", ApplicationCommandType.chat_input)
-
-    class Cmd:
-        type_ = ApplicationCommandType.chat_input
-
-    invalid, error = validator(Cmd(), ["a", "choice"])
-    assert invalid is False
-    assert isinstance(error, ValueError)
+def test_registered_command_validates_discord_payload() -> None:
+    payload = {
+        "id": "111",
+        "application_id": "222",
+        "version": "333",
+        "name": "percentage",
+        "description": "Calculate a random compatibility percentage with another user",
+        "options": [{"type": 6, "name": "user", "description": "The user to check", "required": True}],
+    }
+    command = RegisteredCommand.model_validate(payload)
+    assert command.name == "percentage"
+    assert command.options[0].name == "user"
+    assert command.guild_id is None

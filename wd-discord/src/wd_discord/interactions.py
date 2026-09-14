@@ -1,6 +1,8 @@
 """Discord Interactions."""
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 lazy from dataclasses import dataclass, field
 lazy from enum import Enum, IntEnum, StrEnum, auto
 lazy from typing import TYPE_CHECKING, Annotated, get_type_hints
@@ -8,12 +10,15 @@ lazy from typing import TYPE_CHECKING, Annotated, get_type_hints
 lazy from wd_discord.utils.strings import LimitedString
 lazy from wd_errors.size import TooLongError
 
+from pydantic import Field
+from wd_discord.models import DiscordModel
+from wd_discord.permissions import PermissionsField
+from wd_discord.snowflake import Snowflake
 
 if TYPE_CHECKING:
     lazy from collections.abc import Callable
 
     lazy from wd_discord.permissions import Permissions
-    lazy from wd_discord.snowflake import Snowflake
 
 
 class ApplicationCommandType(IntEnum):
@@ -138,45 +143,30 @@ def validate[T](cls: type[T]) -> type[T]:
     cls.__post_init__ = new_post_init  # ty:ignore[unresolved-attribute]
     return cls
 
-@validate
-@dataclass
-class CommandOption:
-    """Represents an option for an application command.
+class CommandOption(DiscordModel):
+    """An option for an application command (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 
-    Field	Type	Description	Valid Option Types
-    type	one of application command option type	Type of option	all
-    name *	string	1-32 character name	all
-    name_localizations?	?dictionary with keys in available locales	Localization dictionary for the name field. Values follow the same restrictions as name	all
-    description	string	1-100 character description	all
-    description_localizations?	?dictionary with keys in available locales	Localization dictionary for the description field. Values follow the same restrictions as description	all
-    required?	boolean	Whether the parameter is required or optional, default false	all but SUB_COMMAND and SUB_COMMAND_GROUP
-    choices?	array of application command option choice	Choices for the user to pick from, max 25	STRING, INTEGER, NUMBER
-    options?	array of application command option	If the option is a subcommand or subcommand group type, these nested options will be the parameters or subcommands respectively; up to 25	SUB_COMMAND , SUB_COMMAND_GROUP
-    channel_types?	array of channel types	The channels shown will be restricted to these types	CHANNEL
-    min_value?	integer for INTEGER options, double for NUMBER options	The minimum value permitted	INTEGER , NUMBER
-    max_value?	integer for INTEGER options, double for NUMBER options	The maximum value permitted	INTEGER , NUMBER
-    min_length?	integer	The minimum allowed length (minimum of 0, maximum of 6000)	STRING
-    max_length?	integer	The maximum allowed length (minimum of 1, maximum of 6000)	STRING
-    autocomplete? **	boolean	If autocomplete interactions are enabled for this option	STRING, INTEGER, NUMBER
-
-    * name must be unique within an array of application command options.
-    ** autocomplete may not be set to true if choices are present
-    """
-
-    field_type: ApplicationCommandOptionType | None
-    name = LimitedString(32)
-    name_localizations: dict[Locale, str] | None = None
-    description = LimitedString(100)
-    description_localizations: dict[Locale, str] | None = None
+    type: ApplicationCommandOptionType
+    name: str
+    description: str
     required: bool = False
-    choices: list[object] | None = None
+    choices: list[Mapping[str, object]] | None = None
     options: list[CommandOption] | None = None
-    channel_types: list[int] | None = None
-    min_value: int | float | None = None
-    max_value: int | float | None = None
-    min_length: int | None = None
-    max_length: int | None = None
-    autocomplete: Annotated[bool, absent_if("choices")] = False
+
+
+class RegisteredCommand(DiscordModel):
+    """A chat-input application command as Discord's REST API returns it (list/create/edit response)."""
+
+    id: Snowflake
+    application_id: Snowflake
+    guild_id: Snowflake | None = None
+    version: Snowflake
+    name: str
+    description: str
+    options: list[CommandOption] = Field(default_factory=list)
+    default_member_permissions: PermissionsField | None = None
+    dm_permission: bool = True
+    nsfw: bool = False
 
 class CommandHandlerType(Enum):
     """Represents the type of handler for an application command."""
