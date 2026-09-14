@@ -42,7 +42,7 @@ lazy from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
-lazy from wd_discord.embed import Embed  # noqa: TC001 - kept eager for consistency with sibling model imports
+lazy from wd_discord.embed import Embed
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
