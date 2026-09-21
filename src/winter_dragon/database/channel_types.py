@@ -1,7 +1,5 @@
 """Module containing tags for the database."""
 
-
-
 from enum import Enum, auto
 
 

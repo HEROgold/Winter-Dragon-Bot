@@ -6,8 +6,6 @@ the `__all__` list of `src/winter_dragon/database/__init__.py`.
 Prints green for found, yellow for extra's, red for missing. Exits with code 1 if any are missing.
 """
 
-
-
 import ast
 import sys
 from pathlib import Path
