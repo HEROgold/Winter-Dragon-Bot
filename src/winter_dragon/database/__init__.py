@@ -1,7 +1,5 @@
 """The database package for the Winter Dragon project."""
 
-
-
 from winter_dragon.bot.extensions.server.infractions import Infractions
 from winter_dragon.bot.extensions.server.welcome import Welcome
 from winter_dragon.bot.extensions.user.reminder import Reminder

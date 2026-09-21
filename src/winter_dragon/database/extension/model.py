@@ -2,18 +2,16 @@
 
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
+
 import logging
 from collections.abc import Sequence
-from enum import Enum
-from inspect import get_annotations
 from types import NoneType
 from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
 from herogold.log import LoggerMixin
 from herogold.typing.check import contains_sub_type
-from pydantic import ConfigDict, GetCoreSchemaHandler
-from sqlalchemy import BigInteger, Column, ScalarResult
-from sqlalchemy import Enum as SQEnum
+from pydantic import ConfigDict
+from sqlalchemy import BigInteger, ScalarResult
 from sqlalchemy.orm import Mapped
 from sqlmodel import Field, Session, select
 from sqlmodel import SQLModel as BaseSQLModel
