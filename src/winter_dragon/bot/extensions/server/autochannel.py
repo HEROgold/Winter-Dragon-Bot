@@ -260,7 +260,7 @@ class AutomaticChannels(GroupCog, auto_load=True):
     @slash_setup.error
     async def info_error(self, interaction: discord.Interaction, error: Exception) -> None:
         """Handle errors for the setup command."""
-        self.logger.exception(error)
+        self.logger.error(error)
         await interaction.response.send_message(
             "An error occurred while setting up the AutoChannel.",
             ephemeral=True,
