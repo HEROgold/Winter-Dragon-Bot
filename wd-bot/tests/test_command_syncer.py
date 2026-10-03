@@ -84,11 +84,11 @@ async def test_deletes_removed_command() -> None:
         session.commit()
     client = _fake_client()
 
-    await DefaultCommandSyncer(engine=engine).sync(client, [])
+    await DefaultCommandSyncer(engine=engine).sync(client, [_command()])
 
     client.delete_global_command.assert_awaited_once_with("77")
     with Session(engine) as session:
-        assert session.exec(select(GlobalSyncedCommand)).all() == []
+        assert [row.discord_command_id for row in session.exec(select(GlobalSyncedCommand)).all()] == ["555"]
 
 
 async def test_edits_changed_signature() -> None:
@@ -155,11 +155,11 @@ async def test_failed_delete_keeps_row() -> None:
     client = _fake_client()
     client.delete_global_command = AsyncMock(return_value=ApiResponseError(code=500, message="boom"))
 
-    await DefaultCommandSyncer(engine=engine).sync(client, [])
+    await DefaultCommandSyncer(engine=engine).sync(client, [_command()])
 
     client.delete_global_command.assert_awaited_once_with("77")
     with Session(engine) as session:
-        assert len(session.exec(select(GlobalSyncedCommand)).all()) == 1
+        assert len(session.exec(select(GlobalSyncedCommand)).all()) == 2
 
 
 async def test_edit_with_missing_row_warns_and_continues(capsys: pytest.CaptureFixture[str]) -> None:
@@ -269,3 +269,16 @@ async def test_concurrent_syncs_do_not_double_create() -> None:
     client.create_global_command.assert_awaited_once()
     with Session(engine) as session:
         assert len(session.exec(select(GlobalSyncedCommand)).all()) == 1
+
+
+async def test_empty_command_list_skips_mass_delete(capsys: pytest.CaptureFixture[str]) -> None:
+    engine = _make_engine()
+    _seed(engine, "old", "() -> None", "77")
+    client = _fake_client()
+
+    await DefaultCommandSyncer(engine=engine).sync(client, [])
+
+    client.delete_global_command.assert_not_awaited()
+    with Session(engine) as session:
+        assert len(session.exec(select(GlobalSyncedCommand)).all()) == 1
+    assert "refusing to mass-delete" in capsys.readouterr().err

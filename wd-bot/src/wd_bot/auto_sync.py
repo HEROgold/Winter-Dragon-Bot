@@ -190,7 +190,9 @@ class DefaultCommandSyncer(LoggerMixin):
         """Diff ``commands`` against the last-synced state and push only the changes to Discord.
 
         With ``allow_deletes`` False, ``plan.to_delete`` is skipped and one warning lists the skipped IDs.
-        Concurrent calls are serialized, so two overlapping syncs can't both create the same command.
+        Deletes are likewise skipped (with a warning) when ``commands`` is empty, guarding against a
+        broken load wiping every command from Discord. Concurrent calls are serialized, so two
+        overlapping syncs can't both create the same command.
         """
         async with self._lock:
             await self._sync(client, commands, allow_deletes=allow_deletes)
@@ -206,10 +208,17 @@ class DefaultCommandSyncer(LoggerMixin):
                 await self._create(client, session, by_name[planned.name])
             for planned, discord_command_id in plan.to_edit:
                 await self._edit(client, session, by_name[planned.name], discord_command_id)
-            if allow_deletes:
-                await self._delete(client, session, plan.to_delete)
-            elif plan.to_delete:
+            if not plan.to_delete:
+                return
+            if not allow_deletes:
                 self.logger.warning(t"Skipping deletes of Discord commands {plan.to_delete}")
+            elif not by_name:
+                # An empty registry almost always means loading broke, not that every command was removed.
+                self.logger.warning(
+                    t"No commands registered; refusing to mass-delete Discord commands {plan.to_delete}",
+                )
+            else:
+                await self._delete(client, session, plan.to_delete)
 
     async def _create(self, client: Client, session: Session, command: Command) -> None:
         """Create ``command`` on Discord and store its synced row, unless the create failed."""

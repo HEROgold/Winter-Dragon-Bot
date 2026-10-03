@@ -171,7 +171,8 @@ class Bot(LoggerMixin):
 
         Names are relative to :attr:`extensions_package` (e.g. ``"heartbeat"``, not
         ``"winter_dragon.cogs.heartbeat"``) - :meth:`load_extension` prepends the package
-        itself, so a returned name must not already include it.
+        itself, so a returned name must not already include it. A discovery failure is recorded in
+        ``_failed_extensions`` (under the package's name), so :meth:`sync_commands` won't delete.
         """
         modules = []
         try:
@@ -187,8 +188,10 @@ class Bot(LoggerMixin):
 
             walk_packages(package)
         except ImportError:
+            self._failed_extensions.add(self.extensions_package.__name__)
             self.logger.warning(t"{self.extensions_package.__name__} package not found, skipping cog discovery")
         except Exception:
+            self._failed_extensions.add(self.extensions_package.__name__)
             self.logger.exception(t"Error discovering {self.extensions_package.__name__} modules")
 
         return modules

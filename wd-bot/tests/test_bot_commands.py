@@ -182,3 +182,14 @@ async def test_startup_sync_logs_failure_instead_of_raising(capsys: pytest.Captu
     err = capsys.readouterr().err
     assert "Startup command sync failed" in err
     assert "database is down" in err
+
+
+async def test_discovery_failure_disables_deletes() -> None:
+    bot = _make_bot()
+    fake = _FakeSyncer()
+    bot.syncer = fake
+    bot.extensions_package = types.ModuleType("no_path_package")  # no __path__: discovery raises
+    await bot.load_extensions()
+    await bot.sync_commands(object())  # type: ignore[arg-type]
+    assert fake.allow_deletes is False
+    assert bot._failed_extensions == {"no_path_package"}
