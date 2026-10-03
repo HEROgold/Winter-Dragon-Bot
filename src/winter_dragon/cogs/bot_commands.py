@@ -4,8 +4,8 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
-lazy from sqlmodel import Session, select
-lazy from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
+lazy from sqlmodel import Session
+lazy from wd_bot.auto_sync import GlobalSyncedCommand, SyncedCommands
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.constants import engine
 lazy from wd_discord.embed import Embed
@@ -21,14 +21,9 @@ if TYPE_CHECKING:
 
 def describe_sync_status(session: Session, commands: Sequence[tuple[str, str]]) -> Generator[str]:
     """Yield one "name: synced|pending" line per (name, signature) pair in ``commands``."""
-    records_by_name = {record.name: record for record in session.exec(select(CommandRecord)).all()}
-    synced_by_command_id = {row.command_id: row for row in session.exec(select(GlobalSyncedCommand)).all()}
-
+    synced = SyncedCommands.load(session, GlobalSyncedCommand)
     for name, current_signature in commands:
-        record = records_by_name.get(name)
-        row = synced_by_command_id.get(record.id) if record and record.id is not None else None
-        state = "synced" if row is not None and row.signature == current_signature else "pending"
-        yield f"{name}: {state}"
+        yield f"{name}: {'synced' if synced.is_synced(name, current_signature) else 'pending'}"
 
 
 class BotCommands(

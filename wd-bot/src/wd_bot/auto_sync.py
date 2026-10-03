@@ -20,9 +20,9 @@ lazy from wd_discord.errors.api import ApiResponseError
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Sequence
+    lazy from collections.abc import Generator, Iterable, Sequence
 
-    lazy from sqlalchemy import Engine
+    lazy from sqlalchemy import ColumnElement, Engine
     lazy from wd_discord import Client
 
     lazy from wd_bot.commands import AppCommand
@@ -40,6 +40,14 @@ class CommandLike(Protocol):
     def signature(self) -> str:
         """Return the command's signature string."""
         ...
+
+
+class SyncedRow(Protocol):
+    """One command's sync state in some scope - satisfied by :class:`GlobalSyncedCommand` and :class:`GuildSyncedCommand`."""
+
+    command_id: int
+    signature: str
+    discord_command_id: str
 
 
 class CommandRecord(SQLModel, table=True):
@@ -112,47 +120,65 @@ def _is_unknown_command(result: object) -> bool:
     return isinstance(result, ApiResponseError) and result.code in UNKNOWN_COMMAND_CODES
 
 
-def _build_plan(
-    commands: Sequence[CommandLike],
-    records_by_name: dict[str, CommandRecord],
-    synced_by_command_id: dict[int, GlobalSyncedCommand] | dict[int, GuildSyncedCommand],
-) -> SyncPlan:
-    """Compute the :class:`SyncPlan` for ``commands`` given the known records and their synced rows."""
-    plan = SyncPlan()
+class SyncedCommands[Row: SyncedRow]:
+    """The known command records and their synced rows in one scope (global, or one guild)."""
 
-    live_names: set[str] = set()
-    for command in commands:
-        live_names.add(command.name)
-        record = records_by_name.get(command.name)
-        row = synced_by_command_id.get(record.id) if record and record.id is not None else None
-        if row is None:
-            plan.to_create.append(command)
-        elif row.signature != command.signature():
-            plan.to_edit.append((command, row.discord_command_id))
+    def __init__(self, records: Iterable[CommandRecord], rows: Iterable[Row]) -> None:
+        """Index ``records`` by name and ``rows`` by the record they belong to."""
+        self._records_by_name = {record.name: record for record in records}
+        self._rows_by_command_id = {row.command_id: row for row in rows}
 
-    for record in records_by_name.values():
-        if record.name in live_names or record.id is None:
-            continue
-        row = synced_by_command_id.get(record.id)
-        if row is not None:
-            plan.to_delete.append(row.discord_command_id)
+    @classmethod
+    def load(cls, session: Session, row_model: type[Row], *where: ColumnElement[bool] | bool) -> SyncedCommands[Row]:
+        """Read every record, and the ``row_model`` rows matching ``where``, from ``session``."""
+        records = session.exec(select(CommandRecord)).all()
+        rows = session.exec(select(row_model).where(*where)).all()
+        return cls(records, rows)
 
-    return plan
+    def row_for(self, name: str) -> Row | None:
+        """Return the synced row for the command named ``name``, if it was synced in this scope."""
+        record = self._records_by_name.get(name)
+        if record is None or record.id is None:
+            return None
+        return self._rows_by_command_id.get(record.id)
+
+    def is_synced(self, name: str, signature: str) -> bool:
+        """Whether the command named ``name`` was last synced with exactly ``signature``."""
+        row = self.row_for(name)
+        return row is not None and row.signature == signature
+
+    def plan(self, commands: Sequence[CommandLike]) -> SyncPlan:
+        """Compute the :class:`SyncPlan` that brings this scope in line with ``commands``."""
+        plan = SyncPlan(to_delete=list(self._plan_deletes(commands)))
+        self._plan_upserts(plan, commands)
+        return plan
+
+    def _plan_upserts(self, plan: SyncPlan, commands: Sequence[CommandLike]) -> None:
+        """Add each command that was never synced to ``to_create``, and each changed one to ``to_edit``."""
+        for command in commands:
+            row = self.row_for(command.name)
+            if row is None:
+                plan.to_create.append(command)
+            elif row.signature != command.signature():
+                plan.to_edit.append((command, row.discord_command_id))
+
+    def _plan_deletes(self, commands: Sequence[CommandLike]) -> Generator[str]:
+        """Yield the Discord IDs of synced commands that are no longer in ``commands``."""
+        live_names = {command.name for command in commands}
+        for name in self._records_by_name.keys() - live_names:
+            row = self.row_for(name)
+            if row is not None:
+                yield row.discord_command_id
 
 
 def diff_global_commands(session: Session, commands: Sequence[CommandLike]) -> SyncPlan:
     """Compare ``commands`` against :class:`GlobalSyncedCommand` rows and plan the minimal sync."""
-    records_by_name = {record.name: record for record in session.exec(select(CommandRecord)).all()}
-    synced_by_command_id = {row.command_id: row for row in session.exec(select(GlobalSyncedCommand)).all()}
-    return _build_plan(commands, records_by_name, synced_by_command_id)
+    return SyncedCommands.load(session, GlobalSyncedCommand).plan(commands)
 
 
 def diff_guild_commands(session: Session, guild_id: int, commands: Sequence[CommandLike]) -> SyncPlan:
     """Guild-scoped counterpart to :func:`diff_global_commands` (see class docstrings - unused in v1)."""
-    records_by_name = {record.name: record for record in session.exec(select(CommandRecord)).all()}
-    rows = session.exec(select(GuildSyncedCommand).where(GuildSyncedCommand.guild_id == guild_id)).all()
-    synced_by_command_id = {row.command_id: row for row in rows}
-    return _build_plan(commands, records_by_name, synced_by_command_id)
+    return SyncedCommands.load(session, GuildSyncedCommand, GuildSyncedCommand.guild_id == guild_id).plan(commands)
 
 
 class CommandSyncer(Protocol):
@@ -208,17 +234,21 @@ class DefaultCommandSyncer(LoggerMixin):
                 await self._create(client, session, by_name[planned.name])
             for planned, discord_command_id in plan.to_edit:
                 await self._edit(client, session, by_name[planned.name], discord_command_id)
-            if not plan.to_delete:
-                return
-            if not allow_deletes:
-                self.logger.warning(t"Skipping deletes of Discord commands {plan.to_delete}")
-            elif not by_name:
-                # An empty registry almost always means loading broke, not that every command was removed.
-                self.logger.warning(
-                    t"No commands registered; refusing to mass-delete Discord commands {plan.to_delete}",
-                )
-            else:
+            if self._deletes_allowed(plan, allow_deletes=allow_deletes, has_commands=bool(by_name)):
                 await self._delete(client, session, plan.to_delete)
+
+    def _deletes_allowed(self, plan: SyncPlan, *, allow_deletes: bool, has_commands: bool) -> bool:
+        """Whether to run ``plan.to_delete``, warning about any deletes that get skipped."""
+        if not plan.to_delete:
+            return False
+        if not allow_deletes:
+            self.logger.warning(t"Skipping deletes of Discord commands {plan.to_delete}")
+            return False
+        if not has_commands:
+            # An empty registry almost always means loading broke, not that every command was removed.
+            self.logger.warning(t"No commands registered; refusing to mass-delete Discord commands {plan.to_delete}")
+            return False
+        return True
 
     async def _create(self, client: Client, session: Session, command: AppCommand) -> None:
         """Create ``command`` on Discord and store its synced row, unless the create failed."""
@@ -246,9 +276,7 @@ class DefaultCommandSyncer(LoggerMixin):
         """
         result = await client.edit_global_command(discord_command_id, command.params())
         if _is_unknown_command(result):
-            self.logger.warning(t"Command '{command.name}' ({discord_command_id}) is gone on Discord; recreating it")
-            self._drop_row(session, discord_command_id)
-            await self._create(client, session, command)
+            await self._recreate(client, session, command, discord_command_id)
             return
         if is_network_error(result):
             self.logger.warning(t"Failed to edit command '{command.name}': {result}")
@@ -260,6 +288,12 @@ class DefaultCommandSyncer(LoggerMixin):
         row.signature = command.signature()
         session.add(row)
         session.commit()
+
+    async def _recreate(self, client: Client, session: Session, command: AppCommand, discord_command_id: str) -> None:
+        """Drop the stale row of a command Discord no longer knows, then create the command afresh."""
+        self.logger.warning(t"Command '{command.name}' ({discord_command_id}) is gone on Discord; recreating it")
+        self._drop_row(session, discord_command_id)
+        await self._create(client, session, command)
 
     async def _delete(self, client: Client, session: Session, discord_command_ids: Sequence[str]) -> None:
         """Delete ``discord_command_ids`` on Discord, dropping each synced row only if its delete succeeded.
