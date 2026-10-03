@@ -39,12 +39,12 @@ def build_love_embed(target: User, percent: int) -> Embed:
     )
 
 
-class Percentage(Cog):
-    """Cog for the /percentage command."""
+class Love(Cog):
+    """Cog for the /love command."""
 
-    @Cog.command(name="percentage", description="Calculate a random compatibility percentage with another user")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
-    async def percentage(self, interaction: Interaction, user: User) -> None:
-        """Reply with a random compatibility percentage between the invoking user and ``user``."""
+    @Cog.command(name="love", description="Calculate compatibility with another user")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
+    async def love(self, interaction: Interaction, user: User) -> None:
+        """Reply with a random compatibility love between the invoking user and ``user``."""
         asker = interaction.invoking_user
         if asker is None:
             await self.bot.client.create_interaction_response(
