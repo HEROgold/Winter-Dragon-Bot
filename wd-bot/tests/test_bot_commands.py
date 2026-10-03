@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import types
 from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock
 
 from wd_bot.auto_sync import DefaultCommandSyncer
 from wd_bot.bot import Bot
@@ -15,7 +16,7 @@ from wd_discord.resources.user import User
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncGenerator, Sequence
 
     from wd_bot.commands import Command
 
@@ -107,9 +108,11 @@ async def test_init_cogs_registers_commands_before_any_other_await() -> None:
 class _FakeSyncer:
     def __init__(self) -> None:
         self.calls: list[tuple[object, list[Command]]] = []
+        self.allow_deletes: bool | None = None
 
-    async def sync(self, client: object, commands: Sequence[Command]) -> None:
+    async def sync(self, client: object, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:
         self.calls.append((client, list(commands)))
+        self.allow_deletes = allow_deletes
 
 
 async def test_syncer_defaults_and_can_be_swapped() -> None:
@@ -130,3 +133,36 @@ async def test_sync_commands_delegates_to_syncer() -> None:
     assert len(fake.calls) == 1
     assert fake.calls[0][0] is client
     assert [c.name for c in fake.calls[0][1]] == ["ping"]
+
+
+async def test_sync_commands_allows_deletes_by_default() -> None:
+    bot = _make_bot()
+    fake = _FakeSyncer()
+    bot.syncer = fake
+    await bot.sync_commands(object())  # type: ignore[arg-type]
+    assert fake.allow_deletes is True
+
+
+async def test_failed_extension_disables_deletes() -> None:
+    bot = _make_bot()
+    fake = _FakeSyncer()
+    bot.syncer = fake
+    bot.load_extension = AsyncMock(side_effect=RuntimeError("boom"))  # type: ignore[method-assign]
+
+    async def one_extension() -> AsyncGenerator[str]:
+        yield "broken"
+
+    bot.get_extensions = one_extension  # type: ignore[method-assign]
+    await bot.load_extensions()
+    await bot.sync_commands(object())  # type: ignore[arg-type]
+    assert fake.allow_deletes is False
+    assert bot._failed_extensions == {"broken"}
+
+
+async def test_successful_load_clears_failed_extension() -> None:
+    bot = _make_bot()
+    bot._failed_extensions.add("commands")
+    bot.extensions_package = types.ModuleType("wd_bot")
+    bot._load_from_module_spec = AsyncMock()  # type: ignore[method-assign]
+    await bot.load_extension("commands")
+    assert "commands" not in bot._failed_extensions

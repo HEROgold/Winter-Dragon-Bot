@@ -137,8 +137,11 @@ def diff_guild_commands(session: Session, guild_id: int, commands: Sequence[Comm
 class CommandSyncer(Protocol):
     """Strategy for reconciling the bot's registered commands with Discord."""
 
-    async def sync(self, client: Client, commands: Sequence[Command]) -> None:
-        """Push ``commands`` to Discord through ``client``, doing only the work needed."""
+    async def sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:
+        """Push ``commands`` to Discord through ``client``, doing only the work needed.
+
+        With ``allow_deletes`` False, commands missing from ``commands`` are left on Discord.
+        """
         ...
 
 
@@ -149,8 +152,11 @@ class DefaultCommandSyncer(LoggerMixin):
         """Use ``engine`` for sync state; defaults to ``wd_db.constants.engine``, resolved at sync time."""
         self._engine = engine
 
-    async def sync(self, client: Client, commands: Sequence[Command]) -> None:
-        """Diff ``commands`` against the last-synced state and push only the changes to Discord."""
+    async def sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:
+        """Diff ``commands`` against the last-synced state and push only the changes to Discord.
+
+        With ``allow_deletes`` False, ``plan.to_delete`` is skipped and one warning lists the skipped IDs.
+        """
         by_name = {command.name: command for command in commands}
         with Session(self._engine or default_engine) as session:
             plan = diff_global_commands(session, list(by_name.values()))
@@ -191,14 +197,21 @@ class DefaultCommandSyncer(LoggerMixin):
                 row.signature = command.signature()
                 session.add(row)
                 session.commit()
-            for discord_command_id in plan.to_delete:
-                result = await client.delete_global_command(discord_command_id)
-                if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning("Failed to delete command %r: %s", discord_command_id, result)  # pyright: ignore[reportArgumentType]
-                    continue
-                row = session.exec(
-                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
-                ).first()
-                if row is not None:
-                    session.delete(row)
-                    session.commit()
+            if allow_deletes:
+                await self._delete(client, session, plan.to_delete)
+            elif plan.to_delete:
+                self.logger.warning("Skipping deletes of Discord commands %s", plan.to_delete)  # pyright: ignore[reportArgumentType]
+
+    async def _delete(self, client: Client, session: Session, discord_command_ids: Sequence[str]) -> None:
+        """Delete ``discord_command_ids`` on Discord, dropping each synced row only if its delete succeeded."""
+        for discord_command_id in discord_command_ids:
+            result = await client.delete_global_command(discord_command_id)
+            if isinstance(result, ApiResponseError | RequestError):
+                self.logger.warning("Failed to delete command %r: %s", discord_command_id, result)  # pyright: ignore[reportArgumentType]
+                continue
+            row = session.exec(
+                select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+            ).first()
+            if row is not None:
+                session.delete(row)
+                session.commit()

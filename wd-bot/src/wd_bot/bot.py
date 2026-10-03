@@ -82,6 +82,7 @@ class Bot(LoggerMixin):
         self.extensions_package = extensions_package
         self.cogs = {}
         self._extensions: dict[str, ModuleType] = {}
+        self._failed_extensions: set[str] = set()
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
         self._commands: dict[str, tuple[Cog, Command]] = {}
         self._syncer: CommandSyncer = DefaultCommandSyncer()
@@ -133,8 +134,13 @@ class Bot(LoggerMixin):
         self._syncer = syncer
 
     async def sync_commands(self, client: Client) -> None:
-        """Push the registered commands to Discord via :attr:`syncer`."""
-        await self.syncer.sync(client, [command for _, command in self._commands.values()])
+        """Push the registered commands to Discord via :attr:`syncer`.
+
+        Deletes are suppressed while any extension failed to load, since its commands are then
+        missing from the registry and would otherwise be deleted from Discord.
+        """
+        commands = [command for _, command in self._commands.values()]
+        await self.syncer.sync(client, commands, allow_deletes=not self._failed_extensions)
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
         """Fan out a parsed gateway dispatch event to every registered listener for it."""
@@ -213,15 +219,18 @@ class Bot(LoggerMixin):
         if not spec:
             raise ExtensionError(extension, RuntimeError("Extension not found"))
         await self._load_from_module_spec(spec, extension)
+        self._failed_extensions.discard(extension)
 
     async def load_extensions(self) -> None:
         """Load all cogs from :attr:`extensions_package`."""
         self.logger.debug(t"Starting to load cogs from {self.extensions_package.__name__}")
+        self._failed_extensions.clear()
         async for extension in self.get_extensions():
             self.logger.info(t"Loading cog {extension}")
             try:
                 await self.load_extension(extension)
             except Exception:
+                self._failed_extensions.add(extension)
                 self.logger.exception(t"Failed to load cog {extension}")
             else:
                 self.logger.info(t"Loaded cog {extension}")
