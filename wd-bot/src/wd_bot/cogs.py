@@ -10,6 +10,7 @@ lazy from sqlmodel import Session
 lazy from wd_db.constants import engine
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
+lazy from wd_bot.commands import Command
 lazy from wd_bot.listener import listener
 
 
@@ -17,15 +18,13 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
     lazy from wd_bot.bot import Bot
-    lazy from wd_bot.commands import Command
 
 
 def command(name: str, description: str) -> Callable[[Callable[..., Awaitable[None]]], Command]:
     """Tag a Cog method as a chat-input application command, building a :class:`Command` for it."""
-    from wd_bot.commands import Command as CommandClass  # noqa: PLC0415
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
-        return CommandClass(func, name=name, description=description)
+        return Command(func, name=name, description=description)
 
     return decorator
 

@@ -11,6 +11,8 @@ lazy from typing import TYPE_CHECKING, Unpack
 
 lazy from wd_bot.cogs import BotArgs, Cog
 lazy from wd_discord.gateway import EventName
+
+# Command resolves option annotations from module globals at runtime, so User must be available here.
 lazy from wd_discord.resources.user import User  # noqa: TC002
 
 
@@ -28,16 +30,16 @@ class ExampleCog(Cog):
         super().__init__(**kwargs)
         self.received: list[DiscordModel] = []
 
-    @Cog.listener(EventName.MESSAGE_CREATE)  # type: ignore[reportUntypedFunctionDecorator]
+    @Cog.listener(EventName.MESSAGE_CREATE)
     async def on_message_create(self, message: Message) -> None:
         """Record a dispatched MESSAGE_CREATE event."""
         self.received.append(message)
 
-    @Cog.listener(EventName.GUILD_CREATE)  # type: ignore[reportUntypedFunctionDecorator]
+    @Cog.listener(EventName.GUILD_CREATE)
     async def on_guild_create(self, guild: GuildCreate) -> None:
         """Record a dispatched GUILD_CREATE event."""
         self.received.append(guild)
 
-    @Cog.command(name="ping-user", description="Ping a user (test fixture)")  # type: ignore[reportUntypedFunctionDecorator]
+    @Cog.command(name="ping-user", description="Ping a user (test fixture)")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
     async def ping_user(self, interaction: Interaction, user: User) -> None:
         """Ping a user."""
