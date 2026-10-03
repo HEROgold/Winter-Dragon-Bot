@@ -4,6 +4,7 @@ TODO: generic enough to belong in ``herogold`` rather than here - tracked upstre
 https://github.com/HEROgold/HeroPy/issues/33. Drop this module in favor of herogold's version
 once that lands.
 """
+
 from __future__ import annotations
 
 lazy from inspect import signature

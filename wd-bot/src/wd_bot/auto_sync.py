@@ -19,4 +19,3 @@ class SyncedCommand(SQLModel, table=True):
 
 class AutoSync(LoggerMixin):
     """Utility class to manage automatic syncing of command signatures."""
-
