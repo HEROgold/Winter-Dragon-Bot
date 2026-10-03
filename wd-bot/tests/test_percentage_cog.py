@@ -4,18 +4,18 @@ from __future__ import annotations
 
 lazy import random
 lazy from types import SimpleNamespace
+lazy from typing import TYPE_CHECKING
 lazy from unittest.mock import AsyncMock
 
-lazy from wd_discord.gateway.events import (
-    Interaction,
-    InteractionData,
-    InteractionDataOption,
-    InteractionType,
-    ResolvedData,
-)
+lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 lazy from wd_discord.resources.user import User
 
 lazy from winter_dragon.cogs.percentage import Love, build_love_embed, calculate_percentage
+
+
+if TYPE_CHECKING:
+    lazy from conftest import InteractionFactory
+    lazy from wd_discord.gateway.events import Interaction
 
 
 MAX_PERCENT = 100
@@ -62,23 +62,14 @@ def test_love_embed_falls_back_to_username() -> None:
     assert embed.fields[0].value == "Your compatibility with bob is 7%"
 
 
-def _interaction(asker: User | None) -> Interaction:
+def _interaction(make_interaction: InteractionFactory, asker: User | None) -> Interaction:
     """Build a /percentage interaction targeting user 2, optionally invoked by ``asker``."""
     target = User(id=2, username="bob", discriminator="0", global_name="Bobby")
-    return Interaction(
-        id="1",
-        application_id="9",
-        type=InteractionType.APPLICATION_COMMAND,
-        token="tok",  # noqa: S106
-        version=1,
+    return make_interaction(
+        "percentage",
+        options=[InteractionDataOption(name="user", type=6, value="2")],
+        resolved=ResolvedData(users={"2": target}),
         user=asker,
-        data=InteractionData(
-            id="10",
-            name="percentage",
-            type=1,
-            options=[InteractionDataOption(name="user", type=6, value="2")],
-            resolved=ResolvedData(users={"2": target}),
-        ),
     )
 
 
@@ -90,17 +81,17 @@ def _cog() -> tuple[Love, AsyncMock]:
     return cog, respond
 
 
-async def test_handler_replies_with_love_embed() -> None:
+async def test_handler_replies_with_love_embed(make_interaction: InteractionFactory) -> None:
     asker = User(id=1, username="alice", discriminator="0")
-    interaction = _interaction(asker)
+    interaction = _interaction(make_interaction, asker)
     cog, respond = _cog()
     await Love.love.invoke(cog, interaction)
     expected = build_love_embed(User(id=2, username="bob", discriminator="0", global_name="Bobby"), calculate_percentage(1, 2))
     respond.assert_awaited_once_with(interaction, embeds=[expected])
 
 
-async def test_handler_without_asker_replies_content_only() -> None:
-    interaction = _interaction(None)
+async def test_handler_without_asker_replies_content_only(make_interaction: InteractionFactory) -> None:
+    interaction = _interaction(make_interaction, None)
     cog, respond = _cog()
     await Love.love.invoke(cog, interaction)
     respond.assert_awaited_once()

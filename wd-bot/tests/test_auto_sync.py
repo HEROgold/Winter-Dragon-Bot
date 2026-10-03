@@ -6,9 +6,7 @@ lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
 lazy import pytest
-lazy from sqlalchemy import BigInteger
-lazy from sqlalchemy.ext.compiler import compiles
-lazy from sqlmodel import Session, SQLModel, create_engine
+lazy from sqlmodel import Session
 lazy from wd_bot.auto_sync import (
     CommandRecord,
     GlobalSyncedCommand,
@@ -21,15 +19,8 @@ lazy from wd_bot.auto_sync import (
 if TYPE_CHECKING:
     lazy from collections.abc import Generator
 
+    lazy from sqlalchemy import Engine
 
-@compiles(BigInteger, "sqlite")
-def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) -> str:
-    """Render BigInteger as INTEGER on sqlite.
-
-    wd_db's SQLModel.id is a BigInteger primary key, which sqlite only autoincrements when the
-    column type is exactly INTEGER. Postgres (production) is unaffected.
-    """
-    return "INTEGER"
 
 
 @dataclass
@@ -42,9 +33,7 @@ class FakeCommand:
 
 
 @pytest.fixture
-def session() -> Generator[Session]:
-    engine = create_engine("sqlite://")
-    SQLModel.metadata.create_all(engine)
+def session(engine: Engine) -> Generator[Session]:
     with Session(engine) as session:
         yield session
 

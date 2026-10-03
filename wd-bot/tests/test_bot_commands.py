@@ -12,14 +12,14 @@ from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
 from wd_bot.commands import CommandGroup
 from wd_discord.gateway import EventName
-from wd_discord.gateway.events import Interaction, InteractionData, InteractionDataOption, InteractionType
-from wd_discord.resources.user import User
+from wd_discord.gateway.events import Interaction, InteractionDataOption
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
 
     import pytest
+    from conftest import InteractionFactory
     from wd_bot.commands import Command
 
 
@@ -50,16 +50,7 @@ def _make_bot() -> Bot:
     return bot
 
 
-def _make_interaction(name: str) -> Interaction:
-    return Interaction(
-        id="1",
-        application_id="2",
-        type=InteractionType.APPLICATION_COMMAND,
-        token="tok",  # noqa: S106
-        version=1,
-        user=User.model_validate({"id": "3", "username": "asker", "discriminator": "0"}),
-        data=InteractionData(id="10", name=name, type=1),
-    )
+
 
 
 async def test_add_cog_registers_commands() -> None:
@@ -91,11 +82,11 @@ async def test_add_cog_warns_on_duplicate_command_name(capsys: pytest.CaptureFix
     assert "Duplicate command 'ping'" in capsys.readouterr().err
 
 
-async def test_dispatch_interaction_invokes_matching_command() -> None:
+async def test_dispatch_interaction_invokes_matching_command(make_interaction: InteractionFactory) -> None:
     CALLS.clear()
     bot = _make_bot()
     await bot.add_cog(_PingCog(bot=bot))
-    interaction = _make_interaction("ping")
+    interaction = make_interaction("ping")
     await bot._dispatch_interaction(interaction)
     assert [interaction] == CALLS
 
@@ -105,10 +96,10 @@ async def test_dispatch_interaction_is_registered_as_listener() -> None:
     assert bot._dispatch_interaction in bot._listeners[EventName.INTERACTION_CREATE.value]
 
 
-async def test_dispatch_unknown_command_is_ignored() -> None:
+async def test_dispatch_unknown_command_is_ignored(make_interaction: InteractionFactory) -> None:
     CALLS.clear()
     bot = _make_bot()
-    await bot._dispatch_interaction(_make_interaction("nope"))
+    await bot._dispatch_interaction(make_interaction("nope"))
     assert CALLS == []
 
 
@@ -218,25 +209,25 @@ class _BoomCog(Cog, auto_load=False):
         raise RuntimeError(msg)
 
 
-async def test_dispatch_sends_ephemeral_error_when_handler_raises() -> None:
+async def test_dispatch_sends_ephemeral_error_when_handler_raises(make_interaction: InteractionFactory) -> None:
     bot = _make_bot()
     respond = AsyncMock()
     bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
     await bot.add_cog(_BoomCog(bot=bot))
-    interaction = _make_interaction("boom")
+    interaction = make_interaction("boom")
 
     await bot._dispatch_interaction(interaction)
 
     respond.assert_awaited_once_with(interaction, content="Something went wrong running this command.", ephemeral=True)
 
 
-async def test_dispatch_sends_no_error_reply_on_success() -> None:
+async def test_dispatch_sends_no_error_reply_on_success(make_interaction: InteractionFactory) -> None:
     bot = _make_bot()
     respond = AsyncMock()
     bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
     await bot.add_cog(_PingCog(bot=bot))
 
-    await bot._dispatch_interaction(_make_interaction("ping"))
+    await bot._dispatch_interaction(make_interaction("ping"))
 
     respond.assert_not_awaited()
 
@@ -249,7 +240,7 @@ class _AdminTools(GroupCog, auto_load=False):
         CALLS.append(interaction)
 
 
-async def test_group_cog_registers_one_group_and_dispatches_subcommands() -> None:
+async def test_group_cog_registers_one_group_and_dispatches_subcommands(make_interaction: InteractionFactory) -> None:
     CALLS.clear()
     bot = _make_bot()
     cog = _AdminTools(bot=bot)
@@ -261,7 +252,7 @@ async def test_group_cog_registers_one_group_and_dispatches_subcommands() -> Non
     assert list(group.subcommands) == ["ping"]
     assert "ping" not in bot._commands
 
-    interaction = _make_interaction("admin-tools")
+    interaction = make_interaction("admin-tools")
     assert interaction.data is not None
     interaction.data.options = [InteractionDataOption(name="ping", type=1)]
     await bot._dispatch_interaction(interaction)

@@ -10,9 +10,7 @@ lazy from typing import TYPE_CHECKING
 lazy from wd_bot.commands import Command, CommandGroup
 lazy from wd_discord.gateway.events import (
     Interaction,
-    InteractionData,
     InteractionDataOption,
-    InteractionType,
     ResolvedData,
 )
 lazy from wd_discord.interactions import ApplicationCommandOptionType, InteractionContextType
@@ -24,6 +22,7 @@ if TYPE_CHECKING:
     lazy from pathlib import Path
 
     lazy import pytest
+    lazy from conftest import InteractionFactory
 
 
 def make_user(user_id: str, username: str) -> User:
@@ -51,7 +50,7 @@ def test_signature_reflects_the_wrapped_function() -> None:
     assert "user" in command.signature()
 
 
-async def test_invoke_resolves_user_option_from_resolved_data() -> None:
+async def test_invoke_resolves_user_option_from_resolved_data(make_interaction: InteractionFactory) -> None:
     """A USER option's snowflake is resolved to the full User from resolved data."""
     calls: list[tuple[object, object, dict[str, object]]] = []
 
@@ -61,20 +60,10 @@ async def test_invoke_resolves_user_option_from_resolved_data() -> None:
 
     command = Command(handler, name="percentage", description="d")
     target = make_user("4", "target")
-    interaction = Interaction(
-        id="1",
-        application_id="2",
-        type=InteractionType.APPLICATION_COMMAND,
-        token="tok",  # noqa: S106
-        version=1,
-        user=make_user("3", "asker"),
-        data=InteractionData(
-            id="10",
-            name="percentage",
-            type=1,
-            options=[InteractionDataOption(name="user", type=6, value="4")],
-            resolved=ResolvedData(users={"4": target}),
-        ),
+    interaction = make_interaction(
+        "percentage",
+        options=[InteractionDataOption(name="user", type=6, value="4")],
+        resolved=ResolvedData(users={"4": target}),
     )
 
     cog = object()
@@ -83,20 +72,10 @@ async def test_invoke_resolves_user_option_from_resolved_data() -> None:
     assert calls == [(cog, interaction, {"user": target})]
 
 
-def _interaction(options: list[InteractionDataOption], resolved: ResolvedData | None) -> Interaction:
-    """Build an application-command interaction with the given options."""
-    return Interaction(
-        id="1",
-        application_id="2",
-        type=InteractionType.APPLICATION_COMMAND,
-        token="tok",  # noqa: S106
-        version=1,
-        user=make_user("3", "asker"),
-        data=InteractionData(id="10", name="c", type=1, options=options, resolved=resolved),
-    )
 
 
-async def test_invoke_skips_unresolved_user_option() -> None:
+
+async def test_invoke_skips_unresolved_user_option(make_interaction: InteractionFactory) -> None:
     """An unresolvable user id is skipped, so the handler's default applies."""
     calls: list[User | None] = []
 
@@ -109,12 +88,15 @@ async def test_invoke_skips_unresolved_user_option() -> None:
     assert option.type is ApplicationCommandOptionType.USER
     assert option.required is False
 
-    interaction = _interaction([InteractionDataOption(name="user", type=6, value="4")], ResolvedData(users={}))
+    interaction = make_interaction(
+        options=[InteractionDataOption(name="user", type=6, value="4")],
+        resolved=ResolvedData(users={}),
+    )
     await command.invoke(object(), interaction)
     assert calls == [None]
 
 
-async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str], make_interaction: InteractionFactory) -> None:
     """An option the handler doesn't declare is skipped with a warning instead of raising TypeError."""
     calls: list[int] = []
 
@@ -123,9 +105,8 @@ async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str]) -
         calls.append(count)
 
     command = Command(handler, name="c", description="d")
-    interaction = _interaction(
-        [InteractionDataOption(name="count", type=4, value=3), InteractionDataOption(name="stale", type=3, value="x")],
-        None,
+    interaction = make_interaction(
+        options=[InteractionDataOption(name="count", type=4, value=3), InteractionDataOption(name="stale", type=3, value="x")],
     )
     assert await command.invoke(object(), interaction) is True
     assert calls == [3]
@@ -206,7 +187,7 @@ def test_params_carry_the_definition() -> None:
     assert params.contexts == [InteractionContextType.GUILD]
     assert [option.name for option in params.options or []] == [option.name for option in command.options()]
 
-async def test_invoke_reports_success_and_failure() -> None:
+async def test_invoke_reports_success_and_failure(make_interaction: InteractionFactory) -> None:
     """Invoking returns True when the handler completes and False (after logging) when it raises."""
 
     async def ok(self: object, interaction: Interaction) -> None:
@@ -217,7 +198,7 @@ async def test_invoke_reports_success_and_failure() -> None:
         msg = "handler broke"
         raise RuntimeError(msg)
 
-    interaction = _interaction([], None)
+    interaction = make_interaction()
     assert await Command(ok, name="c", description="d").invoke(object(), interaction) is True
     assert await Command(boom, name="c", description="d").invoke(object(), interaction) is False
 
@@ -251,7 +232,7 @@ def test_group_signature_changes_with_a_subcommand() -> None:
     assert before.signature() != after.signature()
 
 
-async def test_group_invoke_routes_nested_options_to_the_subcommand() -> None:
+async def test_group_invoke_routes_nested_options_to_the_subcommand(make_interaction: InteractionFactory) -> None:
     calls: list[int] = []
 
     async def add(self: object, interaction: Interaction, count: int) -> None:  # noqa: ARG001
@@ -259,11 +240,11 @@ async def test_group_invoke_routes_nested_options_to_the_subcommand() -> None:
 
     group = _group(Command(add, name="add", description="Add"))
     sub = InteractionDataOption(name="add", type=1, options=[InteractionDataOption(name="count", type=4, value=5)])
-    assert await group.invoke(object(), _interaction([sub], None)) is True
+    assert await group.invoke(object(), make_interaction(options=[sub])) is True
     assert calls == [5]
 
 
-async def test_group_invoke_rejects_unknown_subcommand() -> None:
+async def test_group_invoke_rejects_unknown_subcommand(make_interaction: InteractionFactory) -> None:
     group = _group(Command(_noop, name="list", description="List"))
     sub = InteractionDataOption(name="gone", type=1)
-    assert await group.invoke(object(), _interaction([sub], None)) is False
+    assert await group.invoke(object(), make_interaction(options=[sub])) is False
