@@ -45,7 +45,7 @@ class CogFlags(IntFlag):
     """Flag to indicate that the cog should be auto-reloaded on file changes."""
 
 
-default_flags = CogFlags(CogFlags.AutoLoad | CogFlags.AutoReload)
+default_flags = CogFlags.AutoLoad | CogFlags.AutoReload
 
 
 class Cog(LoggerMixin):
