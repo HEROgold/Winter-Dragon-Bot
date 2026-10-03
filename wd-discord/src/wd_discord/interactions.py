@@ -173,6 +173,10 @@ class RegisteredCommand(DiscordModel):
     default_member_permissions: PermissionsField | None = None
     dm_permission: bool = True
     nsfw: bool = False
+    type: int | None = None
+    contexts: list[int] | None = None
+    integration_types: list[int] | None = None
+    default_permission: bool | None = None
 
 
 class CommandHandlerType(Enum):

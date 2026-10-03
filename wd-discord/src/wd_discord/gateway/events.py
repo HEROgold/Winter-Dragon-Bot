@@ -120,6 +120,16 @@ class Interaction(DiscordModel):
     user: User | None = None
     token: str
     version: int
+    # Sent on every interaction; declared (loosely typed) so they don't show up as unknown fields.
+    app_permissions: str | None = None
+    locale: str | None = None
+    guild_locale: str | None = None
+    entitlements: list[object] | None = None
+    authorizing_integration_owners: dict[str, object] | None = None
+    context: int | None = None
+    attachment_size_limit: int | None = None
+    guild: dict[str, object] | None = None
+    channel: dict[str, object] | None = None
 
     @property
     def invoking_user(self) -> User | None:
