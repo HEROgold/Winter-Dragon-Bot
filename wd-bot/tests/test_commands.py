@@ -69,3 +69,44 @@ async def test_invoke_resolves_user_option_from_resolved_data() -> None:
     await command.invoke(cog, interaction)
 
     assert calls == [(cog, interaction, {"user": target})]
+
+
+def _interaction(options: list[InteractionDataOption], resolved: ResolvedData | None) -> Interaction:
+    """Build an application-command interaction with the given options."""
+    return Interaction(
+        id="1",
+        application_id="2",
+        type=InteractionType.APPLICATION_COMMAND,
+        token="tok",  # noqa: S106
+        version=1,
+        user=make_user("3", "asker"),
+        data=InteractionData(id="10", name="c", type=1, options=options, resolved=resolved),
+    )
+
+
+async def test_invoke_skips_unresolved_user_option() -> None:
+    """An unresolvable user id is skipped, so the handler's default applies."""
+    calls: list[User | None] = []
+
+    async def handler(self: object, interaction: Interaction, user: User | None = None) -> None:  # noqa: ARG001
+        """Record the user."""
+        calls.append(user)
+
+    command = Command(handler, name="c", description="d")
+    option = next(command.options())
+    assert option.type is ApplicationCommandOptionType.USER
+    assert option.required is False
+
+    interaction = _interaction([InteractionDataOption(name="user", type=6, value="4")], ResolvedData(users={}))
+    await command.invoke(object(), interaction)
+    assert calls == [None]
+
+
+def test_command_tolerates_unimportable_non_option_annotations() -> None:
+    """Annotations of self/interaction that cannot be resolved at runtime are ignored."""
+
+    async def handler(self: object, interaction: NotImported, count: int) -> None:  # noqa: F821
+        """Handle."""
+
+    command = Command(handler, name="c", description="d")
+    assert [o.name for o in command.options()] == ["count"]

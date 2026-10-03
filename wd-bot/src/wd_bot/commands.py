@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+lazy import annotationlib
 lazy from inspect import Parameter
 lazy from inspect import signature as inspect_signature
-lazy from typing import TYPE_CHECKING, Self
+lazy from types import NoneType, UnionType
+lazy from typing import TYPE_CHECKING, Self, get_args
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord.interactions import ApplicationCommandOptionType, CommandOption
@@ -43,14 +45,30 @@ class Command(LoggerMixin):
         self.description = description
         self._param_types: dict[str, type] = {}
         self._param_required: dict[str, bool] = {}
-        for param_name, param in inspect_signature(func, eval_str=True).parameters.items():
+        annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
+        for param_name, param in inspect_signature(func).parameters.items():
             if param_name in ("self", "interaction"):
                 continue
-            if param.annotation not in _OPTION_TYPE_MAP:
-                msg = f"Command {name!r}: unsupported option type {param.annotation!r} for parameter {param_name!r}"
+            annotation = self._resolve(annotations.get(param_name, Parameter.empty), func)
+            required = param.default is Parameter.empty
+            if isinstance(annotation, UnionType) and NoneType in get_args(annotation):
+                non_none = [arg for arg in get_args(annotation) if arg is not NoneType]
+                annotation = non_none[0] if len(non_none) == 1 else annotation
+                required = False
+            if annotation not in _OPTION_TYPE_MAP:
+                msg = f"Command {name!r}: unsupported option type {annotation!r} for parameter {param_name!r}"
                 raise TypeError(msg)
-            self._param_types[param_name] = param.annotation
-            self._param_required[param_name] = param.default is Parameter.empty
+            self._param_types[param_name] = annotation
+            self._param_required[param_name] = required
+
+    @staticmethod
+    def _resolve(annotation: object, func: Callable[..., object]) -> object:
+        """Resolve a string or forward-ref annotation of ``func`` to a real type, if possible."""
+        if isinstance(annotation, str):
+            annotation = annotationlib.ForwardRef(annotation, owner=func)
+        if isinstance(annotation, annotationlib.ForwardRef):
+            return annotation.evaluate()
+        return annotation
 
     def options(self) -> Generator[CommandOption]:
         """Yield this command's Discord option definitions, derived from its handler's parameters."""
@@ -74,8 +92,11 @@ class Command(LoggerMixin):
         resolved = data.resolved if data else None
         for option in options:
             if self._param_types.get(option.name) is User:
-                user_id = str(option.value)
-                kwargs[option.name] = resolved.users.get(user_id) if resolved and resolved.users else None
+                user = resolved.users.get(str(option.value)) if resolved and resolved.users else None
+                if user is None:
+                    self.logger.warning("Unresolved user %r for option %r in command %r", option.value, option.name, self.name)  # pyright: ignore[reportArgumentType]
+                    continue
+                kwargs[option.name] = user
             else:
                 kwargs[option.name] = option.value
         try:
