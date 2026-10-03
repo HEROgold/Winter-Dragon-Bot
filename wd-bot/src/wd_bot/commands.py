@@ -1,8 +1,9 @@
-"""wd_bot.commands.Command: encapsulates one application command's definition and dispatch."""
+"""Application commands: the shared :class:`AppCommand` base, plain :class:`Command` and :class:`CommandGroup`."""
 
 from __future__ import annotations
 
 lazy import annotationlib
+lazy from abc import ABC, abstractmethod
 lazy from inspect import Parameter
 lazy from inspect import signature as inspect_signature
 lazy from types import LazyImportType, NoneType, UnionType
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
     lazy from wd_discord.gateway.events import Interaction, InteractionDataOption
+    lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
     lazy from wd_bot.cogs import Cog
@@ -32,7 +34,60 @@ _OPTION_TYPE_MAP: dict[type, ApplicationCommandOptionType] = {
 }
 
 
-class Command(LoggerMixin):
+class AppCommand(LoggerMixin, ABC):
+    """What every application command shares: its name, description and where Discord lets it be used.
+
+    Subclasses supply the options, the rest of the signature and the dispatch.
+    """
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        description: str,
+        default_member_permissions: Permissions | None = None,
+        contexts: Iterable[InteractionContextType] | None = None,
+    ) -> None:
+        """Set the definition Discord sees.
+
+        ``default_member_permissions`` is the permission bitfield Discord requires by default to use the
+        command; ``contexts`` limits where it shows up (``None`` keeps Discord's default).
+        """
+        self.name = name
+        self.description = description
+        self.default_member_permissions = default_member_permissions
+        self.contexts = None if contexts is None else list(contexts)
+
+    @abstractmethod
+    def options(self) -> Generator[ApplicationCommandOption]:
+        """Yield this command's Discord option definitions."""
+
+    @abstractmethod
+    def _own_signature(self) -> Generator[str]:
+        """Yield the signature parts specific to the subclass."""
+
+    @abstractmethod
+    async def invoke(self, cog: Cog, interaction: Interaction) -> bool:
+        """Handle ``interaction``; return ``False`` if the handler failed or nothing could be dispatched."""
+
+    def signature(self) -> str:
+        """Return the signature of the full registered definition, used to detect drift for sync."""
+        permissions = None if self.default_member_permissions is None else int(self.default_member_permissions)
+        contexts = None if self.contexts is None else [int(context) for context in self.contexts]
+        return " | ".join((self.description, str(permissions), str(contexts), *self._own_signature()))
+
+    def params(self) -> ApplicationCommandParams:
+        """Return the create/edit request body for this command."""
+        return ApplicationCommandParams(
+            name=self.name,
+            description=self.description,
+            options=list(self.options()),
+            default_member_permissions=self.default_member_permissions,
+            contexts=self.contexts,
+        )
+
+
+class Command(AppCommand):
     """Encapsulates one chat-input application command: its Discord definition and its handler.
 
     Built by :meth:`wd_bot.cogs.Cog.command`. ``func``'s parameters (after ``self``/``interaction``)
@@ -46,15 +101,16 @@ class Command(LoggerMixin):
         name: str,
         description: str,
         default_member_permissions: Permissions | None = None,
+        contexts: Iterable[InteractionContextType] | None = None,
     ) -> None:
-        """Wrap ``func`` as a command named ``name`` with the given ``description``.
-
-        ``default_member_permissions`` is the permission bitfield Discord requires by default to use it.
-        """
+        """Wrap ``func`` as a command named ``name`` with the given ``description``."""
+        super().__init__(
+            name=name,
+            description=description,
+            default_member_permissions=default_member_permissions,
+            contexts=contexts,
+        )
         self.func = func
-        self.name = name
-        self.description = description
-        self.default_member_permissions = default_member_permissions
         self._param_types: dict[str, type] = {}
         self._param_required: dict[str, bool] = {}
         annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
@@ -98,22 +154,9 @@ class Command(LoggerMixin):
                 required=self._param_required[param_name],
             )
 
-    def params(self) -> ApplicationCommandParams:
-        """Return the create/edit request body for this command."""
-        return ApplicationCommandParams(
-            name=self.name,
-            description=self.description,
-            options=list(self.options()),
-            default_member_permissions=self.default_member_permissions,
-        )
-
-    def signature(self) -> str:
-        """Return the signature of the full registered definition, used to detect drift for sync.
-
-        Covers the handler's parameters, the description and the default member permissions.
-        """
-        permissions = None if self.default_member_permissions is None else int(self.default_member_permissions)
-        return " | ".join((command_signature(self.func), self.description, str(permissions)))
+    def _own_signature(self) -> Generator[str]:
+        """Yield the handler's parameter signature."""
+        yield command_signature(self.func)
 
     async def invoke(
         self,
@@ -156,12 +199,12 @@ class Command(LoggerMixin):
         return self
 
 
-class CommandGroup(LoggerMixin):
+class CommandGroup(AppCommand):
     """A chat-input command whose options are subcommands, built from a :class:`~wd_bot.cogs.GroupCog`.
 
     Discord registers the group as one command (``/name sub ...``), so the group is what gets synced
-    and dispatched. Only the group carries ``default_member_permissions``; Discord has no per-subcommand
-    permissions.
+    and dispatched. Only the group carries ``default_member_permissions`` and ``contexts``; Discord has
+    neither per subcommand.
     """
 
     def __init__(
@@ -171,16 +214,20 @@ class CommandGroup(LoggerMixin):
         description: str,
         subcommands: Iterable[Command],
         default_member_permissions: Permissions | None = None,
+        contexts: Iterable[InteractionContextType] | None = None,
     ) -> None:
         """Group ``subcommands`` under the command ``name``."""
-        self.name = name
-        self.description = description
-        self.default_member_permissions = default_member_permissions
+        super().__init__(
+            name=name,
+            description=description,
+            default_member_permissions=default_member_permissions,
+            contexts=contexts,
+        )
         self.subcommands = {subcommand.name: subcommand for subcommand in subcommands}
         for subcommand in self.subcommands.values():
-            if subcommand.default_member_permissions is not None:
+            if subcommand.default_member_permissions is not None or subcommand.contexts is not None:
                 self.logger.warning(
-                    t"Subcommand '{name} {subcommand.name}' sets default_member_permissions; Discord ignores it",
+                    t"Subcommand '{name} {subcommand.name}' sets default_member_permissions or contexts; Discord ignores them",
                 )
 
     def options(self) -> Generator[ApplicationCommandOption]:
@@ -193,20 +240,10 @@ class CommandGroup(LoggerMixin):
                 options=list(subcommand.options()) or None,
             )
 
-    def params(self) -> ApplicationCommandParams:
-        """Return the create/edit request body for this command."""
-        return ApplicationCommandParams(
-            name=self.name,
-            description=self.description,
-            options=list(self.options()),
-            default_member_permissions=self.default_member_permissions,
-        )
-
-    def signature(self) -> str:
-        """Return the signature of the whole group, covering every subcommand, used to detect drift for sync."""
-        permissions = None if self.default_member_permissions is None else int(self.default_member_permissions)
-        subcommands = (f"{name}: {self.subcommands[name].signature()}" for name in sorted(self.subcommands))
-        return " | ".join((self.description, str(permissions), *subcommands))
+    def _own_signature(self) -> Generator[str]:
+        """Yield each subcommand's signature, in name order."""
+        for name in sorted(self.subcommands):
+            yield f"{name}: {self.subcommands[name].signature()}"
 
     async def invoke(self, cog: Cog, interaction: Interaction) -> bool:
         """Route ``interaction`` to the chosen subcommand, passing it that subcommand's option values.
@@ -220,7 +257,3 @@ class CommandGroup(LoggerMixin):
             self.logger.warning(t"No known subcommand chosen for command group '{self.name}'")
             return False
         return await subcommand.invoke(cog, interaction, chosen.options or [])
-
-
-type AppCommand = Command | CommandGroup
-"""Anything registered as one top-level Discord command: a plain command or a subcommand group."""

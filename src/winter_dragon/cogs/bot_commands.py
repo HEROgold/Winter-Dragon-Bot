@@ -9,6 +9,7 @@ lazy from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.constants import engine
 lazy from wd_discord.embed import Embed
+lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permissions import Permissions
 
 
@@ -30,16 +31,18 @@ def describe_sync_status(session: Session, commands: Sequence[tuple[str, str]]) 
         yield f"{name}: {state}"
 
 
-GUILD_ONLY_REFUSAL = "This command can only be used in a server."
-
-
 class BotCommands(
     GroupCog,
     name="bot-commands",
     description="Inspect and push the bot's application commands",
     default_member_permissions=Permissions.MANAGE_GUILD,
+    contexts=[InteractionContextType.GUILD],
 ):
-    """Admin ``/bot-commands`` group for inspecting/forcing application-command sync."""
+    """Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
+
+    Guild-only: Discord doesn't enforce ``default_member_permissions`` in DMs, so the group must not
+    show up there.
+    """
 
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
         name="list",
@@ -47,10 +50,6 @@ class BotCommands(
     )
     async def list_commands(self, interaction: Interaction) -> None:
         """Show every registered command's synced/pending state."""
-        if interaction.guild_id is None:
-            # default_member_permissions isn't enforced in DMs, so the gate only holds inside a guild.
-            await self.bot.client.create_interaction_response(interaction, content=GUILD_ONLY_REFUSAL)
-            return
         commands = [(command.name, command.signature()) for command in self.bot.commands]
         with Session(engine) as session:
             lines = list(describe_sync_status(session, commands))
@@ -63,10 +62,6 @@ class BotCommands(
     )
     async def resync(self, interaction: Interaction) -> None:
         """Acknowledge within Discord's 3s window, then force the diff-and-push sync."""
-        if interaction.guild_id is None:
-            # default_member_permissions isn't enforced in DMs, so the gate only holds inside a guild.
-            await self.bot.client.create_interaction_response(interaction, content=GUILD_ONLY_REFUSAL)
-            return
         await self.bot.client.create_interaction_response(interaction, content="Resyncing commands…")
         await self.bot.sync_commands(self.bot.client)
         self.logger.info(t"Command resync finished")

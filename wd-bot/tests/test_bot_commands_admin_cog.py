@@ -12,6 +12,7 @@ lazy from sqlalchemy.pool import StaticPool
 lazy from sqlmodel import Session, SQLModel, create_engine
 lazy from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
 lazy from wd_bot.commands import Command, CommandGroup
+lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permissions import Permissions
 
 lazy import winter_dragon.cogs.bot_commands as module
@@ -109,20 +110,10 @@ async def test_resync_responds_before_syncing() -> None:
     client.create_interaction_response.assert_awaited_once_with(interaction, content="Resyncing commands…")
 
 
-async def test_handlers_refuse_outside_a_guild() -> None:
-    for command in (BotCommands.list_commands, BotCommands.resync):
-        respond = AsyncMock()
-        sync = AsyncMock()
-        cog = BotCommands.__new__(BotCommands)
-        client = SimpleNamespace(create_interaction_response=respond)
-        cog.bot = SimpleNamespace(commands=iter(()), client=client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
-        interaction = MagicMock()
-        interaction.guild_id = None
-
-        await command.invoke(cog, interaction)
-
-        respond.assert_awaited_once_with(interaction, content=module.GUILD_ONLY_REFUSAL)
-        sync.assert_not_awaited()
+def test_group_is_guild_only() -> None:
+    """Discord doesn't enforce default_member_permissions in DMs, so the admin group must not show up there."""
+    (group,) = BotCommands.app_commands()
+    assert group.params().contexts == [InteractionContextType.GUILD]
 
 
 def test_resync_description() -> None:

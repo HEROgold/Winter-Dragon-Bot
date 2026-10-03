@@ -15,8 +15,9 @@ lazy from wd_bot.listener import listener
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator
+    lazy from collections.abc import Awaitable, Callable, Generator, Iterable
 
+    lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
     lazy from wd_bot.bot import Bot
@@ -27,6 +28,7 @@ def command(
     name: str,
     description: str,
     default_member_permissions: Permissions | None = None,
+    contexts: Iterable[InteractionContextType] | None = None,
 ) -> Callable[[Callable[..., Awaitable[None]]], Command]:
     """Tag a Cog method as a chat-input application command, building a :class:`Command` for it."""
 
@@ -36,6 +38,7 @@ def command(
             name=name,
             description=description,
             default_member_permissions=default_member_permissions,
+            contexts=contexts,
         )
 
     return decorator
@@ -137,19 +140,22 @@ class GroupCog(Cog):
         class BotCommands(GroupCog, name="bot-commands", description="...", default_member_permissions=...):
 
     ``name`` defaults to the class name in kebab-case and ``description`` to the first line of the class
-    docstring. ``default_member_permissions`` applies to the whole group (Discord has none per subcommand).
+    docstring. ``default_member_permissions`` and ``contexts`` apply to the whole group (Discord has neither
+    per subcommand).
     """
 
     group_name: ClassVar[str]
     group_description: ClassVar[str]
     group_default_member_permissions: ClassVar[Permissions | None] = None
+    group_contexts: ClassVar[list[InteractionContextType] | None] = None
 
-    def __init_subclass__(
+    def __init_subclass__(  # noqa: PLR0913 - each keyword is a class-level group setting
         cls: type[Self],
         *,
         name: str | None = None,
         description: str | None = None,
         default_member_permissions: Permissions | None = None,
+        contexts: Iterable[InteractionContextType] | None = None,
         auto_load: bool = True,
         flags: CogFlags | None = None,
     ) -> None:
@@ -158,6 +164,7 @@ class GroupCog(Cog):
         cls.group_name = name or _kebab_case(cls.__name__)
         cls.group_description = description or (cls.__doc__ or cls.__name__).strip().splitlines()[0]
         cls.group_default_member_permissions = default_member_permissions
+        cls.group_contexts = None if contexts is None else list(contexts)
 
     @classmethod
     def app_commands(cls) -> Generator[AppCommand]:
@@ -167,6 +174,7 @@ class GroupCog(Cog):
             description=cls.group_description,
             subcommands=cls.commands(),
             default_member_permissions=cls.group_default_member_permissions,
+            contexts=cls.group_contexts,
         )
 
 

@@ -15,7 +15,7 @@ lazy from wd_discord.gateway.events import (
     InteractionType,
     ResolvedData,
 )
-lazy from wd_discord.interactions import ApplicationCommandOptionType
+lazy from wd_discord.interactions import ApplicationCommandOptionType, InteractionContextType
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.user import User
 
@@ -184,6 +184,27 @@ def test_signature_changes_with_default_member_permissions() -> None:
     assert gated.default_member_permissions == Permissions.MANAGE_GUILD
     assert plain.signature() != gated.signature()
 
+
+
+def test_signature_changes_with_contexts() -> None:
+    anywhere = Command(percentage, name="percentage", description="d")
+    guild_only = Command(percentage, name="percentage", description="d", contexts=[InteractionContextType.GUILD])
+    assert anywhere.signature() != guild_only.signature()
+
+
+def test_params_carry_the_definition() -> None:
+    command = Command(
+        percentage,
+        name="percentage",
+        description="d",
+        default_member_permissions=Permissions.MANAGE_GUILD,
+        contexts=[InteractionContextType.GUILD],
+    )
+    params = command.params()
+    assert params.name == "percentage"
+    assert params.default_member_permissions == Permissions.MANAGE_GUILD
+    assert params.contexts == [InteractionContextType.GUILD]
+    assert [option.name for option in params.options or []] == [option.name for option in command.options()]
 
 async def test_invoke_reports_success_and_failure() -> None:
     """Invoking returns True when the handler completes and False (after logging) when it raises."""
