@@ -41,6 +41,10 @@ if TYPE_CHECKING:
     lazy from wd_bot.auto_sync import CommandSyncer
 
 
+COMMAND_ERROR_REPLY = "Something went wrong running this command."
+"""Ephemeral reply sent when a command handler raises."""
+
+
 class BotConfig:
     """Basic bot configuration values."""
 
@@ -113,7 +117,10 @@ class Bot(LoggerMixin):
         await cog.load()
 
     async def _dispatch_interaction(self, interaction: Interaction) -> None:
-        """Route an APPLICATION_COMMAND interaction to its registered Command, if any."""
+        """Route an APPLICATION_COMMAND interaction to its registered Command, if any.
+
+        If the handler raised, the user gets an ephemeral error reply, so an interaction never goes unanswered.
+        """
         if interaction.type is not InteractionType.APPLICATION_COMMAND or interaction.data is None:
             return
         entry = self._commands.get(interaction.data.name)
@@ -121,7 +128,8 @@ class Bot(LoggerMixin):
             self.logger.warning(t"No registered command for interaction {interaction.data.name:r}")
             return
         cog, command = entry
-        await command.invoke(cog, interaction)
+        if not await command.invoke(cog, interaction):
+            await self.client.create_interaction_response(interaction, content=COMMAND_ERROR_REPLY, ephemeral=True)
 
     @property
     def syncer(self) -> CommandSyncer:

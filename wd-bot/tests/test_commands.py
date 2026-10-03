@@ -162,3 +162,19 @@ def test_signature_changes_with_default_member_permissions() -> None:
     assert plain.default_member_permissions is None
     assert gated.default_member_permissions == Permissions.MANAGE_GUILD
     assert plain.signature() != gated.signature()
+
+
+async def test_invoke_reports_success_and_failure() -> None:
+    """Invoking returns True when the handler completes and False (after logging) when it raises."""
+
+    async def ok(self: object, interaction: Interaction) -> None:
+        """Succeed."""
+
+    async def boom(self: object, interaction: Interaction) -> None:  # noqa: ARG001
+        """Fail."""
+        msg = "handler broke"
+        raise RuntimeError(msg)
+
+    interaction = _interaction([], None)
+    assert await Command(ok, name="c", description="d").invoke(object(), interaction) is True
+    assert await Command(boom, name="c", description="d").invoke(object(), interaction) is False

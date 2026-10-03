@@ -68,6 +68,8 @@ if TYPE_CHECKING:
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
 DEFAULT_USER_AGENT_VERSION = "0.1.0"
+EPHEMERAL_FLAG = 1 << 6
+"""Message flag making an interaction reply visible only to the invoking user (64)."""
 
 type NetworkError = ApiResponseError | RequestError
 type RequestResult = Response | NetworkError
@@ -375,13 +377,19 @@ class Client(LoggerMixin):
         *,
         content: str | None = None,
         embeds: list[Embed] | None = None,
+        ephemeral: bool = False,
     ) -> RequestResult:
-        """POST /interactions/{id}/{token}/callback - respond to an interaction (type 4: message with source)."""
+        """POST /interactions/{id}/{token}/callback - respond to an interaction (type 4: message with source).
+
+        ``ephemeral`` makes the reply visible only to the invoking user (message flag 64).
+        """
         data: dict[str, Any] = {}
         if content is not None:
             data["content"] = content
         if embeds is not None:
             data["embeds"] = [embed.model_dump(mode="json", exclude_none=True) for embed in embeds]
+        if ephemeral:
+            data["flags"] = EPHEMERAL_FLAG
         payload = {"type": 4, "data": data}
         return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
 

@@ -105,8 +105,11 @@ class Command(LoggerMixin):
         permissions = None if self.default_member_permissions is None else int(self.default_member_permissions)
         return " | ".join((command_signature(self.func), self.description, str(permissions)))
 
-    async def invoke(self, cog: Cog, interaction: Interaction) -> None:
-        """Resolve ``interaction``'s option values into kwargs and call the wrapped handler."""
+    async def invoke(self, cog: Cog, interaction: Interaction) -> bool:
+        """Resolve ``interaction``'s option values into kwargs and call the wrapped handler.
+
+        Returns ``True`` if the handler completed, ``False`` if it raised (the exception is logged).
+        """
         kwargs: dict[str, object] = {}
         data = interaction.data
         options = data.options if data else []
@@ -124,6 +127,8 @@ class Command(LoggerMixin):
             await self.func(cog, interaction, **kwargs)
         except Exception:
             self.logger.exception(t"Unhandled exception in command '{self.name}'")
+            return False
+        return True
 
     def __get__(self, instance: object, owner: type) -> Self:
         """Allow a Command to be accessed as a plain attribute on a Cog instance without binding it like a method."""

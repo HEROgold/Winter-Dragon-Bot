@@ -193,3 +193,33 @@ async def test_discovery_failure_disables_deletes() -> None:
     await bot.sync_commands(object())  # type: ignore[arg-type]
     assert fake.allow_deletes is False
     assert bot._failed_extensions == {"no_path_package"}
+
+
+class _BoomCog(Cog, auto_load=False):
+    @Cog.command(name="boom", description="d")
+    async def boom(self, interaction: Interaction) -> None:  # noqa: ARG002
+        msg = "handler broke"
+        raise RuntimeError(msg)
+
+
+async def test_dispatch_sends_ephemeral_error_when_handler_raises() -> None:
+    bot = _make_bot()
+    respond = AsyncMock()
+    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+    await bot.add_cog(_BoomCog(bot=bot))
+    interaction = _make_interaction("boom")
+
+    await bot._dispatch_interaction(interaction)
+
+    respond.assert_awaited_once_with(interaction, content="Something went wrong running this command.", ephemeral=True)
+
+
+async def test_dispatch_sends_no_error_reply_on_success() -> None:
+    bot = _make_bot()
+    respond = AsyncMock()
+    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+    await bot.add_cog(_PingCog(bot=bot))
+
+    await bot._dispatch_interaction(_make_interaction("ping"))
+
+    respond.assert_not_awaited()
