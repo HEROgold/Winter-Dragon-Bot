@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     lazy from sqlalchemy import Engine
     lazy from wd_discord import Client
 
-    lazy from wd_bot.commands import Command
+    lazy from wd_bot.commands import AppCommand
 
 
 UNKNOWN_COMMAND_CODES = frozenset({404, 10063})
@@ -158,7 +158,7 @@ def diff_guild_commands(session: Session, guild_id: int, commands: Sequence[Comm
 class CommandSyncer(Protocol):
     """Strategy for reconciling the bot's registered commands with Discord."""
 
-    async def sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:
+    async def sync(self, client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool = True) -> None:
         """Push ``commands`` to Discord through ``client``, doing only the work needed.
 
         With ``allow_deletes`` False, commands missing from ``commands`` are left on Discord.
@@ -186,7 +186,7 @@ class DefaultCommandSyncer(LoggerMixin):
         SQLModel.metadata.create_all(engine, tables=tables)
         self._tables_ready = True
 
-    async def sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:
+    async def sync(self, client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool = True) -> None:
         """Diff ``commands`` against the last-synced state and push only the changes to Discord.
 
         With ``allow_deletes`` False, ``plan.to_delete`` is skipped and one warning lists the skipped IDs.
@@ -197,7 +197,7 @@ class DefaultCommandSyncer(LoggerMixin):
         async with self._lock:
             await self._sync(client, commands, allow_deletes=allow_deletes)
 
-    async def _sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool) -> None:
+    async def _sync(self, client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool) -> None:
         """Body of :meth:`sync`, run while holding the sync lock."""
         by_name = {command.name: command for command in commands}
         engine = self._engine or default_engine
@@ -220,7 +220,7 @@ class DefaultCommandSyncer(LoggerMixin):
             else:
                 await self._delete(client, session, plan.to_delete)
 
-    async def _create(self, client: Client, session: Session, command: Command) -> None:
+    async def _create(self, client: Client, session: Session, command: AppCommand) -> None:
         """Create ``command`` on Discord and store its synced row, unless the create failed."""
         result = await client.create_global_command(
             command.name,
@@ -243,7 +243,7 @@ class DefaultCommandSyncer(LoggerMixin):
         )
         session.commit()
 
-    async def _edit(self, client: Client, session: Session, command: Command, discord_command_id: str) -> None:
+    async def _edit(self, client: Client, session: Session, command: AppCommand, discord_command_id: str) -> None:
         """Edit ``command`` on Discord and update its synced row's signature.
 
         If Discord no longer knows the command (deleted out-of-band), the stale row is dropped and

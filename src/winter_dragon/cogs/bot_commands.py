@@ -33,13 +33,17 @@ def describe_sync_status(session: Session, commands: Sequence[tuple[str, str]]) 
 GUILD_ONLY_REFUSAL = "This command can only be used in a server."
 
 
-class BotCommands(GroupCog):
-    """Admin commands for inspecting/forcing application-command sync."""
+class BotCommands(
+    GroupCog,
+    name="bot-commands",
+    description="Inspect and push the bot's application commands",
+    default_member_permissions=Permissions.MANAGE_GUILD,
+):
+    """Admin ``/bot-commands`` group for inspecting/forcing application-command sync."""
 
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
-        name="bot-commands-list",
+        name="list",
         description="List registered commands and their sync status",
-        default_member_permissions=Permissions.MANAGE_GUILD,
     )
     async def list_commands(self, interaction: Interaction) -> None:
         """Show every registered command's synced/pending state."""
@@ -54,9 +58,8 @@ class BotCommands(GroupCog):
         await self.bot.client.create_interaction_response(interaction, embeds=[embed])
 
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
-        name="bot-commands-resync",
+        name="resync",
         description="Push pending command changes to Discord",
-        default_member_permissions=Permissions.MANAGE_GUILD,
     )
     async def resync(self, interaction: Interaction) -> None:
         """Acknowledge within Discord's 3s window, then force the diff-and-push sync."""

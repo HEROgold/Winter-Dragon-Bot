@@ -11,7 +11,7 @@ lazy from sqlalchemy.ext.compiler import compiles
 lazy from sqlalchemy.pool import StaticPool
 lazy from sqlmodel import Session, SQLModel, create_engine
 lazy from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
-lazy from wd_bot.commands import Command
+lazy from wd_bot.commands import Command, CommandGroup
 lazy from wd_discord.permissions import Permissions
 
 lazy import winter_dragon.cogs.bot_commands as module
@@ -68,10 +68,13 @@ def test_describe_sync_status_reports_stale_signature_as_pending() -> None:
         assert list(describe_sync_status(session, [("percentage", "new")])) == ["percentage: pending"]
 
 
-def test_commands_are_gated_to_manage_guild() -> None:
-    for command in (BotCommands.list_commands, BotCommands.resync):
-        assert isinstance(command, Command)
-        assert command.default_member_permissions == Permissions.MANAGE_GUILD
+def test_group_is_gated_to_manage_guild() -> None:
+    (group,) = BotCommands.app_commands()
+    assert isinstance(group, CommandGroup)
+    assert group.name == "bot-commands"
+    assert group.default_member_permissions == Permissions.MANAGE_GUILD
+    assert sorted(group.subcommands) == ["list", "resync"]
+    assert all(command.default_member_permissions is None for command in group.subcommands.values())
 
 
 async def test_list_commands_replies_with_status_embed(monkeypatch: object) -> None:

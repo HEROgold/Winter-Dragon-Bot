@@ -24,7 +24,6 @@ lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
 lazy from wd_bot.auto_sync import DefaultCommandSyncer
-lazy from wd_bot.commands import Command
 
 lazy from .cogs import Cog, GroupCog
 
@@ -39,6 +38,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.models import DiscordModel
 
     lazy from wd_bot.auto_sync import CommandSyncer
+    lazy from wd_bot.commands import AppCommand
 
 
 COMMAND_ERROR_REPLY = "Something went wrong running this command."
@@ -88,7 +88,7 @@ class Bot(LoggerMixin):
         self._extensions: dict[str, ModuleType] = {}
         self._failed_extensions: set[str] = set()
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
-        self._commands: dict[str, tuple[Cog, Command]] = {}
+        self._commands: dict[str, tuple[Cog, AppCommand]] = {}
         self._syncer: CommandSyncer = DefaultCommandSyncer()
         self._listeners.setdefault(EventName.INTERACTION_CREATE.value, []).append(self._dispatch_interaction)
 
@@ -110,14 +110,15 @@ class Bot(LoggerMixin):
             event = getattr(member, "__listener_event__", None)
             if event:
                 self._listeners.setdefault(event, []).append(member)
-        for attr_name in dir(type(cog)):
-            attr = getattr(type(cog), attr_name)
-            if isinstance(attr, Command):
-                self._commands[attr.name] = (cog, attr)
+        for command in cog.app_commands():
+            if (existing := self._commands.get(command.name)) is not None and existing[0] is not cog:
+                previous = existing[0].__cog_name__
+                self.logger.warning(t"Duplicate command '{command.name}': cog '{cog.__cog_name__}' replaces '{previous}'")
+            self._commands[command.name] = (cog, command)
         await cog.load()
 
     async def _dispatch_interaction(self, interaction: Interaction) -> None:
-        """Route an APPLICATION_COMMAND interaction to its registered Command, if any.
+        """Route an APPLICATION_COMMAND interaction to its registered command, if any.
 
         If the handler raised, the user gets an ephemeral error reply, so an interaction never goes unanswered.
         """
@@ -142,8 +143,8 @@ class Bot(LoggerMixin):
         self._syncer = syncer
 
     @property
-    def commands(self) -> Generator[Command]:
-        """Yield every registered :class:`~wd_bot.commands.Command`."""
+    def commands(self) -> Generator[AppCommand]:
+        """Yield every registered top-level command (plain commands and subcommand groups)."""
         for _, command in self._commands.values():
             yield command
 

@@ -9,9 +9,10 @@ from unittest.mock import AsyncMock
 
 from wd_bot.auto_sync import DefaultCommandSyncer
 from wd_bot.bot import Bot
-from wd_bot.cogs import Cog
+from wd_bot.cogs import Cog, GroupCog
+from wd_bot.commands import CommandGroup
 from wd_discord.gateway import EventName
-from wd_discord.gateway.events import Interaction, InteractionData, InteractionType
+from wd_discord.gateway.events import Interaction, InteractionData, InteractionDataOption, InteractionType
 from wd_discord.resources.user import User
 
 
@@ -73,6 +74,21 @@ async def test_add_cog_registers_inherited_commands() -> None:
     cog = _SubPingCog(bot=bot)
     await bot.add_cog(cog)
     assert bot._commands["ping"][0] is cog
+
+
+class _OtherPingCog(Cog, auto_load=False):
+    @Cog.command(name="ping", description="d")
+    async def ping(self, interaction: Interaction) -> None:
+        CALLS.append(interaction)
+
+
+async def test_add_cog_warns_on_duplicate_command_name(capsys: pytest.CaptureFixture[str]) -> None:
+    bot = _make_bot()
+    await bot.add_cog(_PingCog(bot=bot))
+    other = _OtherPingCog(bot=bot)
+    await bot.add_cog(other)
+    assert bot._commands["ping"][0] is other
+    assert "Duplicate command 'ping'" in capsys.readouterr().err
 
 
 async def test_dispatch_interaction_invokes_matching_command() -> None:
@@ -223,3 +239,30 @@ async def test_dispatch_sends_no_error_reply_on_success() -> None:
     await bot._dispatch_interaction(_make_interaction("ping"))
 
     respond.assert_not_awaited()
+
+
+class _AdminTools(GroupCog, auto_load=False):
+    """Admin tools."""
+
+    @Cog.command(name="ping", description="d")
+    async def ping(self, interaction: Interaction) -> None:
+        CALLS.append(interaction)
+
+
+async def test_group_cog_registers_one_group_and_dispatches_subcommands() -> None:
+    CALLS.clear()
+    bot = _make_bot()
+    cog = _AdminTools(bot=bot)
+    await bot.add_cog(cog)
+
+    group = bot._commands["admin-tools"][1]
+    assert isinstance(group, CommandGroup)
+    assert group.description == "Admin tools."
+    assert list(group.subcommands) == ["ping"]
+    assert "ping" not in bot._commands
+
+    interaction = _make_interaction("admin-tools")
+    assert interaction.data is not None
+    interaction.data.options = [InteractionDataOption(name="ping", type=1)]
+    await bot._dispatch_interaction(interaction)
+    assert CALLS == [interaction]
