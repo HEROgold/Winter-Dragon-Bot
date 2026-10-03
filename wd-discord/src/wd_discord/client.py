@@ -251,7 +251,7 @@ class Client(LoggerMixin):
             return app
         application_id = app.model_dump(mode="json")["id"]
         self._application_id = application_id
-        Settings.application_id = int(application_id)
+        Settings().application_id = int(application_id)
         return application_id
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
