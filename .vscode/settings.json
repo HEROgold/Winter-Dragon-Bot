@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
-        "Messageable"
+        "Messageable",
+        "syncer"
     ],
     "ty.disableLanguageServices": true,
     "python.analysis.inlayHints.functionReturnTypes": true,
