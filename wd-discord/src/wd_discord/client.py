@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.embed import Embed
     lazy from wd_discord.gateway.events import Interaction
     lazy from wd_discord.image import ImageHash
+    lazy from wd_discord.permissions import Permissions
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
@@ -102,14 +103,22 @@ def _parse_error(response: Response) -> ApiResponseError:
         return ApiResponseError(code=response.status_code, message=response.text)
 
 
-def _build_command_payload(name: str, description: str, options: Sequence[CommandOption]) -> dict[str, Any]:
+def _build_command_payload(
+    name: str,
+    description: str,
+    options: Sequence[CommandOption],
+    default_member_permissions: Permissions | None = None,
+) -> dict[str, Any]:
     """Build the JSON body for creating/editing a chat-input application command."""
-    return {
+    payload: dict[str, Any] = {
         "name": name,
         "description": description,
         "type": 1,
         "options": [option.model_dump(mode="json", exclude_none=True) for option in options],
     }
+    if default_member_permissions is not None:
+        payload["default_member_permissions"] = str(int(default_member_permissions))
+    return payload
 
 
 class Client(LoggerMixin):
@@ -378,6 +387,7 @@ class Client(LoggerMixin):
         name: str,
         description: str,
         options: list[CommandOption] | None = None,
+        default_member_permissions: Permissions | None = None,
     ) -> RegisteredCommand | NetworkError:
         """POST /applications/{application_id}/commands - register a new global chat-input command."""
         application_id = await self._get_application_id()
@@ -385,7 +395,7 @@ class Client(LoggerMixin):
             return application_id
         result = await self.post(
             f"/applications/{application_id}/commands",
-            json=_build_command_payload(name, description, options or []),
+            json=_build_command_payload(name, description, options or [], default_member_permissions),
         )
         if isinstance(result, (ApiResponseError, RequestError)):
             return result
@@ -397,6 +407,7 @@ class Client(LoggerMixin):
         name: str,
         description: str,
         options: list[CommandOption] | None = None,
+        default_member_permissions: Permissions | None = None,
     ) -> RegisteredCommand | NetworkError:
         """PATCH /applications/{application_id}/commands/{command_id} - update an existing global command."""
         application_id = await self._get_application_id()
@@ -404,7 +415,7 @@ class Client(LoggerMixin):
             return application_id
         result = await self.patch(
             f"/applications/{application_id}/commands/{command_id}",
-            json=_build_command_payload(name, description, options or []),
+            json=_build_command_payload(name, description, options or [], default_member_permissions),
         )
         if isinstance(result, (ApiResponseError, RequestError)):
             return result

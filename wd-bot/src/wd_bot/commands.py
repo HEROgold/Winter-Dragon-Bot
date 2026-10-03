@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator
 
     lazy from wd_discord.gateway.events import Interaction
+    lazy from wd_discord.permissions import Permissions
 
     lazy from wd_bot.cogs import Cog
 
@@ -38,11 +39,22 @@ class Command(LoggerMixin):
     define the command's options via their type annotations.
     """
 
-    def __init__(self, func: Callable[..., Awaitable[None]], *, name: str, description: str) -> None:
-        """Wrap ``func`` as a command named ``name`` with the given ``description``."""
+    def __init__(
+        self,
+        func: Callable[..., Awaitable[None]],
+        *,
+        name: str,
+        description: str,
+        default_member_permissions: Permissions | None = None,
+    ) -> None:
+        """Wrap ``func`` as a command named ``name`` with the given ``description``.
+
+        ``default_member_permissions`` is the permission bitfield Discord requires by default to use it.
+        """
         self.func = func
         self.name = name
         self.description = description
+        self.default_member_permissions = default_member_permissions
         self._param_types: dict[str, type] = {}
         self._param_required: dict[str, bool] = {}
         annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
@@ -86,8 +98,12 @@ class Command(LoggerMixin):
             )
 
     def signature(self) -> str:
-        """Return this command's current signature, used to detect definition drift for sync."""
-        return command_signature(self.func)
+        """Return the signature of the full registered definition, used to detect drift for sync.
+
+        Covers the handler's parameters, the description and the default member permissions.
+        """
+        permissions = None if self.default_member_permissions is None else int(self.default_member_permissions)
+        return " | ".join((command_signature(self.func), self.description, str(permissions)))
 
     async def invoke(self, cog: Cog, interaction: Interaction) -> None:
         """Resolve ``interaction``'s option values into kwargs and call the wrapped handler."""

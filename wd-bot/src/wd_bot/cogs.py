@@ -17,14 +17,25 @@ lazy from wd_bot.listener import listener
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
 
+    lazy from wd_discord.permissions import Permissions
+
     lazy from wd_bot.bot import Bot
 
 
-def command(name: str, description: str) -> Callable[[Callable[..., Awaitable[None]]], Command]:
+def command(
+    name: str,
+    description: str,
+    default_member_permissions: Permissions | None = None,
+) -> Callable[[Callable[..., Awaitable[None]]], Command]:
     """Tag a Cog method as a chat-input application command, building a :class:`Command` for it."""
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
-        return Command(func, name=name, description=description)
+        return Command(
+            func,
+            name=name,
+            description=description,
+            default_member_permissions=default_member_permissions,
+        )
 
     return decorator
 

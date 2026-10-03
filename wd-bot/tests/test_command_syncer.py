@@ -12,6 +12,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from wd_bot.auto_sync import CommandRecord, DefaultCommandSyncer, GlobalSyncedCommand
 from wd_bot.commands import Command
 from wd_discord.errors.api import ApiResponseError
+from wd_discord.permissions import Permissions
 
 
 if TYPE_CHECKING:
@@ -165,7 +166,7 @@ async def test_edit_with_missing_row_warns_and_continues(capsys: pytest.CaptureF
     _seed(engine, "ping", "stale", "88")
     client = _fake_client()
 
-    async def vanish(*_args: object) -> MagicMock:
+    async def vanish(*_args: object, **_kwargs: object) -> MagicMock:
         with Session(engine) as session:
             for row in session.exec(select(GlobalSyncedCommand)).all():
                 session.delete(row)
@@ -177,3 +178,17 @@ async def test_edit_with_missing_row_warns_and_continues(capsys: pytest.CaptureF
 
     client.edit_global_command.assert_awaited_once()
     assert "No synced row" in capsys.readouterr().err
+
+
+async def test_passes_default_member_permissions_to_create_and_edit() -> None:
+    engine = _make_engine()
+    syncer = DefaultCommandSyncer(engine=engine)
+    client = _fake_client()
+    gated = Command(_ping, name="ping", description="d", default_member_permissions=Permissions.MANAGE_GUILD)
+
+    await syncer.sync(client, [gated])
+    assert client.create_global_command.await_args.kwargs["default_member_permissions"] == Permissions.MANAGE_GUILD
+
+    changed = Command(_ping, name="ping", description="d2", default_member_permissions=Permissions.ADMINISTRATOR)
+    await syncer.sync(client, [changed])
+    assert client.edit_global_command.await_args.kwargs["default_member_permissions"] == Permissions.ADMINISTRATOR

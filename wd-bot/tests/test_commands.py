@@ -16,6 +16,7 @@ lazy from wd_discord.gateway.events import (
     ResolvedData,
 )
 lazy from wd_discord.interactions import ApplicationCommandOptionType
+lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.user import User
 
 
@@ -147,3 +148,17 @@ def test_command_reifies_lazy_import_annotations(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "[('a', 'USER', True), ('b', 'USER', False)]"
+
+
+def test_signature_changes_with_description() -> None:
+    first = Command(percentage, name="percentage", description="one")
+    second = Command(percentage, name="percentage", description="two")
+    assert first.signature() != second.signature()
+
+
+def test_signature_changes_with_default_member_permissions() -> None:
+    plain = Command(percentage, name="percentage", description="d")
+    gated = Command(percentage, name="percentage", description="d", default_member_permissions=Permissions.MANAGE_GUILD)
+    assert plain.default_member_permissions is None
+    assert gated.default_member_permissions == Permissions.MANAGE_GUILD
+    assert plain.signature() != gated.signature()

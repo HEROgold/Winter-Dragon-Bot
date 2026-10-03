@@ -162,7 +162,12 @@ class DefaultCommandSyncer(LoggerMixin):
             plan = diff_global_commands(session, list(by_name.values()))
             for planned in plan.to_create:
                 command = by_name[planned.name]
-                result = await client.create_global_command(command.name, command.description, list(command.options()))
+                result = await client.create_global_command(
+                    command.name,
+                    command.description,
+                    list(command.options()),
+                    default_member_permissions=command.default_member_permissions,
+                )
                 if isinstance(result, ApiResponseError | RequestError):
                     self.logger.warning(t"Failed to create command '{command.name}': {result}")
                     continue
@@ -184,6 +189,7 @@ class DefaultCommandSyncer(LoggerMixin):
                     command.name,
                     command.description,
                     list(command.options()),
+                    default_member_permissions=command.default_member_permissions,
                 )
                 if isinstance(result, ApiResponseError | RequestError):
                     self.logger.warning(t"Failed to edit command '{command.name}': {result}")

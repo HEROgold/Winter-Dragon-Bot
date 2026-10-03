@@ -1,8 +1,10 @@
 """Unit tests: command-payload building and response parsing (no network)."""
+
 from __future__ import annotations
 
 from wd_discord.client import _build_command_payload
 from wd_discord.interactions import ApplicationCommandOptionType, CommandOption, RegisteredCommand
+from wd_discord.permissions import Permissions
 
 
 def test_build_command_payload_includes_options() -> None:
@@ -32,3 +34,13 @@ def test_registered_command_round_trips_from_create_response() -> None:
     }
     command = RegisteredCommand.model_validate(response_json)
     assert command.name == "percentage"
+
+
+def test_build_command_payload_omits_default_member_permissions_when_none() -> None:
+    payload = _build_command_payload("ping", "Ping", [])
+    assert "default_member_permissions" not in payload
+
+
+def test_build_command_payload_sends_permissions_as_decimal_string() -> None:
+    payload = _build_command_payload("ping", "Ping", [], Permissions.MANAGE_GUILD)
+    assert payload["default_member_permissions"] == str(int(Permissions.MANAGE_GUILD))

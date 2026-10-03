@@ -30,7 +30,7 @@ lazy from .cogs import Cog, GroupCog
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import AsyncGenerator, Awaitable, Callable
+    lazy from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
     lazy from importlib.machinery import ModuleSpec
     lazy from types import ModuleType
 
@@ -133,13 +133,19 @@ class Bot(LoggerMixin):
         """Replace the strategy used to push registered commands to Discord."""
         self._syncer = syncer
 
+    @property
+    def commands(self) -> Generator[Command]:
+        """Yield every registered :class:`~wd_bot.commands.Command`."""
+        for _, command in self._commands.values():
+            yield command
+
     async def sync_commands(self, client: Client) -> None:
         """Push the registered commands to Discord via :attr:`syncer`.
 
         Deletes are suppressed while any extension failed to load, since its commands are then
         missing from the registry and would otherwise be deleted from Discord.
         """
-        commands = [command for _, command in self._commands.values()]
+        commands = list(self.commands)
         await self.syncer.sync(client, commands, allow_deletes=not self._failed_extensions)
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
