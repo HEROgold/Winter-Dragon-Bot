@@ -28,8 +28,8 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] 10. wd-bot/src/wd_bot/cogs.py — `Cog.command()` decorator
 - [x] 11. wd-bot/src/wd_bot/bot.py — `_commands` registry, `INTERACTION_CREATE` dispatch, `sync_commands`
 - [x] 12. src/winter_dragon/cogs/percentage.py (new) — `/percentage` command; `Snowflake.__int__`
-- [x] 13. src/winter_dragon/cogs/bot_commands.py (new) — admin `/bot-commands-list` / `/bot-commands-resync`
-- [~] 14. Full-suite verification and lint/type-check done (170 passed, only the 5 baseline failures). Manual smoke test via `run-wd-discord` not run yet: it registers global commands on the live application, so it waits on the user's go-ahead.
+- [x] 13. src/winter_dragon/cogs/bot_commands.py (new) — admin `/bot-commands list|resync` group
+- [~] 14. Verification done: 196 passed, only the 5 baseline failures. Live smoke test on 2026-10-03 with a file-backed sqlite DB: the first run created the commands, a second run made no command calls, and the GroupCog switch created `/bot-commands` and deleted the flat commands (204). A later run again made no calls. Still open: invoking `/percentage` in Discord by hand.
 
 ## Notes / deviations from plan
 
@@ -60,6 +60,23 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - Task 13: `default_member_permissions` is threaded through Command, `Cog.command`, the payload, the
   client and the syncer. `Command.signature()` covers handler signature + description + permissions,
   so description or permission changes sync too. Bot has a public `commands` property.
+- Final-review fixes: the syncer creates its own tables on first sync, and a failed startup sync is
+  logged instead of stopping the bot. `default_member_permissions` is always sent (null clears it).
+  The admin commands refuse outside a guild. An edit that 404s falls through to create, and a delete
+  that 404s counts as done. `sync` holds an asyncio.Lock. An empty registry never mass-deletes.
+  A handler that raises gets an ephemeral error reply. The Interaction and RegisteredCommand fields
+  Discord always sends are now declared, so they no longer show up as unknown fields.
+- Final-review minors: signatures render annotations with `Format.STRING`, which means one more
+  edit per command on the first deploy. `invoke` skips undeclared options with a warning.
+  Duplicate command names across cogs log a warning. herogold is pinned `>=4.0.0` in wd-bot, wd-db
+  and wd-discord.
+- #8 done: `GroupCog` registers one `CommandGroup` (`/bot-commands list|resync`), configured with
+  class kwargs `name=`, `description=` and `default_member_permissions=`. Only the group carries permissions.
+- The smoke test found two bugs, both fixed. `Snowflake.__str__` returned the repr, so stored command IDs
+  and the interaction callback URL were invalid. The sqlite-only BigInteger primary key doesn't autoincrement,
+  which affects tests and drivers, not Postgres.
+- Open for the user: scoping the sync-tracking rows by `application_id` (until then a dev bot and the
+  prod bot must not share a DB).
 
 ## Deferred (not part of this phase)
 
