@@ -109,16 +109,19 @@ def _build_command_payload(
     options: Sequence[CommandOption],
     default_member_permissions: Permissions | None = None,
 ) -> dict[str, Any]:
-    """Build the JSON body for creating/editing a chat-input application command."""
-    payload: dict[str, Any] = {
+    """Build the JSON body for creating/editing a chat-input application command.
+
+    ``default_member_permissions`` is always sent - as a decimal string, or ``None`` (JSON null)
+    when unset - so a PATCH can clear permissions a previous sync set.
+    """
+    permissions = None if default_member_permissions is None else str(int(default_member_permissions))
+    return {
         "name": name,
         "description": description,
         "type": 1,
         "options": [option.model_dump(mode="json", exclude_none=True) for option in options],
+        "default_member_permissions": permissions,
     }
-    if default_member_permissions is not None:
-        payload["default_member_permissions"] = str(int(default_member_permissions))
-    return payload
 
 
 class Client(LoggerMixin):

@@ -15,6 +15,7 @@ def test_build_command_payload_includes_options() -> None:
         "description": "Calculate a percentage",
         "type": 1,
         "options": [{"type": 6, "name": "user", "description": "Target user", "required": True}],
+        "default_member_permissions": None,
     }
 
 
@@ -36,9 +37,11 @@ def test_registered_command_round_trips_from_create_response() -> None:
     assert command.name == "percentage"
 
 
-def test_build_command_payload_omits_default_member_permissions_when_none() -> None:
+def test_build_command_payload_sends_null_default_member_permissions_when_none() -> None:
+    """Unset permissions are sent as JSON null, so an edit (PATCH) clears previously-set permissions."""
     payload = _build_command_payload("ping", "Ping", [])
-    assert "default_member_permissions" not in payload
+    assert "default_member_permissions" in payload
+    assert payload["default_member_permissions"] is None
 
 
 def test_build_command_payload_sends_permissions_as_decimal_string() -> None:
