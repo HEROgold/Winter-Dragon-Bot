@@ -189,7 +189,9 @@ class DefaultCommandSyncer(LoggerMixin):
                     self.logger.warning(t"Failed to edit command '{command.name}': {result}")
                     continue
                 row = session.exec(
-                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+                    select(GlobalSyncedCommand)
+                    .where(GlobalSyncedCommand.discord_command_id == discord_command_id)
+                    .with_for_update(),
                 ).first()
                 if row is None:
                     self.logger.warning(t"No synced row for edited command '{command.name}'")
@@ -210,7 +212,9 @@ class DefaultCommandSyncer(LoggerMixin):
                 self.logger.warning(t"Failed to delete command '{discord_command_id}': {result}")
                 continue
             row = session.exec(
-                select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+                select(GlobalSyncedCommand)
+                .where(GlobalSyncedCommand.discord_command_id == discord_command_id)
+                .with_for_update(),
             ).first()
             if row is not None:
                 session.delete(row)
