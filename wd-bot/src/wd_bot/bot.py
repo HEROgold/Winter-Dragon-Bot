@@ -11,15 +11,24 @@ lazy from importlib.util import find_spec, module_from_spec
 lazy from typing import TYPE_CHECKING
 
 lazy import wd_cogs
+lazy from httpxyz import RequestError
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
+lazy from sqlmodel import Session, select
 lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
+lazy from wd_db.constants import engine
 lazy from wd_discord import Client, GatewayBotInfo
+lazy from wd_discord.errors.api import ApiResponseError
+lazy from wd_discord.gateway import EventName
+lazy from wd_discord.gateway.events import InteractionType
 lazy from wd_discord.resources.user import User
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
+
+lazy from wd_bot.auto_sync import GlobalSyncedCommand, _get_or_create_record, diff_global_commands  # pyright: ignore[reportPrivateUsage]
+lazy from wd_bot.commands import Command
 
 lazy from .cogs import Cog, GroupCog
 
@@ -30,6 +39,7 @@ if TYPE_CHECKING:
     lazy from types import ModuleType
 
     lazy from wd_core.intents import Intents
+    lazy from wd_discord.gateway.events import Interaction
     lazy from wd_discord.models import DiscordModel
 
 
@@ -52,6 +62,7 @@ class Bot(LoggerMixin):
 
     launch_time: datetime.datetime
     loop: asyncio.AbstractEventLoop
+    client: Client
     cogs: dict[str, Cog]
 
     def __init__(
@@ -74,6 +85,8 @@ class Bot(LoggerMixin):
         self.cogs = {}
         self._extensions: dict[str, ModuleType] = {}
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
+        self._commands: dict[str, tuple[Cog, Command]] = {}
+        self._listeners.setdefault(EventName.INTERACTION_CREATE.value, []).append(self._dispatch_interaction)
 
     def get_bot_invite(self) -> str:
         """Get the link to invite the bot to a server."""
@@ -93,7 +106,76 @@ class Bot(LoggerMixin):
             event = getattr(member, "__listener_event__", None)
             if event:
                 self._listeners.setdefault(event, []).append(member)
+        for attr_name in dir(type(cog)):
+            attr = getattr(type(cog), attr_name)
+            if isinstance(attr, Command):
+                self._commands[attr.name] = (cog, attr)
         await cog.load()
+
+    async def _dispatch_interaction(self, interaction: Interaction) -> None:
+        """Route an APPLICATION_COMMAND interaction to its registered Command, if any."""
+        if interaction.type is not InteractionType.APPLICATION_COMMAND or interaction.data is None:
+            return
+        entry = self._commands.get(interaction.data.name)
+        if entry is None:
+            self.logger.warning("No registered command for interaction %r", interaction.data.name)  # pyright: ignore[reportArgumentType]
+            return
+        cog, command = entry
+        await command.invoke(cog, interaction)
+
+    async def sync_commands(self, client: Client) -> None:
+        """Diff registered commands against the last-synced state and push only the changes to Discord."""
+        commands = {command.name: command for _, command in self._commands.values()}
+        with Session(engine) as session:
+            plan = diff_global_commands(session, list(commands.values()))
+            for planned in plan.to_create:
+                command = commands[planned.name]
+                result = await client.create_global_command(command.name, command.description, list(command.options()))
+                if isinstance(result, ApiResponseError | RequestError):
+                    self.logger.warning("Failed to create command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
+                    continue
+                record = _get_or_create_record(session, command.name)
+                if record.id is None:
+                    continue
+                session.add(
+                    GlobalSyncedCommand(
+                        command_id=record.id,
+                        signature=command.signature(),
+                        discord_command_id=str(result.id),
+                    ),
+                )
+                session.commit()
+            for planned, discord_command_id in plan.to_edit:
+                command = commands[planned.name]
+                result = await client.edit_global_command(
+                    discord_command_id,
+                    command.name,
+                    command.description,
+                    list(command.options()),
+                )
+                if isinstance(result, ApiResponseError | RequestError):
+                    self.logger.warning("Failed to edit command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
+                    continue
+                row = session.exec(
+                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+                ).first()
+                if row is None:
+                    self.logger.warning("No synced row for edited command %r", command.name)  # pyright: ignore[reportArgumentType]
+                    continue
+                row.signature = command.signature()
+                session.add(row)
+                session.commit()
+            for discord_command_id in plan.to_delete:
+                result = await client.delete_global_command(discord_command_id)
+                if isinstance(result, ApiResponseError | RequestError):
+                    self.logger.warning("Failed to delete command %r: %s", discord_command_id, result)  # pyright: ignore[reportArgumentType]
+                    continue
+                row = session.exec(
+                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+                ).first()
+                if row is not None:
+                    session.delete(row)
+                    session.commit()
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
         """Fan out a parsed gateway dispatch event to every registered listener for it."""
@@ -145,7 +227,10 @@ class Bot(LoggerMixin):
         """Instantiate every concrete Cog subclass found in a loaded extension module."""
         for obj in lib.__dict__.values():
             if inspect.isclass(obj) and issubclass(obj, Cog) and obj not in (Cog, GroupCog):
-                obj(bot=self)
+                cog = obj(bot=self)
+                # Register now rather than relying on the task Cog.__init__ scheduled: sync_commands
+                # runs right after load_extensions and must see every command. auto_load is idempotent.
+                await cog.auto_load()
 
     async def _load_from_module_spec(self, spec: ModuleSpec, key: str) -> None:
         """Execute a module spec and instantiate its cogs."""
@@ -188,6 +273,7 @@ class Bot(LoggerMixin):
         """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
         self.loop = asyncio.get_running_loop()
         async with Client(token) as client:
+            self.client = client
             me = await client.get_current_user()
             if not isinstance(me, User):
                 msg = "Failed to get current user from Discord API"
@@ -200,6 +286,7 @@ class Bot(LoggerMixin):
 
             manager = await client.get_shard_manager(gw_info, intents=self.intents)
             await self.load_extensions()
+            await self.sync_commands(client)
             async with manager:
                 self.logger.info(t"Bot is running with {len(manager.shards)} shards")
                 await manager.serve_forever(self._dispatch)
