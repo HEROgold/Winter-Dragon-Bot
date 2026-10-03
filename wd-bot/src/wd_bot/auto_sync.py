@@ -10,12 +10,21 @@ from __future__ import annotations
 lazy from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING, Protocol
 
+lazy from herogold.log import LoggerMixin
+lazy from httpxyz import RequestError
 lazy from sqlmodel import Field, Session, UniqueConstraint, select
+lazy from wd_db.constants import engine as default_engine
 lazy from wd_db.extension.model import SQLModel
+lazy from wd_discord.errors.api import ApiResponseError
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
+
+    lazy from sqlalchemy import Engine
+    lazy from wd_discord import Client
+
+    lazy from wd_bot.commands import Command
 
 
 class CommandLike(Protocol):
@@ -71,7 +80,7 @@ class SyncPlan:
     to_delete: list[str] = field(default_factory=list[str])
 
 
-def _get_or_create_record(session: Session, name: str) -> CommandRecord:  # pyright: ignore[reportUnusedFunction]
+def _get_or_create_record(session: Session, name: str) -> CommandRecord:
     """Return the :class:`CommandRecord` named ``name``, creating and committing it if missing."""
     record = session.exec(select(CommandRecord).where(CommandRecord.name == name)).first()
     if record is None:
@@ -123,3 +132,73 @@ def diff_guild_commands(session: Session, guild_id: int, commands: Sequence[Comm
     rows = session.exec(select(GuildSyncedCommand).where(GuildSyncedCommand.guild_id == guild_id)).all()
     synced_by_command_id = {row.command_id: row for row in rows}
     return _build_plan(commands, records_by_name, synced_by_command_id)
+
+
+class CommandSyncer(Protocol):
+    """Strategy for reconciling the bot's registered commands with Discord."""
+
+    async def sync(self, client: Client, commands: Sequence[Command]) -> None:
+        """Push ``commands`` to Discord through ``client``, doing only the work needed."""
+        ...
+
+
+class DefaultCommandSyncer(LoggerMixin):
+    """Diff-based :class:`CommandSyncer` tracking last-synced state in the database (global scope only)."""
+
+    def __init__(self, engine: Engine | None = None) -> None:
+        """Use ``engine`` for sync state; defaults to ``wd_db.constants.engine``, resolved at sync time."""
+        self._engine = engine
+
+    async def sync(self, client: Client, commands: Sequence[Command]) -> None:
+        """Diff ``commands`` against the last-synced state and push only the changes to Discord."""
+        by_name = {command.name: command for command in commands}
+        with Session(self._engine or default_engine) as session:
+            plan = diff_global_commands(session, list(by_name.values()))
+            for planned in plan.to_create:
+                command = by_name[planned.name]
+                result = await client.create_global_command(command.name, command.description, list(command.options()))
+                if isinstance(result, ApiResponseError | RequestError):
+                    self.logger.warning("Failed to create command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
+                    continue
+                record = _get_or_create_record(session, command.name)
+                if record.id is None:
+                    continue
+                session.add(
+                    GlobalSyncedCommand(
+                        command_id=record.id,
+                        signature=command.signature(),
+                        discord_command_id=str(result.id),
+                    ),
+                )
+                session.commit()
+            for planned, discord_command_id in plan.to_edit:
+                command = by_name[planned.name]
+                result = await client.edit_global_command(
+                    discord_command_id,
+                    command.name,
+                    command.description,
+                    list(command.options()),
+                )
+                if isinstance(result, ApiResponseError | RequestError):
+                    self.logger.warning("Failed to edit command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
+                    continue
+                row = session.exec(
+                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+                ).first()
+                if row is None:
+                    self.logger.warning("No synced row for edited command %r", command.name)  # pyright: ignore[reportArgumentType]
+                    continue
+                row.signature = command.signature()
+                session.add(row)
+                session.commit()
+            for discord_command_id in plan.to_delete:
+                result = await client.delete_global_command(discord_command_id)
+                if isinstance(result, ApiResponseError | RequestError):
+                    self.logger.warning("Failed to delete command %r: %s", discord_command_id, result)  # pyright: ignore[reportArgumentType]
+                    continue
+                row = session.exec(
+                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
+                ).first()
+                if row is not None:
+                    session.delete(row)
+                    session.commit()

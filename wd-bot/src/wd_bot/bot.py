@@ -11,23 +11,19 @@ lazy from importlib.util import find_spec, module_from_spec
 lazy from typing import TYPE_CHECKING
 
 lazy import wd_cogs
-lazy from httpxyz import RequestError
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
-lazy from sqlmodel import Session, select
 lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
-lazy from wd_db.constants import engine
 lazy from wd_discord import Client, GatewayBotInfo
-lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.gateway.events import InteractionType
 lazy from wd_discord.resources.user import User
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
-lazy from wd_bot.auto_sync import GlobalSyncedCommand, _get_or_create_record, diff_global_commands  # pyright: ignore[reportPrivateUsage]
+lazy from wd_bot.auto_sync import DefaultCommandSyncer
 lazy from wd_bot.commands import Command
 
 lazy from .cogs import Cog, GroupCog
@@ -41,6 +37,8 @@ if TYPE_CHECKING:
     lazy from wd_core.intents import Intents
     lazy from wd_discord.gateway.events import Interaction
     lazy from wd_discord.models import DiscordModel
+
+    lazy from wd_bot.auto_sync import CommandSyncer
 
 
 class BotConfig:
@@ -86,6 +84,7 @@ class Bot(LoggerMixin):
         self._extensions: dict[str, ModuleType] = {}
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
         self._commands: dict[str, tuple[Cog, Command]] = {}
+        self._syncer: CommandSyncer = DefaultCommandSyncer()
         self._listeners.setdefault(EventName.INTERACTION_CREATE.value, []).append(self._dispatch_interaction)
 
     def get_bot_invite(self) -> str:
@@ -123,59 +122,19 @@ class Bot(LoggerMixin):
         cog, command = entry
         await command.invoke(cog, interaction)
 
+    @property
+    def syncer(self) -> CommandSyncer:
+        """The strategy used to push registered commands to Discord."""
+        return self._syncer
+
+    @syncer.setter
+    def syncer(self, syncer: CommandSyncer) -> None:
+        """Replace the strategy used to push registered commands to Discord."""
+        self._syncer = syncer
+
     async def sync_commands(self, client: Client) -> None:
-        """Diff registered commands against the last-synced state and push only the changes to Discord."""
-        commands = {command.name: command for _, command in self._commands.values()}
-        with Session(engine) as session:
-            plan = diff_global_commands(session, list(commands.values()))
-            for planned in plan.to_create:
-                command = commands[planned.name]
-                result = await client.create_global_command(command.name, command.description, list(command.options()))
-                if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning("Failed to create command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
-                    continue
-                record = _get_or_create_record(session, command.name)
-                if record.id is None:
-                    continue
-                session.add(
-                    GlobalSyncedCommand(
-                        command_id=record.id,
-                        signature=command.signature(),
-                        discord_command_id=str(result.id),
-                    ),
-                )
-                session.commit()
-            for planned, discord_command_id in plan.to_edit:
-                command = commands[planned.name]
-                result = await client.edit_global_command(
-                    discord_command_id,
-                    command.name,
-                    command.description,
-                    list(command.options()),
-                )
-                if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning("Failed to edit command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
-                    continue
-                row = session.exec(
-                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
-                ).first()
-                if row is None:
-                    self.logger.warning("No synced row for edited command %r", command.name)  # pyright: ignore[reportArgumentType]
-                    continue
-                row.signature = command.signature()
-                session.add(row)
-                session.commit()
-            for discord_command_id in plan.to_delete:
-                result = await client.delete_global_command(discord_command_id)
-                if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning("Failed to delete command %r: %s", discord_command_id, result)  # pyright: ignore[reportArgumentType]
-                    continue
-                row = session.exec(
-                    select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
-                ).first()
-                if row is not None:
-                    session.delete(row)
-                    session.commit()
+        """Push the registered commands to Discord via :attr:`syncer`."""
+        await self.syncer.sync(client, [command for _, command in self._commands.values()])
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
         """Fan out a parsed gateway dispatch event to every registered listener for it."""

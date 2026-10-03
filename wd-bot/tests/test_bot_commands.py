@@ -5,30 +5,19 @@ from __future__ import annotations
 import asyncio
 import types
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, MagicMock
 
-import wd_bot.bot as bot_module
-from sqlalchemy import BigInteger
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine, select
-from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
+from wd_bot.auto_sync import DefaultCommandSyncer
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog
-from wd_bot.commands import Command
 from wd_discord.gateway import EventName
 from wd_discord.gateway.events import Interaction, InteractionData, InteractionType
 from wd_discord.resources.user import User
 
 
 if TYPE_CHECKING:
-    import pytest
+    from collections.abc import Sequence
 
-
-@compiles(BigInteger, "sqlite")
-def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) -> str:
-    """Render BigInteger as INTEGER on sqlite so the primary key autoincrements."""
-    return "INTEGER"
+    from wd_bot.commands import Command
 
 
 CALLS: list[Interaction] = []
@@ -115,82 +104,29 @@ async def test_init_cogs_registers_commands_before_any_other_await() -> None:
     assert "auto-ping" in bot._commands
 
 
-def _make_engine() -> object:
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    return engine
+class _FakeSyncer:
+    def __init__(self) -> None:
+        self.calls: list[tuple[object, list[Command]]] = []
+
+    async def sync(self, client: object, commands: Sequence[Command]) -> None:
+        self.calls.append((client, list(commands)))
 
 
-def _fake_client() -> MagicMock:
-    client = MagicMock()
-    registered = MagicMock()
-    registered.id = 555
-    client.create_global_command = AsyncMock(return_value=registered)
-    client.edit_global_command = AsyncMock(return_value=registered)
-    client.delete_global_command = AsyncMock(return_value=None)
-    return client
-
-
-async def test_sync_commands_creates_once_then_is_a_noop(monkeypatch: pytest.MonkeyPatch) -> None:
-    engine = _make_engine()
-    monkeypatch.setattr(bot_module, "engine", engine)
+async def test_syncer_defaults_and_can_be_swapped() -> None:
     bot = _make_bot()
+    assert isinstance(bot.syncer, DefaultCommandSyncer)
+    fake = _FakeSyncer()
+    bot.syncer = fake
+    assert bot.syncer is fake
+
+
+async def test_sync_commands_delegates_to_syncer() -> None:
+    bot = _make_bot()
+    fake = _FakeSyncer()
+    bot.syncer = fake
     await bot.add_cog(_PingCog(bot=bot))
-    client = _fake_client()
-
-    await bot.sync_commands(client)
-
-    client.create_global_command.assert_awaited_once()
-    assert client.create_global_command.await_args.args[0] == "ping"
-    with Session(engine) as session:
-        rows = session.exec(select(GlobalSyncedCommand)).all()
-        assert [row.discord_command_id for row in rows] == ["555"]
-
-    await bot.sync_commands(client)
-
-    client.create_global_command.assert_awaited_once()
-    client.edit_global_command.assert_not_awaited()
-    client.delete_global_command.assert_not_awaited()
-
-
-async def test_sync_commands_deletes_removed_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    engine = _make_engine()
-    monkeypatch.setattr(bot_module, "engine", engine)
-    with Session(engine) as session:
-        record = CommandRecord(name="old")
-        session.add(record)
-        session.commit()
-        session.refresh(record)
-        session.add(GlobalSyncedCommand(command_id=record.id, signature="() -> None", discord_command_id="77"))
-        session.commit()
-    bot = _make_bot()
-    client = _fake_client()
-
-    await bot.sync_commands(client)
-
-    client.delete_global_command.assert_awaited_once_with("77")
-    with Session(engine) as session:
-        assert session.exec(select(GlobalSyncedCommand)).all() == []
-
-
-async def test_sync_commands_edits_changed_signature(monkeypatch: pytest.MonkeyPatch) -> None:
-    engine = _make_engine()
-    monkeypatch.setattr(bot_module, "engine", engine)
-    with Session(engine) as session:
-        record = CommandRecord(name="ping")
-        session.add(record)
-        session.commit()
-        session.refresh(record)
-        session.add(GlobalSyncedCommand(command_id=record.id, signature="stale", discord_command_id="88"))
-        session.commit()
-    bot = _make_bot()
-    await bot.add_cog(_PingCog(bot=bot))
-    client = _fake_client()
-
-    await bot.sync_commands(client)
-
-    client.edit_global_command.assert_awaited_once()
-    assert client.edit_global_command.await_args.args[0] == "88"
-    with Session(engine) as session:
-        row = session.exec(select(GlobalSyncedCommand)).one()
-        assert row.signature == Command.signature(bot._commands["ping"][1])
+    client = object()
+    await bot.sync_commands(client)  # type: ignore[arg-type]
+    assert len(fake.calls) == 1
+    assert fake.calls[0][0] is client
+    assert [c.name for c in fake.calls[0][1]] == ["ping"]
