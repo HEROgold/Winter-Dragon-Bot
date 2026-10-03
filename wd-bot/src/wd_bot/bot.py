@@ -5,7 +5,6 @@ from __future__ import annotations
 lazy import asyncio
 lazy import datetime
 lazy import inspect
-lazy import pkgutil
 lazy import sys
 lazy from importlib.util import find_spec, module_from_spec
 lazy from typing import TYPE_CHECKING
@@ -24,6 +23,7 @@ lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
 lazy from wd_bot.auto_sync import DefaultCommandSyncer
+lazy from wd_bot.extensions import ExtensionDiscovery
 
 lazy from .cogs import Cog, GroupCog
 
@@ -183,27 +183,15 @@ class Bot(LoggerMixin):
         itself, so a returned name must not already include it. A discovery failure is recorded in
         ``_failed_extensions`` (under the package's name), so :meth:`sync_commands` won't delete.
         """
-        modules = []
         try:
-            package = self.extensions_package
-
-            # Recursively walk through all packages and modules in the extensions package
-            def walk_packages(package: ModuleType, prefix: str = "") -> None:
-                """Recursively walk through packages and collect module names."""
-                package_path = package.__path__  # type: ignore[attr-defined]
-                for _importer, mod_name, is_package in pkgutil.walk_packages(path=package_path, prefix=prefix):
-                    if not is_package and not mod_name.endswith(".__init__"):
-                        modules.append(mod_name)
-
-            walk_packages(package)
+            return list(ExtensionDiscovery(self.extensions_package).modules())
         except ImportError:
             self._failed_extensions.add(self.extensions_package.__name__)
             self.logger.warning(t"{self.extensions_package.__name__} package not found, skipping cog discovery")
         except Exception:
             self._failed_extensions.add(self.extensions_package.__name__)
             self.logger.exception(t"Error discovering {self.extensions_package.__name__} modules")
-
-        return modules
+        return []
 
     async def get_extensions(self) -> AsyncGenerator[str]:
         """Get all extensions from :attr:`extensions_package`.
