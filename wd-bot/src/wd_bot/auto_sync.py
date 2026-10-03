@@ -12,10 +12,10 @@ lazy from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING, Protocol
 
 lazy from herogold.log import LoggerMixin
-lazy from httpxyz import RequestError
 lazy from sqlmodel import Field, Session, UniqueConstraint, select
 lazy from wd_db.constants import engine as default_engine
 lazy from wd_db.extension.model import SQLModel
+lazy from wd_discord.client import is_network_error
 lazy from wd_discord.errors.api import ApiResponseError
 
 
@@ -223,7 +223,7 @@ class DefaultCommandSyncer(LoggerMixin):
     async def _create(self, client: Client, session: Session, command: AppCommand) -> None:
         """Create ``command`` on Discord and store its synced row, unless the create failed."""
         result = await client.create_global_command(command.params())
-        if isinstance(result, ApiResponseError | RequestError):
+        if is_network_error(result):
             self.logger.warning(t"Failed to create command '{command.name}': {result}")
             return
         record = _get_or_create_record(session, command.name)
@@ -250,7 +250,7 @@ class DefaultCommandSyncer(LoggerMixin):
             self._drop_row(session, discord_command_id)
             await self._create(client, session, command)
             return
-        if isinstance(result, ApiResponseError | RequestError):
+        if is_network_error(result):
             self.logger.warning(t"Failed to edit command '{command.name}': {result}")
             return
         row = _locked_row(session, discord_command_id)
@@ -268,7 +268,7 @@ class DefaultCommandSyncer(LoggerMixin):
         """
         for discord_command_id in discord_command_ids:
             result = await client.delete_global_command(discord_command_id)
-            if isinstance(result, ApiResponseError | RequestError) and not _is_unknown_command(result):
+            if is_network_error(result) and not _is_unknown_command(result):
                 self.logger.warning(t"Failed to delete command '{discord_command_id}': {result}")
                 continue
             self._drop_row(session, discord_command_id)

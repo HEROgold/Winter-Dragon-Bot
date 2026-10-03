@@ -22,7 +22,7 @@ with ``isinstance`` / ``match`` instead of ``try``/``except``::
 from __future__ import annotations
 
 lazy from functools import wraps
-lazy from typing import TYPE_CHECKING, Any, Self
+lazy from typing import TYPE_CHECKING, Any, Self, TypeIs
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
@@ -95,6 +95,11 @@ def returns_known_exception[**P, T, E: Exception](
         return wrapper
 
     return decorator
+
+
+def is_network_error(value: object) -> TypeIs[NetworkError]:
+    """Whether ``value`` is a failed request: a Discord API error or a network error."""
+    return isinstance(value, ApiResponseError | RequestError)
 
 
 def _parse_error(response: Response) -> ApiResponseError:
@@ -218,14 +223,14 @@ class Client(LoggerMixin):
     async def get_current_user(self) -> User | NetworkError:
         """GET /users/@me - the bot user behind the token."""
         result = await self.get("/users/@me")
-        if isinstance(result, ApiResponseError | RequestError):
+        if is_network_error(result):
             return result
         return User.model_validate(result.json())
 
     async def get_current_application(self) -> Application | NetworkError:
         """GET /applications/@me - the current application object."""
         result = await self.get("/applications/@me")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return Application.model_validate(result.json())
 
@@ -242,7 +247,7 @@ class Client(LoggerMixin):
             self._application_id = str(Settings.application_id)
             return self._application_id
         app = await self.get_current_application()
-        if isinstance(app, (ApiResponseError, RequestError)):
+        if is_network_error(app):
             return app
         application_id = app.model_dump(mode="json")["id"]
         self._application_id = application_id
@@ -252,7 +257,7 @@ class Client(LoggerMixin):
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
         result = await self.get("/gateway/bot")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return GatewayBotInfo.model_validate(result.json())
 
@@ -263,28 +268,28 @@ class Client(LoggerMixin):
     async def get_user(self, user_id: int | str) -> User | NetworkError:
         """GET /users/{user_id}."""
         result = await self.get(f"/users/{user_id}")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return User.model_validate(result.json())
 
     async def get_guild(self, guild_id: int | str) -> Guild | NetworkError:
         """GET /guilds/{guild_id}."""
         result = await self.get(f"/guilds/{guild_id}")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return Guild.model_validate(result.json())
 
     async def get_channel(self, channel_id: int | str) -> Channel | NetworkError:
         """GET /channels/{channel_id}."""
         result = await self.get(f"/channels/{channel_id}")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return Channel.model_validate(result.json())
 
     async def get_guild_channels(self, guild_id: int | str) -> Generator[Channel] | NetworkError:
         """GET /guilds/{guild_id}/channels - the guild's channels."""
         result = await self.get(f"/guilds/{guild_id}/channels")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return (Channel.model_validate(channel) for channel in result.json())
 
@@ -295,21 +300,21 @@ class Client(LoggerMixin):
         the real result here, not a raw-dict shortcut.
         """
         result = await self.delete(f"/users/@me/guilds/{guild_id}", json={})
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return None
 
     async def create_dm(self, recipient_id: int | str) -> Channel | NetworkError:
         """POST /users/@me/channels - open (or fetch the existing) DM channel with a user."""
         result = await self.post("/users/@me/channels", json={"recipient_id": str(recipient_id)})
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return Channel.model_validate(result.json())
 
     async def create_message(self, channel_id: int | str, content: str) -> Message | NetworkError:
         """POST /channels/{channel_id}/messages - send a message (works for DM channels too)."""
         result = await self.post(f"/channels/{channel_id}/messages", json={"content": content})
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return Message.model_validate(result.json())
 
@@ -329,7 +334,7 @@ class Client(LoggerMixin):
         """
         payload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
         result = await self.post(f"/channels/{channel_id}/invites", json=payload)
-        if isinstance(result, (ApiResponseError, RequestError)):
+        if is_network_error(result):
             return result
         return Invite.model_validate(result.json())
 
@@ -372,42 +377,48 @@ class Client(LoggerMixin):
         payload = {"type": 4, "data": data}
         return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
 
+    async def _commands_path(self, command_id: str | None = None) -> str | NetworkError:
+        """Return the global-commands path (or one command's path), or the error from looking up the application ID."""
+        application_id = await self._get_application_id()
+        if is_network_error(application_id):
+            return application_id
+        path = f"/applications/{application_id}/commands"
+        return path if command_id is None else f"{path}/{command_id}"
+
     async def create_global_command(self, params: ApplicationCommandParams) -> ApplicationCommand | NetworkError:
         """POST /applications/{application_id}/commands - register a new global command."""
-        application_id = await self._get_application_id()
-        if isinstance(application_id, (ApiResponseError, RequestError)):
-            return application_id
-        result = await self.post(f"/applications/{application_id}/commands", json=params.to_json())
-        if isinstance(result, (ApiResponseError, RequestError)):
+        path = await self._commands_path()
+        if is_network_error(path):
+            return path
+        result = await self.post(path, json=params.to_json())
+        if is_network_error(result):
             return result
         return ApplicationCommand.model_validate(result.json())
 
     async def edit_global_command(self, command_id: str, params: ApplicationCommandParams) -> ApplicationCommand | NetworkError:
         """PATCH /applications/{application_id}/commands/{command_id} - update an existing global command."""
-        application_id = await self._get_application_id()
-        if isinstance(application_id, (ApiResponseError, RequestError)):
-            return application_id
-        result = await self.patch(f"/applications/{application_id}/commands/{command_id}", json=params.to_json())
-        if isinstance(result, (ApiResponseError, RequestError)):
+        path = await self._commands_path(command_id)
+        if is_network_error(path):
+            return path
+        result = await self.patch(path, json=params.to_json())
+        if is_network_error(result):
             return result
         return ApplicationCommand.model_validate(result.json())
 
     async def delete_global_command(self, command_id: str) -> NetworkError | None:
         """DELETE /applications/{application_id}/commands/{command_id} - remove a global command."""
-        application_id = await self._get_application_id()
-        if isinstance(application_id, (ApiResponseError, RequestError)):
-            return application_id
-        result = await self.delete(f"/applications/{application_id}/commands/{command_id}", json={})
-        if isinstance(result, (ApiResponseError, RequestError)):
-            return result
-        return None
+        path = await self._commands_path(command_id)
+        if is_network_error(path):
+            return path
+        result = await self.delete(path, json={})
+        return result if is_network_error(result) else None
 
     async def get_global_commands(self) -> Generator[ApplicationCommand] | NetworkError:
         """GET /applications/{application_id}/commands - every currently-registered global command."""
-        application_id = await self._get_application_id()
-        if isinstance(application_id, (ApiResponseError, RequestError)):
-            return application_id
-        result = await self.get(f"/applications/{application_id}/commands")
-        if isinstance(result, (ApiResponseError, RequestError)):
+        path = await self._commands_path()
+        if is_network_error(path):
+            return path
+        result = await self.get(path)
+        if is_network_error(result):
             return result
         return (ApplicationCommand.model_validate(item) for item in result.json())
