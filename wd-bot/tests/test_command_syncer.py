@@ -61,7 +61,7 @@ async def test_creates_once_then_is_a_noop() -> None:
     await syncer.sync(client, commands)
 
     client.create_global_command.assert_awaited_once()
-    assert client.create_global_command.await_args.args[0] == "ping"
+    assert client.create_global_command.await_args.args[0].name == "ping"
     with Session(engine) as session:
         rows = session.exec(select(GlobalSyncedCommand)).all()
         assert [row.discord_command_id for row in rows] == ["555"]
@@ -188,11 +188,11 @@ async def test_passes_default_member_permissions_to_create_and_edit() -> None:
     gated = Command(_ping, name="ping", description="d", default_member_permissions=Permissions.MANAGE_GUILD)
 
     await syncer.sync(client, [gated])
-    assert client.create_global_command.await_args.kwargs["default_member_permissions"] == Permissions.MANAGE_GUILD
+    assert client.create_global_command.await_args.args[0].default_member_permissions == Permissions.MANAGE_GUILD
 
     changed = Command(_ping, name="ping", description="d2", default_member_permissions=Permissions.ADMINISTRATOR)
     await syncer.sync(client, [changed])
-    assert client.edit_global_command.await_args.kwargs["default_member_permissions"] == Permissions.ADMINISTRATOR
+    assert client.edit_global_command.await_args.args[1].default_member_permissions == Permissions.ADMINISTRATOR
 
 
 async def test_sync_creates_its_own_tables_on_a_fresh_engine() -> None:

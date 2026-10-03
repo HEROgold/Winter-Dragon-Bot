@@ -1,33 +1,24 @@
-"""Discord Interactions."""
+"""Discord application commands (https://docs.discord.com/developers/interactions/application-commands)."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-lazy from dataclasses import dataclass, field
-lazy from enum import Enum, IntEnum, StrEnum, auto
-lazy from typing import TYPE_CHECKING, Annotated, get_type_hints
+lazy from enum import IntEnum, StrEnum
+lazy from typing import Annotated, Any, Self
 
-from pydantic import Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
 
 from wd_discord.models import DiscordModel
-from wd_discord.permissions import PermissionsField
+from wd_discord.permissions import ChannelType, Permissions, PermissionsField
 from wd_discord.snowflake import Snowflake
-lazy from wd_discord.utils.strings import LimitedString
-
-
-if TYPE_CHECKING:
-    lazy from collections.abc import Callable
-
-    lazy from wd_discord.permissions import Permissions
 
 
 class ApplicationCommandType(IntEnum):
     """Represents the type of an application command."""
 
-    chat_input = 1
-    user = 2
-    message = 3
-    primary_entry_point = 4
+    CHAT_INPUT = 1
+    USER = 2
+    MESSAGE = 3
+    PRIMARY_ENTRY_POINT = 4
 
 
 class ApplicationCommandOptionType(IntEnum):
@@ -46,218 +37,186 @@ class ApplicationCommandOptionType(IntEnum):
     ATTACHMENT = 11
 
 
-@dataclass
-class Locale:
-    """Represents a locale."""
-
-    locale: str
-    english_name: str
-    native_name: str
-
-
-class Locales(Enum):
-    """Represents the different locales for Discord."""
-
-    Indonesian = Locale("id", "Indonesian", "Bahasа Indonesia")
-    Danish = Locale("da", "Danish", "Dansk")
-    German = Locale("de", "German", "Deutsch")
-    English_UK = Locale("en-GB", "English, UK", "English, UK")
-    English_US = Locale("en-US", "English, US", "English, US")
-    Spanish = Locale("es-ES", "Spanish", "Español")
-    Spanish_LATAM = Locale("es-419", "Spanish, LATAM", "Español, LATAM")
-    French = Locale("fr", "French", "Français")
-    Croatian = Locale("hr", "Croatian", "Hrvatski")
-    Italian = Locale("it", "Italian", "Italiano")
-    Lithuanian = Locale("lt", "Lithuanian", "Lietuviškai")
-    Hungarian = Locale("hu", "Hungarian", "Magyar")
-    Dutch = Locale("nl", "Dutch", "Nederlands")
-    Norwegian = Locale("no", "Norwegian", "Norsk")
-    Polish = Locale("pl", "Polish", "Polski")
-    Portuguese_Brazil = Locale("pt-BR", "Portuguese, Brazilian", "Português do Brasil")
-    Romanian = Locale("ro", "Romanian, Romania", "Română")
-    Finnish = Locale("fi", "Finnish", "Suomi")
-    Swedish = Locale("sv-SE", "Swedish", "Svenska")
-    Vietnamese = Locale("vi", "Vietnamese", "Tiếng Việt")
-    Turkish = Locale("tr", "Turkish", "Türkçe")
-    Czech = Locale("cs", "Czech", "Čeština")
-    Greek = Locale("el", "Greek", "Ελληνικά")
-    Bulgarian = Locale("bg", "Bulgarian", "български")
-    Russian = Locale("ru", "Russian", "Pусский")
-    Ukrainian = Locale("uk", "Ukrainian", "Українська")
-    Hindi = Locale("hi", "Hindi", "हिन्दी")
-    Thai = Locale("th", "Thai", "ไทย")
-    Chinese_China = Locale("zh-CN", "Chinese, China", "中文")
-    Japanese = Locale("ja", "Japanese", "日本語")
-    Chinese_Taiwan = Locale("zh-TW", "Chinese, Taiwan", "繁體中文")
-    Korean = Locale("ko", "Korean", "한국어")
-
-
-def required_if(dependent_field: str, required_state: object) -> Callable[[object, object], tuple[bool, Exception | None]]:
-    """Check if a field is required based on the state of another field."""
-
-    def validator(instance: object, current_value: object) -> tuple[bool, Exception | None]:
-        """Validate the field."""
-        actual_state = getattr(instance, dependent_field)
-        if isinstance(current_value, AttributeError):
-            current_value = ""
-        if actual_state == required_state and not bool(current_value):
-            return False, ValueError(f"Description must be provided for {required_state} commands.")
-        return True, None
-
-    return validator
-
-
-def absent_if(dependent_field: str, absent_state: object = None) -> Callable[[object, object], tuple[bool, Exception | None]]:
-    """Check if a field must be absent based on the state of another field."""
-
-    def validator(instance: object, current_value: object) -> tuple[bool, Exception | None]:
-        """Validate the field."""
-        actual_state = getattr(instance, dependent_field)
-        if actual_state == absent_state and bool(current_value):
-            return False, ValueError(f"Choices cannot be provided for {absent_state} commands.")
-        return True, None
-
-    return validator
-
-
-def validate[T](cls: type[T]) -> type[T]:
-    """Class decorator to validate dataclass fields based on their type annotations and metadata."""
-    original_post_init: Callable[..., None] = getattr(cls, "__post_init__", lambda _self, *_args, **_kwargs: None)
-
-    def new_post_init[**P](inst: object, *args: P.args, **kwargs: P.kwargs) -> None:
-        if original_post_init:
-            original_post_init(inst, *args, **kwargs)
-
-        hints = get_type_hints(cls, include_extras=True)
-        errors: list[Exception] = []
-
-        for field_name, field_type in hints.items():
-            if hasattr(field_type, "__metadata__"):
-                validators = field_type.__metadata__
-                current_value = getattr(inst, field_name)
-
-                for validator in validators:
-                    is_valid, error = validator(inst, current_value)
-                    if not is_valid:
-                        errors.append(error)
-
-        if errors:
-            msg = "Invalid application command."
-            raise ExceptionGroup(msg, errors)
-
-    cls.__post_init__ = new_post_init  # ty:ignore[unresolved-attribute]
-    return cls
-
-
-class CommandOption(DiscordModel):
-    """An option for an application command (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
-
-    type: ApplicationCommandOptionType
-    name: str
-    description: str
-    required: bool = False
-    choices: list[Mapping[str, object]] | None = None
-    options: list[CommandOption] | None = None
-
-
-class RegisteredCommand(DiscordModel):
-    """A chat-input application command as Discord's REST API returns it (list/create/edit response)."""
-
-    id: Snowflake
-    application_id: Snowflake
-    guild_id: Snowflake | None = None
-    version: Snowflake
-    name: str
-    description: str
-    options: list[CommandOption] = Field(default_factory=list[CommandOption])
-    default_member_permissions: PermissionsField | None = None
-    dm_permission: bool = True
-    nsfw: bool = False
-    type: int | None = None
-    contexts: list[int] | None = None
-    integration_types: list[int] | None = None
-    default_permission: bool | None = None
-
-
-class CommandHandlerType(Enum):
-    """Represents the type of handler for an application command."""
-
-    APP_HANDLER = 1
-    """The app handles the interaction using an interaction token"""
-    DISCORD_LAUNCH_ACTIVITY = 2
-    """Discord handles the interaction by launching an Activity and sending a follow-up message without coordinating with the app"""
-
-
-class InteractionContextType(Enum):
-    """Represents the context in which an application command can be used."""
+class InteractionContextType(IntEnum):
+    """Where an application command can be used."""
 
     GUILD = 0
     BOT_DM = 1
     PRIVATE_CHANNEL = 2
 
 
-class IntegrationType(StrEnum):
-    """Represents the type of integration for an application command."""
+class ApplicationIntegrationType(IntEnum):
+    """Where an app can be installed, and so where its commands are available."""
 
-    twitch = auto()
-    youtube = auto()
-    discord = auto()
-    guild_subscription = auto()
+    GUILD_INSTALL = 0
+    USER_INSTALL = 1
 
 
-@validate
-@dataclass
-class ApplicationCommand:
-    """Represents an application command."""
+class EntryPointCommandHandlerType(IntEnum):
+    """Who handles a PRIMARY_ENTRY_POINT command's interaction."""
+
+    APP_HANDLER = 1
+    """The app handles the interaction using an interaction token"""
+    DISCORD_LAUNCH_ACTIVITY = 2
+    """Discord handles the interaction by launching an Activity and sending a follow-up message, without the app"""
+
+
+class Locale(StrEnum):
+    """A Discord locale code (https://docs.discord.com/developers/reference#locales)."""
+
+    INDONESIAN = "id"
+    DANISH = "da"
+    GERMAN = "de"
+    ENGLISH_UK = "en-GB"
+    ENGLISH_US = "en-US"
+    SPANISH = "es-ES"
+    SPANISH_LATAM = "es-419"
+    FRENCH = "fr"
+    CROATIAN = "hr"
+    ITALIAN = "it"
+    LITHUANIAN = "lt"
+    HUNGARIAN = "hu"
+    DUTCH = "nl"
+    NORWEGIAN = "no"
+    POLISH = "pl"
+    PORTUGUESE_BRAZIL = "pt-BR"
+    ROMANIAN = "ro"
+    FINNISH = "fi"
+    SWEDISH = "sv-SE"
+    VIETNAMESE = "vi"
+    TURKISH = "tr"
+    CZECH = "cs"
+    GREEK = "el"
+    BULGARIAN = "bg"
+    RUSSIAN = "ru"
+    UKRAINIAN = "uk"
+    HINDI = "hi"
+    THAI = "th"
+    CHINESE_CHINA = "zh-CN"
+    JAPANESE = "ja"
+    CHINESE_TAIWAN = "zh-TW"
+    KOREAN = "ko"
+
+
+MAX_OPTIONS = 25
+MAX_CHOICES = 25
+CHAT_INPUT_NAME_PATTERN = r"^[-_\u02BC\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$"
+
+
+def _require_lowercase(name: str) -> str:
+    """Reject ``name`` if any of its letters has a lowercase variant that wasn't used."""
+    if name != name.lower():
+        msg = f"Name {name!r} must be lowercase"
+        raise ValueError(msg)
+    return name
+
+
+type Name = Annotated[str, StringConstraints(min_length=1, max_length=32)]
+type ChatInputName = Annotated[str, StringConstraints(pattern=CHAT_INPUT_NAME_PATTERN), AfterValidator(_require_lowercase)]
+"""A CHAT_INPUT command or option name: Discord's name regex, lowercase where a lowercase variant exists."""
+type Description = Annotated[str, StringConstraints(min_length=1, max_length=100)]
+type Localizations = dict[Locale, str]
+
+_chat_input_name: TypeAdapter[str] = TypeAdapter(ChatInputName)
+
+
+class ApplicationCommandOptionChoice(DiscordModel):
+    """One predefined value for a STRING, INTEGER or NUMBER option."""
+
+    name: Description
+    name_localizations: Localizations | None = None
+    value: Annotated[str, StringConstraints(max_length=100)] | int | float
+
+
+class ApplicationCommandOption(DiscordModel):
+    """A parameter of an application command, or one of its subcommands."""
+
+    type: ApplicationCommandOptionType
+    name: ChatInputName
+    name_localizations: Localizations | None = None
+    description: Description
+    description_localizations: Localizations | None = None
+    required: bool = False
+    choices: Annotated[list[ApplicationCommandOptionChoice], Field(max_length=MAX_CHOICES)] | None = None
+    options: Annotated[list[ApplicationCommandOption], Field(max_length=MAX_OPTIONS)] | None = None
+    channel_types: list[ChannelType] | None = None
+    min_value: int | float | None = None
+    max_value: int | float | None = None
+    min_length: Annotated[int, Field(ge=0, le=6000)] | None = None
+    max_length: Annotated[int, Field(ge=1, le=6000)] | None = None
+    autocomplete: bool | None = None
+    file_types: Annotated[list[str], Field(max_length=10)] | None = None
+
+
+class ApplicationCommand(DiscordModel):
+    """An application command as Discord returns it (list/create/edit response)."""
 
     id: Snowflake
-    type_: ApplicationCommandType | None
+    type: ApplicationCommandType = ApplicationCommandType.CHAT_INPUT
     application_id: Snowflake
-    guild_id: Snowflake | None
-    version: Snowflake
-    name = LimitedString(32)
-    name_localizations: dict[Locale, str] | None = None
-    description: Annotated[str, required_if("type_", ApplicationCommandType.chat_input)] = LimitedString(100)
-    description_localizations: dict[Locale, str] | None = None
-    options: Annotated[list[CommandOption] | None, absent_if("type_", ApplicationCommandType.chat_input)] = None
-    default_member_permissions: Permissions | None = None
-    dm_permission: bool = True  # If true, allows use of command in DM with bot. Use contexts instead!
-    default_permission: bool = True
-    nsfw: bool = False
-    integration_types: list[IntegrationType] | None = None
-    contexts: list[InteractionContextType] | None = None
-    handler: Annotated[CommandHandlerType, required_if("type_", ApplicationCommandType.primary_entry_point)] = (
-        CommandHandlerType.APP_HANDLER
+    guild_id: Snowflake | None = None
+    name: Name
+    name_localizations: Localizations | None = None
+    description: Annotated[str, StringConstraints(max_length=100)]
+    description_localizations: Localizations | None = None
+    options: Annotated[list[ApplicationCommandOption], Field(max_length=MAX_OPTIONS)] = Field(
+        default_factory=list[ApplicationCommandOption],
     )
+    default_member_permissions: PermissionsField | None = None
+    dm_permission: bool = True
+    default_permission: bool | None = None
+    nsfw: bool = False
+    integration_types: list[ApplicationIntegrationType] | None = None
+    contexts: list[InteractionContextType] | None = None
+    version: Snowflake
+    handler: EntryPointCommandHandlerType | None = None
 
 
-@dataclass
-class ChatInputApplicationCommand(ApplicationCommand):
-    """Represents a chat input application command."""
+class ApplicationCommandParams(BaseModel):
+    """The JSON body for creating or editing an application command.
 
-    description = LimitedString(100)
-    options: list[CommandOption] = field(default_factory=list)
+    Leaves out the deprecated ``dm_permission`` and ``default_permission``; ``contexts`` and
+    ``default_member_permissions`` replace them.
+    """
 
+    model_config = ConfigDict(extra="forbid")
 
-@dataclass
-class UserApplicationCommand(ApplicationCommand):
-    """Represents a user application command."""
+    name: Name
+    name_localizations: Localizations | None = None
+    description: Annotated[str, StringConstraints(max_length=100)] = ""
+    description_localizations: Localizations | None = None
+    options: Annotated[list[ApplicationCommandOption], Field(max_length=MAX_OPTIONS)] | None = None
+    default_member_permissions: Permissions | None = None
+    integration_types: list[ApplicationIntegrationType] | None = None
+    contexts: list[InteractionContextType] | None = None
+    type: ApplicationCommandType = ApplicationCommandType.CHAT_INPUT
+    nsfw: bool | None = None
+    handler: EntryPointCommandHandlerType | None = None
 
-    description = LimitedString(0)
-    options: None = None
+    @model_validator(mode="after")
+    def _check_type_rules(self) -> Self:
+        """Enforce the fields Discord only accepts on some command types."""
+        if self.type is ApplicationCommandType.CHAT_INPUT:
+            _chat_input_name.validate_python(self.name)
+        if self.options and self.type is not ApplicationCommandType.CHAT_INPUT:
+            msg = "options are only valid on CHAT_INPUT commands"
+            raise ValueError(msg)
+        needs_description = self.type in {ApplicationCommandType.CHAT_INPUT, ApplicationCommandType.PRIMARY_ENTRY_POINT}
+        if needs_description != bool(self.description):
+            msg = f"description must be {'1-100 characters' if needs_description else 'empty'} on {self.type.name} commands"
+            raise ValueError(msg)
+        if self.handler is not None and self.type is not ApplicationCommandType.PRIMARY_ENTRY_POINT:
+            msg = "handler is only valid on PRIMARY_ENTRY_POINT commands"
+            raise ValueError(msg)
+        return self
 
+    def to_json(self) -> dict[str, Any]:
+        """Return the request body.
 
-@dataclass
-class MessageApplicationCommand(ApplicationCommand):
-    """Represents a message application command."""
-
-    description = LimitedString(0)
-    options: None = None
-
-
-@dataclass
-class PrimaryEntryPointApplicationCommand(ApplicationCommand):
-    """Represents a primary entry point application command."""
-
-    description = LimitedString(0)
-    options: None = None
+        ``default_member_permissions`` is always sent, as a decimal string or JSON null, so a PATCH
+        can clear permissions a previous sync set.
+        """
+        permissions = self.default_member_permissions
+        payload = self.model_dump(mode="json", exclude_none=True)
+        payload["default_member_permissions"] = None if permissions is None else str(int(permissions))
+        return payload

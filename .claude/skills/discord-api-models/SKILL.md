@@ -6,7 +6,7 @@ description: How wd-discord validates Discord API responses with pydantic v2 —
 # Discord API models (wd-discord)
 
 Every object parsed from a Discord REST or gateway **response** is a validated pydantic v2
-model. Outbound (object→API) builders stay plain — see [architecture](../architecture/SKILL.md).
+model. Outbound (object→API) bodies follow the rule in [architecture](../architecture/SKILL.md).
 
 ## The base: `DiscordModel`
 

@@ -32,7 +32,7 @@ class Guild(DiscordModel):
 
     id: Snowflake
     """Guild id."""
-    name: str # TODO: Make use of LimitedString? probably should expand that with min_length as well.
+    name: str  # TODO: constrain to 2-100 characters with pydantic StringConstraints.
     """Guild name (2-100 characters, excluding trailing and leading whitespace)."""
     icon: ImageHash | None
     """Icon hash."""

@@ -9,7 +9,7 @@ lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Self, get_args
 
 lazy from herogold.log import LoggerMixin
-lazy from wd_discord.interactions import ApplicationCommandOptionType, CommandOption
+lazy from wd_discord.interactions import ApplicationCommandOption, ApplicationCommandOptionType, ApplicationCommandParams
 lazy from wd_discord.resources.user import User
 
 lazy from wd_bot.signature import command_signature
@@ -88,15 +88,24 @@ class Command(LoggerMixin):
         """Resolve ``annotation`` if it is a not-yet-reified lazy-import proxy."""
         return annotation.resolve() if isinstance(annotation, LazyImportType) else annotation
 
-    def options(self) -> Generator[CommandOption]:
+    def options(self) -> Generator[ApplicationCommandOption]:
         """Yield this command's Discord option definitions, derived from its handler's parameters."""
         for param_name, param_type in self._param_types.items():
-            yield CommandOption(
+            yield ApplicationCommandOption(
                 type=_OPTION_TYPE_MAP[param_type],
                 name=param_name,
                 description=param_name,
                 required=self._param_required[param_name],
             )
+
+    def params(self) -> ApplicationCommandParams:
+        """Return the create/edit request body for this command."""
+        return ApplicationCommandParams(
+            name=self.name,
+            description=self.description,
+            options=list(self.options()),
+            default_member_permissions=self.default_member_permissions,
+        )
 
     def signature(self) -> str:
         """Return the signature of the full registered definition, used to detect drift for sync.
@@ -174,15 +183,24 @@ class CommandGroup(LoggerMixin):
                     t"Subcommand '{name} {subcommand.name}' sets default_member_permissions; Discord ignores it",
                 )
 
-    def options(self) -> Generator[CommandOption]:
+    def options(self) -> Generator[ApplicationCommandOption]:
         """Yield one SUB_COMMAND option per subcommand, nesting that subcommand's own options."""
         for subcommand in self.subcommands.values():
-            yield CommandOption(
+            yield ApplicationCommandOption(
                 type=ApplicationCommandOptionType.SUB_COMMAND,
                 name=subcommand.name,
                 description=subcommand.description,
                 options=list(subcommand.options()) or None,
             )
+
+    def params(self) -> ApplicationCommandParams:
+        """Return the create/edit request body for this command."""
+        return ApplicationCommandParams(
+            name=self.name,
+            description=self.description,
+            options=list(self.options()),
+            default_member_permissions=self.default_member_permissions,
+        )
 
     def signature(self) -> str:
         """Return the signature of the whole group, covering every subcommand, used to detect drift for sync."""

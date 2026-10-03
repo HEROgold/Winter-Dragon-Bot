@@ -45,7 +45,7 @@ lazy from wd_discord.authenticate import (
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.interactions import CommandOption, RegisteredCommand
+lazy from wd_discord.interactions import ApplicationCommand
 lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
 lazy from wd_discord.resources.application import Application
 lazy from wd_discord.resources.channel import Channel
@@ -55,7 +55,7 @@ lazy from wd_discord.resources.user import User
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator, Sequence
+    lazy from collections.abc import Awaitable, Callable, Generator
 
     lazy from httpxyz import Response
     lazy from wd_core.intents import Intents
@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.embed import Embed
     lazy from wd_discord.gateway.events import Interaction
     lazy from wd_discord.image import ImageHash
-    lazy from wd_discord.permissions import Permissions
+    lazy from wd_discord.interactions import ApplicationCommandParams
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
@@ -103,27 +103,6 @@ def _parse_error(response: Response) -> ApiResponseError:
         return ApiResponseError.model_validate(response.json())
     except Exception:  # noqa: BLE001 - non-JSON or unexpected shape (e.g. a Cloudflare HTML ban page)
         return ApiResponseError(code=response.status_code, message=response.text)
-
-
-def _build_command_payload(
-    name: str,
-    description: str,
-    options: Sequence[CommandOption],
-    default_member_permissions: Permissions | None = None,
-) -> dict[str, Any]:
-    """Build the JSON body for creating/editing a chat-input application command.
-
-    ``default_member_permissions`` is always sent - as a decimal string, or ``None`` (JSON null)
-    when unset - so a PATCH can clear permissions a previous sync set.
-    """
-    permissions = None if default_member_permissions is None else str(int(default_member_permissions))
-    return {
-        "name": name,
-        "description": description,
-        "type": 1,
-        "options": [option.model_dump(mode="json", exclude_none=True) for option in options],
-        "default_member_permissions": permissions,
-    }
 
 
 class Client(LoggerMixin):
@@ -393,44 +372,25 @@ class Client(LoggerMixin):
         payload = {"type": 4, "data": data}
         return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
 
-    async def create_global_command(
-        self,
-        name: str,
-        description: str,
-        options: list[CommandOption] | None = None,
-        default_member_permissions: Permissions | None = None,
-    ) -> RegisteredCommand | NetworkError:
-        """POST /applications/{application_id}/commands - register a new global chat-input command."""
+    async def create_global_command(self, params: ApplicationCommandParams) -> ApplicationCommand | NetworkError:
+        """POST /applications/{application_id}/commands - register a new global command."""
         application_id = await self._get_application_id()
         if isinstance(application_id, (ApiResponseError, RequestError)):
             return application_id
-        result = await self.post(
-            f"/applications/{application_id}/commands",
-            json=_build_command_payload(name, description, options or [], default_member_permissions),
-        )
+        result = await self.post(f"/applications/{application_id}/commands", json=params.to_json())
         if isinstance(result, (ApiResponseError, RequestError)):
             return result
-        return RegisteredCommand.model_validate(result.json())
+        return ApplicationCommand.model_validate(result.json())
 
-    async def edit_global_command(
-        self,
-        command_id: str,
-        name: str,
-        description: str,
-        options: list[CommandOption] | None = None,
-        default_member_permissions: Permissions | None = None,
-    ) -> RegisteredCommand | NetworkError:
+    async def edit_global_command(self, command_id: str, params: ApplicationCommandParams) -> ApplicationCommand | NetworkError:
         """PATCH /applications/{application_id}/commands/{command_id} - update an existing global command."""
         application_id = await self._get_application_id()
         if isinstance(application_id, (ApiResponseError, RequestError)):
             return application_id
-        result = await self.patch(
-            f"/applications/{application_id}/commands/{command_id}",
-            json=_build_command_payload(name, description, options or [], default_member_permissions),
-        )
+        result = await self.patch(f"/applications/{application_id}/commands/{command_id}", json=params.to_json())
         if isinstance(result, (ApiResponseError, RequestError)):
             return result
-        return RegisteredCommand.model_validate(result.json())
+        return ApplicationCommand.model_validate(result.json())
 
     async def delete_global_command(self, command_id: str) -> NetworkError | None:
         """DELETE /applications/{application_id}/commands/{command_id} - remove a global command."""
@@ -442,7 +402,7 @@ class Client(LoggerMixin):
             return result
         return None
 
-    async def get_global_commands(self) -> Generator[RegisteredCommand] | NetworkError:
+    async def get_global_commands(self) -> Generator[ApplicationCommand] | NetworkError:
         """GET /applications/{application_id}/commands - every currently-registered global command."""
         application_id = await self._get_application_id()
         if isinstance(application_id, (ApiResponseError, RequestError)):
@@ -450,4 +410,4 @@ class Client(LoggerMixin):
         result = await self.get(f"/applications/{application_id}/commands")
         if isinstance(result, (ApiResponseError, RequestError)):
             return result
-        return (RegisteredCommand.model_validate(item) for item in result.json())
+        return (ApplicationCommand.model_validate(item) for item in result.json())

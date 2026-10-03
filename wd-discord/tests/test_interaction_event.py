@@ -8,7 +8,7 @@ from wd_discord import models
 from wd_discord.gateway import EventName
 from wd_discord.gateway.dispatch import parse_dispatch
 from wd_discord.gateway.events import Interaction, InteractionType
-from wd_discord.interactions import RegisteredCommand
+from wd_discord.interactions import ApplicationCommand, InteractionContextType
 
 
 if TYPE_CHECKING:
@@ -79,12 +79,12 @@ def test_realistic_interaction_create_reports_no_unknown_fields(monkeypatch: pyt
     assert reports == []
 
 
-def test_registered_command_reports_no_unknown_fields(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_application_command_reports_no_unknown_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     """The extra keys Discord returns for a registered command are declared."""
     reports: list[tuple[str, dict[str, object]]] = []
     monkeypatch.setattr(models, "_report_unknown_fields", lambda name, extra: reports.append((name, dict(extra))))
 
-    command = RegisteredCommand.model_validate(
+    command = ApplicationCommand.model_validate(
         {
             "id": "1",
             "application_id": "2",
@@ -98,5 +98,5 @@ def test_registered_command_reports_no_unknown_fields(monkeypatch: pytest.Monkey
         },
     )
 
-    assert command.contexts == [0, 1, 2]
+    assert command.contexts == list(InteractionContextType)
     assert reports == []

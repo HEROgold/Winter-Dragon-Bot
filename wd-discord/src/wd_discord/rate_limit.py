@@ -21,7 +21,7 @@ lazy from typing import TYPE_CHECKING, Any, ClassVar
 lazy from herogold.log import LoggerMixin, getLogger
 lazy from wd_errors.base import BaseError
 
-lazy from wd_discord.utils import XORError, xor
+lazy from wd_discord.utils.xor import XORError, xor
 
 
 if TYPE_CHECKING:
