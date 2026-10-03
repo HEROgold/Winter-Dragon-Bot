@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.15"
 dependencies = [
-    "herogold[orm]>=3.0.0",
+    "herogold[orm]>=4.0.0",
     "wd-cogs",
     "wd-config",
     "wd-core",
