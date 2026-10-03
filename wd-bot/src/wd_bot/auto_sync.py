@@ -151,6 +151,18 @@ class DefaultCommandSyncer(LoggerMixin):
     def __init__(self, engine: Engine | None = None) -> None:
         """Use ``engine`` for sync state; defaults to ``wd_db.constants.engine``, resolved at sync time."""
         self._engine = engine
+        self._tables_ready = False
+
+    def _ensure_tables(self, engine: Engine) -> None:
+        """Create the sync-tracking tables on ``engine`` if missing; runs once per syncer (idempotent)."""
+        if self._tables_ready:
+            return
+        models = (CommandRecord, GlobalSyncedCommand, GuildSyncedCommand)
+        # SQLModel's default ``__tablename__`` is the lowercased class name; looking tables up through
+        # the metadata keeps them typed as ``Table`` (``Model.__table__`` is untyped).
+        tables = [SQLModel.metadata.tables[model.__name__.lower()] for model in models]
+        SQLModel.metadata.create_all(engine, tables=tables)
+        self._tables_ready = True
 
     async def sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:
         """Diff ``commands`` against the last-synced state and push only the changes to Discord.
@@ -158,7 +170,9 @@ class DefaultCommandSyncer(LoggerMixin):
         With ``allow_deletes`` False, ``plan.to_delete`` is skipped and one warning lists the skipped IDs.
         """
         by_name = {command.name: command for command in commands}
-        with Session(self._engine or default_engine) as session:
+        engine = self._engine or default_engine
+        self._ensure_tables(engine)
+        with Session(engine) as session:
             plan = diff_global_commands(session, list(by_name.values()))
             for planned in plan.to_create:
                 command = by_name[planned.name]

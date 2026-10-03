@@ -148,6 +148,13 @@ class Bot(LoggerMixin):
         commands = list(self.commands)
         await self.syncer.sync(client, commands, allow_deletes=not self._failed_extensions)
 
+    async def _startup_sync(self, client: Client) -> None:
+        """Run the startup :meth:`sync_commands`, logging (not raising) any failure so the gateway still starts."""
+        try:
+            await self.sync_commands(client)
+        except Exception:
+            self.logger.exception(t"Startup command sync failed; continuing without it")
+
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
         """Fan out a parsed gateway dispatch event to every registered listener for it."""
         for handler in self._listeners.get(event_name, []):
@@ -260,7 +267,7 @@ class Bot(LoggerMixin):
 
             manager = await client.get_shard_manager(gw_info, intents=self.intents)
             await self.load_extensions()
-            await self.sync_commands(client)
+            await self._startup_sync(client)
             async with manager:
                 self.logger.info(t"Bot is running with {len(manager.shards)} shards")
                 await manager.serve_forever(self._dispatch)

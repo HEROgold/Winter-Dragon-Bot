@@ -18,6 +18,7 @@ from wd_discord.resources.user import User
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
 
+    import pytest
     from wd_bot.commands import Command
 
 
@@ -166,3 +167,18 @@ async def test_successful_load_clears_failed_extension() -> None:
     bot._load_from_module_spec = AsyncMock()  # type: ignore[method-assign]
     await bot.load_extension("commands")
     assert "commands" not in bot._failed_extensions
+
+
+class _BrokenSyncer:
+    async def sync(self, client: object, commands: Sequence[Command], *, allow_deletes: bool = True) -> None:  # noqa: ARG002
+        msg = "database is down"
+        raise RuntimeError(msg)
+
+
+async def test_startup_sync_logs_failure_instead_of_raising(capsys: pytest.CaptureFixture[str]) -> None:
+    bot = _make_bot()
+    bot.syncer = _BrokenSyncer()
+    await bot._startup_sync(object())  # type: ignore[arg-type]
+    err = capsys.readouterr().err
+    assert "Startup command sync failed" in err
+    assert "database is down" in err

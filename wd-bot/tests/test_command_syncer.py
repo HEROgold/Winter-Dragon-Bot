@@ -192,3 +192,14 @@ async def test_passes_default_member_permissions_to_create_and_edit() -> None:
     changed = Command(_ping, name="ping", description="d2", default_member_permissions=Permissions.ADMINISTRATOR)
     await syncer.sync(client, [changed])
     assert client.edit_global_command.await_args.kwargs["default_member_permissions"] == Permissions.ADMINISTRATOR
+
+
+async def test_sync_creates_its_own_tables_on_a_fresh_engine() -> None:
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    client = _fake_client()
+
+    await DefaultCommandSyncer(engine=engine).sync(client, [_command()])
+
+    client.create_global_command.assert_awaited_once()
+    with Session(engine) as session:
+        assert [row.discord_command_id for row in session.exec(select(GlobalSyncedCommand)).all()] == ["555"]
