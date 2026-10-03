@@ -103,7 +103,7 @@ class InteractionData(DiscordModel):
     id: Snowflake
     name: str
     type: int
-    options: list[InteractionDataOption] = Field(default_factory=list)
+    options: list[InteractionDataOption] = Field(default_factory=list[InteractionDataOption])
     resolved: ResolvedData | None = None
 
 

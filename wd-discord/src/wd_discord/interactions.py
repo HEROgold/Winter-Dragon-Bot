@@ -1,19 +1,19 @@
 """Discord Interactions."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
-
 lazy from dataclasses import dataclass, field
 lazy from enum import Enum, IntEnum, StrEnum, auto
 lazy from typing import TYPE_CHECKING, Annotated, get_type_hints
 
-lazy from wd_discord.utils.strings import LimitedString
-lazy from wd_errors.size import TooLongError
-
 from pydantic import Field
+
 from wd_discord.models import DiscordModel
 from wd_discord.permissions import PermissionsField
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.utils.strings import LimitedString
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Callable
@@ -28,6 +28,7 @@ class ApplicationCommandType(IntEnum):
     user = 2
     message = 3
     primary_entry_point = 4
+
 
 class ApplicationCommandOptionType(IntEnum):
     """Represents the type of an application command option (distinct from the command's own type)."""
@@ -44,6 +45,7 @@ class ApplicationCommandOptionType(IntEnum):
     NUMBER = 10
     ATTACHMENT = 11
 
+
 @dataclass
 class Locale:
     """Represents a locale."""
@@ -51,6 +53,7 @@ class Locale:
     locale: str
     english_name: str
     native_name: str
+
 
 class Locales(Enum):
     """Represents the different locales for Discord."""
@@ -103,6 +106,7 @@ def required_if(dependent_field: str, required_state: object) -> Callable[[objec
 
     return validator
 
+
 def absent_if(dependent_field: str, absent_state: object = None) -> Callable[[object, object], tuple[bool, Exception | None]]:
     """Check if a field must be absent based on the state of another field."""
 
@@ -114,6 +118,7 @@ def absent_if(dependent_field: str, absent_state: object = None) -> Callable[[ob
         return True, None
 
     return validator
+
 
 def validate[T](cls: type[T]) -> type[T]:
     """Class decorator to validate dataclass fields based on their type annotations and metadata."""
@@ -143,6 +148,7 @@ def validate[T](cls: type[T]) -> type[T]:
     cls.__post_init__ = new_post_init  # ty:ignore[unresolved-attribute]
     return cls
 
+
 class CommandOption(DiscordModel):
     """An option for an application command (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 
@@ -163,10 +169,11 @@ class RegisteredCommand(DiscordModel):
     version: Snowflake
     name: str
     description: str
-    options: list[CommandOption] = Field(default_factory=list)
+    options: list[CommandOption] = Field(default_factory=list[CommandOption])
     default_member_permissions: PermissionsField | None = None
     dm_permission: bool = True
     nsfw: bool = False
+
 
 class CommandHandlerType(Enum):
     """Represents the type of handler for an application command."""
@@ -176,12 +183,14 @@ class CommandHandlerType(Enum):
     DISCORD_LAUNCH_ACTIVITY = 2
     """Discord handles the interaction by launching an Activity and sending a follow-up message without coordinating with the app"""
 
+
 class InteractionContextType(Enum):
     """Represents the context in which an application command can be used."""
 
     GUILD = 0
     BOT_DM = 1
     PRIVATE_CHANNEL = 2
+
 
 class IntegrationType(StrEnum):
     """Represents the type of integration for an application command."""
@@ -190,6 +199,7 @@ class IntegrationType(StrEnum):
     youtube = auto()
     discord = auto()
     guild_subscription = auto()
+
 
 @validate
 @dataclass
@@ -207,12 +217,15 @@ class ApplicationCommand:
     description_localizations: dict[Locale, str] | None = None
     options: Annotated[list[CommandOption] | None, absent_if("type_", ApplicationCommandType.chat_input)] = None
     default_member_permissions: Permissions | None = None
-    dm_permission: bool = True # If true, allows use of command in DM with bot. Use contexts instead!
+    dm_permission: bool = True  # If true, allows use of command in DM with bot. Use contexts instead!
     default_permission: bool = True
     nsfw: bool = False
     integration_types: list[IntegrationType] | None = None
     contexts: list[InteractionContextType] | None = None
-    handler: Annotated[CommandHandlerType, required_if("type_", ApplicationCommandType.primary_entry_point)] = CommandHandlerType.APP_HANDLER
+    handler: Annotated[CommandHandlerType, required_if("type_", ApplicationCommandType.primary_entry_point)] = (
+        CommandHandlerType.APP_HANDLER
+    )
+
 
 @dataclass
 class ChatInputApplicationCommand(ApplicationCommand):
@@ -221,6 +234,7 @@ class ChatInputApplicationCommand(ApplicationCommand):
     description = LimitedString(100)
     options: list[CommandOption] = field(default_factory=list)
 
+
 @dataclass
 class UserApplicationCommand(ApplicationCommand):
     """Represents a user application command."""
@@ -228,12 +242,14 @@ class UserApplicationCommand(ApplicationCommand):
     description = LimitedString(0)
     options: None = None
 
+
 @dataclass
 class MessageApplicationCommand(ApplicationCommand):
     """Represents a message application command."""
 
     description = LimitedString(0)
     options: None = None
+
 
 @dataclass
 class PrimaryEntryPointApplicationCommand(ApplicationCommand):

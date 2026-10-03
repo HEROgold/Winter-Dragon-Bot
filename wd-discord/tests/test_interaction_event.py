@@ -1,4 +1,5 @@
 """Unit tests: the Interaction dispatch-event model."""
+
 from __future__ import annotations
 
 from wd_discord.gateway import EventName

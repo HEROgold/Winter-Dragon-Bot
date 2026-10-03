@@ -1,4 +1,5 @@
 """Unit tests: interaction/application-command concepts and validators."""
+
 from __future__ import annotations
 
 lazy import pytest

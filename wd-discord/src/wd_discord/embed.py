@@ -7,6 +7,7 @@ field is optional per Discord's docs; the ones not modeled yet are: ``type``, ``
 ``flags`` — add them here (and to :class:`EmbedField` for ``fields``' nested shape, already
 covered) as a future command actually needs them.
 """
+
 from __future__ import annotations
 
 from wd_discord.models import DiscordModel

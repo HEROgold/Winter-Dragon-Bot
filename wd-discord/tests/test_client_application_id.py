@@ -1,4 +1,5 @@
 """Unit tests: Client._get_application_id's fetch-and-cache behavior."""
+
 from __future__ import annotations
 
 import pytest
