@@ -248,6 +248,18 @@ class Bot(LoggerMixin):
             else:
                 self.logger.info(t"Loaded cog {extension}")
 
+    async def _fetch_gateway_info(self, client: Client) -> GatewayBotInfo:
+        """Check the token works, then fetch the gateway info; raise :class:`StartupError` if either call fails."""
+        me = await client.get_current_user()
+        if not isinstance(me, User):
+            msg = "Failed to get current user from Discord API"
+            raise StartupError(msg)
+        gw_info = await client.get_gateway_bot()
+        if not isinstance(gw_info, GatewayBotInfo):
+            msg = "Failed to get gateway bot info from Discord API"
+            raise StartupError(msg)
+        return gw_info
+
     @with_known_exception(StartupError)
     @Config.with_kwarg("Tokens", "discord_token", name="token")
     async def start(self, token: str) -> None:
@@ -255,16 +267,7 @@ class Bot(LoggerMixin):
         self.loop = asyncio.get_running_loop()
         async with Client(token) as client:
             self.client = client
-            me = await client.get_current_user()
-            if not isinstance(me, User):
-                msg = "Failed to get current user from Discord API"
-                raise StartupError(msg)
-
-            gw_info = await client.get_gateway_bot()
-            if not isinstance(gw_info, GatewayBotInfo):
-                msg = "Failed to get gateway bot info from Discord API"
-                raise StartupError(msg)
-
+            gw_info = await self._fetch_gateway_info(client)
             manager = await client.get_shard_manager(gw_info, intents=self.intents)
             await self.load_extensions()
             await self._startup_sync(client)

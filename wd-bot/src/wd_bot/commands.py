@@ -19,7 +19,7 @@ lazy from wd_bot.signature import command_signature
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
-    lazy from wd_discord.gateway.events import Interaction, InteractionDataOption
+    lazy from wd_discord.gateway.events import Interaction, InteractionDataOption, ResolvedData
     lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
@@ -118,17 +118,26 @@ class Command(AppCommand):
         for param_name, param in parameters.items():
             if param_name in ("self", "interaction"):
                 continue
-            annotation: object = self._resolve(annotations.get(param_name, Parameter.empty), func)
-            required = param.default is Parameter.empty
-            if isinstance(annotation, UnionType) and NoneType in get_args(annotation):
-                non_none = [arg for arg in get_args(annotation) if arg is not NoneType]
-                annotation = self._reify(non_none[0]) if len(non_none) == 1 else annotation
-                required = False
-            if not isinstance(annotation, type) or annotation not in _OPTION_TYPE_MAP:
-                msg = f"Command {name!r}: unsupported option type {annotation!r} for parameter {param_name!r}"
-                raise TypeError(msg)
-            self._param_types[param_name] = annotation
+            option_type, required = self._parse_parameter(param, annotations.get(param_name, Parameter.empty))
+            self._param_types[param_name] = option_type
             self._param_required[param_name] = required
+
+    def _parse_parameter(self, param: Parameter, annotation: object) -> tuple[type, bool]:
+        """Return the option type for handler parameter ``param`` and whether the option is required.
+
+        A default value or a ``T | None`` annotation makes the option optional. Raises ``TypeError`` if
+        the type has no Discord option type.
+        """
+        option_type = self._resolve(annotation, self.func)
+        required = param.default is Parameter.empty
+        if isinstance(option_type, UnionType) and NoneType in get_args(option_type):
+            non_none = [arg for arg in get_args(option_type) if arg is not NoneType]
+            option_type = self._reify(non_none[0]) if len(non_none) == 1 else option_type
+            required = False
+        if not isinstance(option_type, type) or option_type not in _OPTION_TYPE_MAP:
+            msg = f"Command {self.name!r}: unsupported option type {option_type!r} for parameter {param.name!r}"
+            raise TypeError(msg)
+        return option_type, required
 
     @staticmethod
     def _resolve(annotation: object, func: Callable[..., object]) -> object:
@@ -170,11 +179,23 @@ class Command(AppCommand):
         chosen subcommand's nested options instead. Returns ``True`` if the handler completed, ``False``
         if it raised (the exception is logged).
         """
-        kwargs: dict[str, object] = {}
         data = interaction.data
         if options is None:
             options = data.options if data else []
-        resolved = data.resolved if data else None
+        kwargs = self._build_kwargs(options, data.resolved if data else None)
+        try:
+            await self.func(cog, interaction, **kwargs)
+        except Exception:
+            self.logger.exception(t"Unhandled exception in command '{self.name}'")
+            return False
+        return True
+
+    def _build_kwargs(self, options: Sequence[InteractionDataOption], resolved: ResolvedData | None) -> dict[str, object]:
+        """Map each submitted option to a handler argument, resolving USER options to :class:`User` objects.
+
+        Options the handler doesn't declare, and users missing from ``resolved``, are skipped with a warning.
+        """
+        kwargs: dict[str, object] = {}
         for option in options:
             if option.name not in self._param_types:
                 self.logger.warning(t"Unknown option '{option.name}' for command '{self.name}', skipping it")
@@ -187,12 +208,7 @@ class Command(AppCommand):
                 kwargs[option.name] = user
             else:
                 kwargs[option.name] = option.value
-        try:
-            await self.func(cog, interaction, **kwargs)
-        except Exception:
-            self.logger.exception(t"Unhandled exception in command '{self.name}'")
-            return False
-        return True
+        return kwargs
 
     def __get__(self, instance: object, owner: type) -> Self:
         """Allow a Command to be accessed as a plain attribute on a Cog instance without binding it like a method."""
