@@ -104,3 +104,23 @@ async def test_resync_responds_before_syncing() -> None:
     assert order == ["respond", "sync"]
     sync.assert_awaited_once_with(client)
     client.create_interaction_response.assert_awaited_once_with(interaction, content="Resyncing commands…")
+
+
+async def test_handlers_refuse_outside_a_guild() -> None:
+    for command in (BotCommands.list_commands, BotCommands.resync):
+        respond = AsyncMock()
+        sync = AsyncMock()
+        cog = BotCommands.__new__(BotCommands)
+        client = SimpleNamespace(create_interaction_response=respond)
+        cog.bot = SimpleNamespace(commands=iter(()), client=client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
+        interaction = MagicMock()
+        interaction.guild_id = None
+
+        await command.invoke(cog, interaction)
+
+        respond.assert_awaited_once_with(interaction, content=module.GUILD_ONLY_REFUSAL)
+        sync.assert_not_awaited()
+
+
+def test_resync_description() -> None:
+    assert BotCommands.resync.description == "Push pending command changes to Discord"
