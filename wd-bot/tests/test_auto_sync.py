@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-lazy import sys
-lazy import types
 lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
-lazy import httpxyz
 lazy import pytest
 lazy from sqlalchemy import BigInteger
 lazy from sqlalchemy.ext.compiler import compiles
@@ -19,27 +16,14 @@ if TYPE_CHECKING:
     lazy from collections.abc import Generator
 
 
-def _stub_wd_db_constants() -> None:
-    """Stub the import-time side effects of wd_db that need packages missing from the dev environment.
+@compiles(BigInteger, "sqlite")
+def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) -> str:
+    """Render BigInteger as INTEGER on sqlite.
 
-    ``wd_db.constants`` builds a Postgres engine (needs psycopg2) and ``wd_db.extension.model``
-    builds ``httpxyz.Client(http2=True)`` (needs h2). Neither is exercised by these tests. Also
-    makes sqlite autoincrement the models' BigInteger primary keys.
+    wd_db's SQLModel.id is a BigInteger primary key, which sqlite only autoincrements when the
+    column type is exactly INTEGER. Postgres (production) is unaffected.
     """
-
-    @compiles(BigInteger, "sqlite")
-    def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) -> str:
-        """Render BigInteger as INTEGER on sqlite so BigInteger primary keys autoincrement."""
-        return "INTEGER"
-
-    httpxyz.Client = lambda *_args, **_kwargs: None  # ty: ignore[invalid-assignment]
-    stub = types.ModuleType("wd_db.constants")
-    stub.engine = create_engine("sqlite://")  # ty: ignore[unresolved-attribute]
-    stub.session = Session(stub.engine)  # ty: ignore[unresolved-attribute]
-    sys.modules.setdefault("wd_db.constants", stub)
-
-
-_stub_wd_db_constants()
+    return "INTEGER"
 
 
 @dataclass
