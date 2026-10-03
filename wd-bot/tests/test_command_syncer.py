@@ -203,3 +203,48 @@ async def test_sync_creates_its_own_tables_on_a_fresh_engine() -> None:
     client.create_global_command.assert_awaited_once()
     with Session(engine) as session:
         assert [row.discord_command_id for row in session.exec(select(GlobalSyncedCommand)).all()] == ["555"]
+
+
+async def test_edit_of_unknown_command_recreates_it() -> None:
+    engine = _make_engine()
+    _seed(engine, "ping", "stale", "88")
+    client = _fake_client()
+    client.edit_global_command = AsyncMock(
+        return_value=ApiResponseError(code=10063, message="Unknown application command"),
+    )
+
+    await DefaultCommandSyncer(engine=engine).sync(client, [_command()])
+
+    client.edit_global_command.assert_awaited_once()
+    client.create_global_command.assert_awaited_once()
+    with Session(engine) as session:
+        row = session.exec(select(GlobalSyncedCommand)).one()
+        assert row.discord_command_id == "555"
+        assert row.signature == _command().signature()
+
+
+async def test_edit_with_bare_404_recreates_it() -> None:
+    engine = _make_engine()
+    _seed(engine, "ping", "stale", "88")
+    client = _fake_client()
+    client.edit_global_command = AsyncMock(return_value=ApiResponseError(code=404, message="Not Found"))
+
+    await DefaultCommandSyncer(engine=engine).sync(client, [_command()])
+
+    with Session(engine) as session:
+        assert [row.discord_command_id for row in session.exec(select(GlobalSyncedCommand)).all()] == ["555"]
+
+
+async def test_delete_of_unknown_command_counts_as_success() -> None:
+    engine = _make_engine()
+    _seed(engine, "old", "() -> None", "77")
+    client = _fake_client()
+    client.delete_global_command = AsyncMock(
+        return_value=ApiResponseError(code=10063, message="Unknown application command"),
+    )
+
+    await DefaultCommandSyncer(engine=engine).sync(client, [_command()])
+
+    client.delete_global_command.assert_awaited_once_with("77")
+    with Session(engine) as session:
+        assert [row.discord_command_id for row in session.exec(select(GlobalSyncedCommand)).all()] == ["555"]

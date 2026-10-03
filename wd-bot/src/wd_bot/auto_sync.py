@@ -27,6 +27,10 @@ if TYPE_CHECKING:
     lazy from wd_bot.commands import Command
 
 
+UNKNOWN_COMMAND_CODES = frozenset({404, 10063})
+"""Error codes meaning Discord has no such command: HTTP 404 and JSON code 10063 ("Unknown application command")."""
+
+
 class CommandLike(Protocol):
     """Anything with a stable name and a signature - satisfied structurally by wd_bot.commands.Command."""
 
@@ -89,6 +93,22 @@ def _get_or_create_record(session: Session, name: str) -> CommandRecord:
         session.commit()
         session.refresh(record)
     return record
+
+
+def _locked_row(session: Session, discord_command_id: str) -> GlobalSyncedCommand | None:
+    """Return the :class:`GlobalSyncedCommand` for ``discord_command_id``, locked for update, if any."""
+    return session.exec(
+        select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id).with_for_update(),
+    ).first()
+
+
+def _is_unknown_command(result: object) -> bool:
+    """Whether ``result`` is Discord's "Unknown application command" error (or a bare 404).
+
+    ``ApiResponseError.code`` carries Discord's JSON error code (10063) when the body parsed, and
+    the HTTP status (404) when it didn't.
+    """
+    return isinstance(result, ApiResponseError) and result.code in UNKNOWN_COMMAND_CODES
 
 
 def _build_plan(
@@ -175,67 +195,82 @@ class DefaultCommandSyncer(LoggerMixin):
         with Session(engine) as session:
             plan = diff_global_commands(session, list(by_name.values()))
             for planned in plan.to_create:
-                command = by_name[planned.name]
-                result = await client.create_global_command(
-                    command.name,
-                    command.description,
-                    list(command.options()),
-                    default_member_permissions=command.default_member_permissions,
-                )
-                if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning(t"Failed to create command '{command.name}': {result}")
-                    continue
-                record = _get_or_create_record(session, command.name)
-                if record.id is None:
-                    continue
-                session.add(
-                    GlobalSyncedCommand(
-                        command_id=record.id,
-                        signature=command.signature(),
-                        discord_command_id=str(result.id),
-                    ),
-                )
-                session.commit()
+                await self._create(client, session, by_name[planned.name])
             for planned, discord_command_id in plan.to_edit:
-                command = by_name[planned.name]
-                result = await client.edit_global_command(
-                    discord_command_id,
-                    command.name,
-                    command.description,
-                    list(command.options()),
-                    default_member_permissions=command.default_member_permissions,
-                )
-                if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning(t"Failed to edit command '{command.name}': {result}")
-                    continue
-                row = session.exec(
-                    select(GlobalSyncedCommand)
-                    .where(GlobalSyncedCommand.discord_command_id == discord_command_id)
-                    .with_for_update(),
-                ).first()
-                if row is None:
-                    self.logger.warning(t"No synced row for edited command '{command.name}'")
-                    continue
-                row.signature = command.signature()
-                session.add(row)
-                session.commit()
+                await self._edit(client, session, by_name[planned.name], discord_command_id)
             if allow_deletes:
                 await self._delete(client, session, plan.to_delete)
             elif plan.to_delete:
                 self.logger.warning(t"Skipping deletes of Discord commands {plan.to_delete}")
 
+    async def _create(self, client: Client, session: Session, command: Command) -> None:
+        """Create ``command`` on Discord and store its synced row, unless the create failed."""
+        result = await client.create_global_command(
+            command.name,
+            command.description,
+            list(command.options()),
+            default_member_permissions=command.default_member_permissions,
+        )
+        if isinstance(result, ApiResponseError | RequestError):
+            self.logger.warning(t"Failed to create command '{command.name}': {result}")
+            return
+        record = _get_or_create_record(session, command.name)
+        if record.id is None:
+            return
+        session.add(
+            GlobalSyncedCommand(
+                command_id=record.id,
+                signature=command.signature(),
+                discord_command_id=str(result.id),
+            ),
+        )
+        session.commit()
+
+    async def _edit(self, client: Client, session: Session, command: Command, discord_command_id: str) -> None:
+        """Edit ``command`` on Discord and update its synced row's signature.
+
+        If Discord no longer knows the command (deleted out-of-band), the stale row is dropped and
+        the command is created afresh in the same sync.
+        """
+        result = await client.edit_global_command(
+            discord_command_id,
+            command.name,
+            command.description,
+            list(command.options()),
+            default_member_permissions=command.default_member_permissions,
+        )
+        if _is_unknown_command(result):
+            self.logger.warning(t"Command '{command.name}' ({discord_command_id}) is gone on Discord; recreating it")
+            self._drop_row(session, discord_command_id)
+            await self._create(client, session, command)
+            return
+        if isinstance(result, ApiResponseError | RequestError):
+            self.logger.warning(t"Failed to edit command '{command.name}': {result}")
+            return
+        row = _locked_row(session, discord_command_id)
+        if row is None:
+            self.logger.warning(t"No synced row for edited command '{command.name}'")
+            return
+        row.signature = command.signature()
+        session.add(row)
+        session.commit()
+
     async def _delete(self, client: Client, session: Session, discord_command_ids: Sequence[str]) -> None:
-        """Delete ``discord_command_ids`` on Discord, dropping each synced row only if its delete succeeded."""
+        """Delete ``discord_command_ids`` on Discord, dropping each synced row only if its delete succeeded.
+
+        A delete of a command Discord no longer knows counts as success.
+        """
         for discord_command_id in discord_command_ids:
             result = await client.delete_global_command(discord_command_id)
-            if isinstance(result, ApiResponseError | RequestError):
+            if isinstance(result, ApiResponseError | RequestError) and not _is_unknown_command(result):
                 self.logger.warning(t"Failed to delete command '{discord_command_id}': {result}")
                 continue
-            row = session.exec(
-                select(GlobalSyncedCommand)
-                .where(GlobalSyncedCommand.discord_command_id == discord_command_id)
-                .with_for_update(),
-            ).first()
-            if row is not None:
-                session.delete(row)
-                session.commit()
+            self._drop_row(session, discord_command_id)
+
+    @staticmethod
+    def _drop_row(session: Session, discord_command_id: str) -> None:
+        """Delete the synced row for ``discord_command_id``, if any."""
+        row = _locked_row(session, discord_command_id)
+        if row is not None:
+            session.delete(row)
+            session.commit()
