@@ -37,3 +37,9 @@ def test_timestamp_round_trip() -> None:
 
 def test_snowflake_converts_to_int() -> None:
     assert int(Snowflake(123)) == 123
+
+
+def test_snowflake_str_is_the_wire_form() -> None:
+    snowflake = Snowflake(1226868250713784331)
+    assert str(snowflake) == "1226868250713784331"
+    assert f"/commands/{snowflake}" == "/commands/1226868250713784331"

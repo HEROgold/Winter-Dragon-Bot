@@ -50,6 +50,10 @@ class Snowflake:
         """Return the raw snowflake integer."""
         return self._snowflake
 
+    def __str__(self) -> str:
+        """Return the decimal-string form Discord uses on the wire, so f-strings build valid REST paths."""
+        return str(self._snowflake)
+
     @property
     def timestamp(self) -> datetime:
         """Get the timestamp from the snowflake.
