@@ -118,7 +118,7 @@ class Bot(LoggerMixin):
             return
         entry = self._commands.get(interaction.data.name)
         if entry is None:
-            self.logger.warning(t"No registered command for interaction {interaction.data.name:r}")
+            self.logger.warning(t"No registered command for interaction '{interaction.data.name}'")
             return
         cog, command = entry
         await command.invoke(cog, interaction)

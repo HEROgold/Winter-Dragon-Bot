@@ -164,7 +164,7 @@ class DefaultCommandSyncer(LoggerMixin):
                 command = by_name[planned.name]
                 result = await client.create_global_command(command.name, command.description, list(command.options()))
                 if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning("Failed to create command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
+                    self.logger.warning(t"Failed to create command '{command.name}': {result}")
                     continue
                 record = _get_or_create_record(session, command.name)
                 if record.id is None:
@@ -186,13 +186,13 @@ class DefaultCommandSyncer(LoggerMixin):
                     list(command.options()),
                 )
                 if isinstance(result, ApiResponseError | RequestError):
-                    self.logger.warning("Failed to edit command %r: %s", command.name, result)  # pyright: ignore[reportArgumentType]
+                    self.logger.warning(t"Failed to edit command '{command.name}': {result}")
                     continue
                 row = session.exec(
                     select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),
                 ).first()
                 if row is None:
-                    self.logger.warning("No synced row for edited command %r", command.name)  # pyright: ignore[reportArgumentType]
+                    self.logger.warning(t"No synced row for edited command '{command.name}'")
                     continue
                 row.signature = command.signature()
                 session.add(row)
@@ -200,14 +200,14 @@ class DefaultCommandSyncer(LoggerMixin):
             if allow_deletes:
                 await self._delete(client, session, plan.to_delete)
             elif plan.to_delete:
-                self.logger.warning("Skipping deletes of Discord commands %s", plan.to_delete)  # pyright: ignore[reportArgumentType]
+                self.logger.warning(t"Skipping deletes of Discord commands {plan.to_delete}")
 
     async def _delete(self, client: Client, session: Session, discord_command_ids: Sequence[str]) -> None:
         """Delete ``discord_command_ids`` on Discord, dropping each synced row only if its delete succeeded."""
         for discord_command_id in discord_command_ids:
             result = await client.delete_global_command(discord_command_id)
             if isinstance(result, ApiResponseError | RequestError):
-                self.logger.warning("Failed to delete command %r: %s", discord_command_id, result)  # pyright: ignore[reportArgumentType]
+                self.logger.warning(t"Failed to delete command '{discord_command_id}': {result}")
                 continue
             row = session.exec(
                 select(GlobalSyncedCommand).where(GlobalSyncedCommand.discord_command_id == discord_command_id),

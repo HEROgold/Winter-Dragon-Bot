@@ -99,7 +99,7 @@ class Command(LoggerMixin):
             if self._param_types.get(option.name) is User:
                 user = resolved.users.get(str(option.value)) if resolved and resolved.users else None
                 if user is None:
-                    self.logger.warning("Unresolved user %r for option %r in command %r", option.value, option.name, self.name)  # pyright: ignore[reportArgumentType]
+                    self.logger.warning(t"Unresolved user '{option.value}' for option '{option.name}' in command '{self.name}'")
                     continue
                 kwargs[option.name] = user
             else:
@@ -107,7 +107,7 @@ class Command(LoggerMixin):
         try:
             await self.func(cog, interaction, **kwargs)
         except Exception:
-            self.logger.exception("Unhandled exception in command %r", self.name)  # pyright: ignore[reportArgumentType]  # herogold types msg as Template; t-strings render as reprs
+            self.logger.exception(t"Unhandled exception in command '{self.name}'")
 
     def __get__(self, instance: object, owner: type) -> Self:
         """Allow a Command to be accessed as a plain attribute on a Cog instance without binding it like a method."""
