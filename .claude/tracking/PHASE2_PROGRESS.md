@@ -29,7 +29,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 - [x] 11. wd-bot/src/wd_bot/bot.py — `_commands` registry, `INTERACTION_CREATE` dispatch, `sync_commands`
 - [x] 12. src/winter_dragon/cogs/percentage.py (new) — `/percentage` command; `Snowflake.__int__`
 - [x] 13. src/winter_dragon/cogs/bot_commands.py (new) — admin `/bot-commands list|resync` group
-- [~] 14. Verification done: 196 passed, only the 5 baseline failures. Live smoke test on 2026-10-03 with a file-backed sqlite DB: the first run created the commands, a second run made no command calls, and the GroupCog switch created `/bot-commands` and deleted the flat commands (204). A later run again made no calls. Still open: invoking `/percentage` in Discord by hand.
+- [x] 14. Verification done: 196 passed, only the 5 baseline failures. Live smoke test on 2026-10-03 with a file-backed sqlite DB: the first run created the commands, a second run made no command calls, and the GroupCog switch created `/bot-commands` and deleted the flat commands (204). A later run again made no calls. An invocation of `/percentage` with a user option at 13:53 was answered (callback 204).
 
 ## Notes / deviations from plan
 
