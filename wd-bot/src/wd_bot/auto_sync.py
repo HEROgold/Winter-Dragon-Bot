@@ -5,16 +5,9 @@ When the signature of any command changes, sync the command to Discord, and upda
 
 from __future__ import annotations
 
-lazy from inspect import Signature, signature
-lazy from typing import TYPE_CHECKING
-
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Field
 lazy from wd_db.extension.model import SQLModel
-
-
-if TYPE_CHECKING:
-    lazy from collections.abc import Callable
 
 
 class SyncedCommand(SQLModel, table=True):
@@ -27,7 +20,3 @@ class SyncedCommand(SQLModel, table=True):
 class AutoSync(LoggerMixin):
     """Utility class to manage automatic syncing of command signatures."""
 
-    @staticmethod
-    def get_signature[**P, R](func: Callable[P, R]) -> Signature:
-        """Generate a string representation of the function's signature."""
-        return signature(func)
