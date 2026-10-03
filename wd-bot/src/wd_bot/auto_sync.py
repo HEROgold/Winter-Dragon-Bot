@@ -7,6 +7,7 @@ delete REST calls for commands whose definition actually changed, never a full r
 
 from __future__ import annotations
 
+lazy import asyncio
 lazy from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING, Protocol
 
@@ -172,6 +173,7 @@ class DefaultCommandSyncer(LoggerMixin):
         """Use ``engine`` for sync state; defaults to ``wd_db.constants.engine``, resolved at sync time."""
         self._engine = engine
         self._tables_ready = False
+        self._lock = asyncio.Lock()
 
     def _ensure_tables(self, engine: Engine) -> None:
         """Create the sync-tracking tables on ``engine`` if missing; runs once per syncer (idempotent)."""
@@ -188,7 +190,13 @@ class DefaultCommandSyncer(LoggerMixin):
         """Diff ``commands`` against the last-synced state and push only the changes to Discord.
 
         With ``allow_deletes`` False, ``plan.to_delete`` is skipped and one warning lists the skipped IDs.
+        Concurrent calls are serialized, so two overlapping syncs can't both create the same command.
         """
+        async with self._lock:
+            await self._sync(client, commands, allow_deletes=allow_deletes)
+
+    async def _sync(self, client: Client, commands: Sequence[Command], *, allow_deletes: bool) -> None:
+        """Body of :meth:`sync`, run while holding the sync lock."""
         by_name = {command.name: command for command in commands}
         engine = self._engine or default_engine
         self._ensure_tables(engine)

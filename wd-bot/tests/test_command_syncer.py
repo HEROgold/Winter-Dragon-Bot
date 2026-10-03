@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
@@ -248,3 +249,23 @@ async def test_delete_of_unknown_command_counts_as_success() -> None:
     client.delete_global_command.assert_awaited_once_with("77")
     with Session(engine) as session:
         assert [row.discord_command_id for row in session.exec(select(GlobalSyncedCommand)).all()] == ["555"]
+
+
+async def test_concurrent_syncs_do_not_double_create() -> None:
+    engine = _make_engine()
+    syncer = DefaultCommandSyncer(engine=engine)
+    client = _fake_client()
+    registered = client.create_global_command.return_value
+
+    async def slow_create(*_args: object, **_kwargs: object) -> MagicMock:
+        await asyncio.sleep(0.01)
+        return registered
+
+    client.create_global_command = AsyncMock(side_effect=slow_create)
+    commands = [_command()]
+
+    await asyncio.gather(syncer.sync(client, commands), syncer.sync(client, commands))
+
+    client.create_global_command.assert_awaited_once()
+    with Session(engine) as session:
+        assert len(session.exec(select(GlobalSyncedCommand)).all()) == 1
