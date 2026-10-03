@@ -45,6 +45,10 @@ class Snowflake:
             ),
         )
 
+    def __int__(self) -> int:
+        """Return the raw snowflake integer."""
+        return self._snowflake
+
     @property
     def timestamp(self) -> datetime:
         """Get the timestamp from the snowflake.

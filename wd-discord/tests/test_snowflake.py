@@ -32,3 +32,7 @@ def test_pagination_builds_time_bits() -> None:
 def test_timestamp_round_trip() -> None:
     snowflake = Snowflake(snowflake_from_timestamp(EXAMPLE_TIMESTAMP_MS))
     assert snowflake.timestamp == datetime(2016, 4, 30, 11, 18, 25, 796000, tzinfo=UTC)
+
+
+def test_snowflake_converts_to_int() -> None:
+    assert int(Snowflake(123)) == 123
