@@ -5,7 +5,7 @@ from __future__ import annotations
 lazy import annotationlib
 lazy from inspect import Parameter
 lazy from inspect import signature as inspect_signature
-lazy from types import NoneType, UnionType
+lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Self, get_args
 
 lazy from herogold.log import LoggerMixin
@@ -49,13 +49,13 @@ class Command(LoggerMixin):
         for param_name, param in inspect_signature(func).parameters.items():
             if param_name in ("self", "interaction"):
                 continue
-            annotation = self._resolve(annotations.get(param_name, Parameter.empty), func)
+            annotation: object = self._resolve(annotations.get(param_name, Parameter.empty), func)
             required = param.default is Parameter.empty
             if isinstance(annotation, UnionType) and NoneType in get_args(annotation):
                 non_none = [arg for arg in get_args(annotation) if arg is not NoneType]
-                annotation = non_none[0] if len(non_none) == 1 else annotation
+                annotation = self._reify(non_none[0]) if len(non_none) == 1 else annotation
                 required = False
-            if annotation not in _OPTION_TYPE_MAP:
+            if not isinstance(annotation, type) or annotation not in _OPTION_TYPE_MAP:
                 msg = f"Command {name!r}: unsupported option type {annotation!r} for parameter {param_name!r}"
                 raise TypeError(msg)
             self._param_types[param_name] = annotation
@@ -67,8 +67,13 @@ class Command(LoggerMixin):
         if isinstance(annotation, str):
             annotation = annotationlib.ForwardRef(annotation, owner=func)
         if isinstance(annotation, annotationlib.ForwardRef):
-            return annotation.evaluate()
-        return annotation
+            annotation = annotation.evaluate()
+        return Command._reify(annotation)
+
+    @staticmethod
+    def _reify(annotation: object) -> object:
+        """Resolve ``annotation`` if it is a not-yet-reified lazy-import proxy."""
+        return annotation.resolve() if isinstance(annotation, LazyImportType) else annotation
 
     def options(self) -> Generator[CommandOption]:
         """Yield this command's Discord option definitions, derived from its handler's parameters."""

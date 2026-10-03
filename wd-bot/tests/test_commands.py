@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+lazy import os
+lazy import subprocess
+lazy import sys
+lazy from typing import TYPE_CHECKING
+
 lazy from wd_bot.commands import Command
 lazy from wd_discord.gateway.events import (
     Interaction,
@@ -12,6 +17,10 @@ lazy from wd_discord.gateway.events import (
 )
 lazy from wd_discord.interactions import ApplicationCommandOptionType
 lazy from wd_discord.resources.user import User
+
+
+if TYPE_CHECKING:
+    lazy from pathlib import Path
 
 
 def make_user(user_id: str, username: str) -> User:
@@ -110,3 +119,31 @@ def test_command_tolerates_unimportable_non_option_annotations() -> None:
 
     command = Command(handler, name="c", description="d")
     assert [o.name for o in command.options()] == ["count"]
+
+
+def test_command_reifies_lazy_import_annotations(tmp_path: Path) -> None:
+    """Option annotations that are still-unresolved lazy imports are reified before the type lookup.
+
+    Runs in a fresh interpreter so nothing has touched ``User`` (or loaded its module) beforehand.
+    """
+    (tmp_path / "lazy_handler_module.py").write_text(
+        "from __future__ import annotations\n"
+        "lazy from wd_discord.resources.user import User\n"
+        "async def handler(self, interaction, a: User, b: User | None = None) -> None: ...\n",
+    )
+    script = (
+        "import lazy_handler_module\n"
+        "from wd_bot.commands import Command\n"
+        "command = Command(lazy_handler_module.handler, name='c', description='d')\n"
+        "print([(o.name, o.type.name, o.required) for o in command.options()])\n"
+    )
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": str(tmp_path)},
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "[('a', 'USER', True), ('b', 'USER', False)]"
