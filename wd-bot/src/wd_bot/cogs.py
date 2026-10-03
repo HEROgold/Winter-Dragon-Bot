@@ -14,7 +14,20 @@ lazy from wd_bot.listener import listener
 
 
 if TYPE_CHECKING:
+    lazy from collections.abc import Awaitable, Callable
+
     lazy from wd_bot.bot import Bot
+    lazy from wd_bot.commands import Command
+
+
+def command(name: str, description: str) -> Callable[[Callable[..., Awaitable[None]]], Command]:
+    """Tag a Cog method as a chat-input application command, building a :class:`Command` for it."""
+    from wd_bot.commands import Command as CommandClass  # noqa: PLC0415
+
+    def decorator(func: Callable[..., Awaitable[None]]) -> Command:
+        return CommandClass(func, name=name, description=description)
+
+    return decorator
 
 
 class BotArgs(TypedDict):
@@ -48,6 +61,7 @@ class Cog(LoggerMixin):
     # staticmethod-wrapped overloaded function (confirmed: identical overloads type-check fine
     # as a bare class attribute, wrong as soon as staticmethod() wraps them).
     listener = listener
+    command = command
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""
