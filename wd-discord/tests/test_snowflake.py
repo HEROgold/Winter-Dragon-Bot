@@ -1,4 +1,5 @@
 """Unit tests: Snowflake decoding (API -> object) and pagination round-trip (object -> API)."""
+
 from __future__ import annotations
 
 lazy from datetime import UTC, datetime

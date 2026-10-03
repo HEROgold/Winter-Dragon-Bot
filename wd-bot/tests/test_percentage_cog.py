@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 lazy import random
+lazy from types import SimpleNamespace
+lazy from unittest.mock import AsyncMock
 
+lazy from wd_discord.gateway.events import (
+    Interaction,
+    InteractionData,
+    InteractionDataOption,
+    InteractionType,
+    ResolvedData,
+)
 lazy from wd_discord.resources.user import User
 
-lazy from winter_dragon.cogs.percentage import build_love_embed, calculate_percentage
+lazy from winter_dragon.cogs.percentage import Percentage, build_love_embed, calculate_percentage
 
 
 MAX_PERCENT = 100
@@ -51,3 +60,50 @@ def test_love_embed_falls_back_to_username() -> None:
     assert embed.fields is not None
     assert embed.fields[0].name == "bob"
     assert embed.fields[0].value == "Your compatibility with bob is 7%"
+
+
+def _interaction(asker: User | None) -> Interaction:
+    """Build a /percentage interaction targeting user 2, optionally invoked by ``asker``."""
+    target = User(id=2, username="bob", discriminator="0", global_name="Bobby")
+    return Interaction(
+        id="1",
+        application_id="9",
+        type=InteractionType.APPLICATION_COMMAND,
+        token="tok",  # noqa: S106
+        version=1,
+        user=asker,
+        data=InteractionData(
+            id="10",
+            name="percentage",
+            type=1,
+            options=[InteractionDataOption(name="user", type=6, value="2")],
+            resolved=ResolvedData(users={"2": target}),
+        ),
+    )
+
+
+def _cog() -> tuple[Percentage, AsyncMock]:
+    """Build a Percentage cog without running Cog.__init__, with a mocked client."""
+    respond = AsyncMock()
+    cog = Percentage.__new__(Percentage)
+    cog.bot = SimpleNamespace(client=SimpleNamespace(create_interaction_response=respond))  # pyright: ignore[reportAttributeAccessIssue]
+    return cog, respond
+
+
+async def test_handler_replies_with_love_embed() -> None:
+    asker = User(id=1, username="alice", discriminator="0")
+    interaction = _interaction(asker)
+    cog, respond = _cog()
+    await Percentage.percentage.invoke(cog, interaction)
+    expected = build_love_embed(User(id=2, username="bob", discriminator="0", global_name="Bobby"), calculate_percentage(1, 2))
+    respond.assert_awaited_once_with(interaction, embeds=[expected])
+
+
+async def test_handler_without_asker_replies_content_only() -> None:
+    interaction = _interaction(None)
+    cog, respond = _cog()
+    await Percentage.percentage.invoke(cog, interaction)
+    respond.assert_awaited_once()
+    assert respond.await_args is not None
+    assert "embeds" not in respond.await_args.kwargs
+    assert respond.await_args.kwargs["content"]
