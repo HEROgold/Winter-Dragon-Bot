@@ -114,12 +114,12 @@ class WinterDragon(AutoShardedBot, LoggerMixin):
 
     async def on_error[**P](self, event_method: str, /, *args: P.args, **kwargs: P.kwargs) -> None:
         """Log where errors occur during the event loop."""
-        self.logger.exception(f"error in: {event_method}")
+        self.logger.error(f"error in: {event_method}")
         return await super().on_error(event_method, *args, **kwargs)
 
     async def on_command_error(self, context: Context[BotT], exception: CommandError) -> None:
         """Log where errors occur during command execution."""
-        self.logger.exception(f"error in command: {context}", exc_info=exception)
+        self.logger.error(f"error in command: {context}", exc_info=exception)
         return await super().on_command_error(context, exception)
 
     async def get_extensions(self) -> AsyncGenerator[str]:
