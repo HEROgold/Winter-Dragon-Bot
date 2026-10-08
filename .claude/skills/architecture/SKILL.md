@@ -47,5 +47,5 @@ Decorator injection for config values: `@Config.with_kwarg("Tokens", "discord_to
 1. **Import it.** If two packages need it, move it down a layer (usually wd-types/wd-core), don't copy. In-tree anti-examples: `Region`/`Platform` in both `riot_clash_api.py` and `league_of_legends.py`; `Cassiopeia*` protocols in two cogs.
 2. **Mixins** for orthogonal capabilities: `LoggerMixin` (herogold) gives `self.logger`; `SessionMixin` shares the DB session.
 3. **Base classes with behavior**: `BaseModel` is a repository (`add/update/get/get_all/delete/fetch`); `Cog`/`GroupCog` configure per-subclass `CogFlags` through `__init_subclass__`.
-4. **Decorators** for cross-cutting policy: `returns_known_exception`, `with_known_exception`, `@loop`, `@Config.with_kwarg`.
+4. **Decorators** for cross-cutting policy: `returns_known_exception`, `with_known_exception`, `@Config.with_kwarg`. Periodic work has no loop decorator — the cog starts and cancels its own asyncio task (see `Heartbeat` in `winter_dragon/cogs/heartbeat.py`).
 5. **Descriptors/Protocols** — see advanced-patterns.
