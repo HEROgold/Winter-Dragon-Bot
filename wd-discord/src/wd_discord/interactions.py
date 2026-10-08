@@ -8,9 +8,10 @@ lazy from typing import Annotated, Self
 lazy from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
 lazy from wd_core.client import JsonPayload
 
+# eager: pydantic needs the real classes, not lazy proxies, for the model fields below
+from wd_discord.permissions import ChannelType, Permissions, PermissionsField
+from wd_discord.snowflake import Snowflake
 lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.permissions import ChannelType, Permissions, PermissionsField
-lazy from wd_discord.snowflake import Snowflake
 
 
 class ApplicationCommandType(IntEnum):

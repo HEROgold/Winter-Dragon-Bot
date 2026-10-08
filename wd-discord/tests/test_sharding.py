@@ -1,4 +1,5 @@
 """Unit tests: gateway sharding helpers and ShardManager batching (no sockets)."""
+
 from __future__ import annotations
 
 lazy from typing import Any
@@ -146,10 +147,13 @@ async def test_num_shards_overrides_recommendation(recorded_sleeps: list[float])
 @pytest.mark.usefixtures("fake_gateway", "recorded_sleeps")
 async def test_shard_for_guild_routes_after_start() -> None:
     manager = ShardManager("token", _info(shards=3, max_concurrency=16))
-    with pytest.raises(RuntimeError, match="not started"):
-        manager.shard_for_guild(1 << 22)
+    error = manager.shard_for_guild(1 << 22)
+    assert isinstance(error, RuntimeError)
+    assert "not started" in str(error)
     await manager._start()
-    assert manager.shard_for_guild((4 << 22) | 7).shard == (1, 3)
+    shard = manager.shard_for_guild((4 << 22) | 7)
+    assert not isinstance(shard, RuntimeError)
+    assert shard.shard == (1, 3)
 
 
 async def test_close_closes_all_shards(fake_gateway: type[FakeGateway], recorded_sleeps: list[float]) -> None:  # noqa: ARG001

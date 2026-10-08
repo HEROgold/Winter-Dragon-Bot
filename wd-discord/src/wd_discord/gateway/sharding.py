@@ -126,8 +126,8 @@ class ShardManager:
         self.shards: list[Gateway] = []
 
     @with_known_exception(RuntimeError)
-    def shard_for_guild(self, guild_id: int) -> Gateway:
-        """Return the started shard handling ``guild_id``'s events."""
+    def shard_for_guild(self, guild_id: int) -> Gateway | RuntimeError:
+        """Return the started shard handling ``guild_id``'s events, or the :class:`RuntimeError` if not started."""
         if not self.shards:
             msg = "ShardManager is not started."
             raise RuntimeError(msg)
