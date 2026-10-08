@@ -6,7 +6,7 @@ lazy import os
 lazy from typing import TYPE_CHECKING
 
 lazy import pytest
-lazy from wd_discord.client import is_network_error
+lazy from wd_discord import is_network_error
 
 
 if TYPE_CHECKING:

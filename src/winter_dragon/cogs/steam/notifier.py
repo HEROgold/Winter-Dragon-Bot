@@ -6,7 +6,7 @@ lazy from dataclasses import KW_ONLY, dataclass
 lazy from typing import TYPE_CHECKING
 
 lazy from herogold.log import LoggerMixin
-lazy from wd_discord.client import is_network_error
+lazy from wd_discord import is_network_error
 
 lazy from winter_dragon.cogs.steam.pages import build_notification
 

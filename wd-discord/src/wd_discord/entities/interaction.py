@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import Entity, no_content, parse
+lazy from wd_discord.entities.base import Entity, no_content
 lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.message import Message
@@ -205,8 +205,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         """
         payload = message_data(content=content, embeds=embeds, components=components)
         result = await self.client.patch(f"{self._webhook_path}/messages/@original", json=payload)
-        message = parse(result, MessageModel)
-        return message if is_network_error(message) else Message(self.client, message)
+        return self._entity(result, MessageModel, Message)
 
     async def delete_original(self) -> NetworkError | None:
         """DELETE /webhooks/{application_id}/{token}/messages/@original - remove the initial response."""
@@ -223,8 +222,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         """POST /webhooks/{application_id}/{token} - send another message after the initial response."""
         flags = MessageFlags.EPHEMERAL if ephemeral else None
         payload = message_data(content=content, embeds=embeds, components=components, flags=flags)
-        message = parse(await self.client.post(self._webhook_path, json=payload), MessageModel)
-        return message if is_network_error(message) else Message(self.client, message)
+        return self._entity(await self.client.post(self._webhook_path, json=payload), MessageModel, Message)
 
 
 class CommandInteraction(Interaction[CommandInteractionModel]):

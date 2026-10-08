@@ -10,7 +10,7 @@ from __future__ import annotations
 lazy from wd_config.discord import URLS
 
 lazy from wd_discord.authenticate import Token, TokenType
-lazy from wd_discord.client import Client
+lazy from wd_discord.client import Client, NetworkError, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.entities import (
     AnyInteraction,
@@ -76,6 +76,7 @@ __all__ = [
     "Interaction",
     "Invite",
     "Message",
+    "NetworkError",
     "PartialChannel",
     "PartialEmoji",
     "PartialGlobalCommand",
@@ -92,4 +93,5 @@ __all__ = [
     "TokenType",
     "UnknownInteraction",
     "User",
+    "is_network_error",
 ]

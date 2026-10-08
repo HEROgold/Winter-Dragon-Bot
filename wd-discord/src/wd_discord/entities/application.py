@@ -8,6 +8,7 @@ lazy from wd_config.bot import Settings
 
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import parse
+lazy from wd_discord.entities.command import GlobalCommandStore, PartialGlobalCommand
 lazy from wd_discord.resources.application import Application
 lazy from wd_discord.snowflake import Snowflake
 
@@ -18,12 +19,14 @@ if TYPE_CHECKING:
 
 
 class CurrentApplication:
-    """The client's own application: its data, and its ID, which application-scoped routes need."""
+    """The client's own application: its data, its ID (which application-scoped routes need) and its commands."""
 
     def __init__(self, client: Client, application_id: SnowflakeLike | None = None) -> None:
         """Bind to ``client``; without ``application_id``, the ID is looked up on first use."""
         self.client = client
         self._id = None if application_id is None else Snowflake.coerce(application_id)
+        self.commands = GlobalCommandStore(client, PartialGlobalCommand)
+        """The application's global commands."""
 
     async def fetch(self) -> Application | NetworkError:
         """GET /applications/@me - the application object."""

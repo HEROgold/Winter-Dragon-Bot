@@ -6,10 +6,10 @@ See :mod:`wd_discord.entities.base` for how this level relates to the transport 
 from __future__ import annotations
 
 lazy from .application import CurrentApplication
-lazy from .base import Entity, Store
-lazy from .channel import BaseChannel, Channel, ChannelStore, PartialChannel
+lazy from .base import ClientBound, Entity, EntityStore, Partial, Store
+lazy from .channel import BaseChannel, Channel, PartialChannel
 lazy from .command import BaseGlobalCommand, GlobalCommand, GlobalCommandStore, PartialGlobalCommand
-lazy from .guild import BaseGuild, Guild, GuildStore, PartialGuild
+lazy from .guild import BaseGuild, Guild, PartialGuild
 lazy from .interaction import (
     AnyInteraction,
     AutocompleteInteraction,
@@ -30,18 +30,19 @@ __all__ = [
     "BaseGuild",
     "BaseUser",
     "Channel",
-    "ChannelStore",
+    "ClientBound",
     "CommandInteraction",
     "ComponentInteraction",
     "CurrentApplication",
     "CurrentUser",
     "Entity",
+    "EntityStore",
     "GlobalCommand",
     "GlobalCommandStore",
     "Guild",
-    "GuildStore",
     "Interaction",
     "Message",
+    "Partial",
     "PartialChannel",
     "PartialGlobalCommand",
     "PartialGuild",

@@ -68,21 +68,27 @@ Reused on `PermissionOverwrite.allow/deny`, `Role.permissions`, `Guild.permissio
 `Client` is transport only (`request`/`get`/`post`/..., rate limits, gateway bootstrap). Resource
 operations live in [entities/](../../../wd-discord/src/wd_discord/entities/), in three shapes per resource:
 
-- a **Store** on the client creates, fetches and lists (`client.users`, `client.channels`, `client.guilds`,
-  `client.global_commands`, plus `client.application`);
-- a **`Partial*`** entity acts knowing only an ID, without fetching (`client.users.partial(id).send(...)`);
-- a full **entity** wraps the fetched data model (`entity.model`) and inherits the partial's actions
-  through a shared `Base*` ABC.
+- a **Store** creates, fetches and lists (`client.users`, `client.channels`, `client.guilds`,
+  `client.application.commands`). `EntityStore(client, PartialX)` gives `partial(id)` and `fetch(id)` for
+  free; subclass it only for extra operations (`UserStore.me`, `GlobalCommandStore.create`). Stores nest
+  where Discord's routes do: application commands hang off `client.application`, guild commands will hang
+  off a guild;
+- a **`Partial*`** entity acts knowing only an ID, without fetching (`client.users.partial(id).send(...)`).
+  It is just `class PartialUser(BaseUser, Partial[User])`: `Partial` supplies `client` and `id`, and the
+  `Base*` mixin (listed first, so its `fetch` wins) supplies the actions;
+- a full **entity** wraps the fetched data model (`entity.model`), defines `id` from it, and inherits the
+  same `Base*` actions.
 
-Every method returns `T | NetworkError` and never raises on API/network failure. The `parse` and
-`no_content` helpers in [entities/base.py](../../../wd-discord/src/wd_discord/entities/base.py) do the
-check-and-validate step:
+Every method returns `T | NetworkError` and never raises on API/network failure; consumers import
+`is_network_error`/`NetworkError` from `wd_discord`. Everything holding a client inherits `ClientBound`
+from [entities/base.py](../../../wd-discord/src/wd_discord/entities/base.py), whose `_entity` /
+`_entities` helpers do the check-validate-wrap step (`parse` and `no_content` cover model-only and
+empty responses):
 
 ```python
 async def fetch(self) -> User | NetworkError:
     """GET /users/{user_id}."""
-    user = parse(await self.client.get(f"/users/{self.id}"), UserModel)
-    return user if is_network_error(user) else User(self.client, user)
+    return self._entity(await self.client.get(f"/users/{self.id}"), UserModel, User)
 ```
 
 Entity classes take the plain names (`wd_discord.User`); data models keep the Discord docs' names in

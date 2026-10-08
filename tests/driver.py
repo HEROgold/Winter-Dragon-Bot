@@ -14,7 +14,7 @@ lazy import asyncio
 lazy import configparser
 lazy import sys
 
-lazy from wd_discord.client import Client, is_network_error
+lazy from wd_discord import Client, is_network_error
 lazy from wd_discord.gateway import Gateway
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
 

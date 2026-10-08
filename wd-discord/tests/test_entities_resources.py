@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wd_discord import Channel, CurrentUser, GlobalCommand, Message, PartialGlobalCommand, User
+from wd_discord import Channel, CurrentUser, GlobalCommand, Message, PartialGlobalCommand, User, is_network_error
 from wd_discord.components import ActionRow, Button, ButtonStyle
 from wd_discord.embed import Embed
 from wd_discord.errors.api import ApiResponseError
@@ -32,7 +32,7 @@ async def test_create_global_command_returns_a_bound_command() -> None:
     client = RecordingClient()
     client.reply("POST", COMMANDS, COMMAND_JSON)
 
-    command = await client.global_commands.create(PARAMS)
+    command = await client.application.commands.create(PARAMS)
 
     assert isinstance(command, GlobalCommand)
     assert command.name == "ping"
@@ -43,7 +43,7 @@ async def test_create_global_command_returns_a_bound_command() -> None:
 async def test_global_command_edit_and_delete_by_id() -> None:
     client = RecordingClient()
     client.reply("PATCH", f"{COMMANDS}/77", COMMAND_JSON)
-    command = client.global_commands.partial("77")
+    command = client.application.commands.partial("77")
 
     edited = await command.edit(PARAMS)
     deleted = await command.delete()
@@ -58,7 +58,7 @@ async def test_global_command_failure_is_a_value() -> None:
     client = RecordingClient()
     client.fail("DELETE", f"{COMMANDS}/77", ApiResponseError(code=10063, message="Unknown application command"))
 
-    result = await client.global_commands.partial(77).delete()
+    result = await client.application.commands.partial(77).delete()
 
     assert isinstance(result, ApiResponseError)
     assert result.code == 10063
@@ -68,9 +68,9 @@ async def test_fetch_all_global_commands() -> None:
     client = RecordingClient()
     client.reply("GET", COMMANDS, [COMMAND_JSON, {**COMMAND_JSON, "id": "78", "name": "pong"}])
 
-    commands = await client.global_commands.fetch_all()
+    commands = await client.application.commands.fetch_all()
 
-    assert not isinstance(commands, ApiResponseError)
+    assert not is_network_error(commands)
     assert [command.name for command in commands] == ["ping", "pong"]
 
 
@@ -161,7 +161,7 @@ async def test_guild_channels_and_leave() -> None:
     channels = await guild.channels()
     left = await guild.leave()
 
-    assert not isinstance(channels, ApiResponseError)
+    assert not is_network_error(channels)
     assert [(type(channel), channel.name) for channel in channels] == [(Channel, "general")]
     assert left is None
     assert client.sent[1].path == "/users/@me/guilds/8"

@@ -27,7 +27,7 @@ Define a `Protocol` when you need a *shape*, not a class. Three sanctioned uses 
 
 2. **Type an untyped third-party API.** The `Cassiopeia*` protocols in [wd-cogs/src/wd_cogs/games/league_of_legends.py](../../../wd-cogs/src/wd_cogs/games/league_of_legends.py) describe just the attributes actually used. This beats `cast`/`Any`: pyright checks your usage against the protocol. (Caveat: those protocols are currently duplicated in `lol_clash.py` — if you touch them, consolidate to one module and import.)
 
-3. **Capability branching at runtime.** `Prunable`/`History`/`PrunableHistory` ([wd-cogs/src/wd_cogs/server/purge.py](../../../wd-cogs/src/wd_cogs/server/purge.py)) are `@runtime_checkable` and composed by inheritance (`class PrunableHistory(Prunable, History, Protocol)`), so code branches on what a channel *can do*. Same composition style in the URL specs of [wd-discord/src/wd_discord/endpoints.py](../../../wd-discord/src/wd_discord/endpoints.py) (`UrlSpecWithUserInfo(URLSpec, UserInfoHelpers, Protocol)`), which model endpoint URLs structurally instead of committing to a concrete URL class.
+3. **Capability branching at runtime.** `Prunable`/`History`/`PrunableHistory` ([wd-cogs/src/wd_cogs/server/purge.py](../../../wd-cogs/src/wd_cogs/server/purge.py)) are `@runtime_checkable` and composed by inheritance (`class PrunableHistory(Prunable, History, Protocol)`), so code branches on what a channel *can do*.
 
 Conventions:
 

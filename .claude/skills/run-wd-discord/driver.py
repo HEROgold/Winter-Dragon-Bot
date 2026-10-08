@@ -14,7 +14,7 @@ import asyncio
 import configparser
 import sys
 
-from wd_discord.client import Client, is_network_error
+from wd_discord import Client, is_network_error
 from wd_discord.gateway import Gateway
 from wd_discord.gateway.sharding import GatewayBotInfo
 

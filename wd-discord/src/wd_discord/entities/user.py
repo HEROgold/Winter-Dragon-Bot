@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, override
 
 lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import Entity, Store, parse
+lazy from wd_discord.entities.base import ClientBound, Entity, EntityStore, Partial
 lazy from wd_discord.entities.channel import Channel
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.user import User as UserModel
-lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
@@ -19,23 +17,22 @@ if TYPE_CHECKING:
 
     from wd_core.client import JsonPayload
 
-    from wd_discord.client import Client, NetworkError
+    from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
     from wd_discord.embed import Embed
     from wd_discord.entities.message import Message
     from wd_discord.image import ImageHash
-    from wd_discord.snowflake import SnowflakeLike
+    from wd_discord.snowflake import Snowflake
 
 
-class BaseUser(ABC):
+class BaseUser(ClientBound):
     """What can be done to a user knowing only their ID: read them, open a DM, message them."""
 
-    client: Client
+    if TYPE_CHECKING:
 
-    @property
-    @abstractmethod
-    def id(self) -> Snowflake:
-        """The user's ID."""
+        @property
+        def id(self) -> Snowflake:
+            """The ID this object acts on."""
 
     @property
     def mention(self) -> str:
@@ -44,14 +41,12 @@ class BaseUser(ABC):
 
     async def fetch(self) -> User | NetworkError:
         """GET /users/{user_id}."""
-        user = parse(await self.client.get(f"/users/{self.id}"), UserModel)
-        return user if is_network_error(user) else User(self.client, user)
+        return self._entity(await self.client.get(f"/users/{self.id}"), UserModel, User)
 
     async def dm(self) -> Channel | NetworkError:
         """POST /users/@me/channels - open the DM channel with this user, or return the one already open."""
         result = await self.client.post("/users/@me/channels", json={"recipient_id": str(self.id)})
-        channel = parse(result, ChannelModel)
-        return channel if is_network_error(channel) else Channel(self.client, channel)
+        return self._entity(result, ChannelModel, Channel)
 
     async def send(
         self,
@@ -70,23 +65,11 @@ class BaseUser(ABC):
         return await channel.send(content, embeds=embeds, components=components)
 
 
-@dataclass(frozen=True)
-class PartialUser(BaseUser):
-    """A user known only by ID."""
-
-    client: Client
-    user_id: Snowflake
-
-    @property
-    def id(self) -> Snowflake:
-        """The user's ID."""
-        return self.user_id
-
-
 class User(Entity[UserModel], BaseUser):
     """A user, as Discord returned or sent them."""
 
     @property
+    @override
     def id(self) -> Snowflake:
         """The user's ID."""
         return self.model.id
@@ -130,23 +113,17 @@ class CurrentUser(User):
             payload["avatar"] = str(avatar)
         if banner is not None:
             payload["banner"] = str(banner)
-        user = parse(await self.client.patch("/users/@me", json=payload), UserModel)
-        return user if is_network_error(user) else CurrentUser(self.client, user)
+        return self._entity(await self.client.patch("/users/@me", json=payload), UserModel, CurrentUser)
+
+
+class PartialUser(BaseUser, Partial[User]):
+    """A user known only by ID."""
 
 
 @dataclass(frozen=True)
-class UserStore(Store):
+class UserStore(EntityStore[PartialUser]):
     """Users the client can see."""
-
-    def partial(self, user_id: SnowflakeLike) -> PartialUser:
-        """Return a handle on the user ``user_id``, without fetching them."""
-        return PartialUser(self.client, Snowflake.coerce(user_id))
-
-    async def fetch(self, user_id: SnowflakeLike) -> User | NetworkError:
-        """GET /users/{user_id}."""
-        return await self.partial(user_id).fetch()
 
     async def me(self) -> CurrentUser | NetworkError:
         """GET /users/@me - the user behind the client's token."""
-        user = parse(await self.client.get("/users/@me"), UserModel)
-        return user if is_network_error(user) else CurrentUser(self.client, user)
+        return self._entity(await self.client.get("/users/@me"), UserModel, CurrentUser)

@@ -18,8 +18,8 @@ with ``isinstance`` / ``match`` instead of ``try``/``except``::
             await me.edit(username="Winter Dragon")
 
 The client is the transport level of wd-discord. Resource operations live in the stores it carries
-(``client.users``, ``client.channels``, ``client.guilds``, ``client.global_commands``,
-``client.application``) and on the entities they return; see :mod:`wd_discord.entities`.
+(``client.users``, ``client.channels``, ``client.guilds``, and ``client.application`` with its
+``commands``) and on the entities they return; see :mod:`wd_discord.entities`.
 """
 
 from __future__ import annotations
@@ -45,10 +45,10 @@ lazy from wd_discord.authenticate import (
     user_agent,
 )
 lazy from wd_discord.entities.application import CurrentApplication
-lazy from wd_discord.entities.channel import ChannelStore
-lazy from wd_discord.entities.command import GlobalCommandStore
-lazy from wd_discord.entities.guild import GuildStore
-lazy from wd_discord.entities.user import UserStore
+lazy from wd_discord.entities.base import EntityStore
+lazy from wd_discord.entities.channel import PartialChannel
+lazy from wd_discord.entities.guild import PartialGuild
+lazy from wd_discord.entities.user import PartialUser, UserStore
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
 lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
@@ -106,6 +106,7 @@ def _parse_error(response: Response) -> ApiResponseError:
     except Exception:  # noqa: BLE001 - non-JSON or unexpected shape (e.g. a Cloudflare HTML ban page)
         return ApiResponseError(code=response.status_code, message=response.text)
 
+
 class Client(LoggerMixin):
     """An async Discord REST client pinned to the configured API version (v10 by default)."""
 
@@ -128,10 +129,9 @@ class Client(LoggerMixin):
         self.base_url = f"{URLS.base}/v{self.version}"
         self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
         self.application = CurrentApplication(self, application_id)
-        self.global_commands = GlobalCommandStore(self)
-        self.users = UserStore(self)
-        self.channels = ChannelStore(self)
-        self.guilds = GuildStore(self)
+        self.users = UserStore(self, PartialUser)
+        self.channels = EntityStore(self, PartialChannel)
+        self.guilds = EntityStore(self, PartialGuild)
 
     def _default_headers(self) -> dict[str, str]:
         """Render the auth, user-agent and content-type headers into a plain dict.

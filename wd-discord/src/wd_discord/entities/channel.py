@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, override
 
-lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import Entity, Store, parse
+lazy from wd_discord.entities.base import ClientBound, Entity, Partial, parse
 lazy from wd_discord.entities.message import Message
 lazy from wd_discord.gateway.events import Message as MessageModel
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.invite import Invite
 lazy from wd_discord.responses import message_data
-lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
@@ -21,26 +17,25 @@ if TYPE_CHECKING:
 
     from wd_core.client import JsonPayload
 
-    from wd_discord.client import Client, NetworkError
+    from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
     from wd_discord.embed import Embed
     from wd_discord.permissions import ChannelType
-    from wd_discord.snowflake import SnowflakeLike
+    from wd_discord.snowflake import Snowflake
 
 
 DEFAULT_INVITE_MAX_AGE = 86400
 """Seconds an invite made by :meth:`BaseChannel.create_invite` stays valid by default: 24 hours."""
 
 
-class BaseChannel(ABC):
+class BaseChannel(ClientBound):
     """What can be done in a channel knowing only its ID: send messages, create invites, read it."""
 
-    client: Client
+    if TYPE_CHECKING:
 
-    @property
-    @abstractmethod
-    def id(self) -> Snowflake:
-        """The channel's ID."""
+        @property
+        def id(self) -> Snowflake:
+            """The ID this object acts on."""
 
     @property
     def mention(self) -> str:
@@ -49,8 +44,7 @@ class BaseChannel(ABC):
 
     async def fetch(self) -> Channel | NetworkError:
         """GET /channels/{channel_id}."""
-        channel = parse(await self.client.get(f"/channels/{self.id}"), ChannelModel)
-        return channel if is_network_error(channel) else Channel(self.client, channel)
+        return self._entity(await self.client.get(f"/channels/{self.id}"), ChannelModel, Channel)
 
     async def send(
         self,
@@ -64,8 +58,7 @@ class BaseChannel(ABC):
         Discord needs at least one of ``content``, ``embeds`` or ``components``.
         """
         payload = message_data(content=content, embeds=embeds, components=components)
-        message = parse(await self.client.post(f"/channels/{self.id}/messages", json=payload), MessageModel)
-        return message if is_network_error(message) else Message(self.client, message)
+        return self._entity(await self.client.post(f"/channels/{self.id}/messages", json=payload), MessageModel, Message)
 
     async def create_invite(
         self,
@@ -83,23 +76,11 @@ class BaseChannel(ABC):
         return parse(await self.client.post(f"/channels/{self.id}/invites", json=payload), Invite)
 
 
-@dataclass(frozen=True)
-class PartialChannel(BaseChannel):
-    """A channel known only by ID."""
-
-    client: Client
-    channel_id: Snowflake
-
-    @property
-    def id(self) -> Snowflake:
-        """The channel's ID."""
-        return self.channel_id
-
-
 class Channel(Entity[ChannelModel], BaseChannel):
     """A channel, as Discord returned it."""
 
     @property
+    @override
     def id(self) -> Snowflake:
         """The channel's ID."""
         return self.model.id
@@ -120,14 +101,5 @@ class Channel(Entity[ChannelModel], BaseChannel):
         return self.model.guild_id
 
 
-@dataclass(frozen=True)
-class ChannelStore(Store):
-    """Channels the client can see."""
-
-    def partial(self, channel_id: SnowflakeLike) -> PartialChannel:
-        """Return a handle on the channel ``channel_id``, without fetching it."""
-        return PartialChannel(self.client, Snowflake.coerce(channel_id))
-
-    async def fetch(self, channel_id: SnowflakeLike) -> Channel | NetworkError:
-        """GET /channels/{channel_id}."""
-        return await self.partial(channel_id).fetch()
+class PartialChannel(BaseChannel, Partial[Channel]):
+    """A channel known only by ID."""

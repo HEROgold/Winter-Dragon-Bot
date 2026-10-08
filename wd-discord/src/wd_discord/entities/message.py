@@ -4,8 +4,7 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import Entity, no_content, parse
+lazy from wd_discord.entities.base import Entity, no_content
 lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.user import User
 lazy from wd_discord.gateway.events import Message as MessageModel
@@ -60,8 +59,7 @@ class Message(Entity[MessageModel]):
         A ``None`` argument leaves that part of the message unchanged; an empty sequence clears it.
         """
         payload = message_data(content=content, embeds=embeds, components=components)
-        message = parse(await self.client.patch(self._path, json=payload), MessageModel)
-        return message if is_network_error(message) else Message(self.client, message)
+        return self._entity(await self.client.patch(self._path, json=payload), MessageModel, Message)
 
     async def delete(self) -> NetworkError | None:
         """DELETE /channels/{channel_id}/messages/{message_id}."""

@@ -15,8 +15,7 @@ lazy from herogold.log import LoggerMixin
 lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
-lazy from wd_discord import Client, CommandInteraction, ComponentInteraction, GatewayBotInfo, Interaction
-lazy from wd_discord.client import is_network_error
+lazy from wd_discord import Client, CommandInteraction, ComponentInteraction, GatewayBotInfo, Interaction, is_network_error
 lazy from wd_discord.gateway import EventName
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
