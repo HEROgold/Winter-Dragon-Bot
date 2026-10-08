@@ -32,6 +32,10 @@ class WatcherFlags(IntFlag):
         """Check if the Enabled flag is set."""
         return bool(self & WatcherFlags.Enabled)
 
+    @property
+    def is_registered(self) -> bool:
+        """Check if the Registered flag is set."""
+        return bool(self & WatcherFlags.Registered)
 
 default_flags = WatcherFlags.Enabled
 
@@ -61,22 +65,9 @@ class AutoReloadWatcher(LoggerMixin):
         self.module_name = cog_cls.__module__
         self.flags = flags
 
-    # Tech Debt: Replace all callers with bitfield checks
-    @property
-    def _registered(self) -> bool:
-        """Indicates whether the watcher is currently registered."""
-        return (self.flags & WatcherFlags.Registered) != 0
-
-    @_registered.setter
-    def _registered(self, value: bool) -> None:
-        if value:
-            self.flags |= WatcherFlags.Registered
-        else:
-            self.flags &= ~WatcherFlags.Registered
-
     def register(self) -> None:
         """Start watching the cog's backing module."""
-        if self._registered or not self._should_watch():
+        if self.flags.is_registered or not self._should_watch():
             return
         path = self._resolve_module_path()
         if path is None:
@@ -84,7 +75,7 @@ class AutoReloadWatcher(LoggerMixin):
         entry = AutoReloadWatcher._entries.get(self.module_name)
         if entry:
             entry.refs += 1
-            self._registered = True
+            self.flags |= WatcherFlags.Registered
             return
         task = self.bot.loop.create_task(self._watch_extension_file(self.module_name))
         AutoReloadWatcher._entries[self.module_name] = _WatchEntry(
@@ -95,16 +86,16 @@ class AutoReloadWatcher(LoggerMixin):
             mtime_ns=self._get_file_mtime(path),
             logger=self.logger,
         )
-        self._registered = True
+        self.flags |= WatcherFlags.Registered
         self.logger.debug(t"Enabled auto-reload watcher for {self.module_name} ({path})")
 
     def deregister(self) -> None:
         """Stop watching the module when no cogs reference it anymore."""
-        if not self._registered:
+        if not self.flags.is_registered:
             return
         entry = AutoReloadWatcher._entries.get(self.module_name)
         if entry is None:
-            self._registered = False
+            self.flags &= ~WatcherFlags.Registered
             return
         entry.refs -= 1
         if entry.refs <= 0:
@@ -115,7 +106,7 @@ class AutoReloadWatcher(LoggerMixin):
                 current_task = None
             if entry.task is not current_task:
                 entry.task.cancel()
-        self._registered = False
+        self.flags &= ~WatcherFlags.Registered
 
     def _should_watch(self) -> bool:
         return (
