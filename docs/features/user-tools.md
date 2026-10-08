@@ -10,18 +10,15 @@ Audience: server members.
 
 The bot's most substantial user-facing subsystem. It scrapes the Steam store on a schedule and notifies subscribed members about sales — free games in particular — instead of requiring them to check.
 
-The scraping side is split by page type, sharing a common fetch/parse base:
+A background loop scrapes Steam's specials search page every few hours, down to the lowest threshold any subscriber set. For each new sale it reads the app page to learn when the sale ends, then checks that page again a minute after the end. A sale that has ended is removed, and one that continues gets its new end.
 
-- **Sale listings** — discovers discounted titles from a configured search URL.
-- **App pages** — details for an individual store app.
-- **Bundle pages** — expands a bundle or sub into the games it contains.
-- **Search results** — walks paginated search output.
+Members opt in to DMs, set the minimum discount they care about, and browse current sales a page at a time. The page buttons only respond to the member who ran the command. After each scrape, every subscriber gets one DM with the sales above their threshold that they haven't been told about yet.
 
-On top of that sits per-user subscription state: members opt in to notifications, filter by tag, browse current sales through a paginated menu, and opt out again. A notifier composes the embed and delivers it to everyone whose filters match.
+Surface: `/steam add | percentage | remove | show`
 
-Surface: `/steam add | remove | …`
+Settings (`[SteamSettings]` in `config.ini`): `search_url`, `update_interval`, `outdated_after`, `recheck_delay`, `embed_color`.
 
-**Status:** ✅ Ported for the stateless helpers — the scraper base, Steam URL handling, and tag definitions carry no `winter_dragon.*` imports (`wd-cogs/src/wd_cogs/user/steam/`, plus `wd-bot/src/wd_bot/steam_url.py`). 🟡 for the concrete scrapers, the sales cog, its menu, and the notifier, all of which depend on the Steam sale/user tables.
+**Status:** ✅ Ported to `src/winter_dragon/cogs/steam/`.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/steam/`
 
 ## Reminders

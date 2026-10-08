@@ -43,7 +43,7 @@ Decorator injection for config values: `@Config.with_kwarg("Tokens", "discord_to
 
 ## Avoiding repetition — the reuse toolbox, in order
 
-1. **Import it.** Most duplication here started as a copy of an enum or helper (in-tree anti-examples: `Region`/`Platform` duplicated between `riot_clash_api.py` and `league_of_legends.py`; `steam_url.py` existing in both `wd-bot` and `wd-cogs`; `Cassiopeia*` protocols copied between two cogs). If two packages need it, move it down a layer (usually wd-types/wd-core), don't copy.
+1. **Import it.** Most duplication here started as a copy of an enum or helper (in-tree anti-examples: `Region`/`Platform` duplicated between `riot_clash_api.py` and `league_of_legends.py`; `Cassiopeia*` protocols copied between two cogs). If two packages need it, move it down a layer (usually wd-types/wd-core), don't copy.
 2. **Mixins** for orthogonal capabilities: `LoggerMixin` (herogold) gives `self.logger` everywhere; `SessionMixin` shares the DB session.
 3. **Base classes with behavior**: `BaseModel` is a repository (`add/update/get/get_all/delete/fetch`); `Cog`/`GroupCog` hierarchy configures per-subclass `CogFlags` through `__init_subclass__`.
 4. **Decorators** for cross-cutting policy: `returns_known_exception`, `with_known_exception`, `@loop`, `@Config.with_kwarg`.

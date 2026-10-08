@@ -28,6 +28,8 @@ dependencies = [
   "wd-types",
   "wd-cogs",
   "herogold>=4.0.0",
+  "beautifulsoup4>=4.15.0",
+  "httpxyz>=0.42.0",
 ]
 
 [dependency-groups]
