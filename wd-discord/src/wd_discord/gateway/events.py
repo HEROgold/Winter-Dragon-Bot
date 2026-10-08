@@ -121,7 +121,7 @@ class InteractionDataOption(DiscordModel):
 
     name: str
     type: int
-    value: str | int | bool | None = None
+    value: str | int | float | bool | None = None
     options: list[InteractionDataOption] | None = None
     """The chosen subcommand's own option values (only on SUB_COMMAND / SUB_COMMAND_GROUP options)."""
     focused: bool | None = None

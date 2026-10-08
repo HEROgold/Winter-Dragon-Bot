@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from wd_discord import (
     AutocompleteInteraction,
     CommandInteraction,
@@ -14,6 +16,7 @@ from wd_discord import (
 from wd_discord.components import ActionRow, Button, ButtonStyle, ComponentType
 from wd_discord.embed import Embed
 from wd_discord.errors.api import ApiResponseError
+from wd_discord.files import File
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
 from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
@@ -120,6 +123,32 @@ async def test_respond_after_answering_sends_a_followup() -> None:
     await interaction.respond("oops", ephemeral=True)
     assert [sent.path for sent in client.sent] == [CALLBACK, FOLLOWUP]
     assert client.sent[1].json == {"content": "oops", "flags": 64}
+
+
+async def test_respond_with_files_sends_multipart() -> None:
+    client = RecordingClient()
+    await _command(client).respond("graph", files=[File("graph.png", b"png", content_type="image/png", description="A graph")])
+    sent = client.requests_to("POST", CALLBACK)[0]
+    assert sent.json is None
+    assert json.loads(sent.data["payload_json"]) == {
+        "type": 4,
+        "data": {"content": "graph", "attachments": [{"id": 0, "filename": "graph.png", "description": "A graph"}]},
+    }
+    assert sent.files == [("files[0]", ("graph.png", b"png", "image/png"))]
+
+
+async def test_followup_with_files_sends_multipart() -> None:
+    client = RecordingClient()
+    client.reply("POST", FOLLOWUP, MESSAGE_JSON)
+    interaction = _command(client)
+    await interaction.defer(ephemeral=True)
+    await interaction.respond(files=[File("a.txt", b"a"), File("b.txt", b"b")], ephemeral=True)
+    sent = client.requests_to("POST", FOLLOWUP)[0]
+    assert json.loads(sent.data["payload_json"]) == {
+        "flags": 64,
+        "attachments": [{"id": 0, "filename": "a.txt"}, {"id": 1, "filename": "b.txt"}],
+    }
+    assert [name for name, _ in sent.files] == ["files[0]", "files[1]"]
 
 
 async def test_failed_callback_does_not_count_as_answered() -> None:

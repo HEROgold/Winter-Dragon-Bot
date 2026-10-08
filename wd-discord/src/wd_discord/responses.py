@@ -11,6 +11,7 @@ lazy from enum import IntEnum, IntFlag
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import components_payload
+lazy from wd_discord.files import attachments_payload
 
 
 if TYPE_CHECKING:
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
     lazy from wd_discord.components import ActionRow
     lazy from wd_discord.embed import Embed
+    lazy from wd_discord.files import File
 
 
 class InteractionCallbackType(IntEnum):
@@ -46,6 +48,7 @@ class MessageFlags(IntFlag):
     """Only the invoking user sees the message (interaction responses only)."""
     SUPPRESS_NOTIFICATIONS = 1 << 12
 
+
 class MessageData(TypedDict, total=False):
     """The body of a response to an interaction (object -> API)."""
 
@@ -53,8 +56,11 @@ class MessageData(TypedDict, total=False):
     embeds: list[Embed]
     components: list[ActionRow]
     flags: MessageFlags
+    attachments: list[dict[str, object]]
+    """The partial attachment object of each uploaded file; see :mod:`wd_discord.files`."""
     choices: list[dict[str, object]]
     """Autocomplete suggestions (APPLICATION_COMMAND_AUTOCOMPLETE_RESULT only), as dumped choices."""
+
 
 def message_data(
     *,
@@ -62,11 +68,13 @@ def message_data(
     embeds: Sequence[Embed] | None = None,
     components: Sequence[ActionRow] | None = None,
     flags: MessageFlags | None = None,
+    files: Sequence[File] = (),
 ) -> MessageData:
     """Build a message body for sending or editing a message (object -> API).
 
     A ``None`` argument is left out of the body, so an edit keeps that part of the message unchanged; pass
-    an empty sequence to clear the embeds or components instead.
+    an empty sequence to clear the embeds or components instead. ``files`` only adds their ``attachments``; the
+    files themselves go in the request body (see :func:`wd_discord.files.request_body`).
     """
     data: MessageData = {}
     if content is not None:
@@ -77,4 +85,6 @@ def message_data(
         data["components"] = components_payload(components)
     if flags:
         data["flags"] = int(flags)
+    if files:
+        data["attachments"] = list(attachments_payload(files))
     return data

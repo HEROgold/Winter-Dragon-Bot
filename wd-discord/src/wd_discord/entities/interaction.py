@@ -21,6 +21,7 @@ lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.message import Message
 lazy from wd_discord.entities.user import User
+lazy from wd_discord.files import request_body
 lazy from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 lazy from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
 lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow, ComponentType
     from wd_discord.embed import Embed
+    from wd_discord.files import File
     from wd_discord.gateway.events import InteractionDataOption, InteractionType, ResolvedData
     from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType, Locale
     from wd_discord.permissions import Permissions
@@ -138,12 +140,14 @@ class Interaction[M: InteractionModel](Entity[M]):
         self,
         callback_type: InteractionCallbackType,
         data: MessageData | None = None,
+        files: Sequence[File] = (),
     ) -> NetworkError | None:
         """POST /interactions/{id}/{token}/callback - send the initial response, remembering that it was sent."""
         payload: JsonPayload = {"type": callback_type}
         if data:
             payload["data"] = data
-        error = no_content(await self.client.post(f"/interactions/{self.id}/{self.token}/callback", json=payload))
+        path = f"/interactions/{self.id}/{self.token}/callback"
+        error = no_content(await self.client.post(path, **request_body(payload, files)))
         if error is None:
             self._state.responded = True
         return error
@@ -154,6 +158,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         *,
         embeds: Sequence[Embed] | None = None,
         components: Sequence[ActionRow] | None = None,
+        files: Sequence[File] = (),
         ephemeral: bool = False,
     ) -> NetworkError | None:
         """Reply with a message; ``ephemeral`` shows it only to the invoking user.
@@ -162,11 +167,11 @@ class Interaction[M: InteractionModel](Entity[M]):
         replaces the loading state of a deferred response.
         """
         if self.responded:
-            message = await self.followup(content, embeds=embeds, components=components, ephemeral=ephemeral)
+            message = await self.followup(content, embeds=embeds, components=components, files=files, ephemeral=ephemeral)
             return message if is_network_error(message) else None
         flags = MessageFlags.EPHEMERAL if ephemeral else None
-        data = message_data(content=content, embeds=embeds, components=components, flags=flags)
-        return await self._callback(InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE, data)
+        data = message_data(content=content, embeds=embeds, components=components, flags=flags, files=files)
+        return await self._callback(InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE, data, files)
 
     async def defer(self, *, ephemeral: bool = False) -> NetworkError | None:
         """Acknowledge now and show a loading state; does nothing when already answered.
@@ -185,13 +190,15 @@ class Interaction[M: InteractionModel](Entity[M]):
         *,
         embeds: Sequence[Embed] | None = None,
         components: Sequence[ActionRow] | None = None,
+        files: Sequence[File] = (),
     ) -> Message | NetworkError:
         """PATCH /webhooks/{application_id}/{token}/messages/@original - edit the initial response.
 
-        A ``None`` argument leaves that part of the message unchanged; an empty sequence clears it.
+        A ``None`` argument leaves that part of the message unchanged; an empty sequence clears it. ``files`` are
+        added to the message's attachments.
         """
-        payload = message_data(content=content, embeds=embeds, components=components)
-        result = await self.client.patch(f"{self._webhook_path}/messages/@original", json=payload)
+        payload = message_data(content=content, embeds=embeds, components=components, files=files)
+        result = await self.client.patch(f"{self._webhook_path}/messages/@original", **request_body(payload, files))
         return self._entity(result, MessageModel, Message)
 
     async def delete_original(self) -> NetworkError | None:
@@ -204,12 +211,14 @@ class Interaction[M: InteractionModel](Entity[M]):
         *,
         embeds: Sequence[Embed] | None = None,
         components: Sequence[ActionRow] | None = None,
+        files: Sequence[File] = (),
         ephemeral: bool = False,
     ) -> Message | NetworkError:
         """POST /webhooks/{application_id}/{token} - send another message after the initial response."""
         flags = MessageFlags.EPHEMERAL if ephemeral else None
-        payload = message_data(content=content, embeds=embeds, components=components, flags=flags)
-        return self._entity(await self.client.post(self._webhook_path, json=payload), MessageModel, Message)
+        payload = message_data(content=content, embeds=embeds, components=components, flags=flags, files=files)
+        result = await self.client.post(self._webhook_path, **request_body(payload, files))
+        return self._entity(result, MessageModel, Message)
 
 
 class CommandInteraction(Interaction[CommandInteractionModel]):

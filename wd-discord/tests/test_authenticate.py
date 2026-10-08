@@ -37,5 +37,5 @@ def test_user_agent_render() -> None:
 def test_client_default_headers() -> None:
     headers = Client("my.token")._default_headers()
     assert headers["Authorization"] == "Bot my.token"
-    assert headers["Content-Type"] == "application/json"
+    assert "Content-Type" not in headers  # set per request: JSON, or multipart for uploads
     assert headers["User-Agent"].startswith("DiscordBot (")

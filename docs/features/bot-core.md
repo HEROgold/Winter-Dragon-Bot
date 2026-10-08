@@ -59,9 +59,9 @@ Settings are declared as typed descriptors on the classes that use them, backed 
 
 ## Scheduled tasks
 
-A wrapper around Discord's task loops adds logging and error reporting, so a background loop that throws is surfaced rather than dying quietly. Used throughout the bot for polling, cleanup, and periodic refreshes.
+`main` wraps discord.py's task loops to add logging and error reporting. The v2 bot has no task framework of its own: a cog that works in the background starts a plain asyncio task in `load()`, cancels it in `unload()`, and catches and logs failures inside its loop so one failed run doesn't stop it (see the Steam and reminder cogs).
 
-**Status:** ✅ Ported — `wd-bot/src/wd_bot/tasks.py`, `routines.py`.
+**Status:** ✅ Replaced by plain asyncio tasks per cog; the discord.py-based `tasks.py`/`routines.py` were removed.
 **Source on `main`:** `src/winter_dragon/bot/core/tasks.py`
 
 ## Telemetry

@@ -16,6 +16,7 @@ lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
 lazy from wd_discord import (
+    AutocompleteInteraction,
     Client,
     CommandInteraction,
     ComponentInteraction,
@@ -131,15 +132,19 @@ class Bot(LoggerMixin):
         await cog.load()
 
     async def _dispatch_interaction(self, interaction: AnyInteraction) -> None:
-        """Route a command or component interaction to its registered handler.
+        """Route a command, component or autocomplete interaction to its registered handler.
 
-        If the handler raised, the user gets an ephemeral error reply, so an interaction never goes unanswered.
+        If a command or component handler raised, the user gets an ephemeral error reply, so an interaction never goes
+        unanswered. A failed autocomplete has no message to reply with: the user just sees no suggestions.
         """
         match interaction:
             case CommandInteraction():
                 succeeded = await self._dispatch_command(interaction)
             case ComponentInteraction():
                 succeeded = await self._dispatch_component(interaction)
+            case AutocompleteInteraction():
+                await self._dispatch_autocomplete(interaction)
+                return
             case _:
                 return
         if not succeeded:
@@ -153,6 +158,15 @@ class Bot(LoggerMixin):
             return True
         cog, command = entry
         return await command.invoke(cog, interaction)
+
+    async def _dispatch_autocomplete(self, interaction: AutocompleteInteraction) -> bool:
+        """Suggest values for the option being typed in the command ``interaction`` names; ``False`` if that failed."""
+        entry = self._commands.get(interaction.command_name)
+        if entry is None:
+            self.logger.warning(t"No registered command for autocomplete {interaction.command_name!r}")
+            return False
+        cog, command = entry
+        return await command.complete(cog, interaction)
 
     async def _dispatch_component(self, interaction: ComponentInteraction) -> bool:
         """Invoke the handler owning the clicked component's ``custom_id`` prefix; ``False`` only if it raised."""

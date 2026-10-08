@@ -34,12 +34,10 @@ lazy from wd_config.discord import URLS
 lazy from wd_discord import ShardManager
 lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
 lazy from wd_discord.authenticate import (
-    ContentType,
     MetaData,
     Token,
     TokenType,
     UserAgentVersion,
-    content_type,
     get_auth_header,
     render_header,
     user_agent,
@@ -134,8 +132,9 @@ class Client(LoggerMixin):
         self.guilds = EntityStore(self, PartialGuild)
 
     def _default_headers(self) -> dict[str, str]:
-        """Render the auth, user-agent and content-type headers into a plain dict.
+        """Render the auth and user-agent headers into a plain dict.
 
+        There's no default content type: httpxyz sets it per request, JSON or the multipart boundary of an upload.
         Values are stripped because an empty user-agent metadata segment would otherwise
         leave a trailing space, which HTTP rejects as an illegal header value.
         """
@@ -148,7 +147,6 @@ class Client(LoggerMixin):
                     MetaData(""),
                 ),
             ),
-            render_header(content_type(ContentType.json)),
         )
         return {name: value.strip() for name, value in headers}
 

@@ -6,7 +6,7 @@ lazy import asyncio
 lazy from datetime import UTC, datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
-lazy from sqlmodel import Session, SQLModel
+lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_config.steam import SteamSettings
 
@@ -21,7 +21,6 @@ lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
 if TYPE_CHECKING:
     lazy from collections.abc import Coroutine, Generator, Iterable
 
-    lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord import CommandInteraction, ComponentInteraction
 
     lazy from winter_dragon.cogs.steam.models import SteamSale
@@ -80,11 +79,6 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         return self._throttle
 
     @property
-    def _bind(self) -> Engine | Connection:
-        """The database the cog's sessions connect to."""
-        return self.session.get_bind()
-
-    @property
     def _outdated_after(self) -> timedelta:
         return timedelta(seconds=SteamSettings.outdated_after)
 
@@ -95,8 +89,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     @override
     async def load(self) -> None:
         """Create the Steam tables if missing, then start the background scrape loop."""
-        tables = [SQLModel.metadata.tables[model.__name__.lower()] for model in STEAM_TABLES]
-        SQLModel.metadata.create_all(self._bind, tables=tables)
+        self.create_tables(*STEAM_TABLES)
         self._task = self.bot.loop.create_task(self._run())
 
     @override
@@ -117,7 +110,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
                 self.logger.info(t"Next Steam scrape at {next_scrape:%Y-%m-%d %H:%M} UTC")
             await self._guarded(self.recheck_due(utc_now()))
-            with Session(self._bind) as session:
+            with Session(self.bind) as session:
                 next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
             wake = min(next_scrape, next_recheck) if next_recheck is not None else next_scrape
             await asyncio.sleep(max(MIN_SLEEP_SECONDS, (wake - utc_now()).total_seconds()))
@@ -138,7 +131,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         scrape didn't list (ended, or no longer among the top sellers) are checked again, unless their end is
         known: those are re-checked when they end, by :meth:`recheck_due`.
         """
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             store = SteamSaleStore(session)
             lowest = store.lowest_threshold()
             percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
@@ -165,7 +158,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
 
     async def recheck_due(self, now: datetime) -> None:
         """Check the sales whose announced end has passed: update those still running, remove those that ended."""
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             store = SteamSaleStore(session)
             due = store.due_rechecks(now=now, delay=self._recheck_delay)
             if not due or self.throttle.paused:
@@ -200,7 +193,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             if SteamSaleStore(session).subscriber(int(user.id)) is not None:
                 await interaction.respond(
                     content="Already in the list of recipients",
@@ -229,7 +222,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 ephemeral=True,
             )
             return
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
             if subscriber is not None:
                 subscriber.sale_threshold = percent
@@ -247,7 +240,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
             if subscriber is not None:
                 session.delete(subscriber)
@@ -264,7 +257,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             store = SteamSaleStore(session)
             sales = store.current_sales(percent, now=utc_now(), outdated_after=self._outdated_after)
             if not sales:
@@ -291,7 +284,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 ephemeral=True,
             )
             return
-        with Session(self._bind) as session:
+        with Session(self.bind) as session:
             store = SteamSaleStore(session)
             sales = store.current_sales(int(percent), now=utc_now(), outdated_after=self._outdated_after)
             pages = page_count(len(sales))

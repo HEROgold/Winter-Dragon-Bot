@@ -6,12 +6,18 @@ lazy import annotationlib
 lazy from abc import ABC, abstractmethod
 lazy from inspect import Parameter
 lazy from inspect import signature as inspect_signature
+lazy from itertools import islice
 lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Self, get_args
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord import User
-lazy from wd_discord.interactions import ApplicationCommandOption, ApplicationCommandOptionType, ApplicationCommandParams
+lazy from wd_discord.interactions import (
+    MAX_CHOICES,
+    ApplicationCommandOption,
+    ApplicationCommandOptionType,
+    ApplicationCommandParams,
+)
 lazy from wd_discord.resources.user import User as UserModel
 
 lazy from wd_bot.signature import command_signature
@@ -20,9 +26,9 @@ lazy from wd_bot.signature import command_signature
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
-    lazy from wd_discord import CommandInteraction
+    lazy from wd_discord import AutocompleteInteraction, CommandInteraction
     lazy from wd_discord.gateway.events import InteractionDataOption
-    lazy from wd_discord.interactions import InteractionContextType
+    lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
     lazy from wd_bot.cogs import Cog
@@ -31,10 +37,15 @@ if TYPE_CHECKING:
 _OPTION_TYPE_MAP: dict[type, ApplicationCommandOptionType] = {
     str: ApplicationCommandOptionType.STRING,
     int: ApplicationCommandOptionType.INTEGER,
+    float: ApplicationCommandOptionType.NUMBER,
     bool: ApplicationCommandOptionType.BOOLEAN,
     User: ApplicationCommandOptionType.USER,
     UserModel: ApplicationCommandOptionType.USER,
 }
+
+
+type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]
+"""A cog method suggesting values for an option: ``(self, interaction, current) -> choices``."""
 
 
 class AppCommand(LoggerMixin, ABC):
@@ -72,6 +83,10 @@ class AppCommand(LoggerMixin, ABC):
     @abstractmethod
     async def invoke(self, cog: Cog, interaction: CommandInteraction) -> bool:
         """Handle ``interaction``; return ``False`` if the handler failed or nothing could be dispatched."""
+
+    @abstractmethod
+    async def complete(self, cog: Cog, interaction: AutocompleteInteraction) -> bool:
+        """Suggest values for the option being typed; return ``False`` if the handler failed or none was found."""
 
     def signature(self) -> str:
         """Return the signature of the full registered definition, used to detect drift for sync."""
@@ -114,6 +129,7 @@ class Command(AppCommand):
             contexts=contexts,
         )
         self.func = func
+        self._autocompletes: dict[str, AutocompleteHandler] = {}
         self._param_types: dict[str, type] = {}
         self._param_required: dict[str, bool] = {}
         annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
@@ -164,11 +180,31 @@ class Command(AppCommand):
                 name=param_name,
                 description=param_name,
                 required=self._param_required[param_name],
+                autocomplete=True if param_name in self._autocompletes else None,
             )
 
     def _own_signature(self) -> Generator[str]:
-        """Yield the handler's parameter signature."""
+        """Yield the handler's parameter signature, and which options autocomplete when any do."""
         yield command_signature(self.func)
+        if self._autocompletes:
+            yield f"autocomplete: {sorted(self._autocompletes)}"
+
+    def autocomplete(self, option: str) -> Callable[[AutocompleteHandler], AutocompleteHandler]:
+        """Tag a Cog method as the handler suggesting values for this command's ``option`` while it's typed.
+
+        The handler gets the interaction and the text typed so far, and returns the choices to suggest; Discord
+        shows at most the first :data:`~wd_discord.interactions.MAX_CHOICES`. Only STRING, INTEGER and NUMBER
+        options autocomplete. Use it right below the command, like ``@remove.autocomplete("reminder")``.
+        """
+        if self._param_types.get(option) not in (str, int, float):
+            msg = f"Command {self.name!r}: option {option!r} isn't a str, int or float parameter, so it can't autocomplete"
+            raise TypeError(msg)
+
+        def decorator(func: AutocompleteHandler) -> AutocompleteHandler:
+            self._autocompletes[option] = func
+            return func
+
+        return decorator
 
     async def invoke(
         self,
@@ -192,6 +228,33 @@ class Command(AppCommand):
             return False
         return True
 
+    async def complete(
+        self,
+        cog: Cog,
+        interaction: AutocompleteInteraction,
+        options: Sequence[InteractionDataOption] | None = None,
+    ) -> bool:
+        """Answer ``interaction`` with the focused option's suggestions.
+
+        ``options`` defaults to ``interaction``'s top-level options, like :meth:`invoke`. Returns ``False`` (after
+        logging) when no handler is registered for the focused option, or the handler raised.
+        """
+        if options is None:
+            options = interaction.options
+        focused = next((option for option in options if option.focused), None)
+        handler = self._autocompletes.get(focused.name) if focused else None
+        if focused is None or handler is None:
+            self.logger.warning(t"No autocomplete handler for the focused option of command '{self.name}'")
+            return False
+        current = "" if focused.value is None else str(focused.value)
+        try:
+            choices = list(islice(await handler(cog, interaction, current), MAX_CHOICES))
+        except Exception:
+            self.logger.exception(t"Unhandled exception autocompleting '{focused.name}' of command '{self.name}'")
+            return False
+        await interaction.suggest(choices)
+        return True
+
     def _build_kwargs(self, interaction: CommandInteraction, options: Sequence[InteractionDataOption]) -> dict[str, object]:
         """Map each submitted option to a handler argument, resolving USER options to users.
 
@@ -212,6 +275,8 @@ class Command(AppCommand):
                     self.logger.warning(t"Unresolved user '{option.value}' for option '{option.name}' in command '{self.name}'")
                     continue
                 kwargs[option.name] = User(interaction.client, user) if param_type is User else user
+            elif param_type is float and isinstance(option.value, int):
+                kwargs[option.name] = float(option.value)  # Discord sends a whole NUMBER as an integer
             else:
                 kwargs[option.name] = option.value
         return kwargs
@@ -267,15 +332,28 @@ class CommandGroup(AppCommand):
         for name in sorted(self.subcommands):
             yield f"{name}: {self.subcommands[name].signature()}"
 
+    def _chosen(self, options: Sequence[InteractionDataOption]) -> tuple[Command, Sequence[InteractionDataOption]] | None:
+        """Return the chosen subcommand and its own option values, or ``None`` (after logging) if none is known."""
+        chosen = next((option for option in options if option.type == ApplicationCommandOptionType.SUB_COMMAND), None)
+        subcommand = self.subcommands.get(chosen.name) if chosen else None
+        if chosen is None or subcommand is None:
+            self.logger.warning(t"No known subcommand chosen for command group '{self.name}'")
+            return None
+        return subcommand, chosen.options or []
+
     async def invoke(self, cog: Cog, interaction: CommandInteraction) -> bool:
         """Route ``interaction`` to the chosen subcommand, passing it that subcommand's option values.
 
         Returns ``False`` (after logging) if no known subcommand was chosen.
         """
-        options = interaction.options
-        chosen = next((option for option in options if option.type == ApplicationCommandOptionType.SUB_COMMAND), None)
-        subcommand = self.subcommands.get(chosen.name) if chosen else None
-        if chosen is None or subcommand is None:
-            self.logger.warning(t"No known subcommand chosen for command group '{self.name}'")
+        if (chosen := self._chosen(interaction.options)) is None:
             return False
-        return await subcommand.invoke(cog, interaction, chosen.options or [])
+        subcommand, options = chosen
+        return await subcommand.invoke(cog, interaction, options)
+
+    async def complete(self, cog: Cog, interaction: AutocompleteInteraction) -> bool:
+        """Route ``interaction`` to the chosen subcommand's autocomplete, like :meth:`invoke`."""
+        if (chosen := self._chosen(interaction.options)) is None:
+            return False
+        subcommand, options = chosen
+        return await subcommand.complete(cog, interaction, options)

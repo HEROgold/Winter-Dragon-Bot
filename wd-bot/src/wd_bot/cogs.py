@@ -6,7 +6,7 @@ lazy from enum import IntFlag, auto
 lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 
 lazy from herogold.log import LoggerMixin
-lazy from sqlmodel import Session
+lazy from sqlmodel import Session, SQLModel
 lazy from wd_db.constants import engine
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
@@ -19,6 +19,7 @@ lazy from wd_bot.listener import listener
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable
 
+    lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
@@ -144,6 +145,16 @@ class Cog(LoggerMixin):
     def mention(self, command: Command) -> str:
         """Return a clickable mention of ``command``, or its plain ``/name`` until it has been synced."""
         return command_mention(self.session, command.name)
+
+    @property
+    def bind(self) -> Engine | Connection:
+        """The database the cog's injected session connects to; open short-lived sessions on it per operation."""
+        return self.session.get_bind()
+
+    def create_tables(self, *models: type[SQLModel]) -> None:
+        """Create the tables of ``models`` that don't exist yet, in :attr:`bind`; each named after its model, lowercased."""
+        tables = [SQLModel.metadata.tables[model.__name__.lower()] for model in models]
+        SQLModel.metadata.create_all(self.bind, tables=tables)
 
     async def load(self) -> None:
         """Run setup once registered with the bot; a hook for subclasses to override.
