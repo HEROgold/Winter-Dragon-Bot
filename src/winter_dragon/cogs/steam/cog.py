@@ -117,7 +117,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 now=now,
                 content=self._notification_content(),
             )
-            self.logger.info(t"Steam scrape done at {percent}%+, notified {notified} subscriber(s)")
+            self.logger.info(t"Steam scrape done (threshold {percent} percent), notified {notified} subscriber(s)")
 
     async def recheck_due(self, now: datetime) -> None:
         """Check the sales whose announced end has passed: update those still running, remove those that ended."""

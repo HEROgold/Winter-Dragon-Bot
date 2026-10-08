@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
+import sys
 import types
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
@@ -257,3 +259,15 @@ async def test_group_cog_registers_one_group_and_dispatches_subcommands(make_int
     interaction.data.options = [InteractionDataOption(name="ping", type=1)]
     await bot._dispatch_interaction(interaction)
     assert CALLS == [interaction]
+
+
+async def test_load_extension_reuses_an_already_imported_module() -> None:
+    """A module another extension imported isn't executed again; a second copy would redefine its SQLModel tables."""
+    bot = _make_bot()
+    bot.extensions_package = importlib.import_module("winter_dragon.cogs")
+    imported = importlib.import_module("winter_dragon.cogs.steam.models")
+
+    await bot.load_extension("steam.models")
+
+    assert bot._extensions["steam.models"] is imported
+    assert sys.modules["winter_dragon.cogs.steam.models"] is imported

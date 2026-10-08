@@ -240,17 +240,26 @@ class Bot(LoggerMixin):
                 await cog.auto_load()
 
     async def _load_from_module_spec(self, spec: ModuleSpec, key: str) -> None:
-        """Execute a module spec and instantiate its cogs."""
+        """Import a module spec under its full name and instantiate its cogs.
+
+        A module another extension already imported is reused, not executed again: a second copy would
+        redefine its classes, which e.g. SQLModel tables don't allow.
+        """
         if spec.loader is None:
             raise ExtensionError(key, RuntimeError("Module spec has no loader"))
 
-        module = module_from_spec(spec)
-        sys.modules[key] = module
+        module = sys.modules.get(spec.name)
+        if module is None:
+            module = module_from_spec(spec)
+            sys.modules[spec.name] = module
+            try:
+                spec.loader.exec_module(module)
+            except Exception as e:
+                del sys.modules[spec.name]
+                raise ExtensionError(key, e) from e
         try:
-            spec.loader.exec_module(module)
             await self._init_cogs(module)
         except Exception as e:
-            del sys.modules[key]
             raise ExtensionError(key, e) from e
 
         self._extensions[key] = module
