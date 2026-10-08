@@ -106,6 +106,18 @@ repos:
 
   - repo: local
     hooks:
+      # Strict pyrefly over every package. pyrefly-baseline.json grandfathers the errors that existed when
+      # the hook was added, so only new ones fail; after fixing old ones, shrink it with
+      # `--baseline pyrefly-baseline.json --prune-baseline` (same paths).
+      - id: pyrefly-check
+        name: uvx pyrefly check (strict, baselined)
+        language: system
+        entry: >-
+          uvx pyrefly check src wd-bot/src wd-cogs/src wd-config/src wd-core/src wd-db/src
+          wd-discord/src wd-errors/src wd-types/src --baseline pyrefly-baseline.json
+        pass_filenames: false
+        files: ^((src|wd-[a-z]+/src)/.*\.pyi?|pyrefly\.toml|pyrefly-baseline\.json)$
+        stages: [pre-commit, pre-push]
       - id: ty-check
         name: uvx ty check
         language: system

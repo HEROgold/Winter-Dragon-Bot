@@ -95,16 +95,16 @@ def main() -> int:
     any_missing = False
     for name in table_classes:
         if name in all_set:
-            print(f"{GREEN}FOUND: {name}{RESET}")  # noqa: T201
+            print(f"{GREEN}FOUND: {name}{RESET}")
         else:
             any_missing = True
-            print(f"{RED}MISSING: {name}{RESET}")  # noqa: T201
+            print(f"{RED}MISSING: {name}{RESET}")
 
     # Also show classes that are in __all__ but not discovered (optional)
     extras = sorted([x for x in all_list if x not in table_classes])
     if extras:
         for _x in extras:
-            print(f"{YELLOW}EXTRA: {_x}{RESET}")  # noqa: T201
+            print(f"{YELLOW}EXTRA: {_x}{RESET}")
 
     return 1 if any_missing else 0
 

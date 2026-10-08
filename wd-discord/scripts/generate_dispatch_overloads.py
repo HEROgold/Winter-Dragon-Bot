@@ -121,13 +121,13 @@ def check() -> bool:
         candidate.write_text(render(), encoding="utf-8")
         _ruff_format(candidate)
         if not OUTPUT_PATH.exists():
-            print(f"{OUTPUT_PATH} does not exist - run without --check to generate it.")  # noqa: T201
+            print(f"{OUTPUT_PATH} does not exist - run without --check to generate it.")
             return False
         current = OUTPUT_PATH.read_text(encoding="utf-8")
         expected = candidate.read_text(encoding="utf-8")
         if current == expected:
             return True
-        print(f"{OUTPUT_PATH} is out of date - run without --check to regenerate it.")  # noqa: T201
+        print(f"{OUTPUT_PATH} is out of date - run without --check to regenerate it.")
         return False
 
 

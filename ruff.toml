@@ -16,6 +16,7 @@ ignore = [
   "D105",
   "TD005", # We won't require an GH-issue.
   "CPY001", # We don't care about Copyright headers.
+  "T20", # print is how scripts and live drivers report; an unsafe fix would delete their output.
 ]
 
 [lint.isort]
