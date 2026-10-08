@@ -6,7 +6,7 @@ lazy from collections import defaultdict
 lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
-lazy from sqlmodel import col, delete, select
+lazy from sqlmodel import col, delete, or_, select
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 
@@ -61,8 +61,8 @@ class SteamSaleStore:
         self.session.refresh(sale)
         return sale, is_new
 
-    def update_from_app_page(self, sale: SteamSale, scraped: ScrapedSale, *, now: datetime) -> None:
-        """Apply what an app page says about ``sale``: its current discount, end and properties.
+    def refresh(self, sale: SteamSale, scraped: ScrapedSale, *, now: datetime) -> None:
+        """Apply what Steam now says about ``sale``: its current discount, end and properties.
 
         An end that has already passed is dropped, so a sale still running past its announced end waits for the
         next regular scrape instead of being checked again in a loop.
@@ -99,12 +99,28 @@ class SteamSaleStore:
         return dict(found)
 
     def current_sales(self, percent: int, *, now: datetime, outdated_after: timedelta) -> list[SteamSale]:
-        """Return the sales of at least ``percent`` that aren't outdated: biggest discount first, then cheapest."""
+        """Return the sales of at least ``percent`` still running: biggest discount first, then cheapest.
+
+        A sale runs until its known end, or without one, until it's outdated (not seen for ``outdated_after``).
+        """
         query = select(SteamSale).where(
             SteamSale.sale_percent >= percent,
-            col(SteamSale.update_datetime) > now - outdated_after,
+            or_(col(SteamSale.sale_end) > now, col(SteamSale.update_datetime) > now - outdated_after),
         )
         return list(self.session.exec(query.order_by(col(SteamSale.sale_percent).desc(), col(SteamSale.final_price))))
+
+    def unseen_without_end(self, moment: datetime, percent: int, *, outdated_after: timedelta) -> list[SteamSale]:
+        """Return the shown sales of at least ``percent`` last seen before ``moment``, longest unseen first.
+
+        Sales with a known end are left out: they're re-checked once they end (see :meth:`due_rechecks`).
+        """
+        query = select(SteamSale).where(
+            SteamSale.sale_percent >= percent,
+            col(SteamSale.update_datetime) < moment,
+            col(SteamSale.update_datetime) > moment - outdated_after,
+            col(SteamSale.sale_end).is_(None),
+        )
+        return list(self.session.exec(query.order_by(col(SteamSale.update_datetime))))
 
     def due_rechecks(self, *, now: datetime, delay: timedelta) -> Sequence[SteamSale]:
         """Return the sales whose announced end was at least ``delay`` ago."""

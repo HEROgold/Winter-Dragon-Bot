@@ -1,64 +1,64 @@
-"""Scrape Steam's store pages for sales.
+"""Find Steam sales through Steam's store web APIs.
 
+``IStoreQueryService/Query`` lists the items with at least a given discount, best-selling first, 1000 per request;
+``IStoreBrowseService/GetItems`` looks up the current discount of many items at once. Both answer without an API key.
 Scrapers return plain :class:`ScrapedSale` values and never touch the database; the cog decides what to store.
-A page that fails to load or parse is logged and skipped, so one bad page never stops a scrape.
+A request that fails is logged and skipped, so one bad answer never stops a scrape. Every request goes through a
+:class:`RequestThrottle`, so a scrape never sends requests fast enough to get rate-limited.
 """
 
 from __future__ import annotations
 
-lazy import re
-lazy from collections import Counter
-lazy from dataclasses import dataclass, field
-lazy from datetime import UTC, datetime, timedelta
+lazy import json
+lazy from dataclasses import dataclass
 lazy from enum import Enum, auto
+lazy from itertools import batched
 lazy from typing import TYPE_CHECKING, Self
 
-lazy from bs4 import BeautifulSoup, Tag
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
+lazy from pydantic import ValidationError
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes
-lazy from winter_dragon.cogs.steam.tags import (
-    ADD_TO_CART,
-    DATA_APPID,
-    DISCOUNT_FINAL_PRICE,
-    DISCOUNT_PERCENT,
-    DISCOUNT_PRICES,
-    DLC_BANNER,
-    GAME_BUY_AREA,
-    SALE_END_DATE,
-    SALE_END_HOUR_UTC,
-    SALE_END_TIMESTAMP,
-    SEARCH_GAME_TITLE,
-    SINGLE_GAME_TITLE,
-    price_to_num,
-)
-lazy from winter_dragon.cogs.steam.urls import SteamURL
+lazy from winter_dragon.cogs.steam.store_api import DLC_APP_TYPE, FOUND, ItemsResponse, QueryResponse
+lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
+lazy from winter_dragon.cogs.steam.urls import StoreItemKind
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import AsyncGenerator
+    lazy from collections.abc import AsyncGenerator, Iterable
+    lazy from datetime import datetime
+
+    lazy from httpxyz import Response
+
+    lazy from winter_dragon.cogs.steam.store_api import SteamModel, StoreItem
+    lazy from winter_dragon.cogs.steam.urls import SteamURL, StoreItemID
 
 
-STORE_COOKIES = {
-    "birthtime": "0",
-    "lastagecheckage": "1-0-1990",
-    "mature_content": "1",
-    "wants_mature_content": "1",
-    "Steam_Language": "english",
-}
-"""Pass Steam's age gate and get English pages, so the "Offer ends" text can be parsed."""
+STORE_API_URL = "https://api.steampowered.com"
+QUERY_URL = f"{STORE_API_URL}/IStoreQueryService/Query/v1/"
+GET_ITEMS_URL = f"{STORE_API_URL}/IStoreBrowseService/GetItems/v1/"
+QUERY_PAGE_SIZE = 1000
+"""Items per ``Query`` request; the most Steam returns at once."""
+GET_ITEMS_BATCH_SIZE = 200
+"""Items per ``GetItems`` request; Steam rejects the URL of a few hundred more."""
+TOP_SELLERS_SORT = 10
+"""The ``Query`` sort ordering items by global sales, best-selling first (not in SteamDB's protobufs; found by trying)."""
+MIN_DISCOUNT_FILTER = range(1, 100)
+"""The ``min_discount_percent`` values Steam honours: it ignores 100 (matching every item), and 0 matches full price."""
 REQUEST_TIMEOUT_SECONDS = 30.0
-BUNDLE_ID_PATTERN = re.compile(r"/(?:sub|bundle)/(\d+)")
-DATE_ONLY_ROLLOVER = timedelta(days=180)
-"""A date-only sale end this far in the past belongs to next year (e.g. "Offer ends 3 January" seen in December)."""
+DEFAULT_REQUEST_INTERVAL = 1.5
+"""Seconds between requests for a scraper given no throttle."""
+DEFAULT_COUNTRY_CODE = "US"
+LANGUAGE = "english"
+RATE_LIMITED = 429
 
 
 class ScrapeFailure(Enum):
-    """Why a page gave no answer, as opposed to answering "not on sale"."""
+    """Why Steam gave no answer, as opposed to answering "not on sale"."""
 
-    PAGE_UNAVAILABLE = auto()
-    """The page failed to load (network error or non-2xx status)."""
+    UNAVAILABLE = auto()
+    """The request failed (network error, non-2xx status, rate limit) or Steam answered something unexpected."""
 
 
 @dataclass(frozen=True)
@@ -74,50 +74,54 @@ class ScrapedSale:
     properties: frozenset[SaleTypes] = frozenset()
     sale_end: datetime | None = None
 
-
-def parse_sale_end(buy_area_html: str, now: datetime) -> datetime | None:
-    """Return when the sale in a buy area ends, or ``None`` when Steam doesn't say.
-
-    Prefers the countdown's exact timestamp. A date-only "Offer ends 15 October" is taken to end at
-    :data:`SALE_END_HOUR_UTC` that day, in the year that puts it closest to ``now``.
-    """
-    if timestamp := SALE_END_TIMESTAMP.search(buy_area_html):
-        return datetime.fromtimestamp(int(timestamp[1]), UTC)
-    if not (date := SALE_END_DATE.search(buy_area_html)):
-        return None
-    day = datetime.strptime(f"{date[1]} {now.year}", "%d %B %Y").replace(hour=SALE_END_HOUR_UTC, tzinfo=UTC)
-    return day.replace(year=now.year + 1) if day < now - DATE_ONLY_ROLLOVER else day
-
-
-@dataclass
-class SearchDiagnostics:
-    """Why sales on a search page were skipped, logged once per scrape."""
-
-    percent_threshold: int
-    examined: int = 0
-    yielded: int = 0
-    skipped: Counter[str] = field(default_factory=Counter[str])
-
-    def skip(self, reason: str) -> None:
-        """Count one sale skipped for ``reason``."""
-        self.skipped[reason] += 1
-
-    def summary(self) -> str:
-        """Describe the scrape in one line."""
-        reasons = ", ".join(f"{reason}={count}" for reason, count in self.skipped.items()) or "none"
-        return (
-            f"Steam search: examined={self.examined} yielded={self.yielded} "
-            f"threshold={self.percent_threshold}% skipped: {reasons}"
+    @classmethod
+    def from_store_item(cls, item: StoreItem) -> Self | None:
+        """Return the sale on ``item``, or ``None`` when it isn't discounted (or isn't a store item Steam knows)."""
+        option = item.best_purchase_option
+        url = item.url
+        if item.success != FOUND or option is None or option.discount_pct <= 0 or url is None or item.item_id is None:
+            return None
+        properties: set[SaleTypes] = set()
+        if item.item_id.kind is not StoreItemKind.APP:
+            properties.add(SaleTypes.BUNDLE)
+        elif item.type == DLC_APP_TYPE:
+            properties.add(SaleTypes.DLC)
+        return cls(
+            id=item.id,
+            title=item.name or "Bundle",
+            url=url,
+            sale_percent=option.discount_pct,
+            final_price=option.final_price_in_cents / 100,
+            properties=frozenset(properties),
+            sale_end=option.discount_end,
         )
 
 
-class SteamScraper(LoggerMixin):
-    """Fetches Steam store pages and extracts sales from them; use as ``async with SteamScraper() as scraper``."""
+def _retry_after(response: Response) -> float | None:
+    """Return the seconds a response's ``Retry-After`` header asks to wait, if it gives a number."""
+    value = response.headers.get("Retry-After", "")
+    return float(value) if value.isdigit() else None
 
-    def __init__(self, http: AsyncClient | None = None) -> None:
-        """Scrape through ``http``, or through a client of its own (closed on exit) when not given."""
+
+class SteamScraper(LoggerMixin):
+    """Asks Steam's store APIs for sales; use as ``async with SteamScraper() as scraper``."""
+
+    def __init__(
+        self,
+        http: AsyncClient | None = None,
+        throttle: RequestThrottle | None = None,
+        *,
+        country_code: str = DEFAULT_COUNTRY_CODE,
+    ) -> None:
+        """Ask through ``http``, or through a client of its own (closed on exit) when not given.
+
+        Pass the same ``throttle`` to every scraper, so request spacing and rate-limit pauses span all of them.
+        Prices are read in the store region ``country_code``.
+        """
         self._owns_http = http is None
-        self.http = http or AsyncClient(cookies=STORE_COOKIES, follow_redirects=True, timeout=REQUEST_TIMEOUT_SECONDS)
+        self.http = http or AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS)
+        self.throttle = throttle or RequestThrottle(DEFAULT_REQUEST_INTERVAL)
+        self.context = {"language": LANGUAGE, "country_code": country_code}
 
     async def __aenter__(self) -> Self:
         """Enter the context, returning the scraper."""
@@ -128,112 +132,88 @@ class SteamScraper(LoggerMixin):
         if self._owns_http:
             await self.http.aclose()
 
-    async def _get_soup(self, url: str) -> BeautifulSoup | None:
-        """Fetch and parse ``url``, or log and return ``None`` when it can't be loaded."""
+    async def _call[T: SteamModel](self, url: str, request: dict[str, object], answer: type[T]) -> T | None:
+        """Send ``request`` to the store API at ``url``, or log and return ``None`` when it gives no usable answer."""
+        if not await self.throttle.acquire():
+            return None
         try:
-            response = await self.http.get(url, headers={"Accept-Language": "en-US,en;q=0.9"})
+            response = await self.http.get(url, params={"input_json": json.dumps(request)})
         except RequestError:
             self.logger.exception(t"Request to {url} failed")
             return None
+        if response.status_code == RATE_LIMITED:
+            pause = self.throttle.rate_limited(_retry_after(response))
+            self.logger.warning(t"Steam rate-limited us on {url}; pausing all requests for {pause:.0f}s")
+            return None
+        self.throttle.succeeded()
         if not response.is_success:
             self.logger.warning(t"Steam answered {response.status_code} for {url}")
             return None
-        return BeautifulSoup(response.text, "html.parser")
-
-    async def get_game_sale(self, url: SteamURL, now: datetime | None = None) -> ScrapedSale | ScrapeFailure | None:
-        """Return the sale on an app page, ``None`` when the app isn't discounted, or why the page gave no answer."""
-        app_id = url.app_id
-        if app_id is None:
-            self.logger.warning(t"Not an app page: {url}")
+        try:
+            return answer.model_validate_json(response.content)
+        except ValidationError:
+            self.logger.warning(t"Unexpected answer from {url}")
             return None
-        soup = await self._get_soup(url)
-        if soup is None:
-            return ScrapeFailure.PAGE_UNAVAILABLE
-        add_to_cart = soup.find(class_=ADD_TO_CART)
-        buy_area = add_to_cart.find_parent(class_=GAME_BUY_AREA) if add_to_cart else None
-        if not isinstance(buy_area, Tag):
-            self.logger.debug(t"No buy area on {url}")
-            return None
-        sale_percent = buy_area.find(class_=DISCOUNT_PERCENT)
-        price = buy_area.find(class_=DISCOUNT_FINAL_PRICE)
-        title = soup.find(class_=SINGLE_GAME_TITLE)
-        if not isinstance(sale_percent, Tag) or not isinstance(price, Tag) or not isinstance(title, Tag):
-            self.logger.debug(t"{url} is not on sale")
-            return None
-        properties = frozenset({SaleTypes.DLC}) if soup.find(class_=DLC_BANNER) else frozenset[SaleTypes]()
-        return ScrapedSale(
-            id=app_id,
-            title=title.get_text(strip=True),
-            url=url,
-            sale_percent=abs(int(sale_percent.get_text(strip=True).strip("-%"))),
-            final_price=price_to_num(price.get_text(strip=True)),
-            properties=properties,
-            sale_end=parse_sale_end(str(buy_area), now or datetime.now(UTC)),
-        )
 
-    async def get_sales_from_search(self, search_url: str, percent: int) -> AsyncGenerator[ScrapedSale]:
-        """Yield every sale of at least ``percent`` on a Steam search page."""
-        soup = await self._get_soup(search_url)
-        if soup is None:
-            return
-        diagnostics = SearchDiagnostics(percent_threshold=percent)
-        for prices in soup.find_all(class_=DISCOUNT_PRICES):
-            diagnostics.examined += 1
-            if (sale := await self._sale_from_search_result(prices, percent, diagnostics)) is not None:
-                diagnostics.yielded += 1
-                yield sale
-        self.logger.info(t"{diagnostics.summary()}")
+    def _query(self, percent: int, start: int, count: int) -> dict[str, object]:
+        """Build the ``Query`` request for ``count`` best-selling items of at least ``percent`` from ``start`` on."""
+        min_discount = min(max(percent, MIN_DISCOUNT_FILTER.start), MIN_DISCOUNT_FILTER.stop - 1)
+        return {
+            "query_name": "winter-dragon-sales",
+            "context": self.context,
+            "data_request": {},
+            "query": {
+                "start": start,
+                "count": count,
+                "sort": TOP_SELLERS_SORT,
+                "filters": {
+                    "type_filters": {"include_apps": True, "include_packages": True, "include_bundles": True},
+                    "price_filters": {"min_discount_percent": min_discount},
+                },
+            },
+        }
 
-    async def _sale_from_search_result(
+    async def query_sales(self, percent: int, limit: int | None = None) -> AsyncGenerator[ScrapedSale]:
+        """Yield the sales of at least ``percent``, best-selling first: the first ``limit``, or every one without.
+
+        Pages through the results :data:`QUERY_PAGE_SIZE` at a time, stopping early at the last result or at a page
+        that fails to load.
+        """
+        start = examined = yielded = 0
+        while limit is None or start < limit:
+            count = QUERY_PAGE_SIZE if limit is None else min(QUERY_PAGE_SIZE, limit - start)
+            page = await self._call(QUERY_URL, self._query(percent, start, count), QueryResponse)
+            if page is None:
+                break
+            items = page.response.store_items
+            for item in items:
+                examined += 1
+                sale = ScrapedSale.from_store_item(item)
+                if sale is not None and sale.sale_percent >= percent:
+                    yielded += 1
+                    yield sale
+            start += count
+            if not items or start >= page.response.metadata.total_matching_records:
+                break
+        self.logger.info(t"Steam query: examined={examined} yielded={yielded} threshold={percent} percent, limit={limit}")
+
+    async def get_sales(
         self,
-        prices: Tag,
-        percent: int,
-        diagnostics: SearchDiagnostics,
-    ) -> ScrapedSale | None:
-        """Extract the sale from one search result's price block, or record why it was skipped."""
-        anchor = prices.find_parent("a", href=True)
-        if not isinstance(anchor, Tag):
-            diagnostics.skip("missing_anchor")
-            return None
-        url = SteamURL(str(anchor["href"]).split("?", maxsplit=1)[0])  # drop Steam's ?snr= tracking parameters
-        price = anchor.find(class_=DISCOUNT_FINAL_PRICE)
-        title = anchor.find(class_=SEARCH_GAME_TITLE)
-        if not isinstance(price, Tag) or not isinstance(title, Tag):
-            diagnostics.skip("missing_price_or_title")
-            return None
-        discount = prices.parent.find(class_=DISCOUNT_PERCENT) if prices.parent else None
-        if not isinstance(discount, Tag):
-            return await self._sale_from_app_page(url, diagnostics)
-        sale_percent = abs(int(discount.get_text(strip=True).strip("-%")))
-        if sale_percent < percent:
-            diagnostics.skip("below_threshold")
-            return None
-        sale_id = self._sale_id(url, anchor)
-        if sale_id is None:
-            diagnostics.skip("missing_id")
-            return None
-        return ScrapedSale(
-            id=sale_id,
-            title=title.get_text(strip=True) or "Bundle",
-            url=url,
-            sale_percent=sale_percent,
-            final_price=price_to_num(price.get_text(strip=True)),
-            properties=frozenset({SaleTypes.BUNDLE}) if url.is_bundle else frozenset[SaleTypes](),
-        )
+        items: Iterable[StoreItemID],
+    ) -> AsyncGenerator[tuple[StoreItemID, ScrapedSale | ScrapeFailure | None]]:
+        """Yield each item with its current sale, ``None`` when it isn't on sale, or why Steam gave no answer.
 
-    async def _sale_from_app_page(self, url: SteamURL, diagnostics: SearchDiagnostics) -> ScrapedSale | None:
-        """Look up a sale whose search result hides the discount on its app page, which shows it."""
-        sale = await self.get_game_sale(url) if url.is_app else None
-        if not isinstance(sale, ScrapedSale):
-            diagnostics.skip("app_page_lookup_failed")
-            return None
-        return sale
-
-    @staticmethod
-    def _sale_id(url: SteamURL, anchor: Tag) -> int | None:
-        """Return a result's app ID, or for bundles the bundle/sub ID from the URL (their app ID lists every item)."""
-        if url.is_bundle:
-            match = BUNDLE_ID_PATTERN.search(url)
-            return int(match[1]) if match else None
-        app_id = str(anchor.get(DATA_APPID) or "").split(",", maxsplit=1)[0]
-        return int(app_id) if app_id.isdigit() else url.app_id
+        Looks the items up :data:`GET_ITEMS_BATCH_SIZE` at a time; an item missing from Steam's answer counts as no
+        answer, so it's retried later instead of taken for ended.
+        """
+        for batch in batched(items, GET_ITEMS_BATCH_SIZE, strict=False):
+            request: dict[str, object] = {
+                "ids": [item.as_request() for item in batch],
+                "context": self.context,
+                "data_request": {},
+            }
+            answer = await self._call(GET_ITEMS_URL, request, ItemsResponse)
+            found = {} if answer is None else {item.item_id: item for item in answer.response.store_items}
+            for item in batch:
+                store_item = found.get(item)
+                yield item, ScrapeFailure.UNAVAILABLE if store_item is None else ScrapedSale.from_store_item(store_item)

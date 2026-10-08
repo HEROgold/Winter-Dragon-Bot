@@ -15,10 +15,11 @@ lazy from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
 lazy from winter_dragon.cogs.steam.pages import build_page, page_buttons, page_count
 lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure, SteamScraper
 lazy from winter_dragon.cogs.steam.store import SteamSaleStore
+lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Coroutine
+    lazy from collections.abc import Coroutine, Generator, Iterable
 
     lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord.gateway.events import CommandInteraction, ComponentInteraction
@@ -27,12 +28,37 @@ if TYPE_CHECKING:
 
 
 DEFAULT_THRESHOLD = 100
-"""The discount scraped for, and a new subscriber's threshold: free games only."""
+"""The discount /steam show lists by default, and a new subscriber's threshold: free games only."""
 MAX_PERCENT = 100
 MIN_SLEEP_SECONDS = 60.0
 """The loop never sleeps less than this, so a failing re-check is retried at most once a minute."""
-MAX_SALE_END_LOOKUPS = 25
-"""App pages fetched per scrape to learn when new sales end."""
+SALE_END_HOUR_UTC = 17
+"""The hour (UTC) Steam starts and ends most sales: 10:00 Pacific during daylight saving time."""
+ROLLOVER_GRACE = timedelta(minutes=5)
+"""How long after Steam's daily rollover the extra scrape runs, giving the store time to update."""
+
+
+def next_scrape_time(now: datetime, interval: timedelta) -> datetime:
+    """Return when to scrape next: after ``interval``, or just after Steam's daily rollover if that comes first.
+
+    Steam starts and ends most sales at the rollover (:data:`SALE_END_HOUR_UTC`), so scraping right after it picks up
+    new sales the same day instead of up to ``interval`` later.
+    """
+    rollover = now.replace(hour=SALE_END_HOUR_UTC, minute=0, second=0, microsecond=0) + ROLLOVER_GRACE
+    if rollover <= now:
+        rollover += timedelta(days=1)
+    return min(now + interval, rollover)
+
+
+def sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Generator[tuple[int, int | None]]:
+    """Yield the ``(percent, limit)`` of each query a scrape makes.
+
+    That's every sale from ``complete_percent`` up, then the ``top_sellers`` best-selling ones from ``percent`` up,
+    when that's lower.
+    """
+    yield max(percent, complete_percent), None
+    if percent < complete_percent:
+        yield percent, top_sellers
 
 
 def utc_now() -> datetime:
@@ -44,6 +70,14 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     """Lists Steam sales on request and DMs subscribers new ones, re-checking sales right after they end."""
 
     _task: asyncio.Task[None] | None = None
+    _throttle: RequestThrottle | None = None
+
+    @property
+    def throttle(self) -> RequestThrottle:
+        """The request throttle every scraper of this cog shares, so spacing and rate-limit pauses span them all."""
+        if self._throttle is None:
+            self._throttle = RequestThrottle(SteamSettings.request_interval)
+        return self._throttle
 
     @property
     def _bind(self) -> Engine | Connection:
@@ -74,13 +108,14 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         await super().unload()
 
     async def _run(self) -> None:
-        """Scrape every ``update_interval`` and re-check sales just after they end, forever."""
+        """Scrape on load, then on :func:`next_scrape_time`, and re-check sales just after they end, forever."""
         next_scrape = utc_now()
         while True:
             now = utc_now()
             if now >= next_scrape:
                 await self._guarded(self.scrape(now))
-                next_scrape = now + timedelta(seconds=SteamSettings.update_interval)
+                next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
+                self.logger.info(t"Next Steam scrape at {next_scrape:%Y-%m-%d %H:%M} UTC")
             await self._guarded(self.recheck_due(utc_now()))
             with Session(self._bind) as session:
                 next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
@@ -95,48 +130,62 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             self.logger.exception(t"Steam background work failed")
 
     async def scrape(self, now: datetime) -> None:
-        """Scrape Steam's specials, store them, look up when new sales end, and DM subscribers new sales.
+        """Ask Steam for its sales, store them, and DM subscribers new ones.
 
-        Scrapes down to the lowest subscriber threshold, so every subscriber's sales are found.
+        Stores every sale from :attr:`SteamSettings.complete_percent` up, and the
+        :attr:`SteamSettings.top_sellers` best-selling ones below it, down to :attr:`SteamSettings.stored_percent`
+        or a lower subscriber threshold, so /steam show and every subscriber find their sales. Shown sales this
+        scrape didn't list (ended, or no longer among the top sellers) are checked again, unless their end is
+        known: those are re-checked when they end, by :meth:`recheck_due`.
         """
         with Session(self._bind) as session:
             store = SteamSaleStore(session)
             lowest = store.lowest_threshold()
-            percent = DEFAULT_THRESHOLD if lowest is None else lowest
-            without_end: list[SteamSale] = []
-            async with SteamScraper() as scraper:
-                async for scraped in scraper.get_sales_from_search(SteamSettings.search_url, percent):
-                    sale, is_new = store.record(scraped, now=now, outdated_after=self._outdated_after)
-                    if is_new and sale.sale_end is None and sale.steam_url.is_app:
-                        without_end.append(sale)
-                for sale in without_end[:MAX_SALE_END_LOOKUPS]:
-                    details = await scraper.get_game_sale(sale.steam_url, now)
-                    if isinstance(details, ScrapedSale):
-                        store.update_from_app_page(sale, details, now=now)
+            percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
+            seen: set[int] = set()
+            sent_before = self.throttle.sent
+            async with SteamScraper(throttle=self.throttle, country_code=SteamSettings.country_code) as scraper:
+                for query_percent, limit in sale_queries(percent, SteamSettings.complete_percent, SteamSettings.top_sellers):
+                    async for scraped in scraper.query_sales(query_percent, limit):
+                        if scraped.id not in seen:
+                            seen.add(scraped.id)
+                            store.record(scraped, now=now, outdated_after=self._outdated_after)
+                if seen:  # finding nothing means Steam failed, not that every sale ended
+                    unseen = store.unseen_without_end(now, percent, outdated_after=self._outdated_after)
+                    await self._recheck(scraper, store, unseen, now)
             notified = await SteamSaleNotifier(self.bot.client, store, color=SteamSettings.embed_color).notify(
                 now=now,
                 content=self._notification_content(),
             )
-            self.logger.info(t"Steam scrape done (threshold {percent} percent), notified {notified} subscriber(s)")
+            requests = self.throttle.sent - sent_before
+            self.logger.info(
+                t"Steam scrape done (threshold {percent} percent, {len(seen)} sales, {requests} requests), "
+                t"notified {notified} subscriber(s)",
+            )
 
     async def recheck_due(self, now: datetime) -> None:
         """Check the sales whose announced end has passed: update those still running, remove those that ended."""
         with Session(self._bind) as session:
             store = SteamSaleStore(session)
             due = store.due_rechecks(now=now, delay=self._recheck_delay)
-            if not due:
+            if not due or self.throttle.paused:
                 return
-            async with SteamScraper() as scraper:
-                for sale in due:
-                    details = await scraper.get_game_sale(sale.steam_url, now) if sale.steam_url.is_app else None
-                    match details:
-                        case ScrapeFailure():
-                            self.logger.warning(t"Could not re-check {sale.url}; trying again later")
-                        case ScrapedSale():
-                            store.update_from_app_page(sale, details, now=now)
-                        case None:
-                            self.logger.info(t"Steam sale ended: {sale.title}")
-                            store.remove(sale)
+            async with SteamScraper(throttle=self.throttle, country_code=SteamSettings.country_code) as scraper:
+                await self._recheck(scraper, store, due, now)
+
+    async def _recheck(self, scraper: SteamScraper, store: SteamSaleStore, sales: Iterable[SteamSale], now: datetime) -> None:
+        """Check ``sales`` on Steam: update those still running, remove those that ended, retry later on failure."""
+        by_item = {item: sale for sale in sales if (item := sale.steam_url.store_item) is not None}
+        async for item, details in scraper.get_sales(by_item):
+            sale = by_item[item]
+            match details:
+                case ScrapeFailure():
+                    self.logger.warning(t"Could not re-check {sale.url}; trying again later")
+                case ScrapedSale():
+                    store.refresh(sale, details, now=now)
+                case None:
+                    self.logger.info(t"Steam sale ended: {sale.title}")
+                    store.remove(sale)
 
     def _notification_content(self) -> str:
         """Return the text above a sale DM, pointing at the commands to stop notifications and see every sale."""

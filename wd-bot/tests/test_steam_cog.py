@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlmodel import Session, select
 from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
+from wd_config.steam import SteamSettings
 from wd_discord.gateway.events import InteractionDataOption, Message
 from wd_discord.resources.channel import Channel
 
@@ -18,11 +19,11 @@ from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamUsers
 from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure
 from winter_dragon.cogs.steam.store import SteamSaleStore
-from winter_dragon.cogs.steam.urls import SteamURL
+from winter_dragon.cogs.steam.urls import SteamURL, StoreItemID
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterable
 
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
@@ -46,11 +47,15 @@ def app_sale(sale_id: int, *, percent: int = 100, sale_end: datetime | None = No
 
 
 class FakeScraper:
-    """Serves canned search results and app pages instead of Steam."""
+    """Serves canned query results and current sales instead of Steam."""
 
-    search: ClassVar[list[ScrapedSale]] = []
-    app_pages: ClassVar[dict[str, ScrapedSale | ScrapeFailure | None]] = {}
-    searched_percent: ClassVar[int | None] = None
+    sales: ClassVar[list[ScrapedSale]] = []
+    current: ClassVar[dict[str, ScrapedSale | ScrapeFailure | None]] = {}
+    """What Steam says about each store page's item now; ``None`` (not on sale) when missing."""
+    queries: ClassVar[list[tuple[int, int | None]]] = []
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        """Accept and ignore the real scraper's HTTP client, throttle and country."""
 
     async def __aenter__(self) -> Self:
         return self
@@ -58,22 +63,27 @@ class FakeScraper:
     async def __aexit__(self, *_exc: object) -> None:
         return None
 
-    async def get_sales_from_search(self, _url: str, percent: int) -> AsyncGenerator[ScrapedSale]:
-        """Yield the canned search results, remembering the threshold searched for."""
-        FakeScraper.searched_percent = percent
-        for sale in self.search:
-            yield sale
+    async def query_sales(self, percent: int, limit: int | None = None) -> AsyncGenerator[ScrapedSale]:
+        """Yield the canned sales of at least ``percent``, remembering the query."""
+        FakeScraper.queries.append((percent, limit))
+        for sale in self.sales:
+            if sale.sale_percent >= percent:
+                yield sale
 
-    async def get_game_sale(self, url: SteamURL, _now: datetime | None = None) -> ScrapedSale | ScrapeFailure | None:
-        """Return the canned app page result for ``url``."""
-        return self.app_pages.get(url)
+    async def get_sales(
+        self,
+        items: Iterable[StoreItemID],
+    ) -> AsyncGenerator[tuple[StoreItemID, ScrapedSale | ScrapeFailure | None]]:
+        """Yield the canned current sale of each item."""
+        for item in items:
+            yield item, self.current.get(item.url)
 
 
 @pytest.fixture(autouse=True)
 def fake_steam(monkeypatch: pytest.MonkeyPatch) -> None:
-    FakeScraper.search = []
-    FakeScraper.app_pages = {}
-    FakeScraper.searched_percent = None
+    FakeScraper.sales = []
+    FakeScraper.current = {}
+    FakeScraper.queries = []
     monkeypatch.setattr(module, "SteamScraper", FakeScraper)
     monkeypatch.setattr(module, "utc_now", lambda: NOW)
 
@@ -221,36 +231,58 @@ async def test_page_button_only_works_for_the_invoker(
     assert client.create_interaction_response.await_args.kwargs["ephemeral"] is True
 
 
-async def test_scrape_stores_sales_learns_their_end_and_notifies(engine: Engine) -> None:
+async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -> None:
     end = NOW + timedelta(days=3)
-    FakeScraper.search = [app_sale(1)]
-    FakeScraper.app_pages = {"https://store.steampowered.com/app/1/": app_sale(1, sale_end=end)}
+    FakeScraper.sales = [app_sale(1, sale_end=end)]
     with Session(engine) as session:
-        session.add(SteamUsers(id=7, sale_threshold=80, last_notification=NOW - timedelta(hours=1)))
+        session.add(SteamUsers(id=7, sale_threshold=30, last_notification=NOW - timedelta(hours=1)))
         session.commit()
     _sync_steam_group(engine)
     cog, client = _cog(engine)
 
     await cog.scrape(NOW)
 
-    assert FakeScraper.searched_percent == 80  # down to the lowest subscriber threshold
+    # every sale from complete_percent up, then the top sellers down to the lowest subscriber threshold
+    assert FakeScraper.queries == [(SteamSettings.complete_percent, None), (30, SteamSettings.top_sellers)]
     with Session(engine) as session:
-        sale = session.exec(select(SteamSale)).one()
+        sale = session.exec(select(SteamSale)).one()  # listed by both queries, stored once
         assert sale.sale_end == end
         assert session.exec(select(SteamUsers)).one().last_notification == NOW
     client.create_dm.assert_awaited_once_with(7)
 
 
-async def test_scrape_without_subscribers_looks_for_free_games(engine: Engine) -> None:
+async def test_scrape_without_subscribers_stores_down_to_the_configured_percent(engine: Engine) -> None:
     _sync_steam_group(engine)
     cog, _client = _cog(engine)
     await cog.scrape(NOW)
-    assert FakeScraper.searched_percent == module.DEFAULT_THRESHOLD
+    assert FakeScraper.queries[-1] == (SteamSettings.stored_percent, SteamSettings.top_sellers)
+
+
+async def test_scrape_ignores_subscriber_thresholds_above_the_configured_percent(engine: Engine) -> None:
+    with Session(engine) as session:
+        session.add(SteamUsers(id=7, sale_threshold=100, last_notification=NOW))
+        session.commit()
+    _sync_steam_group(engine)
+    cog, _client = _cog(engine)
+    await cog.scrape(NOW)
+    assert FakeScraper.queries[-1] == (SteamSettings.stored_percent, SteamSettings.top_sellers)
+
+
+@pytest.mark.parametrize(
+    ("percent", "expected"),
+    [
+        (50, [(90, None), (50, 2000)]),
+        (90, [(90, None)]),  # nothing below the complete range to take top sellers from
+        (95, [(95, None)]),
+    ],
+)
+def test_sale_queries(percent: int, expected: list[tuple[int, int | None]]) -> None:
+    assert list(module.sale_queries(percent, 90, 2000)) == expected
 
 
 async def test_recheck_removes_ended_sales(engine: Engine) -> None:
     _seed(engine, app_sale(1, sale_end=NOW - timedelta(minutes=5)))
-    FakeScraper.app_pages = {"https://store.steampowered.com/app/1/": None}
+    FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
     cog, _client = _cog(engine)
 
     await cog.recheck_due(NOW)
@@ -262,7 +294,7 @@ async def test_recheck_removes_ended_sales(engine: Engine) -> None:
 async def test_recheck_updates_sales_that_continue(engine: Engine) -> None:
     _seed(engine, app_sale(1, sale_end=NOW - timedelta(minutes=5)))
     new_end = NOW + timedelta(days=7)
-    FakeScraper.app_pages = {"https://store.steampowered.com/app/1/": app_sale(1, percent=75, sale_end=new_end)}
+    FakeScraper.current = {"https://store.steampowered.com/app/1/": app_sale(1, percent=75, sale_end=new_end)}
     cog, _client = _cog(engine)
 
     await cog.recheck_due(NOW)
@@ -275,7 +307,7 @@ async def test_recheck_updates_sales_that_continue(engine: Engine) -> None:
 async def test_recheck_keeps_sales_when_steam_is_unavailable(engine: Engine) -> None:
     ended = NOW - timedelta(minutes=5)
     _seed(engine, app_sale(1, sale_end=ended))
-    FakeScraper.app_pages = {"https://store.steampowered.com/app/1/": ScrapeFailure.PAGE_UNAVAILABLE}
+    FakeScraper.current = {"https://store.steampowered.com/app/1/": ScrapeFailure.UNAVAILABLE}
     cog, _client = _cog(engine)
 
     await cog.recheck_due(NOW)
@@ -286,7 +318,7 @@ async def test_recheck_keeps_sales_when_steam_is_unavailable(engine: Engine) -> 
 
 async def test_recheck_ignores_sales_not_yet_due(engine: Engine) -> None:
     _seed(engine, app_sale(1, sale_end=NOW + timedelta(hours=1)))
-    FakeScraper.app_pages = {"https://store.steampowered.com/app/1/": None}
+    FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
     cog, _client = _cog(engine)
 
     await cog.recheck_due(NOW)
@@ -295,7 +327,7 @@ async def test_recheck_ignores_sales_not_yet_due(engine: Engine) -> None:
         assert len(session.exec(select(SteamSale)).all()) == 1
 
 
-def test_dlc_property_is_kept_from_the_app_page(engine: Engine) -> None:
+def test_dlc_property_is_kept_on_refresh(engine: Engine) -> None:
     _seed(engine, app_sale(1))
     with Session(engine) as session:
         store = SteamSaleStore(session)
@@ -308,5 +340,76 @@ def test_dlc_property_is_kept_from_the_app_page(engine: Engine) -> None:
             final_price=0.0,
             properties=frozenset({SaleTypes.DLC}),
         )
-        store.update_from_app_page(sale, dlc, now=NOW)
+        store.refresh(sale, dlc, now=NOW)
         assert store.properties([sale]) == {1: {SaleTypes.DLC}}
+
+
+async def test_scrape_verifies_sales_it_no_longer_lists(engine: Engine) -> None:
+    earlier = NOW - timedelta(hours=3)
+    _seed(engine, app_sale(1), app_sale(2), app_sale(3), now=earlier)
+    FakeScraper.sales = [app_sale(1)]
+    FakeScraper.current = {
+        "https://store.steampowered.com/app/1/": app_sale(1),
+        "https://store.steampowered.com/app/2/": None,  # ended
+        "https://store.steampowered.com/app/3/": app_sale(3, percent=80),  # no longer a top seller
+    }
+    _sync_steam_group(engine)
+    cog, _client = _cog(engine)
+
+    await cog.scrape(NOW)
+
+    with Session(engine) as session:
+        sales = {sale.id: sale for sale in session.exec(select(SteamSale))}
+    assert sorted(sales) == [1, 3]
+    assert (sales[3].sale_percent, sales[3].update_datetime) == (80, NOW)
+
+
+async def test_empty_scrape_removes_nothing(engine: Engine) -> None:
+    _seed(engine, app_sale(1), now=NOW - timedelta(hours=3))
+    FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
+    _sync_steam_group(engine)
+    cog, _client = _cog(engine)
+
+    await cog.scrape(NOW)
+
+    with Session(engine) as session:
+        assert len(session.exec(select(SteamSale)).all()) == 1
+
+
+@pytest.mark.parametrize(
+    ("now", "expected"),
+    [
+        (datetime(2026, 10, 8, 12, 0, tzinfo=UTC), datetime(2026, 10, 8, 15, 0, tzinfo=UTC)),  # interval first
+        (datetime(2026, 10, 8, 15, 0, tzinfo=UTC), datetime(2026, 10, 8, 17, 5, tzinfo=UTC)),  # rollover first
+        (datetime(2026, 10, 8, 17, 5, tzinfo=UTC), datetime(2026, 10, 8, 20, 5, tzinfo=UTC)),  # just scraped it
+        (datetime(2026, 10, 8, 23, 0, tzinfo=UTC), datetime(2026, 10, 9, 2, 0, tzinfo=UTC)),
+    ],
+)
+def test_next_scrape_time(now: datetime, expected: datetime) -> None:
+    assert module.next_scrape_time(now, timedelta(hours=3)) == expected
+
+
+async def test_scrape_defers_unseen_sales_with_a_known_end(engine: Engine) -> None:
+    end = NOW + timedelta(days=2)
+    _seed(engine, app_sale(1), app_sale(2, sale_end=end), now=NOW - timedelta(hours=3))
+    FakeScraper.sales = [app_sale(1)]
+    FakeScraper.current = {"https://store.steampowered.com/app/2/": None}  # would remove it if looked at
+    _sync_steam_group(engine)
+    cog, _client = _cog(engine)
+
+    await cog.scrape(NOW)
+
+    with Session(engine) as session:
+        assert session.exec(select(SteamSale).where(SteamSale.id == 2)).one().sale_end == end
+
+
+async def test_recheck_waits_while_steam_rate_limits_us(engine: Engine) -> None:
+    _seed(engine, app_sale(1, sale_end=NOW - timedelta(minutes=5)))
+    FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
+    cog, _client = _cog(engine)
+    cog.throttle.rate_limited(60)
+
+    await cog.recheck_due(NOW)
+
+    with Session(engine) as session:
+        assert len(session.exec(select(SteamSale)).all()) == 1

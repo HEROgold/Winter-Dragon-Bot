@@ -118,14 +118,14 @@ def test_no_recheck_without_known_ends(store: SteamSaleStore) -> None:
     assert store.next_recheck(delay=DELAY) is None
 
 
-def test_app_page_update_drops_an_end_that_already_passed(store: SteamSaleStore) -> None:
+def test_refresh_drops_an_end_that_already_passed(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(sale_end=NOW), now=NOW, outdated_after=OUTDATED)
-    store.update_from_app_page(sale, scraped(percent=80, sale_end=NOW), now=NOW + DELAY)
+    store.refresh(sale, scraped(percent=80, sale_end=NOW), now=NOW + DELAY)
     assert sale.sale_end is None
     assert sale.sale_percent == 80
 
     future = NOW + timedelta(days=1)
-    store.update_from_app_page(sale, scraped(sale_end=future), now=NOW + DELAY)
+    store.refresh(sale, scraped(sale_end=future), now=NOW + DELAY)
     assert sale.sale_end == future
 
 
@@ -149,3 +149,22 @@ def test_lowest_threshold(store: SteamSaleStore) -> None:
     store.session.add(SteamUsers(id=2, sale_threshold=0, last_notification=NOW))
     store.session.commit()
     assert store.lowest_threshold() == 0
+
+
+def test_a_sale_with_a_known_end_stays_current_until_it_ends(store: SteamSaleStore) -> None:
+    long_ago = NOW - 2 * OUTDATED
+    store.record(scraped(1, sale_end=NOW + timedelta(hours=1)), now=long_ago, outdated_after=OUTDATED)
+    store.record(scraped(2, sale_end=NOW - timedelta(hours=1)), now=long_ago, outdated_after=OUTDATED)
+
+    assert [sale.id for sale in store.current_sales(0, now=NOW, outdated_after=OUTDATED)] == [1]
+
+
+def test_unseen_without_end_skips_sales_with_a_known_end(store: SteamSaleStore) -> None:
+    earlier = NOW - timedelta(hours=3)
+    store.record(scraped(1), now=earlier, outdated_after=OUTDATED)
+    store.record(scraped(2, sale_end=NOW + timedelta(days=1)), now=earlier, outdated_after=OUTDATED)
+    store.record(scraped(3), now=NOW, outdated_after=OUTDATED)  # seen this scrape
+
+    unseen = store.unseen_without_end(NOW, 0, outdated_after=OUTDATED)
+
+    assert [sale.id for sale in unseen] == [1]

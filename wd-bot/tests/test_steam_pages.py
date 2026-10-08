@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
+from wd_config.bot import Settings
 from wd_discord.components import ButtonStyle, components_payload
 from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS
 
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale
 from winter_dragon.cogs.steam.pages import ITEMS_PER_PAGE, build_notification, build_page, format_sale, page_buttons
+
+
+if TYPE_CHECKING:
+    import pytest
 
 
 NOW = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
@@ -29,13 +35,19 @@ def sale(sale_id: int, *, title: str | None = None, url: str | None = None) -> S
     )
 
 
-def test_format_sale_lists_kind_and_install_link() -> None:
+def test_format_sale_lists_kind_and_install_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "steam_redirect", "https://example.com/steam/")
     text = format_sale(sale(10), {SaleTypes.DLC})
     assert "[Game 10](https://store.steampowered.com/app/10/)" in text
     assert "DLC: True" in text
     assert "Bundle: False" in text
     assert f"<t:{int(NOW.timestamp())}:F>" in text
-    assert "/install/10)" in text
+    assert "[Click here](https://example.com/steam/install/10)" in text
+
+
+def test_no_install_link_without_an_http_redirect(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "steam_redirect", "steam://")
+    assert "Install game" not in format_sale(sale(10), set())
 
 
 def test_bundles_get_no_install_link() -> None:

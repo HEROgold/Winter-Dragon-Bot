@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 ITEMS_PER_PAGE = 5
 MAX_FIELD_NAME_LENGTH = 256
 """Discord's limit on an embed field's name."""
+HTTP_SCHEMES = ("https://", "http://")
+"""The URL schemes Discord renders masked links for."""
 
 
 def format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str:
@@ -36,9 +38,20 @@ def format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str:
         Last Checked: <t:{int(sale.update_datetime.timestamp())}:F>""")
     if sale.sale_end is not None:
         text += f"\nSale ends: <t:{int(sale.sale_end.timestamp())}:R>"
-    if (app_id := sale.steam_url.app_id) is not None:
-        text += f"\nInstall game: [Click here]({Settings.steam_redirect}/install/{app_id})"
+    if (app_id := sale.steam_url.app_id) is not None and (install_url := _install_url(app_id)) is not None:
+        text += f"\nInstall game: [Click here]({install_url})"
     return text
+
+
+def _install_url(app_id: int) -> str | None:
+    """Return the link installing ``app_id`` through :attr:`Settings.steam_redirect`, or ``None`` without one.
+
+    Discord only renders masked links to http(s) URLs, so a bare ``steam://`` redirect would show as raw markdown.
+    """
+    redirect = str(Settings.steam_redirect).rstrip("/")
+    if not redirect.startswith(HTTP_SCHEMES):
+        return None
+    return f"{redirect}/install/{app_id}"
 
 
 def _sale_field(name: str, sale: SteamSale, properties: Mapping[int, set[SaleTypes]]) -> EmbedField:
