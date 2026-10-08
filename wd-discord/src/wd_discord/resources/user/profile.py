@@ -1,11 +1,12 @@
 """User profile sub-objects: avatar decoration and nameplate collectibles."""
+
 from __future__ import annotations
 
 lazy from enum import StrEnum, auto
 
-lazy from wd_discord.image import ImageHash
-lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.snowflake import Snowflake
+from wd_discord.image import ImageHash
+from wd_discord.models import DiscordModel
+from wd_discord.snowflake import Snowflake
 
 
 class Avatar(DiscordModel):

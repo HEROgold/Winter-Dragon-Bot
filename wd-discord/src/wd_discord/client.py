@@ -52,14 +52,16 @@ lazy from wd_discord.resources.channel import Channel
 lazy from wd_discord.resources.guild import Guild
 lazy from wd_discord.resources.invite import Invite
 lazy from wd_discord.resources.user import User
+lazy from wd_discord.responses import InteractionCallbackType, MessageFlags, message_data
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator
+    lazy from collections.abc import Awaitable, Callable, Generator, Sequence
 
     lazy from httpxyz import Response
     lazy from wd_core.intents import Intents
 
+    lazy from wd_discord.components import ActionRow
     lazy from wd_discord.embed import Embed
     lazy from wd_discord.gateway.events import Interaction
     lazy from wd_discord.image import ImageHash
@@ -68,8 +70,6 @@ if TYPE_CHECKING:
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
 DEFAULT_USER_AGENT_VERSION = "0.1.0"
-EPHEMERAL_FLAG = 1 << 6
-"""Message flag making an interaction reply visible only to the invoking user (64)."""
 
 type NetworkError = ApiResponseError | RequestError
 type RequestResult = Response | NetworkError
@@ -311,9 +311,20 @@ class Client(LoggerMixin):
             return result
         return Channel.model_validate(result.json())
 
-    async def create_message(self, channel_id: int | str, content: str) -> Message | NetworkError:
-        """POST /channels/{channel_id}/messages - send a message (works for DM channels too)."""
-        result = await self.post(f"/channels/{channel_id}/messages", json={"content": content})
+    async def create_message(
+        self,
+        channel_id: int | str,
+        content: str | None = None,
+        *,
+        embeds: Sequence[Embed] | None = None,
+        components: Sequence[ActionRow] | None = None,
+    ) -> Message | NetworkError:
+        """POST /channels/{channel_id}/messages - send a message (works for DM channels too).
+
+        Discord needs at least one of ``content``, ``embeds`` or ``components``.
+        """
+        payload = message_data(content=content, embeds=embeds, components=components)
+        result = await self.post(f"/channels/{channel_id}/messages", json=payload)
         if is_network_error(result):
             return result
         return Message.model_validate(result.json())
@@ -355,27 +366,77 @@ class Client(LoggerMixin):
             payload["banner"] = str(banner)
         return await self.patch("/users/@me", json=payload)
 
+    async def _callback(
+        self,
+        interaction: Interaction,
+        callback_type: InteractionCallbackType,
+        data: dict[str, Any] | None = None,
+    ) -> RequestResult:
+        """POST /interactions/{id}/{token}/callback - send the initial response to an interaction."""
+        payload: dict[str, Any] = {"type": int(callback_type)}
+        if data:
+            payload["data"] = data
+        return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
+
     async def create_interaction_response(
         self,
         interaction: Interaction,
         *,
         content: str | None = None,
-        embeds: list[Embed] | None = None,
+        embeds: Sequence[Embed] | None = None,
+        components: Sequence[ActionRow] | None = None,
         ephemeral: bool = False,
     ) -> RequestResult:
-        """POST /interactions/{id}/{token}/callback - respond to an interaction (type 4: message with source).
+        """Respond to an interaction with a message (callback type 4).
 
         ``ephemeral`` makes the reply visible only to the invoking user (message flag 64).
         """
-        data: dict[str, Any] = {}
-        if content is not None:
-            data["content"] = content
-        if embeds is not None:
-            data["embeds"] = [embed.model_dump(mode="json", exclude_none=True) for embed in embeds]
-        if ephemeral:
-            data["flags"] = EPHEMERAL_FLAG
-        payload = {"type": 4, "data": data}
-        return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
+        flags = MessageFlags.EPHEMERAL if ephemeral else None
+        data = message_data(content=content, embeds=embeds, components=components, flags=flags)
+        return await self._callback(interaction, InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE, data)
+
+    async def defer_interaction(self, interaction: Interaction, *, ephemeral: bool = False) -> RequestResult:
+        """Acknowledge an interaction now and show a loading state (callback type 5).
+
+        Follow up with :meth:`edit_original_interaction_response` within 15 minutes. ``ephemeral`` decides
+        whether that eventual response is visible only to the invoking user.
+        """
+        data = message_data(flags=MessageFlags.EPHEMERAL) if ephemeral else None
+        return await self._callback(interaction, InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data)
+
+    async def update_interaction_message(
+        self,
+        interaction: Interaction,
+        *,
+        content: str | None = None,
+        embeds: Sequence[Embed] | None = None,
+        components: Sequence[ActionRow] | None = None,
+    ) -> RequestResult:
+        """Edit the message a clicked component is attached to (callback type 7; component interactions only).
+
+        A ``None`` argument leaves that part of the message unchanged.
+        """
+        data = message_data(content=content, embeds=embeds, components=components)
+        return await self._callback(interaction, InteractionCallbackType.UPDATE_MESSAGE, data)
+
+    async def edit_original_interaction_response(
+        self,
+        interaction: Interaction,
+        *,
+        content: str | None = None,
+        embeds: Sequence[Embed] | None = None,
+        components: Sequence[ActionRow] | None = None,
+    ) -> Message | NetworkError:
+        """PATCH /webhooks/{application_id}/{token}/messages/@original - edit the initial response.
+
+        Valid for 15 minutes after the interaction. A ``None`` argument leaves that part of the message unchanged.
+        """
+        payload = message_data(content=content, embeds=embeds, components=components)
+        path = f"/webhooks/{interaction.application_id}/{interaction.token}/messages/@original"
+        result = await self.patch(path, json=payload)
+        if is_network_error(result):
+            return result
+        return Message.model_validate(result.json())
 
     async def _commands_path(self, command_id: str | None = None) -> str | NetworkError:
         """Return the global-commands path (or one command's path), or the error from looking up the application ID."""

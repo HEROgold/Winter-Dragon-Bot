@@ -35,11 +35,18 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 lazy from enum import IntEnum, StrEnum
-lazy from typing import NotRequired, Self, TypedDict
+lazy from typing import NotRequired, Self, TypedDict, cast
 
-lazy from pydantic import Field
+lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 
+from wd_discord.components import ComponentType
+from wd_discord.interactions import ApplicationIntegrationType, InteractionContextType, Locale
 from wd_discord.models import DiscordModel
+from wd_discord.permissions import PermissionsField
+from wd_discord.resources.channel.channel import Channel
+from wd_discord.resources.entitlement import Entitlement
+from wd_discord.resources.guild.member import GuildMember
+from wd_discord.resources.guild.partial_guild import PartialGuild
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 
@@ -110,38 +117,106 @@ class InteractionData(DiscordModel):
     resolved: ResolvedData | None = None
 
 
+class MessageComponentData(DiscordModel):
+    """The ``data`` block of a MESSAGE_COMPONENT INTERACTION_CREATE (a button click or select choice)."""
+
+    custom_id: str
+    component_type: ComponentType
+    id: int | None = None
+    """The component's numeric identifier within its message."""
+    values: list[str] | None = None
+    """The chosen values; only sent for select menus."""
+
+
 class Interaction(DiscordModel):
-    """INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object)."""
+    """INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object).
+
+    The fields every interaction shares. Its ``data`` shape depends on ``type``, so each type gets a subclass
+    with a precise ``data``: :meth:`model_validate` on this base returns the subclass matching ``type``, so a
+    parsed interaction narrows with ``isinstance``. Build a specific interaction through its subclass; calling
+    ``Interaction(...)`` directly can't swap in the subclass.
+    """
 
     id: Snowflake
     application_id: Snowflake
     type: InteractionType
-    data: InteractionData | None = None
     guild_id: Snowflake | None = None
     channel_id: Snowflake | None = None
-    member: Mapping[str, object] | None = None
+    member: GuildMember | None = None
+    """The invoking member, when invoked in a guild."""
     user: User | None = None
+    """The invoking user, when invoked in a DM."""
     token: str
     version: int
-    # Sent on every interaction; declared (loosely typed) so they don't show up as unknown fields.
-    app_permissions: str | None = None
-    locale: str | None = None
-    guild_locale: str | None = None
-    entitlements: list[object] | None = None
-    authorizing_integration_owners: dict[str, object] | None = None
-    context: int | None = None
+    app_permissions: PermissionsField | None = None
+    """Permissions the app has where the interaction was sent, including overwrites."""
+    locale: Locale | None = None
+    """The invoking user's selected language; sent on every interaction except PING."""
+    guild_locale: Locale | None = None
+    """The guild's preferred locale, when invoked in a guild."""
+    entitlements: list[Entitlement] | None = None
+    """For monetized apps: the invoking user's (and guild's) entitlements."""
+    authorizing_integration_owners: dict[ApplicationIntegrationType, Snowflake] | None = None
+    """Who installed the app for this interaction, per installation context: a guild ID, a user ID, or ``0``."""
+    context: InteractionContextType | None = None
+    """Where the interaction was triggered from."""
     attachment_size_limit: int | None = None
-    guild: dict[str, object] | None = None
-    channel: dict[str, object] | None = None
+    """Attachment size limit in bytes."""
+    guild: PartialGuild | None = None
+    """The guild the interaction was sent from."""
+    channel: Channel | None = None
+    """The (partial) channel the interaction was sent from."""
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _parse_as_subclass(cls, data: object, handler: ModelWrapValidatorHandler[Interaction]) -> Interaction:
+        """Validate a raw interaction on the base class into the subclass its ``type`` names."""
+        if cls is not Interaction or not isinstance(data, Mapping):
+            return handler(data)
+        payload = cast("Mapping[str, object]", data)
+        subclass = _INTERACTION_SUBCLASSES.get(payload.get("type"), UnknownInteraction)
+        return subclass.model_validate(payload)
 
     @property
     def invoking_user(self) -> User | None:
         """The user who triggered this interaction, whether invoked in a guild (``member``) or a DM (``user``)."""
         if self.user is not None:
             return self.user
-        if self.member is not None and "user" in self.member:
-            return User.model_validate(self.member["user"])
-        return None
+        return self.member.user if self.member is not None else None
+
+
+class CommandInteraction(Interaction):
+    """An APPLICATION_COMMAND interaction: someone ran a command."""
+
+    data: InteractionData
+
+
+class AutocompleteInteraction(Interaction):
+    """An APPLICATION_COMMAND_AUTOCOMPLETE interaction: someone is typing a value for an autocomplete option."""
+
+    data: InteractionData
+
+
+class ComponentInteraction(Interaction):
+    """A MESSAGE_COMPONENT interaction: someone clicked a button or chose from a select menu."""
+
+    data: MessageComponentData
+    message: dict[str, object]
+    """The message the component is attached to."""
+
+
+class UnknownInteraction(Interaction):
+    """An interaction type without its own subclass yet (PING, MODAL_SUBMIT); ``data`` stays untyped."""
+
+    data: Mapping[str, object] | None = None
+
+
+_INTERACTION_SUBCLASSES: dict[object, type[Interaction]] = {
+    InteractionType.APPLICATION_COMMAND: CommandInteraction,
+    InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE: AutocompleteInteraction,
+    InteractionType.MESSAGE_COMPONENT: ComponentInteraction,
+}
+"""The subclass each interaction type parses into; IntEnum members hash like the wire ints."""
 
 
 class Message(DiscordModel):

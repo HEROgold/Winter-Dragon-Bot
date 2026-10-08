@@ -80,6 +80,8 @@ class Channel(DiscordModel):
     """Default duration for newly created threads, in minutes, to automatically archive after recent activity."""
     permissions: PermissionsField | None = None
     """Computed permissions for the invoking user in the channel, including overwrites."""
+    app_permissions: PermissionsField | None = None
+    """Computed permissions for the app in the channel, including overwrites; only on an interaction's partial channel."""
     flags: int | None = None
     """Channel flags combined as a bitfield."""
     total_message_sent: int | None = None
