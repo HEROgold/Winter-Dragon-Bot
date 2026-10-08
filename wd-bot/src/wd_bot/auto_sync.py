@@ -8,8 +8,9 @@ delete REST calls for commands whose definition actually changed, never a full r
 from __future__ import annotations
 
 lazy import asyncio
+lazy from abc import ABC, abstractmethod
 lazy from dataclasses import dataclass, field
-lazy from typing import TYPE_CHECKING, Protocol
+lazy from typing import TYPE_CHECKING, Protocol, override
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Field, Session, UniqueConstraint, select
@@ -171,6 +172,16 @@ class SyncedCommands[Row: SyncedRow]:
                 yield row.discord_command_id
 
 
+def command_mention(session: Session, name: str, subcommand: str | None = None) -> str:
+    """Return a clickable ``</name subcommand:id>`` mention of a globally synced command.
+
+    Falls back to a plain ``/name subcommand`` while the command hasn't been synced yet (no Discord ID known).
+    """
+    full_name = name if subcommand is None else f"{name} {subcommand}"
+    row = SyncedCommands.load(session, GlobalSyncedCommand).row_for(name)
+    return f"`/{full_name}`" if row is None else f"</{full_name}:{row.discord_command_id}>"
+
+
 def diff_global_commands(session: Session, commands: Sequence[CommandLike]) -> SyncPlan:
     """Compare ``commands`` against :class:`GlobalSyncedCommand` rows and plan the minimal sync."""
     return SyncedCommands.load(session, GlobalSyncedCommand).plan(commands)
@@ -181,18 +192,18 @@ def diff_guild_commands(session: Session, guild_id: int, commands: Sequence[Comm
     return SyncedCommands.load(session, GuildSyncedCommand, GuildSyncedCommand.guild_id == guild_id).plan(commands)
 
 
-class CommandSyncer(Protocol):
+class CommandSyncer(ABC):
     """Strategy for reconciling the bot's registered commands with Discord."""
 
+    @abstractmethod
     async def sync(self, client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool = True) -> None:
         """Push ``commands`` to Discord through ``client``, doing only the work needed.
 
         With ``allow_deletes`` False, commands missing from ``commands`` are left on Discord.
         """
-        ...
 
 
-class DefaultCommandSyncer(LoggerMixin):
+class DefaultCommandSyncer(CommandSyncer, LoggerMixin):
     """Diff-based :class:`CommandSyncer` tracking last-synced state in the database (global scope only)."""
 
     def __init__(self, engine: Engine | None = None) -> None:
@@ -212,6 +223,7 @@ class DefaultCommandSyncer(LoggerMixin):
         SQLModel.metadata.create_all(engine, tables=tables)
         self._tables_ready = True
 
+    @override
     async def sync(self, client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool = True) -> None:
         """Diff ``commands`` against the last-synced state and push only the changes to Discord.
 

@@ -19,7 +19,7 @@ lazy from wd_bot.signature import command_signature
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
-    lazy from wd_discord.gateway.events import Interaction, InteractionDataOption, ResolvedData
+    lazy from wd_discord.gateway.events import CommandInteraction, InteractionDataOption, ResolvedData
     lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
@@ -67,7 +67,7 @@ class AppCommand(LoggerMixin, ABC):
         """Yield the signature parts specific to the subclass."""
 
     @abstractmethod
-    async def invoke(self, cog: Cog, interaction: Interaction) -> bool:
+    async def invoke(self, cog: Cog, interaction: CommandInteraction) -> bool:
         """Handle ``interaction``; return ``False`` if the handler failed or nothing could be dispatched."""
 
     def signature(self) -> str:
@@ -170,7 +170,7 @@ class Command(AppCommand):
     async def invoke(
         self,
         cog: Cog,
-        interaction: Interaction,
+        interaction: CommandInteraction,
         options: Sequence[InteractionDataOption] | None = None,
     ) -> bool:
         """Resolve option values into kwargs and call the wrapped handler.
@@ -179,10 +179,9 @@ class Command(AppCommand):
         chosen subcommand's nested options instead. Returns ``True`` if the handler completed, ``False``
         if it raised (the exception is logged).
         """
-        data = interaction.data
         if options is None:
-            options = data.options if data else []
-        kwargs = self._build_kwargs(options, data.resolved if data else None)
+            options = interaction.data.options
+        kwargs = self._build_kwargs(options, interaction.data.resolved)
         try:
             await self.func(cog, interaction, **kwargs)
         except Exception:
@@ -261,12 +260,12 @@ class CommandGroup(AppCommand):
         for name in sorted(self.subcommands):
             yield f"{name}: {self.subcommands[name].signature()}"
 
-    async def invoke(self, cog: Cog, interaction: Interaction) -> bool:
+    async def invoke(self, cog: Cog, interaction: CommandInteraction) -> bool:
         """Route ``interaction`` to the chosen subcommand, passing it that subcommand's option values.
 
         Returns ``False`` (after logging) if no known subcommand was chosen.
         """
-        options = interaction.data.options if interaction.data else []
+        options = interaction.data.options
         chosen = next((option for option in options if option.type == ApplicationCommandOptionType.SUB_COMMAND), None)
         subcommand = self.subcommands.get(chosen.name) if chosen else None
         if chosen is None or subcommand is None:

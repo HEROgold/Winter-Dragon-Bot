@@ -17,12 +17,13 @@ lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
 lazy from wd_discord import Client, GatewayBotInfo
 lazy from wd_discord.gateway import EventName
-lazy from wd_discord.gateway.events import InteractionType
+lazy from wd_discord.gateway.events import CommandInteraction, ComponentInteraction
 lazy from wd_discord.resources.user import User
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
 lazy from wd_bot.auto_sync import DefaultCommandSyncer
+lazy from wd_bot.components import parse_custom_id
 lazy from wd_bot.extensions import ExtensionDiscovery
 
 lazy from .cogs import Cog, GroupCog
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
 
     lazy from wd_bot.auto_sync import CommandSyncer
     lazy from wd_bot.commands import AppCommand
+    lazy from wd_bot.components import ComponentHandler
 
 
 COMMAND_ERROR_REPLY = "Something went wrong running this command."
@@ -89,6 +91,7 @@ class Bot(LoggerMixin):
         self._failed_extensions: set[str] = set()
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
         self._commands: dict[str, tuple[Cog, AppCommand]] = {}
+        self._components: dict[str, tuple[Cog, ComponentHandler]] = {}
         self._syncer: CommandSyncer = DefaultCommandSyncer()
         self._listeners.setdefault(EventName.INTERACTION_CREATE.value, []).append(self._dispatch_interaction)
 
@@ -115,22 +118,48 @@ class Bot(LoggerMixin):
                 previous = existing[0].__cog_name__
                 self.logger.warning(t"Duplicate command '{command.name}': cog '{cog.__cog_name__}' replaces '{previous}'")
             self._commands[command.name] = (cog, command)
+        for handler in cog.components():
+            if (existing_handler := self._components.get(handler.prefix)) is not None and existing_handler[0] is not cog:
+                previous = existing_handler[0].__cog_name__
+                self.logger.warning(
+                    t"Duplicate component prefix '{handler.prefix}': cog '{cog.__cog_name__}' replaces '{previous}'",
+                )
+            self._components[handler.prefix] = (cog, handler)
         await cog.load()
 
     async def _dispatch_interaction(self, interaction: Interaction) -> None:
-        """Route an APPLICATION_COMMAND interaction to its registered command, if any.
+        """Route an APPLICATION_COMMAND or MESSAGE_COMPONENT interaction to its registered handler, if any.
 
         If the handler raised, the user gets an ephemeral error reply, so an interaction never goes unanswered.
         """
-        if interaction.type is not InteractionType.APPLICATION_COMMAND or interaction.data is None:
-            return
+        match interaction:
+            case CommandInteraction():
+                succeeded = await self._dispatch_command(interaction)
+            case ComponentInteraction():
+                succeeded = await self._dispatch_component(interaction)
+            case _:
+                return
+        if not succeeded:
+            await self.client.create_interaction_response(interaction, content=COMMAND_ERROR_REPLY, ephemeral=True)
+
+    async def _dispatch_command(self, interaction: CommandInteraction) -> bool:
+        """Invoke the command ``interaction`` names; ``False`` only if its handler raised."""
         entry = self._commands.get(interaction.data.name)
         if entry is None:
-            self.logger.warning(t"No registered command for interaction {interaction.data.name:r}")
-            return
+            self.logger.warning(t"No registered command for interaction {interaction.data.name!r}")
+            return True
         cog, command = entry
-        if not await command.invoke(cog, interaction):
-            await self.client.create_interaction_response(interaction, content=COMMAND_ERROR_REPLY, ephemeral=True)
+        return await command.invoke(cog, interaction)
+
+    async def _dispatch_component(self, interaction: ComponentInteraction) -> bool:
+        """Invoke the handler owning the clicked component's ``custom_id`` prefix; ``False`` only if it raised."""
+        prefix, args = parse_custom_id(interaction.data.custom_id)
+        entry = self._components.get(prefix)
+        if entry is None:
+            self.logger.warning(t"No registered component handler for custom_id {interaction.data.custom_id!r}")
+            return True
+        cog, handler = entry
+        return await handler.invoke(cog, interaction, args)
 
     @property
     def syncer(self) -> CommandSyncer:

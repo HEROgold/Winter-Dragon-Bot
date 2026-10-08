@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 lazy from enum import IntFlag, auto
-lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack
+lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session
 lazy from wd_db.constants import engine
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
+lazy from wd_bot.auto_sync import command_mention
 lazy from wd_bot.commands import Command, CommandGroup
+lazy from wd_bot.components import ComponentHandler
 lazy from wd_bot.listener import listener
 
 
@@ -40,6 +42,15 @@ def command(
             default_member_permissions=default_member_permissions,
             contexts=contexts,
         )
+
+    return decorator
+
+
+def component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ComponentHandler]:
+    """Tag a Cog method as the handler for components whose ``custom_id`` starts with ``prefix``."""
+
+    def decorator(func: Callable[..., Awaitable[None]]) -> ComponentHandler:
+        return ComponentHandler(func, prefix=prefix)
 
     return decorator
 
@@ -76,6 +87,7 @@ class Cog(LoggerMixin):
     # as a bare class attribute, wrong as soon as staticmethod() wraps them).
     listener = listener
     command = command
+    component = component
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""
@@ -120,6 +132,18 @@ class Cog(LoggerMixin):
     def app_commands(cls) -> Generator[AppCommand]:
         """Yield what this cog registers as top-level Discord commands: each of its commands."""
         yield from cls.commands()
+
+    @classmethod
+    def components(cls) -> Generator[ComponentHandler]:
+        """Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases."""
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            if isinstance(attr, ComponentHandler):
+                yield attr
+
+    def mention(self, command: Command) -> str:
+        """Return a clickable mention of ``command``, or its plain ``/name`` until it has been synced."""
+        return command_mention(self.session, command.name)
 
     async def load(self) -> None:
         """Run setup once registered with the bot; a hook for subclasses to override.
@@ -176,6 +200,11 @@ class GroupCog(Cog):
             default_member_permissions=cls.group_default_member_permissions,
             contexts=cls.group_contexts,
         )
+
+    @override
+    def mention(self, command: Command) -> str:
+        """Return a clickable mention of the subcommand ``command``, as ``/<group> <command>``."""
+        return command_mention(self.session, self.group_name, command.name)
 
 
 def _kebab_case(name: str) -> str:

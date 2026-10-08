@@ -9,7 +9,14 @@ lazy from sqlalchemy import BigInteger
 lazy from sqlalchemy.ext.compiler import compiles
 lazy from sqlalchemy.pool import StaticPool
 lazy from sqlmodel import SQLModel, create_engine
-lazy from wd_discord.gateway.events import Interaction, InteractionData, InteractionType
+lazy from wd_discord.components import ComponentType
+lazy from wd_discord.gateway.events import (
+    CommandInteraction,
+    ComponentInteraction,
+    InteractionData,
+    InteractionType,
+    MessageComponentData,
+)
 lazy from wd_discord.resources.user import User
 
 
@@ -48,7 +55,7 @@ class InteractionFactory(Protocol):
         options: Sequence[InteractionDataOption] = (),
         resolved: ResolvedData | None = None,
         user: User | None = ...,
-    ) -> Interaction:
+    ) -> CommandInteraction:
         """Build the interaction."""
         ...
 
@@ -67,8 +74,8 @@ def make_interaction() -> InteractionFactory:
         options: Sequence[InteractionDataOption] = (),
         resolved: ResolvedData | None = None,
         user: User | None = ASKER,
-    ) -> Interaction:
-        return Interaction(
+    ) -> CommandInteraction:
+        return CommandInteraction(
             id="1",
             application_id="2",
             type=InteractionType.APPLICATION_COMMAND,
@@ -76,6 +83,33 @@ def make_interaction() -> InteractionFactory:
             version=1,
             user=user,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),
+        )
+
+    return build
+
+
+class ComponentInteractionFactory(Protocol):
+    """Builds a button-click interaction, as the ``make_component_interaction`` fixture returns."""
+
+    def __call__(self, custom_id: str, *, user: User | None = ...) -> ComponentInteraction:
+        """Build the interaction."""
+        ...
+
+
+@pytest.fixture
+def make_component_interaction() -> ComponentInteractionFactory:
+    """Return a builder for a click on the button ``custom_id``, by ``user``."""
+
+    def build(custom_id: str, *, user: User | None = ASKER) -> ComponentInteraction:
+        return ComponentInteraction(
+            id="1",
+            application_id="2",
+            type=InteractionType.MESSAGE_COMPONENT,
+            token="tok",  # noqa: S106
+            version=1,
+            user=user,
+            data=MessageComponentData(custom_id=custom_id, component_type=ComponentType.BUTTON),
+            message={"id": "11"},
         )
 
     return build
