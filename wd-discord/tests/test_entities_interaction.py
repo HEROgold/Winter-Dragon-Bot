@@ -6,10 +6,10 @@ from wd_discord import (
     AutocompleteInteraction,
     CommandInteraction,
     ComponentInteraction,
-    Interaction,
     Message,
     UnknownInteraction,
     User,
+    bind,
 )
 from wd_discord.components import ActionRow, Button, ButtonStyle, ComponentType
 from wd_discord.embed import Embed
@@ -79,10 +79,10 @@ def _component(client: RecordingClient) -> ComponentInteraction:
 def test_bind_picks_the_class_matching_the_model() -> None:
     client = RecordingClient()
     ping = InteractionModel.model_validate({"id": "1", "application_id": "2", "type": 1, "token": "tok", "version": 1})
-    assert isinstance(Interaction.bind(client, COMMAND), CommandInteraction)
-    assert isinstance(Interaction.bind(client, COMPONENT), ComponentInteraction)
-    assert isinstance(Interaction.bind(client, AUTOCOMPLETE), AutocompleteInteraction)
-    assert isinstance(Interaction.bind(client, ping), UnknownInteraction)
+    assert isinstance(bind(client, COMMAND), CommandInteraction)
+    assert isinstance(bind(client, COMPONENT), ComponentInteraction)
+    assert isinstance(bind(client, AUTOCOMPLETE), AutocompleteInteraction)
+    assert isinstance(bind(client, ping), UnknownInteraction)
 
 
 def test_exposes_the_model_through_bound_properties() -> None:

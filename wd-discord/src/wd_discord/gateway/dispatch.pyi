@@ -22,8 +22,12 @@ from .events import (
     InteractionCreatePayload,
     Message,
     MessageCreatePayload,
+    Ready,
+    ReadyPayload,
 )
 
+@overload
+def parse_dispatch(name: Literal[EventName.READY], data: ReadyPayload) -> Ready: ...
 @overload
 def parse_dispatch(name: Literal[EventName.MESSAGE_CREATE], data: MessageCreatePayload) -> Message: ...
 @overload

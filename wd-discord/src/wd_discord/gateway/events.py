@@ -13,22 +13,21 @@ checkers, so mixing "the real implementation" and "~75 generated overload declar
 file would mean either hand-maintaining the overloads (what the generator exists to avoid) or
 letting generated content live next to hand-written runtime logic in the same file.
 
-:class:`EventName` covers every dispatch event Discord currently defines (except READY - see its
-own docstring note). Each member carries its own :class:`DiscordModel` subclass as a real
-attribute (``EventName.MESSAGE_CREATE.model is Message``) via the "data-carrying enum" pattern (a
-custom ``__new__``), so the name and its model live in exactly one place - but only
-``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE`` have a real model wired up so far;
+:class:`EventName` covers every dispatch event Discord currently defines. Each member carries its own
+:class:`DiscordModel` subclass as a real attribute (``EventName.MESSAGE_CREATE.model is Message``) via the
+"data-carrying enum" pattern (a custom ``__new__``), so the name and its model live in exactly one place - but
+only ``READY``/``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE`` have a real model wired up so far;
 every other member's ``model`` is ``None`` (dispatches as :class:`RawEvent`) until its
 payload/model classes get built
 (add them here, then run the generator - see its own docstring for the naming convention it
 expects).
 
+These are data only; :func:`wd_discord.entities.events.bind` wraps them in the client-bound entities a
+listener receives.
+
 ``User``/``Snowflake``/``Mapping`` are imported eagerly (not via ``lazy from``) because pydantic
 resolves model field annotations to real classes at class-definition time; a still-unresolved
-lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``). ``Guild``/``Channel``
-have this same problem internally today (pre-existing, unrelated to this change), so
-:class:`GuildCreate` intentionally does not subclass :class:`~wd_discord.resources.guild.Guild` or type its
-nested collections as ``list[Channel]`` - see the TODO on :class:`GuildCreate`.
+lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``).
 """
 
 from __future__ import annotations
@@ -45,6 +44,7 @@ from wd_discord.models import DiscordModel
 from wd_discord.permissions import PermissionsField
 from wd_discord.resources.channel.channel import Channel
 from wd_discord.resources.entitlement import Entitlement
+from wd_discord.resources.guild.guild import Guild
 from wd_discord.resources.guild.member import GuildMember
 from wd_discord.resources.guild.partial_guild import PartialGuild
 from wd_discord.resources.user import User
@@ -58,26 +58,46 @@ class RawEvent(DiscordModel):
     data: Mapping[str, object]
 
 
-class GuildCreate(DiscordModel):
-    """GUILD_CREATE (subset - https://docs.discord.com/developers/events/gateway-events#guild-create).
-
-    TODO(Phase 2): should subclass :class:`~wd_discord.resources.guild.Guild` and type ``channels`` as
-    ``list[Channel]``, but ``Guild``/``Channel`` currently fail pydantic schema generation
-    themselves (unresolved ``lazy import`` proxies used as nested field types) - fix that
-    alongside the Interaction/CommandTree pydantic port, then merge this into ``Guild``.
-    """
+class UnavailableGuild(DiscordModel):
+    """A guild that is offline or not sent yet (https://docs.discord.com/developers/resources/guild#unavailable-guild-object)."""
 
     id: Snowflake
-    name: str
-    owner_id: Snowflake
+    unavailable: bool | None = None
+
+
+class Ready(DiscordModel):
+    """READY (https://docs.discord.com/developers/events/gateway-events#ready).
+
+    Parsed by :func:`~wd_discord.gateway.connection.parse_ready`.
+    """
+
+    v: int
+    user: User
+    guilds: list[UnavailableGuild] = Field(default_factory=list[UnavailableGuild])
+    """The bot's guilds; each one arrives in full later as a GUILD_CREATE."""
+    session_id: str
+    resume_gateway_url: str
+    shard: tuple[int, int] | None = None
+    application_id: str | None = None
+
+
+class GuildCreate(Guild):
+    """GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-create).
+
+    A full :class:`~wd_discord.resources.guild.Guild` plus the fields only the gateway sends. ``voice_states`` and
+    ``presences`` stay untyped until their models exist; ``stage_instances``, ``guild_scheduled_events`` and
+    ``soundboard_sounds`` are not modeled yet.
+    """
+
     joined_at: str | None = None
     large: bool | None = None
     unavailable: bool | None = None
     member_count: int | None = None
-    channels: list[Mapping[str, object]] = Field(default_factory=list)
-    members: list[Mapping[str, object]] = Field(default_factory=list)
-    voice_states: list[Mapping[str, object]] = Field(default_factory=list)
-    presences: list[Mapping[str, object]] = Field(default_factory=list)
+    channels: list[Channel] = Field(default_factory=list[Channel])
+    threads: list[Channel] = Field(default_factory=list[Channel])
+    members: list[GuildMember] = Field(default_factory=list[GuildMember])
+    voice_states: list[Mapping[str, object]] = Field(default_factory=list[Mapping[str, object]])
+    presences: list[Mapping[str, object]] = Field(default_factory=list[Mapping[str, object]])
 
 
 class InteractionType(IntEnum):
@@ -255,17 +275,35 @@ class MessageCreatePayload(TypedDict):
     mention_everyone: bool
 
 
+class ReadyPayload(TypedDict):
+    """The raw ``d`` payload of a READY dispatch, as delivered by the gateway (subset)."""
+
+    v: int
+    user: Mapping[str, object]
+    guilds: list[Mapping[str, object]]
+    session_id: str
+    resume_gateway_url: str
+    shard: NotRequired[list[int]]
+    application: NotRequired[Mapping[str, object]]
+
+
 class GuildCreatePayload(TypedDict):
-    """The raw ``d`` payload of a GUILD_CREATE dispatch, as delivered by the gateway (subset)."""
+    """The raw ``d`` payload of a GUILD_CREATE dispatch, as delivered by the gateway (subset of the guild fields)."""
 
     id: str
     name: str
+    icon: str | None
     owner_id: str
+    afk_timeout: int
+    roles: list[Mapping[str, object]]
+    emojis: list[Mapping[str, object]]
+    features: list[str]
     joined_at: NotRequired[str]
     large: NotRequired[bool]
     unavailable: NotRequired[bool]
     member_count: NotRequired[int]
     channels: NotRequired[list[Mapping[str, object]]]
+    threads: NotRequired[list[Mapping[str, object]]]
     members: NotRequired[list[Mapping[str, object]]]
     voice_states: NotRequired[list[Mapping[str, object]]]
     presences: NotRequired[list[Mapping[str, object]]]
@@ -289,9 +327,9 @@ class InteractionCreatePayload(TypedDict):
 class EventName(StrEnum):
     """Every dispatch event name Discord currently defines.
 
-    READY is deliberately not a member here - it's parsed once via
-    :func:`~wd_discord.gateway.connection.parse_ready` before the continuous receive loop starts,
-    and never appears again on the same connection, so it has no need of a dispatch-time lookup.
+    READY arrives once per connection. :meth:`~wd_discord.gateway.connection.Gateway.connect` parses it with
+    :func:`~wd_discord.gateway.connection.parse_ready` (never :func:`~wd_discord.gateway.dispatch.parse_dispatch`),
+    and :meth:`~wd_discord.gateway.connection.Gateway.listen` then hands it to listeners like any other event.
 
     Each member carries its own :class:`DiscordModel` subclass as a real attribute
     (``EventName.MESSAGE_CREATE.model is Message``) via a custom ``__new__``, so the name and its
@@ -308,6 +346,7 @@ class EventName(StrEnum):
         member.model = model
         return member
 
+    READY = ("READY", Ready)
     MESSAGE_CREATE = ("MESSAGE_CREATE", Message)
     GUILD_CREATE = ("GUILD_CREATE", GuildCreate)
     INTERACTION_CREATE = ("INTERACTION_CREATE", Interaction)

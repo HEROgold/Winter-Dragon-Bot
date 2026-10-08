@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel:
     """Parse a dispatch (``t``, ``d``) pair into its typed model, or a RawEvent fallback.
 
-    READY is intentionally not handled here - it's parsed once via
+    The gateway never routes READY through here: it's parsed once via
     wd_discord.gateway.connection.parse_ready before the continuous receive loop starts, and
     never appears again on the same connection.
     """

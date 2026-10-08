@@ -15,6 +15,7 @@ lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.entities import (
     AnyInteraction,
     AutocompleteInteraction,
+    BoundEvent,
     Channel,
     CommandInteraction,
     ComponentInteraction,
@@ -27,8 +28,10 @@ lazy from wd_discord.entities import (
     PartialGlobalCommand,
     PartialGuild,
     PartialUser,
+    Ready,
     UnknownInteraction,
     User,
+    bind,
 )
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import (
@@ -38,7 +41,6 @@ lazy from wd_discord.gateway import (
     GatewayBotInfo,
     GuildCreate,
     RawEvent,
-    Ready,
     ShardManager,
     Status,
 )
@@ -57,6 +59,7 @@ __all__ = [
     "ApiResponseError",
     "Application",
     "AutocompleteInteraction",
+    "BoundEvent",
     "Channel",
     "ChannelType",
     "Client",
@@ -93,5 +96,6 @@ __all__ = [
     "TokenType",
     "UnknownInteraction",
     "User",
+    "bind",
     "is_network_error",
 ]

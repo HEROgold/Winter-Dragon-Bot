@@ -30,6 +30,39 @@ if TYPE_CHECKING:
 TEST_TOKEN = "token"  # noqa: S105 - a placeholder; RecordingClient never sends it anywhere
 TEST_APPLICATION_ID = 2
 
+GUILD_JSON: Mapping[str, object] = {
+    "id": "1",
+    "name": "My Guild",
+    "icon": None,
+    "splash": None,
+    "discovery_splash": None,
+    "owner_id": "9",
+    "afk_channel_id": None,
+    "afk_timeout": 300,
+    "verification_level": 0,
+    "default_message_notifications": 0,
+    "explicit_content_filter": 0,
+    "roles": [],
+    "emojis": [],
+    "features": [],
+    "mfa_level": 0,
+    "application_id": None,
+    "system_channel_id": None,
+    "system_channel_flags": 0,
+    "rules_channel_id": None,
+    "vanity_url_code": None,
+    "description": None,
+    "banner": None,
+    "premium_tier": 0,
+    "preferred_locale": "en-US",
+    "public_updates_channel_id": None,
+    "nsfw_level": 0,
+    "premium_progress_bar_enabled": False,
+    "safety_alerts_channel_id": None,
+    "incidents_data": None,
+}
+"""The smallest guild object Discord could send: every required field, nothing optional."""
+
 
 @dataclass(frozen=True)
 class SentRequest:

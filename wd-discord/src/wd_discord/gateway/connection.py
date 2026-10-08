@@ -23,21 +23,20 @@ lazy from enum import IntEnum, StrEnum
 lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 lazy from herogold.log import LoggerMixin
-lazy from pydantic import Field
 lazy from wd_core.intents import Intents
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 
-from wd_discord.resources.user import User  # eager: pydantic needs the real class, not a lazy proxy, for Ready.user below
-lazy from wd_discord.models import DiscordModel
-
 lazy from .dispatch import parse_dispatch
+lazy from .events import EventName, Ready
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Mapping
 
     lazy from websockets.asyncio.client import ClientConnection
+
+    lazy from wd_discord.models import DiscordModel
 
 # Default well-known gateway URL, already pinned to API v10 + JSON encoding.
 DEFAULT_GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"
@@ -130,19 +129,6 @@ class GatewayActivity:
         return data
 
 
-class Ready(DiscordModel):
-    """The parts of a READY dispatch we care about (API -> object via :func:`parse_ready`)."""
-
-    v: int
-    user: User
-    guilds: list[dict[str, Any]] = Field(default_factory=list)
-    """Unavailable-guild stubs. TODO(Phase 2): type as PartialGuild."""
-    session_id: str
-    resume_gateway_url: str
-    shard: tuple[int, int] | None = None
-    application_id: str | None = None
-
-
 def build_presence(
     activities: list[GatewayActivity],
     status: Status | str = Status.online,
@@ -186,14 +172,16 @@ def parse_ready(payload: dict[str, Any]) -> Ready:
     """Parse a READY dispatch payload into a :class:`Ready` (API -> object)."""
     data = payload.get("d", payload)
     shard = data.get("shard")
-    return Ready(
-        v=data.get("v", 10),
-        user=User.model_validate(data["user"]),
-        guilds=data.get("guilds", []),
-        session_id=data["session_id"],
-        resume_gateway_url=data["resume_gateway_url"],
-        shard=tuple(shard) if shard else None,
-        application_id=data.get("application", {}).get("id"),
+    return Ready.model_validate(
+        {
+            "v": data.get("v", 10),
+            "user": data["user"],
+            "guilds": data.get("guilds", []),
+            "session_id": data["session_id"],
+            "resume_gateway_url": data["resume_gateway_url"],
+            "shard": tuple(shard) if shard else None,
+            "application_id": data.get("application", {}).get("id"),
+        },
     )
 
 
@@ -267,7 +255,8 @@ class Gateway(LoggerMixin):
     async def listen(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None:
         """Receive gateway frames forever, updating ``_seq`` and invoking ``dispatch`` on DISPATCH.
 
-        Must be called after :meth:`connect` has returned (i.e. after READY). Runs until the
+        Must be called after :meth:`connect` has returned (i.e. after READY). The READY that
+        :meth:`connect` consumed is dispatched first, so listeners see it once per shard. Runs until the
         connection closes, is cancelled, or Discord sends RECONNECT/INVALID_SESSION.
 
         TODO(Phase 2): implement RESUME (op 6) using ``resume_gateway_url``/``session_id``/``_seq``
@@ -276,6 +265,8 @@ class Gateway(LoggerMixin):
         if self._ws is None:
             msg = "Gateway is not connected."
             raise RuntimeError(msg)
+        if self.ready is not None:
+            await dispatch(EventName.READY, self.ready)
         while True:
             message = cast("GatewayFrame", json.loads(await self._ws.recv()))
             if (seq := message.get("s")) is not None:

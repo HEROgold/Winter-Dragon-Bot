@@ -78,7 +78,7 @@ async def test_dispatch_routes_a_click_to_its_handler_with_args(
     bot = _make_bot(discord_client)
     await bot.add_cog(_PagerCog(bot=bot))
 
-    await bot._dispatch_interaction(make_component_interaction("pager:3:100:2").model)
+    await bot._dispatch_interaction(make_component_interaction("pager:3:100:2"))
 
     assert CLICKS == [("3", "100", "2")]
     assert discord_client.sent == []
@@ -90,7 +90,7 @@ async def test_dispatch_ignores_unknown_prefixes(
 ) -> None:
     bot = _make_bot(discord_client)
 
-    await bot._dispatch_interaction(make_component_interaction("nobody:1").model)
+    await bot._dispatch_interaction(make_component_interaction("nobody:1"))
 
     assert discord_client.sent == []
 
@@ -102,7 +102,7 @@ async def test_dispatch_sends_ephemeral_error_when_component_handler_raises(
     bot = _make_bot(discord_client)
     await bot.add_cog(_BrokenPagerCog(bot=bot))
 
-    await bot._dispatch_interaction(make_component_interaction("broken:1").model)
+    await bot._dispatch_interaction(make_component_interaction("broken:1"))
 
     assert discord_client.interaction_responses() == [
         {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},

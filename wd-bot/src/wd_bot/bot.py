@@ -15,8 +15,14 @@ lazy from herogold.log import LoggerMixin
 lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
-lazy from wd_discord import Client, CommandInteraction, ComponentInteraction, GatewayBotInfo, Interaction, is_network_error
-lazy from wd_discord.gateway import EventName
+lazy from wd_discord import (
+    Client,
+    CommandInteraction,
+    ComponentInteraction,
+    GatewayBotInfo,
+    bind,
+    is_network_error,
+)
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
@@ -33,7 +39,7 @@ if TYPE_CHECKING:
     lazy from types import ModuleType
 
     lazy from wd_core.intents import Intents
-    lazy from wd_discord.gateway.events import Interaction as InteractionModel
+    lazy from wd_discord import AnyInteraction
     lazy from wd_discord.models import DiscordModel
 
     lazy from wd_bot.auto_sync import CommandSyncer
@@ -91,7 +97,6 @@ class Bot(LoggerMixin):
         self._commands: dict[str, tuple[Cog, AppCommand]] = {}
         self._components: dict[str, tuple[Cog, ComponentHandler]] = {}
         self._syncer: CommandSyncer = DefaultCommandSyncer()
-        self._listeners.setdefault(EventName.INTERACTION_CREATE.value, []).append(self._dispatch_interaction)
 
     def get_bot_invite(self) -> str:
         """Get the link to invite the bot to a server."""
@@ -125,12 +130,11 @@ class Bot(LoggerMixin):
             self._components[handler.prefix] = (cog, handler)
         await cog.load()
 
-    async def _dispatch_interaction(self, model: InteractionModel) -> None:
-        """Bind an INTERACTION_CREATE to the client and route a command or component to its registered handler.
+    async def _dispatch_interaction(self, interaction: AnyInteraction) -> None:
+        """Route a command or component interaction to its registered handler.
 
         If the handler raised, the user gets an ephemeral error reply, so an interaction never goes unanswered.
         """
-        interaction = Interaction.bind(self.client, model)
         match interaction:
             case CommandInteraction():
                 succeeded = await self._dispatch_command(interaction)
@@ -193,11 +197,17 @@ class Bot(LoggerMixin):
             self.logger.exception(t"Startup command sync failed; continuing without it")
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
-        """Fan out a parsed gateway dispatch event to every registered listener for it."""
-        for handler in self._listeners.get(event_name, []):
-            self.loop.create_task(self._invoke_listener(handler, payload))
+        """Bind a parsed gateway dispatch event to the client, then fan it out to every registered listener for it.
 
-    async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], payload: DiscordModel) -> None:
+        An interaction is also routed to its command or component handler.
+        """
+        event = bind(self.client, payload)
+        if isinstance(event, CommandInteraction | ComponentInteraction):
+            self.loop.create_task(self._dispatch_interaction(event))
+        for handler in self._listeners.get(event_name, []):
+            self.loop.create_task(self._invoke_listener(handler, event))
+
+    async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], payload: object) -> None:
         try:
             await handler(payload)
         except Exception:

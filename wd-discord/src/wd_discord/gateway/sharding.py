@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.client import Client
     lazy from wd_discord.errors import ApiResponseError
 
-    lazy from .connection import Ready
+    lazy from .events import Ready
 
 # Query string appended to the gateway URL from /gateway/bot (same pinning as DEFAULT_GATEWAY_URL).
 GATEWAY_URL_QUERY = "?v=10&encoding=json"

@@ -6,15 +6,17 @@ import asyncio
 import importlib
 import sys
 import types
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 from unittest.mock import AsyncMock
 
 from wd_bot.auto_sync import DefaultCommandSyncer
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
 from wd_bot.commands import CommandGroup
+from wd_discord import Message
 from wd_discord.gateway import EventName
 from wd_discord.gateway.events import InteractionDataOption
+from wd_discord.gateway.events import Message as MessageModel
 from wd_discord.testing import RecordingClient
 
 
@@ -92,19 +94,61 @@ async def test_dispatch_interaction_invokes_matching_command(
     bot = _make_bot(discord_client)
     await bot.add_cog(_PingCog(bot=bot))
     interaction = make_interaction("ping")
-    await bot._dispatch_interaction(interaction.model)
+    await bot._dispatch_interaction(interaction)
     assert [interaction] == CALLS
 
 
-async def test_dispatch_interaction_is_registered_as_listener() -> None:
-    bot = _make_bot()
-    assert bot._dispatch_interaction in bot._listeners[EventName.INTERACTION_CREATE.value]
+async def _drain_tasks() -> None:
+    """Wait for every task :meth:`Bot._dispatch` scheduled."""
+    await asyncio.gather(*(task for task in asyncio.all_tasks() if task is not asyncio.current_task()))
+
+
+async def test_dispatch_routes_an_interaction_to_its_command(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    CALLS.clear()
+    bot = _make_bot(discord_client)
+    await bot.add_cog(_PingCog(bot=bot))
+    interaction = make_interaction("ping")
+    await bot._dispatch(EventName.INTERACTION_CREATE, interaction.model)
+    await _drain_tasks()
+    assert [interaction] == CALLS
+
+
+class _MessageCog(Cog, auto_load=False):
+    received: ClassVar[list[Message]] = []
+
+    @Cog.listener(EventName.MESSAGE_CREATE)
+    async def on_message_create(self, message: Message) -> None:
+        self.received.append(message)
+
+
+async def test_dispatch_hands_listeners_the_bound_entity(discord_client: RecordingClient) -> None:
+    bot = _make_bot(discord_client)
+    await bot.add_cog(_MessageCog(bot=bot))
+    message_json = {
+        "id": "1",
+        "channel_id": "2",
+        "author": {"id": "3", "username": "someone", "discriminator": "0"},
+        "content": "hi",
+        "timestamp": "t",
+        "tts": False,
+        "mention_everyone": False,
+    }
+    model = MessageModel.model_validate(message_json)
+    await bot._dispatch(EventName.MESSAGE_CREATE, model)
+    await _drain_tasks()
+    assert _MessageCog.received == [Message(discord_client, model)]
+    discord_client.reply("POST", "/channels/2/messages", message_json)
+    await _MessageCog.received[0].channel.send("pong")
+    assert len(discord_client.requests_to("POST", "/channels/2/messages")) == 1
 
 
 async def test_dispatch_unknown_command_is_ignored(make_interaction: InteractionFactory) -> None:
     CALLS.clear()
     bot = _make_bot()
-    await bot._dispatch_interaction(make_interaction("nope").model)
+    await bot._dispatch_interaction(make_interaction("nope"))
     assert CALLS == []
 
 
@@ -240,7 +284,7 @@ async def test_dispatch_sends_ephemeral_error_when_handler_raises(
     bot = _make_bot(discord_client)
     await bot.add_cog(_BoomCog(bot=bot))
 
-    await bot._dispatch_interaction(make_interaction("boom").model)
+    await bot._dispatch_interaction(make_interaction("boom"))
 
     assert discord_client.interaction_responses() == [
         {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},
@@ -255,7 +299,7 @@ async def test_dispatch_error_reply_after_a_deferred_response_is_a_followup(
     discord_client.reply("POST", "/webhooks/2/tok", FOLLOWUP_JSON)
     await bot.add_cog(_DeferThenBoomCog(bot=bot))
 
-    await bot._dispatch_interaction(make_interaction("defer-boom").model)
+    await bot._dispatch_interaction(make_interaction("defer-boom"))
 
     assert [(sent.path, sent.json) for sent in discord_client.sent] == [
         ("/interactions/1/tok/callback", {"type": 5}),
@@ -270,7 +314,7 @@ async def test_dispatch_sends_no_error_reply_on_success(
     bot = _make_bot(discord_client)
     await bot.add_cog(_PingCog(bot=bot))
 
-    await bot._dispatch_interaction(make_interaction("ping").model)
+    await bot._dispatch_interaction(make_interaction("ping"))
 
     assert discord_client.sent == []
 
@@ -299,7 +343,7 @@ async def test_group_cog_registers_one_group_and_dispatches_subcommands(
     assert "ping" not in bot._commands
 
     interaction = make_interaction("admin-tools", options=[InteractionDataOption(name="ping", type=1)])
-    await bot._dispatch_interaction(interaction.model)
+    await bot._dispatch_interaction(interaction)
     assert [interaction] == CALLS
 
 

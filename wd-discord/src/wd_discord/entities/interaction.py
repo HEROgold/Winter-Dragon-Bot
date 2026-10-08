@@ -3,8 +3,8 @@
 https://docs.discord.com/developers/interactions/receiving-and-responding
 
 The data models in :mod:`wd_discord.gateway.events` describe what Discord sent; the classes here wrap one and
-add the responses (``respond``, ``defer``, ``edit_original``, ...). :meth:`Interaction.bind` picks the class
-matching the model, so a bound interaction narrows with ``isinstance`` or ``match`` like its model does.
+add the responses (``respond``, ``defer``, ``edit_original``, ...). :func:`wd_discord.entities.events.bind` picks
+the class matching the model, so a bound interaction narrows with ``isinstance`` or ``match`` like its model does.
 
 Discord expects an initial response within 3 seconds. The token stays valid for 15 minutes after that, for
 editing the original response and sending follow-ups.
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from wd_core.client import JsonPayload
 
-    from wd_discord.client import Client, NetworkError
+    from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow, ComponentType
     from wd_discord.embed import Embed
     from wd_discord.gateway.events import InteractionDataOption, InteractionType, ResolvedData
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 
 type AnyInteraction = CommandInteraction | ComponentInteraction | AutocompleteInteraction | UnknownInteraction
-"""Every bound interaction :meth:`Interaction.bind` can return; ``match`` on it to handle each type."""
+"""Every bound interaction :func:`~wd_discord.entities.events.bind` can return; ``match`` on it to handle each type."""
 
 
 @dataclass
@@ -61,19 +61,6 @@ class Interaction[M: InteractionModel](Entity[M]):
     """The fields and responses every interaction shares."""
 
     _state: ResponseState = field(default_factory=ResponseState, init=False, repr=False, compare=False)
-
-    @staticmethod
-    def bind(client: Client, model: InteractionModel) -> AnyInteraction:
-        """Wrap ``model`` in the bound class matching its type."""
-        match model:
-            case CommandInteractionModel():
-                return CommandInteraction(client, model)
-            case ComponentInteractionModel():
-                return ComponentInteraction(client, model)
-            case AutocompleteInteractionModel():
-                return AutocompleteInteraction(client, model)
-            case _:
-                return UnknownInteraction(client, model)
 
     @property
     def id(self) -> Snowflake:

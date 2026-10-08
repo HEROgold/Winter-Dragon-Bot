@@ -17,8 +17,7 @@ lazy from wd_discord.resources.user import User  # noqa: TC002
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord import DiscordModel
-    lazy from wd_discord.gateway import GuildCreate, Message
+    lazy from wd_discord.entities import Guild, Message
     lazy from wd_discord.gateway.events import Interaction
 
 
@@ -28,7 +27,7 @@ class ExampleCog(Cog):
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the cog with an empty list of received events."""
         super().__init__(**kwargs)
-        self.received: list[DiscordModel] = []
+        self.received: list[Message | Guild] = []
 
     @Cog.listener(EventName.MESSAGE_CREATE)
     async def on_message_create(self, message: Message) -> None:
@@ -36,7 +35,7 @@ class ExampleCog(Cog):
         self.received.append(message)
 
     @Cog.listener(EventName.GUILD_CREATE)
-    async def on_guild_create(self, guild: GuildCreate) -> None:
+    async def on_guild_create(self, guild: Guild) -> None:
         """Record a dispatched GUILD_CREATE event."""
         self.received.append(guild)
 

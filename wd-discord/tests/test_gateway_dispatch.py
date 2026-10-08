@@ -8,8 +8,9 @@ lazy import json
 lazy from typing import Any
 
 lazy import pytest
-lazy from wd_discord.gateway import EventName, GuildCreate, Message, RawEvent, parse_dispatch
+lazy from wd_discord.gateway import EventName, GuildCreate, Message, RawEvent, Ready, parse_dispatch, parse_ready
 lazy from wd_discord.gateway.connection import Gateway, Opcode
+lazy from wd_discord.testing import GUILD_JSON
 
 
 def test_event_name_members_match_discord_wire_format() -> None:
@@ -18,13 +19,14 @@ def test_event_name_members_match_discord_wire_format() -> None:
 
 
 def test_event_name_members_carry_their_own_model() -> None:
+    assert EventName.READY.model is Ready
     assert EventName.MESSAGE_CREATE.model is Message
     assert EventName.GUILD_CREATE.model is GuildCreate
 
 
-def test_event_name_covers_every_dispatch_event_except_ready() -> None:
-    assert "READY" not in EventName.__members__
-    assert len(EventName) > 70  # the full Discord catalog, not just the two modeled events
+def test_event_name_covers_every_dispatch_event() -> None:
+    assert "READY" in EventName.__members__
+    assert len(EventName) > 70  # the full Discord catalog, not just the modeled events
 
 
 def test_event_name_unmodeled_members_have_no_model_yet() -> None:
@@ -59,10 +61,20 @@ def test_parse_dispatch_message_create() -> None:
 
 
 def test_parse_dispatch_guild_create() -> None:
-    event = parse_dispatch(EventName.GUILD_CREATE, {"id": "1", "name": "My Guild", "owner_id": "9"})
+    event = parse_dispatch(EventName.GUILD_CREATE, GUILD_JSON)
     assert isinstance(event, GuildCreate)
     assert event.name == "My Guild"
     assert event.channels == []
+
+
+def test_parse_dispatch_guild_create_types_its_channels() -> None:
+    event = parse_dispatch(
+        EventName.GUILD_CREATE,
+        {**GUILD_JSON, "member_count": 3, "channels": [{"id": "5", "type": 0, "name": "general", "guild_id": "1"}]},
+    )
+    assert isinstance(event, GuildCreate)
+    assert event.member_count == 3
+    assert event.channels[0].name == "general"
 
 
 def test_parse_dispatch_accepts_plain_str_matching_an_event_name() -> None:
@@ -144,6 +156,24 @@ async def test_listen_dispatches_and_tracks_sequence() -> None:
     assert isinstance(received[0][1], Message)
     assert received[1][0] == "SOMETHING_UNMODELED"
     assert isinstance(received[1][1], RawEvent)
+
+
+async def test_listen_dispatches_ready_first() -> None:
+    gateway = Gateway("token")
+    gateway.ready = parse_ready(
+        {"session_id": "s", "resume_gateway_url": "wss://x", "user": {"id": "1", "username": "bot", "discriminator": "0"}},
+    )
+    gateway._ws = FakeWebSocket([{"op": Opcode.DISPATCH, "s": 1, "t": "SOMETHING_UNMODELED", "d": {}}])  # noqa: SLF001 - test wiring
+
+    received: list[str] = []
+
+    async def dispatch(name: str, payload: Any) -> None:  # noqa: ANN401, ARG001
+        received.append(name)
+
+    with pytest.raises(_EndOfFrames):
+        await gateway.listen(dispatch)
+
+    assert received == ["READY", "SOMETHING_UNMODELED"]
 
 
 async def test_listen_replies_to_heartbeat_request() -> None:

@@ -7,14 +7,13 @@ lazy from .connection import (
     Gateway,
     GatewayActivity,
     Opcode,
-    Ready,
     Status,
     build_identify,
     build_presence,
     parse_ready,
 )
 lazy from .dispatch import parse_dispatch
-lazy from .events import EventName, GuildCreate, Message, RawEvent
+lazy from .events import EventName, GuildCreate, Message, RawEvent, Ready, UnavailableGuild
 lazy from .sharding import (
     GatewayBotInfo,
     SessionStartLimit,
@@ -41,6 +40,7 @@ __all__ = [
     "SessionStartLimit",
     "ShardManager",
     "Status",
+    "UnavailableGuild",
     "build_identify",
     "build_presence",
     "fetch_gateway_bot",
