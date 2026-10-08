@@ -27,7 +27,7 @@ GATEWAY OK: READY session 3bb18e2b..., user TBot
 GATEWAY OK: closed cleanly
 ```
 
-The driver exercises: `Client.get_current_user()` and `get_gateway_bot()` (REST, errors-as-values — a failure comes back as `ApiResponseError`, not an exception), then `Gateway.connect()` through HELLO → IDENTIFY → READY, then `Gateway.close()`. Extend the driver (send `update_presence`, fetch a guild) rather than writing throwaway scripts.
+The driver exercises: `client.users.me()` and `client.get_gateway_bot()` (REST, errors-as-values — a failure comes back as `ApiResponseError`, not an exception), then `Gateway.connect()` through HELLO → IDENTIFY → READY, then `Gateway.close()`. Extend the driver (send `update_presence`, fetch a guild) rather than writing throwaway scripts.
 
 ## Direct invocation
 

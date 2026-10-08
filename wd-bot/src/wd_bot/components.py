@@ -15,7 +15,7 @@ lazy from wd_discord.components import MAX_CUSTOM_ID_LENGTH
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Sequence
 
-    lazy from wd_discord.gateway.events import ComponentInteraction
+    lazy from wd_discord import ComponentInteraction
 
     lazy from wd_bot.cogs import Cog
 

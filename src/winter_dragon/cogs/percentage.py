@@ -6,14 +6,14 @@ lazy import random
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog
-lazy from wd_discord.embed import Embed, EmbedField
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
-lazy from wd_discord.resources.user import User  # noqa: TC002
+lazy from wd_discord import User  # noqa: TC002
+lazy from wd_discord.embed import Embed, EmbedField
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord.gateway.events import Interaction
+    lazy from wd_discord import CommandInteraction
 
 
 def calculate_percentage(user_id_a: int, user_id_b: int) -> int:
@@ -24,7 +24,7 @@ def calculate_percentage(user_id_a: int, user_id_b: int) -> int:
 
 def build_love_embed(target: User, percent: int) -> Embed:
     """Build the "Love Meter" embed for ``target`` with the given compatibility ``percent``."""
-    name = target.global_name or target.username
+    name = target.display_name
     return Embed(
         title="Love Meter",
         description=" ",
@@ -43,14 +43,11 @@ class Love(Cog):
     """Cog for the /love command."""
 
     @Cog.command(name="love", description="Calculate compatibility with another user")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
-    async def love(self, interaction: Interaction, user: User) -> None:
+    async def love(self, interaction: CommandInteraction, user: User) -> None:
         """Reply with a random compatibility love between the invoking user and ``user``."""
-        asker = interaction.invoking_user
+        asker = interaction.user
         if asker is None:
-            await self.bot.client.create_interaction_response(
-                interaction,
-                content="I couldn't work out who invoked this command.",
-            )
+            await interaction.respond("I couldn't work out who invoked this command.")
             return
         percent = calculate_percentage(int(asker.id), int(user.id))
-        await self.bot.client.create_interaction_response(interaction, embeds=[build_love_embed(user, percent)])
+        await interaction.respond(embeds=[build_love_embed(user, percent)])

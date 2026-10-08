@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     lazy from pydantic_core import CoreSchema
 
 
+type SnowflakeLike = Snowflake | int | str
+"""Any form a Discord ID arrives in: a parsed :class:`Snowflake`, an ``int``, or Discord's decimal string."""
+
+
 @dataclass
 class Snowflake:
     """Represents a Discord Snowflake, which is a unique identifier used by Discord for various entities."""
@@ -33,6 +37,11 @@ class Snowflake:
             return cls(value)
         msg = f"Cannot build Snowflake from {type(value).__name__}."
         raise TypeError(msg)
+
+    @classmethod
+    def coerce(cls, value: SnowflakeLike) -> Snowflake:
+        """Return ``value`` as a :class:`Snowflake`."""
+        return cls._validate(value)
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source: type[Any], handler: GetCoreSchemaHandler) -> CoreSchema:

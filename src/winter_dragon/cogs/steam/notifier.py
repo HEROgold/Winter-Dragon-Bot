@@ -51,11 +51,7 @@ class SteamSaleNotifier(LoggerMixin):
 
     async def _send(self, user: SteamUsers, content: str, embed: Embed) -> bool:
         """DM ``user`` the notification; ``False`` (after logging) when Discord refused it."""
-        channel = await self.client.create_dm(user.id)
-        if is_network_error(channel):
-            self.logger.warning(t"Could not open a DM with {user.id}: {channel}")
-            return False
-        message = await self.client.create_message(str(channel.id), content, embeds=[embed])
+        message = await self.client.users.partial(user.id).send(content, embeds=[embed])
         if is_network_error(message):
             self.logger.warning(t"Could not DM Steam sales to {user.id}: {message}")
             return False

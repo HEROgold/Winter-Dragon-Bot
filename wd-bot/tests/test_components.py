@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import types
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock
 
 import pytest
 from sqlmodel import Session
@@ -18,7 +16,8 @@ from wd_bot.components import ComponentHandler, parse_custom_id
 if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory
     from sqlalchemy import Engine
-    from wd_discord.gateway.events import ComponentInteraction
+    from wd_discord import ComponentInteraction
+    from wd_discord.testing import RecordingClient
 
 
 CLICKS: list[tuple[str, ...]] = []
@@ -37,9 +36,10 @@ class _BrokenPagerCog(Cog, auto_load=False):
         raise RuntimeError(msg)
 
 
-def _make_bot() -> Bot:
+def _make_bot(client: RecordingClient) -> Bot:
     bot = Bot()
     bot.loop = asyncio.get_running_loop()
+    bot.client = client
     return bot
 
 
@@ -72,41 +72,41 @@ def test_cog_lists_its_component_handlers() -> None:
 
 async def test_dispatch_routes_a_click_to_its_handler_with_args(
     make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     CLICKS.clear()
-    bot = _make_bot()
-    respond = AsyncMock()
-    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+    bot = _make_bot(discord_client)
     await bot.add_cog(_PagerCog(bot=bot))
 
-    await bot._dispatch_interaction(make_component_interaction("pager:3:100:2"))
+    await bot._dispatch_interaction(make_component_interaction("pager:3:100:2").model)
 
     assert CLICKS == [("3", "100", "2")]
-    respond.assert_not_awaited()
+    assert discord_client.sent == []
 
 
-async def test_dispatch_ignores_unknown_prefixes(make_component_interaction: ComponentInteractionFactory) -> None:
-    bot = _make_bot()
-    respond = AsyncMock()
-    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+async def test_dispatch_ignores_unknown_prefixes(
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    bot = _make_bot(discord_client)
 
-    await bot._dispatch_interaction(make_component_interaction("nobody:1"))
+    await bot._dispatch_interaction(make_component_interaction("nobody:1").model)
 
-    respond.assert_not_awaited()
+    assert discord_client.sent == []
 
 
 async def test_dispatch_sends_ephemeral_error_when_component_handler_raises(
     make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
-    bot = _make_bot()
-    respond = AsyncMock()
-    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+    bot = _make_bot(discord_client)
     await bot.add_cog(_BrokenPagerCog(bot=bot))
-    interaction = make_component_interaction("broken:1")
 
-    await bot._dispatch_interaction(interaction)
+    await bot._dispatch_interaction(make_component_interaction("broken:1").model)
 
-    respond.assert_awaited_once_with(interaction, content="Something went wrong running this command.", ephemeral=True)
+    assert discord_client.interaction_responses() == [
+        {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},
+    ]
 
 
 def test_command_mention_falls_back_to_plain_text_until_synced(engine: Engine) -> None:

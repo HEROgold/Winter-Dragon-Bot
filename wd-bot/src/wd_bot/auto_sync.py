@@ -264,7 +264,7 @@ class DefaultCommandSyncer(CommandSyncer, LoggerMixin):
 
     async def _create(self, client: Client, session: Session, command: AppCommand) -> None:
         """Create ``command`` on Discord and store its synced row, unless the create failed."""
-        result = await client.create_global_command(command.params())
+        result = await client.global_commands.create(command.params())
         if is_network_error(result):
             self.logger.warning(t"Failed to create command '{command.name}': {result}")
             return
@@ -286,7 +286,7 @@ class DefaultCommandSyncer(CommandSyncer, LoggerMixin):
         If Discord no longer knows the command (deleted out-of-band), the stale row is dropped and
         the command is created afresh in the same sync.
         """
-        result = await client.edit_global_command(discord_command_id, command.params())
+        result = await client.global_commands.partial(discord_command_id).edit(command.params())
         if _is_unknown_command(result):
             await self._recreate(client, session, command, discord_command_id)
             return
@@ -313,7 +313,7 @@ class DefaultCommandSyncer(CommandSyncer, LoggerMixin):
         A delete of a command Discord no longer knows counts as success.
         """
         for discord_command_id in discord_command_ids:
-            result = await client.delete_global_command(discord_command_id)
+            result = await client.global_commands.partial(discord_command_id).delete()
             if is_network_error(result) and not _is_unknown_command(result):
                 self.logger.warning(t"Failed to delete command '{discord_command_id}': {result}")
                 continue

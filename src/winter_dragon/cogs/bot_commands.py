@@ -16,7 +16,7 @@ lazy from wd_discord.permissions import Permissions
 if TYPE_CHECKING:
     lazy from collections.abc import Generator, Sequence
 
-    lazy from wd_discord.gateway.events import Interaction
+    lazy from wd_discord import CommandInteraction
 
 
 def describe_sync_status(session: Session, commands: Sequence[tuple[str, str]]) -> Generator[str]:
@@ -43,20 +43,20 @@ class BotCommands(
         name="list",
         description="List registered commands and their sync status",
     )
-    async def list_commands(self, interaction: Interaction) -> None:
+    async def list_commands(self, interaction: CommandInteraction) -> None:
         """Show every registered command's synced/pending state."""
         commands = [(command.name, command.signature()) for command in self.bot.commands]
         with Session(engine) as session:
             lines = list(describe_sync_status(session, commands))
         embed = Embed(title="Registered commands", description="\n".join(lines) or "No commands registered.")
-        await self.bot.client.create_interaction_response(interaction, embeds=[embed])
+        await interaction.respond(embeds=[embed])
 
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
         name="resync",
         description="Push pending command changes to Discord",
     )
-    async def resync(self, interaction: Interaction) -> None:
+    async def resync(self, interaction: CommandInteraction) -> None:
         """Acknowledge within Discord's 3s window, then force the diff-and-push sync."""
-        await self.bot.client.create_interaction_response(interaction, content="Resyncing commands…")
+        await interaction.respond("Resyncing commands…")
         await self.bot.sync_commands(self.bot.client)
         self.logger.info(t"Command resync finished")

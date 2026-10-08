@@ -14,10 +14,9 @@ lazy import asyncio
 lazy import configparser
 lazy import sys
 
-lazy from wd_discord.client import Client
+lazy from wd_discord.client import Client, is_network_error
 lazy from wd_discord.gateway import Gateway
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.user.user import User
 
 
 def load_token() -> str:
@@ -36,8 +35,8 @@ async def main() -> int:
     token = load_token()
 
     async with Client(token) as client:
-        me = await client.get_current_user()
-        if not isinstance(me, User):
+        me = await client.users.me()
+        if is_network_error(me):
             print(f"FAIL: /users/@me -> {me!r}")
             return 1
         print(f"REST OK: authenticated as {me.username} (id {me.id})")
@@ -50,7 +49,7 @@ async def main() -> int:
 
     gateway = Gateway(token)
     ready = await asyncio.wait_for(gateway.connect(), timeout=30)
-    print(f"GATEWAY OK: READY session {ready.session_id[:8]}..., user {ready.user.get('username')}")
+    print(f"GATEWAY OK: READY session {ready.session_id[:8]}..., user {ready.user.username}")
     await gateway.close()
     print("GATEWAY OK: closed cleanly")
     return 0

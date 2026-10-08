@@ -1,4 +1,4 @@
-"""Shared fixtures for the wd-bot test suite: an in-memory database and an interaction builder."""
+"""Shared fixtures for the wd-bot test suite: an in-memory database, a recording client, and interaction builders."""
 
 from __future__ import annotations
 
@@ -9,15 +9,13 @@ lazy from sqlalchemy import BigInteger
 lazy from sqlalchemy.ext.compiler import compiles
 lazy from sqlalchemy.pool import StaticPool
 lazy from sqlmodel import SQLModel, create_engine
+lazy from wd_discord import CommandInteraction, ComponentInteraction
 lazy from wd_discord.components import ComponentType
-lazy from wd_discord.gateway.events import (
-    CommandInteraction,
-    ComponentInteraction,
-    InteractionData,
-    InteractionType,
-    MessageComponentData,
-)
+lazy from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
+lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
+lazy from wd_discord.gateway.events import InteractionData, InteractionType, MessageComponentData
 lazy from wd_discord.resources.user import User
+lazy from wd_discord.testing import RecordingClient
 
 
 if TYPE_CHECKING:
@@ -35,6 +33,12 @@ def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) 
     column type is exactly INTEGER. Postgres (production) is unaffected.
     """
     return "INTEGER"
+
+
+@pytest.fixture
+def discord_client() -> RecordingClient:
+    """Return a client that records requests instead of sending them; the builders' interactions use it."""
+    return RecordingClient()
 
 
 @pytest.fixture
@@ -65,8 +69,8 @@ ASKER = User.model_validate({"id": "3", "username": "asker", "discriminator": "0
 
 
 @pytest.fixture
-def make_interaction() -> InteractionFactory:
-    """Return a builder for a ``/name`` interaction with the given options, invoked by ``user``."""
+def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
+    """Return a builder for a ``/name`` interaction with the given options, invoked by ``user``, bound to ``discord_client``."""
 
     def build(
         name: str = "c",
@@ -75,7 +79,7 @@ def make_interaction() -> InteractionFactory:
         resolved: ResolvedData | None = None,
         user: User | None = ASKER,
     ) -> CommandInteraction:
-        return CommandInteraction(
+        model = CommandInteractionModel(
             id="1",
             application_id="2",
             type=InteractionType.APPLICATION_COMMAND,
@@ -84,6 +88,7 @@ def make_interaction() -> InteractionFactory:
             user=user,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),
         )
+        return CommandInteraction(discord_client, model)
 
     return build
 
@@ -97,11 +102,11 @@ class ComponentInteractionFactory(Protocol):
 
 
 @pytest.fixture
-def make_component_interaction() -> ComponentInteractionFactory:
-    """Return a builder for a click on the button ``custom_id``, by ``user``."""
+def make_component_interaction(discord_client: RecordingClient) -> ComponentInteractionFactory:
+    """Return a builder for a click on the button ``custom_id``, by ``user``, bound to ``discord_client``."""
 
     def build(custom_id: str, *, user: User | None = ASKER) -> ComponentInteraction:
-        return ComponentInteraction(
+        model = ComponentInteractionModel(
             id="1",
             application_id="2",
             type=InteractionType.MESSAGE_COMPONENT,
@@ -111,5 +116,6 @@ def make_component_interaction() -> ComponentInteractionFactory:
             data=MessageComponentData(custom_id=custom_id, component_type=ComponentType.BUTTON),
             message={"id": "11"},
         )
+        return ComponentInteraction(discord_client, model)
 
     return build

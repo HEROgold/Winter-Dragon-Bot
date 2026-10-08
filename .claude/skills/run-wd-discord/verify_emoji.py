@@ -14,8 +14,8 @@ import sys
 from _common import load_token, support_guild_id
 from httpxyz import RequestError
 from wd_discord import ApiResponseError, Client
-from wd_discord.guild import Guild
-from wd_discord.guild.welcome_screen import WelcomeScreen
+from wd_discord.resources.guild import Guild
+from wd_discord.resources.guild.welcome_screen import WelcomeScreen
 from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.snowflake import Snowflake
 
@@ -49,10 +49,11 @@ async def main() -> int:
         return 0
 
     async with Client(load_token()) as client:
-        guild = await client.get_guild(gid)
-        if isinstance(guild, ApiResponseError | RequestError):
-            print(f"FAIL: get_guild -> {guild!r}")
+        fetched = await client.guilds.fetch(gid)
+        if isinstance(fetched, ApiResponseError | RequestError):
+            print(f"FAIL: guilds.fetch -> {fetched!r}")
             return 1
+        guild = fetched.model
         assert isinstance(guild, Guild)  # noqa: S101
         print(f"EMOJI OK: guild has {len(guild.emojis)} custom emoji(s)")
 
