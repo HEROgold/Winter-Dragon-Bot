@@ -4,34 +4,32 @@ from __future__ import annotations
 
 lazy from abc import ABC, abstractmethod
 lazy from datetime import UTC, datetime
-lazy from typing import TYPE_CHECKING, Self, overload
+lazy from typing import TYPE_CHECKING, Self
 
+from wd_discord.embed import Embed
 lazy from herogold.log import LoggerMixin
+lazy from wd_discord.gateway.events import Interaction
 
 lazy from .factory import ErrorFactory
 
 
 if TYPE_CHECKING:
-    lazy from wd_types.alias import Bot, ResponseTypes
+    from wd_bot.bot import Bot
 
+    from wd_errors.base import BaseError
 
 class DiscordError(ABC, LoggerMixin):
     """Base class for Error."""
 
-    def __init_subclass__(cls: type[Self], *, error_type: type[DiscordException]) -> None:
+    def __init_subclass__(cls: type[Self], *, error_type: type[BaseError]) -> None:
         """Register the subclass with the factory."""
         ErrorFactory.register(error_type, cls)
 
-    @overload
-    def __init__(self, bot: BotBase, interaction: Interaction, command_error: AppCommandError) -> None: ...
-    @overload
-    def __init__(self, bot: BotBase, interaction: Context[Bot], command_error: CommandError) -> None: ...
-
     def __init__(
         self,
-        bot: BotBase,
-        interaction: Context[Bot] | Interaction,
-        command_error: DiscordException,
+        bot: Bot,
+        interaction: Interaction,
+        command_error: BaseError,
     ) -> None:
         """Initialize the Error."""
         self.timestamp = datetime.now(UTC)
@@ -56,16 +54,13 @@ class DiscordError(ABC, LoggerMixin):
     def create_embed(self) -> Embed:
         """Create an embed for the Error."""
 
-    async def send_message(self, response: ResponseTypes) -> None:
+    async def send_message(self, response: Embed | str) -> None:
         """Send an embed response to the interaction or context."""
         match response:
             case Embed():
                 await self._send_response_embed(response)
             case str():
                 await self._send_response_embed(Embed(description=response))
-            case _:
-                msg = f"Unsupported response type: {type(response).__name__}"
-                raise TypeError(msg)
 
     async def _send_response_embed(self, embed: Embed) -> None:
         if isinstance(self.interaction, Interaction):
@@ -73,5 +68,3 @@ class DiscordError(ABC, LoggerMixin):
                 await self.interaction.followup.send(embed=embed, ephemeral=True)
             else:
                 await self.interaction.response.send_message(embed=embed, ephemeral=True)
-        if isinstance(self.interaction, Context):
-            await self.interaction.send(embed=embed)

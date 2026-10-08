@@ -6,8 +6,9 @@ stays valid for 15 minutes afterwards, for editing the original response or send
 
 from __future__ import annotations
 
+from typing import TypedDict
 lazy from enum import IntEnum, IntFlag
-lazy from typing import TYPE_CHECKING, Any
+lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import components_payload
 
@@ -45,6 +46,13 @@ class MessageFlags(IntFlag):
     """Only the invoking user sees the message (interaction responses only)."""
     SUPPRESS_NOTIFICATIONS = 1 << 12
 
+class MessageData(TypedDict, total=False):
+    """The body of a response to an interaction (object -> API)."""
+
+    content: str
+    embeds: list[Embed]
+    components: list[ActionRow]
+    flags: MessageFlags
 
 def message_data(
     *,
@@ -52,13 +60,13 @@ def message_data(
     embeds: Sequence[Embed] | None = None,
     components: Sequence[ActionRow] | None = None,
     flags: MessageFlags | None = None,
-) -> dict[str, Any]:
+) -> MessageData:
     """Build a message body for sending or editing a message (object -> API).
 
     A ``None`` argument is left out of the body, so an edit keeps that part of the message unchanged; pass
     an empty sequence to clear the embeds or components instead.
     """
-    data: dict[str, Any] = {}
+    data: MessageData = {}
     if content is not None:
         data["content"] = content
     if embeds is not None:

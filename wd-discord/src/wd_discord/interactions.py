@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 lazy from enum import IntEnum, StrEnum
-lazy from typing import Annotated, Any, Self
+lazy from typing import Annotated, Self
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
+lazy from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
+lazy from wd_core.client import JsonPayload
 
-from wd_discord.models import DiscordModel
-from wd_discord.permissions import ChannelType, Permissions, PermissionsField
-from wd_discord.snowflake import Snowflake
+lazy from wd_discord.models import DiscordModel
+lazy from wd_discord.permissions import ChannelType, Permissions, PermissionsField
+lazy from wd_discord.snowflake import Snowflake
 
 
 class ApplicationCommandType(IntEnum):
@@ -210,7 +211,7 @@ class ApplicationCommandParams(BaseModel):
             raise ValueError(msg)
         return self
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> JsonPayload:
         """Return the request body.
 
         ``default_member_permissions`` is always sent, as a decimal string or JSON null, so a PATCH

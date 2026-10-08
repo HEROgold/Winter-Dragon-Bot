@@ -8,7 +8,7 @@ from __future__ import annotations
 
 lazy from collections import Counter
 lazy from enum import IntEnum
-lazy from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
+lazy from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -109,7 +109,7 @@ class ActionRow(BaseModel):
     components: Annotated[list[Button], Field(min_length=1, max_length=MAX_ACTION_ROW_BUTTONS)]
 
 
-def components_payload(rows: Sequence[ActionRow]) -> list[dict[str, Any]]:
+def components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]:
     """Return the ``components`` JSON for a message, checking the message-wide limits.
 
     Raises :class:`ValueError` when the message has more than 40 components or reuses a ``custom_id``,

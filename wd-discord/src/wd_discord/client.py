@@ -22,7 +22,7 @@ with ``isinstance`` / ``match`` instead of ``try``/``except``::
 from __future__ import annotations
 
 lazy from functools import wraps
-lazy from typing import TYPE_CHECKING, Any, Self, TypeIs
+lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
@@ -52,13 +52,14 @@ lazy from wd_discord.resources.channel import Channel
 lazy from wd_discord.resources.guild import Guild
 lazy from wd_discord.resources.invite import Invite
 lazy from wd_discord.resources.user import User
-lazy from wd_discord.responses import InteractionCallbackType, MessageFlags, message_data
+lazy from wd_discord.responses import InteractionCallbackType, MessageData, MessageFlags, message_data
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Sequence
 
     lazy from httpxyz import Response
+    lazy from wd_core.client import JsonPayload, RequestKwargs
     lazy from wd_core.intents import Intents
 
     lazy from wd_discord.components import ActionRow
@@ -108,7 +109,6 @@ def _parse_error(response: Response) -> ApiResponseError:
         return ApiResponseError.model_validate(response.json())
     except Exception:  # noqa: BLE001 - non-JSON or unexpected shape (e.g. a Cloudflare HTML ban page)
         return ApiResponseError(code=response.status_code, message=response.text)
-
 
 class Client(LoggerMixin):
     """An async Discord REST client pinned to the configured API version (v10 by default)."""
@@ -163,7 +163,7 @@ class Client(LoggerMixin):
         await self._client.aclose()
 
     @returns_known_exception(RequestError)
-    async def request(self, method: str, path: str, **kwargs: Any) -> Response | ApiResponseError:  # noqa: ANN401
+    async def request(self, method: str, path: str, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
         """Send a request, returning the :class:`Response` or a parsed error value.
 
         Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and 4xx/5xx
@@ -198,24 +198,26 @@ class Client(LoggerMixin):
         self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
         return error
 
-    async def get(self, path: str, **kwargs: Any) -> RequestResult:  # noqa: ANN401
+    async def get(self, path: str) -> RequestResult:
         """Send a GET request."""
-        return await self.request("GET", path, **kwargs)
+        return await self.request("GET", path)
 
-    async def post(self, path: str, **kwargs: Any) -> RequestResult:  # noqa: ANN401
+    async def post(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a POST request."""
         return await self.request("POST", path, **kwargs)
 
-    async def patch(self, path: str, **kwargs: Any) -> RequestResult:  # noqa: ANN401
+    async def patch(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a PATCH request."""
         return await self.request("PATCH", path, **kwargs)
 
-    async def put(self, path: str, **kwargs: Any) -> RequestResult:  # noqa: ANN401
+    async def put(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a PUT request."""
         return await self.request("PUT", path, **kwargs)
 
-    async def delete(self, path: str, **kwargs: Any) -> RequestResult:  # noqa: ANN401
+    async def delete(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a DELETE request."""
+        if "json" not in kwargs:
+            kwargs["json"] = {}
         return await self.request("DELETE", path, **kwargs)
 
     # --- Resource helpers (read-only unless noted) -------------------------------------
@@ -299,7 +301,7 @@ class Client(LoggerMixin):
         Discord returns 204 No Content on success, so there's no body to parse - ``None`` is
         the real result here, not a raw-dict shortcut.
         """
-        result = await self.delete(f"/users/@me/guilds/{guild_id}", json={})
+        result = await self.delete(f"/users/@me/guilds/{guild_id}")
         if is_network_error(result):
             return result
         return None
@@ -343,7 +345,7 @@ class Client(LoggerMixin):
         Defaults to a single-use, 24h invite (``max_age``/``max_uses``) - unlike a permanent
         vanity invite, this is meant for handing to one specific person.
         """
-        payload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
+        payload: JsonPayload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
         result = await self.post(f"/channels/{channel_id}/invites", json=payload)
         if is_network_error(result):
             return result
@@ -357,7 +359,7 @@ class Client(LoggerMixin):
         banner: ImageHash | None = None,
     ) -> RequestResult:
         """PATCH /users/@me - update the bot's profile (username and/or avatar)."""
-        payload: dict[str, str] = {}
+        payload: JsonPayload = {}
         if username is not None:
             payload["username"] = username
         if avatar is not None:
@@ -370,10 +372,10 @@ class Client(LoggerMixin):
         self,
         interaction: Interaction,
         callback_type: InteractionCallbackType,
-        data: dict[str, Any] | None = None,
+        data: MessageData | None = None,
     ) -> RequestResult:
         """POST /interactions/{id}/{token}/callback - send the initial response to an interaction."""
-        payload: dict[str, Any] = {"type": int(callback_type)}
+        payload: JsonPayload = {"type": callback_type}
         if data:
             payload["data"] = data
         return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
@@ -471,7 +473,7 @@ class Client(LoggerMixin):
         path = await self._commands_path(command_id)
         if is_network_error(path):
             return path
-        result = await self.delete(path, json={})
+        result = await self.delete(path)
         return result if is_network_error(result) else None
 
     async def get_global_commands(self) -> Generator[ApplicationCommand] | NetworkError:

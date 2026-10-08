@@ -27,7 +27,7 @@ dependencies = [
   "wd-errors",
   "wd-types",
   "wd-cogs",
-  "herogold>=4.0.0",
+  "herogold==5.0.0",
   "httpxyz>=0.42.0",
   "pydantic>=2.13.5",
 ]

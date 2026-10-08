@@ -3,21 +3,20 @@
 from __future__ import annotations
 
 lazy from abc import ABC
-lazy from typing import Self, override
+lazy from typing import override
 
+lazy from wd_discord.embed import Embed, EmbedFooter
+
+lazy from wd_errors.base import BaseError
 lazy from wd_errors.error import DiscordError
 
 
-class BaseError(DiscordError, ABC, error_type=DiscordException):
+class BaseError(DiscordError, ABC, error_type=BaseError):
     """Base error handler class for app command errors."""
 
     title: str = "❌ An Error Occurred"
     description: str = "An unexpected error occurred."
     footer: str = "**Please report this issue and include the timestamp:** {timestamp}"
-
-    def __init_subclass__(cls: type[Self], *, error_type: type[DiscordException]) -> None:
-        """Register the subclass with the factory."""
-        super().__init_subclass__(error_type=error_type)
 
     @property
     def timestamp_str(self) -> str:
@@ -26,11 +25,9 @@ class BaseError(DiscordError, ABC, error_type=DiscordException):
 
     @override
     def create_embed(self) -> Embed:
-        embed = Embed(
+        return Embed(
             title=self.title,
             description=self.description,
             color=0xFF0000,
+            footer = EmbedFooter(text=self.footer.format(timestamp=self.timestamp_str)),
         )
-        embed.set_footer(text=self.footer.format(timestamp=self.timestamp_str))
-
-        return embed
