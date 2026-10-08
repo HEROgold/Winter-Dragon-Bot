@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Self
 
 from pydantic import BaseModel, Field, ValidationError
+lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_config.urban import UrbanSettings
 lazy from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS, Embed, EmbedField, EmbedFooter
+lazy from wd_errors import BaseError
 
 
 if TYPE_CHECKING:
@@ -43,11 +44,8 @@ class DefinitionList(BaseModel):
     definitions: list[Definition] = Field(alias="list")
 
 
-@dataclass(frozen=True)
-class LookupFailed:
-    """Urban Dictionary couldn't be asked, or answered something unexpected."""
-
-    reason: str
+class LookupFailed(BaseError):  # noqa: N818 - reads as the outcome callers branch on
+    """Urban Dictionary couldn't be asked, or answered something unexpected; the message says which, for the user."""
 
 
 def truncate(text: str, limit: int) -> str:
@@ -100,26 +98,30 @@ class UrbanDictionary(LoggerMixin):
 
     async def define(self, term: str) -> list[Definition] | LookupFailed:
         """Return the definitions of ``term``, best first; empty when it has none."""
-        return await self._definitions(DEFINE_URL, {"term": term})
+        return await self._definitions(DEFINE_URL, {"term": term})  # pyrefly: ignore[not-async] - herogold's with_known_exception lacks an async overload
 
     async def random(self) -> list[Definition] | LookupFailed:
         """Return a handful of definitions of random terms."""
-        return await self._definitions(RANDOM_URL, {})
+        return await self._definitions(RANDOM_URL, {})  # pyrefly: ignore[not-async] - herogold's with_known_exception lacks an async overload
 
-    async def _definitions(self, url: str, params: dict[str, str]) -> list[Definition] | LookupFailed:
+    @with_known_exception(LookupFailed)
+    async def _definitions(self, url: str, params: dict[str, str]) -> list[Definition]:
         try:
             response = await self.http.get(url, params=params)
         except RequestError as error:
             self.logger.warning(t"Urban Dictionary request failed: {error!r}")
-            return LookupFailed("Urban Dictionary can't be reached right now.")
+            msg = "Urban Dictionary can't be reached right now."
+            raise LookupFailed(msg) from error
         if response.is_error:
             self.logger.warning(t"Urban Dictionary answered {response.status_code} for {url}")
-            return LookupFailed("Urban Dictionary isn't answering right now.")
+            msg = "Urban Dictionary isn't answering right now."
+            raise LookupFailed(msg)
         try:
             return DefinitionList.model_validate_json(response.content).definitions
-        except ValidationError:
+        except ValidationError as error:
             self.logger.exception(t"Unexpected Urban Dictionary response for {url}")
-            return LookupFailed("Urban Dictionary answered something I didn't understand.")
+            msg = "Urban Dictionary answered something I didn't understand."
+            raise LookupFailed(msg) from error
 
 
 class Urban(GroupCog, name="urban", description="Look up words on Urban Dictionary"):
@@ -135,7 +137,7 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.define(query)
         if isinstance(definitions, LookupFailed):
-            await interaction.respond(definitions.reason)
+            await interaction.respond(str(definitions))
             return
         if not definitions:
             await interaction.respond(f"No definitions found for `{truncate(query, 100)}`.")
@@ -153,6 +155,6 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.random()
         if isinstance(definitions, LookupFailed):
-            await interaction.respond(definitions.reason)
+            await interaction.respond(str(definitions))
             return
         await interaction.respond(embeds=[build_embed("Urban Dictionary: random", definitions, UrbanSettings.max_definitions)])

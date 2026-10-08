@@ -8,6 +8,7 @@ lazy from typing import TYPE_CHECKING
 lazy from wd_config.bot import Settings
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS, Embed, EmbedField, EmbedFooter
+lazy from wd_discord.timestamp import DiscordTime
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes
 
@@ -35,9 +36,9 @@ def format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str:
         Price: {sale.final_price}
         DLC: {SaleTypes.DLC in properties}
         Bundle: {SaleTypes.BUNDLE in properties}
-        Last Checked: <t:{int(sale.update_datetime.timestamp())}:F>""")
+        Last Checked: {DiscordTime(sale.update_datetime):F}""")
     if sale.sale_end is not None:
-        text += f"\nSale ends: <t:{int(sale.sale_end.timestamp())}:R>"
+        text += f"\nSale ends: {DiscordTime(sale.sale_end):R}"
     if (app_id := sale.steam_url.app_id) is not None and (install_url := _install_url(app_id)) is not None:
         text += f"\nInstall game: [Click here]({install_url})"
     return text

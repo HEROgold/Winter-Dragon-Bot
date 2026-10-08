@@ -5,6 +5,7 @@ from __future__ import annotations
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_discord.timestamp import DiscordTime
 
 
 if TYPE_CHECKING:
@@ -15,8 +16,7 @@ if TYPE_CHECKING:
 
 def uptime_message(launch_time: datetime) -> str:
     """Return the reply to /uptime bot: when the bot started, as an absolute and a relative Discord timestamp."""
-    epoch = int(launch_time.timestamp())
-    return f"Online since <t:{epoch}:F> (<t:{epoch}:R>)"
+    return f"Online since {DiscordTime(launch_time).with_relative()}"
 
 
 class Uptime(GroupCog, name="uptime", description="Show how long the bot has been running"):

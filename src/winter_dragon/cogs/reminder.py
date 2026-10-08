@@ -14,6 +14,7 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_config.reminder import ReminderSettings
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice
+lazy from wd_discord.timestamp import DiscordTime
 
 
 if TYPE_CHECKING:
@@ -188,15 +189,14 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
 
     async def _store(self, interaction: CommandInteraction, reminder: AnyReminder) -> None:
         """Save ``reminder``, then tell the invoking user when it's due."""
-        epoch = int(reminder.timestamp.timestamp())
+        due = DiscordTime(reminder.timestamp).with_relative()
         content = reminder.content
         with Session(self.bind) as session:
             session.add(reminder)
             session.commit()
         repeat = " and then every so often" if isinstance(reminder, TimedReminder) else ""
         await interaction.respond(
-            f"On <t:{epoch}:F> (<t:{epoch}:R>){repeat} I will remind you of\n`{content}`\n"
-            f"Use {self.mention(self.remove)} to cancel it.",
+            f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it.",
             ephemeral=True,
         )
 
