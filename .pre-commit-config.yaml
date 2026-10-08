@@ -139,6 +139,21 @@ repos:
         pass_filenames: false
         files: ^(wd-bot/(scripts/generate_listener_overloads\.py|src/wd_bot/listener\.pyi?)|wd-discord/src/wd_discord/gateway/events\.py)$
         stages: [pre-push]
+      # docs/reference/ is generated from the public API; agents read it instead of source files.
+      - id: api-reference-check
+        name: docs/reference up to date
+        language: system
+        entry: uv run python scripts/generate_api_reference.py --check
+        pass_filenames: false
+        files: ^((src|wd-[a-z]+/src)/.*\.pyi?|scripts/generate_api_reference\.py|docs/reference/.*\.md)$
+        stages: [pre-commit, pre-push]
+      - id: doc-links-check
+        name: doc and skill links resolve, no line anchors in skills
+        language: system
+        entry: uv run python scripts/check_doc_links.py
+        pass_filenames: false
+        files: ^(CLAUDE\.md|README\.md|\.claude/skills/.*\.md|docs/.*\.md|wd-[a-z]+/README\.md|scripts/check_doc_links\.py)$
+        stages: [pre-commit, pre-push]
 
   # GitHub workflows
   - repo: https://github.com/python-jsonschema/check-jsonschema

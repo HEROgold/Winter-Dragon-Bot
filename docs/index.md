@@ -1,56 +1,33 @@
-# Welcome to Winter Dragon
+# Winter Dragon
 
-**Winter Dragon** is a versatile Discord bot with moderation, utility, and entertainment features. This documentation covers user guides, API reference, and development information.
+**Winter Dragon** is a Discord bot with moderation, utility and entertainment features. These docs cover the
+`v2` rewrite: the bot runs on its own Discord API client (`wd-discord`) instead of discord.py, split into
+`wd-*` packages in one uv workspace.
 
-## Features
-
-- **Moderation Tools**: Comprehensive moderation commands and automation
-- **Utility Functions**: Helpful utility commands for Discord servers
-- **Entertainment**: Games and fun features for community engagement
-- **User Dashboard**: Authenticated view with Discord OAuth integration
-- **REST API**: FastAPI-powered backend for programmatic access
-- **Monitoring**: Grafana dashboards for logs and database analytics
-
-## Quick Start
-
-### Running with Docker
+## Quick start
 
 ```bash
-export DISCORD_CLIENT_ID="your-client-id"
-export DISCORD_REDIRECT_URI="http://localhost:3000"
-docker compose up --build
+uv sync
+uv run python -m winter_dragon.run_test_bot   # first run writes config.ini; fill in the !! values
 ```
 
-### Available Services
+The full steps are in [Getting Started](guide/getting-started.md).
 
-- **Frontend**: http://localhost:3000
-- **API**: http://localhost:8001
-- **PgAdmin**: http://localhost:5050
-- **Grafana**: http://localhost:3002
-- **Redis Commander**: http://localhost:8081
+## Documentation
 
-## Documentation Structure
+- **[Getting Started](guide/getting-started.md)** — run your own instance and see its commands.
+- **[Feature Inventory](features/index.md)** — everything the bot offers on `main`, and how much is ported to `v2`.
+- **[Architecture](dev/architecture.md)** — packages, layering and the runtime flow.
+- **[Setup](dev/setup.md)** — development environment, adding a cog, tests and code quality.
+- **[Database](dev/database.md)** — connection, how tables are declared, current tables.
+- **[API Reference](reference/index.md)** — the public classes and functions of every package, generated from source.
+- **[Planned](planned.md)** — the web dashboard, HTTP API and workers, which aren't built yet.
 
-- **[Feature Inventory](features/index.md)** — Every capability the bot offers on `main`, with v2 porting status
-- **[User Guide](guide/getting-started.md)** — How to use the bot and access the dashboard
-- **[Development](dev/architecture.md)** — Architecture, setup, and technical details
-- **[API Reference](api-reference.md)** — REST API endpoints and authentication
+## Technology
 
-## Technology Stack
-
-- **Frontend**: React + Bun (TSRX)
-- **Backend**: FastAPI with SQLModel ORM
-- **Database**: PostgreSQL
-- **Cache**: Redis
-- **Discord Integration**: discord.py
-- **Analytics**: Grafana + PostgreSQL
-- **Admin Panel**: PgAdmin
-- **Containerization**: Docker & Docker Compose
-
-## Contributing
-
-Contributions are welcome! Please refer to the development guides for setup instructions and architecture documentation.
+Python 3.15 with uv · `wd-discord` (httpxyz + websockets + pydantic) · SQLModel on PostgreSQL · confkit
+configuration · Sentry · Docker Compose for PostgreSQL, Redis, pgAdmin and Grafana.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](https://github.com/HEROgold/Winter-Dragon-Bot/blob/v2/LICENSE.md) for details.
+MIT — see [LICENSE.md](https://github.com/HEROgold/Winter-Dragon-Bot/blob/v2/LICENSE.md).

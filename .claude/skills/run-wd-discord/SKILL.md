@@ -1,24 +1,23 @@
 ---
 name: run-wd-discord
-description: Run and drive the Winter Dragon Discord bot / wd-discord client live against Discord — REST auth check and real gateway connection. Use when asked to run the bot, start the Discord client, verify a wd-discord change against the live API, or smoke-test gateway/REST behavior.
+description: Run and drive the Winter Dragon Discord bot / wd-discord client live against Discord — the real bot entry point, a time-boxed sqlite test bot, the REST/gateway smoke driver and the verify_* drivers. Use when asked to run the bot, start the Discord client, verify a wd-discord change against the live API, or smoke-test gateway/REST behavior.
 ---
 
-# Run: the Discord client (live)
+# Run: the Discord bot and client (live)
 
-All paths relative to the repo root. **There is currently no bot entry point** — `src/winter_dragon/` is an empty package (the Dockerfile's `python -m winter_dragon` would crash), because the project is mid-rewrite replacing discord.py with the in-house `wd_discord` client. The runnable app surface is `wd_discord` itself, driven live by the committed driver.
+All paths relative to the repo root. Everything here needs a real bot token in `config.ini` under `[Tokens] discord_token`; `!!` is the "unset" sentinel. Never print `config.ini`.
 
-## Prerequisites
+## Which one to run
 
-- `uv` on PATH (0.11.x works); deps installed via `uv sync` (a plain `uv run` also resolves them).
-- A real bot token in `config.ini` under `[Tokens] discord_token`. The value `!!` is the "unset" sentinel — the driver refuses it with exit code 2. Never print this file's contents.
+| Goal | Command |
+|---|---|
+| Whole bot, time-boxed, no Postgres | `uv run python -m winter_dragon.run_test_bot` — real `wd_bot.Bot` with `winter_dragon.cogs`, local sqlite engine, stops after 10 minutes |
+| Whole bot, production shape | `uv run python -m winter_dragon` — `Bot(extensions_package=cogs).start()`; needs Postgres (`DbUrl` config + psycopg2) |
+| REST auth + gateway handshake only | `uv run python .claude/skills/run-wd-discord/driver.py` |
+| Live checks of one area | `uv run python .claude/skills/run-wd-discord/verify_{rest,gateway,models,emoji,sentry}.py`, or `verify_all.py` for all |
+| Gateway dispatch → `parse_dispatch` | `uv run python tests/verify_bot_events.py [seconds]` |
 
-## Run (agent path)
-
-```powershell
-uv run python .claude/skills/run-wd-discord/driver.py
-```
-
-Verified output shape (ran 2026-07-07, exit 0):
+## Smoke driver output (verified 2026-07-07)
 
 ```text
 REST OK: authenticated as TBot (id 12268...)
@@ -27,20 +26,20 @@ GATEWAY OK: READY session 3bb18e2b..., user TBot
 GATEWAY OK: closed cleanly
 ```
 
-The driver exercises: `client.users.me()` and `client.get_gateway_bot()` (REST, errors-as-values — a failure comes back as `ApiResponseError`, not an exception), then `Gateway.connect()` through HELLO → IDENTIFY → READY, then `Gateway.close()`. Extend the driver (send `update_presence`, fetch a guild) rather than writing throwaway scripts.
+The driver calls `client.users.me()` and `client.get_gateway_bot()` (errors-as-values — a failure is a `NetworkError`, checked with `is_network_error`), then `Gateway.connect()` through HELLO → IDENTIFY → READY and `Gateway.close()`. Extend a driver rather than writing throwaway scripts.
 
 ## Direct invocation
 
-Most wd-discord PRs touch one function. Import and call it directly:
+Most wd-discord changes touch one function. The outbound builders in `wd_discord/gateway/connection.py` (`build_presence`, `build_identify`, `parse_ready`) are pure — call them directly:
 
 ```powershell
-uv run python -c "from wd_discord.gateway import parse_ready; print(parse_ready({'d': {'session_id': 's', 'resume_gateway_url': 'u'}}))"
+uv run python -c "from wd_discord.gateway.connection import build_presence; print(build_presence())"
 ```
 
-`build_presence`, `parse_ready`, `build_identify` in `wd_discord/gateway/connection.py` are pure functions designed for exactly this.
+Check a signature in [docs/reference/wd-discord.gateway.md](../../../docs/reference/wd-discord.gateway.md) first.
 
 ## Gotchas
 
-- The gateway `connect()` blocks until READY; wrap in `asyncio.wait_for(..., timeout=30)` like the driver does, or a bad token hangs the run.
-- `Client` responses: check `isinstance(result, Response)` (from `httpxyz`) before `.json()` — the union return means pyright rejects blind attribute access.
-- Docker's bot service and `docker compose up bot` do **not** work right now (no `winter_dragon.__main__`); see the run-stack skill for what does.
+- `Gateway.connect()` blocks until READY; wrap it in `asyncio.wait_for(..., timeout=30)` like the driver does, or a bad token hangs the run.
+- `wd_db.constants` creates a Postgres engine at import time; on a host without psycopg2 use `run_test_bot` (it stubs a sqlite engine), not `python -m winter_dragon`.
+- `Bot.start()`'s `token` is injected by `@Config.with_kwarg`, so type checkers report it missing — the call site carries a coded `# ty: ignore`.

@@ -92,9 +92,19 @@ async def fetch(self) -> User | NetworkError:
 ```
 
 Entity classes take the plain names (`wd_discord.User`); data models keep the Discord docs' names in
-their modules and are imported as `... as UserModel` where both meet. Interactions follow the same
-split: `Interaction.bind(client, model)` wraps a gateway `Interaction` model in the bound subclass
-with `respond`/`defer`/`edit_original`/`followup` (and `update`/`defer_update` on components).
+their modules and are imported as `... as UserModel` where both meet.
+
+Gateway dispatches follow the same split: `wd_discord.gateway.events` parses each dispatch into a data
+model, and `wd_discord.bind(client, model)` ([entities/events.py](../../../wd-discord/src/wd_discord/entities/events.py))
+wraps it in its entity (`Message`, `Guild`, `Ready`, a typed `Interaction` subclass, ...) so listeners act
+without passing a client around; events with no entity yet come back as `RawEvent`. `event_entities()`
+is the event → entity map that generates `wd_bot/listener.pyi`. Interactions bind to
+`CommandInteraction`/`ComponentInteraction`/`AutocompleteInteraction` with `respond`/`defer`/
+`edit_original`/`followup` (plus `update`/`defer_update` on components).
+
+Find a store's or entity's methods in [docs/reference/wd-discord.entities.md](../../../docs/reference/wd-discord.entities.md)
+and data-model fields in [docs/reference/wd-discord.resources.md](../../../docs/reference/wd-discord.resources.md)
+before opening source.
 
 Test code built on wd-discord with `wd_discord.testing.RecordingClient`: it records each request and
 answers from canned `reply(...)`/`fail(...)` values, so stores and entities run unchanged offline.

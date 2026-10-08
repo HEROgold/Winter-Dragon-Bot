@@ -1,96 +1,60 @@
 # Getting Started
 
-## Installation
+This guide gets your own Winter Dragon instance (the `v2` branch) running in a Discord server.
 
-### Prerequisites
+## 1. Create the Discord application
 
-- Docker and Docker Compose
-- Discord Developer Application credentials
-- Git
+1. In the [Discord Developer Portal](https://discord.com/developers/applications), create an application and
+   add a bot to it.
+2. Copy the bot token. Treat it like a password.
+3. Under **Bot → Privileged Gateway Intents**, enable the message-content intent if you want message logging.
 
-### Setup Steps
-
-#### 1. Clone the Repository
+## 2. Install and configure
 
 ```bash
 git clone https://github.com/HEROgold/Winter-Dragon-Bot.git
 cd Winter-Dragon-Bot
+git checkout v2
+uv sync
+uv run python -m winter_dragon.run_test_bot
 ```
 
-#### 2. Configure Discord OAuth
+The first run writes `config.ini` and `discord.ini` and stops. Open `config.ini` and replace every `!!` value,
+at least `[Tokens] discord_token`. Then run the command again. `run_test_bot` uses a local sqlite database and
+stops after 10 minutes, which is enough to check that everything works.
 
-1. Create a Discord application at [Discord Developer Portal](https://discord.com/developers/applications)
-2. Copy the **Client ID**
-3. Set OAuth2 Redirect URL to `http://localhost:3000`
-4. Create a client secret and store it securely
-
-#### 3. Set Environment Variables
-
-Create a `.env` file in the project root with your credentials:
-
-```env
-DISCORD_CLIENT_ID=your-client-id
-DISCORD_REDIRECT_URI=http://localhost:3000
-DB_PASSWORD=your-secure-password
-PGADMIN_PASSWORD=your-pgadmin-password
-GRAFANA_ADMIN_PASSWORD=your-grafana-password
-```
-
-#### 4. Start Services
+To run the bot for real, start PostgreSQL and use the main entry point:
 
 ```bash
-docker compose up --build
+docker compose up -d postgres redis
+uv run python -m winter_dragon
 ```
 
-Services will be available at:
+## 3. Invite the bot
 
-| Service | URL | Default Credentials |
-|---------|-----|-------------------|
-| Frontend | http://localhost:3000 | N/A |
-| API | http://localhost:8001 | Bearer token auth |
-| PgAdmin | http://localhost:5050 | admin@example.com / admin123 |
-| Grafana | http://localhost:3002 | admin / admin123 |
-| Redis Commander | http://localhost:8081 | N/A |
+Once the bot is online, use `/invite bot` for an invite link. The bot syncs its slash commands with Discord when
+it starts, and they appear in your server shortly after.
 
-## First Steps
+## Commands
 
-### 1. Access the Frontend
+| Command | What it does |
+|---|---|
+| `/fuel add`, `/fuel efficiency` | Log refuels and graph your fuel efficiency. |
+| `/reminder add`, `/reminder repeat`, `/reminder remove` | One-off and repeating reminders. |
+| `/steam ...` | Get notified about free and discounted Steam games. |
+| `/urban search`, `/urban random` | Look up words on Urban Dictionary. |
+| `/love` | Calculate your compatibility with another user. |
+| `/uptime bot` | How long the bot has been running. |
+| `/invite bot`, `/invite guild` | Invite the bot, or join its support server. |
+| `/bot-commands ...` | Admin only (Manage Server): inspect and resync the bot's commands. |
 
-Navigate to http://localhost:3000 and click "Sign in with Discord" to authenticate using OAuth.
-
-### 2. View Your Profile
-
-Once authenticated, you'll see:
-- Your Discord profile information
-- Connected accounts
-- Data managed by Winter Dragon
-
-### 3. Monitor the Database
-
-Visit http://localhost:5050 (PgAdmin) to manage the PostgreSQL database directly.
-
-### 4. View Analytics
-
-Visit http://localhost:3002 (Grafana) to view database analytics and logs using the pre-configured PostgreSQL datasource.
+Everything the `main` branch offers, and what has been ported to `v2` so far, is listed in the
+[Feature Inventory](../features/index.md).
 
 ## Troubleshooting
 
-### Services Won't Start
-
-Check logs:
-```bash
-docker compose logs -f
-```
-
-### Database Connection Issues
-
-Verify PostgreSQL is healthy:
-```bash
-docker compose ps
-```
-
-### OAuth Not Working
-
-1. Verify `DISCORD_CLIENT_ID` is correct
-2. Check OAuth Redirect URL matches `DISCORD_REDIRECT_URI`
-3. Ensure frontend is accessible at the configured URL
+- **The bot stops with `FirstTimeLaunchError`:** `config.ini` still contains `!!` values. Fill them in.
+- **Import error mentioning psycopg:** `python -m winter_dragon` needs PostgreSQL and its driver. Use
+  `run_test_bot` for a sqlite instance instead.
+- **Commands don't show up:** check the bot's log in `logs/` for sync errors, then run `/bot-commands` as an
+  admin.

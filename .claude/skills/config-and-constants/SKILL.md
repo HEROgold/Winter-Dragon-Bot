@@ -15,20 +15,20 @@ Configuration is the **confkit descriptor system** — not `os.environ`, not dot
 
 ## Configurable values: `Config[T]` descriptors
 
-[wd-config/src/wd_config/config.py](../../../wd-config/src/wd_config/config.py) defines `class Config[T](CKConfig[T])` bound to `config.ini` via `Config.set_file(CONFIG_FILE)`. Settings are plain classes whose attributes are descriptors:
+[wd_config/config.py](../../../wd-config/src/wd_config/config.py) defines `class Config[T](CKConfig[T])` bound to `config.ini` via `Config.set_file(CONFIG_FILE)`. Settings are plain classes whose attributes are descriptors:
 
 ```python
 class Settings:
     log_level = Config(logging.DEBUG)
-    application_id = Config[int | None](None)
+    application_id = Config[int | None](0, optional=True)
     created_color = Config(Hex(0x00FF00))          # confkit data types: Hex, List, Enum
 ```
 
-Surfaces: `Settings` ([bot.py](../../../wd-config/src/wd_config/bot.py)), `DbUrl` ([db.py](../../../wd-config/src/wd_config/db.py)), `SentrySettings` ([sentry.py](../../../wd-config/src/wd_config/sentry.py)). Access is static (`Settings.BOT_SCOPE`) — reads/writes go live to the ini file.
+Surfaces, one class per concern: `Settings` ([bot.py](../../../wd-config/src/wd_config/bot.py)), `DbUrl` ([db.py](../../../wd-config/src/wd_config/db.py)), `SentrySettings` ([sentry.py](../../../wd-config/src/wd_config/sentry.py)), plus per-cog `ReminderSettings`, `SteamSettings`, `UrbanSettings` — the full list with attributes is [docs/reference/wd-config.md](../../../docs/reference/wd-config.md). A new cog's settings get their own module + class there. Access is static (`Settings.BOT_SCOPE`) — reads/writes go live to the ini file.
 
-**Second scope:** `DiscordConfig[T]` binds to `discord.ini` ([discord.py:13](../../../wd-config/src/wd_config/discord.py#L13)). Gotcha: after `set_file`, it must reset `_parser = UNSET` and `_has_read_config = False` because `__init_subclass__` copies parent parser state — copy that block if you ever add a third scope. Both ini paths are declared once in [wd_config/constants.py](../../../wd-config/src/wd_config/constants.py).
+**Second scope:** `DiscordConfig[T]` binds to `discord.ini` ([wd_config/discord.py](../../../wd-config/src/wd_config/discord.py)). Gotcha: after `set_file`, it must reset `_parser = UNSET` and `_has_read_config = False` because `__init_subclass__` copies parent parser state — copy that block if you ever add a third scope. Both ini paths are declared once in [wd_config/constants.py](../../../wd-config/src/wd_config/constants.py).
 
-**Injecting config into functions:** the decorator form `@Config.with_kwarg("Tokens", "discord_token")` passes a config value as a kwarg (see `WinterDragon.start` in [wd-bot/src/wd_bot/bot.py](../../../wd-bot/src/wd_bot/bot.py)) — prefer it over reading config inside the function body.
+**Injecting config into functions:** the decorator form `@Config.with_kwarg("Tokens", "discord_token")` passes a config value as a kwarg (see `Bot.start` in [wd_bot/bot.py](../../../wd-bot/src/wd_bot/bot.py): `@Config.with_kwarg("Tokens", "discord_token", name="token")`). Type checkers don't see the injected kwarg, so call sites carry a coded ignore — prefer it over reading config inside the function body.
 
 ## Derived values: `Combined`
 
@@ -45,10 +45,10 @@ DATETIME_FORMAT = Config(Combined(DATE_FORMAT, " ", TIME_FORMAT))
 
 Fixed values live in the owning package's `constants.py` with a docstring:
 
-- [wd-discord/src/wd_discord/constants.py](../../../wd-discord/src/wd_discord/constants.py) — `DISCORD_EPOCH`, `RATE_LIMIT_BUCKET` header name.
-- [wd-db/src/wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) — `CASCADE`, plus **`DATABASE_URL` assembled from the `DbUrl` config descriptors**. That's the source-of-truth pattern in one line: credentials/host/port are config, the URL is derived, nothing redefines either.
+- [wd_discord/constants.py](../../../wd-discord/src/wd_discord/constants.py) — `DISCORD_EPOCH`, `RATE_LIMIT_BUCKET` header name.
+- [wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) — `CASCADE`, plus **`DATABASE_URL` assembled from the `DbUrl` config descriptors**. That's the source-of-truth pattern in one line: credentials/host/port are config, the URL is derived, nothing redefines either.
 
-Discord API base + version are config (`URLS` in [wd_config/discord.py:24](../../../wd-config/src/wd_config/discord.py#L24), `api_version` property renders `"v10"`) — do not hardcode `https://discord.com/api/v10` in new code.
+Discord API base + version are config (`URLS` in [wd_config/discord.py](../../../wd-config/src/wd_config/discord.py), `api_version` property renders `"v10"`) — do not hardcode `https://discord.com/api/v10` in new code.
 
 ## First-launch & unset values
 

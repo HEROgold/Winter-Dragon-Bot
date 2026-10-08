@@ -1,214 +1,68 @@
 # Architecture
 
-## System Overview
+Winter Dragon v2 is a Discord bot built on its own Discord client instead of discord.py. The code is a
+[uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/): eight `wd-*` library packages plus
+the app itself in `src/winter_dragon/`.
 
-Winter Dragon is a multi-service Discord bot platform with a modular architecture:
+## Packages and layering
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Frontend Layer                          │
-│         React + Bun + TSRX (SPA)                           │
-│              http://localhost:3000                          │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                   (OAuth + REST API)
-                          │
-┌─────────────────────────────────────────────────────────────┐
-│                     API Layer                               │
-│    FastAPI Application                                      │
-│    - OAuth2 Endpoints (/api/auth/*)                        │
-│    - User Routes (/api/user/*)                             │
-│    - Admin Routes (/api/admin/*)                           │
-│         http://localhost:8001                              │
-└─────────────────────────────────────────────────────────────┘
-            │                    │                    │
-            ├──────┬────────────┬┴──────┐             │
-            │      │            │       │             │
-┌───────────▼─┐ ┌──▼──┐  ┌──────▼──┐  │   ┌─────────▼───┐
-│ PostgreSQL  │ │Redis│  │ Bot Core│  │   │   Workers   │
-│   (DB)      │ │(Key)│  │ discord │  │   │   Service   │
-│             │ │Value│  │  .py    │  │   │             │
-└─────────────┘ └─────┘  └─────────┘  │   └─────────────┘
-                                       │
-                    ┌──────────────────┘
-                    │
-        ┌───────────▼───────────┐
-        │ Discord Gateway       │
-        │ (Events & Commands)   │
-        └───────────────────────┘
+Dependencies only point downward. A package never imports one above it.
+
+```text
+wd-types            wd-config             ← no internal dependencies
+                    /       \
+                wd-db      wd-discord     ← infrastructure
+                   \       /    \
+                    \  wd-core  wd-errors ← shared domain helpers, error machinery
+                     \    |     /
+                       wd-bot             ← bot framework
+                          |
+                    winter_dragon         ← the app: entry point + feature cogs
 ```
 
-## Component Architecture
+| Package | Owns |
+|---|---|
+| `wd-config` | Every configurable value, as confkit `Config[T]` descriptors bound to `config.ini` / `discord.ini`. |
+| `wd-discord` | The Discord API v10 client: REST transport, gateway, pydantic response models, client-bound entities. |
+| `wd-db` | SQLModel/SQLAlchemy engine and session, model base classes. |
+| `wd-core` | Audit-log events, gateway intents, Sentry setup, an HTTP client for third-party APIs. |
+| `wd-errors` | Error base classes and the self-registering error-handler factory. |
+| `wd-types` | Cross-package protocols and type aliases. |
+| `wd-bot` | `Bot`, `Cog`/`GroupCog`, slash commands, components, autocomplete, help, command sync. |
+| `winter_dragon` | `python -m winter_dragon` and the live cogs in `src/winter_dragon/cogs/`. |
+| `wd-cogs` | **Legacy** discord.py-era cogs, not loaded. Port a cog into `winter_dragon/cogs/` before using it. |
 
-### Frontend (React + Bun)
+Each package's public API is listed in the [API reference](../reference/index.md).
 
-- **SPA** (Single Page Application) using React
-- **TSRX** for state management and routing
-- **OAuth 2.0** integration with Discord
-- **Protected Routes** for authenticated views
-- **Real-time** updates via API polling
+## Runtime flow
 
-### API Server (FastAPI)
+1. `python -m winter_dragon` builds `Bot(extensions_package=winter_dragon.cogs)` and awaits `Bot.start()`.
+   The bot token is injected from `config.ini` (`[Tokens] discord_token`) by `@Config.with_kwarg`.
+2. `Bot` discovers every cog module in the extensions package, instantiates each `Cog` with the bot and a
+   database session, and creates the tables the cog declares (`Cog.create_tables`).
+3. Application commands are synced with Discord. The sync state is stored in the database so unchanged
+   commands aren't pushed again (`wd_bot.auto_sync`).
+4. The gateway connection (`wd_discord.gateway`) receives dispatch events. `parse_dispatch` validates each one
+   into a model, and `wd_discord.bind` wraps it in an entity bound to the client: a `Message`, a `Guild`,
+   a typed `Interaction`.
+5. `Bot` routes the result. Interactions go to the matching `@Cog.command`, `@Cog.component` or
+   autocomplete handler. Other events go to `@Cog.listener` methods.
 
-- **REST API** with OpenAPI documentation
-- **SQLModel ORM** for database operations
-- **Async Support** for concurrent request handling
-- **Bearer Token** authentication
-- **CORS** enabled for frontend integration
+## Design rules
 
-### Bot Service (discord.py)
+- **Errors are values.** wd-discord operations return `T | NetworkError` instead of raising, and callers
+  narrow with `is_network_error`.
+- **Validated models.** Every Discord response is a pydantic `DiscordModel`. Unknown fields are kept and
+  reported to Sentry instead of being dropped.
+- **No bare primitives.** IDs are `Snowflake`, tokens are `Token`, flags are `IntFlag`s.
+- **Constructor injection.** Cogs receive the bot and session; tests inject a sqlite session and a
+  `RecordingClient`.
 
-- **Event Handlers** for Discord events
-- **Command Framework** for slash commands
-- **Background Tasks** via Redis queue
-- **Database Integration** for persistent data
+The full rules agents follow live in `.claude/skills/` (architecture, code-style, discord-api-models,
+value-modeling, config-and-constants).
 
-### Worker Service
+## Infrastructure
 
-- **Async Tasks** from Redis queue
-- **Background Processing** (emails, heavy computation)
-- **Scheduled Jobs** (cron-like tasks)
-
-### Data Layer
-
-#### PostgreSQL Database
-
-- **User Profiles** - Discord user data
-- **User Data Deletion** - GDPR audit trail
-- **Game Records** - Player statistics
-- **Authorization** - OAuth tokens and sessions
-
-#### Redis Cache
-
-- **Session Storage** - User session data
-- **Job Queue** - Background task queue
-- **Real-time Data** - Transient caching
-
-## Data Flow
-
-### User Authentication
-
-```
-1. User clicks "Sign in with Discord"
-   │
-2. Frontend → API (/api/auth/discord/login)
-   │
-3. API → Discord OAuth Endpoint
-   │
-4. User authorizes on Discord
-   │
-5. Discord → API Callback
-   │
-6. API exchanges code for token
-   │
-7. API → Frontend (token)
-   │
-8. Frontend stores token, redirects to /dashboard
-```
-
-### Data Access
-
-```
-1. Frontend request → API endpoint (with token)
-   │
-2. API validates token via Redis
-   │
-3. API queries PostgreSQL
-   │
-4. PostgreSQL → API (data)
-   │
-5. API → Frontend (JSON response)
-```
-
-### Background Processing
-
-```
-1. API receives request requiring async work
-   │
-2. API enqueues job to Redis queue
-   │
-3. Worker picks up job from queue
-   │
-4. Worker processes and updates database
-   │
-5. API notifies frontend (optional)
-```
-
-## Service Communication
-
-### Inter-Service
-
-- **API ↔ PostgreSQL**: SQLModel ORM, connection pooling
-- **API ↔ Redis**: Redis client (caching, sessions)
-- **Bot ↔ PostgreSQL**: SQLModel ORM
-- **Bot ↔ Redis**: Job queue, state sharing
-- **Worker ↔ Redis**: Job queue processing
-- **Worker ↔ PostgreSQL**: Data persistence
-
-### External
-
-- **API ↔ Discord OAuth**: HTTP requests
-- **Bot ↔ Discord**: WebSocket (gateway)
-- **Frontend ↔ API**: REST API over HTTP
-
-## Deployment Architecture
-
-### Docker Compose
-
-Each service runs in its own container:
-- `redis` - Cache layer
-- `postgres` - Database
-- `api` - FastAPI server
-- `bot` - Discord bot
-- `workers` - Background workers
-- `pgadmin` - Database admin UI
-- `grafana` - Analytics dashboard
-
-### Environment Configuration
-
-Services communicate via Docker DNS:
-- `postgres:5432` - Database host
-- `redis:6379` - Cache host
-- Services share the same network
-
-## Security
-
-### Authentication
-
-- **OAuth 2.0** with Discord for user authentication
-- **Bearer Tokens** for API access (JWT recommended)
-- **Session Storage** in Redis with TTL
-
-### Data Protection
-
-- **Password Hashing** for sensitive data
-- **HTTPS** enforced in production
-- **CORS** restricted to whitelisted origins
-- **SQL Injection** prevention via ORM
-
-### Audit Trail
-
-- **GDPR Compliance** with deletion audit logs
-- **User Data Deletion** soft-delete approach
-- **Timestamp Tracking** for all operations
-
-## Scaling Considerations
-
-### Horizontal Scaling
-
-- **Multiple API instances** behind load balancer
-- **Multiple Workers** consuming from Redis queue
-- **Read replicas** for PostgreSQL
-- **Redis Sentinel** for HA
-
-### Caching Strategy
-
-- **User profiles** cached in Redis
-- **Session data** stored in Redis with TTL
-- **Database query results** cached where applicable
-
-### Database Optimization
-
-- **Indexes** on frequently queried columns
-- **Connection pooling** for concurrent access
-- **Query optimization** using SQLModel
+`docker-compose.yml` provides PostgreSQL, Redis, pgAdmin, Grafana and Redis Commander. The `bot` service
+runs `python -m winter_dragon`. The `api` and `workers` services point at modules that don't exist yet —
+see [Planned](../planned.md).

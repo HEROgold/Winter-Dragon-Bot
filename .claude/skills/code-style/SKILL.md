@@ -1,38 +1,35 @@
 ---
 name: code-style
-description: WinterDragonV2 code style and typing rules. Use when writing, editing, refactoring, or reviewing any Python code in this repo — formatting, imports, docstrings, type annotations, fixing pyright/ty/ruff errors, or deciding how to handle Any/cast/noqa.
+description: WinterDragonV2 code style and typing rules. Use when writing, editing, refactoring, or reviewing any Python code in this repo — formatting, imports, docstrings, type annotations, fixing pyrefly/ty/ruff errors, or deciding how to handle Any/cast/noqa.
 ---
 
 # Code style & typing
 
-Python **3.15**, ruff with `select = ["ALL"]` (only `D105`, `TD005` ignored), pyright **strict**, and astral `ty` all run in pre-commit. Assume every rule is on; write code that passes without suppressions, and suppress only with a specific code.
+Python **3.15**, ruff `select = ["ALL"]` (ignores only `D105`, `TD005`, `CPY001`, `T20` — see [ruff.toml](../../../ruff.toml)), **pyrefly strict** with a baseline (pre-commit), and astral `ty` (pre-push). Write code that passes without suppressions; suppress only with a specific code.
 
 ## Module skeleton
-
-Every module, no exceptions (isort enforces the import; D-rules enforce the docstring):
 
 ```python
 """One-line module docstring."""
 from __future__ import annotations
 
-import logging
-from typing import TYPE_CHECKING
+lazy import asyncio
+lazy from typing import TYPE_CHECKING
 
-from wd_config import Config
+lazy from wd_config import Config
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    lazy from collections.abc import Callable
 ```
 
-- Line length **128**, 4-space indent, **double quotes**, magic trailing commas kept.
-- **Two blank lines after the import block** (`lines-after-imports = 2` in [ruff.toml](../../../ruff.toml)).
-- Imports only used for annotations go in `if TYPE_CHECKING:` — see [client.py](../../../wd-discord/src/wd_discord/client.py) for the idiom.
-- Docstrings: PEP-257 imperative ("Send a GET request."), on all public classes/functions. Sphinx roles (`:class:`, `:mod:`) welcome in module docstrings.
+- **PEP 810 `lazy` imports** at module level, as every module in the tree does. A plain (eager) import only where the tooling needs the name at class-definition time — e.g. pydantic/SQLModel field types (see the `runtime-evaluated-base-classes` note in ruff.toml).
+- Line length **128**, 4-space indent, **double quotes**, magic trailing commas kept, **two blank lines after imports**.
+- Annotation-only imports go under `if TYPE_CHECKING:`.
+- Docstrings: PEP-257 imperative ("Send a GET request."), on every public class/function. Sphinx roles welcome. The first paragraph is what [docs/reference/](../../../docs/reference/index.md) shows, so make it say what the thing does.
+- Logging: herogold loggers render **t-strings** — `self.logger.warning(t"Unresolved user '{name}'")`, not `%`-style.
 
 ## Typing rules
-
-Use the modern forms only:
 
 | Use | Never |
 |---|---|
@@ -41,14 +38,17 @@ Use the modern forms only:
 | PEP 695 `class Store[T]:` / `def f[**P, T](...)` | module-level `TypeVar(...)` / `ParamSpec(...)` |
 | `Self` for `__aenter__`, alt constructors | returning the class name |
 | `@override` on every overriding method | silent overrides |
+| `TypeIs[T]` for narrowing predicates (`is_network_error`) | `bool` returns the caller must `cast` after |
 
-Reference examples: [wd-types/src/wd_types/alias.py](../../../wd-types/src/wd_types/alias.py) (bounded generics, ParamSpec, defaulted type params), [client.py:56](../../../wd-discord/src/wd_discord/client.py#L56) (`def returns_known_exception[**P, T, E: Exception]`).
+Examples: [wd_types/alias.py](../../../wd-types/src/wd_types/alias.py) (bounded generics, ParamSpec, defaulted type params); `returns_known_exception[**P, T, E: Exception]` in [wd_discord/client.py](../../../wd-discord/src/wd_discord/client.py).
 
-Kwargs are typed with a `TypedDict` + `Unpack`, not `**kwargs: Any` — see `BotArgs` in [wd-bot/src/wd_bot/cogs.py:29](../../../wd-bot/src/wd_bot/cogs.py#L29) (`Required`/`NotRequired` per key).
+Kwargs are a `TypedDict` + `Unpack`, not `**kwargs: Any` — `BotArgs` in [wd_bot/cogs.py](../../../wd-bot/src/wd_bot/cogs.py) (`Required`/`NotRequired` per key).
+
+Plain-data classes whose `__init__` only copies parameters are `@dataclass`es (keyword-only after `_: KW_ONLY`) — e.g. `SteamSaleNotifier`, `ClientBound`.
 
 ### Prefer generators for collection-returning helpers
 
-A helper/property that derives a sequence should **yield** and be annotated `Generator[T]` (import from `collections.abc` under `TYPE_CHECKING`), not eagerly build and return a `list`. Consumers that need a materialised list wrap the call with `list(...)`. See `Channel.applied_forum_tags` in [wd-discord/src/wd_discord/channel/channel.py](../../../wd-discord/src/wd_discord/channel/channel.py):
+A helper/property deriving a sequence **yields** and is annotated `Generator[T]`; callers wrap with `list(...)` when they need one. Example: `Channel.applied_forum_tags` in [resources/channel/channel.py](../../../wd-discord/src/wd_discord/resources/channel/channel.py):
 
 ```python
 @property
@@ -58,39 +58,41 @@ def applied_forum_tags(self) -> Generator[ForumTag]:
     yield from (tag for tid in self.applied_tags for tag in self.available_tags if tag.id == tid)
 ```
 
-This keeps derivation lazy; a `return []`/`[...]` version forces work callers may not need. (Note: `Snowflake` is a non-frozen `@dataclass` and thus unhashable — resolve id→object by linear `==` scan, not a `dict`/`set` lookup.)
+(`Snowflake` is a non-frozen `@dataclass`, so unhashable — resolve id→object by `==` scan, not a `dict`/`set`.)
 
 ## Errors as values, not exceptions
 
-Functions that can fail return the error instead of raising; the return type is a union the caller must narrow:
+Fallible functions return the error; the return type is a union the caller narrows:
 
 ```python
-type RequestResult = Response | ApiResponseError | RequestError
+type NetworkError = ApiResponseError | RequestError
 
-result = await client.get(url)
-if isinstance(result, ApiResponseError):
+me = await client.users.me()          # User | NetworkError
+if is_network_error(me):
     ...handle...
 ```
 
-The `returns_known_exception` decorator ([client.py:56](../../../wd-discord/src/wd_discord/client.py#L56)) converts a known exception into a return value; herogold's `with_known_exception` is the sync analog. Follow this contract when extending `wd-discord` or `wd-errors`; don't add bare `raise` paths for expected failures.
+`returns_known_exception` (async, [client.py](../../../wd-discord/src/wd_discord/client.py)) and herogold's `with_known_exception` (sync) turn a known exception into a return value. No bare `raise` paths for expected failures in wd-discord/wd-errors/wd-bot.
 
 ## Escape hatches — the discipline
 
-- **No blanket suppressions.** Bare `# noqa` and bare `# type: ignore` are forbidden (pre-commit pygrep hook). Always use the coded form: `# noqa: ANN401`, `# noqa: N811`.
-- `Any` only where genuinely unavoidable, always paired with `# noqa: ANN401` at that site.
-- `cast` uses the string-literal target form — `cast("Guild", channel)` — and is reserved for third-party/dynamic objects (see [wd-cogs/src/wd_cogs/utility/team.py](../../../wd-cogs/src/wd_cogs/utility/team.py)). Prefer a `Protocol` over a `cast` when you control the call site (see the advanced-patterns skill).
-- A justifying comment accompanies suppressions of behavior rules (e.g. `BLE001` blind-except in [client.py:82](../../../wd-discord/src/wd_discord/client.py#L82)).
+- **No blanket suppressions** (pygrep hook). Coded forms only: `# noqa: ANN401`, `# pyrefly: ignore[not-async]`, `# ty: ignore[missing-argument]`.
+- `Any` only where unavoidable, with `# noqa: ANN401` at that site.
+- `cast("Guild", channel)` (string-literal target), only for third-party/dynamic objects. Prefer a `Protocol` (advanced-patterns).
+- Suppressing a behavior rule needs a reason on the same line — `# noqa: BLE001 - non-JSON or unexpected shape` in `Client.request`.
 
 ## Naming
 
-- Modules/functions `snake_case`, classes `PascalCase`, module constants `UPPER_SNAKE`.
-- Renaming imports to satisfy casing rules gets a coded noqa: `from x import URL as UserAgentURL  # noqa: N811`.
-- Packages: dir `wd-<name>`, import package `wd_<name>`, src-layout under `src/`.
+- `snake_case` modules/functions, `PascalCase` classes, `UPPER_SNAKE` constants.
+- Import renames that break casing get a coded noqa: `lazy from x import URL as UserAgentURL  # noqa: N811`.
+- Packages: dir `wd-<name>`, import `wd_<name>`, src layout.
 
 ## Verify before committing
 
 ```powershell
-uv run ruff check .; uv run ruff format --check .; uv run pyright
+uv run ruff check <files> --fix --unsafe-fixes; uv run ruff format <files>
+uvx pyrefly check <files>
+uv run pytest -q
 ```
 
-`docs/dev/setup.md` code samples are stale (they use `Optional`) — the source tree, not the docs, is the style reference.
+The source tree, not `docs/dev/`, is the style reference.

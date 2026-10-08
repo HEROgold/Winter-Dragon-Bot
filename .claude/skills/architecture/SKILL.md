@@ -5,46 +5,47 @@ description: WinterDragonV2 package layering, coupling rules, dependency injecti
 
 # Architecture — layering, DI & domain placement
 
+Per-package public API: [docs/reference/index.md](../../../docs/reference/index.md). Read the page, not the source, to find a symbol.
+
 ## The layer diagram (dependency direction is law)
 
 ```
-wd-types   wd-errors   wd-config      ← leaves: depend on nothing internal
-     \         |        /   \
-      \        |    wd-db   wd-discord   ← infrastructure (each: wd-config only)
-       \       |       \     /
-        \      |       wd-core           ← domain (config + discord)
-         \     |      /
-           wd-cogs                       ← features (core + db + discord)
-              |
-           wd-bot                        ← composition/runtime
+wd-types            wd-config             ← leafs: depend on nothing internal
+                    /       \
+                wd-db      wd-discord     ← infrastructure (each: wd-config only)
+                   \       /    \
+                    \  wd-core  wd-errors ← shared domain helpers / error machinery (on wd-discord)
+                     \    |     /
+                       wd-bot             ← bot framework: Bot, Cog/GroupCog, commands, components, sync
+                          |
+                    winter_dragon         ← the app (root src/): __main__ + the live cogs
 ```
 
-Rules:
-
-- **wd-discord never imports wd-core/wd-db.** It is a thin transport layer: HTTP (`Client` in [client.py](../../../wd-discord/src/wd_discord/client.py), with resource operations on stores and client-bound entities in [entities/](../../../wd-discord/src/wd_discord/entities/)) and WebSocket ([gateway/](../../../wd-discord/src/wd_discord/gateway/)), errors-as-values. API **responses** are validated pydantic models (`DiscordModel` base — see the [discord-api-models](../discord-api-models/SKILL.md) skill); **outbound** (object→API) bodies are built without a socket so they test offline: plain functions/dataclasses ([gateway/connection.py](../../../wd-discord/src/wd_discord/gateway/connection.py): `build_presence`, `GatewayActivity.to_dict`), or a pydantic `BaseModel` (not `DiscordModel`) when Discord documents limits worth validating before sending (`ApplicationCommandParams` in [interactions.py](../../../wd-discord/src/wd_discord/interactions.py)). wd-discord depends on `wd-config` (Config flags) and `sentry-sdk` (unknown-field telemetry) — nothing higher in the stack.
-- **Domain logic lives in wd-core and wd-cogs** — e.g. audit-log behavior (`AuditEvent`, `create_embed`) in [wd-core/src/wd_core/events.py](../../../wd-core/src/wd_core/events.py); feature behavior in `wd-cogs`.
-- **wd-bot only composes**: cog discovery via `pkgutil` ([bot.py](../../../wd-bot/src/wd_bot/bot.py)), lifecycle, reload. New behavior goes in a cog or in core, not in `wd_bot`.
-- **Declare every internal dep in the package's `pyproject.toml`** as `{ workspace = true }`. Known debt: `wd-bot` imports `wd_db`/`wd_errors`/`wd_core`/`wd_cogs` but declares only `wd-config` — it works only because the workspace installs everything. Don't add more undeclared imports; declare them when touching a manifest.
-- Cross-package structural types go in **wd-types** (`Mentionable` protocol, `alias.py`); shared error machinery in **wd-errors**.
+- **The live feature code is `src/winter_dragon/cogs/`.** `python -m winter_dragon` builds `Bot(extensions_package=cogs)` from there. Its tests live in `wd-bot/tests/` (`test_steam_*`, `test_fuel_cog`, ...).
+- **`wd-cogs` is a legacy catalog** of discord.py-era cogs (`discord.Interaction`, `app_commands`); discord.py isn't installed and the app never loads it. Port a cog into `winter_dragon/cogs/` on the `wd_bot` API rather than editing it in place. (`Bot`'s default `extensions_package` is still `wd_cogs` — always pass one.)
+- **wd-discord never imports wd-core/wd-db/wd-bot.** It is the transport: HTTP (`Client`, transport only) plus stores and client-bound entities ([entities/](../../../wd-discord/src/wd_discord/entities/)), WebSocket ([gateway/](../../../wd-discord/src/wd_discord/gateway/)), errors-as-values. Responses are validated `DiscordModel`s (see [discord-api-models](../discord-api-models/SKILL.md)); outbound bodies are built without a socket so they test offline — plain functions/dataclasses (`build_presence`, `GatewayActivity.to_dict` in [gateway/connection.py](../../../wd-discord/src/wd_discord/gateway/connection.py)) or a pydantic `BaseModel` when Discord documents limits worth validating (`ApplicationCommandParams` in [interactions.py](../../../wd-discord/src/wd_discord/interactions.py)). Its only internal dep is `wd-config`.
+- **wd-bot is framework, not features.** Lifecycle, extension discovery ([extensions.py](../../../wd-bot/src/wd_bot/extensions.py)), dispatch, command sync. A new feature is a cog in `winter_dragon/cogs/`; a reusable mechanism goes in `wd_bot` or `wd_core`.
+- **Declare every internal dep in the package's `pyproject.toml`** via `uv add --package <member> wd-x` (see [dependencies](../dependencies/SKILL.md)). Known debt: `wd-bot` imports `wd_db`, and `wd-errors` imports `wd_discord`, without declaring them.
+- Cross-package structural types go in **wd-types** (`Mentionable`, `alias.py`); shared error machinery in **wd-errors**.
 
 ## Dependency injection — the three sanctioned forms
 
-1. **Constructor injection** (default). Collaborators are parameters: `AuditEventHandler(event, session, bot)` ([events.py](../../../wd-core/src/wd_core/events.py)). Cogs take `**kwargs: Unpack[BotArgs]` where `bot` is `Required` and `db_session` is `NotRequired` with a fallback: `self.session = kwargs.get("db_session", Session(engine))` ([wd-bot/src/wd_bot/cogs.py:60](../../../wd-bot/src/wd_bot/cogs.py#L60)). Tests inject; runtime falls back to the shared default.
+1. **Constructor injection** (default). Collaborators are parameters: `AuditEventHandler(event, session, bot)` ([wd_core/events.py](../../../wd-core/src/wd_core/events.py)); `SteamSaleNotifier` takes its client and store as dataclass fields. Cogs take `**kwargs: Unpack[BotArgs]` — `bot` `Required`, `db_session` `NotRequired` with a fallback in `Cog.__init__` ([wd_bot/cogs.py](../../../wd-bot/src/wd_bot/cogs.py)): `kwargs.get("db_session", Session(engine))`. Tests inject; runtime falls back to the shared default.
 
-2. **Self-registering factory registries** — for open sets of handlers keyed by a value. The pattern: a factory class holding a `ClassVar` dict + `register()`/`get_*()` classmethods, populated by `__init_subclass__` on a base class, so defining a subclass IS the registration:
-   - `ErrorFactory` ([wd-errors/src/wd_errors/factory.py](../../../wd-errors/src/wd_errors/factory.py)), registered from [error.py](../../../wd-errors/src/wd_errors/error.py) `__init_subclass__`.
-   - `AuditEventFactory` keyed by the subclass-declaration kwarg: `class X(AuditEvent, action=AuditLogAction.ban)` ([events.py](../../../wd-core/src/wd_core/events.py)).
-   - `BaseModel.__init_subclass__` auto-collects every model ([wd-db/src/wd_db/extension/model.py](../../../wd-db/src/wd_db/extension/model.py)).
-   Registration happens at import time — a package `__init__` must import the modules containing the subclasses (see the note in `wd-errors/__init__.py`).
+2. **Self-registering factory registries** — an open set of handlers keyed by a value. A factory class holds a `ClassVar` dict + `register()`/`get_*()` classmethods, populated by `__init_subclass__` on a base, so defining a subclass IS the registration:
+   - `ErrorFactory` ([wd_errors/factory.py](../../../wd-errors/src/wd_errors/factory.py)), registered from `DiscordError.__init_subclass__` ([error.py](../../../wd-errors/src/wd_errors/error.py)).
+   - `AuditEventFactory`, keyed by the subclass kwarg: `class X(AuditEvent, action=AuditLogAction.ban)` ([wd_core/events.py](../../../wd-core/src/wd_core/events.py)).
+   - `BaseModel.__init_subclass__` auto-collects every model ([wd_db/extension/model.py](../../../wd-db/src/wd_db/extension/model.py)).
+   Registration happens at import time — a package `__init__` must import the modules holding the subclasses.
 
-3. **Service locator (module singletons)** — reserved for process-wide resources: `engine`/`session` in [wd-db/src/wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) (exposed via `SessionMixin`), and the static config classes (`Settings`, `DbUrl`). Don't create new module-level singletons for anything a constructor parameter can carry; the locator is the fallback, injection is the interface.
+3. **Service locator (module singletons)** — only for process-wide resources: `engine`/`session` in [wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) (via `SessionMixin`) and the static config classes (`Settings`, `DbUrl`). Anything a constructor parameter can carry doesn't get a new singleton.
 
-Decorator injection for config values: `@Config.with_kwarg("Tokens", "discord_token")` (see the config-and-constants skill).
+Decorator injection for config values: `@Config.with_kwarg("Tokens", "discord_token")` (see config-and-constants).
 
 ## Avoiding repetition — the reuse toolbox, in order
 
-1. **Import it.** Most duplication here started as a copy of an enum or helper (in-tree anti-examples: `Region`/`Platform` duplicated between `riot_clash_api.py` and `league_of_legends.py`; `Cassiopeia*` protocols copied between two cogs). If two packages need it, move it down a layer (usually wd-types/wd-core), don't copy.
-2. **Mixins** for orthogonal capabilities: `LoggerMixin` (herogold) gives `self.logger` everywhere; `SessionMixin` shares the DB session.
-3. **Base classes with behavior**: `BaseModel` is a repository (`add/update/get/get_all/delete/fetch`); `Cog`/`GroupCog` hierarchy configures per-subclass `CogFlags` through `__init_subclass__`.
+1. **Import it.** If two packages need it, move it down a layer (usually wd-types/wd-core), don't copy. In-tree anti-examples: `Region`/`Platform` in both `riot_clash_api.py` and `league_of_legends.py`; `Cassiopeia*` protocols in two cogs.
+2. **Mixins** for orthogonal capabilities: `LoggerMixin` (herogold) gives `self.logger`; `SessionMixin` shares the DB session.
+3. **Base classes with behavior**: `BaseModel` is a repository (`add/update/get/get_all/delete/fetch`); `Cog`/`GroupCog` configure per-subclass `CogFlags` through `__init_subclass__`.
 4. **Decorators** for cross-cutting policy: `returns_known_exception`, `with_known_exception`, `@loop`, `@Config.with_kwarg`.
-5. **Descriptors/Protocols** for reusable field behavior and structural contracts — see the advanced-patterns skill.
+5. **Descriptors/Protocols** — see advanced-patterns.

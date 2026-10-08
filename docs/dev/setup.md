@@ -2,322 +2,111 @@
 
 ## Prerequisites
 
-- Python 3.15+
-- Bun (for frontend)
-- Docker and Docker Compose
-- Git
-- A code editor (VS Code recommended)
+- Python 3.15 and [uv](https://docs.astral.sh/uv/) (uv installs the interpreter if it's missing)
+- Docker, for PostgreSQL and the other infrastructure services
+- A Discord application with a bot token
 
-## Local Development Environment
-
-### 1. Clone the Repository
+## Install
 
 ```bash
 git clone https://github.com/HEROgold/Winter-Dragon-Bot.git
 cd Winter-Dragon-Bot
 git checkout v2
-```
-
-### 2. Install Python Dependencies
-
-Using UV (fast Python package manager):
-
-```bash
-# Install all workspace dependencies
 uv sync
-
-# Or install specific workspaces
-uv sync --group wd-bot
+uvx pre-commit install
 ```
 
-### 3. Setup Environment Variables
+`uv sync` installs every workspace package in editable mode. Change dependencies only with
+`uv add --package <wd-member> <requirement>`, never by editing `pyproject.toml` or `uv.lock` by hand.
 
-Create `.env` file in project root:
+## Configure
 
-```env
-# Python
-PYTHON_LAZY_IMPORTS=all
+Configuration lives in `config.ini` (bot) and `discord.ini` (Discord API), not environment variables. On the
+first run the bot writes both files with defaults and stops with `FirstTimeLaunchError`. Every value shown as
+`!!` must be filled in, for example `[Tokens] discord_token`. All settings and their defaults are in the
+[`wd_config` reference](../reference/wd-config.md).
 
-# Database
-DB_PASSWORD=dev-password-change-in-prod
-
-# Discord OAuth
-DISCORD_CLIENT_ID=your-client-id
-DISCORD_REDIRECT_URI=http://localhost:3000
-
-# Admin Interfaces
-PGADMIN_EMAIL=admin@example.com
-PGADMIN_PASSWORD=dev-password
-
-GRAFANA_ADMIN_USER=admin
-GRAFANA_ADMIN_PASSWORD=dev-password
-```
-
-### 4. Start Services
+## Run
 
 ```bash
-# Build and start all services
-docker compose up --build
+# Infrastructure only: postgres, redis and the admin UIs
+docker compose up -d postgres redis redis-commander pgadmin grafana
 
-# Or in background
-docker compose up -d --build
+# The bot, against the configured PostgreSQL database
+uv run python -m winter_dragon
+
+# Or a time-boxed live bot on a local sqlite database (stops after 10 minutes)
+uv run python -m winter_dragon.run_test_bot
 ```
 
-### 5. Frontend Development
+| Service | URL | Default login |
+|---|---|---|
+| pgAdmin | <http://localhost:5050> | `admin@example.com` / `admin123` |
+| Grafana | <http://localhost:3002> | `admin` / `admin123` |
+| Redis Commander | <http://localhost:8081> | — |
 
-In a new terminal:
+PostgreSQL is only reachable inside the compose network: `docker compose exec postgres psql -U postgres winter_dragon`.
 
-```bash
-cd frontend
-bun install
-bun run serve
-```
+## Adding a feature
 
-Frontend will auto-reload on file changes.
-
-## Project Structure
-
-```
-WinterDragonV2/
-├── docs/                          # MkDocs documentation
-│   ├── guide/                     # User guides
-│   ├── dev/                       # Developer guides
-│   └── index.md                   # Home page
-├── src/winter_dragon/
-│   ├── bot/
-│   │   ├── api/                   # FastAPI server
-│   │   ├── cogs/                  # Discord bot cogs
-│   │   └── __main__.py           # Bot entry point
-│   ├── database/
-│   │   ├── tables/               # SQLModel ORM tables
-│   │   └── manager.py            # Database manager
-│   ├── workers/                  # Background tasks
-│   └── __main__.py               # Main entry point
-├── frontend/                      # React + Bun frontend
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── components/
-│   │   └── main.tsx
-│   └── vite.config.ts
-├── wd-bot/                       # Bot workspace package
-├── wd-db/                        # Database workspace package
-├── wd-discord/                   # Discord extensions
-├── wd-core/                      # Core utilities
-├── wd-errors/                    # Error handling
-├── wd-types/                     # Type definitions
-└── pyproject.toml               # Main project config
-```
-
-## Development Workflow
-
-### Adding Database Tables
-
-1. Create table definition in `src/winter_dragon/database/tables/`
-2. Use SQLModel for type hints and ORM
-3. Run migration or recreate containers
-
-Example:
+A feature is a cog module in `src/winter_dragon/cogs/`. The bot discovers it automatically.
 
 ```python
-# src/winter_dragon/database/tables/my_table.py
-from sqlmodel import SQLModel, Field
-from typing import Optional
+"""The /uptime command group: how long the bot has been running."""
 
-class MyTable(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id")
-    data: str
+from __future__ import annotations
+
+lazy from typing import TYPE_CHECKING
+
+lazy from wd_bot.cogs import Cog, GroupCog
+
+
+if TYPE_CHECKING:
+    lazy from wd_discord import CommandInteraction
+
+
+class Uptime(GroupCog, name="uptime", description="Show how long the bot has been running"):
+    """Cog for showing the bot's uptime."""
+
+    @Cog.command(name="bot", description="Show the bot's current uptime")
+    async def bot_uptime(self, interaction: CommandInteraction) -> None:
+        """Reply with when the bot started."""
+        await interaction.respond(f"Online since {self.bot.launch_time}")
 ```
 
-### Adding API Endpoints
+- Database tables are `SQLModel` classes with `table=True`, declared next to the cog. The cog creates them
+  with `self.create_tables(Model)` (see `winter_dragon/cogs/fuel.py`).
+- Settings go in a new class in `wd-config` (see `SteamSettings`, `UrbanSettings`).
+- Buttons use `@Cog.component(prefix)`, gateway events use `@Cog.listener`.
 
-1. Create route in `src/winter_dragon/bot/api/routes.py`
-2. Use FastAPI decorators
-3. Add SQLModel schemas for request/response
-
-Example:
-
-```python
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/api/my-resource", tags=["my-resource"])
-
-@router.get("/{id}")
-async def get_resource(id: int):
-    return {"id": id}
-```
-
-### Adding Discord Bot Commands
-
-1. Create cog in `src/winter_dragon/bot/cogs/`
-2. Extend `commands.Cog`
-3. Use decorators for commands/listeners
-
-Example:
-
-```python
-# src/winter_dragon/bot/cogs/my_cog.py
-from discord.ext import commands
-
-class MyCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-    
-    @commands.command()
-    async def mycommand(self, ctx):
-        await ctx.send("Hello!")
-
-async def setup(bot):
-    await bot.add_cog(MyCog(bot))
-```
-
-### Adding Background Jobs
-
-1. Create task in `src/winter_dragon/workers/`
-2. Enqueue from API via Redis
-3. Worker processes asynchronously
-
-## Testing
-
-### Run Tests
+## Test
 
 ```bash
-# All tests
-uv run pytest
-
-# Specific test file
-uv run pytest tests/test_api.py
-
-# With coverage
-uv run pytest --cov=src
+uv run pytest -q                       # whole suite
+uv run pytest wd-bot/tests -k steam -q # one area
 ```
 
-### Test Structure
+Cog tests live in `wd-bot/tests/`; wd-discord tests in `wd-discord/tests/`. Offline tests use
+`wd_discord.testing.RecordingClient` and an in-memory sqlite session. Tests marked `integration` hit the real
+Discord API and skip unless a token is configured.
 
-```
-tests/
-├── test_api.py              # API endpoint tests
-├── test_database.py         # Database tests
-├── test_bot.py             # Bot tests
-└── conftest.py             # Pytest fixtures
-```
+## Code quality
 
-## Code Quality
-
-### Type Checking
+Pre-commit runs ruff (all rules), strict pyrefly with a baseline, the doc-link check, and the generated-file
+checks. To run the main ones by hand:
 
 ```bash
-uv run pyright
-```
-
-### Linting
-
-```bash
-uv run ruff check .
-```
-
-### Formatting
-
-```bash
+uv run ruff check . --fix
 uv run ruff format .
+uvx pyrefly check src wd-bot/src wd-cogs/src wd-config/src wd-core/src wd-db/src wd-discord/src wd-errors/src wd-types/src --baseline pyrefly-baseline.json
+uv run python scripts/generate_api_reference.py   # after changing any public API
 ```
 
-### Pre-commit Hooks
+## Docs
 
 ```bash
-# Install hooks
-pre-commit install
-
-# Run manually
-pre-commit run --all-files
+uv sync --group docs
+uv run zensical serve
 ```
 
-## Debugging
-
-### View Logs
-
-```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f api
-
-# Last 100 lines
-docker compose logs -f --tail=100
-```
-
-### Access Database
-
-Using PgAdmin:
-1. Navigate to http://localhost:5050
-2. Login with credentials from `.env`
-3. Query database directly
-
-### Debug API
-
-FastAPI provides Swagger UI at http://localhost:8001/docs for interactive testing.
-
-### Debug Bot
-
-Enable debug logging in bot startup:
-
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
-
-## Common Tasks
-
-### Rebuild Containers
-
-```bash
-docker compose up --build --force-recreate
-```
-
-### Reset Database
-
-```bash
-docker compose down -v  # Remove volumes
-docker compose up       # Recreate volumes
-```
-
-### View Database Migrations
-
-Check `IMPLEMENTATION.md` for database schema overview.
-
-## Troubleshooting
-
-### Import Errors
-
-Ensure workspace dependencies are installed:
-
-```bash
-uv sync --all-groups
-```
-
-### Database Connection Fails
-
-Verify PostgreSQL is running:
-
-```bash
-docker compose ps postgres
-```
-
-### API Not Accessible
-
-Check if service started:
-
-```bash
-docker compose logs api
-```
-
-### Bot Won't Connect
-
-Verify Discord token and permissions are set correctly in config.
-
-## Next Steps
-
-- Review [Architecture](architecture.md) for system design
-- Check [Database Schema](database.md) for data models
-- Read [API Usage](../guide/api-usage.md) for integration examples
+`docs/reference/` is generated. Don't edit it; rerun `scripts/generate_api_reference.py`.

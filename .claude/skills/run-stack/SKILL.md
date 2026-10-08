@@ -7,7 +7,7 @@ description: Start and smoke-check the WinterDragonV2 docker compose stack (post
 
 All commands from the repo root. Docker Desktop must be running (verified against server 29.5.2).
 
-**Do not `docker compose up` the whole file.** The `bot`, `api`, and `workers` services run `python -m winter_dragon[.api|.workers]`, but `src/winter_dragon/` is an empty package mid-rewrite — those containers crash-loop. The infra services are what works.
+**Do not `docker compose up` the whole file.** `api` and `workers` run `python -m winter_dragon.api` / `.workers`, which don't exist — they crash-loop. `bot` runs `python -m winter_dragon`, which now exists (`src/winter_dragon/__main__.py`), but the container has not been re-verified since. Bring up the infra services, and run the bot on the host (run-wd-discord skill) unless you are deliberately testing the container.
 
 ## Run (agent path) — verified 2026-07-07
 
@@ -27,13 +27,13 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/   # Redis Commande
 
 Default credentials (compose fallbacks): pgAdmin `admin@example.com`/`admin123`, Grafana `admin`/`admin123`, DB `postgres`/`postgres` on database `winter_dragon` (postgres is `expose`d to the compose network only, not published to the host).
 
-## Build (the image is fine; the entry point isn't)
+## Build
 
 ```powershell
 docker compose build bot
 ```
 
-Verified to complete (exit 0, 2026-07-07) — the multi-stage Dockerfile builds `python:3.15-rc-slim-trixie` + `uv sync --frozen --no-dev` cleanly. The image is healthy; it's only the runtime `CMD ["python", "-m", "winter_dragon"]` that fails because the module has no `__main__`. So "the build is broken" and "the container won't run" are different problems — the build is not the issue.
+Verified to complete (exit 0, 2026-07-07) — the multi-stage Dockerfile builds `python:3.15-rc-slim-trixie` + `uv sync --frozen --no-dev` cleanly. The build and the container runtime are separate problems: a green build says nothing about whether `CMD ["python", "-m", "winter_dragon"]` reaches READY (it needs the token in the mounted `config.ini` and a reachable postgres).
 
 ## Stop
 
@@ -43,5 +43,5 @@ docker compose down          # keep volumes (postgres/grafana data persist)
 
 ## Gotchas
 
-- `bot`/`api`/`workers` services: the Dockerfile CMD is `python -m winter_dragon` and compose overrides use `winter_dragon.api` / `winter_dragon.workers` — none of those modules exist yet. Until the rewrite lands an entry point, run app code on the host (see run-wd-discord skill) against this dockerized infra.
+- `api`/`workers` services: `winter_dragon.api` / `winter_dragon.workers` don't exist; there is no HTTP API or worker service in the tree yet (see docs/planned.md).
 - The compose file publishes no postgres port; to reach it from the host tooling use `docker compose exec postgres psql -U postgres winter_dragon`.
