@@ -30,6 +30,7 @@ dependencies = [
   "herogold==5.0.0",
   "httpxyz>=0.42.0",
   "pydantic>=2.13.5",
+  "matplotlib>=3.11.2",
 ]
 
 [dependency-groups]

@@ -23,23 +23,29 @@ Settings (`[SteamSettings]` in `config.ini`): `country_code`, `stored_percent`, 
 
 ## Reminders
 
-Personal reminders, one-shot (`/remind`) or repeating on an interval (`/timed_reminder`), with a command to cancel one. Delivery is driven by a background loop against stored reminders, so reminders survive a restart.
+Personal reminders, one-shot or repeating on an interval, with a command to cancel one. Reminders are DMed by the cog's own background task, which looks for due ones every `check_interval` seconds; they're stored, so they survive a restart. A repeating reminder that came due while the bot was offline is sent once, then moves on to its next time. A reminder that can't be DMed (closed DMs) is dropped rather than retried forever. Cancelling autocompletes the member's own reminders.
 
-**Status:** 🟡 Copied, unwired.
+Surface: `/reminder add | repeat | remove`
+
+Settings (`[ReminderSettings]` in `config.ini`): `check_interval`.
+
+**Status:** ✅ Ported to `src/winter_dragon/cogs/reminder.py`; it keeps `main`'s `reminder`/`timedreminder` tables.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/reminder.py`
 
 ## Fuel tracking
 
-A personal log for vehicle refuelling — record a fill-up (`/fuel add`) and render a graph of distance travelled per unit of fuel over time (`/fuel graph efficiency`). An unusual feature for a Discord bot, and entirely per-user.
+A personal log for vehicle refuelling — record a fill-up (`/fuel add`) and render a graph of distance travelled per unit of fuel over time (`/fuel efficiency`), sent as a PNG attachment. An unusual feature for a Discord bot, and entirely per-user.
 
-**Status:** 🟡 Copied, unwired.
+**Status:** ✅ Ported to `src/winter_dragon/cogs/fuel.py`; it keeps `main`'s `carfuels` table. `/fuel graph efficiency` became `/fuel efficiency`: wd_bot has no nested subcommand groups.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/car_fuel.py`
 
 ## Urban Dictionary
 
-Look up a term, or pull a random definition (`/urban …`), rendered as embeds in-channel.
+Look up a term, or pull random definitions (`/urban search | random`), rendered as embeds in-channel. Long definitions are cut to fit Discord's embed limits.
 
-**Status:** 🟡 Copied, unwired.
+Settings (`[UrbanSettings]` in `config.ini`): `allow_random`, `max_definitions`.
+
+**Status:** ✅ Ported to `src/winter_dragon/cogs/urban.py`.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/urban.py`
 
 ---
@@ -52,5 +58,5 @@ Small, self-contained commands.
 - **Uptime** (`/uptime bot`) — how long the current process has been running.
 - **Team splitting** (`/team voice | text | lobby`) — randomly divide members into teams, either everyone in the caller's voice channel or a set shown in a message, with a lobby channel found or created for the purpose.
 
-**Status:** 🟡 Copied, unwired for all three.
+**Status:** ✅ Invites and uptime ported to `src/winter_dragon/cogs/invite.py` and `uptime.py`; 🟡 team splitting copied, unwired.
 **Source on `main`:** `src/winter_dragon/bot/extensions/utility/`
