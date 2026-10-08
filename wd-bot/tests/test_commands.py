@@ -8,11 +8,10 @@ lazy import sys
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.commands import Command, CommandGroup
-lazy from wd_discord.gateway.events import (
-    Interaction,
-    InteractionDataOption,
-    ResolvedData,
-)
+
+# Command resolves option annotations from module globals at runtime, so BoundUser must be available here.
+lazy from wd_discord import User as BoundUser  # noqa: TC002
+lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 lazy from wd_discord.interactions import ApplicationCommandOptionType, InteractionContextType
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.user import User
@@ -23,6 +22,7 @@ if TYPE_CHECKING:
 
     lazy import pytest
     lazy from conftest import InteractionFactory
+    lazy from wd_discord import CommandInteraction
 
 
 def make_user(user_id: str, username: str) -> User:
@@ -30,7 +30,7 @@ def make_user(user_id: str, username: str) -> User:
     return User.model_validate({"id": user_id, "username": username, "discriminator": "0"})
 
 
-async def percentage(self: object, interaction: Interaction, user: User) -> None:
+async def percentage(self: object, interaction: CommandInteraction, user: User) -> None:
     """Handle a command with one required user option."""
 
 
@@ -54,7 +54,7 @@ async def test_invoke_resolves_user_option_from_resolved_data(make_interaction: 
     """A USER option's snowflake is resolved to the full User from resolved data."""
     calls: list[tuple[object, object, dict[str, object]]] = []
 
-    async def handler(self: object, interaction: Interaction, user: User) -> None:
+    async def handler(self: object, interaction: CommandInteraction, user: User) -> None:
         """Record the call."""
         calls.append((self, interaction, {"user": user}))
 
@@ -72,14 +72,33 @@ async def test_invoke_resolves_user_option_from_resolved_data(make_interaction: 
     assert calls == [(cog, interaction, {"user": target})]
 
 
+async def test_invoke_binds_a_user_option_annotated_with_the_bound_user(make_interaction: InteractionFactory) -> None:
+    """A parameter annotated with wd_discord.User gets the resolved user bound to the interaction's client."""
+    received: list[BoundUser] = []
 
+    async def handler(self: object, interaction: CommandInteraction, user: BoundUser) -> None:  # noqa: ARG001
+        """Record the user."""
+        received.append(user)
+
+    command = Command(handler, name="percentage", description="d")
+    assert next(command.options()).type is ApplicationCommandOptionType.USER
+    target = make_user("4", "target")
+    interaction = make_interaction(
+        "percentage",
+        options=[InteractionDataOption(name="user", type=6, value="4")],
+        resolved=ResolvedData(users={"4": target}),
+    )
+
+    await command.invoke(object(), interaction)
+
+    assert [(user.model, user.client) for user in received] == [(target, interaction.client)]
 
 
 async def test_invoke_skips_unresolved_user_option(make_interaction: InteractionFactory) -> None:
     """An unresolvable user id is skipped, so the handler's default applies."""
     calls: list[User | None] = []
 
-    async def handler(self: object, interaction: Interaction, user: User | None = None) -> None:  # noqa: ARG001
+    async def handler(self: object, interaction: CommandInteraction, user: User | None = None) -> None:  # noqa: ARG001
         """Record the user."""
         calls.append(user)
 
@@ -100,7 +119,7 @@ async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str], m
     """An option the handler doesn't declare is skipped with a warning instead of raising TypeError."""
     calls: list[int] = []
 
-    async def handler(self: object, interaction: Interaction, count: int) -> None:  # noqa: ARG001
+    async def handler(self: object, interaction: CommandInteraction, count: int) -> None:  # noqa: ARG001
         """Record the count."""
         calls.append(count)
 
@@ -166,7 +185,6 @@ def test_signature_changes_with_default_member_permissions() -> None:
     assert plain.signature() != gated.signature()
 
 
-
 def test_signature_changes_with_contexts() -> None:
     anywhere = Command(percentage, name="percentage", description="d")
     guild_only = Command(percentage, name="percentage", description="d", contexts=[InteractionContextType.GUILD])
@@ -187,13 +205,14 @@ def test_params_carry_the_definition() -> None:
     assert params.contexts == [InteractionContextType.GUILD]
     assert [option.name for option in params.options or []] == [option.name for option in command.options()]
 
+
 async def test_invoke_reports_success_and_failure(make_interaction: InteractionFactory) -> None:
     """Invoking returns True when the handler completes and False (after logging) when it raises."""
 
-    async def ok(self: object, interaction: Interaction) -> None:
+    async def ok(self: object, interaction: CommandInteraction) -> None:
         """Succeed."""
 
-    async def boom(self: object, interaction: Interaction) -> None:  # noqa: ARG001
+    async def boom(self: object, interaction: CommandInteraction) -> None:  # noqa: ARG001
         """Fail."""
         msg = "handler broke"
         raise RuntimeError(msg)
@@ -203,11 +222,11 @@ async def test_invoke_reports_success_and_failure(make_interaction: InteractionF
     assert await Command(boom, name="c", description="d").invoke(object(), interaction) is False
 
 
-async def _noop(self: object, interaction: Interaction) -> None:
+async def _noop(self: object, interaction: CommandInteraction) -> None:
     """Handle a subcommand with no options."""
 
 
-async def _count_handler(self: object, interaction: Interaction, count: int) -> None:
+async def _count_handler(self: object, interaction: CommandInteraction, count: int) -> None:
     """Handle a subcommand with one required integer option."""
 
 
@@ -235,7 +254,7 @@ def test_group_signature_changes_with_a_subcommand() -> None:
 async def test_group_invoke_routes_nested_options_to_the_subcommand(make_interaction: InteractionFactory) -> None:
     calls: list[int] = []
 
-    async def add(self: object, interaction: Interaction, count: int) -> None:  # noqa: ARG001
+    async def add(self: object, interaction: CommandInteraction, count: int) -> None:  # noqa: ARG001
         calls.append(count)
 
     group = _group(Command(add, name="add", description="Add"))

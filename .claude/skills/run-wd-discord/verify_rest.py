@@ -12,13 +12,10 @@ import asyncio
 import sys
 
 from _common import load_token, support_guild_id
-from httpxyz import RequestError, Response
-from wd_discord import ApiResponseError, Client
-from wd_discord.application import Application
-from wd_discord.channel import Channel
+from httpxyz import RequestError
+from wd_discord import ApiResponseError, Channel, Client, CurrentUser, Guild, User
 from wd_discord.gateway.sharding import GatewayBotInfo
-from wd_discord.guild import Guild
-from wd_discord.user import User
+from wd_discord.resources.application import Application
 
 
 def _ok(result: object, expected: type, label: str) -> bool:
@@ -34,38 +31,38 @@ def _ok(result: object, expected: type, label: str) -> bool:
 
 
 async def main() -> int:
-    """Call every Client resource method once."""
+    """Call every store and entity REST method once."""
     async with Client(load_token()) as client:
-        me = await client.get_current_user()
-        if not _ok(me, User, "get_current_user() /users/@me"):
+        me = await client.users.me()
+        if not _ok(me, CurrentUser, "users.me() /users/@me"):
             return 1
-        assert isinstance(me, User)  # noqa: S101 - narrow for the calls below
-        my_id: str = me.model_dump(mode="json")["id"]  # Snowflake -> decimal string
+        assert isinstance(me, CurrentUser)  # noqa: S101 - narrow for the calls below
+        my_id = str(me.id)
 
-        if not _ok(await client.get_current_application(), Application, "get_current_application() /applications/@me"):
+        if not _ok(await client.application.fetch(), Application, "application.fetch() /applications/@me"):
             return 1
         if not _ok(await client.get_gateway_bot(), GatewayBotInfo, "get_gateway_bot() /gateway/bot"):
             return 1
-        if not _ok(await client.get_user(my_id), User, f"get_user({my_id})"):
+        if not _ok(await client.users.fetch(my_id), User, f"users.fetch({my_id})"):
             return 1
 
         gid = support_guild_id()
         if gid:
-            if not _ok(await client.get_guild(gid), Guild, f"get_guild({gid})"):
+            if not _ok(await client.guilds.fetch(gid), Guild, f"guilds.fetch({gid})"):
                 return 1
-            channels = await client.get(f"/guilds/{gid}/channels")
-            if isinstance(channels, Response) and channels.json():
-                first = channels.json()[0]["id"]
-                if not _ok(await client.get_channel(first), Channel, f"get_channel({first})"):
+            channels = await client.guilds.partial(gid).channels()
+            first = None if isinstance(channels, ApiResponseError | RequestError) else next(channels, None)
+            if first is not None:
+                if not _ok(await client.channels.fetch(first.id), Channel, f"channels.fetch({first.id})"):
                     return 1
             else:
                 print(f"REST SKIP: no channels listed for guild {gid} ({channels!r})")
         else:
-            print("REST SKIP: no support_guild_id in config; skipped get_guild/get_channel")
+            print("REST SKIP: no support_guild_id in config; skipped guilds.fetch/channels.fetch")
 
         # Mutating call: same-value username patch (no visible change), verifies the PATCH path.
-        patched = await client.modify_current_user(username=me.username)
-        if not _ok(patched, Response, "modify_current_user(username=<current>) PATCH /users/@me"):
+        patched = await me.edit(username=me.username)
+        if not _ok(patched, CurrentUser, "me.edit(username=<current>) PATCH /users/@me"):
             return 1
 
     print("REST OK: all resource methods exercised")

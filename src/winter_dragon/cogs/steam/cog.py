@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Coroutine, Generator, Iterable
 
     lazy from sqlalchemy import Connection, Engine
-    lazy from wd_discord.gateway.events import CommandInteraction, ComponentInteraction
+    lazy from wd_discord import CommandInteraction, ComponentInteraction
 
     lazy from winter_dragon.cogs.steam.models import SteamSale
 
@@ -197,21 +197,19 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     @Cog.command(name="add", description="Get notified automatically about free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def add(self, interaction: CommandInteraction) -> None:
         """Subscribe the invoking user to Steam sale DMs."""
-        user = interaction.invoking_user
+        user = interaction.user
         if user is None:
             return
         with Session(self._bind) as session:
             if SteamSaleStore(session).subscriber(int(user.id)) is not None:
-                await self.bot.client.create_interaction_response(
-                    interaction,
+                await interaction.respond(
                     content="Already in the list of recipients",
                     ephemeral=True,
                 )
                 return
             session.add(SteamUsers(id=int(user.id), last_notification=utc_now()))
             session.commit()
-        await self.bot.client.create_interaction_response(
-            interaction,
+        await interaction.respond(
             content=f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales.",
             ephemeral=True,
         )
@@ -222,12 +220,11 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     )
     async def percentage(self, interaction: CommandInteraction, percent: int) -> None:
         """Set the minimum discount the invoking user is notified about."""
-        user = interaction.invoking_user
+        user = interaction.user
         if user is None:
             return
         if not 0 <= percent <= MAX_PERCENT:
-            await self.bot.client.create_interaction_response(
-                interaction,
+            await interaction.respond(
                 content=f"The percentage must be between 0 and {MAX_PERCENT}.",
                 ephemeral=True,
             )
@@ -242,12 +239,12 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             content = f"You are not in the list of recipients. Use {self.mention(self.add)} to subscribe."
         else:
             content = f"Changed your sale notification threshold to {percent}%."
-        await self.bot.client.create_interaction_response(interaction, content=content, ephemeral=True)
+        await interaction.respond(content=content, ephemeral=True)
 
     @Cog.command(name="remove", description="No longer get notified of free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def remove(self, interaction: CommandInteraction) -> None:
         """Unsubscribe the invoking user from Steam sale DMs."""
-        user = interaction.invoking_user
+        user = interaction.user
         if user is None:
             return
         with Session(self._bind) as session:
@@ -256,7 +253,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 session.delete(subscriber)
                 session.commit()
         content = "Not in the list of recipients" if subscriber is None else "I will no longer notify you of new steam games."
-        await self.bot.client.create_interaction_response(interaction, content=content, ephemeral=True)
+        await interaction.respond(content=content, ephemeral=True)
 
     @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
         name="show",
@@ -264,31 +261,29 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     )
     async def show(self, interaction: CommandInteraction, percent: int = DEFAULT_THRESHOLD) -> None:
         """Show the first page of current sales of at least ``percent``, with buttons to page through them."""
-        user = interaction.invoking_user
+        user = interaction.user
         if user is None:
             return
         with Session(self._bind) as session:
             store = SteamSaleStore(session)
             sales = store.current_sales(percent, now=utc_now(), outdated_after=self._outdated_after)
             if not sales:
-                await self.bot.client.create_interaction_response(
-                    interaction,
+                await interaction.respond(
                     content=f"No steam games found with sales {percent}% or higher.",
                     ephemeral=True,
                 )
                 return
-            await self.bot.client.defer_interaction(interaction)
+            await interaction.defer()
             embed = build_page(sales, store.properties(sales), page=0, color=SteamSettings.embed_color)
         buttons = page_buttons(self.show_page, owner_id=int(user.id), percent=percent, page=0, pages=page_count(len(sales)))
-        await self.bot.client.edit_original_interaction_response(interaction, embeds=[embed], components=buttons)
+        await interaction.edit_original(embeds=[embed], components=buttons)
 
     @Cog.component("steam-show")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def show_page(self, interaction: ComponentInteraction, owner_id: str, percent: str, page: str) -> None:
         """Turn a /steam show listing to ``page``; only the user who ran the command may."""
-        user = interaction.invoking_user
+        user = interaction.user
         if user is None or str(user.id) != owner_id:
-            await self.bot.client.create_interaction_response(
-                interaction,
+            await interaction.respond(
                 content=(
                     "Only the person who ran this command can page through it. "
                     f"Use {self.mention(self.show)} for your own list."
@@ -303,4 +298,4 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             target = min(max(int(page), 0), pages - 1)
             embed = build_page(sales, store.properties(sales), page=target, color=SteamSettings.embed_color)
         buttons = page_buttons(self.show_page, owner_id=int(owner_id), percent=int(percent), page=target, pages=pages)
-        await self.bot.client.update_interaction_message(interaction, embeds=[embed], components=buttons)
+        await interaction.update(embeds=[embed], components=buttons)

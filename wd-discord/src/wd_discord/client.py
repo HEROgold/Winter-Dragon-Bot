@@ -11,12 +11,15 @@ API/network failure; they return the error as a type-safe value so callers can h
 with ``isinstance`` / ``match`` instead of ``try``/``except``::
 
     async with Client(token) as client:
-        result = await client.get_current_user()
-        match result:
-            case ApiResponseError() as err:
-                ...  # handle the failure
-            case _:
-                user = result.json()
+        me = await client.users.me()
+        if is_network_error(me):
+            ...  # handle the failure
+        else:
+            await me.edit(username="Winter Dragon")
+
+The client is the transport level of wd-discord. Resource operations live in the stores it carries
+(``client.users``, ``client.channels``, ``client.guilds``, ``client.global_commands``,
+``client.application``) and on the entities they return; see :mod:`wd_discord.entities`.
 """
 
 from __future__ import annotations
@@ -26,7 +29,6 @@ lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
-lazy from wd_config.bot import Settings
 lazy from wd_config.discord import URLS
 
 lazy from wd_discord import ShardManager
@@ -42,31 +44,25 @@ lazy from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
+lazy from wd_discord.entities.application import CurrentApplication
+lazy from wd_discord.entities.channel import ChannelStore
+lazy from wd_discord.entities.command import GlobalCommandStore
+lazy from wd_discord.entities.guild import GuildStore
+lazy from wd_discord.entities.user import UserStore
 lazy from wd_discord.errors.api import ApiResponseError
-lazy from wd_discord.gateway import Message
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.interactions import ApplicationCommand
 lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
-lazy from wd_discord.resources.application import Application
-lazy from wd_discord.resources.channel import Channel
-lazy from wd_discord.resources.guild import Guild
-lazy from wd_discord.resources.invite import Invite
-lazy from wd_discord.resources.user import User
-lazy from wd_discord.responses import InteractionCallbackType, MessageData, MessageFlags, message_data
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator, Sequence
+    lazy from collections.abc import Awaitable, Callable
 
     lazy from httpxyz import Response
-    lazy from wd_core.client import JsonPayload, RequestKwargs
+    lazy from wd_core.client import RequestKwargs
     lazy from wd_core.intents import Intents
 
-    lazy from wd_discord.components import ActionRow
-    lazy from wd_discord.embed import Embed
-    lazy from wd_discord.gateway.events import Interaction
-    lazy from wd_discord.image import ImageHash
-    lazy from wd_discord.interactions import ApplicationCommandParams
+    lazy from wd_discord.snowflake import SnowflakeLike
+
 
 # Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
 DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
@@ -119,17 +115,23 @@ class Client(LoggerMixin):
         *,
         token_type: TokenType = TokenType.BOT,
         version: int | None = None,
+        application_id: SnowflakeLike | None = None,
     ) -> None:
         """Build a client for ``token``.
 
-        ``version`` overrides the API version from :class:`~wd_config.discord.URLS`.
+        ``version`` overrides the API version from :class:`~wd_config.discord.URLS`. ``application_id`` skips
+        looking up the application's ID; see :meth:`CurrentApplication.id`.
         """
         self.token = Token(token)
         self.token_type = token_type
         self.version = version if version is not None else URLS.version
         self.base_url = f"{URLS.base}/v{self.version}"
         self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
-        self._application_id: str | None = None
+        self.application = CurrentApplication(self, application_id)
+        self.global_commands = GlobalCommandStore(self)
+        self.users = UserStore(self)
+        self.channels = ChannelStore(self)
+        self.guilds = GuildStore(self)
 
     def _default_headers(self) -> dict[str, str]:
         """Render the auth, user-agent and content-type headers into a plain dict.
@@ -220,41 +222,7 @@ class Client(LoggerMixin):
             kwargs["json"] = {}
         return await self.request("DELETE", path, **kwargs)
 
-    # --- Resource helpers (read-only unless noted) -------------------------------------
-
-    async def get_current_user(self) -> User | NetworkError:
-        """GET /users/@me - the bot user behind the token."""
-        result = await self.get("/users/@me")
-        if is_network_error(result):
-            return result
-        return User.model_validate(result.json())
-
-    async def get_current_application(self) -> Application | NetworkError:
-        """GET /applications/@me - the current application object."""
-        result = await self.get("/applications/@me")
-        if is_network_error(result):
-            return result
-        return Application.model_validate(result.json())
-
-    async def _get_application_id(self) -> str | NetworkError:
-        """Return this client's application ID, fetching-and-caching it via the API if unset.
-
-        Prefers an already-configured ``Settings.application_id``; otherwise fetches it once via
-        :meth:`get_current_application` and writes it back into ``Settings`` so future ``Client``
-        instances don't need to fetch it again.
-        """
-        if self._application_id is not None:
-            return self._application_id
-        if Settings.application_id:
-            self._application_id = str(Settings.application_id)
-            return self._application_id
-        app = await self.get_current_application()
-        if is_network_error(app):
-            return app
-        application_id = app.model_dump(mode="json")["id"]
-        self._application_id = application_id
-        Settings().application_id = int(application_id)
-        return application_id
+    # --- Gateway bootstrap ----------------------------------------------------------
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
@@ -266,222 +234,3 @@ class Client(LoggerMixin):
     async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents | None = None) -> ShardManager:
         """Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
         return ShardManager(self.token, info, intents=intents)
-
-    async def get_user(self, user_id: int | str) -> User | NetworkError:
-        """GET /users/{user_id}."""
-        result = await self.get(f"/users/{user_id}")
-        if is_network_error(result):
-            return result
-        return User.model_validate(result.json())
-
-    async def get_guild(self, guild_id: int | str) -> Guild | NetworkError:
-        """GET /guilds/{guild_id}."""
-        result = await self.get(f"/guilds/{guild_id}")
-        if is_network_error(result):
-            return result
-        return Guild.model_validate(result.json())
-
-    async def get_channel(self, channel_id: int | str) -> Channel | NetworkError:
-        """GET /channels/{channel_id}."""
-        result = await self.get(f"/channels/{channel_id}")
-        if is_network_error(result):
-            return result
-        return Channel.model_validate(result.json())
-
-    async def get_guild_channels(self, guild_id: int | str) -> Generator[Channel] | NetworkError:
-        """GET /guilds/{guild_id}/channels - the guild's channels."""
-        result = await self.get(f"/guilds/{guild_id}/channels")
-        if is_network_error(result):
-            return result
-        return (Channel.model_validate(channel) for channel in result.json())
-
-    async def leave_guild(self, guild_id: int | str) -> NetworkError | None:
-        """DELETE /users/@me/guilds/{guild_id} - remove the bot from a guild it doesn't own.
-
-        Discord returns 204 No Content on success, so there's no body to parse - ``None`` is
-        the real result here, not a raw-dict shortcut.
-        """
-        result = await self.delete(f"/users/@me/guilds/{guild_id}")
-        if is_network_error(result):
-            return result
-        return None
-
-    async def create_dm(self, recipient_id: int | str) -> Channel | NetworkError:
-        """POST /users/@me/channels - open (or fetch the existing) DM channel with a user."""
-        result = await self.post("/users/@me/channels", json={"recipient_id": str(recipient_id)})
-        if is_network_error(result):
-            return result
-        return Channel.model_validate(result.json())
-
-    async def create_message(
-        self,
-        channel_id: int | str,
-        content: str | None = None,
-        *,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-    ) -> Message | NetworkError:
-        """POST /channels/{channel_id}/messages - send a message (works for DM channels too).
-
-        Discord needs at least one of ``content``, ``embeds`` or ``components``.
-        """
-        payload = message_data(content=content, embeds=embeds, components=components)
-        result = await self.post(f"/channels/{channel_id}/messages", json=payload)
-        if is_network_error(result):
-            return result
-        return Message.model_validate(result.json())
-
-    async def create_channel_invite(
-        self,
-        channel_id: int | str,
-        *,
-        max_age: int = 86400,
-        max_uses: int = 1,
-        temporary: bool = False,
-        unique: bool = True,
-    ) -> Invite | NetworkError:
-        """POST /channels/{channel_id}/invites - create an instant invite for a channel.
-
-        Defaults to a single-use, 24h invite (``max_age``/``max_uses``) - unlike a permanent
-        vanity invite, this is meant for handing to one specific person.
-        """
-        payload: JsonPayload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
-        result = await self.post(f"/channels/{channel_id}/invites", json=payload)
-        if is_network_error(result):
-            return result
-        return Invite.model_validate(result.json())
-
-    async def modify_current_user(
-        self,
-        *,
-        username: str | None = None,
-        avatar: ImageHash | None = None,
-        banner: ImageHash | None = None,
-    ) -> RequestResult:
-        """PATCH /users/@me - update the bot's profile (username and/or avatar)."""
-        payload: JsonPayload = {}
-        if username is not None:
-            payload["username"] = username
-        if avatar is not None:
-            payload["avatar"] = str(avatar)
-        if banner is not None:
-            payload["banner"] = str(banner)
-        return await self.patch("/users/@me", json=payload)
-
-    async def _callback(
-        self,
-        interaction: Interaction,
-        callback_type: InteractionCallbackType,
-        data: MessageData | None = None,
-    ) -> RequestResult:
-        """POST /interactions/{id}/{token}/callback - send the initial response to an interaction."""
-        payload: JsonPayload = {"type": callback_type}
-        if data:
-            payload["data"] = data
-        return await self.post(f"/interactions/{interaction.id}/{interaction.token}/callback", json=payload)
-
-    async def create_interaction_response(
-        self,
-        interaction: Interaction,
-        *,
-        content: str | None = None,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-        ephemeral: bool = False,
-    ) -> RequestResult:
-        """Respond to an interaction with a message (callback type 4).
-
-        ``ephemeral`` makes the reply visible only to the invoking user (message flag 64).
-        """
-        flags = MessageFlags.EPHEMERAL if ephemeral else None
-        data = message_data(content=content, embeds=embeds, components=components, flags=flags)
-        return await self._callback(interaction, InteractionCallbackType.CHANNEL_MESSAGE_WITH_SOURCE, data)
-
-    async def defer_interaction(self, interaction: Interaction, *, ephemeral: bool = False) -> RequestResult:
-        """Acknowledge an interaction now and show a loading state (callback type 5).
-
-        Follow up with :meth:`edit_original_interaction_response` within 15 minutes. ``ephemeral`` decides
-        whether that eventual response is visible only to the invoking user.
-        """
-        data = message_data(flags=MessageFlags.EPHEMERAL) if ephemeral else None
-        return await self._callback(interaction, InteractionCallbackType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data)
-
-    async def update_interaction_message(
-        self,
-        interaction: Interaction,
-        *,
-        content: str | None = None,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-    ) -> RequestResult:
-        """Edit the message a clicked component is attached to (callback type 7; component interactions only).
-
-        A ``None`` argument leaves that part of the message unchanged.
-        """
-        data = message_data(content=content, embeds=embeds, components=components)
-        return await self._callback(interaction, InteractionCallbackType.UPDATE_MESSAGE, data)
-
-    async def edit_original_interaction_response(
-        self,
-        interaction: Interaction,
-        *,
-        content: str | None = None,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-    ) -> Message | NetworkError:
-        """PATCH /webhooks/{application_id}/{token}/messages/@original - edit the initial response.
-
-        Valid for 15 minutes after the interaction. A ``None`` argument leaves that part of the message unchanged.
-        """
-        payload = message_data(content=content, embeds=embeds, components=components)
-        path = f"/webhooks/{interaction.application_id}/{interaction.token}/messages/@original"
-        result = await self.patch(path, json=payload)
-        if is_network_error(result):
-            return result
-        return Message.model_validate(result.json())
-
-    async def _commands_path(self, command_id: str | None = None) -> str | NetworkError:
-        """Return the global-commands path (or one command's path), or the error from looking up the application ID."""
-        application_id = await self._get_application_id()
-        if is_network_error(application_id):
-            return application_id
-        path = f"/applications/{application_id}/commands"
-        return path if command_id is None else f"{path}/{command_id}"
-
-    async def create_global_command(self, params: ApplicationCommandParams) -> ApplicationCommand | NetworkError:
-        """POST /applications/{application_id}/commands - register a new global command."""
-        path = await self._commands_path()
-        if is_network_error(path):
-            return path
-        result = await self.post(path, json=params.to_json())
-        if is_network_error(result):
-            return result
-        return ApplicationCommand.model_validate(result.json())
-
-    async def edit_global_command(self, command_id: str, params: ApplicationCommandParams) -> ApplicationCommand | NetworkError:
-        """PATCH /applications/{application_id}/commands/{command_id} - update an existing global command."""
-        path = await self._commands_path(command_id)
-        if is_network_error(path):
-            return path
-        result = await self.patch(path, json=params.to_json())
-        if is_network_error(result):
-            return result
-        return ApplicationCommand.model_validate(result.json())
-
-    async def delete_global_command(self, command_id: str) -> NetworkError | None:
-        """DELETE /applications/{application_id}/commands/{command_id} - remove a global command."""
-        path = await self._commands_path(command_id)
-        if is_network_error(path):
-            return path
-        result = await self.delete(path)
-        return result if is_network_error(result) else None
-
-    async def get_global_commands(self) -> Generator[ApplicationCommand] | NetworkError:
-        """GET /applications/{application_id}/commands - every currently-registered global command."""
-        path = await self._commands_path()
-        if is_network_error(path):
-            return path
-        result = await self.get(path)
-        if is_network_error(result):
-            return result
-        return (ApplicationCommand.model_validate(item) for item in result.json())

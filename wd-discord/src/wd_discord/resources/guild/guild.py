@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-lazy from wd_discord.image import ImageHash
-lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.permissions import PermissionsField
-lazy from wd_discord.resources.guild.emoji import Emoji
-lazy from wd_discord.resources.guild.features import (
+from wd_discord.image import ImageHash
+from wd_discord.models import DiscordModel
+from wd_discord.permissions import PermissionsField
+from wd_discord.resources.guild.emoji import Emoji
+from wd_discord.resources.guild.features import (
     DefaultMessageNotificationLevel,
     ExplicitContentFilterLevel,
     MFALevel,
@@ -15,11 +15,11 @@ lazy from wd_discord.resources.guild.features import (
     SystemChannelFlags,
     VerificationLevel,
 )
-lazy from wd_discord.resources.guild.incidents_data import IncidentsData
-lazy from wd_discord.resources.guild.role import Role
-lazy from wd_discord.resources.guild.sticker import Sticker
-lazy from wd_discord.resources.guild.welcome_screen import WelcomeScreen
-lazy from wd_discord.snowflake import Snowflake
+from wd_discord.resources.guild.incidents_data import IncidentsData
+from wd_discord.resources.guild.role import Role
+from wd_discord.resources.guild.sticker import Sticker
+from wd_discord.resources.guild.welcome_screen import WelcomeScreen
+from wd_discord.snowflake import Snowflake
 
 
 class Guild(DiscordModel):

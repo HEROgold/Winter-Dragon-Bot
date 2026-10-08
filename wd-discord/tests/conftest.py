@@ -4,6 +4,7 @@ Live tests are gated on a real bot token read from the repo ``config.ini`` (``[T
 discord_token``). When the token is missing or still the ``!!`` placeholder, those tests
 are skipped so the unit suite stays green offline and in CI.
 """
+
 from __future__ import annotations
 
 lazy import configparser
@@ -13,7 +14,8 @@ lazy from typing import TYPE_CHECKING, Any
 lazy import pytest
 lazy import pytest_asyncio
 lazy from httpxyz import Response
-lazy from wd_discord import ApiResponseError, Client
+lazy from wd_discord import ApiResponseError, Client, DiscordModel
+lazy from wd_discord.entities import Entity
 
 
 if TYPE_CHECKING:
@@ -67,10 +69,17 @@ async def client(token: str) -> AsyncIterator[Client]:
 
 @pytest.fixture
 def assert_success() -> Callable[[object], Any]:
-    """Return a helper that asserts a client call succeeded and returns its JSON body."""
+    """Return a helper that asserts a client call succeeded and returns its result as JSON.
+
+    Accepts a raw :class:`Response`, a data model, or an entity (whose model is used).
+    """
 
     def _assert_success(result: object) -> Any:  # noqa: ANN401 - JSON body may be an object or array
         assert not isinstance(result, ApiResponseError), f"Discord API error: {result!r}"
+        if isinstance(result, Entity):
+            result = result.model
+        if isinstance(result, DiscordModel):
+            return result.model_dump(mode="json")
         assert isinstance(result, Response), f"expected a successful Response, got {result!r}"
         assert result.is_success, f"unexpected status {result.status_code}: {result.text}"
         return result.json()

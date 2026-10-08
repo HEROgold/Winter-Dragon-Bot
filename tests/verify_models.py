@@ -14,10 +14,10 @@ lazy import sys
 lazy from _common import load_token, support_guild_id
 lazy from httpxyz import RequestError
 lazy from wd_discord import ApiResponseError, Client, Permissions
-lazy from wd_discord.application import Application
-lazy from wd_discord.guild import Guild
+lazy from wd_discord.resources.application import Application
+lazy from wd_discord.resources.guild import Guild
 lazy from wd_discord.oauth import OAuthScopes
-lazy from wd_discord.user import User
+lazy from wd_discord.resources.user import User
 
 
 def _fail(label: str, detail: object) -> int:
@@ -28,9 +28,10 @@ def _fail(label: str, detail: object) -> int:
 async def main() -> int:  # noqa: PLR0911 - a linear sequence of guarded checks reads clearest flat
     """Drive model validators and methods against live + crafted data."""
     async with Client(load_token()) as client:
-        me = await client.get_current_user()
-        if isinstance(me, ApiResponseError | RequestError):
-            return _fail("get_current_user", me)
+        current = await client.users.me()
+        if isinstance(current, ApiResponseError | RequestError):
+            return _fail("users.me", current)
+        me = current.model
 
         # Value-type round-trip: Snowflake -> decimal string, ImageHash -> hash string.
         dumped = me.model_dump(mode="json")
@@ -50,9 +51,9 @@ async def main() -> int:  # noqa: PLR0911 - a linear sequence of guarded checks 
         with_email = me.validate_scopes({OAuthScopes.IDENTIFY, OAuthScopes.EMAIL})
         print(f"MODEL OK: validate_scopes(identify)={identify_only} validate_scopes(+email)={with_email}")
 
-        app = await client.get_current_application()
+        app = await client.application.fetch()
         if isinstance(app, ApiResponseError | RequestError):
-            return _fail("get_current_application", app)
+            return _fail("application.fetch", app)
         if isinstance(app, Application) and app.team is not None:
             print(f"MODEL OK: Application.team.owner -> {app.team.owner!r}")
         else:
@@ -60,9 +61,10 @@ async def main() -> int:  # noqa: PLR0911 - a linear sequence of guarded checks 
 
         gid = support_guild_id()
         if gid:
-            guild = await client.get_guild(gid)
-            if isinstance(guild, ApiResponseError | RequestError):
-                return _fail("get_guild", guild)
+            fetched = await client.guilds.fetch(gid)
+            if isinstance(fetched, ApiResponseError | RequestError):
+                return _fail("guilds.fetch", fetched)
+            guild = fetched.model
             assert isinstance(guild, Guild)  # noqa: S101
             perms_ok = guild.permissions is None or isinstance(guild.permissions, Permissions)
             print(f"MODEL OK: Guild validated ({len(guild.roles)} roles, permissions typed={perms_ok})")

@@ -53,6 +53,8 @@ class MessageData(TypedDict, total=False):
     embeds: list[Embed]
     components: list[ActionRow]
     flags: MessageFlags
+    choices: list[dict[str, object]]
+    """Autocomplete suggestions (APPLICATION_COMMAND_AUTOCOMPLETE_RESULT only), as dumped choices."""
 
 def message_data(
     *,

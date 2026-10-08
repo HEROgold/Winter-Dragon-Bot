@@ -15,10 +15,9 @@ lazy from herogold.log import LoggerMixin
 lazy from wd_config import Config
 lazy from wd_config.bot import Settings
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
-lazy from wd_discord import Client, GatewayBotInfo
+lazy from wd_discord import Client, CommandInteraction, ComponentInteraction, GatewayBotInfo, Interaction
+lazy from wd_discord.client import is_network_error
 lazy from wd_discord.gateway import EventName
-lazy from wd_discord.gateway.events import CommandInteraction, ComponentInteraction
-lazy from wd_discord.resources.user import User
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
@@ -35,7 +34,7 @@ if TYPE_CHECKING:
     lazy from types import ModuleType
 
     lazy from wd_core.intents import Intents
-    lazy from wd_discord.gateway.events import Interaction
+    lazy from wd_discord.gateway.events import Interaction as InteractionModel
     lazy from wd_discord.models import DiscordModel
 
     lazy from wd_bot.auto_sync import CommandSyncer
@@ -127,11 +126,12 @@ class Bot(LoggerMixin):
             self._components[handler.prefix] = (cog, handler)
         await cog.load()
 
-    async def _dispatch_interaction(self, interaction: Interaction) -> None:
-        """Route an APPLICATION_COMMAND or MESSAGE_COMPONENT interaction to its registered handler, if any.
+    async def _dispatch_interaction(self, model: InteractionModel) -> None:
+        """Bind an INTERACTION_CREATE to the client and route a command or component to its registered handler.
 
         If the handler raised, the user gets an ephemeral error reply, so an interaction never goes unanswered.
         """
+        interaction = Interaction.bind(self.client, model)
         match interaction:
             case CommandInteraction():
                 succeeded = await self._dispatch_command(interaction)
@@ -140,23 +140,23 @@ class Bot(LoggerMixin):
             case _:
                 return
         if not succeeded:
-            await self.client.create_interaction_response(interaction, content=COMMAND_ERROR_REPLY, ephemeral=True)
+            await interaction.respond(COMMAND_ERROR_REPLY, ephemeral=True)
 
     async def _dispatch_command(self, interaction: CommandInteraction) -> bool:
         """Invoke the command ``interaction`` names; ``False`` only if its handler raised."""
-        entry = self._commands.get(interaction.data.name)
+        entry = self._commands.get(interaction.command_name)
         if entry is None:
-            self.logger.warning(t"No registered command for interaction {interaction.data.name!r}")
+            self.logger.warning(t"No registered command for interaction {interaction.command_name!r}")
             return True
         cog, command = entry
         return await command.invoke(cog, interaction)
 
     async def _dispatch_component(self, interaction: ComponentInteraction) -> bool:
         """Invoke the handler owning the clicked component's ``custom_id`` prefix; ``False`` only if it raised."""
-        prefix, args = parse_custom_id(interaction.data.custom_id)
+        prefix, args = parse_custom_id(interaction.custom_id)
         entry = self._components.get(prefix)
         if entry is None:
-            self.logger.warning(t"No registered component handler for custom_id {interaction.data.custom_id!r}")
+            self.logger.warning(t"No registered component handler for custom_id {interaction.custom_id!r}")
             return True
         cog, handler = entry
         return await handler.invoke(cog, interaction, args)
@@ -288,8 +288,8 @@ class Bot(LoggerMixin):
 
     async def _fetch_gateway_info(self, client: Client) -> GatewayBotInfo:
         """Check the token works, then fetch the gateway info; raise :class:`StartupError` if either call fails."""
-        me = await client.get_current_user()
-        if not isinstance(me, User):
+        me = await client.users.me()
+        if is_network_error(me):
             msg = "Failed to get current user from Discord API"
             raise StartupError(msg)
         gw_info = await client.get_gateway_bot()

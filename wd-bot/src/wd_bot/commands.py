@@ -10,8 +10,9 @@ lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Self, get_args
 
 lazy from herogold.log import LoggerMixin
+lazy from wd_discord import User
 lazy from wd_discord.interactions import ApplicationCommandOption, ApplicationCommandOptionType, ApplicationCommandParams
-lazy from wd_discord.resources.user import User
+lazy from wd_discord.resources.user import User as UserModel
 
 lazy from wd_bot.signature import command_signature
 
@@ -19,7 +20,8 @@ lazy from wd_bot.signature import command_signature
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
-    lazy from wd_discord.gateway.events import CommandInteraction, InteractionDataOption, ResolvedData
+    lazy from wd_discord import CommandInteraction
+    lazy from wd_discord.gateway.events import InteractionDataOption
     lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
 
@@ -31,6 +33,7 @@ _OPTION_TYPE_MAP: dict[type, ApplicationCommandOptionType] = {
     int: ApplicationCommandOptionType.INTEGER,
     bool: ApplicationCommandOptionType.BOOLEAN,
     User: ApplicationCommandOptionType.USER,
+    UserModel: ApplicationCommandOptionType.USER,
 }
 
 
@@ -180,8 +183,8 @@ class Command(AppCommand):
         if it raised (the exception is logged).
         """
         if options is None:
-            options = interaction.data.options
-        kwargs = self._build_kwargs(options, interaction.data.resolved)
+            options = interaction.options
+        kwargs = self._build_kwargs(interaction, options)
         try:
             await self.func(cog, interaction, **kwargs)
         except Exception:
@@ -189,22 +192,26 @@ class Command(AppCommand):
             return False
         return True
 
-    def _build_kwargs(self, options: Sequence[InteractionDataOption], resolved: ResolvedData | None) -> dict[str, object]:
-        """Map each submitted option to a handler argument, resolving USER options to :class:`User` objects.
+    def _build_kwargs(self, interaction: CommandInteraction, options: Sequence[InteractionDataOption]) -> dict[str, object]:
+        """Map each submitted option to a handler argument, resolving USER options to users.
 
-        Options the handler doesn't declare, and users missing from ``resolved``, are skipped with a warning.
+        A parameter annotated with the bound :class:`wd_discord.User` gets one bound to the interaction's client; one
+        annotated with the data model gets the model. Options the handler doesn't declare, and users missing from the
+        interaction's resolved data, are skipped with a warning.
         """
+        resolved = interaction.resolved
         kwargs: dict[str, object] = {}
         for option in options:
-            if option.name not in self._param_types:
+            param_type = self._param_types.get(option.name)
+            if param_type is None:
                 self.logger.warning(t"Unknown option '{option.name}' for command '{self.name}', skipping it")
                 continue
-            if self._param_types[option.name] is User:
+            if param_type is User or param_type is UserModel:
                 user = resolved.users.get(str(option.value)) if resolved and resolved.users else None
                 if user is None:
                     self.logger.warning(t"Unresolved user '{option.value}' for option '{option.name}' in command '{self.name}'")
                     continue
-                kwargs[option.name] = user
+                kwargs[option.name] = User(interaction.client, user) if param_type is User else user
             else:
                 kwargs[option.name] = option.value
         return kwargs
@@ -265,7 +272,7 @@ class CommandGroup(AppCommand):
 
         Returns ``False`` (after logging) if no known subcommand was chosen.
         """
-        options = interaction.data.options
+        options = interaction.options
         chosen = next((option for option in options if option.type == ApplicationCommandOptionType.SUB_COMMAND), None)
         subcommand = self.subcommands.get(chosen.name) if chosen else None
         if chosen is None or subcommand is None:

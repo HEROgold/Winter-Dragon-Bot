@@ -1,6 +1,6 @@
 ---
 name: discord-api-models
-description: How wd-discord validates Discord API responses with pydantic v2 — the DiscordModel base, pydantic-aware value types (Snowflake/ImageHash), PermissionsField coercion, unknown-field Sentry telemetry, and the errors-as-values getter pattern. Use when adding or parsing any Discord REST/gateway response type, adding a field to Application/Guild/Channel/User, or wiring a new Client resource method.
+description: How wd-discord validates Discord API responses with pydantic v2 — the DiscordModel base, pydantic-aware value types (Snowflake/ImageHash), PermissionsField coercion, unknown-field Sentry telemetry, and where REST methods live (stores, partial and bound entities, errors as values). Use when adding or parsing any Discord REST/gateway response type, adding a field to Application/Guild/Channel/User, or adding a REST operation to a store or entity.
 ---
 
 # Discord API models (wd-discord)
@@ -63,18 +63,35 @@ type PermissionsField = Annotated[Permissions, BeforeValidator(lambda value: Per
 Reused on `PermissionOverwrite.allow/deny`, `Role.permissions`, `Guild.permissions`,
 `InstallParams.permissions`.
 
-## Getter pattern: errors are values
+## Where REST methods live: stores and entities, errors are values
 
-`Client` resource methods return `Model | ApiResponseError | RequestError` — they never raise on
-API/network failure ([client.py](../../../wd-discord/src/wd_discord/client.py)):
+`Client` is transport only (`request`/`get`/`post`/..., rate limits, gateway bootstrap). Resource
+operations live in [entities/](../../../wd-discord/src/wd_discord/entities/), in three shapes per resource:
+
+- a **Store** on the client creates, fetches and lists (`client.users`, `client.channels`, `client.guilds`,
+  `client.global_commands`, plus `client.application`);
+- a **`Partial*`** entity acts knowing only an ID, without fetching (`client.users.partial(id).send(...)`);
+- a full **entity** wraps the fetched data model (`entity.model`) and inherits the partial's actions
+  through a shared `Base*` ABC.
+
+Every method returns `T | NetworkError` and never raises on API/network failure. The `parse` and
+`no_content` helpers in [entities/base.py](../../../wd-discord/src/wd_discord/entities/base.py) do the
+check-and-validate step:
 
 ```python
-async def get_user(self, user_id: int | str) -> User | ApiResponseError | RequestError:
-    result = await self.get(f"/users/{user_id}")
-    if isinstance(result, ApiResponseError | RequestError):
-        return result
-    return User.model_validate(result.json())
+async def fetch(self) -> User | NetworkError:
+    """GET /users/{user_id}."""
+    user = parse(await self.client.get(f"/users/{self.id}"), UserModel)
+    return user if is_network_error(user) else User(self.client, user)
 ```
+
+Entity classes take the plain names (`wd_discord.User`); data models keep the Discord docs' names in
+their modules and are imported as `... as UserModel` where both meet. Interactions follow the same
+split: `Interaction.bind(client, model)` wraps a gateway `Interaction` model in the bound subclass
+with `respond`/`defer`/`edit_original`/`followup` (and `update`/`defer_update` on components).
+
+Test code built on wd-discord with `wd_discord.testing.RecordingClient`: it records each request and
+answers from canned `reply(...)`/`fail(...)` values, so stores and entities run unchanged offline.
 
 ## Gotchas
 

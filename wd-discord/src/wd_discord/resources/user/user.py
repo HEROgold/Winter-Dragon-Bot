@@ -3,14 +3,14 @@ from __future__ import annotations
 
 lazy from typing import Annotated
 
-lazy from pydantic import Field
+from pydantic import Field
 
-lazy from wd_discord.image import ImageHash
-lazy from wd_discord.models import DiscordModel
-lazy from wd_discord.oauth import OAuthScopes
-lazy from wd_discord.resources.user.collectibles import Collectibles
-lazy from wd_discord.resources.user.profile import Avatar
-lazy from wd_discord.snowflake import Snowflake
+from wd_discord.image import ImageHash
+from wd_discord.models import DiscordModel
+from wd_discord.oauth import OAuthScopes
+from wd_discord.resources.user.collectibles import Collectibles
+from wd_discord.resources.user.profile import Avatar
+from wd_discord.snowflake import Snowflake
 
 
 class UserPrimaryGuild(DiscordModel):

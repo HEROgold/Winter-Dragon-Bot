@@ -14,7 +14,8 @@ from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
 from wd_bot.commands import CommandGroup
 from wd_discord.gateway import EventName
-from wd_discord.gateway.events import Interaction, InteractionDataOption
+from wd_discord.gateway.events import InteractionDataOption
+from wd_discord.testing import RecordingClient
 
 
 if TYPE_CHECKING:
@@ -23,14 +24,15 @@ if TYPE_CHECKING:
     import pytest
     from conftest import InteractionFactory
     from wd_bot.commands import Command
+    from wd_discord import CommandInteraction
 
 
-CALLS: list[Interaction] = []
+CALLS: list[CommandInteraction] = []
 
 
 class _PingCog(Cog, auto_load=False):
     @Cog.command(name="ping", description="d")
-    async def ping(self, interaction: Interaction) -> None:
+    async def ping(self, interaction: CommandInteraction) -> None:
         CALLS.append(interaction)
 
 
@@ -42,17 +44,15 @@ class _AutoPingCog(Cog):
     """Auto-loading cog (the default), as real extension cogs are."""
 
     @Cog.command(name="auto-ping", description="d")
-    async def auto_ping(self, interaction: Interaction) -> None:
+    async def auto_ping(self, interaction: CommandInteraction) -> None:
         CALLS.append(interaction)
 
 
-def _make_bot() -> Bot:
+def _make_bot(client: RecordingClient | None = None) -> Bot:
     bot = Bot()
     bot.loop = asyncio.get_running_loop()
+    bot.client = client or RecordingClient()
     return bot
-
-
-
 
 
 async def test_add_cog_registers_commands() -> None:
@@ -71,7 +71,7 @@ async def test_add_cog_registers_inherited_commands() -> None:
 
 class _OtherPingCog(Cog, auto_load=False):
     @Cog.command(name="ping", description="d")
-    async def ping(self, interaction: Interaction) -> None:
+    async def ping(self, interaction: CommandInteraction) -> None:
         CALLS.append(interaction)
 
 
@@ -84,12 +84,15 @@ async def test_add_cog_warns_on_duplicate_command_name(capsys: pytest.CaptureFix
     assert "Duplicate command 'ping'" in capsys.readouterr().err
 
 
-async def test_dispatch_interaction_invokes_matching_command(make_interaction: InteractionFactory) -> None:
+async def test_dispatch_interaction_invokes_matching_command(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     CALLS.clear()
-    bot = _make_bot()
+    bot = _make_bot(discord_client)
     await bot.add_cog(_PingCog(bot=bot))
     interaction = make_interaction("ping")
-    await bot._dispatch_interaction(interaction)
+    await bot._dispatch_interaction(interaction.model)
     assert [interaction] == CALLS
 
 
@@ -101,7 +104,7 @@ async def test_dispatch_interaction_is_registered_as_listener() -> None:
 async def test_dispatch_unknown_command_is_ignored(make_interaction: InteractionFactory) -> None:
     CALLS.clear()
     bot = _make_bot()
-    await bot._dispatch_interaction(make_interaction("nope"))
+    await bot._dispatch_interaction(make_interaction("nope").model)
     assert CALLS == []
 
 
@@ -206,45 +209,86 @@ async def test_discovery_failure_disables_deletes() -> None:
 
 class _BoomCog(Cog, auto_load=False):
     @Cog.command(name="boom", description="d")
-    async def boom(self, interaction: Interaction) -> None:  # noqa: ARG002
+    async def boom(self, interaction: CommandInteraction) -> None:  # noqa: ARG002
         msg = "handler broke"
         raise RuntimeError(msg)
 
 
-async def test_dispatch_sends_ephemeral_error_when_handler_raises(make_interaction: InteractionFactory) -> None:
-    bot = _make_bot()
-    respond = AsyncMock()
-    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+FOLLOWUP_JSON = {
+    "id": "5",
+    "channel_id": "6",
+    "author": {"id": "2", "username": "bot", "discriminator": "0"},
+    "content": "Something went wrong running this command.",
+    "timestamp": "2026-10-08T00:00:00+00:00",
+    "tts": False,
+    "mention_everyone": False,
+}
+
+
+class _DeferThenBoomCog(Cog, auto_load=False):
+    @Cog.command(name="defer-boom", description="d")
+    async def defer_boom(self, interaction: CommandInteraction) -> None:
+        await interaction.defer()
+        msg = "handler broke after deferring"
+        raise RuntimeError(msg)
+
+
+async def test_dispatch_sends_ephemeral_error_when_handler_raises(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    bot = _make_bot(discord_client)
     await bot.add_cog(_BoomCog(bot=bot))
-    interaction = make_interaction("boom")
 
-    await bot._dispatch_interaction(interaction)
+    await bot._dispatch_interaction(make_interaction("boom").model)
 
-    respond.assert_awaited_once_with(interaction, content="Something went wrong running this command.", ephemeral=True)
+    assert discord_client.interaction_responses() == [
+        {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},
+    ]
 
 
-async def test_dispatch_sends_no_error_reply_on_success(make_interaction: InteractionFactory) -> None:
-    bot = _make_bot()
-    respond = AsyncMock()
-    bot.client = types.SimpleNamespace(create_interaction_response=respond)  # type: ignore[assignment]
+async def test_dispatch_error_reply_after_a_deferred_response_is_a_followup(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    bot = _make_bot(discord_client)
+    discord_client.reply("POST", "/webhooks/2/tok", FOLLOWUP_JSON)
+    await bot.add_cog(_DeferThenBoomCog(bot=bot))
+
+    await bot._dispatch_interaction(make_interaction("defer-boom").model)
+
+    assert [(sent.path, sent.json) for sent in discord_client.sent] == [
+        ("/interactions/1/tok/callback", {"type": 5}),
+        ("/webhooks/2/tok", {"content": "Something went wrong running this command.", "flags": 64}),
+    ]
+
+
+async def test_dispatch_sends_no_error_reply_on_success(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    bot = _make_bot(discord_client)
     await bot.add_cog(_PingCog(bot=bot))
 
-    await bot._dispatch_interaction(make_interaction("ping"))
+    await bot._dispatch_interaction(make_interaction("ping").model)
 
-    respond.assert_not_awaited()
+    assert discord_client.sent == []
 
 
 class _AdminTools(GroupCog, auto_load=False):
     """Admin tools."""
 
     @Cog.command(name="ping", description="d")
-    async def ping(self, interaction: Interaction) -> None:
+    async def ping(self, interaction: CommandInteraction) -> None:
         CALLS.append(interaction)
 
 
-async def test_group_cog_registers_one_group_and_dispatches_subcommands(make_interaction: InteractionFactory) -> None:
+async def test_group_cog_registers_one_group_and_dispatches_subcommands(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     CALLS.clear()
-    bot = _make_bot()
+    bot = _make_bot(discord_client)
     cog = _AdminTools(bot=bot)
     await bot.add_cog(cog)
 
@@ -254,11 +298,9 @@ async def test_group_cog_registers_one_group_and_dispatches_subcommands(make_int
     assert list(group.subcommands) == ["ping"]
     assert "ping" not in bot._commands
 
-    interaction = make_interaction("admin-tools")
-    assert interaction.data is not None
-    interaction.data.options = [InteractionDataOption(name="ping", type=1)]
-    await bot._dispatch_interaction(interaction)
-    assert CALLS == [interaction]
+    interaction = make_interaction("admin-tools", options=[InteractionDataOption(name="ping", type=1)])
+    await bot._dispatch_interaction(interaction.model)
+    assert [interaction] == CALLS
 
 
 async def test_load_extension_reuses_an_already_imported_module() -> None:

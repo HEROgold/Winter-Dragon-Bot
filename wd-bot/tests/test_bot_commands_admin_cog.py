@@ -4,7 +4,7 @@ from __future__ import annotations
 
 lazy from types import SimpleNamespace
 lazy from typing import TYPE_CHECKING
-lazy from unittest.mock import AsyncMock, MagicMock
+lazy from unittest.mock import AsyncMock
 
 lazy from sqlmodel import Session
 lazy from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
@@ -17,15 +17,14 @@ lazy from winter_dragon.cogs.bot_commands import BotCommands, describe_sync_stat
 
 
 if TYPE_CHECKING:
+    lazy from conftest import InteractionFactory
     lazy from sqlalchemy import Engine
-    lazy from wd_discord.gateway.events import Interaction
+    lazy from wd_discord import CommandInteraction
+    lazy from wd_discord.testing import RecordingClient
 
 
-
-async def _noop(self: object, interaction: Interaction) -> None:
+async def _noop(self: object, interaction: CommandInteraction) -> None:
     """Handle a no-option command."""
-
-
 
 
 def _seed_synced(engine: Engine, name: str, signature: str) -> None:
@@ -63,35 +62,35 @@ def test_group_is_gated_to_manage_guild() -> None:
     assert all(command.default_member_permissions is None for command in group.subcommands.values())
 
 
-async def test_list_commands_replies_with_status_embed(monkeypatch: object, engine: Engine) -> None:
+async def test_list_commands_replies_with_status_embed(
+    monkeypatch: object,
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     command = Command(_noop, name="ping", description="d")
     _seed_synced(engine, "ping", command.signature())
     monkeypatch.setattr(module, "engine", engine)  # pyright: ignore[reportAttributeAccessIssue]
-    respond = AsyncMock()
     cog = BotCommands.__new__(BotCommands)
-    cog.bot = SimpleNamespace(commands=iter([command]), client=SimpleNamespace(create_interaction_response=respond))  # pyright: ignore[reportAttributeAccessIssue]
-    interaction = MagicMock()
+    cog.bot = SimpleNamespace(commands=iter([command]), client=discord_client)  # pyright: ignore[reportAttributeAccessIssue]
 
-    await BotCommands.list_commands.invoke(cog, interaction)
+    await BotCommands.list_commands.invoke(cog, make_interaction("bot-commands"))
 
-    respond.assert_awaited_once()
-    embed = respond.await_args.kwargs["embeds"][0]
-    assert embed.description == "ping: synced"
+    (response,) = discord_client.interaction_responses()
+    assert response["data"]["embeds"][0]["description"] == "ping: synced"
 
 
-async def test_resync_responds_before_syncing() -> None:
-    order: list[str] = []
-    client = SimpleNamespace(create_interaction_response=AsyncMock(side_effect=lambda *_a, **_k: order.append("respond")))
-    sync = AsyncMock(side_effect=lambda *_a, **_k: order.append("sync"))
+async def test_resync_responds_before_syncing(make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
+    responses_before_sync: list[int] = []
+    sync = AsyncMock(side_effect=lambda *_a, **_k: responses_before_sync.append(len(discord_client.interaction_responses())))
     cog = BotCommands.__new__(BotCommands)
-    cog.bot = SimpleNamespace(commands=iter(()), client=client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
-    interaction = MagicMock()
+    cog.bot = SimpleNamespace(commands=iter(()), client=discord_client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
 
-    await BotCommands.resync.invoke(cog, interaction)
+    await BotCommands.resync.invoke(cog, make_interaction("bot-commands"))
 
-    assert order == ["respond", "sync"]
-    sync.assert_awaited_once_with(client)
-    client.create_interaction_response.assert_awaited_once_with(interaction, content="Resyncing commands…")
+    assert responses_before_sync == [1]
+    sync.assert_awaited_once_with(discord_client)
+    assert discord_client.interaction_responses() == [{"type": 4, "data": {"content": "Resyncing commands…"}}]
 
 
 def test_group_is_guild_only() -> None:

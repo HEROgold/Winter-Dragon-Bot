@@ -5,14 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, ClassVar, Self
-from unittest.mock import AsyncMock
 
 import pytest
 from sqlmodel import Session, select
 from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
 from wd_config.steam import SteamSettings
-from wd_discord.gateway.events import InteractionDataOption, Message
-from wd_discord.resources.channel import Channel
+from wd_discord.gateway.events import InteractionDataOption
+from wd_discord.testing import RecordingClient
 
 import winter_dragon.cogs.steam.cog as module
 from winter_dragon.cogs.steam.cog import SteamSales
@@ -88,31 +87,36 @@ def fake_steam(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(module, "utc_now", lambda: NOW)
 
 
-def _cog(engine: Engine) -> tuple[SteamSales, SimpleNamespace]:
-    """Build a SteamSales cog on ``engine`` without running Cog.__init__, with a mocked client."""
-    message = Message.model_validate(
-        {
-            "id": "5",
-            "channel_id": "6",
-            "author": {"id": "2", "username": "bot", "discriminator": "0"},
-            "content": "",
-            "timestamp": "2026-10-08T12:00:00+00:00",
-            "tts": False,
-            "mention_everyone": False,
-        },
-    )
-    client = SimpleNamespace(
-        create_interaction_response=AsyncMock(),
-        defer_interaction=AsyncMock(),
-        edit_original_interaction_response=AsyncMock(),
-        update_interaction_message=AsyncMock(),
-        create_dm=AsyncMock(return_value=Channel.model_validate({"id": "6", "type": 1})),
-        create_message=AsyncMock(return_value=message),
-    )
+ORIGINAL = "/webhooks/2/tok/messages/@original"
+OPEN_DM = "/users/@me/channels"
+MESSAGE_JSON = {
+    "id": "5",
+    "channel_id": "6",
+    "author": {"id": "2", "username": "bot", "discriminator": "0"},
+    "content": "",
+    "timestamp": "2026-10-08T12:00:00+00:00",
+    "tts": False,
+    "mention_everyone": False,
+}
+
+
+def _cog(engine: Engine) -> tuple[SteamSales, RecordingClient]:
+    """Build a SteamSales cog on ``engine`` without running Cog.__init__, on a client that accepts DMs.
+
+    Interaction handlers answer through their interaction's own client, not this one.
+    """
+    client = RecordingClient()
+    client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
+    client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
     cog = SteamSales.__new__(SteamSales)
     cog.bot = SimpleNamespace(client=client)  # pyright: ignore[reportAttributeAccessIssue]
     cog.session = Session(engine)
     return cog, client
+
+
+def _replies(client: RecordingClient) -> list[dict[str, object]]:
+    """Return the message data of each initial response ``client`` sent."""
+    return [response["data"] for response in client.interaction_responses()]
 
 
 def _seed(engine: Engine, *sales: ScrapedSale, now: datetime = NOW) -> None:
@@ -137,9 +141,9 @@ def _sync_steam_group(engine: Engine, discord_command_id: str = "42") -> None:
         session.commit()
 
 
-async def test_add_subscribes_once(engine: Engine, make_interaction: InteractionFactory) -> None:
+async def test_add_subscribes_once(engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
     _sync_steam_group(engine)
-    cog, client = _cog(engine)
+    cog, _client = _cog(engine)
 
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
@@ -148,87 +152,110 @@ async def test_add_subscribes_once(engine: Engine, make_interaction: Interaction
         (user,) = session.exec(select(SteamUsers)).all()
     assert user.id == ASKER_ID
     assert user.sale_threshold == module.DEFAULT_THRESHOLD
-    first, second = client.create_interaction_response.await_args_list
-    assert "</steam show:42>" in first.kwargs["content"]
-    assert second.kwargs["content"] == "Already in the list of recipients"
+    first, second = _replies(discord_client)
+    assert "</steam show:42>" in str(first["content"])
+    assert second == {"content": "Already in the list of recipients", "flags": 64}
 
 
-async def test_percentage_updates_the_threshold(engine: Engine, make_interaction: InteractionFactory) -> None:
-    cog, client = _cog(engine)
+async def test_percentage_updates_the_threshold(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog, _client = _cog(engine)
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
 
     await SteamSales.percentage.invoke(cog, make_interaction("steam"), _percent(75))
 
     with Session(engine) as session:
         assert session.exec(select(SteamUsers)).one().sale_threshold == 75
-    assert client.create_interaction_response.await_args.kwargs["content"] == "Changed your sale notification threshold to 75%."
+    assert _replies(discord_client)[-1]["content"] == "Changed your sale notification threshold to 75%."
 
 
-async def test_percentage_rejects_values_outside_0_to_100(engine: Engine, make_interaction: InteractionFactory) -> None:
-    cog, client = _cog(engine)
+async def test_percentage_rejects_values_outside_0_to_100(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog, _client = _cog(engine)
     await SteamSales.percentage.invoke(cog, make_interaction("steam"), _percent(150))
-    assert "between 0 and 100" in client.create_interaction_response.await_args.kwargs["content"]
+    assert "between 0 and 100" in str(_replies(discord_client)[-1]["content"])
 
 
-async def test_remove_unsubscribes(engine: Engine, make_interaction: InteractionFactory) -> None:
-    cog, client = _cog(engine)
+async def test_remove_unsubscribes(engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
+    cog, _client = _cog(engine)
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
 
     await SteamSales.remove.invoke(cog, make_interaction("steam"), [])
 
     with Session(engine) as session:
         assert session.exec(select(SteamUsers)).all() == []
-    assert client.create_interaction_response.await_args.kwargs["content"] == "I will no longer notify you of new steam games."
+    assert _replies(discord_client)[-1]["content"] == "I will no longer notify you of new steam games."
 
 
-async def test_show_without_sales_replies_ephemerally(engine: Engine, make_interaction: InteractionFactory) -> None:
-    cog, client = _cog(engine)
+async def test_show_without_sales_replies_ephemerally(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog, _client = _cog(engine)
 
     await SteamSales.show.invoke(cog, make_interaction("steam"), _percent(90))
 
-    client.create_interaction_response.assert_awaited_once()
-    assert client.create_interaction_response.await_args.kwargs["ephemeral"] is True
-    client.defer_interaction.assert_not_awaited()
+    (response,) = discord_client.interaction_responses()
+    assert response["type"] == 4
+    assert response["data"]["flags"] == 64
 
 
-async def test_show_defers_then_edits_in_the_first_page(engine: Engine, make_interaction: InteractionFactory) -> None:
+async def test_show_defers_then_edits_in_the_first_page(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     _seed(engine, *(app_sale(index) for index in range(1, 8)))
-    cog, client = _cog(engine)
-    interaction = make_interaction("steam")
+    discord_client.reply("PATCH", ORIGINAL, MESSAGE_JSON)
+    cog, _client = _cog(engine)
 
-    await SteamSales.show.invoke(cog, interaction, _percent(90))
+    await SteamSales.show.invoke(cog, make_interaction("steam"), _percent(90))
 
-    client.defer_interaction.assert_awaited_once_with(interaction)
-    kwargs = client.edit_original_interaction_response.await_args.kwargs
-    (embed,) = kwargs["embeds"]
-    assert embed.footer.text == "Page 1/2 • 7 games total"
-    (row,) = kwargs["components"]
-    assert row.components[2].custom_id == f"steam-show:{ASKER_ID}:90:1"
+    assert discord_client.interaction_responses() == [{"type": 5}]
+    (edit,) = discord_client.requests_to("PATCH", ORIGINAL)
+    (embed,) = edit.json["embeds"]
+    assert embed["footer"]["text"] == "Page 1/2 • 7 games total"
+    (row,) = edit.json["components"]
+    assert row["components"][2]["custom_id"] == f"steam-show:{ASKER_ID}:90:1"
 
 
-async def test_page_button_turns_the_page(engine: Engine, make_component_interaction: ComponentInteractionFactory) -> None:
+async def test_page_button_turns_the_page(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     _seed(engine, *(app_sale(index) for index in range(1, 8)))
-    cog, client = _cog(engine)
+    cog, _client = _cog(engine)
     interaction = make_component_interaction(f"steam-show:{ASKER_ID}:90:1")
 
     await SteamSales.show_page.invoke(cog, interaction, [str(ASKER_ID), "90", "1"])
 
-    kwargs = client.update_interaction_message.await_args.kwargs
-    assert kwargs["embeds"][0].footer.text == "Page 2/2 • 7 games total"
-    assert kwargs["components"][0].components[2].disabled  # last page
+    (update,) = discord_client.interaction_responses()
+    assert update["type"] == 7
+    assert update["data"]["embeds"][0]["footer"]["text"] == "Page 2/2 • 7 games total"
+    assert update["data"]["components"][0]["components"][2]["disabled"]  # last page
 
 
 async def test_page_button_only_works_for_the_invoker(
     engine: Engine,
     make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     _seed(engine, app_sale(1))
-    cog, client = _cog(engine)
+    cog, _client = _cog(engine)
 
     await SteamSales.show_page.invoke(cog, make_component_interaction("steam-show:999:90:1"), ["999", "90", "1"])
 
-    client.update_interaction_message.assert_not_awaited()
-    assert client.create_interaction_response.await_args.kwargs["ephemeral"] is True
+    (response,) = discord_client.interaction_responses()
+    assert response["type"] == 4
+    assert response["data"]["flags"] == 64
 
 
 async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -> None:
@@ -248,7 +275,7 @@ async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -
         sale = session.exec(select(SteamSale)).one()  # listed by both queries, stored once
         assert sale.sale_end == end
         assert session.exec(select(SteamUsers)).one().last_notification == NOW
-    client.create_dm.assert_awaited_once_with(7)
+    assert [sent.json for sent in client.requests_to("POST", OPEN_DM)] == [{"recipient_id": "7"}]
 
 
 async def test_scrape_without_subscribers_stores_down_to_the_configured_percent(engine: Engine) -> None:
