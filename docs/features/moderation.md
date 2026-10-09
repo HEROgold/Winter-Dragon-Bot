@@ -62,9 +62,11 @@ Bulk message deletion (`/purge`) with a history-based path for messages older th
 
 ## Channel utilities
 
-Moderation actions on channels themselves: lock and unlock a channel — optionally scoped to a single role or member rather than everyone — and delete a category together with every channel inside it.
+Moderation actions on channels themselves: lock and unlock a channel for a role or member, and delete a category together with every channel inside it. Locking denies Send Messages in that target's permission overwrite and keeps the rest of it; unlocking lifts the denial and removes an overwrite left empty. Threads and DMs are refused. Every change carries an audit-log reason naming the moderator and the command.
 
-**Status:** 🟡 Copied, unwired.
+Surface: `/channel-utils delete-category | lock | unlock`, needing Manage Channels.
+
+**Status:** ✅ Ported to `src/winter_dragon/cogs/channel_utils.py`. `/channel-utils categories delete` became `/channel-utils delete-category`: wd_bot has no nested subcommand groups.
 **Source on `main`:** `src/winter_dragon/bot/extensions/server/channel_utils.py`
 
 ## Forum duplicate detection

@@ -94,12 +94,18 @@ class RecordingClient(Client):
         super().__init__(TEST_TOKEN, application_id=application_id)
         self.sent: list[SentRequest] = []
         self._replies: dict[tuple[str, str], Response | ApiResponseError] = {}
+        self._queued: dict[tuple[str, str], list[Response]] = {}
 
     def reply(self, method: str, path: str, body: Mapping[str, object] | list[Any] | None = None, *, status: int = 200) -> None:
         """Answer every ``method`` request to ``path`` with ``body`` as JSON (no body when ``None``)."""
         request = Request(method, f"{self.base_url}{path}")
         response = Response(status, request=request) if body is None else Response(status, json=body, request=request)
         self._replies[method, path] = response
+
+    def reply_each(self, method: str, path: str, *bodies: Mapping[str, object]) -> None:
+        """Answer the next ``method`` requests to ``path`` with ``bodies`` in turn, then fall back to :meth:`reply`'s."""
+        request = Request(method, f"{self.base_url}{path}")
+        self._queued.setdefault((method, path), []).extend(Response(200, json=body, request=request) for body in bodies)
 
     def fail(self, method: str, path: str, error: ApiResponseError) -> None:
         """Answer every ``method`` request to ``path`` with ``error``."""
@@ -132,7 +138,8 @@ class RecordingClient(Client):
                 kwargs.get("params"),
             ),
         )
-        reply = self._replies.get((method, path))
+        queued = self._queued.get((method, path))
+        reply = queued.pop(0) if queued else self._replies.get((method, path))
         if reply is None:
             return Response(204, request=Request(method, f"{self.base_url}{path}"))
         return reply

@@ -59,6 +59,13 @@ A forever-running Discord bot: connects to the gateway, loads extensions, dispat
 - `async load_extensions() -> None` — Load all cogs from :attr:`extensions_package`.
 - `@with_known_exception @Config.with_kwarg async start(token: str) -> None` — Start the bot with a token from the config file, or a provided token. Provided token takes precedence.
 
+## `wd_bot.checks` — `wd-bot/src/wd_bot/checks.py`
+Checks a command makes before acting: whether the invoker holds some permissions, or owns the bot.
+
+- `member_has(interaction: AnyInteraction, permissions: Permissions) -> bool` — Whether the guild member invoking ``interaction`` holds every one of ``permissions`` in its channel.
+- `owner_ids(application: Application) -> Generator[Snowflake]` — Yield the IDs of the users owning ``application``: its team's accepted members, or else its owner.
+- `async is_owner(client: Client, user_id: SnowflakeLike) -> bool` — Whether the user ``user_id`` owns the bot; ``False`` when the application can't be read.
+
 ## `wd_bot.cogs` — `wd-bot/src/wd_bot/cogs.py`
 Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency.
 

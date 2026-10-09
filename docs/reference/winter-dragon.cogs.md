@@ -10,11 +10,25 @@ Admin command group for inspecting and forcing the application-command sync stat
 
 - `describe_sync_status(registry: CommandRegistry) -> Generator[str]` — Yield one "name (scope): synced|pending" line per registered command, scope by scope.
 
-### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and push the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
-Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
+### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and manage the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
+Admin ``/bot-commands`` group for inspecting/managing application-command sync.
 
 - `@Cog.command async list_commands(interaction: CommandInteraction) -> None` — Show every registered command's synced/pending state.
 - `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it.
+
+## `winter_dragon.cogs.channel_utils` — `src/winter_dragon/cogs/channel_utils.py`
+The /channel-utils command group: delete a whole category, and lock or unlock a channel for a role or member.
+
+- module names: UNLOCKABLE
+- `locked_overwrite(existing: Iterable[PermissionOverwrite], target: User | Role, *, lock: bool) -> OverwriteParams` — Return ``target``'s overwrite among ``existing`` with SEND_MESSAGES denied (``lock``) or no longer denied.
+- `mention(target: User | Role) -> str` — Return a clickable mention of the user or role ``target``.
+
+### `class ChannelUtils(GroupCog, name='channel-utils', description='Manage channels', default_member_permissions=Permissions.MANAGE_CHANNELS, contexts=[InteractionContextType.GUILD])`
+Moderation helpers for channels: removing a category with its channels, and locking channels.
+
+- `@Cog.command async delete_category(interaction: CommandInteraction, category: Channel) -> None` — Delete every channel in ``category``, then the category itself.
+- `@Cog.command async lock(interaction: CommandInteraction, target: User | Role) -> None` — Deny ``target`` SEND_MESSAGES in the channel the command was used in.
+- `@Cog.command async unlock(interaction: CommandInteraction, target: User | Role) -> None` — Stop denying ``target`` SEND_MESSAGES in the channel the command was used in.
 
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.
@@ -117,6 +131,53 @@ Stores reminders and DMs them to their users when due, from a background task.
 - `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
 - `@Cog.command async remove(interaction: CommandInteraction, reminder: str) -> None` — Remove the invoking user's reminder named by ``reminder``.
 - `@remove.autocomplete async remove_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoking user's reminders whose content contains what they typed.
+
+## `winter_dragon.cogs.stats` — `src/winter_dragon/cogs/stats.py`
+The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels.
+
+- module names: SHOWN, CATEGORY_NAME, STATS_TABLES
+- `async count_bots(guild: BaseGuild) -> int | NetworkError` — Count the bots among ``guild``'s members, a page of members at a time.
+- `async guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError` — Read ``guild``'s member, bot and online counts.
+- `channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str` — Return the name of the stats channel showing ``kind``.
+- `stats_embed(name: str, counts: GuildCounts, afk_channel_id: Snowflake | None) -> Embed` — Return the embed /stats show answers with.
+- `guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]` — Return the stats channels recorded for the guild ``guild_id``, category included.
+- `stats_guild_ids(session: Session) -> Generator[int]` — Yield every guild with stats channels.
+
+### `class StatKind(StrEnum)`
+What a stats channel shows; the category holding them is one too.
+
+- attributes: CATEGORY, USERS, ONLINE, BOTS, CREATED, PEAK
+
+### `class StatChannel(SQLModel, table=True)`
+One of a guild's stats channels, or the category holding them.
+
+- fields: guild_id: int, channel_id: int, kind: StatKind
+
+### `class PeakOnline(SQLModel, table=True)`
+The most users a guild has seen online at once, since its stats channels were added.
+
+- fields: guild_id: int, peak: int
+
+### `@dataclass class GuildCounts`
+How many members a guild has, how many are bots and how many are online; Discord's counts are approximate.
+
+- fields: members: int, bots: int, online: int, created: datetime
+- `@property users -> int` — Members that aren't bots.
+- `@property online_users -> int` — Members online that aren't bots, taking every bot to be online.
+
+### `class Stats(GroupCog, name='stats', description="Show this server's member counts", contexts=[InteractionContextType.GUILD])`
+Shows a guild's member counts, and keeps a locked category of voice channels named after them up to date.
+
+- `async load() -> None` — Create the stats tables if missing, then start the background task renaming the stats channels.
+- `async unload() -> None` — Stop the background task.
+- `async update_all() -> None` — Update the stats channels of every guild that has them.
+- `async update_guild(guild_id: int) -> None` — Rename ``guild_id``'s stats channels to the current counts, and record a new peak.
+- `async create_channels(client: Client, guild_id: int, *, reason: str) -> NetworkError | None` — Create ``guild_id``'s locked stats category and its channels, named after the current counts.
+- `async remove_channels(client: Client, stats: Iterable[StatChannel], *, reason: str) -> None` — Delete the channels of ``stats``, category last, and forget them; channels already gone are just forgotten.
+- `@Cog.command async show(interaction: CommandInteraction) -> None` — Answer with an embed of the guild's member counts.
+- `@Cog.command async add(interaction: CommandInteraction) -> None` — Create the stats channels, unless the guild has them already; needs MANAGE_CHANNELS.
+- `@Cog.command async remove(interaction: CommandInteraction) -> None` — Delete the guild's stats channels; needs MANAGE_CHANNELS.
+- `@Cog.command async reset(interaction: CommandInteraction) -> None` — Delete and recreate every guild's stats channels; only the bot's owners may.
 
 ## `winter_dragon.cogs.steam.cog` — `src/winter_dragon/cogs/steam/cog.py`
 The /steam command group, its page buttons, and the background scrape of Steam's specials.

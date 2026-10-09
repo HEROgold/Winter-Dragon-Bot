@@ -38,9 +38,15 @@ Configurable greeting for new members, set up through an interactive menu (`/wel
 
 ## Guild statistics
 
-Live server statistics, both on demand (`/stats show`) and as self-updating stat channels whose names carry counts such as members online. Includes commands to (re)create the channels and to reset stored stats.
+Live server statistics, both on demand (`/stats show`) and as a locked "Stats" category of voice channels whose names carry the counts: total users, online users, bots, creation date and peak online. Counts come from Discord's approximate member and presence counts plus a paged member listing for the bots; bots are taken to be online, so online users is presences minus bots. The peak is stored, not read back from a channel name. The cog's own background task renames only the channels whose name changed, every `update_interval` seconds (Discord allows two renames per channel per 10 minutes), and forgets channels deleted by hand.
 
-**Status:** 🟡 Copied, unwired.
+Everyone can use `show`; `add` and `remove` need Manage Channels, checked per subcommand since Discord only gates the group as a whole; `reset` recreates every guild's stats channels and is for the bot's owners (the application owner or its team).
+
+Surface: `/stats show | add | remove | reset`
+
+Settings (`[StatsSettings]` in `config.ini`): `update_interval`.
+
+**Status:** ✅ Ported to `src/winter_dragon/cogs/stats.py`, with cog-local `statchannel` and `peakonline` tables replacing `main`'s tagged channels.
 **Source on `main`:** `src/winter_dragon/bot/extensions/server/stats.py`
 
 ## Announcements

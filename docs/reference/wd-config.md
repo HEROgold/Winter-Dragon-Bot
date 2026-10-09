@@ -96,6 +96,14 @@ Configurable Sentry settings.
 
 - attributes: Telemetry, dsn, environment
 
+## `wd_config.stats` — `wd-config/src/wd_config/stats.py`
+Settings for the guild stats channels.
+
+### `class StatsSettings`
+How often the stats channels are renamed to show the current counts.
+
+- attributes: update_interval
+
 ## `wd_config.steam` — `wd-config/src/wd_config/steam.py`
 Settings for the Steam sale finder.
 
