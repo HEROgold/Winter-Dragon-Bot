@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from wd_discord import AuditLogReason, Channel, ChannelType, Guild, Member, Permissions, is_network_error
 from wd_discord.audit import MAX_REASON_LENGTH, REASON_HEADER
+from wd_discord.errors import ApiResponseError, JsonErrorCode
 from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient
@@ -114,3 +115,26 @@ async def test_member_move_to_patches_the_voice_channel() -> None:
     assert isinstance(moved, Member)
     assert member.mention == "<@3>"
     assert [sent.json for sent in client.sent] == [{"channel_id": "20"}, {"channel_id": None}]
+
+
+async def test_an_unreadable_response_is_a_failure_not_an_exception() -> None:
+    client = RecordingClient()  # no reply: an empty 204 where a channel was expected
+    client.reply("GET", "/guilds/1/channels", [VOICE_JSON, {"id": "x"}])
+
+    deleted = await client.channels.partial(20).delete()
+    channels = await client.guilds.partial(1).channels()
+
+    assert isinstance(deleted, ApiResponseError)
+    assert (deleted.code, deleted.status) == (JsonErrorCode.GENERAL_ERROR, 204)
+    assert isinstance(channels, ApiResponseError)
+
+
+async def test_api_errors_keep_the_http_status_and_name_unknown_resources() -> None:
+    client = RecordingClient()
+    client.reply("DELETE", "/channels/20", {"code": 10003, "message": "Unknown Channel"}, status=404)
+
+    error = await client.channels.partial(20).delete()
+
+    assert isinstance(error, ApiResponseError)
+    assert (error.code, error.status, error.unknown_resource) == (JsonErrorCode.UNKNOWN_CHANNEL, 404, True)
+    assert not ApiResponseError(code=JsonErrorCode.MISSING_ACCESS, message="Missing Access").unknown_resource

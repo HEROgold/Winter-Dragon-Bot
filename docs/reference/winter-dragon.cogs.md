@@ -51,8 +51,8 @@ Admin command group for inspecting and forcing the application-command sync stat
 
 - `describe_sync_status(registry: CommandRegistry) -> Generator[str]` — Yield one "name (scope): synced|pending" line per registered command, scope by scope.
 
-### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and manage the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
-Admin ``/bot-commands`` group for inspecting/managing application-command sync.
+### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and push the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
+Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
 
 - `@Cog.command async list_commands(interaction: CommandInteraction) -> None` — Show every registered command's synced/pending state.
 - `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it.

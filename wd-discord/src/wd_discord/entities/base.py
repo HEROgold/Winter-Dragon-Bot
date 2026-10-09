@@ -12,7 +12,10 @@ wd-discord has three levels, and a consumer picks the one it needs:
 A :class:`Partial` entity is an ID-only handle that acts without fetching first. The full entity wraps
 the fetched data model, which stays reachable as ``entity.model``.
 
-Every method returns failures as values (:data:`~wd_discord.client.NetworkError`), never raises.
+Every method returns failures as values (:data:`~wd_discord.client.NetworkError`), never raises; a response that
+can't be read as the expected model is a failure too (:data:`~wd_discord.errors.JsonErrorCode.GENERAL_ERROR`).
+
+Entities expose their IDs and the actions they take; read the rest of what Discord sent from ``entity.model``.
 """
 
 from __future__ import annotations
@@ -21,23 +24,61 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Any, Protocol
 
+lazy from herogold.errors import with_known_exception
+lazy from herogold.log import getLogger
+
 lazy from wd_discord.client import is_network_error
+lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
 lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from httpxyz import Response
+
     from wd_discord.client import Client, NetworkError, RequestResult
     from wd_discord.models import DiscordModel
     from wd_discord.snowflake import SnowflakeLike
 
 
+logger = getLogger("wd_discord.entities")
+
+
+@with_known_exception(ValueError)  # an empty or non-JSON body, and pydantic's ValidationError, are ValueErrors
+def _validate[M: DiscordModel](response: Response, model: type[M]) -> M:
+    return model.model_validate(response.json())
+
+
+@with_known_exception(ValueError)
+def _validate_all[M: DiscordModel](response: Response, model: type[M]) -> list[M]:
+    return [model.model_validate(item) for item in response.json()]
+
+
+def _unreadable(response: Response, model: type[DiscordModel], error: ValueError) -> ApiResponseError:
+    """Return the failure of a response that can't be read as ``model``, after logging why."""
+    logger.warning(t"Unreadable {model.__name__} response ({response.status_code}): {error}")
+    message = f"Discord's {model.__name__} response couldn't be read"
+    return ApiResponseError(code=JsonErrorCode.GENERAL_ERROR, message=message, status=response.status_code)
+
+
 def parse[M: DiscordModel](result: RequestResult, model: type[M]) -> M | NetworkError:
-    """Return the failure in ``result``, or its JSON body validated as ``model``."""
+    """Return the failure in ``result``, or its JSON body validated as ``model``; an unreadable body is a failure."""
     if is_network_error(result):
         return result
-    return model.model_validate(result.json())
+    parsed = _validate(result, model)
+    return _unreadable(result, model, parsed) if isinstance(parsed, ValueError) else parsed
+
+
+def parse_all[M: DiscordModel](result: RequestResult, model: type[M]) -> list[M] | NetworkError:
+    """Return the failure in ``result``, or each item of its JSON array validated as ``model``.
+
+    Validates every item up front, so a bad one is a failure here rather than an error while iterating.
+    """
+    if is_network_error(result):
+        return result
+    parsed = _validate_all(result, model)
+    return _unreadable(result, model, parsed) if isinstance(parsed, ValueError) else parsed
 
 
 def no_content(result: RequestResult) -> NetworkError | None:
@@ -68,9 +109,8 @@ class ClientBound:
         entity: type[E],
     ) -> Generator[E] | NetworkError:
         """Return the failure in ``result``, or each item of its JSON array as ``model`` wrapped in ``entity``."""
-        if is_network_error(result):
-            return result
-        return (entity(self.client, model.model_validate(item)) for item in result.json())
+        parsed = parse_all(result, model)
+        return parsed if is_network_error(parsed) else (entity(self.client, item) for item in parsed)
 
 
 @dataclass(frozen=True)

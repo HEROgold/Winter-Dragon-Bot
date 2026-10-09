@@ -102,9 +102,10 @@ def is_network_error(value: object) -> TypeIs[NetworkError]:
 def _parse_error(response: Response) -> ApiResponseError:
     """Parse a failed Discord response body into a type-safe :class:`ApiResponseError`."""
     try:
-        return ApiResponseError.model_validate(response.json())
+        error = ApiResponseError.model_validate(response.json())
     except Exception:  # noqa: BLE001 - non-JSON or unexpected shape (e.g. a Cloudflare HTML ban page)
-        return ApiResponseError(code=response.status_code, message=response.text)
+        return ApiResponseError(code=response.status_code, message=response.text, status=response.status_code)
+    return error.model_copy(update={"status": response.status_code})
 
 
 class Client(LoggerMixin):

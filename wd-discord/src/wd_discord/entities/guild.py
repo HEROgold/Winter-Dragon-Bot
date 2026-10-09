@@ -6,7 +6,7 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from wd_discord.audit import reason_headers
 lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_content
+lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_content, parse_all
 lazy from wd_discord.entities.channel import Channel
 lazy from wd_discord.entities.member import Member, PartialMember
 lazy from wd_discord.resources.channel import Channel as ChannelModel
@@ -72,10 +72,8 @@ class BaseGuild(ClientBound):
         Needs the GUILD_MEMBERS intent.
         """
         params = {"limit": str(limit), "after": str(after or 0)}
-        result = await self.client.get(t"/guilds/{self.id}/members", params=params)
-        if is_network_error(result):
-            return result
-        return (Member(self.client, GuildMember.model_validate(item), self.id) for item in result.json())
+        members = parse_all(await self.client.get(t"/guilds/{self.id}/members", params=params), GuildMember)
+        return members if is_network_error(members) else (Member(self.client, member, self.id) for member in members)
 
     async def leave(self) -> NetworkError | None:
         """DELETE /users/@me/guilds/{guild_id} - remove the bot from the guild; fails for a guild it owns."""

@@ -26,7 +26,9 @@ The client's own application: its data, its ID (which application-scoped routes 
 ## `wd_discord.entities.base` — `wd-discord/src/wd_discord/entities/base.py`
 Bases of the high-level API: client-bound entities and the stores that create them.
 
-- `parse[M: DiscordModel](result: RequestResult, model: type[M]) -> M | NetworkError` — Return the failure in ``result``, or its JSON body validated as ``model``.
+- module names: logger
+- `parse[M: DiscordModel](result: RequestResult, model: type[M]) -> M | NetworkError` — Return the failure in ``result``, or its JSON body validated as ``model``; an unreadable body is a failure.
+- `parse_all[M: DiscordModel](result: RequestResult, model: type[M]) -> list[M] | NetworkError` — Return the failure in ``result``, or each item of its JSON array validated as ``model``.
 - `no_content(result: RequestResult) -> NetworkError | None` — Return the failure in ``result``, or ``None`` for an endpoint that answers without a body.
 
 ### `@dataclass class ClientBound`

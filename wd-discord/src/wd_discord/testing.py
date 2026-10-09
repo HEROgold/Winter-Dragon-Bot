@@ -17,7 +17,10 @@ lazy from typing import TYPE_CHECKING, Any, override
 
 lazy from httpxyz import Request, Response
 
-lazy from wd_discord.client import Client
+lazy from wd_discord.client import (  # pyright: ignore[reportPrivateUsage] - the client's own reading of a failure
+    Client,
+    _parse_error,
+)
 lazy from wd_discord.route import Route
 
 
@@ -97,7 +100,10 @@ class RecordingClient(Client):
         self._queued: dict[tuple[str, str], list[Response]] = {}
 
     def reply(self, method: str, path: str, body: Mapping[str, object] | list[Any] | None = None, *, status: int = 200) -> None:
-        """Answer every ``method`` request to ``path`` with ``body`` as JSON (no body when ``None``)."""
+        """Answer every ``method`` request to ``path`` with ``body`` as JSON (no body when ``None``).
+
+        A ``status`` outside 2xx fails like the real client does: ``body`` is read as Discord's error.
+        """
         request = Request(method, f"{self.base_url}{path}")
         response = Response(status, request=request) if body is None else Response(status, json=body, request=request)
         self._replies[method, path] = response
@@ -142,4 +148,6 @@ class RecordingClient(Client):
         reply = queued.pop(0) if queued else self._replies.get((method, path))
         if reply is None:
             return Response(204, request=Request(method, f"{self.base_url}{path}"))
+        if isinstance(reply, Response) and not reply.is_success:
+            return _parse_error(reply)
         return reply
