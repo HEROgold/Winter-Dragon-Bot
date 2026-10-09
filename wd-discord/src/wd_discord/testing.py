@@ -18,10 +18,12 @@ lazy from typing import TYPE_CHECKING, Any, override
 lazy from httpxyz import Request, Response
 
 lazy from wd_discord.client import Client
+lazy from wd_discord.route import Route
 
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from string.templatelib import Template
 
     from wd_discord.errors.api import ApiResponseError
     from wd_discord.snowflake import SnowflakeLike
@@ -112,8 +114,9 @@ class RecordingClient(Client):
         ]
 
     @override
-    async def request(self, method: str, path: str, **kwargs: Any) -> Response | ApiResponseError:  # pyright: ignore[reportIncompatibleMethodOverride] - the parent's decorator widens its declared return
-        """Record the request and return its canned reply."""
+    async def request(self, method: str, route: Template, **kwargs: Any) -> Response | ApiResponseError:  # pyright: ignore[reportIncompatibleMethodOverride] - the parent's decorator widens its declared return
+        """Record the request (with its rendered path) and return its canned reply."""
+        path = Route(route).path
         self.sent.append(SentRequest(method, path, kwargs.get("json"), kwargs.get("data"), kwargs.get("files")))
         reply = self._replies.get((method, path))
         if reply is None:

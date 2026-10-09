@@ -219,7 +219,7 @@ class SharedRateLimiter(RateLimiter):
         await asyncio.sleep(retry_after)
 
 
-_MAJOR_PARAM_PREFIXES = ("guilds", "channels", "webhooks")
+MAJOR_PARAM_PREFIXES = ("guilds", "channels", "webhooks")
 
 MAX_RATE_LIMIT_RETRIES = 5
 
@@ -235,30 +235,6 @@ class RouteKey(str):
     """
 
     __slots__ = ()
-
-
-def route_key(method: str, path: str) -> RouteKey:
-    """Collapse a request to Discord's major-param route-key shape (method + path).
-
-    Only ``guild_id``/``channel_id``/``webhook_id`` partition a Discord rate-limit bucket
-    independently (https://docs.discord.com/developers/topics/rate-limits) - every other path
-    segment (message ids, user ids, ``@me``, ...) is collapsed so unrelated ids on an otherwise
-    identical route don't fragment a single real Discord bucket into many local keys.
-    """
-    segments = path.strip("/").split("/")
-    keyed: list[str] = []
-    keep_next = False
-    for segment in segments:
-        if keep_next:
-            keyed.append(segment)
-            keep_next = False
-            continue
-        if segment in _MAJOR_PARAM_PREFIXES:
-            keyed.append(segment)
-            keep_next = True
-            continue
-        keyed.append("{id}" if segment.isdigit() else segment)
-    return RouteKey(f"{method} {'/'.join(keyed)}")
 
 
 class MaxRetriesExceededError(Exception):

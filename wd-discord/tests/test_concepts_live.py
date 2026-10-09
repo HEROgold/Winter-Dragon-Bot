@@ -53,7 +53,7 @@ async def test_channel(
     """Channel resource: list the guild's channels, then GET /channels/{id} for one."""
     if not support_guild_id:
         pytest.skip("No support_guild_id configured in config.ini.")
-    channels = assert_success(await client.get(f"/guilds/{support_guild_id}/channels"))
+    channels = assert_success(await client.get(t"/guilds/{support_guild_id}/channels"))
     assert channels, "support guild has no channels to read"
     channel = assert_success(await client.channels.fetch(channels[0]["id"]))
     assert "id" in channel

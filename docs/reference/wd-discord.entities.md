@@ -103,7 +103,7 @@ A global command known only by ID, e.g. one stored from an earlier sync.
 ### `@dataclass class GlobalCommandStore(EntityStore[PartialGlobalCommand])`
 The application's global commands: register, fetch and list them.
 
-- `async path(command_id: SnowflakeLike | None=None) -> str | NetworkError` — Return the global-commands route, or one command's, or the failure looking up the application ID.
+- `async path(command_id: SnowflakeLike | None=None) -> Template | NetworkError` — Return the global-commands route, or one command's, or the failure looking up the application ID.
 - `async create(params: ApplicationCommandParams) -> GlobalCommand | NetworkError` — POST /applications/{application_id}/commands - register a new global command.
 - `async fetch_all() -> Generator[GlobalCommand] | NetworkError` — GET /applications/{application_id}/commands - every registered global command.
 - `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GlobalCommand] | NetworkError` — PUT /applications/{application_id}/commands - replace every global command with ``params``.
@@ -119,7 +119,7 @@ A command registered in one guild, as Discord returned it.
 One guild's commands for the application: list them, or replace them all.
 
 - fields: guild_id: Snowflake
-- `async path() -> str | NetworkError` — Return the guild-commands route, or the failure looking up the application ID.
+- `async path() -> Template | NetworkError` — Return the guild-commands route, or the failure looking up the application ID.
 - `async fetch_all() -> Generator[GuildCommand] | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild.
 - `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GuildCommand] | NetworkError` — PUT /applications/{application_id}/guilds/{guild_id}/commands - replace the guild's commands with ``params``.
 

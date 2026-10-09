@@ -13,6 +13,7 @@ lazy from wd_discord.responses import message_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from string.templatelib import Template
 
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
@@ -44,8 +45,8 @@ class Message(Entity[MessageModel]):
         return PartialChannel(self.client, self.model.channel_id)
 
     @property
-    def _path(self) -> str:
-        return f"/channels/{self.model.channel_id}/messages/{self.id}"
+    def _path(self) -> Template:
+        return t"/channels/{self.model.channel_id}/messages/{self.id}"
 
     async def edit(
         self,

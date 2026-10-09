@@ -32,6 +32,7 @@ lazy from wd_discord.responses import InteractionCallbackType, MessageFlags, mes
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from string.templatelib import Template
 
     from wd_core.client import JsonPayload
 
@@ -133,8 +134,8 @@ class Interaction[M: InteractionModel](Entity[M]):
         return self._state.responded
 
     @property
-    def _webhook_path(self) -> str:
-        return f"/webhooks/{self.application_id}/{self.token}"
+    def _webhook_path(self) -> Template:
+        return t"/webhooks/{self.application_id}/{self.token}"
 
     async def _callback(
         self,
@@ -146,7 +147,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         payload: JsonPayload = {"type": callback_type}
         if data:
             payload["data"] = data
-        path = f"/interactions/{self.id}/{self.token}/callback"
+        path = t"/interactions/{self.id}/{self.token}/callback"
         error = no_content(await self.client.post(path, **request_body(payload, files)))
         if error is None:
             self._state.responded = True
@@ -198,12 +199,12 @@ class Interaction[M: InteractionModel](Entity[M]):
         added to the message's attachments.
         """
         payload = message_data(content=content, embeds=embeds, components=components, files=files)
-        result = await self.client.patch(f"{self._webhook_path}/messages/@original", **request_body(payload, files))
+        result = await self.client.patch(self._webhook_path + t"/messages/@original", **request_body(payload, files))
         return self._entity(result, MessageModel, Message)
 
     async def delete_original(self) -> NetworkError | None:
         """DELETE /webhooks/{application_id}/{token}/messages/@original - remove the initial response."""
-        return no_content(await self.client.delete(f"{self._webhook_path}/messages/@original", json={}))
+        return no_content(await self.client.delete(self._webhook_path + t"/messages/@original", json={}))
 
     async def followup(
         self,

@@ -41,11 +41,11 @@ class BaseUser(ClientBound):
 
     async def fetch(self) -> User | NetworkError:
         """GET /users/{user_id}."""
-        return self._entity(await self.client.get(f"/users/{self.id}"), UserModel, User)
+        return self._entity(await self.client.get(t"/users/{self.id}"), UserModel, User)
 
     async def dm(self) -> Channel | NetworkError:
         """POST /users/@me/channels - open the DM channel with this user, or return the one already open."""
-        result = await self.client.post("/users/@me/channels", json={"recipient_id": str(self.id)})
+        result = await self.client.post(t"/users/@me/channels", json={"recipient_id": str(self.id)})
         return self._entity(result, ChannelModel, Channel)
 
     async def send(
@@ -113,7 +113,7 @@ class CurrentUser(User):
             payload["avatar"] = str(avatar)
         if banner is not None:
             payload["banner"] = str(banner)
-        return self._entity(await self.client.patch("/users/@me", json=payload), UserModel, CurrentUser)
+        return self._entity(await self.client.patch(t"/users/@me", json=payload), UserModel, CurrentUser)
 
 
 class PartialUser(BaseUser, Partial[User]):
@@ -126,4 +126,4 @@ class UserStore(EntityStore[PartialUser]):
 
     async def me(self) -> CurrentUser | NetworkError:
         """GET /users/@me - the user behind the client's token."""
-        return self._entity(await self.client.get("/users/@me"), UserModel, CurrentUser)
+        return self._entity(await self.client.get(t"/users/@me"), UserModel, CurrentUser)

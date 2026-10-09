@@ -30,7 +30,7 @@ class CurrentApplication:
 
     async def fetch(self) -> Application | NetworkError:
         """GET /applications/@me - the application object."""
-        return parse(await self.client.get("/applications/@me"), Application)
+        return parse(await self.client.get(t"/applications/@me"), Application)
 
     async def id(self) -> Snowflake | NetworkError:
         """Return the application's ID, fetching and caching it when unknown.

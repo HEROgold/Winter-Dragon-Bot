@@ -49,11 +49,13 @@ lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import PartialUser, UserStore
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler, route_key
+lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler
+lazy from wd_discord.route import Route
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
+    lazy from string.templatelib import Template
 
     lazy from httpxyz import Response
     lazy from wd_core.client import RequestKwargs
@@ -163,7 +165,7 @@ class Client(LoggerMixin):
         await self._client.aclose()
 
     @returns_known_exception(RequestError)
-    async def request(self, method: str, path: str, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
+    async def request(self, method: str, route: Template, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
         """Send a request, returning the :class:`Response` or a parsed error value.
 
         Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and 4xx/5xx
@@ -173,8 +175,9 @@ class Client(LoggerMixin):
         extra exponential backoff (``2 ** attempt`` seconds) and retries transparently (up to
         :data:`MAX_RATE_LIMIT_RETRIES` times) rather than surfacing the 429 to the caller.
         """
-        key = route_key(method, path)
-        handler = RateLimitHandler(key)
+        resolved = Route(route)
+        path = resolved.path
+        handler = RateLimitHandler(resolved.key(method))
 
         async def send_once() -> Response:
             self.logger.debug(t"{method} {path}")
@@ -198,33 +201,33 @@ class Client(LoggerMixin):
         self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
         return error
 
-    async def get(self, path: str) -> RequestResult:
+    async def get(self, route: Template) -> RequestResult:
         """Send a GET request."""
-        return await self.request("GET", path)
+        return await self.request("GET", route)
 
-    async def post(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+    async def post(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a POST request."""
-        return await self.request("POST", path, **kwargs)
+        return await self.request("POST", route, **kwargs)
 
-    async def patch(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+    async def patch(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a PATCH request."""
-        return await self.request("PATCH", path, **kwargs)
+        return await self.request("PATCH", route, **kwargs)
 
-    async def put(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+    async def put(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a PUT request."""
-        return await self.request("PUT", path, **kwargs)
+        return await self.request("PUT", route, **kwargs)
 
-    async def delete(self, path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+    async def delete(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a DELETE request."""
         if "json" not in kwargs:
             kwargs["json"] = {}
-        return await self.request("DELETE", path, **kwargs)
+        return await self.request("DELETE", route, **kwargs)
 
     # --- Gateway bootstrap ----------------------------------------------------------
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
-        result = await self.get("/gateway/bot")
+        result = await self.get(t"/gateway/bot")
         if is_network_error(result):
             return result
         return GatewayBotInfo.model_validate(result.json())

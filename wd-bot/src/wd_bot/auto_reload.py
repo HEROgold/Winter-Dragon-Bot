@@ -4,17 +4,19 @@ from __future__ import annotations
 
 lazy import asyncio
 lazy import inspect
-lazy import logging
 lazy from dataclasses import dataclass
 lazy from enum import IntFlag, auto
 lazy from pathlib import Path
 lazy from typing import TYPE_CHECKING, ClassVar
 
-lazy from herogold.log import LoggerMixin
+lazy from herogold.log import LoggerMixin, getLogger
 lazy from wd_config.bot import Settings
 
 
 if TYPE_CHECKING:
+    lazy import logging
+    lazy from string.templatelib import Template
+
     lazy from wd_bot.bot import Bot
     lazy from wd_bot.cogs import Cog
 
@@ -151,23 +153,23 @@ class AutoReloadWatcher(LoggerMixin):
                 entry.mtime_ns = current_mtime
                 await cls._reload_extension(entry.bot, module_name, entry.logger)
         except asyncio.CancelledError:
-            cls._log_with_fallback(module_name, "debug", "Stopped watching %s for changes", module_name)
+            cls._log_with_fallback(module_name, "debug", t"Stopped watching {module_name} for changes")
             raise
         except Exception:  # noqa: BLE001
-            cls._log_with_fallback(module_name, "exception", "Auto-reload watcher for %s crashed", module_name)
+            cls._log_with_fallback(module_name, "exception", t"Auto-reload watcher for {module_name} crashed")
 
     @classmethod
-    def _log_with_fallback(cls, module_name: str, level: str, msg: str, *args: object) -> None:
+    def _log_with_fallback(cls, module_name: str, level: str, msg: Template) -> None:
         entry = cls._entries.get(module_name)
-        logger = entry.logger if entry else logging.getLogger(f"{__name__}.{cls.__name__}")
-        getattr(logger, level)(msg, *args)
+        logger = entry.logger if entry else getLogger(f"{__name__}.{cls.__name__}")
+        getattr(logger, level)(msg)
 
     @staticmethod
     async def _reload_extension(bot: Bot, module_name: str, logger: logging.Logger) -> None:
-        logger.info("Detected change in %s. Reloading extension.", module_name)
+        logger.info(t"Detected change in {module_name}. Reloading extension.")
         try:
             reload_result = bot.reload_extension(module_name)
             if inspect.isawaitable(reload_result):
                 await reload_result
         except Exception:
-            logger.exception("Failed to reload extension %s", module_name)
+            logger.exception(t"Failed to reload extension {module_name}")

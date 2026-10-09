@@ -59,12 +59,12 @@ The built-in Discord REST client for wd-discord.
 An async Discord REST client pinned to the configured API version (v10 by default).
 
 - `async aclose() -> None` — Close the underlying httpxyz transport.
-- `@returns_known_exception async request(method: str, path: str, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
-- `async get(path: str) -> RequestResult` — Send a GET request.
-- `async post(path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a POST request.
-- `async patch(path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
-- `async put(path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.
-- `async delete(path: str, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a DELETE request.
+- `@returns_known_exception async request(method: str, route: Template, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
+- `async get(route: Template) -> RequestResult` — Send a GET request.
+- `async post(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a POST request.
+- `async patch(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
+- `async put(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.
+- `async delete(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a DELETE request.
 - `async get_gateway_bot() -> GatewayBotInfo | NetworkError` — GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info.
 - `async get_shard_manager(info: GatewayBotInfo, *, intents: Intents | None=None) -> ShardManager` — Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`.
 
@@ -303,8 +303,7 @@ Represents the permissions a member has in a guild or channel.
 ## `wd_discord.rate_limit` — `wd-discord/src/wd_discord/rate_limit.py`
 Utilities for handling rate limits.
 
-- module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAX_RATE_LIMIT_RETRIES
-- `route_key(method: str, path: str) -> RouteKey` — Collapse a request to Discord's major-param route-key shape (method + path).
+- module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAJOR_PARAM_PREFIXES, MAX_RATE_LIMIT_RETRIES
 
 ### `class Buckets(StrEnum)`
 Represents the different buckets for rate limits.
@@ -386,6 +385,16 @@ The body of a response to an interaction (object -> API).
 - fields: content: str, embeds: list[Embed], components: list[ActionRow], flags: MessageFlags, attachments:
   list[dict[str, object]], choices: list[dict[str, object]]
 
+## `wd_discord.route` — `wd-discord/src/wd_discord/route.py`
+REST routes written as PEP 750 templates: ``t"/channels/{channel_id}/messages"``.
+
+### `@dataclass class Route`
+One REST route: a template whose literal parts are the route and whose interpolations are its parameters.
+
+- fields: template: Template
+- `@property path -> str` — The request path, with each parameter formatted and percent-encoded as one path segment.
+- `key(method: str) -> RouteKey` — Collapse this route to Discord's rate-limit route shape for ``method``.
+
 ## `wd_discord.sentry` — `wd-discord/src/wd_discord/sentry.py`
 Module to handle Sentry setup for wd-discord.
 
@@ -423,7 +432,7 @@ A client that records requests instead of sending them, and answers with canned 
 - `fail(method: str, path: str, error: ApiResponseError) -> None` — Answer every ``method`` request to ``path`` with ``error``.
 - `requests_to(method: str, path: str) -> list[SentRequest]` — Return the recorded ``method`` requests to ``path``, oldest first.
 - `interaction_responses() -> list[Any]` — Return the bodies of every initial interaction response sent, oldest first.
-- `async request(method: str, path: str, **kwargs: Any) -> Response | ApiResponseError` — Record the request and return its canned reply.
+- `async request(method: str, route: Template, **kwargs: Any) -> Response | ApiResponseError` — Record the request (with its rendered path) and return its canned reply.
 
 ## `wd_discord.timestamp` — `wd-discord/src/wd_discord/timestamp.py`
 Discord timestamp markup: ``<t:EPOCH:STYLE>``, shown in each reader's own timezone and locale.

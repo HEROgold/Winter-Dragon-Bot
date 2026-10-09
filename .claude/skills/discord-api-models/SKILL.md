@@ -88,8 +88,13 @@ empty responses):
 ```python
 async def fetch(self) -> User | NetworkError:
     """GET /users/{user_id}."""
-    return self._entity(await self.client.get(f"/users/{self.id}"), UserModel, User)
+    return self._entity(await self.client.get(t"/users/{self.id}"), UserModel, User)
 ```
+
+Routes are t-strings, never f-strings: [route.py](../../../wd-discord/src/wd_discord/route.py) `Route`
+percent-encodes each parameter into the path and builds the rate-limit key from the template, keeping only
+the major parameter (`guilds`/`channels`/`webhooks` id) and collapsing every other one to `{id}`. Join
+route pieces with `+` (`self._webhook_path + t"/messages/@original"`).
 
 Entity classes take the plain names (`wd_discord.User`); data models keep the Discord docs' names in
 their modules and are imported as `... as UserModel` where both meet.

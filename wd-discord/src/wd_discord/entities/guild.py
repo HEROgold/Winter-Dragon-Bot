@@ -28,15 +28,15 @@ class BaseGuild(ClientBound):
 
     async def fetch(self) -> Guild | NetworkError:
         """GET /guilds/{guild_id}."""
-        return self._entity(await self.client.get(f"/guilds/{self.id}"), GuildModel, Guild)
+        return self._entity(await self.client.get(t"/guilds/{self.id}"), GuildModel, Guild)
 
     async def channels(self) -> Generator[Channel] | NetworkError:
         """GET /guilds/{guild_id}/channels - the guild's channels, threads excluded."""
-        return self._entities(await self.client.get(f"/guilds/{self.id}/channels"), ChannelModel, Channel)
+        return self._entities(await self.client.get(t"/guilds/{self.id}/channels"), ChannelModel, Channel)
 
     async def leave(self) -> NetworkError | None:
         """DELETE /users/@me/guilds/{guild_id} - remove the bot from the guild; fails for a guild it owns."""
-        return no_content(await self.client.delete(f"/users/@me/guilds/{self.id}", json={}))
+        return no_content(await self.client.delete(t"/users/@me/guilds/{self.id}", json={}))
 
 
 class Guild(Entity[GuildModel], BaseGuild):

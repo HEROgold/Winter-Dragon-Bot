@@ -44,7 +44,7 @@ class BaseChannel(ClientBound):
 
     async def fetch(self) -> Channel | NetworkError:
         """GET /channels/{channel_id}."""
-        return self._entity(await self.client.get(f"/channels/{self.id}"), ChannelModel, Channel)
+        return self._entity(await self.client.get(t"/channels/{self.id}"), ChannelModel, Channel)
 
     async def send(
         self,
@@ -58,7 +58,7 @@ class BaseChannel(ClientBound):
         Discord needs at least one of ``content``, ``embeds`` or ``components``.
         """
         payload = message_data(content=content, embeds=embeds, components=components)
-        return self._entity(await self.client.post(f"/channels/{self.id}/messages", json=payload), MessageModel, Message)
+        return self._entity(await self.client.post(t"/channels/{self.id}/messages", json=payload), MessageModel, Message)
 
     async def create_invite(
         self,
@@ -73,7 +73,7 @@ class BaseChannel(ClientBound):
         Defaults to a single-use 24-hour invite, meant for handing to one specific person.
         """
         payload: JsonPayload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
-        return parse(await self.client.post(f"/channels/{self.id}/invites", json=payload), Invite)
+        return parse(await self.client.post(t"/channels/{self.id}/invites", json=payload), Invite)
 
 
 class Channel(Entity[ChannelModel], BaseChannel):

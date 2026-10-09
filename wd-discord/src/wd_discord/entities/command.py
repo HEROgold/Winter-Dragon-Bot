@@ -16,6 +16,7 @@ lazy from wd_discord.interactions import ApplicationCommand
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterable
+    from string.templatelib import Template
 
     from wd_discord.client import NetworkError
     from wd_discord.interactions import ApplicationCommandParams
@@ -31,7 +32,7 @@ class BaseGlobalCommand(ClientBound):
         def id(self) -> Snowflake:
             """The ID this object acts on."""
 
-    async def _path(self) -> str | NetworkError:
+    async def _path(self) -> Template | NetworkError:
         return await self.client.application.commands.path(self.id)
 
     async def fetch(self) -> GlobalCommand | NetworkError:
@@ -89,13 +90,13 @@ class PartialGlobalCommand(BaseGlobalCommand, Partial[GlobalCommand]):
 class GlobalCommandStore(EntityStore[PartialGlobalCommand]):
     """The application's global commands: register, fetch and list them."""
 
-    async def path(self, command_id: SnowflakeLike | None = None) -> str | NetworkError:
+    async def path(self, command_id: SnowflakeLike | None = None) -> Template | NetworkError:
         """Return the global-commands route, or one command's, or the failure looking up the application ID."""
         application_id = await self.client.application.id()
         if is_network_error(application_id):
             return application_id
-        path = f"/applications/{application_id}/commands"
-        return path if command_id is None else f"{path}/{command_id}"
+        path = t"/applications/{application_id}/commands"
+        return path if command_id is None else path + t"/{command_id}"
 
     async def create(self, params: ApplicationCommandParams) -> GlobalCommand | NetworkError:
         """POST /applications/{application_id}/commands - register a new global command.
@@ -151,12 +152,12 @@ class GuildCommandStore(Store):
 
     guild_id: Snowflake
 
-    async def path(self) -> str | NetworkError:
+    async def path(self) -> Template | NetworkError:
         """Return the guild-commands route, or the failure looking up the application ID."""
         application_id = await self.client.application.id()
         if is_network_error(application_id):
             return application_id
-        return f"/applications/{application_id}/guilds/{self.guild_id}/commands"
+        return t"/applications/{application_id}/guilds/{self.guild_id}/commands"
 
     async def fetch_all(self) -> Generator[GuildCommand] | NetworkError:
         """GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild."""
