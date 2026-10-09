@@ -265,7 +265,7 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     (embed,) = data["embeds"]  # pyright: ignore[reportIndexIssue]
     assert embed["title"] == "🏆 Cup"
     labels = [button["label"] for button in data["components"][0]["components"]]  # pyright: ignore[reportIndexIssue]
-    assert labels == ["Join", "Leave"]
+    assert labels == ["Join", "Leave", "Participants"]
     with Session(engine) as session:
         assert session.exec(select(Tournament)).one().organiser_id == ORGANISER
 
@@ -340,4 +340,28 @@ def test_signup_buttons_depend_on_the_team_mode(engine: Engine, discord_client: 
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS if captains else TeamMode.SOLO)
         _, rows = _cog(engine, discord_client)._signup_card(session, tournament)  # noqa: SLF001
-    assert [button.label for button in rows[0].components] == (["Leave"] if captains else ["Join", "Leave"])
+    expected = ["Leave", "Participants"] if captains else ["Join", "Leave", "Participants"]
+    assert [button.label for button in rows[0].components] == expected
+
+
+async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        assert service.create_team(session, tournament, 5, "Reds") is None
+        session.commit()
+        tournament_id = tournament.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.participants_button.invoke(
+        cog, make_component_interaction(f"tourney-participants:{tournament_id}"), [str(tournament_id)],
+    )
+
+    data = _response(discord_client)["data"]
+    assert data["flags"] == 64  # EPHEMERAL  # pyright: ignore[reportIndexIssue]
+    (embed,) = data["embeds"]  # pyright: ignore[reportIndexIssue]
+    assert embed["title"] == "🏆 Cup: 1 participant"
+    assert embed["description"] == "**Reds** (1/2): <@5>"

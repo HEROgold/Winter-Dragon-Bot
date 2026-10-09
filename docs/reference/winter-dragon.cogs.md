@@ -444,10 +444,11 @@ The arithmetic of a single-elimination bracket, and of splitting players into te
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: MAX_FIELD_LENGTH, PHASE_LABELS
+- module names: MAX_FIELD_LENGTH, MAX_DESCRIPTION_LENGTH, PHASE_LABELS
 - `mentions(user_ids: Sequence[int]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.
-- `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int]) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per team.
-- `signup_buttons(join: ComponentHandler, leave: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join and Leave buttons under a sign-up card; captains' tournaments join by command, not button.
+- `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int], *, team_create: CommandMention, team_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per team.
+- `signup_buttons(join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join, Leave and Participants buttons under a sign-up card.
+- `participants_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int]) -> Embed` — Return everyone signed up to ``tournament``: one line per player, or one line per team with its players.
 - `match_line(match: TournamentMatch, names: Mapping[int, str]) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
 - `bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Embed` — Return the bracket: every round's matches, and the champion once there is one.
 - `match_embed(match: TournamentMatch, rounds: int, names: Mapping[int, str], rosters: Mapping[int, Sequence[int]], drafts: Sequence[DraftChoice]) -> Embed` — Return a match card: its round, phase, the teams' players, and what each team banned and picked.
@@ -473,6 +474,7 @@ Runs one tournament per guild: players sign up, teams form, and a single-elimina
 - `@Cog.command async leave(interaction: CommandInteraction) -> None` — Take the invoker out of the tournament; a captain leaving disbands their team.
 - `@Cog.component async join_button(interaction: ComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
 - `@Cog.component async leave_button(interaction: ComponentInteraction, tournament_id: str) -> None` — Take the clicker out, then refresh the sign-up card.
+- `@Cog.component async participants_button(interaction: ComponentInteraction, tournament_id: str) -> None` — Show the clicker, and only them, everyone signed up so far.
 - `@Cog.command async team_create(interaction: CommandInteraction, name: str) -> None` — Register the team ``name`` captained by the invoker.
 - `@Cog.command async team_add(interaction: CommandInteraction, player: User) -> None` — Add ``player`` to the invoker's team.
 - `@Cog.command async team_remove(interaction: CommandInteraction, player: User) -> None` — Remove ``player`` from the invoker's team.

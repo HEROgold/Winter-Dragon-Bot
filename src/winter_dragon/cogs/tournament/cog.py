@@ -20,6 +20,7 @@ lazy from .cards import (
     match_buttons,
     match_embed,
     match_line,
+    participants_embed,
     signup_buttons,
     signup_embed,
     vote_buttons,
@@ -125,17 +126,30 @@ class Tournaments(
 
     # --- Sign-up ---------------------------------------------------------------------------------------------------
 
-    def _signup_card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
-        """Return the tournament's sign-up card and its buttons, as they are now."""
+    @staticmethod
+    def _participants(session: Session, tournament: Tournament) -> tuple[dict[str, list[int]], list[int]]:
+        """Return each team's players by team name, and the players signed up alone."""
         tournament_id = tournament.id or 0
         rosters = {team.name: roster(session, team.id) for team in teams_of(session, tournament_id) if team.id is not None}
         solo = [player.user_id for player in players_of(session, tournament_id)]
+        return rosters, solo
+
+    def _signup_card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
+        """Return the tournament's sign-up card and its buttons, as they are now."""
+        rosters, solo = self._participants(session, tournament)
         buttons = (
-            signup_buttons(self.join_button, self.leave_button, tournament)
+            signup_buttons(self.join_button, self.leave_button, self.participants_button, tournament)
             if tournament.status is TournamentStatus.SIGNUP
             else []
         )
-        return signup_embed(tournament, rosters, solo), buttons
+        embed = signup_embed(
+            tournament,
+            rosters,
+            solo,
+            team_create=self.mention(self.team_create),
+            team_add=self.mention(self.team_add),
+        )
+        return embed, buttons
 
     @Cog.command(name="create", description="Open sign-up for a tournament in this channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def create(self, interaction: CommandInteraction, name: str, team_size: int, captains: bool = False) -> None:  # noqa: FBT001, FBT002 - a command option
@@ -209,6 +223,18 @@ class Tournaments(
     async def leave_button(self, interaction: ComponentInteraction, tournament_id: str) -> None:
         """Take the clicker out, then refresh the sign-up card."""
         await self._signup_click(interaction, tournament_id, join=False)
+
+    @Cog.component("tourney-participants")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def participants_button(self, interaction: ComponentInteraction, tournament_id: str) -> None:
+        """Show the clicker, and only them, everyone signed up so far."""
+        with Session(self.bind) as session:
+            tournament = session.get(Tournament, int(tournament_id))
+            if tournament is None:
+                await interaction.respond("This tournament is gone.", ephemeral=True)
+                return
+            rosters, solo = self._participants(session, tournament)
+            embed = participants_embed(tournament, rosters, solo)
+        await interaction.respond(embeds=[embed], ephemeral=True)
 
     async def _signup_click(self, interaction: ComponentInteraction, tournament_id: str, *, join: bool) -> None:
         with Session(self.bind) as session:

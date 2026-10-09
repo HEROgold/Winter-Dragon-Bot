@@ -16,12 +16,15 @@ if TYPE_CHECKING:
     lazy from collections.abc import Mapping, Sequence
 
     lazy from wd_bot.components import ComponentHandler
+    lazy from wd_bot.registry import CommandMention
 
     lazy from .models import DraftChoice, MatchVote, Tournament, TournamentMatch
 
 
 MAX_FIELD_LENGTH = 1024
 """Discord's limit on an embed field's value."""
+MAX_DESCRIPTION_LENGTH = 4096
+"""Discord's limit on an embed's description."""
 PHASE_LABELS = {
     MatchPhase.WAITING: "⏳ Waiting for teams",
     MatchPhase.READY: "🟦 Ready",
@@ -39,24 +42,70 @@ def mentions(user_ids: Sequence[int]) -> str:
     return text if len(text) <= MAX_FIELD_LENGTH else text[: MAX_FIELD_LENGTH - 1] + "…"
 
 
-def signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int]) -> Embed:
-    """Return the sign-up card: the format, and who signed up, alone or per team."""
+def signup_embed(
+    tournament: Tournament,
+    rosters: Mapping[str, Sequence[int]],
+    solo_players: Sequence[int],
+    *,
+    team_create: CommandMention,
+    team_add: CommandMention,
+) -> Embed:
+    """Return the sign-up card: the format, and who signed up, alone or per team.
+
+    ``team_create`` and ``team_add`` are mentions of the commands that join a captains' tournament.
+    """
     if tournament.mode is TeamMode.SOLO:
         how = f"Sign up alone; teams of {tournament.team_size} are drawn when the tournament starts."
         fields = [EmbedField(name=f"Players ({len(solo_players)})", value=mentions(solo_players))]
     else:
-        how = f"Captains register a team of up to {tournament.team_size} players and add their teammates."
+        how = (
+            f"Captains register a team of up to {tournament.team_size} players with {team_create}, "
+            f"then add their teammates with {team_add}."
+        )
         fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:25]
     status = "open" if tournament.status is TournamentStatus.SIGNUP else tournament.status.value
     return Embed(title=f"🏆 {tournament.name}", description=f"{how}\nSign-up is {status}.", fields=fields)
 
 
-def signup_buttons(join: ComponentHandler, leave: ComponentHandler, tournament: Tournament) -> list[ActionRow]:
-    """Return the Join and Leave buttons under a sign-up card; captains' tournaments join by command, not button."""
-    buttons = [Button(style=ButtonStyle.DANGER, label="Leave", custom_id=leave.custom_id(tournament.id or 0))]
+def signup_buttons(
+    join: ComponentHandler,
+    leave: ComponentHandler,
+    participants: ComponentHandler,
+    tournament: Tournament,
+) -> list[ActionRow]:
+    """Return the Join, Leave and Participants buttons under a sign-up card.
+
+    Captains' tournaments join by command, not button, so they have no Join button.
+    """
+    tournament_id = tournament.id or 0
+    buttons = [
+        Button(style=ButtonStyle.DANGER, label="Leave", custom_id=leave.custom_id(tournament_id)),
+        Button(style=ButtonStyle.SECONDARY, label="Participants", custom_id=participants.custom_id(tournament_id)),
+    ]
     if tournament.mode is TeamMode.SOLO:
-        buttons.insert(0, Button(style=ButtonStyle.SUCCESS, label="Join", custom_id=join.custom_id(tournament.id or 0)))
+        buttons.insert(0, Button(style=ButtonStyle.SUCCESS, label="Join", custom_id=join.custom_id(tournament_id)))
     return [ActionRow(components=buttons)]
+
+
+def participants_embed(
+    tournament: Tournament,
+    rosters: Mapping[str, Sequence[int]],
+    solo_players: Sequence[int],
+) -> Embed:
+    """Return everyone signed up to ``tournament``: one line per player, or one line per team with its players."""
+    if tournament.mode is TeamMode.SOLO:
+        count = len(solo_players)
+        lines = [f"<@{user_id}>" for user_id in solo_players]
+    else:
+        count = sum(len(players) for players in rosters.values())
+        lines = [
+            f"**{name}** ({len(players)}/{tournament.team_size}): {', '.join(f'<@{user_id}>' for user_id in players) or '—'}"
+            for name, players in rosters.items()
+        ]
+    text = "\n".join(lines) or "Nobody has signed up yet."
+    if len(text) > MAX_DESCRIPTION_LENGTH:
+        text = text[: MAX_DESCRIPTION_LENGTH - 1] + "…"
+    return Embed(title=f"🏆 {tournament.name}: {count} participant{'' if count == 1 else 's'}", description=text)
 
 
 def _team(names: Mapping[int, str], team_id: int | None, *, bye: bool) -> str:
