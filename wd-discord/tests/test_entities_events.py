@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TypeAliasType
 
-from wd_discord import CurrentUser, Guild, Message, PartialGuild, Ready, bind
+from wd_discord import CurrentUser, Guild, Member, Message, PartialChannel, PartialGuild, PartialMember, Ready, VoiceState, bind
 from wd_discord.entities import event_entities
 from wd_discord.gateway import EventName, RawEvent, parse_dispatch, parse_ready
 from wd_discord.snowflake import Snowflake
@@ -28,6 +28,26 @@ READY_JSON = {
     "shard": [0, 2],
 }
 INTERACTION_JSON = {"id": "1", "application_id": "2", "type": 1, "token": "tok", "version": 1}
+VOICE_STATE_JSON = {
+    "guild_id": "7",
+    "channel_id": "5",
+    "user_id": "3",
+    "session_id": "s",
+    "deaf": False,
+    "mute": False,
+    "self_deaf": False,
+    "self_mute": True,
+    "self_video": False,
+    "suppress": False,
+    "request_to_speak_timestamp": None,
+}
+MEMBER_JSON = {
+    "user": {"id": "3", "username": "someone", "discriminator": "0"},
+    "roles": [],
+    "joined_at": None,
+    "deaf": False,
+    "mute": False,
+}
 
 
 def test_bind_message_create() -> None:
@@ -55,6 +75,27 @@ def test_bind_ready() -> None:
     assert ready.session_id == "s"
 
 
+def test_bind_voice_state_update() -> None:
+    client = RecordingClient()
+    state = bind(client, parse_dispatch(EventName.VOICE_STATE_UPDATE, VOICE_STATE_JSON))
+    assert isinstance(state, VoiceState)
+    assert state.channel == PartialChannel(client, Snowflake(5))
+    assert state.member == PartialMember(client, Snowflake(3), Snowflake(7))
+
+
+def test_voice_state_member_is_full_when_sent() -> None:
+    state = bind(RecordingClient(), parse_dispatch(EventName.VOICE_STATE_UPDATE, {**VOICE_STATE_JSON, "member": MEMBER_JSON}))
+    assert isinstance(state, VoiceState)
+    assert isinstance(state.member, Member)
+    assert state.member.guild_id == Snowflake(7)
+
+
+def test_voice_state_disconnect_has_no_channel() -> None:
+    state = bind(RecordingClient(), parse_dispatch(EventName.VOICE_STATE_UPDATE, {**VOICE_STATE_JSON, "channel_id": None}))
+    assert isinstance(state, VoiceState)
+    assert state.channel is None
+
+
 def test_bind_returns_events_without_an_entity_unchanged() -> None:
     raw = parse_dispatch(EventName.TYPING_START, {"channel_id": "2"})
     assert isinstance(raw, RawEvent)
@@ -67,6 +108,7 @@ def test_event_entities_match_what_bind_returns() -> None:
         EventName.MESSAGE_CREATE: parse_dispatch(EventName.MESSAGE_CREATE, MESSAGE_JSON),
         EventName.GUILD_CREATE: parse_dispatch(EventName.GUILD_CREATE, GUILD_JSON),
         EventName.INTERACTION_CREATE: parse_dispatch(EventName.INTERACTION_CREATE, INTERACTION_JSON),
+        EventName.VOICE_STATE_UPDATE: parse_dispatch(EventName.VOICE_STATE_UPDATE, VOICE_STATE_JSON),
     }
     entities = event_entities()
     assert entities.keys() == samples.keys()

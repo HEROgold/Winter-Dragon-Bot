@@ -201,9 +201,9 @@ class Client(LoggerMixin):
         self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
         return error
 
-    async def get(self, route: Template) -> RequestResult:
+    async def get(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a GET request."""
-        return await self.request("GET", route)
+        return await self.request("GET", route, **kwargs)
 
     async def post(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a POST request."""

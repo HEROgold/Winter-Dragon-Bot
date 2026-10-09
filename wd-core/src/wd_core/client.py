@@ -37,6 +37,31 @@ class JsonPayload(TypedDict, total=False):
     data: MessageData
     type: InteractionCallbackType
     default_member_permissions: str
+    channel_id: str | None
+
+
+class OverwritePayload(TypedDict):
+    """A permission overwrite on a channel: what a role (``type`` 0) or member (``type`` 1) is allowed and denied."""
+
+    id: str
+    type: int
+    allow: str
+    deny: str
+
+
+class ChannelPayload(TypedDict, total=False):
+    """The settings of a guild channel to create or change."""
+
+    name: str
+    type: int
+    topic: str
+    position: int
+    bitrate: int
+    user_limit: int
+    rate_limit_per_user: int
+    nsfw: bool
+    parent_id: str
+    permission_overwrites: list[OverwritePayload]
 
 
 class RequestKwargs(TypedDict, total=False):
@@ -45,7 +70,7 @@ class RequestKwargs(TypedDict, total=False):
     content: RequestContent
     data: RequestData
     files: RequestFiles
-    json: JsonPayload | MessageData | list[JsonPayload]
+    json: JsonPayload | MessageData | ChannelPayload | OverwritePayload | list[JsonPayload]
     params: QueryParamTypes
     headers: HeaderTypes
     cookies: CookieTypes

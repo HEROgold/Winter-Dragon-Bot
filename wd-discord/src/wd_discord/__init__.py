@@ -9,6 +9,7 @@ from __future__ import annotations
 
 lazy from wd_config.discord import URLS
 
+lazy from wd_discord.audit import AuditLogReason
 lazy from wd_discord.authenticate import Token, TokenType
 lazy from wd_discord.client import Client, NetworkError, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
@@ -24,14 +25,17 @@ lazy from wd_discord.entities import (
     Guild,
     GuildCommand,
     Interaction,
+    Member,
     Message,
     PartialChannel,
     PartialGlobalCommand,
     PartialGuild,
+    PartialMember,
     PartialUser,
     Ready,
     UnknownInteraction,
     User,
+    VoiceState,
     bind,
 )
 lazy from wd_discord.errors import ApiResponseError
@@ -59,6 +63,7 @@ __all__ = [
     "AnyInteraction",
     "ApiResponseError",
     "Application",
+    "AuditLogReason",
     "AutocompleteInteraction",
     "BoundEvent",
     "Channel",
@@ -80,12 +85,14 @@ __all__ = [
     "GuildCreate",
     "Interaction",
     "Invite",
+    "Member",
     "Message",
     "NetworkError",
     "PartialChannel",
     "PartialEmoji",
     "PartialGlobalCommand",
     "PartialGuild",
+    "PartialMember",
     "PartialUser",
     "Permissions",
     "RawEvent",
@@ -98,6 +105,7 @@ __all__ = [
     "TokenType",
     "UnknownInteraction",
     "User",
+    "VoiceState",
     "bind",
     "is_network_error",
 ]

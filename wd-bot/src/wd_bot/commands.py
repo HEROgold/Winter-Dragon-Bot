@@ -3,21 +3,25 @@
 from __future__ import annotations
 
 lazy import annotationlib
+lazy import operator
 lazy from abc import ABC, abstractmethod
+lazy from functools import reduce
 lazy from inspect import Parameter
 lazy from inspect import signature as inspect_signature
 lazy from itertools import islice
 lazy from types import LazyImportType, NoneType, UnionType
-lazy from typing import TYPE_CHECKING, Self, get_args
+lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
-lazy from wd_discord import User
+lazy from wd_discord import Channel, User
 lazy from wd_discord.interactions import (
     MAX_CHOICES,
     ApplicationCommandOption,
     ApplicationCommandOptionType,
     ApplicationCommandParams,
 )
+lazy from wd_discord.resources.channel import Channel as ChannelModel
+lazy from wd_discord.resources.guild import Role
 lazy from wd_discord.resources.user import User as UserModel
 lazy from wd_discord.snowflake import Snowflake
 
@@ -30,9 +34,9 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
-    lazy from wd_discord.gateway.events import InteractionDataOption
+    lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
     lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
-    lazy from wd_discord.permissions import Permissions
+    lazy from wd_discord.permissions import ChannelType, Permissions
     lazy from wd_discord.snowflake import SnowflakeLike
 
 
@@ -43,7 +47,22 @@ _OPTION_TYPE_MAP: dict[type, ApplicationCommandOptionType] = {
     bool: ApplicationCommandOptionType.BOOLEAN,
     User: ApplicationCommandOptionType.USER,
     UserModel: ApplicationCommandOptionType.USER,
+    Channel: ApplicationCommandOptionType.CHANNEL,
+    ChannelModel: ApplicationCommandOptionType.CHANNEL,
+    Role: ApplicationCommandOptionType.ROLE,
 }
+_MENTIONABLES = (frozenset({User, Role}), frozenset({UserModel, Role}))
+"""The unions a parameter is annotated with to take a MENTIONABLE option: a user or a role."""
+
+
+class ChannelTypes:
+    """Limit a channel option to some kinds of channel: ``category: Annotated[Channel, ChannelTypes(GUILD_CATEGORY)]``."""
+
+    __slots__ = ("types",)
+
+    def __init__(self, *types: ChannelType) -> None:
+        """Only let channels of ``types`` be picked."""
+        self.types = list(types)
 
 
 type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]
@@ -145,33 +164,53 @@ class Command(AppCommand):
         self.owner: type[Cog] | None = None
         """The cog class this command was defined on; set when that class is created."""
         self._autocompletes: dict[str, AutocompleteHandler] = {}
-        self._param_types: dict[str, type] = {}
+        self._param_types: dict[str, object] = {}
+        """Each option's handler type: a ``_OPTION_TYPE_MAP`` key, or a mentionable union."""
+        self._option_types: dict[str, ApplicationCommandOptionType] = {}
+        self._channel_types: dict[str, list[ChannelType]] = {}
         self._param_required: dict[str, bool] = {}
         annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
         parameters = inspect_signature(func, annotation_format=annotationlib.Format.STRING).parameters
         for param_name, param in parameters.items():
             if param_name in ("self", "interaction"):
                 continue
-            option_type, required = self._parse_parameter(param, annotations.get(param_name, Parameter.empty))
-            self._param_types[param_name] = option_type
-            self._param_required[param_name] = required
+            self._parse_parameter(param, annotations.get(param_name, Parameter.empty))
 
-    def _parse_parameter(self, param: Parameter, annotation: object) -> tuple[type, bool]:
-        """Return the option type for handler parameter ``param`` and whether the option is required.
+    def _parse_parameter(self, param: Parameter, annotation: object) -> None:
+        """Record handler parameter ``param``'s option type, channel-type filter, and whether it's required.
 
-        A default value or a ``T | None`` annotation makes the option optional. Raises ``TypeError`` if
-        the type has no Discord option type.
+        A default value or a ``T | None`` annotation makes the option optional. ``Annotated[Channel, ChannelTypes(...)]``
+        limits a channel option, and ``User | Role`` takes a MENTIONABLE. Raises ``TypeError`` if the type has no
+        Discord option type.
         """
-        option_type = self._resolve(annotation, self.func)
+        param_type = self._resolve(annotation, self.func)
         required = param.default is Parameter.empty
-        if isinstance(option_type, UnionType) and NoneType in get_args(option_type):
-            non_none = [arg for arg in get_args(option_type) if arg is not NoneType]
-            option_type = self._reify(non_none[0]) if len(non_none) == 1 else option_type
+        if isinstance(param_type, UnionType) and NoneType in get_args(param_type):
+            non_none = [self._reify(arg) for arg in get_args(param_type) if arg is not NoneType]
+            param_type = non_none[0] if len(non_none) == 1 else _union(non_none)
             required = False
-        if not isinstance(option_type, type) or option_type not in _OPTION_TYPE_MAP:
-            msg = f"Command {self.name!r}: unsupported option type {option_type!r} for parameter {param.name!r}"
+        channel_types: list[ChannelType] = []
+        if get_origin(param_type) is Annotated:
+            param_type, *metadata = get_args(param_type)
+            param_type = self._reify(param_type)
+            for item in metadata:
+                if isinstance(item, ChannelTypes):
+                    channel_types.extend(item.types)
+        if isinstance(param_type, UnionType) and frozenset(map(self._reify, get_args(param_type))) in _MENTIONABLES:
+            option_type = ApplicationCommandOptionType.MENTIONABLE
+        elif isinstance(param_type, type) and param_type in _OPTION_TYPE_MAP:
+            option_type = _OPTION_TYPE_MAP[param_type]
+        else:
+            msg = f"Command {self.name!r}: unsupported option type {param_type!r} for parameter {param.name!r}"
             raise TypeError(msg)
-        return option_type, required
+        if channel_types and option_type is not ApplicationCommandOptionType.CHANNEL:
+            msg = f"Command {self.name!r}: ChannelTypes only applies to a channel parameter, not {param.name!r}"
+            raise TypeError(msg)
+        self._param_types[param.name] = param_type
+        self._option_types[param.name] = option_type
+        self._param_required[param.name] = required
+        if channel_types:
+            self._channel_types[param.name] = channel_types
 
     @staticmethod
     def _resolve(annotation: object, func: Callable[..., object]) -> object:
@@ -189,12 +228,13 @@ class Command(AppCommand):
 
     def options(self) -> Generator[ApplicationCommandOption]:
         """Yield this command's Discord option definitions, derived from its handler's parameters."""
-        for param_name, param_type in self._param_types.items():
+        for param_name, option_type in self._option_types.items():
             yield ApplicationCommandOption(
-                type=_OPTION_TYPE_MAP[param_type],
+                type=option_type,
                 name=param_name,
                 description=param_name,
                 required=self._param_required[param_name],
+                channel_types=self._channel_types.get(param_name),
                 autocomplete=True if param_name in self._autocompletes else None,
             )
 
@@ -271,30 +311,42 @@ class Command(AppCommand):
         return True
 
     def _build_kwargs(self, interaction: CommandInteraction, options: Sequence[InteractionDataOption]) -> dict[str, object]:
-        """Map each submitted option to a handler argument, resolving USER options to users.
+        """Map each submitted option to a handler argument, resolving user, channel, role and mentionable options.
 
-        A parameter annotated with the bound :class:`wd_discord.User` gets one bound to the interaction's client; one
-        annotated with the data model gets the model. Options the handler doesn't declare, and users missing from the
-        interaction's resolved data, are skipped with a warning.
+        A parameter annotated with a bound entity (:class:`wd_discord.User`, :class:`wd_discord.Channel`) gets one bound
+        to the interaction's client; one annotated with the data model gets the model. Options the handler doesn't
+        declare, and objects missing from the interaction's resolved data, are skipped with a warning.
         """
-        resolved = interaction.resolved
         kwargs: dict[str, object] = {}
         for option in options:
             param_type = self._param_types.get(option.name)
             if param_type is None:
                 self.logger.warning(t"Unknown option '{option.name}' for command '{self.name}', skipping it")
                 continue
-            if param_type is User or param_type is UserModel:
-                user = resolved.users.get(str(option.value)) if resolved and resolved.users else None
-                if user is None:
-                    self.logger.warning(t"Unresolved user '{option.value}' for option '{option.name}' in command '{self.name}'")
-                    continue
-                kwargs[option.name] = User(interaction.client, user) if param_type is User else user
-            elif param_type is float and isinstance(option.value, int):
-                kwargs[option.name] = float(option.value)  # Discord sends a whole NUMBER as an integer
-            else:
-                kwargs[option.name] = option.value
+            value = self._argument(interaction, param_type, option)
+            if value is None:
+                self.logger.warning(t"Unresolved '{option.value}' for option '{option.name}' in command '{self.name}'")
+                continue
+            kwargs[option.name] = value
         return kwargs
+
+    def _argument(self, interaction: CommandInteraction, param_type: object, option: InteractionDataOption) -> object:
+        """Return the handler argument for ``option``, or ``None`` when the object it names wasn't resolved."""
+        option_type = self._option_types[option.name]
+        resolved = interaction.resolved
+        roles = resolved.roles if resolved else None
+        if option_type is ApplicationCommandOptionType.USER:
+            return _user(interaction, resolved, option, entity=param_type is User)
+        if option_type is ApplicationCommandOptionType.ROLE:
+            return _lookup(roles, option)
+        if option_type is ApplicationCommandOptionType.MENTIONABLE:
+            return _user(interaction, resolved, option, entity=User in get_args(param_type)) or _lookup(roles, option)
+        if option_type is ApplicationCommandOptionType.CHANNEL:
+            channel = _lookup(resolved.channels if resolved else None, option)
+            return Channel(interaction.client, channel) if channel is not None and param_type is Channel else channel
+        if param_type is float and isinstance(option.value, int):
+            return float(option.value)  # Discord sends a whole NUMBER as an integer
+        return option.value
 
     def __get__(self, instance: object, owner: type) -> Self:
         """Allow a Command to be accessed as a plain attribute on a Cog instance without binding it like a method."""
@@ -304,6 +356,30 @@ class Command(AppCommand):
         """Remember the cog class this command is defined on, so a mention from any cog can find its path."""
         if issubclass(owner, Cog):
             self.owner = owner
+
+
+def _union(types: Iterable[object]) -> object:
+    """Return the union of ``types``, as ``A | B`` would."""
+    return reduce(operator.or_, types)
+
+
+def _lookup[T](resolved: dict[str, T] | None, option: InteractionDataOption) -> T | None:
+    """Return the object of ``resolved`` that ``option``'s value names by ID, if any."""
+    return None if resolved is None else resolved.get(str(option.value))
+
+
+def _user(
+    interaction: CommandInteraction,
+    resolved: ResolvedData | None,
+    option: InteractionDataOption,
+    *,
+    entity: bool,
+) -> User | UserModel | None:
+    """Return the user ``option`` names, bound to the interaction's client when ``entity``; ``None`` if unresolved."""
+    user = _lookup(resolved.users if resolved else None, option)
+    if user is None:
+        return None
+    return User(interaction.client, user) if entity else user
 
 
 class CommandGroup(AppCommand):

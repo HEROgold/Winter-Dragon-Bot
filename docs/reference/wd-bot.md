@@ -106,6 +106,9 @@ Application commands: the shared :class:`AppCommand` base, plain :class:`Command
 
 - `type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]`
 
+### `class ChannelTypes`
+Limit a channel option to some kinds of channel: ``category: Annotated[Channel, ChannelTypes(GUILD_CATEGORY)]``.
+
 ### `class AppCommand(LoggerMixin, ABC)`
 What every application command shares: its name, description and where Discord lets it be used.
 

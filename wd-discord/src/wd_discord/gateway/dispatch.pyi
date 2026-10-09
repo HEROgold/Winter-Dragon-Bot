@@ -24,6 +24,8 @@ from .events import (
     MessageCreatePayload,
     Ready,
     ReadyPayload,
+    VoiceStateUpdate,
+    VoiceStateUpdatePayload,
 )
 
 @overload
@@ -34,5 +36,7 @@ def parse_dispatch(name: Literal[EventName.MESSAGE_CREATE], data: MessageCreateP
 def parse_dispatch(name: Literal[EventName.GUILD_CREATE], data: GuildCreatePayload) -> GuildCreate: ...
 @overload
 def parse_dispatch(name: Literal[EventName.INTERACTION_CREATE], data: InteractionCreatePayload) -> Interaction: ...
+@overload
+def parse_dispatch(name: Literal[EventName.VOICE_STATE_UPDATE], data: VoiceStateUpdatePayload) -> VoiceStateUpdate: ...
 @overload
 def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel: ...

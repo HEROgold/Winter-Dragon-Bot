@@ -7,12 +7,24 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord` — `wd-discord/src/wd_discord/__init__.py`
 
-- exports: URLS, AnyInteraction, ApiResponseError, Application, AutocompleteInteraction, BoundEvent, Channel,
-  ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField,
+- exports: URLS, AnyInteraction, ApiResponseError, Application, AuditLogReason, AutocompleteInteraction, BoundEvent,
+  Channel, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField,
   EventName, Gateway, GatewayActivity, GatewayBotInfo, GlobalCommand, Guild, GuildCommand, GuildCreate, Interaction,
-  Invite, Message, NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialUser,
-  Permissions, RawEvent, Ready, Sentry, ShardManager, Snowflake, Status, Token, TokenType, UnknownInteraction, User,
-  bind, is_network_error
+  Invite, Member, Message, NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild,
+  PartialMember, PartialUser, Permissions, RawEvent, Ready, Sentry, ShardManager, Snowflake, Status, Token, TokenType,
+  UnknownInteraction, User, VoiceState, bind, is_network_error
+
+## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
+Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
+
+- module names: MAX_REASON_LENGTH, REASON_HEADER
+- `reason_headers(reason: AuditLogReason | str | None) -> dict[str, str]` — Return the headers for ``reason``: none without one, else the audit-log reason header.
+
+### `@dataclass class AuditLogReason`
+Why the bot made a change, as shown in the guild's audit log.
+
+- fields: text: str
+- `headers() -> dict[str, str]` — Return the request header carrying this reason, cut to :data:`MAX_REASON_LENGTH` and URL-encoded.
 
 ## `wd_discord.authenticate` — `wd-discord/src/wd_discord/authenticate.py`
 Location for all authentication related functions and classes.
@@ -60,7 +72,7 @@ An async Discord REST client pinned to the configured API version (v10 by defaul
 
 - `async aclose() -> None` — Close the underlying httpxyz transport.
 - `@returns_known_exception async request(method: str, route: Template, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
-- `async get(route: Template) -> RequestResult` — Send a GET request.
+- `async get(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request.
 - `async post(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a POST request.
 - `async patch(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
 - `async put(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.
@@ -423,7 +435,7 @@ Test doubles for code built on wd-discord.
 ### `@dataclass class SentRequest`
 One request a :class:`RecordingClient` received.
 
-- fields: method: str, path: str, json: Any, data: Any, files: Any
+- fields: method: str, path: str, json: Any, data: Any, files: Any, headers: Any, params: Any
 
 ### `class RecordingClient(Client)`
 A client that records requests instead of sending them, and answers with canned replies.

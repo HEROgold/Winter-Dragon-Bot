@@ -76,6 +76,10 @@ class SentRequest:
     data: Any = None
     """The form fields of a ``multipart/form-data`` request, e.g. a message with files."""
     files: Any = None
+    headers: Any = None
+    """Extra headers sent with this request, e.g. an audit-log reason."""
+    params: Any = None
+    """The query parameters."""
 
 
 class RecordingClient(Client):
@@ -117,7 +121,17 @@ class RecordingClient(Client):
     async def request(self, method: str, route: Template, **kwargs: Any) -> Response | ApiResponseError:  # pyright: ignore[reportIncompatibleMethodOverride] - the parent's decorator widens its declared return
         """Record the request (with its rendered path) and return its canned reply."""
         path = Route(route).path
-        self.sent.append(SentRequest(method, path, kwargs.get("json"), kwargs.get("data"), kwargs.get("files")))
+        self.sent.append(
+            SentRequest(
+                method,
+                path,
+                kwargs.get("json"),
+                kwargs.get("data"),
+                kwargs.get("files"),
+                kwargs.get("headers"),
+                kwargs.get("params"),
+            ),
+        )
         reply = self._replies.get((method, path))
         if reply is None:
             return Response(204, request=Request(method, f"{self.base_url}{path}"))

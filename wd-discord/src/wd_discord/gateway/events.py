@@ -16,7 +16,8 @@ letting generated content live next to hand-written runtime logic in the same fi
 :class:`EventName` covers every dispatch event Discord currently defines. Each member carries its own
 :class:`DiscordModel` subclass as a real attribute (``EventName.MESSAGE_CREATE.model is Message``) via the
 "data-carrying enum" pattern (a custom ``__new__``), so the name and its model live in exactly one place - but
-only ``READY``/``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE`` have a real model wired up so far;
+only ``READY``/``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE``/``VOICE_STATE_UPDATE`` have a real model
+wired up so far;
 every other member's ``model`` is ``None`` (dispatches as :class:`RawEvent`) until its
 payload/model classes get built
 (add them here, then run the generator - see its own docstring for the naming convention it
@@ -47,7 +48,9 @@ from wd_discord.resources.entitlement import Entitlement
 from wd_discord.resources.guild.guild import Guild
 from wd_discord.resources.guild.member import GuildMember
 from wd_discord.resources.guild.partial_guild import PartialGuild
+from wd_discord.resources.guild.role import Role
 from wd_discord.resources.user import User
+from wd_discord.resources.voice import VoiceState
 from wd_discord.snowflake import Snowflake
 
 
@@ -84,9 +87,9 @@ class Ready(DiscordModel):
 class GuildCreate(Guild):
     """GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-create).
 
-    A full :class:`~wd_discord.resources.guild.Guild` plus the fields only the gateway sends. ``voice_states`` and
-    ``presences`` stay untyped until their models exist; ``stage_instances``, ``guild_scheduled_events`` and
-    ``soundboard_sounds`` are not modeled yet.
+    A full :class:`~wd_discord.resources.guild.Guild` plus the fields only the gateway sends. ``presences`` stays
+    untyped until its model exists; ``stage_instances``, ``guild_scheduled_events`` and ``soundboard_sounds`` are not
+    modeled yet.
     """
 
     joined_at: str | None = None
@@ -96,8 +99,16 @@ class GuildCreate(Guild):
     channels: list[Channel] = Field(default_factory=list[Channel])
     threads: list[Channel] = Field(default_factory=list[Channel])
     members: list[GuildMember] = Field(default_factory=list[GuildMember])
-    voice_states: list[Mapping[str, object]] = Field(default_factory=list[Mapping[str, object]])
+    voice_states: list[VoiceState] = Field(default_factory=list[VoiceState])
+    """Who is in which voice channel when the guild arrives; these leave out ``guild_id``."""
     presences: list[Mapping[str, object]] = Field(default_factory=list[Mapping[str, object]])
+
+
+class VoiceStateUpdate(VoiceState):
+    """VOICE_STATE_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-state-update).
+
+    Someone joined, left or moved between voice channels, or changed their mute/deafen state.
+    """
 
 
 class InteractionType(IntEnum):
@@ -111,9 +122,16 @@ class InteractionType(IntEnum):
 
 
 class ResolvedData(DiscordModel):
-    """The ``resolved`` block of interaction command data - full objects for referenced IDs."""
+    """The ``resolved`` block of interaction command data - full objects for referenced IDs.
+
+    ``members`` (partial members, without ``user``, ``deaf`` and ``mute``) and ``messages``/``attachments`` aren't
+    modeled yet.
+    """
 
     users: dict[str, User] | None = None
+    roles: dict[str, Role] | None = None
+    channels: dict[str, Channel] | None = None
+    """Partial channels: ``id``, ``name``, ``type``, ``permissions`` and, for threads, ``parent_id``/``thread_metadata``."""
 
 
 class InteractionDataOption(DiscordModel):
@@ -309,6 +327,24 @@ class GuildCreatePayload(TypedDict):
     presences: NotRequired[list[Mapping[str, object]]]
 
 
+class VoiceStateUpdatePayload(TypedDict):
+    """The raw ``d`` payload of a VOICE_STATE_UPDATE dispatch, as delivered by the gateway."""
+
+    guild_id: NotRequired[str]
+    channel_id: str | None
+    user_id: str
+    member: NotRequired[Mapping[str, object]]
+    session_id: str
+    deaf: bool
+    mute: bool
+    self_deaf: bool
+    self_mute: bool
+    self_stream: NotRequired[bool]
+    self_video: bool
+    suppress: bool
+    request_to_speak_timestamp: str | None
+
+
 class InteractionCreatePayload(TypedDict):
     """The raw ``d`` payload of an INTERACTION_CREATE dispatch, as delivered by the gateway (subset)."""
 
@@ -435,7 +471,7 @@ class EventName(StrEnum):
     USER_UPDATE = "USER_UPDATE"
 
     VOICE_CHANNEL_EFFECT_SEND = "VOICE_CHANNEL_EFFECT_SEND"
-    VOICE_STATE_UPDATE = "VOICE_STATE_UPDATE"
+    VOICE_STATE_UPDATE = ("VOICE_STATE_UPDATE", VoiceStateUpdate)
     VOICE_SERVER_UPDATE = "VOICE_SERVER_UPDATE"
 
     WEBHOOKS_UPDATE = "WEBHOOKS_UPDATE"

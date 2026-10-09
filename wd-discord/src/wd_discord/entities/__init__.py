@@ -26,9 +26,11 @@ lazy from .interaction import (
     Interaction,
     UnknownInteraction,
 )
+lazy from .member import BaseMember, Member, PartialMember
 lazy from .message import Message
 lazy from .ready import Ready
 lazy from .user import BaseUser, CurrentUser, PartialUser, User, UserStore
+lazy from .voice import VoiceState
 
 
 __all__ = [
@@ -37,6 +39,7 @@ __all__ = [
     "BaseChannel",
     "BaseGlobalCommand",
     "BaseGuild",
+    "BaseMember",
     "BaseUser",
     "BoundEvent",
     "Channel",
@@ -53,17 +56,20 @@ __all__ = [
     "GuildCommand",
     "GuildCommandStore",
     "Interaction",
+    "Member",
     "Message",
     "Partial",
     "PartialChannel",
     "PartialGlobalCommand",
     "PartialGuild",
+    "PartialMember",
     "PartialUser",
     "Ready",
     "Store",
     "UnknownInteraction",
     "User",
     "UserStore",
+    "VoiceState",
     "bind",
     "event_entities",
 ]

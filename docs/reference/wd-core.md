@@ -11,15 +11,26 @@ Domain specific web-client for WD.
 A JSON payload for a request.
 
 - fields: recipient_id: str, max_age: int, max_uses: int, temporary: bool, unique: bool, username: str, avatar: str,
-  banner: str, data: MessageData, type: InteractionCallbackType, default_member_permissions: str
+  banner: str, data: MessageData, type: InteractionCallbackType, default_member_permissions: str, channel_id: str | None
+
+### `class OverwritePayload(TypedDict)`
+A permission overwrite on a channel: what a role (``type`` 0) or member (``type`` 1) is allowed and denied.
+
+- fields: id: str, type: int, allow: str, deny: str
+
+### `class ChannelPayload(TypedDict, total=False)`
+The settings of a guild channel to create or change.
+
+- fields: name: str, type: int, topic: str, position: int, bitrate: int, user_limit: int, rate_limit_per_user: int,
+  nsfw: bool, parent_id: str, permission_overwrites: list[OverwritePayload]
 
 ### `class RequestKwargs(TypedDict, total=False)`
 The keyword arguments accepted by :meth:`Client.request` and its convenience methods.
 
 - fields: content: RequestContent, data: RequestData, files: RequestFiles, json: JsonPayload | MessageData |
-  list[JsonPayload], params: QueryParamTypes, headers: HeaderTypes, cookies: CookieTypes, auth: AuthTypes |
-  UseClientDefault, follow_redirects: bool | UseClientDefault, timeout: TimeoutTypes | UseClientDefault, extensions:
-  RequestExtensions
+  ChannelPayload | OverwritePayload | list[JsonPayload], params: QueryParamTypes, headers: HeaderTypes, cookies:
+  CookieTypes, auth: AuthTypes | UseClientDefault, follow_redirects: bool | UseClientDefault, timeout: TimeoutTypes |
+  UseClientDefault, extensions: RequestExtensions
 
 ### `class AsyncClient(_AsyncClient)`
 Async client for WD.

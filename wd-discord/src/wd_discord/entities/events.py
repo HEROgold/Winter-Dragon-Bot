@@ -19,10 +19,11 @@ lazy from wd_discord.entities.interaction import (
 )
 lazy from wd_discord.entities.message import Message
 lazy from wd_discord.entities.ready import Ready
+lazy from wd_discord.entities.voice import VoiceState
 lazy from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 lazy from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
 lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
-lazy from wd_discord.gateway.events import EventName, GuildCreate
+lazy from wd_discord.gateway.events import EventName, GuildCreate, VoiceStateUpdate
 lazy from wd_discord.gateway.events import Interaction as InteractionModel
 lazy from wd_discord.gateway.events import Message as MessageModel
 lazy from wd_discord.gateway.events import Ready as ReadyModel
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
     from wd_discord.models import DiscordModel
 
 
-type BoundEvent = AnyInteraction | Message | Guild | Ready
+type BoundEvent = AnyInteraction | Message | Guild | Ready | VoiceState
 """Every entity :func:`bind` can return; ``match`` on it to handle each event."""
 
 
@@ -51,6 +52,8 @@ def bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel:
             return Guild(client, model)
         case ReadyModel():
             return Ready(client, model)
+        case VoiceStateUpdate():
+            return VoiceState(client, model)
         case _:
             return model
 
@@ -75,4 +78,5 @@ def event_entities() -> Mapping[EventName, type | TypeAliasType]:
         EventName.MESSAGE_CREATE: Message,
         EventName.GUILD_CREATE: Guild,
         EventName.INTERACTION_CREATE: AnyInteraction,
+        EventName.VOICE_STATE_UPDATE: VoiceState,
     }

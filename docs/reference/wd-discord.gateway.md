@@ -74,8 +74,11 @@ READY (https://docs.discord.com/developers/events/gateway-events#ready).
 GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-create).
 
 - fields: joined_at: str | None, large: bool | None, unavailable: bool | None, member_count: int | None, channels:
-  list[Channel], threads: list[Channel], members: list[GuildMember], voice_states: list[Mapping[str, object]],
-  presences: list[Mapping[str, object]]
+  list[Channel], threads: list[Channel], members: list[GuildMember], voice_states: list[VoiceState], presences:
+  list[Mapping[str, object]]
+
+### `class VoiceStateUpdate(VoiceState)`
+VOICE_STATE_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-state-update).
 
 ### `class InteractionType(IntEnum)`
 The kind of interaction an INTERACTION_CREATE dispatch carries.
@@ -85,7 +88,7 @@ The kind of interaction an INTERACTION_CREATE dispatch carries.
 ### `class ResolvedData(DiscordModel)`
 The ``resolved`` block of interaction command data - full objects for referenced IDs.
 
-- fields: users: dict[str, User] | None
+- fields: users: dict[str, User] | None, roles: dict[str, Role] | None, channels: dict[str, Channel] | None
 
 ### `class InteractionDataOption(DiscordModel)`
 One option value as submitted in an interaction (not the command's *definition* - see CommandOption for that).
@@ -159,6 +162,13 @@ The raw ``d`` payload of a GUILD_CREATE dispatch, as delivered by the gateway (s
   unavailable: NotRequired[bool], member_count: NotRequired[int], channels: NotRequired[list[Mapping[str, object]]],
   threads: NotRequired[list[Mapping[str, object]]], members: NotRequired[list[Mapping[str, object]]], voice_states:
   NotRequired[list[Mapping[str, object]]], presences: NotRequired[list[Mapping[str, object]]]
+
+### `class VoiceStateUpdatePayload(TypedDict)`
+The raw ``d`` payload of a VOICE_STATE_UPDATE dispatch, as delivered by the gateway.
+
+- fields: guild_id: NotRequired[str], channel_id: str | None, user_id: str, member: NotRequired[Mapping[str, object]],
+  session_id: str, deaf: bool, mute: bool, self_deaf: bool, self_mute: bool, self_stream: NotRequired[bool], self_video:
+  bool, suppress: bool, request_to_speak_timestamp: str | None
 
 ### `class InteractionCreatePayload(TypedDict)`
 The raw ``d`` payload of an INTERACTION_CREATE dispatch, as delivered by the gateway (subset).

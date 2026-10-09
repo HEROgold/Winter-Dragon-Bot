@@ -7,11 +7,11 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord.entities` — `wd-discord/src/wd_discord/entities/__init__.py`
 
-- exports: AnyInteraction, AutocompleteInteraction, BaseChannel, BaseGlobalCommand, BaseGuild, BaseUser, BoundEvent,
-  Channel, ClientBound, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Entity, EntityStore,
-  GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, Interaction, Message, Partial,
-  PartialChannel, PartialGlobalCommand, PartialGuild, PartialUser, Ready, Store, UnknownInteraction, User, UserStore,
-  bind, event_entities
+- exports: AnyInteraction, AutocompleteInteraction, BaseChannel, BaseGlobalCommand, BaseGuild, BaseMember, BaseUser,
+  BoundEvent, Channel, ClientBound, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Entity,
+  EntityStore, GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, Interaction, Member, Message,
+  Partial, PartialChannel, PartialGlobalCommand, PartialGuild, PartialMember, PartialUser, Ready, Store,
+  UnknownInteraction, User, UserStore, VoiceState, bind, event_entities
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -61,12 +61,16 @@ Channels (https://docs.discord.com/developers/resources/channel).
 - module names: DEFAULT_INVITE_MAX_AGE
 
 ### `class BaseChannel(ClientBound)`
-What can be done in a channel knowing only its ID: send messages, create invites, read it.
+What can be done in a channel knowing only its ID: read, edit or delete it, send messages, set permissions.
 
 - `@property mention -> str` — A clickable mention of the channel, as ``<#id>``.
 - `async fetch() -> Channel | NetworkError` — GET /channels/{channel_id}.
 - `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — POST /channels/{channel_id}/messages - send a message; DM channels included.
 - `async create_invite(*, max_age: int=DEFAULT_INVITE_MAX_AGE, max_uses: int=1, temporary: bool=False, unique: bool=True) -> Invite | NetworkError` — POST /channels/{channel_id}/invites - create an invite to this channel.
+- `async edit(params: ChannelParams, *, reason: AuditLogReason | str | None=None) -> Channel | NetworkError` — PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
+- `async delete(*, reason: AuditLogReason | str | None=None) -> Channel | NetworkError` — DELETE /channels/{channel_id} - delete the channel, or close a DM; returns the deleted channel.
+- `async set_permissions(overwrite: OverwriteParams, *, reason: AuditLogReason | str | None=None) -> NetworkError | None` — PUT /channels/{channel_id}/permissions/{overwrite_id} - set one role's or member's overwrite on the channel.
+- `async delete_permissions(target_id: SnowflakeLike, *, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /channels/{channel_id}/permissions/{overwrite_id} - remove a role's or member's overwrite.
 
 ### `class Channel(Entity[ChannelModel], BaseChannel)`
 A channel, as Discord returned it.
@@ -75,6 +79,7 @@ A channel, as Discord returned it.
 - `@property name -> str | None` — The channel's name; ``None`` for DM channels.
 - `@property type -> ChannelType` — The kind of channel.
 - `@property guild_id -> Snowflake | None` — The guild the channel belongs to; ``None`` for DM channels.
+- `@property parent_id -> Snowflake | None` — The category a guild channel sits in, or the channel a thread was started in.
 
 ### `class PartialChannel(BaseChannel, Partial[Channel])`
 A channel known only by ID.
@@ -126,18 +131,23 @@ One guild's commands for the application: list them, or replace them all.
 ## `wd_discord.entities.events` — `wd-discord/src/wd_discord/entities/events.py`
 Gateway dispatch events bound to the client that received them.
 
-- `type BoundEvent = AnyInteraction | Message | Guild | Ready`
+- `type BoundEvent = AnyInteraction | Message | Guild | Ready | VoiceState`
 - `bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
 - `event_entities() -> Mapping[EventName, type | TypeAliasType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
 
 ## `wd_discord.entities.guild` — `wd-discord/src/wd_discord/entities/guild.py`
 Guilds (https://docs.discord.com/developers/resources/guild).
 
-### `class BaseGuild(ClientBound)`
-What can be done to a guild knowing only its ID: read it, list its channels, leave it.
+- module names: MAX_MEMBERS_PER_PAGE
 
-- `async fetch() -> Guild | NetworkError` — GET /guilds/{guild_id}.
+### `class BaseGuild(ClientBound)`
+What can be done to a guild knowing only its ID: read it, list and create its channels, list its members.
+
+- `async fetch(*, with_counts: bool=False) -> Guild | NetworkError` — GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
 - `async channels() -> Generator[Channel] | NetworkError` — GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
+- `async create_channel(params: GuildChannelParams, *, reason: AuditLogReason | str | None=None) -> Channel | NetworkError` — POST /guilds/{guild_id}/channels - create a channel or category; needs MANAGE_CHANNELS.
+- `member(user_id: SnowflakeLike) -> PartialMember` — Return a handle on the member ``user_id`` of this guild, without fetching them.
+- `async members(*, after: SnowflakeLike | None=None, limit: int=MAX_MEMBERS_PER_PAGE) -> Generator[Member] | NetworkError` — GET /guilds/{guild_id}/members - one page of members, by user ID, after the user ``after``.
 - `async leave() -> NetworkError | None` — DELETE /users/@me/guilds/{guild_id} - remove the bot from the guild; fails for a guild it owns.
 
 ### `class Guild(Entity[GuildModel], BaseGuild)`
@@ -146,6 +156,7 @@ A guild, as Discord returned it.
 - `@property id -> Snowflake` — The guild's ID.
 - `@property name -> str` — The guild's name.
 - `@property owner_id -> Snowflake` — The ID of the guild's owner.
+- `@property afk_channel_id -> Snowflake | None` — The voice channel idle members are moved to, if the guild has one.
 
 ### `class PartialGuild(BaseGuild, Partial[Guild])`
 A guild known only by ID.
@@ -210,6 +221,31 @@ Someone is typing a value for an autocomplete option.
 ### `class UnknownInteraction(Interaction[InteractionModel])`
 An interaction type without its own class yet (PING, MODAL_SUBMIT).
 
+## `wd_discord.entities.member` — `wd-discord/src/wd_discord/entities/member.py`
+Guild members (https://docs.discord.com/developers/resources/guild#guild-member-object).
+
+### `class BaseMember(ClientBound)`
+What can be done to a guild member knowing only their guild and user ID: read them, move them in voice.
+
+- `@property mention -> str` — A clickable mention of the member, as ``<@id>``.
+- `async fetch() -> Member | NetworkError` — GET /guilds/{guild_id}/members/{user_id}.
+- `async move_to(channel_id: SnowflakeLike | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - move the member to the voice channel ``channel_id``.
+
+### `@dataclass class Member(Entity[GuildMember], BaseMember)`
+A guild member, as Discord returned them; always with their user.
+
+- fields: guild: Snowflake
+- `@property guild_id -> Snowflake` — The guild the member is in.
+- `@property id -> Snowflake` — The member's user ID.
+- `@property bot -> bool` — Whether the member is a bot account.
+- `@property display_name -> str` — The member's guild nickname, else their global display name, else their username.
+
+### `@dataclass class PartialMember(BaseMember, Partial[Member])`
+A guild member known only by guild and user ID.
+
+- fields: guild: Snowflake
+- `@property guild_id -> Snowflake` — The guild the member is in.
+
 ## `wd_discord.entities.message` — `wd-discord/src/wd_discord/entities/message.py`
 Messages (https://docs.discord.com/developers/resources/message).
 
@@ -267,3 +303,15 @@ A user known only by ID.
 Users the client can see.
 
 - `async me() -> CurrentUser | NetworkError` — GET /users/@me - the user behind the client's token.
+
+## `wd_discord.entities.voice` — `wd-discord/src/wd_discord/entities/voice.py`
+Voice states (https://docs.discord.com/developers/resources/voice#voice-state-object).
+
+### `class VoiceState(Entity[VoiceStateModel])`
+Which voice channel a user is in, bound to the client that can act on them and the channel.
+
+- `@property user_id -> Snowflake` — The user this voice state is for.
+- `@property guild_id -> Snowflake | None` — The guild this voice state is for; ``None`` for a voice state taken from GUILD_CREATE.
+- `@property channel_id -> Snowflake | None` — The voice channel the user is in; ``None`` once they disconnected.
+- `@property channel -> PartialChannel | None` — The voice channel the user is in; ``None`` once they disconnected.
+- `@property member -> Member | PartialMember | None` — The member this voice state is for, in full when Discord sent it; ``None`` outside a guild.

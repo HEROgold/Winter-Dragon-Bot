@@ -70,8 +70,8 @@ https://docs.discord.com/developers/topics/teams#data-models-team-object.
 ## `wd_discord.resources.channel` — `wd-discord/src/wd_discord/resources/channel/__init__.py`
 Pydantic v2 models for the Discord v10 Channel object.
 
-- exports: Channel, DefaultReaction, ForumLayoutType, ForumTag, OverwriteType, PermissionOverwrite, SortOrderType,
-  ThreadMember, ThreadMetadata, VideoQualityMode
+- exports: Channel, ChannelParams, DefaultReaction, ForumLayoutType, ForumTag, GuildChannelParams, OverwriteParams,
+  OverwriteType, PermissionOverwrite, SortOrderType, ThreadMember, ThreadMetadata, VideoQualityMode
 
 ## `wd_discord.resources.channel.channel` — `wd-discord/src/wd_discord/resources/channel/channel.py`
 The Discord Channel object model.
@@ -134,6 +134,29 @@ Whether a permission overwrite targets a role or a member.
 https://docs.discord.com/developers/resources/channel#overwrite-object.
 
 - fields: id: Snowflake, type: OverwriteType, allow: PermissionsField, deny: PermissionsField
+
+## `wd_discord.resources.channel.params` — `wd-discord/src/wd_discord/resources/channel/params.py`
+Request bodies for creating and modifying guild channels.
+
+- module names: MAX_USER_LIMIT
+- `type ChannelName = str`
+
+### `class OverwriteParams(BaseModel)`
+One permission overwrite to set on a channel: what a role or member is explicitly allowed and denied.
+
+- fields: id: Snowflake, type: OverwriteType, allow: Permissions, deny: Permissions
+- attributes: model_config
+- `to_json() -> OverwritePayload` — Return the overwrite as Discord's JSON body.
+
+### `class ChannelParams(_ChannelSettings)`
+The channel settings to change; the rest stay as they are.
+
+- fields: name: ChannelName | None
+
+### `class GuildChannelParams(_ChannelSettings)`
+A new guild channel or category; Discord requires its name.
+
+- fields: name: ChannelName, type: ChannelType
 
 ## `wd_discord.resources.channel.thread` — `wd-discord/src/wd_discord/resources/channel/thread.py`
 Thread metadata and member models for the Discord Channel object.
@@ -397,3 +420,13 @@ https://docs.discord.com/developers/resources/user#user-object.
   | None, verified: bool | None, email: str | None, flags: int | None, premium_type: int | None, public_flags: int |
   None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild: UserPrimaryGuild | None
 - `validate_scopes(allowed_scopes: set[OAuthScopes]) -> bool` — Check that every scope-gated field is covered by ``allowed_scopes``.
+
+## `wd_discord.resources.voice` — `wd-discord/src/wd_discord/resources/voice.py`
+Discord voice state model (https://docs.discord.com/developers/resources/voice#voice-state-object).
+
+### `class VoiceState(DiscordModel)`
+A user's voice connection status: which voice channel they are in, and whether they're muted.
+
+- fields: guild_id: Snowflake | None, channel_id: Snowflake | None, user_id: Snowflake, member: GuildMember | None,
+  session_id: str, deaf: bool, mute: bool, self_deaf: bool, self_mute: bool, self_stream: bool | None, self_video: bool,
+  suppress: bool, request_to_speak_timestamp: datetime | None
