@@ -87,10 +87,18 @@ Requires a Riot API key, supplied through configuration.
 
 ## Tournaments
 
-An in-progress tournament system, modelled as a state machine over match phases — pre-match, team forming, ban phase, champion select, in progress, post-match, forfeit — with transitions driven by explicit events. Match information (teams, players, intended picks) hangs off that state.
+Team tournaments with a single-elimination bracket; a guild runs one at a time, in the channel it was opened in. The organiser (whoever opened it, or anyone who can manage the server) opens sign-up with a team size and one of two ways to form teams:
 
-!!! note "Incomplete on `main`"
-    The state machine and match data model exist; `extensions/tournament/voting.py` is an empty file, and there are no tournament commands. Matchmaking tables (matches, teams, player stats, synergy, team compositions) exist in the database on `main` but are not driven by a cog.
+- **Solo:** players join alone (a Join button on the sign-up card, or `/tournament join`); starting the tournament shuffles them into teams of the team size, players left over joining the first teams, and the first player drawn into a team captains it.
+- **Captains:** a captain registers a team and adds or removes its players, up to the team size. A captain leaving disbands their team.
 
-**Status:** ✅ Ported for the state machine and store (`wd-cogs/src/wd_cogs/tournament/status.py`, `store.py`, `controller.py` — the latter two are new on `v2`, with no `main` counterpart). 🟡 for match information.
+Starting draws the seeds and lays out every round. The bracket is padded to a power of two with byes for the top seeds, which win at once, so two byes never meet. Each match card walks through ready → bans → picks → live, and the organiser's buttons move it on, report the winner once it's live, or record a forfeit at any point. A team's captain bans and picks with commands during those phases, and the card lists them. Winners move on to their next match, and the final's winner is the champion.
+
+The organiser can open a vote for a match (e.g. which map), answered with buttons by that match's players only. Voting again changes your answer, and the organiser closes the vote to show the final tally.
+
+Everything is stored, so a tournament survives a restart.
+
+Surface: `/tournament create | join | leave | team-create | team-add | team-remove | start | bracket | match | ban | pick | vote | cancel`; the match options autocomplete the undecided matches.
+
+**Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open (HER-355).
 **Source on `main`:** `src/winter_dragon/bot/extensions/tournament/`
