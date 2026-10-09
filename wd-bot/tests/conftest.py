@@ -52,13 +52,15 @@ def engine() -> Engine:
 class InteractionFactory(Protocol):
     """Builds an application-command interaction, as the ``make_interaction`` fixture returns."""
 
-    def __call__(
+    def __call__(  # noqa: PLR0913 - mirrors the fixture's builder
         self,
         name: str = "c",
         *,
         options: Sequence[InteractionDataOption] = (),
         resolved: ResolvedData | None = None,
         user: User | None = ...,
+        guild_id: int | None = None,
+        channel_id: int | None = None,
     ) -> CommandInteraction:
         """Build the interaction."""
         ...
@@ -70,14 +72,19 @@ ASKER = User.model_validate({"id": "3", "username": "asker", "discriminator": "0
 
 @pytest.fixture
 def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
-    """Return a builder for a ``/name`` interaction with the given options, invoked by ``user``, bound to ``discord_client``."""
+    """Return a builder for a ``/name`` interaction with the given options, invoked by ``user``, bound to ``discord_client``.
 
-    def build(
+    ``guild_id`` and ``channel_id`` say where it was sent from; by default, nowhere in particular.
+    """
+
+    def build(  # noqa: PLR0913 - one keyword per interaction field a test may set
         name: str = "c",
         *,
         options: Sequence[InteractionDataOption] = (),
         resolved: ResolvedData | None = None,
         user: User | None = ASKER,
+        guild_id: int | None = None,
+        channel_id: int | None = None,
     ) -> CommandInteraction:
         model = CommandInteractionModel(
             id="1",
@@ -86,6 +93,8 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
             token="tok",  # noqa: S106
             version=1,
             user=user,
+            guild_id=guild_id,
+            channel_id=channel_id,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),
         )
         return CommandInteraction(discord_client, model)
