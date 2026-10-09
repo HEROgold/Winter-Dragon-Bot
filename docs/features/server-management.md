@@ -22,11 +22,13 @@ Remembers which roles a member held when they left — including when they were 
 
 ## Automatic channels
 
-Self-service temporary voice channels. An admin marks a channel as the "hub"; joining it creates a personal channel for that member, which is cleaned up when it empties. Members control their own channel's name and user limit, and admins can cap how many auto-channels the guild allows in total. A guided setup command wires the whole thing up.
+Self-service temporary voice channels. An admin marks a channel as the "hub"; joining it creates a personal channel for that member in the hub's category and moves them in, and the channel is deleted once everyone has left. A member who already has a channel is moved back into it instead. The owner gets an overwrite to run their channel (rename, limit, move/mute members) but not to change who may see it. Members set their channel's name and user limit once, applied to their current channel and every later one; admins can cap how many auto-channels the guild allows at once. A guided setup command creates the category and hub.
 
-Surface: `/autochannel setup | mark | guild_limit | limit | name`
+Who is in which voice channel is tracked in memory from GUILD_CREATE's voice states and every VOICE_STATE_UPDATE; on startup, channels that emptied while the bot was offline are deleted.
 
-**Status:** 🟡 Copied, unwired.
+Surface: `/autochannel setup | mark | guild-limit | limit | name` (`setup`, `mark` and `guild-limit` need Manage Server).
+
+**Status:** ✅ Ported to `src/winter_dragon/cogs/autochannel.py`, with cog-local `autochannelhub`, `autochannel` and `autochannelsettings` tables. `guild_limit` became `guild-limit`, and now caps the number of channels (on `main` it was stored but never enforced).
 **Source on `main`:** `src/winter_dragon/bot/extensions/server/autochannel.py`
 
 ## Welcome messages
