@@ -64,6 +64,7 @@ class InteractionFactory(Protocol):
         guild_id: int | None = None,
         channel_id: int | None = None,
         permissions: Permissions | None = None,
+        app_permissions: Permissions | None = None,
     ) -> CommandInteraction:
         """Build the interaction."""
         ...
@@ -78,7 +79,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
     """Return a builder for a ``/name`` interaction with the given options, invoked by ``user``, bound to ``discord_client``.
 
     ``guild_id`` and ``channel_id`` say where it was sent from; by default, nowhere in particular. ``permissions``
-    makes ``user`` a guild member holding them.
+    makes ``user`` a guild member holding them; ``app_permissions`` are the bot's in that channel.
     """
 
     def build(  # noqa: PLR0913 - one keyword per interaction field a test may set
@@ -90,6 +91,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
         guild_id: int | None = None,
         channel_id: int | None = None,
         permissions: Permissions | None = None,
+        app_permissions: Permissions | None = None,
     ) -> CommandInteraction:
         model = CommandInteractionModel(
             id="1",
@@ -103,6 +105,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
             else GuildMember(user=user, roles=[], joined_at=None, deaf=False, mute=False, permissions=permissions),
             guild_id=guild_id,
             channel_id=channel_id,
+            app_permissions=app_permissions,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),
         )
         return CommandInteraction(discord_client, model)

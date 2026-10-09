@@ -60,8 +60,9 @@ Admin ``/bot-commands`` group for inspecting/managing application-command sync.
 ## `winter_dragon.cogs.channel_utils` — `src/winter_dragon/cogs/channel_utils.py`
 The /channel-utils command group: delete a whole category, and lock or unlock a channel for a role or member.
 
-- module names: UNLOCKABLE
+- module names: UNLOCKABLE, DELETE_PERMISSIONS
 - `locked_overwrite(existing: Iterable[PermissionOverwrite], target: User | Role, *, lock: bool) -> OverwriteParams` — Return ``target``'s overwrite among ``existing`` with SEND_MESSAGES denied (``lock``) or no longer denied.
+- `deleted(result: Channel | NetworkError) -> bool` — Whether a channel delete left the channel gone: it succeeded, or the channel was gone already.
 - `mention(target: User | Role) -> str` — Return a clickable mention of the user or role ``target``.
 
 ### `class ChannelUtils(GroupCog, name='channel-utils', description='Manage channels', default_member_permissions=Permissions.MANAGE_CHANNELS, contexts=[InteractionContextType.GUILD])`

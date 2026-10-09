@@ -9,6 +9,7 @@ import pytest
 from wd_bot.commands import CommandGroup
 from wd_discord import User as BoundUser
 from wd_discord.audit import REASON_HEADER
+from wd_discord.errors import ApiResponseError, JsonErrorCode
 from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 from wd_discord.interactions import ApplicationCommandOptionType
 from wd_discord.permissions import ChannelType, Permissions
@@ -16,13 +17,16 @@ from wd_discord.resources.channel import Channel as ChannelModel
 from wd_discord.resources.channel import PermissionOverwrite
 from wd_discord.resources.guild import Role
 from wd_discord.resources.user import User
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient
 
-from winter_dragon.cogs.channel_utils import ChannelUtils, locked_overwrite
+from winter_dragon.cogs.channel_utils import DELETE_PERMISSIONS, ChannelUtils, deleted, locked_overwrite
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from conftest import InteractionFactory
+    from wd_discord import CommandInteraction
 
 
 GUILD_ID = 1
@@ -43,6 +47,21 @@ ROLE = Role.model_validate(
 )
 TARGET = User.model_validate({"id": "4", "username": "target", "discriminator": "0"})
 SEND = int(Permissions.SEND_MESSAGES)
+EVERYONE = {
+    **ROLE.model_dump(mode="json"),
+    "id": str(GUILD_ID),
+    "name": "@everyone",
+    "permissions": str(int(DELETE_PERMISSIONS)),
+}
+"""The ``@everyone`` role, letting the bot view and manage channels."""
+BOT_MEMBER: Mapping[str, object] = {
+    "user": {"id": "2", "username": "bot", "discriminator": "0", "bot": True},
+    "roles": [],
+    "joined_at": None,
+    "deaf": False,
+    "mute": False,
+}
+"""The bot's own member; its user ID is the interaction's application ID."""
 
 
 def _cog() -> ChannelUtils:
@@ -84,21 +103,36 @@ def test_locked_overwrite_keeps_other_permissions() -> None:
     assert unlocked.deny == Permissions(64)
 
 
+def _delete_category(make_interaction: InteractionFactory, app_permissions: Permissions | None = None) -> CommandInteraction:
+    return make_interaction(
+        "channel-utils",
+        options=[InteractionDataOption(name="category", type=7, value="10")],
+        resolved=ResolvedData(channels={"10": ChannelModel.model_validate(CATEGORY)}),
+        guild_id=GUILD_ID,
+        app_permissions=app_permissions,
+    )
+
+
+def _serve_guild(discord_client: RecordingClient, *channels: Mapping[str, object]) -> None:
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}", {**GUILD_JSON, "roles": [EVERYONE]})
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}/members/2", BOT_MEMBER)
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}/channels", [CATEGORY, *channels])
+
+
+def _followup(discord_client: RecordingClient) -> str:
+    return discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json["content"]
+
+
 async def test_delete_category_deletes_its_channels_then_itself(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
     inside = {"id": "21", "type": 0, "guild_id": "1", "name": "chat", "parent_id": "10"}
     outside = {"id": "22", "type": 0, "guild_id": "1", "name": "rules"}
-    discord_client.reply("GET", f"/guilds/{GUILD_ID}/channels", [CATEGORY, inside, outside])
+    _serve_guild(discord_client, inside, outside)
     discord_client.reply("DELETE", "/channels/21", inside)
     discord_client.reply("DELETE", "/channels/10", CATEGORY)
-    interaction = make_interaction(
-        "channel-utils",
-        options=[InteractionDataOption(name="category", type=7, value="10")],
-        resolved=ResolvedData(channels={"10": ChannelModel.model_validate(CATEGORY)}),
-        guild_id=GUILD_ID,
-    )
+    interaction = _delete_category(make_interaction, DELETE_PERMISSIONS)
 
     await ChannelUtils.delete_category.invoke(_cog(), interaction, interaction.options)
 
@@ -107,10 +141,40 @@ async def test_delete_category_deletes_its_channels_then_itself(
     assert (
         unquote(deletes[0].headers[REASON_HEADER]) == "Deleted category Games by asker (3) using /channel-utils delete-category"
     )
-    assert (
-        discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json["content"]
-        == "Deleted the category Games and its channels."
-    )
+    assert _followup(discord_client) == "Deleted the category Games and its channels."
+
+
+async def test_delete_category_deletes_nothing_when_a_channel_is_hidden_from_the_bot(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    hide = {"id": str(GUILD_ID), "type": 0, "allow": "0", "deny": str(int(Permissions.VIEW_CHANNEL))}
+    hidden = {"id": "21", "type": 0, "guild_id": "1", "name": "secret", "parent_id": "10", "permission_overwrites": [hide]}
+    seen = {"id": "23", "type": 0, "guild_id": "1", "name": "chat", "parent_id": "10"}
+    _serve_guild(discord_client, hidden, seen)
+    interaction = _delete_category(make_interaction)
+
+    await ChannelUtils.delete_category.invoke(_cog(), interaction, interaction.options)
+
+    assert [sent.path for sent in discord_client.sent if sent.method == "DELETE"] == []
+    assert _followup(discord_client).startswith("I can't see or manage: secret.")
+
+
+async def test_delete_category_refuses_up_front_without_the_bot_permissions(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    interaction = _delete_category(make_interaction, Permissions.VIEW_CHANNEL)
+
+    await ChannelUtils.delete_category.invoke(_cog(), interaction, interaction.options)
+
+    assert [sent.method for sent in discord_client.sent if sent.method != "POST"] == []
+    assert _reply(discord_client) == "I need the View Channels and Manage Channels permissions to do that."
+
+
+def test_a_channel_already_gone_counts_as_deleted() -> None:
+    assert deleted(ApiResponseError(code=JsonErrorCode.UNKNOWN_CHANNEL, message="Unknown Channel"))
+    assert not deleted(ApiResponseError(code=JsonErrorCode.MISSING_ACCESS, message="Missing Access"))
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,7 @@
 """Error models for Discord API responses."""
 from __future__ import annotations
 
+lazy from enum import IntEnum
 lazy from typing import TYPE_CHECKING
 
 lazy from pydantic import BaseModel, RootModel
@@ -9,6 +10,17 @@ lazy from wd_errors import ErrorNode
 
 if TYPE_CHECKING:
     lazy from wd_discord.errors import ApiErrorTree
+
+
+class JsonErrorCode(IntEnum):
+    """Codes Discord puts in a failed response's ``code`` (https://docs.discord.com/developers/topics/opcodes-and-status-codes#json)."""
+
+    UNKNOWN_CHANNEL = 10003
+    """The channel doesn't exist, e.g. it was deleted already."""
+    MISSING_ACCESS = 50001
+    """The bot can't see the resource, e.g. it lacks VIEW_CHANNEL on the channel."""
+    MISSING_PERMISSIONS = 50013
+    """The bot can see the resource but lacks a permission the action needs."""
 
 
 class ApiErrorTree(RootModel[ErrorNode | dict[str, "ApiErrorTree"]]):

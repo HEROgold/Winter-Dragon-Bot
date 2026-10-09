@@ -272,6 +272,17 @@ A minimal emoji reference: a custom emoji ``id`` or a unicode ``name``.
 - `@property is_unicode -> bool` — Whether this references a standard unicode emoji (a ``name`` but no ``id``).
 - `@classmethod from_fields(emoji_id: Snowflake | None, emoji_name: str | None) -> PartialEmoji | None` — Build from a raw ``emoji_id`` / ``emoji_name`` pair; ``None`` when no emoji is set.
 
+## `wd_discord.permission_solver` — `wd-discord/src/wd_discord/permission_solver.py`
+Work out what a member may do in a guild or one of its channels, the way Discord does.
+
+### `@dataclass class PermissionSolver`
+The permissions ``member`` holds in ``guild``, and in each of its channels.
+
+- fields: guild: Guild, member: GuildMember
+- `@property member_id -> Snowflake` — The member's user ID.
+- `base() -> Permissions` — Return the member's guild-wide permissions, before any channel overwrites.
+- `in_channel(channel: Channel) -> Permissions` — Return the member's permissions in ``channel``: :meth:`base` with its overwrites applied.
+
 ## `wd_discord.permissions` — `wd-discord/src/wd_discord/permissions.py`
 Discord Permissions.
 

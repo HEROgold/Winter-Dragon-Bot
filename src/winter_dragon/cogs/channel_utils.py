@@ -9,7 +9,9 @@ lazy from wd_bot.commands import ChannelTypes
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
 lazy from wd_discord import Channel, User, is_network_error
+lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
 lazy from wd_discord.interactions import InteractionContextType
+lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
 lazy from wd_discord.resources.channel import OverwriteParams, OverwriteType
 lazy from wd_discord.resources.guild import Role  # noqa: TC002
@@ -19,7 +21,8 @@ if TYPE_CHECKING:
     lazy from collections.abc import Iterable
 
     lazy from wd_bot.commands import Command
-    lazy from wd_discord import CommandInteraction
+    lazy from wd_discord import CommandInteraction, NetworkError
+    lazy from wd_discord.entities import PartialGuild
     lazy from wd_discord.resources.channel import PermissionOverwrite
 
 
@@ -33,6 +36,8 @@ UNLOCKABLE = frozenset(
     },
 )
 """Channels without their own permission overwrites to lock: DMs and threads."""
+DELETE_PERMISSIONS = Permissions.VIEW_CHANNEL | Permissions.MANAGE_CHANNELS
+"""What the bot needs on a channel to delete it: Discord answers 50001 Missing Access without VIEW_CHANNEL."""
 
 
 def locked_overwrite(
@@ -55,6 +60,13 @@ def locked_overwrite(
         deny &= ~Permissions.SEND_MESSAGES
     kind = OverwriteType.MEMBER if isinstance(target, User) else OverwriteType.ROLE
     return OverwriteParams(id=target.id, type=kind, allow=allow, deny=deny)
+
+
+def deleted(result: Channel | NetworkError) -> bool:
+    """Whether a channel delete left the channel gone: it succeeded, or the channel was gone already."""
+    if not is_network_error(result):
+        return True
+    return isinstance(result, ApiResponseError) and result.code == JsonErrorCode.UNKNOWN_CHANNEL
 
 
 def mention(target: User | Role) -> str:
@@ -84,29 +96,58 @@ class ChannelUtils(
         interaction: CommandInteraction,
         category: Annotated[Channel, ChannelTypes(ChannelType.GUILD_CATEGORY)],
     ) -> None:
-        """Delete every channel in ``category``, then the category itself."""
+        """Delete every channel in ``category``, then the category itself.
+
+        Deletes nothing unless the bot may view and manage every one of them.
+        """
         guild = interaction.guild
         if guild is None:
             await interaction.respond("This only works in a server.", ephemeral=True)
             return
-        await interaction.defer(ephemeral=True)
-        channels = await guild.channels()
-        if is_network_error(channels):
-            await interaction.followup("I couldn't read this server's channels.", ephemeral=True)
+        app_permissions = interaction.app_permissions
+        if app_permissions is not None and DELETE_PERMISSIONS not in app_permissions:
+            await interaction.respond("I need the View Channels and Manage Channels permissions to do that.", ephemeral=True)
             return
+        await interaction.defer(ephemeral=True)
+        doomed = await self._deletable(interaction, guild, category)
+        if isinstance(doomed, str):
+            await interaction.followup(doomed, ephemeral=True)
+            return
+        *channels, whole = doomed
         reason = self._reason(interaction, self.delete_category, f"Deleted category {category.name}")
-        failed = [
-            channel.name
-            for channel in channels
-            if channel.parent_id == category.id and is_network_error(await channel.delete(reason=reason))
-        ]
+        failed = [channel.name for channel in channels if not deleted(await channel.delete(reason=reason))]
         if failed:
             await interaction.followup(f"I couldn't delete: {', '.join(map(str, failed))}. The category stays.", ephemeral=True)
             return
-        if is_network_error(await category.delete(reason=reason)):
+        if not deleted(await whole.delete(reason=reason)):
             await interaction.followup("I deleted the channels, but couldn't delete the category.", ephemeral=True)
             return
         await interaction.followup(f"Deleted the category {category.name} and its channels.", ephemeral=True)
+
+    @staticmethod
+    async def _deletable(interaction: CommandInteraction, guild: PartialGuild, category: Channel) -> list[Channel] | str:
+        """Return ``category``'s channels then the category itself, or why the bot may not delete them all.
+
+        The bot's user shares its application's ID, so its member is ``interaction.application_id``.
+        """
+        full_guild = await guild.fetch()
+        bot = await guild.member(interaction.application_id).fetch()
+        channels = await guild.channels()
+        if is_network_error(full_guild) or is_network_error(bot) or is_network_error(channels):
+            return "I couldn't read this server's channels, roles or my own roles."
+        channels = list(channels)
+        whole = next((channel for channel in channels if channel.id == category.id), None)
+        if whole is None:
+            return "That category is gone."
+        doomed = [*(channel for channel in channels if channel.parent_id == category.id), whole]
+        solver = PermissionSolver(full_guild.model, bot.model)
+        blocked = [channel.name for channel in doomed if DELETE_PERMISSIONS not in solver.in_channel(channel.model)]
+        if blocked:
+            return (
+                f"I can't see or manage: {', '.join(map(str, blocked))}. Give me View Channel and Manage Channels there, "
+                "then try again. Nothing was deleted."
+            )
+        return doomed
 
     @Cog.command(name="lock", description="Stop a role or member from sending messages in this channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def lock(self, interaction: CommandInteraction, target: User | Role) -> None:
