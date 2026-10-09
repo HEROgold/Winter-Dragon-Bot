@@ -4,26 +4,25 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
-lazy from sqlmodel import Session
-lazy from wd_bot.auto_sync import GlobalSyncedCommand, SyncedCommands
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.constants import engine
 lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permissions import Permissions
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Sequence
+    lazy from collections.abc import Generator
 
+    lazy from wd_bot.registry import CommandRegistry
     lazy from wd_discord import CommandInteraction
 
 
-def describe_sync_status(session: Session, commands: Sequence[tuple[str, str]]) -> Generator[str]:
-    """Yield one "name: synced|pending" line per (name, signature) pair in ``commands``."""
-    synced = SyncedCommands.load(session, GlobalSyncedCommand)
-    for name, current_signature in commands:
-        yield f"{name}: {'synced' if synced.is_synced(name, current_signature) else 'pending'}"
+def describe_sync_status(registry: CommandRegistry) -> Generator[str]:
+    """Yield one "name (scope): synced|pending" line per registered command, scope by scope."""
+    for scope in sorted(registry.scopes(), key=str):
+        for entry in registry.entries(scope):
+            status = "synced" if registry.is_synced(scope, entry.command.name) else "pending"
+            yield f"{entry.command.name} ({scope}): {status}"
 
 
 class BotCommands(
@@ -45,18 +44,17 @@ class BotCommands(
     )
     async def list_commands(self, interaction: CommandInteraction) -> None:
         """Show every registered command's synced/pending state."""
-        commands = [(command.name, command.signature()) for command in self.bot.commands]
-        with Session(engine) as session:
-            lines = list(describe_sync_status(session, commands))
+        lines = list(describe_sync_status(self.bot.registry))
         embed = Embed(title="Registered commands", description="\n".join(lines) or "No commands registered.")
         await interaction.respond(embeds=[embed])
 
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
         name="resync",
-        description="Push pending command changes to Discord",
+        description="Re-read the commands from Discord and push any differences",
     )
     async def resync(self, interaction: CommandInteraction) -> None:
-        """Acknowledge within Discord's 3s window, then force the diff-and-push sync."""
+        """Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it."""
         await interaction.respond("Resyncing commands…")
+        self.bot.registry.forget()
         await self.bot.sync_commands(self.bot.client)
         self.logger.info(t"Command resync finished")

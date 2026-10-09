@@ -39,7 +39,6 @@ Base classes in `wd_db.extension.model`:
 
 | Table | Owner | Purpose |
 |---|---|---|
-| `CommandRecord`, `GlobalSyncedCommand`, `GuildSyncedCommand` | `wd_bot.auto_sync` | Application-command sync state, so unchanged commands aren't pushed again. |
 | `CarFuels` | `winter_dragon.cogs.fuel` | Refuel log per user. |
 | `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder` | One-off and repeating reminders. |
 | `SteamSale`, `SteamSaleProperties`, `SteamUsers` | `winter_dragon.cogs.steam.models` | Known Steam sales and the users subscribed to them. |

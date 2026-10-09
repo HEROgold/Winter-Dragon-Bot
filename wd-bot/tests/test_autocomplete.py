@@ -139,7 +139,7 @@ async def test_group_routes_autocomplete_to_its_subcommand_and_caps_choices(disc
 async def test_bot_dispatches_autocomplete_to_the_command(discord_client: RecordingClient) -> None:
     bot = Bot()
     cog = _cog(_Pets)
-    bot._commands["pet"] = (cog, _Pets.pet)  # noqa: SLF001 - registering without add_cog's side effects
+    bot.registry.register(cog)  # registering without add_cog's side effects
     options = [InteractionDataOption(name="name", type=3, value="d", focused=True)]
     await bot._dispatch_interaction(_autocomplete(discord_client, "pet", options))  # noqa: SLF001
     assert discord_client.interaction_responses() == [{"type": 8, "data": {"choices": [{"name": "dog", "value": "dog"}]}}]

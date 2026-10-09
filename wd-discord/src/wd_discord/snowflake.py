@@ -20,7 +20,7 @@ type SnowflakeLike = Snowflake | int | str
 """Any form a Discord ID arrives in: a parsed :class:`Snowflake`, an ``int``, or Discord's decimal string."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class Snowflake:
     """Represents a Discord Snowflake, which is a unique identifier used by Discord for various entities."""
 

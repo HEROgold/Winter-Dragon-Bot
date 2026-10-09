@@ -1,4 +1,5 @@
 """Domain specific web-client for WD."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
         TimeoutTypes,
     )
     from wd_discord.responses import InteractionCallbackType, MessageData
+
 
 class JsonPayload(TypedDict, total=False):
     """A JSON payload for a request."""
@@ -43,7 +45,7 @@ class RequestKwargs(TypedDict, total=False):
     content: RequestContent
     data: RequestData
     files: RequestFiles
-    json: JsonPayload | MessageData
+    json: JsonPayload | MessageData | list[JsonPayload]
     params: QueryParamTypes
     headers: HeaderTypes
     cookies: CookieTypes

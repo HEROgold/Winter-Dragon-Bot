@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from sqlmodel import Session, select
+from wd_bot.registry import CommandRegistry
 from wd_discord.gateway.events import InteractionDataOption
 
 from winter_dragon.cogs.fuel import CarFuels, Fuel, render_efficiency_graph
@@ -27,7 +28,7 @@ FOLLOWUP = "/webhooks/2/tok"
 
 def _cog(engine: Engine) -> Fuel:
     cog = Fuel.__new__(Fuel)
-    cog.bot = SimpleNamespace()  # pyright: ignore[reportAttributeAccessIssue]
+    cog.bot = SimpleNamespace(registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
     cog.session = Session(engine)
     return cog
 
@@ -46,7 +47,9 @@ def test_graph_is_a_png() -> None:
 
 
 async def test_add_stores_the_refuel(
-    engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     await Fuel.add.invoke(_cog(engine), make_interaction("fuel"), _numbers(price=72.5, distance=600, amount=40))
 

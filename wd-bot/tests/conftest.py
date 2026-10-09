@@ -5,7 +5,6 @@ from __future__ import annotations
 lazy from typing import TYPE_CHECKING, Protocol
 
 lazy import pytest
-import wd_bot.auto_sync  # noqa: F401 - registers the command-sync tables Cog.mention reads, for the engine fixture
 lazy from sqlalchemy import BigInteger
 lazy from sqlalchemy.ext.compiler import compiles
 lazy from sqlalchemy.pool import StaticPool

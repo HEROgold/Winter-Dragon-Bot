@@ -64,122 +64,10 @@
       "severity": "error"
     },
     {
-      "column": 29,
-      "path": "wd-bot/src/wd_bot/auto_reload.py",
-      "name": "missing-attribute",
-      "concise_description": "Object of class `Bot` has no attribute `reload_extension`",
-      "severity": "error"
-    },
-    {
       "column": 62,
       "path": "wd-bot/src/wd_bot/bot.py",
       "name": "bad-argument-type",
       "concise_description": "Argument `OverloadResidual@[(ParamSpec(Any)) -> CoroutineType[Any, Any, Any], (ParamSpec(Any)) -> CoroutineType[Any, Any, Any], (...) -> CoroutineType[Any, Any, Any]]` is not assignable to parameter `object` with type `(...) -> Awaitable[None]` in function `list.append`",
-      "severity": "error"
-    },
-    {
-      "column": 37,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "missing-module-attribute",
-      "concise_description": "Could not import `CommandStore` from `wd_types.alias`",
-      "severity": "error"
-    },
-    {
-      "column": 61,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "missing-attribute",
-      "concise_description": "Object of class `Snowflake` has no attribute `id`",
-      "severity": "error"
-    },
-    {
-      "column": 51,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `AppCommand`",
-      "severity": "error"
-    },
-    {
-      "column": 31,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `AppCommand`",
-      "severity": "error"
-    },
-    {
-      "column": 44,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `AppCommandGroup`",
-      "severity": "error"
-    },
-    {
-      "column": 62,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `Argument`",
-      "severity": "error"
-    },
-    {
-      "column": 39,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `AppCommandGroup`",
-      "severity": "error"
-    },
-    {
-      "column": 14,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `BotBase`",
-      "severity": "error"
-    },
-    {
-      "column": 24,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `AppCommand`",
-      "severity": "error"
-    },
-    {
-      "column": 22,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `discord`",
-      "severity": "error"
-    },
-    {
-      "column": 38,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "missing-attribute",
-      "concise_description": "Object of class `Snowflake` has no attribute `id`",
-      "severity": "error"
-    },
-    {
-      "column": 82,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "bad-argument-type",
-      "concise_description": "Argument `list[Unknown] | None` is not assignable to parameter `commands` with type `list[Unknown]` in function `AppCommandCache._unpack_app_commands`",
-      "severity": "error"
-    },
-    {
-      "column": 72,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "bad-argument-type",
-      "concise_description": "Argument `list[Unknown] | None` is not assignable to parameter `commands` with type `list[Unknown]` in function `AppCommandCache._unpack_app_commands`",
-      "severity": "error"
-    },
-    {
-      "column": 41,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `Command`",
-      "severity": "error"
-    },
-    {
-      "column": 44,
-      "path": "wd-bot/src/wd_bot/cache.py",
-      "name": "unknown-name",
-      "concise_description": "Could not find name `Command`",
       "severity": "error"
     },
     {
@@ -208,34 +96,6 @@
       "path": "wd-bot/src/wd_bot/permissions.py",
       "name": "unknown-name",
       "concise_description": "Could not find name `Member`",
-      "severity": "error"
-    },
-    {
-      "column": 1,
-      "path": "wd-bot/src/wd_bot/routines.py",
-      "name": "bad-specialization",
-      "concise_description": "`() -> Coroutine[Unknown, Unknown, None]` is not assignable to upper bound `(Any) -> Coroutine[Any, Any, Any]` of type variable `FT`",
-      "severity": "error"
-    },
-    {
-      "column": 1,
-      "path": "wd-bot/src/wd_bot/tasks.py",
-      "name": "missing-import",
-      "concise_description": "Cannot find module `discord.ext`",
-      "severity": "error"
-    },
-    {
-      "column": 1,
-      "path": "wd-bot/src/wd_bot/tasks.py",
-      "name": "missing-import",
-      "concise_description": "Cannot find module `discord.utils`",
-      "severity": "error"
-    },
-    {
-      "column": 15,
-      "path": "wd-bot/src/wd_bot/tasks.py",
-      "name": "bad-override",
-      "concise_description": "Class member `Loop._error` is marked as an override, but no parent class has a matching attribute",
       "severity": "error"
     },
     {

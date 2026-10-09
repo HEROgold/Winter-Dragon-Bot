@@ -26,7 +26,7 @@ Conventions when writing one:
 Define a `Protocol` when you need a *shape*, not a class. Sanctioned uses:
 
 1. **Decouple from a heavy library.** `Mentionable` ([wd_types/protocol.py](../../../wd-types/src/wd_types/protocol.py), `@runtime_checkable`) lets [wd_core/events.py](../../../wd-core/src/wd_core/events.py) do `isinstance(target, Mentionable)` without importing entity classes. Cross-package protocols live in **wd-types**.
-2. **One shape, several concrete types.** `SyncedRow` / `CommandLike` ([wd_bot/auto_sync.py](../../../wd-bot/src/wd_bot/auto_sync.py)) let `SyncedCommands[Row: SyncedRow]` treat `GlobalSyncedCommand` and `GuildSyncedCommand` tables the same.
+2. **One shape, several concrete types.** `Placement` ([wd_bot/registry.py](../../../wd-bot/src/wd_bot/registry.py)) is a callable protocol, so the plain `declared_scopes` function and a stateful per-guild policy object can both decide where commands are registered.
 3. **Type an untyped third-party API.** The `Cassiopeia*` protocols in [wd_cogs/games/league_of_legends.py](../../../wd-cogs/src/wd_cogs/games/league_of_legends.py) describe only the attributes used. (Debt: duplicated in `lol_clash.py` — consolidate if you touch them.)
 4. **Capability branching at runtime.** `Prunable`/`History`/`PrunableHistory` ([wd_cogs/server/purge.py](../../../wd-cogs/src/wd_cogs/server/purge.py)) are `@runtime_checkable` and composed by inheritance, so code branches on what a channel *can do*.
 

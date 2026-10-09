@@ -22,18 +22,20 @@ A filesystem watcher reloads changed extensions while the bot is running, so dev
 
 ## Command tree synchronisation
 
-Syncing the application command tree with Discord is rate-limited, so the bot avoids doing it needlessly. It records a signature for every synced command definition and only pushes a sync when a signature actually changed. Alongside the automatic path there is a manual sync surface (`/sync`, plus a developer-only variant that syncs every guild) for when a sync must be forced.
+Syncing the application command tree with Discord is rate-limited, so the bot avoids doing it needlessly. The command registry holds, per scope (global or one guild), the commands the cogs want and the commands Discord last reported. On startup each scope is read once, which recovers every command's ID, and a scope is only written (one bulk overwrite) when a definition differs. A hot reload re-syncs just the scopes whose commands changed. `/bot-commands resync` re-reads every scope from Discord and pushes any differences.
 
-A cache of application commands — global and per guild — backs command lookups, so cogs can resolve a command's Discord-side ID (for mention-style command links) without re-fetching.
+Command mentions (`self.mention(self.add)`) resolve to the ID Discord last reported when the message is rendered, falling back to plain `/name` until Discord has reported the command.
 
-**Status:** ✅ Ported for the runtime pieces (`wd-bot/src/wd_bot/auto_sync.py`, `cache.py`); 🟡 for the `/sync` cog, which still imports `winter_dragon.bot.ui`.
+**Status:** ✅ Ported (`wd-bot/src/wd_bot/registry.py`, `auto_sync.py`, `winter_dragon/cogs/bot_commands.py`).
 **Source on `main`:** `src/winter_dragon/bot/core/auto_sync.py`, `core/app_command_cache.py`, `extensions/bot_extension/sync.py`
 
 ## Per-guild command enable/disable
 
 Server admins can turn individual commands off for their guild through an interactive, paginated toggle UI (`/manage-commands`). Disabled commands are recorded per guild and refused at invocation time — the command still exists in Discord's tree, it just declines to run.
 
-**Status:** 🟡 Copied, unwired — depends on the missing UI toolkit and command/guild tables.
+In v2 this becomes a whitelist/blacklist per guild that changes where commands are registered, so a disabled command disappears from the guild's command list. The command-management group itself can't be removed. It plugs into the registry's `Placement` hook ([#206](https://github.com/HEROgold/Winter-Dragon-Bot/issues/206)).
+
+**Status:** 🟡 Copied, unwired — the v2 design is tracked in #206.
 **Source on `main`:** `src/winter_dragon/bot/extensions/bot_extension/command_manager.py`
 
 ## Permission handling

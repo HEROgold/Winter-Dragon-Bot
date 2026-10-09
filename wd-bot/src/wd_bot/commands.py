@@ -19,7 +19,10 @@ lazy from wd_discord.interactions import (
     ApplicationCommandParams,
 )
 lazy from wd_discord.resources.user import User as UserModel
+lazy from wd_discord.snowflake import Snowflake
 
+lazy from wd_bot.cogs import Cog
+lazy from wd_bot.registry import GLOBAL, Scope
 lazy from wd_bot.signature import command_signature
 
 
@@ -30,8 +33,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.gateway.events import InteractionDataOption
     lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
     lazy from wd_discord.permissions import Permissions
-
-    lazy from wd_bot.cogs import Cog
+    lazy from wd_discord.snowflake import SnowflakeLike
 
 
 _OPTION_TYPE_MAP: dict[type, ApplicationCommandOptionType] = {
@@ -61,16 +63,22 @@ class AppCommand(LoggerMixin, ABC):
         description: str,
         default_member_permissions: Permissions | None = None,
         contexts: Iterable[InteractionContextType] | None = None,
+        guild_ids: Iterable[SnowflakeLike] | None = None,
     ) -> None:
         """Set the definition Discord sees.
 
         ``default_member_permissions`` is the permission bitfield Discord requires by default to use the
-        command; ``contexts`` limits where it shows up (``None`` keeps Discord's default).
+        command; ``contexts`` limits where it shows up (``None`` keeps Discord's default). ``guild_ids``
+        registers the command in just those guilds instead of globally.
         """
         self.name = name
         self.description = description
         self.default_member_permissions = default_member_permissions
         self.contexts = None if contexts is None else list(contexts)
+        self.scopes: frozenset[Scope] = (
+            frozenset({GLOBAL}) if guild_ids is None else frozenset(Scope(Snowflake.coerce(guild)) for guild in guild_ids)
+        )
+        """The scopes this command declares it is registered in; a :class:`~wd_bot.registry.Placement` may differ."""
 
     @abstractmethod
     def options(self) -> Generator[ApplicationCommandOption]:
@@ -96,6 +104,9 @@ class AppCommand(LoggerMixin, ABC):
 
     def params(self) -> ApplicationCommandParams:
         """Return the create/edit request body for this command."""
+        # TODO(Herogold): send every field Discord would otherwise default, so a fetched command  # noqa: FIX002
+        # https://github.com/HEROgold/Winter-Dragon-Bot/issues/205
+        # compares equal to ``params()`` without the special-casing in ``registry.definition_matches``.
         return ApplicationCommandParams(
             name=self.name,
             description=self.description,
@@ -112,7 +123,7 @@ class Command(AppCommand):
     define the command's options via their type annotations.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - each keyword is part of the command's Discord definition
         self,
         func: Callable[..., Awaitable[None]],
         *,
@@ -120,6 +131,7 @@ class Command(AppCommand):
         description: str,
         default_member_permissions: Permissions | None = None,
         contexts: Iterable[InteractionContextType] | None = None,
+        guild_ids: Iterable[SnowflakeLike] | None = None,
     ) -> None:
         """Wrap ``func`` as a command named ``name`` with the given ``description``."""
         super().__init__(
@@ -127,8 +139,11 @@ class Command(AppCommand):
             description=description,
             default_member_permissions=default_member_permissions,
             contexts=contexts,
+            guild_ids=guild_ids,
         )
         self.func = func
+        self.owner: type[Cog] | None = None
+        """The cog class this command was defined on; set when that class is created."""
         self._autocompletes: dict[str, AutocompleteHandler] = {}
         self._param_types: dict[str, type] = {}
         self._param_required: dict[str, bool] = {}
@@ -285,6 +300,11 @@ class Command(AppCommand):
         """Allow a Command to be accessed as a plain attribute on a Cog instance without binding it like a method."""
         return self
 
+    def __set_name__(self, owner: type, name: str) -> None:
+        """Remember the cog class this command is defined on, so a mention from any cog can find its path."""
+        if issubclass(owner, Cog):
+            self.owner = owner
+
 
 class CommandGroup(AppCommand):
     """A chat-input command whose options are subcommands, built from a :class:`~wd_bot.cogs.GroupCog`.
@@ -294,7 +314,7 @@ class CommandGroup(AppCommand):
     neither per subcommand.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - each keyword is part of the group's Discord definition
         self,
         *,
         name: str,
@@ -302,6 +322,7 @@ class CommandGroup(AppCommand):
         subcommands: Iterable[Command],
         default_member_permissions: Permissions | None = None,
         contexts: Iterable[InteractionContextType] | None = None,
+        guild_ids: Iterable[SnowflakeLike] | None = None,
     ) -> None:
         """Group ``subcommands`` under the command ``name``."""
         super().__init__(
@@ -309,6 +330,7 @@ class CommandGroup(AppCommand):
             description=description,
             default_member_permissions=default_member_permissions,
             contexts=contexts,
+            guild_ids=guild_ids,
         )
         self.subcommands = {subcommand.name: subcommand for subcommand in subcommands}
         for subcommand in self.subcommands.values():
@@ -316,6 +338,8 @@ class CommandGroup(AppCommand):
                 self.logger.warning(
                     t"Subcommand '{name} {subcommand.name}' sets default_member_permissions or contexts; Discord ignores them",
                 )
+            if subcommand.scopes != {GLOBAL}:
+                self.logger.warning(t"Subcommand '{name} {subcommand.name}' sets guild_ids; the group's scopes apply")
 
     def options(self) -> Generator[ApplicationCommandOption]:
         """Yield one SUB_COMMAND option per subcommand, nesting that subcommand's own options."""

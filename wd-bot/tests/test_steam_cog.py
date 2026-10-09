@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING, ClassVar, Self
 
 import pytest
 from sqlmodel import Session, select
-from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
+from wd_bot.registry import GLOBAL, CommandRegistry
 from wd_config.steam import SteamSettings
 from wd_discord.gateway.events import InteractionDataOption
+from wd_discord.interactions import ApplicationCommand
 from wd_discord.testing import RecordingClient
 
 import winter_dragon.cogs.steam.cog as module
@@ -109,7 +110,7 @@ def _cog(engine: Engine) -> tuple[SteamSales, RecordingClient]:
     client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
     client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
     cog = SteamSales.__new__(SteamSales)
-    cog.bot = SimpleNamespace(client=client)  # pyright: ignore[reportAttributeAccessIssue]
+    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
     cog.session = Session(engine)
     return cog, client
 
@@ -129,21 +130,19 @@ def _percent(value: int) -> list[InteractionDataOption]:
     return [InteractionDataOption(name="percent", type=4, value=value)]
 
 
-def _sync_steam_group(engine: Engine, discord_command_id: str = "42") -> None:
-    """Record the /steam group as synced, so mentions of it become clickable."""
-    with Session(engine) as session:
-        record = CommandRecord(name="steam")
-        session.add(record)
-        session.commit()
-        session.refresh(record)
-        assert record.id is not None
-        session.add(GlobalSyncedCommand(command_id=record.id, signature="s", discord_command_id=discord_command_id))
-        session.commit()
+def _sync_steam_group(cog: SteamSales, discord_command_id: str = "42") -> None:
+    """Record the /steam group as Discord reported it, so mentions of it become clickable."""
+    steam = {"id": discord_command_id, "application_id": "2", "name": "steam", "description": "s", "version": "1"}
+    cog.bot.registry.apply(GLOBAL, [ApplicationCommand.model_validate(steam)])
 
 
-async def test_add_subscribes_once(engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
-    _sync_steam_group(engine)
+async def test_add_subscribes_once(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     cog, _client = _cog(engine)
+    _sync_steam_group(cog)
 
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
@@ -182,7 +181,11 @@ async def test_percentage_rejects_values_outside_0_to_100(
     assert "between 0 and 100" in str(_replies(discord_client)[-1]["content"])
 
 
-async def test_remove_unsubscribes(engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
+async def test_remove_unsubscribes(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     cog, _client = _cog(engine)
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
 
@@ -264,8 +267,8 @@ async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -
     with Session(engine) as session:
         session.add(SteamUsers(id=7, sale_threshold=30, last_notification=NOW - timedelta(hours=1)))
         session.commit()
-    _sync_steam_group(engine)
     cog, client = _cog(engine)
+    _sync_steam_group(cog)
 
     await cog.scrape(NOW)
 
@@ -279,8 +282,8 @@ async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -
 
 
 async def test_scrape_without_subscribers_stores_down_to_the_configured_percent(engine: Engine) -> None:
-    _sync_steam_group(engine)
     cog, _client = _cog(engine)
+    _sync_steam_group(cog)
     await cog.scrape(NOW)
     assert FakeScraper.queries[-1] == (SteamSettings.stored_percent, SteamSettings.top_sellers)
 
@@ -289,8 +292,8 @@ async def test_scrape_ignores_subscriber_thresholds_above_the_configured_percent
     with Session(engine) as session:
         session.add(SteamUsers(id=7, sale_threshold=100, last_notification=NOW))
         session.commit()
-    _sync_steam_group(engine)
     cog, _client = _cog(engine)
+    _sync_steam_group(cog)
     await cog.scrape(NOW)
     assert FakeScraper.queries[-1] == (SteamSettings.stored_percent, SteamSettings.top_sellers)
 
@@ -380,8 +383,8 @@ async def test_scrape_verifies_sales_it_no_longer_lists(engine: Engine) -> None:
         "https://store.steampowered.com/app/2/": None,  # ended
         "https://store.steampowered.com/app/3/": app_sale(3, percent=80),  # no longer a top seller
     }
-    _sync_steam_group(engine)
     cog, _client = _cog(engine)
+    _sync_steam_group(cog)
 
     await cog.scrape(NOW)
 
@@ -394,8 +397,8 @@ async def test_scrape_verifies_sales_it_no_longer_lists(engine: Engine) -> None:
 async def test_empty_scrape_removes_nothing(engine: Engine) -> None:
     _seed(engine, app_sale(1), now=NOW - timedelta(hours=3))
     FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
-    _sync_steam_group(engine)
     cog, _client = _cog(engine)
+    _sync_steam_group(cog)
 
     await cog.scrape(NOW)
 
@@ -421,8 +424,8 @@ async def test_scrape_defers_unseen_sales_with_a_known_end(engine: Engine) -> No
     _seed(engine, app_sale(1), app_sale(2, sale_end=end), now=NOW - timedelta(hours=3))
     FakeScraper.sales = [app_sale(1)]
     FakeScraper.current = {"https://store.steampowered.com/app/2/": None}  # would remove it if looked at
-    _sync_steam_group(engine)
     cog, _client = _cog(engine)
+    _sync_steam_group(cog)
 
     await cog.scrape(NOW)
 

@@ -8,7 +8,7 @@ lazy from wd_config.bot import Settings
 
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import parse
-lazy from wd_discord.entities.command import GlobalCommandStore, PartialGlobalCommand
+lazy from wd_discord.entities.command import GlobalCommandStore, GuildCommandStore, PartialGlobalCommand
 lazy from wd_discord.resources.application import Application
 lazy from wd_discord.snowflake import Snowflake
 
@@ -49,3 +49,7 @@ class CurrentApplication:
         self._id = application.id
         Settings().application_id = int(application.id)
         return self._id
+
+    def guild_commands(self, guild_id: SnowflakeLike) -> GuildCommandStore:
+        """Return the store of the application's commands registered in the guild ``guild_id``."""
+        return GuildCommandStore(self.client, Snowflake.coerce(guild_id))

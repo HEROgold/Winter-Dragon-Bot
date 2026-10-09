@@ -9,9 +9,10 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 - exports: URLS, AnyInteraction, ApiResponseError, Application, AutocompleteInteraction, BoundEvent, Channel,
   ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField,
-  EventName, Gateway, GatewayActivity, GatewayBotInfo, GlobalCommand, Guild, GuildCreate, Interaction, Invite, Message,
-  NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialUser, Permissions, RawEvent,
-  Ready, Sentry, ShardManager, Snowflake, Status, Token, TokenType, UnknownInteraction, User, bind, is_network_error
+  EventName, Gateway, GatewayActivity, GatewayBotInfo, GlobalCommand, Guild, GuildCommand, GuildCreate, Interaction,
+  Invite, Message, NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialUser,
+  Permissions, RawEvent, Ready, Sentry, ShardManager, Snowflake, Status, Token, TokenType, UnknownInteraction, User,
+  bind, is_network_error
 
 ## `wd_discord.authenticate` — `wd-discord/src/wd_discord/authenticate.py`
 Location for all authentication related functions and classes.
@@ -214,6 +215,7 @@ An application command as Discord returns it (list/create/edit response).
   options: list[ApplicationCommandOption], default_member_permissions: PermissionsField | None, dm_permission: bool,
   default_permission: bool | None, nsfw: bool, integration_types: list[ApplicationIntegrationType] | None, contexts:
   list[InteractionContextType] | None, version: Snowflake, handler: EntryPointCommandHandlerType | None
+- `to_params() -> ApplicationCommandParams` — Return the create/edit body that defines this command, without the fields only Discord sets.
 
 ### `class ApplicationCommandParams(BaseModel)`
 The JSON body for creating or editing an application command.

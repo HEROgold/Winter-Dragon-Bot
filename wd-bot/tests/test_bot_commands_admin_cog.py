@@ -6,51 +6,46 @@ lazy from types import SimpleNamespace
 lazy from typing import TYPE_CHECKING
 lazy from unittest.mock import AsyncMock
 
-lazy from sqlmodel import Session
-lazy from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand
-lazy from wd_bot.commands import Command, CommandGroup
-lazy from wd_discord.interactions import InteractionContextType
+lazy from wd_bot.cogs import Cog
+lazy from wd_bot.commands import CommandGroup
+lazy from wd_bot.registry import GLOBAL, CommandRegistry
+lazy from wd_discord.interactions import ApplicationCommand, InteractionContextType
 lazy from wd_discord.permissions import Permissions
 
-lazy import winter_dragon.cogs.bot_commands as module
 lazy from winter_dragon.cogs.bot_commands import BotCommands, describe_sync_status
 
 
 if TYPE_CHECKING:
     lazy from conftest import InteractionFactory
-    lazy from sqlalchemy import Engine
     lazy from wd_discord import CommandInteraction
     lazy from wd_discord.testing import RecordingClient
 
 
-async def _noop(self: object, interaction: CommandInteraction) -> None:
-    """Handle a no-option command."""
+class _Commands(Cog, auto_load=False):
+    @Cog.command(name="ping", description="d")
+    async def ping(self, interaction: CommandInteraction) -> None:
+        """Handle /ping."""
+
+    @Cog.command(name="other", description="d")
+    async def other(self, interaction: CommandInteraction) -> None:
+        """Handle /other."""
 
 
-def _seed_synced(engine: Engine, name: str, signature: str) -> None:
-    """Record ``name`` as synced with ``signature``."""
-    with Session(engine) as session:
-        record = CommandRecord(name=name)
-        session.add(record)
-        session.commit()
-        session.refresh(record)
-        assert record.id is not None
-        session.add(GlobalSyncedCommand(command_id=record.id, signature=signature, discord_command_id="1"))
-        session.commit()
+def _registry(**reported_ping: str) -> CommandRegistry:
+    """Return a registry holding /ping and /other, of which Discord has reported only /ping (as ``reported_ping``)."""
+    registry = CommandRegistry()
+    registry.register(_Commands.__new__(_Commands))
+    ping = {**_Commands.ping.params().to_json(), "id": "1", "application_id": "2", "version": "1", **reported_ping}
+    registry.apply(GLOBAL, [ApplicationCommand.model_validate(ping)])
+    return registry
 
 
-def test_describe_sync_status_reports_synced_and_pending(engine: Engine) -> None:
-    _seed_synced(engine, "percentage", "sig")
-    with Session(engine) as session:
-        lines = list(describe_sync_status(session, [("percentage", "sig"), ("other", "sig2")]))
-    assert "percentage: synced" in lines
-    assert "other: pending" in lines
+def test_describe_sync_status_reports_synced_and_pending() -> None:
+    assert list(describe_sync_status(_registry())) == ["other (global): pending", "ping (global): synced"]
 
 
-def test_describe_sync_status_reports_stale_signature_as_pending(engine: Engine) -> None:
-    _seed_synced(engine, "percentage", "old")
-    with Session(engine) as session:
-        assert list(describe_sync_status(session, [("percentage", "new")])) == ["percentage: pending"]
+def test_describe_sync_status_reports_a_changed_definition_as_pending() -> None:
+    assert "ping (global): pending" in list(describe_sync_status(_registry(description="older")))
 
 
 def test_group_is_gated_to_manage_guild() -> None:
@@ -63,33 +58,33 @@ def test_group_is_gated_to_manage_guild() -> None:
 
 
 async def test_list_commands_replies_with_status_embed(
-    monkeypatch: object,
-    engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    command = Command(_noop, name="ping", description="d")
-    _seed_synced(engine, "ping", command.signature())
-    monkeypatch.setattr(module, "engine", engine)  # pyright: ignore[reportAttributeAccessIssue]
     cog = BotCommands.__new__(BotCommands)
-    cog.bot = SimpleNamespace(commands=iter([command]), client=discord_client)  # pyright: ignore[reportAttributeAccessIssue]
+    cog.bot = SimpleNamespace(registry=_registry(), client=discord_client)  # pyright: ignore[reportAttributeAccessIssue]
 
     await BotCommands.list_commands.invoke(cog, make_interaction("bot-commands"))
 
     (response,) = discord_client.interaction_responses()
-    assert response["data"]["embeds"][0]["description"] == "ping: synced"
+    assert response["data"]["embeds"][0]["description"] == "other (global): pending\nping (global): synced"
 
 
-async def test_resync_responds_before_syncing(make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
+async def test_resync_responds_then_rereads_discord_before_syncing(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     responses_before_sync: list[int] = []
     sync = AsyncMock(side_effect=lambda *_a, **_k: responses_before_sync.append(len(discord_client.interaction_responses())))
+    registry = _registry()
     cog = BotCommands.__new__(BotCommands)
-    cog.bot = SimpleNamespace(commands=iter(()), client=discord_client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
+    cog.bot = SimpleNamespace(registry=registry, client=discord_client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
 
     await BotCommands.resync.invoke(cog, make_interaction("bot-commands"))
 
     assert responses_before_sync == [1]
     sync.assert_awaited_once_with(discord_client)
+    assert not registry.is_known(GLOBAL)
     assert discord_client.interaction_responses() == [{"type": 4, "data": {"content": "Resyncing commands…"}}]
 
 
@@ -100,4 +95,4 @@ def test_group_is_guild_only() -> None:
 
 
 def test_resync_description() -> None:
-    assert BotCommands.resync.description == "Push pending command changes to Discord"
+    assert BotCommands.resync.description == "Re-read the commands from Discord and push any differences"

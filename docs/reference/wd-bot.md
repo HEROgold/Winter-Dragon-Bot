@@ -24,61 +24,12 @@ Monitors extension files and reloads them in-place when they change.
 - `deregister() -> None` — Stop watching the module when no cogs reference it anymore.
 
 ## `wd_bot.auto_sync` — `wd-bot/src/wd_bot/auto_sync.py`
-Diff-based sync tracking for Discord application commands.
+Keeps the commands Discord has equal to the :class:`~wd_bot.registry.CommandRegistry`, one scope at a time.
 
-- module names: UNKNOWN_COMMAND_CODES
-- `command_mention(session: Session, name: str, subcommand: str | None=None) -> str` — Return a clickable ``</name subcommand:id>`` mention of a globally synced command.
-- `diff_global_commands(session: Session, commands: Sequence[CommandLike]) -> SyncPlan` — Compare ``commands`` against :class:`GlobalSyncedCommand` rows and plan the minimal sync.
-- `diff_guild_commands(session: Session, guild_id: int, commands: Sequence[CommandLike]) -> SyncPlan` — Guild-scoped counterpart to :func:`diff_global_commands` (see class docstrings - unused in v1).
+### `class CommandSyncer(LoggerMixin)`
+Brings Discord's commands in line with a :class:`~wd_bot.registry.CommandRegistry`.
 
-### `class CommandLike(Protocol)`
-Anything with a stable name and a signature - satisfied structurally by wd_bot.commands.Command.
-
-- fields: name: str
-- `signature() -> str` — Return the command's signature string.
-
-### `class SyncedRow(Protocol)`
-One command's sync state in some scope - satisfied by :class:`GlobalSyncedCommand` and :class:`GuildSyncedCommand`.
-
-- fields: command_id: int, signature: str, discord_command_id: str
-
-### `class CommandRecord(SQLModel, table=True)`
-The identity of a known command, independent of which scope(s) it's synced to.
-
-- fields: name: str
-
-### `class GlobalSyncedCommand(SQLModel, table=True)`
-Tracks one command's global sync state: its last-synced signature and Discord's assigned ID.
-
-- fields: command_id: int, signature: str, discord_command_id: str
-
-### `class GuildSyncedCommand(SQLModel, table=True)`
-Per-guild counterpart to :class:`GlobalSyncedCommand`.
-
-- fields: command_id: int, guild_id: int, signature: str, discord_command_id: str
-
-### `@dataclass class SyncPlan`
-The set of REST calls needed to reconcile registered commands with Discord's actual state.
-
-- fields: to_create: list[CommandLike], to_edit: list[tuple[CommandLike, str]], to_delete: list[str]
-
-### `class SyncedCommands[Row: SyncedRow]`
-The known command records and their synced rows in one scope (global, or one guild).
-
-- `@classmethod load(session: Session, row_model: type[Row], *where: ColumnElement[bool] | bool) -> SyncedCommands[Row]` — Read every record, and the ``row_model`` rows matching ``where``, from ``session``.
-- `row_for(name: str) -> Row | None` — Return the synced row for the command named ``name``, if it was synced in this scope.
-- `is_synced(name: str, signature: str) -> bool` — Whether the command named ``name`` was last synced with exactly ``signature``.
-- `plan(commands: Sequence[CommandLike]) -> SyncPlan` — Compute the :class:`SyncPlan` that brings this scope in line with ``commands``.
-
-### `class CommandSyncer(ABC)`
-Strategy for reconciling the bot's registered commands with Discord.
-
-- `async sync(client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool=True) -> None` — Push ``commands`` to Discord through ``client``, doing only the work needed.
-
-### `class DefaultCommandSyncer(CommandSyncer, LoggerMixin)`
-Diff-based :class:`CommandSyncer` tracking last-synced state in the database (global scope only).
-
-- `async sync(client: Client, commands: Sequence[AppCommand], *, allow_deletes: bool=True) -> None` — Diff ``commands`` against the last-synced state and push only the changes to Discord.
+- `async sync(client: Client, scopes: Iterable[Scope], *, allow_writes: bool=True) -> None` — Sync each of ``scopes``; with ``allow_writes`` False, only read them (recovering IDs), never PUT.
 
 ## `wd_bot.bot` — `wd-bot/src/wd_bot/bot.py`
 Module that contains the bot.
@@ -99,29 +50,20 @@ A forever-running Discord bot: connects to the gateway, loads extensions, dispat
 - fields: launch_time: datetime.datetime, loop: asyncio.AbstractEventLoop, client: Client, cogs: dict[str, Cog]
 - `get_bot_invite() -> str` — Get the link to invite the bot to a server.
 - `async add_cog(cog: Cog) -> None` — Register a cog and any of its @Cog.listener()-tagged methods.
-- `@property syncer -> CommandSyncer` — The strategy used to push registered commands to Discord.
+- `async remove_cog(cog: Cog) -> set[Scope]` — Unregister ``cog``'s listeners, commands and components and unload it; return the command scopes that changed.
 - `@property commands -> Generator[AppCommand]` — Yield every registered top-level command (plain commands and subcommand groups).
-- `async sync_commands(client: Client) -> None` — Push the registered commands to Discord via :attr:`syncer`.
+- `async sync_commands(client: Client, scopes: Iterable[Scope] | None=None) -> None` — Sync ``scopes`` (default: every scope the registry knows) to Discord via :attr:`syncer`.
 - `async get_extensions() -> AsyncGenerator[str]` — Get all extensions from :attr:`extensions_package`.
+- `async reload_extension(module_name: str) -> None` — Re-import the extension module ``module_name``, swap its cogs for fresh ones and sync what changed.
 - `async load_extension(extension: str) -> None` — Load a single extension from :attr:`extensions_package`.
 - `async load_extensions() -> None` — Load all cogs from :attr:`extensions_package`.
 - `@with_known_exception @Config.with_kwarg async start(token: str) -> None` — Start the bot with a token from the config file, or a provided token. Provided token takes precedence.
-
-## `wd_bot.cache` — `wd-bot/src/wd_bot/cache.py`
-A cache for storing application commands, both globally and per guild.
-
-### `class AppCommandCache`
-A cache for storing application commands, both globally and per guild.
-
-- `get_app_command(value: str, guild: Snowflake | int | None=None, *, fallback_to_global: bool=True) -> Mentionable | None` — Get an app command from the cache.
-- `async update_app_commands_cache(bot: BotBase, commands: list[AppCommand] | None=None, guild: Snowflake | int | None=None) -> None` — Update the app commands cache with the provided commands for a given guild.
-- `get_command_mention(command: Command | str) -> str` — Return a command string from a given functiontype. (Decorated with app_commands.command).
 
 ## `wd_bot.cogs` — `wd-bot/src/wd_bot/cogs.py`
 Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency.
 
 - module names: default_flags
-- `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
+- `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None, guild_ids: Iterable[SnowflakeLike] | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 - `component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ComponentHandler]` — Tag a Cog method as the handler for components whose ``custom_id`` starts with ``prefix``.
 
 ### `class BotArgs(TypedDict)`
@@ -143,7 +85,8 @@ A wd-native feature unit: a class whose methods can be tagged with @Cog.listener
 - `@classmethod commands() -> Generator[Command]` — Yield the :class:`Command` attributes defined on this cog class or inherited from its bases.
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield what this cog registers as top-level Discord commands: each of its commands.
 - `@classmethod components() -> Generator[ComponentHandler]` — Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases.
-- `mention(command: Command) -> str` — Return a clickable mention of ``command``, or its plain ``/name`` until it has been synced.
+- `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run ``command`` from this cog: ``/name``.
+- `mention(command: Command, *, guild: SnowflakeLike | None=None) -> CommandMention` — Return a mention of ``command``, as seen from ``guild``: clickable once Discord reported it, else ``/name``.
 - `@property bind -> Engine | Connection` — The database the cog's injected session connects to; open short-lived sessions on it per operation.
 - `create_tables(*models: type[SQLModel]) -> None` — Create the tables of ``models`` that don't exist yet, in :attr:`bind`; each named after its model, lowercased.
 - `async load() -> None` — Run setup once registered with the bot; a hook for subclasses to override.
@@ -153,9 +96,10 @@ A wd-native feature unit: a class whose methods can be tagged with @Cog.listener
 A cog whose commands are registered as subcommands of one Discord command, ``/<group_name> <command>``.
 
 - fields: group_name: ClassVar[str], group_description: ClassVar[str], group_default_member_permissions:
-  ClassVar[Permissions | None], group_contexts: ClassVar[list[InteractionContextType] | None]
+  ClassVar[Permissions | None], group_contexts: ClassVar[list[InteractionContextType] | None], group_guild_ids:
+  ClassVar[list[SnowflakeLike] | None]
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield this cog's single top-level Discord command: the group holding its commands.
-- `mention(command: Command) -> str` — Return a clickable mention of the subcommand ``command``, as ``/<group> <command>``.
+- `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run the subcommand ``command``: ``/<group> <command>``.
 
 ## `wd_bot.commands` — `wd-bot/src/wd_bot/commands.py`
 Application commands: the shared :class:`AppCommand` base, plain :class:`Command` and :class:`CommandGroup`.
@@ -234,6 +178,58 @@ Module for handling permission related things in Discord bot interactions.
 Notify users about missing permissions, roles or overwrites.
 
 - `async notify() -> None` — Notify the user about missing permissions, roles or overwrites.
+
+## `wd_bot.registry` — `wd-bot/src/wd_bot/registry.py`
+Which application commands the bot registers where, and the IDs Discord gave them.
+
+- module names: GLOBAL: Final
+- `declared_scopes(command: AppCommand) -> frozenset[Scope]` — Place ``command`` in the scopes it declares (global unless it names guilds); the default :class:`Placement`.
+- `definition_matches(local: ApplicationCommandParams, remote: ApplicationCommand) -> bool` — Whether Discord's ``remote`` command has the definition ``local`` would register.
+
+### `@dataclass class Scope`
+Where a command is registered: globally (``guild_id=None``) or in one guild.
+
+- fields: guild_id: Snowflake | None
+
+### `@dataclass class CommandPath`
+The full name a user types: ``/root`` or ``/root sub``.
+
+- fields: root: str, sub: str | None
+
+### `class Placement(Protocol)`
+Decides which scopes a top-level command is registered in.
+
+- `__call__(command: AppCommand, /) -> frozenset[Scope]` — Return the scopes ``command`` belongs in.
+
+### `@dataclass class Entry`
+A registered top-level command and the cog whose methods handle it.
+
+- fields: cog: Cog, command: AppCommand
+
+### `@dataclass class CommandMention`
+A mention of a command, resolved to its current Discord ID when rendered (``str()`` or an f-string).
+
+- fields: registry: CommandRegistry, path: CommandPath, guild_id: Snowflake | None
+
+### `class CommandRegistry(LoggerMixin)`
+The bot's commands per scope, next to what Discord last reported for that scope.
+
+- `register(cog: Cog) -> set[Scope]` — Add ``cog``'s top-level commands to the scopes their placement picks; return those scopes.
+- `unregister(cog: Cog) -> set[Scope]` — Remove ``cog``'s commands from every scope; return the scopes that changed.
+- `refresh() -> set[Scope]` — Place every registered command again, e.g. after :attr:`placement` changed; return the scopes that changed.
+- `scopes_of(cog: Cog) -> set[Scope]` — Return the scopes ``cog`` has commands registered in.
+- `entry(name: str, guild_id: Snowflake | None=None) -> Entry | None` — Return the command ``name`` an interaction from ``guild_id`` reaches: the guild's own first, then global.
+- `entries(scope: Scope) -> Generator[Entry]` — Yield the commands registered in ``scope``, by name.
+- `commands() -> Generator[AppCommand]` — Yield every registered top-level command once, whichever scopes it is in.
+- `scopes() -> set[Scope]` — Return every scope that has commands locally or on Discord; a sync covers all of them.
+- `params(scope: Scope) -> list[ApplicationCommandParams]` — Return the definitions ``scope`` should have on Discord, by name.
+- `is_known(scope: Scope) -> bool` — Whether Discord has reported ``scope``'s commands since startup (or the last :meth:`forget`).
+- `apply(scope: Scope, commands: Iterable[ApplicationCommand]) -> None` — Record ``commands`` as everything Discord has in ``scope`` now.
+- `forget() -> None` — Drop what Discord reported, so the next sync reads every scope from Discord again.
+- `in_sync(scope: Scope) -> bool` — Whether Discord's last report for ``scope`` has exactly the commands and definitions the bot wants.
+- `is_synced(scope: Scope, name: str) -> bool` — Whether the command ``name`` in ``scope`` is on Discord as currently defined.
+- `command_id(name: str, guild_id: Snowflake | None=None) -> Snowflake | None` — Return the Discord ID of the top-level command ``name``: the guild's own first, then the global one.
+- `mention(path: CommandPath, guild_id: Snowflake | None=None) -> CommandMention` — Return a mention of the command at ``path``, as seen from ``guild_id``.
 
 ## `wd_bot.signature` — `wd-bot/src/wd_bot/signature.py`
 Derive a stable signature string for a command's callable, used to detect definition drift.

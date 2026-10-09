@@ -173,6 +173,26 @@ class ApplicationCommand(DiscordModel):
     version: Snowflake
     handler: EntryPointCommandHandlerType | None = None
 
+    def to_params(self) -> ApplicationCommandParams:
+        """Return the create/edit body that defines this command, without the fields only Discord sets.
+
+        Drops ``id``, ``application_id``, ``guild_id``, ``version`` and the deprecated ``dm_permission`` /
+        ``default_permission``, so the result compares equal to the params the command was registered with.
+        """
+        return ApplicationCommandParams(
+            name=self.name,
+            name_localizations=self.name_localizations,
+            description=self.description,
+            description_localizations=self.description_localizations,
+            options=self.options,
+            default_member_permissions=self.default_member_permissions,
+            integration_types=self.integration_types,
+            contexts=self.contexts,
+            type=self.type,
+            nsfw=self.nsfw,
+            handler=self.handler,
+        )
+
 
 class ApplicationCommandParams(BaseModel):
     """The JSON body for creating or editing an application command.

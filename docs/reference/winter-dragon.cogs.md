@@ -8,13 +8,13 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `winter_dragon.cogs.bot_commands` — `src/winter_dragon/cogs/bot_commands.py`
 Admin command group for inspecting and forcing the application-command sync state.
 
-- `describe_sync_status(session: Session, commands: Sequence[tuple[str, str]]) -> Generator[str]` — Yield one "name: synced|pending" line per (name, signature) pair in ``commands``.
+- `describe_sync_status(registry: CommandRegistry) -> Generator[str]` — Yield one "name (scope): synced|pending" line per registered command, scope by scope.
 
 ### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and push the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
 Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
 
 - `@Cog.command async list_commands(interaction: CommandInteraction) -> None` — Show every registered command's synced/pending state.
-- `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then force the diff-and-push sync.
+- `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it.
 
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.

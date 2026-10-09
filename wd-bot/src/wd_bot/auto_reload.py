@@ -37,6 +37,7 @@ class WatcherFlags(IntFlag):
         """Check if the Registered flag is set."""
         return bool(self & WatcherFlags.Registered)
 
+
 default_flags = WatcherFlags.Enabled
 
 
@@ -112,7 +113,7 @@ class AutoReloadWatcher(LoggerMixin):
         return (
             self.flags.is_enabled
             and Settings.auto_reload_extensions
-            and self.module_name.startswith("wd_bot..extensions")
+            and self.module_name.startswith(f"{self.bot.extensions_package.__name__}.")
         )
 
     def _resolve_module_path(self) -> Path | None:
@@ -136,14 +137,13 @@ class AutoReloadWatcher(LoggerMixin):
         interval = float(Settings.auto_reload_poll_seconds or 1.5)
         if interval <= 0:
             interval = 1.5
+        this_task = asyncio.current_task()
         try:
             while True:
-                entry = cls._entries.get(module_name)
-                if entry is None:
-                    return
                 await asyncio.sleep(interval)
                 entry = cls._entries.get(module_name)
-                if entry is None:
+                # A reload hands the module to the new cogs' watcher; this one stops.
+                if entry is None or entry.task is not this_task:
                     return
                 current_mtime = cls._get_file_mtime(entry.path)
                 if current_mtime <= entry.mtime_ns:

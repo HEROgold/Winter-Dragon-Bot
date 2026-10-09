@@ -9,8 +9,9 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 - exports: AnyInteraction, AutocompleteInteraction, BaseChannel, BaseGlobalCommand, BaseGuild, BaseUser, BoundEvent,
   Channel, ClientBound, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Entity, EntityStore,
-  GlobalCommand, GlobalCommandStore, Guild, Interaction, Message, Partial, PartialChannel, PartialGlobalCommand,
-  PartialGuild, PartialUser, Ready, Store, UnknownInteraction, User, UserStore, bind, event_entities
+  GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, Interaction, Message, Partial,
+  PartialChannel, PartialGlobalCommand, PartialGuild, PartialUser, Ready, Store, UnknownInteraction, User, UserStore,
+  bind, event_entities
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -20,6 +21,7 @@ The client's own application: its data, its ID (which application-scoped routes 
 
 - `async fetch() -> Application | NetworkError` — GET /applications/@me - the application object.
 - `async id() -> Snowflake | NetworkError` — Return the application's ID, fetching and caching it when unknown.
+- `guild_commands(guild_id: SnowflakeLike) -> GuildCommandStore` — Return the store of the application's commands registered in the guild ``guild_id``.
 
 ## `wd_discord.entities.base` — `wd-discord/src/wd_discord/entities/base.py`
 Bases of the high-level API: client-bound entities and the stores that create them.
@@ -78,7 +80,7 @@ A channel, as Discord returned it.
 A channel known only by ID.
 
 ## `wd_discord.entities.command` — `wd-discord/src/wd_discord/entities/command.py`
-Global application commands (https://docs.discord.com/developers/interactions/application-commands).
+Application commands (https://docs.discord.com/developers/interactions/application-commands).
 
 ### `class BaseGlobalCommand(ClientBound)`
 What can be done to a global command knowing only its ID: read it again, edit it, delete it.
@@ -104,6 +106,22 @@ The application's global commands: register, fetch and list them.
 - `async path(command_id: SnowflakeLike | None=None) -> str | NetworkError` — Return the global-commands route, or one command's, or the failure looking up the application ID.
 - `async create(params: ApplicationCommandParams) -> GlobalCommand | NetworkError` — POST /applications/{application_id}/commands - register a new global command.
 - `async fetch_all() -> Generator[GlobalCommand] | NetworkError` — GET /applications/{application_id}/commands - every registered global command.
+- `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GlobalCommand] | NetworkError` — PUT /applications/{application_id}/commands - replace every global command with ``params``.
+
+### `class GuildCommand(Entity[ApplicationCommand])`
+A command registered in one guild, as Discord returned it.
+
+- `@property id -> Snowflake` — The command's ID.
+- `@property name -> str` — The command's name.
+- `@property mention -> str` — A clickable mention of the command, as ``</name:id>``.
+
+### `@dataclass class GuildCommandStore(Store)`
+One guild's commands for the application: list them, or replace them all.
+
+- fields: guild_id: Snowflake
+- `async path() -> str | NetworkError` — Return the guild-commands route, or the failure looking up the application ID.
+- `async fetch_all() -> Generator[GuildCommand] | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild.
+- `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GuildCommand] | NetworkError` — PUT /applications/{application_id}/guilds/{guild_id}/commands - replace the guild's commands with ``params``.
 
 ## `wd_discord.entities.events` — `wd-discord/src/wd_discord/entities/events.py`
 Gateway dispatch events bound to the client that received them.

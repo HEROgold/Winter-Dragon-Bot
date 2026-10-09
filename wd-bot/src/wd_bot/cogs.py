@@ -8,12 +8,13 @@ lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, Ty
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session, SQLModel
 lazy from wd_db.constants import engine
+lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
-lazy from wd_bot.auto_sync import command_mention
 lazy from wd_bot.commands import Command, CommandGroup
 lazy from wd_bot.components import ComponentHandler
 lazy from wd_bot.listener import listener
+lazy from wd_bot.registry import CommandPath
 
 
 if TYPE_CHECKING:
@@ -22,9 +23,11 @@ if TYPE_CHECKING:
     lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
+    lazy from wd_discord.snowflake import SnowflakeLike
 
     lazy from wd_bot.bot import Bot
     lazy from wd_bot.commands import AppCommand
+    lazy from wd_bot.registry import CommandMention
 
 
 def command(
@@ -32,8 +35,13 @@ def command(
     description: str,
     default_member_permissions: Permissions | None = None,
     contexts: Iterable[InteractionContextType] | None = None,
+    guild_ids: Iterable[SnowflakeLike] | None = None,
 ) -> Callable[[Callable[..., Awaitable[None]]], Command]:
-    """Tag a Cog method as a chat-input application command, building a :class:`Command` for it."""
+    """Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
+
+    ``guild_ids`` registers the command in just those guilds instead of globally; on a :class:`GroupCog`
+    the group's ``guild_ids`` apply instead.
+    """
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
         return Command(
@@ -42,6 +50,7 @@ def command(
             description=description,
             default_member_permissions=default_member_permissions,
             contexts=contexts,
+            guild_ids=guild_ids,
         )
 
     return decorator
@@ -142,9 +151,20 @@ class Cog(LoggerMixin):
             if isinstance(attr, ComponentHandler):
                 yield attr
 
-    def mention(self, command: Command) -> str:
-        """Return a clickable mention of ``command``, or its plain ``/name`` until it has been synced."""
-        return command_mention(self.session, command.name)
+    @classmethod
+    def path_of(cls, command: Command) -> CommandPath:
+        """Return the path a user types to run ``command`` from this cog: ``/name``."""
+        return CommandPath(command.name)
+
+    def mention(self, command: Command, *, guild: SnowflakeLike | None = None) -> CommandMention:
+        """Return a mention of ``command``, as seen from ``guild``: clickable once Discord reported it, else ``/name``.
+
+        ``command`` may belong to another cog; its path comes from the cog class it was defined on.
+        """
+        own = any(candidate is command for candidate in type(self).commands())
+        owner = type(self) if own or command.owner is None else command.owner
+        guild_id = None if guild is None else Snowflake.coerce(guild)
+        return self.bot.registry.mention(owner.path_of(command), guild_id)
 
     @property
     def bind(self) -> Engine | Connection:
@@ -175,14 +195,15 @@ class GroupCog(Cog):
         class BotCommands(GroupCog, name="bot-commands", description="...", default_member_permissions=...):
 
     ``name`` defaults to the class name in kebab-case and ``description`` to the first line of the class
-    docstring. ``default_member_permissions`` and ``contexts`` apply to the whole group (Discord has neither
-    per subcommand).
+    docstring. ``default_member_permissions``, ``contexts`` and ``guild_ids`` apply to the whole group (Discord
+    has none of them per subcommand).
     """
 
     group_name: ClassVar[str]
     group_description: ClassVar[str]
     group_default_member_permissions: ClassVar[Permissions | None] = None
     group_contexts: ClassVar[list[InteractionContextType] | None] = None
+    group_guild_ids: ClassVar[list[SnowflakeLike] | None] = None
 
     def __init_subclass__(  # noqa: PLR0913 - each keyword is a class-level group setting
         cls: type[Self],
@@ -191,6 +212,7 @@ class GroupCog(Cog):
         description: str | None = None,
         default_member_permissions: Permissions | None = None,
         contexts: Iterable[InteractionContextType] | None = None,
+        guild_ids: Iterable[SnowflakeLike] | None = None,
         auto_load: bool = True,
         flags: CogFlags | None = None,
     ) -> None:
@@ -200,6 +222,7 @@ class GroupCog(Cog):
         cls.group_description = description or (cls.__doc__ or cls.__name__).strip().splitlines()[0]
         cls.group_default_member_permissions = default_member_permissions
         cls.group_contexts = None if contexts is None else list(contexts)
+        cls.group_guild_ids = None if guild_ids is None else list(guild_ids)
 
     @classmethod
     def app_commands(cls) -> Generator[AppCommand]:
@@ -210,12 +233,14 @@ class GroupCog(Cog):
             subcommands=cls.commands(),
             default_member_permissions=cls.group_default_member_permissions,
             contexts=cls.group_contexts,
+            guild_ids=cls.group_guild_ids,
         )
 
+    @classmethod
     @override
-    def mention(self, command: Command) -> str:
-        """Return a clickable mention of the subcommand ``command``, as ``/<group> <command>``."""
-        return command_mention(self.session, self.group_name, command.name)
+    def path_of(cls, command: Command) -> CommandPath:
+        """Return the path a user types to run the subcommand ``command``: ``/<group> <command>``."""
+        return CommandPath(cls.group_name, command.name)
 
 
 def _kebab_case(name: str) -> str:

@@ -16,9 +16,10 @@ A JSON payload for a request.
 ### `class RequestKwargs(TypedDict, total=False)`
 The keyword arguments accepted by :meth:`Client.request` and its convenience methods.
 
-- fields: content: RequestContent, data: RequestData, files: RequestFiles, json: JsonPayload | MessageData, params:
-  QueryParamTypes, headers: HeaderTypes, cookies: CookieTypes, auth: AuthTypes | UseClientDefault, follow_redirects:
-  bool | UseClientDefault, timeout: TimeoutTypes | UseClientDefault, extensions: RequestExtensions
+- fields: content: RequestContent, data: RequestData, files: RequestFiles, json: JsonPayload | MessageData |
+  list[JsonPayload], params: QueryParamTypes, headers: HeaderTypes, cookies: CookieTypes, auth: AuthTypes |
+  UseClientDefault, follow_redirects: bool | UseClientDefault, timeout: TimeoutTypes | UseClientDefault, extensions:
+  RequestExtensions
 
 ### `class AsyncClient(_AsyncClient)`
 Async client for WD.

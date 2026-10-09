@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
-from wd_discord import Channel, CurrentUser, GlobalCommand, Message, PartialGlobalCommand, User, is_network_error
+from wd_discord import (
+    Channel,
+    CurrentUser,
+    GlobalCommand,
+    GuildCommand,
+    Message,
+    PartialGlobalCommand,
+    User,
+    is_network_error,
+)
 from wd_discord.components import ActionRow, Button, ButtonStyle
 from wd_discord.embed import Embed
 from wd_discord.errors.api import ApiResponseError
-from wd_discord.interactions import ApplicationCommandParams
+from wd_discord.interactions import ApplicationCommand, ApplicationCommandParams
 from wd_discord.resources.invite import Invite
+from wd_discord.snowflake import Snowflake
 from wd_discord.testing import RecordingClient
 
 
@@ -72,6 +82,40 @@ async def test_fetch_all_global_commands() -> None:
 
     assert not is_network_error(commands)
     assert [command.name for command in commands] == ["ping", "pong"]
+
+
+async def test_overwrite_global_commands_puts_every_definition() -> None:
+    client = RecordingClient()
+    client.reply("PUT", COMMANDS, [COMMAND_JSON])
+
+    commands = await client.application.commands.overwrite([PARAMS])
+
+    assert not is_network_error(commands)
+    assert [command.id for command in commands] == [Snowflake(77)]
+    assert client.sent[0].json == [PARAMS.to_json()]
+
+
+async def test_guild_commands_are_listed_and_overwritten_under_the_guild_route() -> None:
+    client = RecordingClient()
+    guild_route = "/applications/2/guilds/9/commands"
+    client.reply("GET", guild_route, [{**COMMAND_JSON, "guild_id": "9"}])
+    client.reply("PUT", guild_route, [{**COMMAND_JSON, "guild_id": "9"}])
+    store = client.application.guild_commands(9)
+
+    fetched = await store.fetch_all()
+    overwritten = await store.overwrite([PARAMS])
+
+    assert not is_network_error(fetched)
+    assert not is_network_error(overwritten)
+    assert [command.mention for command in fetched] == ["</ping:77>"]
+    assert all(isinstance(command, GuildCommand) for command in overwritten)
+    assert [(sent.method, sent.path) for sent in client.sent] == [("GET", guild_route), ("PUT", guild_route)]
+
+
+def test_fetched_command_round_trips_to_the_params_it_was_registered_with() -> None:
+    fetched = ApplicationCommand.model_validate({**COMMAND_JSON, "dm_permission": True, "guild_id": "9"})
+
+    assert fetched.to_params() == ApplicationCommandParams(name="ping", description="Pong", options=[], nsfw=False)
 
 
 async def test_users_me_returns_an_editable_current_user() -> None:

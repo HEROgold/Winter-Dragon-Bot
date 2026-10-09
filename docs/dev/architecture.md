@@ -40,8 +40,9 @@ Each package's public API is listed in the [API reference](../reference/index.md
    The bot token is injected from `config.ini` (`[Tokens] discord_token`) by `@Config.with_kwarg`.
 2. `Bot` discovers every cog module in the extensions package, instantiates each `Cog` with the bot and a
    database session, and creates the tables the cog declares (`Cog.create_tables`).
-3. Application commands are synced with Discord. The sync state is stored in the database so unchanged
-   commands aren't pushed again (`wd_bot.auto_sync`).
+3. Application commands are synced with Discord, one scope (global, or one guild) at a time. Each scope is read
+   from Discord once, which recovers the command IDs, and only written (a bulk overwrite) when a definition
+   differs. Nothing is stored in the database (`wd_bot.registry`, `wd_bot.auto_sync`).
 4. The gateway connection (`wd_discord.gateway`) receives dispatch events. `parse_dispatch` validates each one
    into a model, and `wd_discord.bind` wraps it in an entity bound to the client: a `Message`, a `Guild`,
    a typed `Interaction`.

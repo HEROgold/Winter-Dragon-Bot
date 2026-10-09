@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
+from wd_bot.registry import CommandRegistry
 from wd_discord import AutocompleteInteraction
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
@@ -50,7 +51,7 @@ def _cog(engine: Engine) -> tuple[Reminders, RecordingClient]:
     client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
     client.reply("POST", SEND_DM, MESSAGE_JSON)
     cog = Reminders.__new__(Reminders)
-    cog.bot = SimpleNamespace(client=client)  # pyright: ignore[reportAttributeAccessIssue]
+    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
     cog.session = Session(engine)
     return cog, client
 
@@ -104,7 +105,9 @@ def test_next_occurrence_skips_missed_occurrences() -> None:
 
 
 async def test_add_stores_a_one_off_reminder(
-    engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     cog, _ = _cog(engine)
     await Reminders.add.invoke(cog, make_interaction("reminder"), _options(reminder="feed the cat", hours=2))
@@ -117,7 +120,9 @@ async def test_add_stores_a_one_off_reminder(
 
 
 async def test_add_without_a_time_stores_nothing(
-    engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     cog, _ = _cog(engine)
     await Reminders.add.invoke(cog, make_interaction("reminder"), _options(reminder="never"))
@@ -128,7 +133,9 @@ async def test_add_without_a_time_stores_nothing(
 
 
 async def test_add_refuses_a_too_long_reminder(
-    engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     cog, _ = _cog(engine)
     await Reminders.add.invoke(cog, make_interaction("reminder"), _options(reminder="x" * 1001, minutes=5))
@@ -186,7 +193,9 @@ async def test_undeliverable_reminder_is_still_removed(engine: Engine) -> None:
 
 
 async def test_remove_by_autocomplete_value(
-    engine: Engine, make_interaction: InteractionFactory, discord_client: RecordingClient
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
 ) -> None:
     (timed_id,) = _seed(engine, TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)))
     cog, _ = _cog(engine)

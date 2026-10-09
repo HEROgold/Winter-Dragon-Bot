@@ -6,8 +6,6 @@ import asyncio
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session
-from wd_bot.auto_sync import CommandRecord, GlobalSyncedCommand, command_mention
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog
 from wd_bot.components import ComponentHandler, parse_custom_id
@@ -15,7 +13,6 @@ from wd_bot.components import ComponentHandler, parse_custom_id
 
 if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory
-    from sqlalchemy import Engine
     from wd_discord import ComponentInteraction
     from wd_discord.testing import RecordingClient
 
@@ -107,22 +104,3 @@ async def test_dispatch_sends_ephemeral_error_when_component_handler_raises(
     assert discord_client.interaction_responses() == [
         {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},
     ]
-
-
-def test_command_mention_falls_back_to_plain_text_until_synced(engine: Engine) -> None:
-    with Session(engine) as session:
-        assert command_mention(session, "steam", "show") == "`/steam show`"
-
-
-def test_command_mention_uses_the_synced_discord_id(engine: Engine) -> None:
-    with Session(engine) as session:
-        record = CommandRecord(name="steam")
-        session.add(record)
-        session.commit()
-        session.refresh(record)
-        assert record.id is not None
-        session.add(GlobalSyncedCommand(command_id=record.id, signature="s", discord_command_id="42"))
-        session.commit()
-
-        assert command_mention(session, "steam", "show") == "</steam show:42>"
-        assert command_mention(session, "steam") == "</steam:42>"

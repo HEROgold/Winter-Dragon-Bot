@@ -8,7 +8,14 @@ from __future__ import annotations
 lazy from .application import CurrentApplication
 lazy from .base import ClientBound, Entity, EntityStore, Partial, Store
 lazy from .channel import BaseChannel, Channel, PartialChannel
-lazy from .command import BaseGlobalCommand, GlobalCommand, GlobalCommandStore, PartialGlobalCommand
+lazy from .command import (
+    BaseGlobalCommand,
+    GlobalCommand,
+    GlobalCommandStore,
+    GuildCommand,
+    GuildCommandStore,
+    PartialGlobalCommand,
+)
 lazy from .events import BoundEvent, bind, event_entities
 lazy from .guild import BaseGuild, Guild, PartialGuild
 lazy from .interaction import (
@@ -43,6 +50,8 @@ __all__ = [
     "GlobalCommand",
     "GlobalCommandStore",
     "Guild",
+    "GuildCommand",
+    "GuildCommandStore",
     "Interaction",
     "Message",
     "Partial",
