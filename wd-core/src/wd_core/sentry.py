@@ -22,3 +22,4 @@ class Sentry:
             },
             traces_sample_rate=1,  # 100% of error traces will be sent
         )
+        sentry_sdk.set_user({"ip_address": "{{auto}}"})

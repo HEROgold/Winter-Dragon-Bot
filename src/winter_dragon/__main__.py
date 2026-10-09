@@ -14,6 +14,7 @@ from __future__ import annotations
 lazy import asyncio
 lazy import sys
 
+from wd_core.sentry import Sentry
 lazy from wd_bot.bot import Bot
 
 lazy from . import cogs
@@ -25,6 +26,7 @@ async def main() -> None:
     # bot.start() is decorated with @Config.with_kwarg("Tokens", "discord_token"), which
     # injects `token` into kwargs at call time - real, but not reflected in its type
     # signature, so `token` still looks required here.
+    Sentry()
     await bot.start()  # ty: ignore[invalid-await, missing-argument]
 
 
