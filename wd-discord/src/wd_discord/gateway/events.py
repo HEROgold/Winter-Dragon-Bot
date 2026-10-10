@@ -39,6 +39,8 @@ lazy from typing import Self, cast
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 
 from wd_discord.components import ComponentType
+from wd_discord.gateway.presence import Presence
+from wd_discord.image import ImageHash
 from wd_discord.interactions import ApplicationIntegrationType, InteractionContextType, Locale
 from wd_discord.models import DiscordModel
 from wd_discord.permissions import ChannelType, PermissionsField
@@ -50,6 +52,8 @@ from wd_discord.resources.guild.member import GuildMember
 from wd_discord.resources.guild.partial_guild import PartialGuild
 from wd_discord.resources.guild.role import Role
 from wd_discord.resources.user import User
+from wd_discord.resources.user.collectibles import Collectibles
+from wd_discord.resources.user.profile import Avatar
 from wd_discord.resources.voice import VoiceState
 from wd_discord.snowflake import Snowflake
 
@@ -87,9 +91,8 @@ class Ready(DiscordModel):
 class GuildCreate(Guild):
     """GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-create).
 
-    A full :class:`~wd_discord.resources.guild.Guild` plus the fields only the gateway sends. ``presences`` stays
-    untyped until its model exists; ``stage_instances``, ``guild_scheduled_events`` and ``soundboard_sounds`` are not
-    modeled yet.
+    A full :class:`~wd_discord.resources.guild.Guild` plus the fields only the gateway sends. ``stage_instances``,
+    ``guild_scheduled_events`` and ``soundboard_sounds`` are not modeled yet.
     """
 
     joined_at: str | None = None
@@ -101,7 +104,8 @@ class GuildCreate(Guild):
     members: list[GuildMember] = Field(default_factory=list[GuildMember])
     voice_states: list[VoiceState] = Field(default_factory=list[VoiceState])
     """Who is in which voice channel when the guild arrives; these leave out ``guild_id``."""
-    presences: list[Mapping[str, object]] = Field(default_factory=list[Mapping[str, object]])
+    presences: list[Presence] = Field(default_factory=list[Presence])
+    """The members' presences; only those of the members sent along."""
 
 
 class VoiceStateUpdate(VoiceState):
@@ -232,6 +236,93 @@ class VoiceChannelStartTimeUpdate(DiscordModel):
     guild_id: Snowflake
     voice_start_time: int | None = None
     """When the current voice session in the channel started, as Unix seconds; ``None`` once nobody is in it."""
+
+
+class GuildMemberAdd(GuildMember):
+    """GUILD_MEMBER_ADD (https://docs.discord.com/developers/events/gateway-events#guild-member-add): someone joined."""
+
+    guild_id: Snowflake
+
+
+class GuildMemberRemove(DiscordModel):
+    """GUILD_MEMBER_REMOVE (https://docs.discord.com/developers/events/gateway-events#guild-member-remove).
+
+    Someone left, or was kicked or banned.
+    """
+
+    guild_id: Snowflake
+    user: User
+
+
+class GuildMemberUpdate(DiscordModel):
+    """GUILD_MEMBER_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-member-update).
+
+    A member's new state, without what Discord leaves out of this event (``deaf``, ``mute`` and ``flags`` may be
+    missing), so it isn't a full :class:`~wd_discord.resources.guild.GuildMember`.
+    """
+
+    guild_id: Snowflake
+    roles: list[Snowflake]
+    user: User
+    nick: str | None = None
+    avatar: ImageHash | None
+    banner: ImageHash | None
+    joined_at: datetime | None
+    premium_since: datetime | None = None
+    deaf: bool | None = None
+    mute: bool | None = None
+    pending: bool | None = None
+    communication_disabled_until: datetime | None = None
+    avatar_decoration_data: Avatar | None = None
+    collectibles: Collectibles | None = None
+
+
+class GuildMembersChunk(DiscordModel):
+    """GUILD_MEMBERS_CHUNK (https://docs.discord.com/developers/events/gateway-events#guild-members-chunk).
+
+    One part of the answer to a Request Guild Members (opcode 8).
+    """
+
+    guild_id: Snowflake
+    members: list[GuildMember]
+    chunk_index: int
+    chunk_count: int
+    not_found: list[Snowflake] | None = None
+    """The requested user IDs that aren't members."""
+    presences: list[Presence] | None = None
+    nonce: str | None = None
+
+
+class GuildRoleCreate(DiscordModel):
+    """GUILD_ROLE_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-role-create)."""
+
+    guild_id: Snowflake
+    role: Role
+
+
+class GuildRoleUpdate(DiscordModel):
+    """GUILD_ROLE_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-role-update)."""
+
+    guild_id: Snowflake
+    role: Role
+
+
+class GuildRoleDelete(DiscordModel):
+    """GUILD_ROLE_DELETE (https://docs.discord.com/developers/events/gateway-events#guild-role-delete)."""
+
+    guild_id: Snowflake
+    role_id: Snowflake
+
+
+class UserUpdate(User):
+    """USER_UPDATE (https://docs.discord.com/developers/events/gateway-events#user-update): the bot's own user changed."""
+
+
+class PresenceUpdate(Presence):
+    """PRESENCE_UPDATE (https://docs.discord.com/developers/events/gateway-events#presence-update).
+
+    A member's status or activities changed; needs the GUILD_PRESENCES intent.
+    """
 
 
 class InteractionType(IntEnum):
@@ -455,13 +546,13 @@ class EventName(StrEnum):
     GUILD_EMOJIS_UPDATE = "GUILD_EMOJIS_UPDATE"
     GUILD_STICKERS_UPDATE = "GUILD_STICKERS_UPDATE"
     GUILD_INTEGRATIONS_UPDATE = "GUILD_INTEGRATIONS_UPDATE"
-    GUILD_MEMBER_ADD = "GUILD_MEMBER_ADD"
-    GUILD_MEMBER_REMOVE = "GUILD_MEMBER_REMOVE"
-    GUILD_MEMBER_UPDATE = "GUILD_MEMBER_UPDATE"
-    GUILD_MEMBERS_CHUNK = "GUILD_MEMBERS_CHUNK"
-    GUILD_ROLE_CREATE = "GUILD_ROLE_CREATE"
-    GUILD_ROLE_UPDATE = "GUILD_ROLE_UPDATE"
-    GUILD_ROLE_DELETE = "GUILD_ROLE_DELETE"
+    GUILD_MEMBER_ADD = ("GUILD_MEMBER_ADD", GuildMemberAdd)
+    GUILD_MEMBER_REMOVE = ("GUILD_MEMBER_REMOVE", GuildMemberRemove)
+    GUILD_MEMBER_UPDATE = ("GUILD_MEMBER_UPDATE", GuildMemberUpdate)
+    GUILD_MEMBERS_CHUNK = ("GUILD_MEMBERS_CHUNK", GuildMembersChunk)
+    GUILD_ROLE_CREATE = ("GUILD_ROLE_CREATE", GuildRoleCreate)
+    GUILD_ROLE_UPDATE = ("GUILD_ROLE_UPDATE", GuildRoleUpdate)
+    GUILD_ROLE_DELETE = ("GUILD_ROLE_DELETE", GuildRoleDelete)
     GUILD_SCHEDULED_EVENT_CREATE = "GUILD_SCHEDULED_EVENT_CREATE"
     GUILD_SCHEDULED_EVENT_UPDATE = "GUILD_SCHEDULED_EVENT_UPDATE"
     GUILD_SCHEDULED_EVENT_DELETE = "GUILD_SCHEDULED_EVENT_DELETE"
@@ -491,7 +582,7 @@ class EventName(StrEnum):
     MESSAGE_POLL_VOTE_ADD = "MESSAGE_POLL_VOTE_ADD"
     MESSAGE_POLL_VOTE_REMOVE = "MESSAGE_POLL_VOTE_REMOVE"
 
-    PRESENCE_UPDATE = "PRESENCE_UPDATE"
+    PRESENCE_UPDATE = ("PRESENCE_UPDATE", PresenceUpdate)
 
     STAGE_INSTANCE_CREATE = "STAGE_INSTANCE_CREATE"
     STAGE_INSTANCE_UPDATE = "STAGE_INSTANCE_UPDATE"
@@ -503,7 +594,7 @@ class EventName(StrEnum):
 
     TYPING_START = "TYPING_START"
 
-    USER_UPDATE = "USER_UPDATE"
+    USER_UPDATE = ("USER_UPDATE", UserUpdate)
 
     VOICE_CHANNEL_EFFECT_SEND = "VOICE_CHANNEL_EFFECT_SEND"
     VOICE_CHANNEL_START_TIME_UPDATE = ("VOICE_CHANNEL_START_TIME_UPDATE", VoiceChannelStartTimeUpdate)

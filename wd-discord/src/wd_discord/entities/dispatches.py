@@ -14,8 +14,12 @@ lazy from wd_discord.entities.base import Entity
 lazy from wd_discord.entities.channel import Channel, PartialChannel, ThreadMember
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.member import Member, PartialMember
+lazy from wd_discord.entities.presence import Presence
+lazy from wd_discord.entities.user import PartialUser, User
 lazy from wd_discord.gateway.events import ChannelPinsUpdate as ChannelPinsUpdateModel
 lazy from wd_discord.gateway.events import GuildDelete as GuildDeleteModel
+lazy from wd_discord.gateway.events import GuildMemberRemove as GuildMemberRemoveModel
+lazy from wd_discord.gateway.events import GuildMembersChunk as GuildMembersChunkModel
 lazy from wd_discord.gateway.events import ThreadCreate as ThreadCreateModel
 lazy from wd_discord.gateway.events import ThreadDelete as ThreadDeleteModel
 lazy from wd_discord.gateway.events import ThreadListSync as ThreadListSyncModel
@@ -204,3 +208,59 @@ class VoiceChannelStartTimeUpdate(Entity[VoiceChannelStartTimeUpdateModel]):
         """When the channel's current voice session started; ``None`` once nobody is in it."""
         seconds = self.model.voice_start_time
         return None if seconds is None else datetime.fromtimestamp(seconds, UTC)
+
+
+class MemberRemove(Entity[GuildMemberRemoveModel]):
+    """GUILD_MEMBER_REMOVE: someone left a guild, or was kicked or banned from it."""
+
+    @property
+    def guild(self) -> PartialGuild:
+        """The guild they left."""
+        return PartialGuild(self.client, self.model.guild_id)
+
+    @property
+    def user(self) -> User:
+        """Who left."""
+        return User(self.client, self.model.user)
+
+
+class MembersChunk(Entity[GuildMembersChunkModel]):
+    """GUILD_MEMBERS_CHUNK: one part of the members a Request Guild Members (opcode 8) asked for."""
+
+    @property
+    def guild(self) -> PartialGuild:
+        """The guild the members are from."""
+        return PartialGuild(self.client, self.model.guild_id)
+
+    @property
+    def members(self) -> Generator[Member]:
+        """The members in this chunk."""
+        for member in self.model.members:
+            yield Member(self.client, member, self.model.guild_id)
+
+    @property
+    def chunk_index(self) -> int:
+        """Which chunk this is, from ``0``."""
+        return self.model.chunk_index
+
+    @property
+    def chunk_count(self) -> int:
+        """How many chunks the answer has."""
+        return self.model.chunk_count
+
+    @property
+    def not_found(self) -> Generator[PartialUser]:
+        """The requested users who aren't members of the guild."""
+        for user_id in self.model.not_found or []:
+            yield PartialUser(self.client, user_id)
+
+    @property
+    def presences(self) -> Generator[Presence]:
+        """The members' presences, when the request asked for them."""
+        for presence in self.model.presences or []:
+            yield Presence(self.client, presence)
+
+    @property
+    def nonce(self) -> str | None:
+        """The nonce the request was sent with, to match the chunks to it."""
+        return self.model.nonce

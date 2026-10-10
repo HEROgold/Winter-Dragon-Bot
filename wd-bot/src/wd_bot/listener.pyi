@@ -15,11 +15,18 @@ from wd_discord.entities import (
     AnyInteraction,
     Channel,
     ChannelPinsUpdate,
+    CurrentUser,
     GatewayGuild,
     Guild,
     GuildDelete,
+    Member,
+    MemberRemove,
+    MembersChunk,
     Message,
+    PartialRole,
+    Presence,
     Ready,
+    Role,
     ThreadCreate,
     ThreadDelete,
     ThreadListSync,
@@ -91,5 +98,27 @@ def listener(
 def listener(
     name: Literal[EventName.VOICE_CHANNEL_START_TIME_UPDATE],
 ) -> Callable[[_BoundHandler[VoiceChannelStartTimeUpdate]], _BoundHandler[VoiceChannelStartTimeUpdate]]: ...
+@overload
+def listener(name: Literal[EventName.GUILD_MEMBER_ADD]) -> Callable[[_BoundHandler[Member]], _BoundHandler[Member]]: ...
+@overload
+def listener(
+    name: Literal[EventName.GUILD_MEMBER_REMOVE],
+) -> Callable[[_BoundHandler[MemberRemove]], _BoundHandler[MemberRemove]]: ...
+@overload
+def listener(
+    name: Literal[EventName.GUILD_MEMBERS_CHUNK],
+) -> Callable[[_BoundHandler[MembersChunk]], _BoundHandler[MembersChunk]]: ...
+@overload
+def listener(name: Literal[EventName.GUILD_ROLE_CREATE]) -> Callable[[_BoundHandler[Role]], _BoundHandler[Role]]: ...
+@overload
+def listener(name: Literal[EventName.GUILD_ROLE_UPDATE]) -> Callable[[_BoundHandler[Role]], _BoundHandler[Role]]: ...
+@overload
+def listener(
+    name: Literal[EventName.GUILD_ROLE_DELETE],
+) -> Callable[[_BoundHandler[PartialRole]], _BoundHandler[PartialRole]]: ...
+@overload
+def listener(name: Literal[EventName.USER_UPDATE]) -> Callable[[_BoundHandler[CurrentUser]], _BoundHandler[CurrentUser]]: ...
+@overload
+def listener(name: Literal[EventName.PRESENCE_UPDATE]) -> Callable[[_BoundHandler[Presence]], _BoundHandler[Presence]]: ...
 @overload
 def listener[F: Callable[..., Awaitable[None]]](name: str | None = ...) -> Callable[[F], F]: ...

@@ -19,7 +19,7 @@ lazy import asyncio
 lazy import json
 lazy import random
 lazy from dataclasses import dataclass
-lazy from enum import IntEnum, StrEnum
+lazy from enum import IntEnum
 lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 lazy from herogold.log import LoggerMixin
@@ -29,6 +29,7 @@ lazy from websockets.asyncio.client import connect
 
 lazy from .dispatch import parse_dispatch
 lazy from .events import EventName, Ready
+lazy from .presence import Status
 
 
 if TYPE_CHECKING:
@@ -98,16 +99,6 @@ class Opcode(IntEnum):
     INVALID_SESSION = 9
     HELLO = 10
     HEARTBEAT_ACK = 11
-
-
-class Status(StrEnum):
-    """Valid presence statuses (https://docs.discord.com/developers/topics/gateway-events#update-presence-status-types)."""
-
-    online = "online"
-    dnd = "dnd"
-    idle = "idle"
-    invisible = "invisible"
-    offline = "offline"
 
 
 @dataclass

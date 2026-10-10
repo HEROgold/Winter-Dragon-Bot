@@ -22,9 +22,17 @@ from .events import (
     ChannelUpdate,
     GuildCreate,
     GuildDelete,
+    GuildMemberAdd,
+    GuildMemberRemove,
+    GuildMemberUpdate,
+    GuildMembersChunk,
+    GuildRoleCreate,
+    GuildRoleDelete,
+    GuildRoleUpdate,
     GuildUpdate,
     Interaction,
     Message,
+    PresenceUpdate,
     Ready,
     ThreadCreate,
     ThreadDelete,
@@ -32,6 +40,7 @@ from .events import (
     ThreadMemberUpdate,
     ThreadMembersUpdate,
     ThreadUpdate,
+    UserUpdate,
     VoiceChannelStartTimeUpdate,
     VoiceChannelStatusUpdate,
     VoiceStateUpdate,
@@ -69,6 +78,24 @@ def parse_dispatch(name: Literal[EventName.THREAD_MEMBERS_UPDATE], data: Mapping
 def parse_dispatch(name: Literal[EventName.GUILD_UPDATE], data: Mapping[str, object]) -> GuildUpdate: ...
 @overload
 def parse_dispatch(name: Literal[EventName.GUILD_DELETE], data: Mapping[str, object]) -> GuildDelete: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_MEMBER_ADD], data: Mapping[str, object]) -> GuildMemberAdd: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_MEMBER_REMOVE], data: Mapping[str, object]) -> GuildMemberRemove: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_MEMBER_UPDATE], data: Mapping[str, object]) -> GuildMemberUpdate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_MEMBERS_CHUNK], data: Mapping[str, object]) -> GuildMembersChunk: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_ROLE_CREATE], data: Mapping[str, object]) -> GuildRoleCreate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_ROLE_UPDATE], data: Mapping[str, object]) -> GuildRoleUpdate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_ROLE_DELETE], data: Mapping[str, object]) -> GuildRoleDelete: ...
+@overload
+def parse_dispatch(name: Literal[EventName.PRESENCE_UPDATE], data: Mapping[str, object]) -> PresenceUpdate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.USER_UPDATE], data: Mapping[str, object]) -> UserUpdate: ...
 @overload
 def parse_dispatch(
     name: Literal[EventName.VOICE_CHANNEL_START_TIME_UPDATE], data: Mapping[str, object]

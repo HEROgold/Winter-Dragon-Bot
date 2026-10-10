@@ -22,6 +22,8 @@ lazy from .command import (
 lazy from .dispatches import (
     ChannelPinsUpdate,
     GuildDelete,
+    MemberRemove,
+    MembersChunk,
     ThreadCreate,
     ThreadDelete,
     ThreadListSync,
@@ -44,6 +46,7 @@ lazy from .interaction import (
 lazy from .invite import Invite
 lazy from .member import BaseMember, Member, PartialMember
 lazy from .message import BaseMessage, Message, PartialMessage, ReactionEmoji
+lazy from .presence import Presence
 lazy from .ready import Ready
 lazy from .resolved import Resolved
 lazy from .role import BaseRole, PartialRole, Role
@@ -86,6 +89,8 @@ __all__ = [
     "Interaction",
     "Invite",
     "Member",
+    "MemberRemove",
+    "MembersChunk",
     "Message",
     "Partial",
     "PartialChannel",
@@ -98,6 +103,7 @@ __all__ = [
     "PartialUser",
     "PermissionOverwrite",
     "PermissionTarget",
+    "Presence",
     "ReactionEmoji",
     "Ready",
     "Resolved",

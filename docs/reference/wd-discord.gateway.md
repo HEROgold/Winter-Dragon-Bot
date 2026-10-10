@@ -27,11 +27,6 @@ Discord gateway opcodes (the subset this client uses).
 - attributes: DISPATCH, HEARTBEAT, IDENTIFY, PRESENCE_UPDATE, RESUME, RECONNECT, REQUEST_GUILD_MEMBERS, INVALID_SESSION,
   HELLO, HEARTBEAT_ACK
 
-### `class Status(StrEnum)`
-Valid presence statuses (https://docs.discord.com/developers/topics/gateway-events#update-presence-status-types).
-
-- attributes: online, dnd, idle, invisible, offline
-
 ### `@dataclass class GatewayActivity`
 An activity shown on the bot's presence (object -> API via :meth:`to_dict`).
 
@@ -75,7 +70,7 @@ GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-cr
 
 - fields: joined_at: str | None, large: bool | None, unavailable: bool | None, member_count: int | None, channels:
   list[Channel], threads: list[Channel], members: list[GuildMember], voice_states: list[VoiceState], presences:
-  list[Mapping[str, object]]
+  list[Presence]
 
 ### `class VoiceStateUpdate(VoiceState)`
 VOICE_STATE_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-state-update).
@@ -143,6 +138,51 @@ VOICE_CHANNEL_STATUS_UPDATE (https://docs.discord.com/developers/events/gateway-
 VOICE_CHANNEL_START_TIME_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-channel-start-time-update).
 
 - fields: id: Snowflake, guild_id: Snowflake, voice_start_time: int | None
+
+### `class GuildMemberAdd(GuildMember)`
+GUILD_MEMBER_ADD (https://docs.discord.com/developers/events/gateway-events#guild-member-add): someone joined.
+
+- fields: guild_id: Snowflake
+
+### `class GuildMemberRemove(DiscordModel)`
+GUILD_MEMBER_REMOVE (https://docs.discord.com/developers/events/gateway-events#guild-member-remove).
+
+- fields: guild_id: Snowflake, user: User
+
+### `class GuildMemberUpdate(DiscordModel)`
+GUILD_MEMBER_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-member-update).
+
+- fields: guild_id: Snowflake, roles: list[Snowflake], user: User, nick: str | None, avatar: ImageHash | None, banner:
+  ImageHash | None, joined_at: datetime | None, premium_since: datetime | None, deaf: bool | None, mute: bool | None,
+  pending: bool | None, communication_disabled_until: datetime | None, avatar_decoration_data: Avatar | None,
+  collectibles: Collectibles | None
+
+### `class GuildMembersChunk(DiscordModel)`
+GUILD_MEMBERS_CHUNK (https://docs.discord.com/developers/events/gateway-events#guild-members-chunk).
+
+- fields: guild_id: Snowflake, members: list[GuildMember], chunk_index: int, chunk_count: int, not_found:
+  list[Snowflake] | None, presences: list[Presence] | None, nonce: str | None
+
+### `class GuildRoleCreate(DiscordModel)`
+GUILD_ROLE_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-role-create).
+
+- fields: guild_id: Snowflake, role: Role
+
+### `class GuildRoleUpdate(DiscordModel)`
+GUILD_ROLE_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-role-update).
+
+- fields: guild_id: Snowflake, role: Role
+
+### `class GuildRoleDelete(DiscordModel)`
+GUILD_ROLE_DELETE (https://docs.discord.com/developers/events/gateway-events#guild-role-delete).
+
+- fields: guild_id: Snowflake, role_id: Snowflake
+
+### `class UserUpdate(User)`
+USER_UPDATE (https://docs.discord.com/developers/events/gateway-events#user-update): the bot's own user changed.
+
+### `class PresenceUpdate(Presence)`
+PRESENCE_UPDATE (https://docs.discord.com/developers/events/gateway-events#presence-update).
 
 ### `class InteractionType(IntEnum)`
 The kind of interaction an INTERACTION_CREATE dispatch carries.
@@ -226,6 +266,79 @@ Every dispatch event name Discord currently defines.
   STAGE_INSTANCE_CREATE, STAGE_INSTANCE_UPDATE, STAGE_INSTANCE_DELETE, SUBSCRIPTION_CREATE, SUBSCRIPTION_UPDATE,
   SUBSCRIPTION_DELETE, TYPING_START, USER_UPDATE, VOICE_CHANNEL_EFFECT_SEND, VOICE_CHANNEL_START_TIME_UPDATE,
   VOICE_CHANNEL_STATUS_UPDATE, VOICE_STATE_UPDATE, VOICE_SERVER_UPDATE, WEBHOOKS_UPDATE
+
+## `wd_discord.gateway.presence` — `wd-discord/src/wd_discord/gateway/presence.py`
+Presences and activities as the gateway sends them (https://docs.discord.com/developers/events/gateway-events#presence).
+
+### `class Status(StrEnum)`
+Valid presence statuses (https://docs.discord.com/developers/topics/gateway-events#update-presence-status-types).
+
+- attributes: online, dnd, idle, invisible, offline
+
+### `class ActivityType(IntEnum)`
+https://docs.discord.com/developers/events/gateway-events#activity-object-activity-types.
+
+- attributes: PLAYING, STREAMING, LISTENING, WATCHING, CUSTOM, COMPETING
+
+### `class ActivityFlags(IntFlag)`
+https://docs.discord.com/developers/events/gateway-events#activity-object-activity-flags.
+
+- attributes: INSTANCE, JOIN, SPECTATE, JOIN_REQUEST, SYNC, PLAY, PARTY_PRIVACY_FRIENDS, PARTY_PRIVACY_VOICE_CHANNEL,
+  EMBEDDED
+
+### `class ActivityTimestamps(DiscordModel)`
+When an activity started and ends, as Unix milliseconds.
+
+- fields: start: int | None, end: int | None
+
+### `class ActivityEmoji(DiscordModel)`
+The emoji of a custom status.
+
+- fields: name: str, id: Snowflake | None, animated: bool | None
+
+### `class ActivityParty(DiscordModel)`
+The party a user is in for an activity.
+
+- fields: id: str | None, size: tuple[int, int] | None
+
+### `class ActivityAssets(DiscordModel)`
+The images an activity shows, with their hover texts.
+
+- fields: large_image: str | None, large_text: str | None, large_url: str | None, small_image: str | None, small_text:
+  str | None, small_url: str | None, invite_cover_image: str | None
+
+### `class ActivitySecrets(DiscordModel)`
+The secrets for joining or spectating an activity.
+
+- fields: join: str | None, spectate: str | None, match: str | None
+
+### `class Activity(DiscordModel)`
+https://docs.discord.com/developers/events/gateway-events#activity-object.
+
+- fields: name: str, type: ActivityType, url: str | None, created_at: int, timestamps: ActivityTimestamps | None,
+  application_id: Snowflake | None, status_display_type: int | None, details: str | None, details_url: str | None,
+  state: str | None, state_url: str | None, emoji: ActivityEmoji | None, party: ActivityParty | None, assets:
+  ActivityAssets | None, secrets: ActivitySecrets | None, instance: bool | None, flags: ActivityFlags | None, buttons:
+  list[str] | None
+
+### `class ClientStatus(DiscordModel)`
+A user's status per platform; a platform they're offline or invisible on is left out.
+
+- fields: desktop: Status | None, mobile: Status | None, web: Status | None, vr: Status | None
+
+### `class PresenceUser(DiscordModel)`
+The user a presence is for: only ``id`` is certain, any other user field may come along.
+
+- fields: id: Snowflake, username: str | None, discriminator: str | None, global_name: str | None, avatar: ImageHash |
+  None, bot: bool | None, system: bool | None, banner: ImageHash | None, accent_color: int | None, flags: int | None,
+  public_flags: int | None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild:
+  UserPrimaryGuild | None
+
+### `class Presence(DiscordModel)`
+https://docs.discord.com/developers/events/gateway-events#presence-update-presence-update-event-fields.
+
+- fields: user: PresenceUser, guild_id: Snowflake | None, status: Status, activities: list[Activity], client_status:
+  ClientStatus
 
 ## `wd_discord.gateway.sharding` — `wd-discord/src/wd_discord/gateway/sharding.py`
 Gateway sharding (https://docs.discord.com/developers/events/gateway#sharding).

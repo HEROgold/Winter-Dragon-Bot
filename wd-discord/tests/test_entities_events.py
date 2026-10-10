@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TypeAliasType
-
 from datetime import UTC, datetime
+from typing import TypeAliasType
 
 from wd_discord import (
     Channel,
@@ -13,11 +12,17 @@ from wd_discord import (
     Guild,
     GuildDelete,
     Member,
+    MemberRemove,
+    MembersChunk,
     Message,
     PartialChannel,
     PartialGuild,
     PartialMember,
+    PartialRole,
+    PartialUser,
+    Presence,
     Ready,
+    Role,
     ThreadCreate,
     ThreadDelete,
     ThreadListSync,
@@ -29,7 +34,8 @@ from wd_discord import (
     bind,
 )
 from wd_discord.entities import event_entities
-from wd_discord.gateway import EventName, RawEvent, parse_dispatch, parse_ready
+from wd_discord.gateway import EventName, RawEvent, Status, parse_dispatch, parse_ready
+from wd_discord.gateway.events import GuildMemberUpdate
 from wd_discord.permissions import ChannelType
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient
@@ -77,6 +83,23 @@ MEMBER_JSON = {
 CHANNEL_JSON = {"id": "5", "type": 0, "guild_id": "7", "name": "general"}
 THREAD_JSON = {"id": "6", "type": 11, "guild_id": "7", "parent_id": "5", "name": "a thread"}
 THREAD_MEMBER_JSON = {"id": "6", "user_id": "3", "join_timestamp": "2026-10-10T12:00:00+00:00", "flags": 0}
+ROLE_JSON = {
+    "id": "8",
+    "name": "mods",
+    "color": 0,
+    "hoist": False,
+    "position": 1,
+    "permissions": "0",
+    "managed": False,
+    "mentionable": True,
+    "flags": 0,
+}
+PRESENCE_JSON = {
+    "user": {"id": "3"},
+    "status": "idle",
+    "activities": [{"name": "Custom Status", "type": 4, "created_at": 1, "state": "afk", "emoji": {"name": "zzz"}}],
+    "client_status": {"desktop": "idle"},
+}
 GUILD_EVENT_SAMPLES = {
     EventName.GUILD_UPDATE: GUILD_JSON,
     EventName.GUILD_DELETE: {"id": "7", "unavailable": True},
@@ -98,6 +121,22 @@ GUILD_EVENT_SAMPLES = {
     },
     EventName.VOICE_CHANNEL_STATUS_UPDATE: {"id": "5", "guild_id": "7", "status": "chilling"},
     EventName.VOICE_CHANNEL_START_TIME_UPDATE: {"id": "5", "guild_id": "7", "voice_start_time": 1_760_097_600},
+    EventName.GUILD_MEMBER_ADD: {**MEMBER_JSON, "guild_id": "7"},
+    EventName.GUILD_MEMBER_REMOVE: {"guild_id": "7", "user": MEMBER_JSON["user"]},
+    EventName.GUILD_MEMBERS_CHUNK: {
+        "guild_id": "7",
+        "members": [MEMBER_JSON],
+        "chunk_index": 0,
+        "chunk_count": 1,
+        "not_found": ["4"],
+        "presences": [PRESENCE_JSON],
+        "nonce": "n",
+    },
+    EventName.GUILD_ROLE_CREATE: {"guild_id": "7", "role": ROLE_JSON},
+    EventName.GUILD_ROLE_UPDATE: {"guild_id": "7", "role": ROLE_JSON},
+    EventName.GUILD_ROLE_DELETE: {"guild_id": "7", "role_id": "8"},
+    EventName.USER_UPDATE: {"id": "42", "username": "bot", "discriminator": "0"},
+    EventName.PRESENCE_UPDATE: {**PRESENCE_JSON, "guild_id": "7"},
 }
 """A payload for each guild, channel and thread event, as the gateway sends it."""
 
@@ -258,3 +297,65 @@ def test_voice_channel_start_time_is_a_datetime() -> None:
     update = bound(EventName.VOICE_CHANNEL_START_TIME_UPDATE)
     assert isinstance(update, VoiceChannelStartTimeUpdate)
     assert update.voice_start_time == datetime(2025, 10, 10, 12, tzinfo=UTC)
+
+
+def test_member_add_binds_to_the_member() -> None:
+    member = bound(EventName.GUILD_MEMBER_ADD)
+    assert isinstance(member, Member)
+    assert member.guild_id == Snowflake(7)
+
+
+def test_member_remove_says_who_left_which_guild() -> None:
+    removed = bound(EventName.GUILD_MEMBER_REMOVE)
+    assert isinstance(removed, MemberRemove)
+    assert removed.user.id == Snowflake(3)
+    assert removed.guild.id == Snowflake(7)
+
+
+def test_members_chunk() -> None:
+    chunk = bound(EventName.GUILD_MEMBERS_CHUNK)
+    assert isinstance(chunk, MembersChunk)
+    assert [member.id for member in chunk.members] == [Snowflake(3)]
+    assert list(chunk.not_found) == [PartialUser(chunk.client, Snowflake(4))]
+    assert [presence.status for presence in chunk.presences] == [Status.idle]
+    assert (chunk.chunk_index, chunk.chunk_count, chunk.nonce) == (0, 1, "n")
+
+
+def test_role_events_bind_to_the_role() -> None:
+    for event in (EventName.GUILD_ROLE_CREATE, EventName.GUILD_ROLE_UPDATE):
+        role = bound(event)
+        assert isinstance(role, Role), event
+        assert role.name == "mods"
+        assert role.guild_id == Snowflake(7)
+
+
+def test_role_delete_binds_to_a_handle_on_the_role() -> None:
+    role = bound(EventName.GUILD_ROLE_DELETE)
+    assert isinstance(role, PartialRole)
+    assert role == PartialRole(role.client, Snowflake(8), Snowflake(7))
+
+
+def test_user_update_binds_to_the_current_user() -> None:
+    user = bound(EventName.USER_UPDATE)
+    assert isinstance(user, CurrentUser)
+    assert user.username == "bot"
+
+
+def test_presence_update() -> None:
+    presence = bound(EventName.PRESENCE_UPDATE)
+    assert isinstance(presence, Presence)
+    assert presence.status is Status.idle
+    assert presence.member == PartialMember(presence.client, Snowflake(3), Snowflake(7))
+    [custom] = presence.activities
+    assert custom.state == "afk"
+    assert presence.client_status.desktop is Status.idle
+
+
+def test_member_update_waits_for_the_state_cache() -> None:
+    """A partial member can't become a Member until the state cache merges it, so it stays a model."""
+    data = {**MEMBER_JSON, "guild_id": "7", "avatar": None, "banner": None}
+    del data["deaf"], data["mute"]
+    update = parse_dispatch(EventName.GUILD_MEMBER_UPDATE, data)
+    assert isinstance(update, GuildMemberUpdate)
+    assert update.deaf is None
+    assert bind(RecordingClient(), update) is update

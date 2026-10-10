@@ -11,11 +11,12 @@ Public names only — open the file when you need a body. Index: [API reference]
   BaseGuildCommand, BaseMember, BaseMessage, BaseRole, BaseUser, BoundEvent, Channel, ChannelPinsUpdate, ClientBound,
   CommandEntity, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Emoji, Entitlement, Entity,
   EntityStore, GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, GuildDelete,
-  Interaction, Invite, Member, Message, Partial, PartialChannel, PartialGlobalCommand, PartialGuild,
-  PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget,
-  ReactionEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync,
-  ThreadMember, ThreadMembersUpdate, UnknownInteraction, User, UserStore, VoiceChannelStartTimeUpdate,
-  VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel, bind, event_entities
+  Interaction, Invite, Member, MemberRemove, MembersChunk, Message, Partial, PartialChannel, PartialGlobalCommand,
+  PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite,
+  PermissionTarget, Presence, ReactionEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember, ThreadCreate,
+  ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, UnknownInteraction, User, UserStore,
+  VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel, bind,
+  event_entities
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -309,6 +310,23 @@ VOICE_CHANNEL_START_TIME_UPDATE: a voice session in a channel started or ended.
 - `@property guild -> PartialGuild` — The voice channel's guild.
 - `@property voice_start_time -> datetime | None` — When the channel's current voice session started; ``None`` once nobody is in it.
 
+### `class MemberRemove(Entity[GuildMemberRemoveModel])`
+GUILD_MEMBER_REMOVE: someone left a guild, or was kicked or banned from it.
+
+- `@property guild -> PartialGuild` — The guild they left.
+- `@property user -> User` — Who left.
+
+### `class MembersChunk(Entity[GuildMembersChunkModel])`
+GUILD_MEMBERS_CHUNK: one part of the members a Request Guild Members (opcode 8) asked for.
+
+- `@property guild -> PartialGuild` — The guild the members are from.
+- `@property members -> Generator[Member]` — The members in this chunk.
+- `@property chunk_index -> int` — Which chunk this is, from ``0``.
+- `@property chunk_count -> int` — How many chunks the answer has.
+- `@property not_found -> Generator[PartialUser]` — The requested users who aren't members of the guild.
+- `@property presences -> Generator[Presence]` — The members' presences, when the request asked for them.
+- `@property nonce -> str | None` — The nonce the request was sent with, to match the chunks to it.
+
 ## `wd_discord.entities.emoji` — `wd-discord/src/wd_discord/entities/emoji.py`
 Guild emojis and stickers (https://docs.discord.com/developers/resources/emoji, .../resources/sticker).
 
@@ -363,7 +381,7 @@ A user's or guild's access to one of the application's SKUs.
 ## `wd_discord.entities.events` — `wd-discord/src/wd_discord/entities/events.py`
 Gateway dispatch events bound to the client that received them.
 
-- `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate`
+- `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate | Member | MemberRemove | MembersChunk | Role | PartialRole | CurrentUser | Presence`
 - `bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
 - `event_entities() -> Mapping[EventName, type | TypeAliasType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
 
@@ -622,6 +640,19 @@ A message, as Discord returned or dispatched it.
 A message known only by channel and ID.
 
 - fields: channel_id: Snowflake
+
+## `wd_discord.entities.presence` — `wd-discord/src/wd_discord/entities/presence.py`
+Presences (https://docs.discord.com/developers/events/gateway-events#presence-update).
+
+### `class Presence(Entity[PresenceModel])`
+What a member is doing: whether they're online, and their activities.
+
+- `@property user -> PartialUser` — The user the presence is for; Discord sends only part of them along.
+- `@property guild -> PartialGuild | None` — The guild the presence was seen in; ``None`` inside GUILD_CREATE and GUILD_MEMBERS_CHUNK.
+- `@property member -> PartialMember | None` — The member the presence is for, when the guild is known.
+- `@property status -> Status` — Whether they're online, idle, on do-not-disturb or offline.
+- `@property activities -> Generator[Activity]` — What they're doing, their custom status included.
+- `@property client_status -> ClientStatus` — Their status on each platform they're on.
 
 ## `wd_discord.entities.ready` — `wd-discord/src/wd_discord/entities/ready.py`
 The READY a shard receives once it has connected (https://docs.discord.com/developers/events/gateway-events#ready).

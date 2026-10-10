@@ -14,6 +14,8 @@ lazy from wd_discord.entities.channel import Channel, ThreadMember
 lazy from wd_discord.entities.dispatches import (
     ChannelPinsUpdate,
     GuildDelete,
+    MemberRemove,
+    MembersChunk,
     ThreadCreate,
     ThreadDelete,
     ThreadListSync,
@@ -29,8 +31,12 @@ lazy from wd_discord.entities.interaction import (
     ComponentInteraction,
     UnknownInteraction,
 )
+lazy from wd_discord.entities.member import Member
 lazy from wd_discord.entities.message import Message
+lazy from wd_discord.entities.presence import Presence
 lazy from wd_discord.entities.ready import Ready
+lazy from wd_discord.entities.role import PartialRole, Role
+lazy from wd_discord.entities.user import CurrentUser
 lazy from wd_discord.entities.voice import VoiceState
 lazy from wd_discord.gateway import events as wire
 lazy from wd_discord.gateway.events import EventName
@@ -38,10 +44,10 @@ lazy from wd_discord.gateway.events import EventName
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-    from typing import Any, TypeAliasType
+    from typing import TypeAliasType
 
     from wd_discord.client import Client
-    from wd_discord.entities.base import Entity
+    from wd_discord.entities.base import ClientBound
     from wd_discord.models import DiscordModel
 
 
@@ -62,6 +68,13 @@ type BoundEvent = (
     | ThreadMembersUpdate
     | VoiceChannelStatusUpdate
     | VoiceChannelStartTimeUpdate
+    | Member
+    | MemberRemove
+    | MembersChunk
+    | Role
+    | PartialRole
+    | CurrentUser
+    | Presence
 )
 """Every entity :func:`bind` can return; ``match`` on it to handle each event."""
 
@@ -74,7 +87,7 @@ def bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel:
 
 
 @cache
-def _binders() -> Mapping[type[DiscordModel], Callable[..., Entity[Any]]]:
+def _binders() -> Mapping[type[DiscordModel], Callable[..., ClientBound]]:
     """Return what builds the entity of each dispatch model, keyed by the model's exact class.
 
     An entity that needs more than the client and the model gets a function here instead of its class.
@@ -102,7 +115,30 @@ def _binders() -> Mapping[type[DiscordModel], Callable[..., Entity[Any]]]:
         wire.ThreadMembersUpdate: ThreadMembersUpdate,
         wire.VoiceChannelStatusUpdate: VoiceChannelStatusUpdate,
         wire.VoiceChannelStartTimeUpdate: VoiceChannelStartTimeUpdate,
+        wire.GuildMemberAdd: _member,
+        wire.GuildMemberRemove: MemberRemove,
+        wire.GuildMembersChunk: MembersChunk,
+        wire.GuildRoleCreate: _role,
+        wire.GuildRoleUpdate: _role,
+        wire.GuildRoleDelete: _deleted_role,
+        wire.UserUpdate: CurrentUser,
+        wire.PresenceUpdate: Presence,
     }
+
+
+def _member(client: Client, model: wire.GuildMemberAdd) -> Member:
+    """Wrap a member who just joined their guild."""
+    return Member(client, model, model.guild_id)
+
+
+def _role(client: Client, model: wire.GuildRoleCreate | wire.GuildRoleUpdate) -> Role:
+    """Wrap the role a role event carries."""
+    return Role(client, model.role, model.guild_id)
+
+
+def _deleted_role(client: Client, model: wire.GuildRoleDelete) -> PartialRole:
+    """Return a handle on a deleted role, which the event names only by ID."""
+    return PartialRole(client, model.role_id, model.guild_id)
 
 
 def _thread_member(client: Client, model: wire.ThreadMemberUpdate) -> ThreadMember:
@@ -132,4 +168,12 @@ def event_entities() -> Mapping[EventName, type | TypeAliasType]:
         EventName.THREAD_MEMBERS_UPDATE: ThreadMembersUpdate,
         EventName.VOICE_CHANNEL_STATUS_UPDATE: VoiceChannelStatusUpdate,
         EventName.VOICE_CHANNEL_START_TIME_UPDATE: VoiceChannelStartTimeUpdate,
+        EventName.GUILD_MEMBER_ADD: Member,
+        EventName.GUILD_MEMBER_REMOVE: MemberRemove,
+        EventName.GUILD_MEMBERS_CHUNK: MembersChunk,
+        EventName.GUILD_ROLE_CREATE: Role,
+        EventName.GUILD_ROLE_UPDATE: Role,
+        EventName.GUILD_ROLE_DELETE: PartialRole,
+        EventName.USER_UPDATE: CurrentUser,
+        EventName.PRESENCE_UPDATE: Presence,
     }

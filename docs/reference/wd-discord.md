@@ -10,12 +10,12 @@ Public names only — open the file when you need a body. Index: [API reference]
 - exports: URLS, AnyInteraction, ApiResponseError, Application, AuditLogReason, AutocompleteInteraction, BoundEvent,
   Channel, ChannelPinsUpdate, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel,
   Embed, EmbedField, Emoji, Entitlement, EventName, Gateway, GatewayActivity, GatewayBotInfo, GatewayGuild,
-  GlobalCommand, Guild, GuildCommand, GuildCreate, GuildDelete, Interaction, Invite, Member, Message, NetworkError,
-  PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage,
-  PartialRole, PartialUser, PermissionOverwrite, Permissions, RawEvent, Ready, Resolved, Role, Sentry, ShardManager,
-  Snowflake, Status, Sticker, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember,
-  ThreadMembersUpdate, Token, TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate,
-  VoiceChannelStatusUpdate, VoiceState, bind, is_network_error
+  GlobalCommand, Guild, GuildCommand, GuildCreate, GuildDelete, Interaction, Invite, Member, MemberRemove, MembersChunk,
+  Message, NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand,
+  PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, Permissions, Presence, RawEvent, Ready,
+  Resolved, Role, Sentry, ShardManager, Snowflake, Status, Sticker, Team, TeamMember, ThreadCreate, ThreadDelete,
+  ThreadListSync, ThreadMember, ThreadMembersUpdate, Token, TokenType, UnknownInteraction, User,
+  VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind, is_network_error
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
