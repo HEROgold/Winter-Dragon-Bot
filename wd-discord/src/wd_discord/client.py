@@ -24,11 +24,12 @@ The client is the transport level of wd-discord. Resource operations live in the
 
 from __future__ import annotations
 
+lazy import asyncio
 lazy from functools import wraps
 lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
 lazy from herogold.log import LoggerMixin
-lazy from httpxyz import AsyncClient, RequestError
+lazy from httpxyz import AsyncClient, QueryParams, RequestError
 lazy from wd_config.discord import URLS
 
 lazy from wd_discord import ShardManager
@@ -70,6 +71,8 @@ DEFAULT_USER_AGENT_VERSION = "0.1.0"
 
 type NetworkError = ApiResponseError | RequestError
 type RequestResult = Response | NetworkError
+type InflightKey = tuple[str, tuple[tuple[str, str], ...]]
+"""A GET's rendered path and sorted query parameters: what makes two reads the same read."""
 
 
 def returns_known_exception[**P, T, E: Exception](
@@ -108,6 +111,18 @@ def _parse_error(response: Response) -> ApiResponseError:
     return error.model_copy(update={"status": response.status_code})
 
 
+def _inflight_key(method: str, path: str, kwargs: RequestKwargs) -> InflightKey | None:
+    """Return the key identical reads share, or ``None`` for a request that must go out on its own.
+
+    Only a GET whose sole extra is ``params`` qualifies: anything else may change state, or carries headers or a
+    body that could make two lookalike requests differ.
+    """
+    if method != "GET" or kwargs.keys() - {"params"}:
+        return None
+    params = QueryParams(kwargs.get("params")).multi_items()
+    return path, tuple(sorted(params))
+
+
 class Client(LoggerMixin):
     """An async Discord REST client pinned to the configured API version (v10 by default)."""
 
@@ -129,6 +144,7 @@ class Client(LoggerMixin):
         self.version = version if version is not None else URLS.version
         self.base_url = f"{URLS.base}/v{self.version}"
         self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
+        self._inflight: dict[InflightKey, asyncio.Future[Response | ApiResponseError]] = {}
         self.application = CurrentApplication(self, application_id)
         self.users = UserStore(self, PartialUser)
         self.channels = EntityStore(self, PartialChannel)
@@ -175,8 +191,31 @@ class Client(LoggerMixin):
         429 in the first place; if one still happens, waits Discord's own ``retry_after`` plus an
         extra exponential backoff (``2 ** attempt`` seconds) and retries transparently (up to
         :data:`MAX_RATE_LIMIT_RETRIES` times) rather than surfacing the 429 to the caller.
+
+        A GET that matches one already in flight (same path and query parameters) joins it instead of being sent
+        again; every caller gets that one answer, failures included. A caller that's cancelled leaves the read
+        running for the others.
         """
         resolved = Route(route)
+        key = _inflight_key(method, resolved.path, kwargs)
+        if key is None:
+            return await self._send(method, resolved, **kwargs)
+        shared = self._inflight.get(key)
+        if shared is None:
+            shared = asyncio.ensure_future(self._send(method, resolved, **kwargs))
+            self._inflight[key] = shared
+            shared.add_done_callback(lambda done: self._forget_inflight(key, done))
+        return await asyncio.shield(shared)
+
+    def _forget_inflight(self, key: InflightKey, done: asyncio.Future[Response | ApiResponseError]) -> None:
+        """Drop the finished read ``done`` so the next GET of ``key`` goes out fresh."""
+        if self._inflight.get(key) is done:
+            del self._inflight[key]
+        if not done.cancelled():
+            done.exception()  # Retrieved, so a failure every caller abandoned isn't reported as unhandled.
+
+    async def _send(self, method: str, resolved: Route, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
+        """Send one request under the rate limiters; a network error is raised, an API error returned."""
         path = resolved.path
         handler = RateLimitHandler(resolved.key(method))
 
