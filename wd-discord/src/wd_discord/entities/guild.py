@@ -60,18 +60,18 @@ class BaseGuild(ClientBound):
         def id(self) -> Snowflake:
             """The ID this object acts on."""
 
-    async def fetch(self, *, with_counts: bool = False) -> Guild | NetworkError:
+    async def fetch(self, *, with_counts: bool = False, cache: bool = False) -> Guild | NetworkError:
         """GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts."""
         params = {"with_counts": "true"} if with_counts else {}
-        return self._entity(await self.client.get(t"/guilds/{self.id}", params=params), GuildModel, Guild)
+        return self._entity(await self.client.get(t"/guilds/{self.id}", params=params, cache=cache), GuildModel, Guild)
 
     def channel(self, channel_id: SnowflakeLike) -> PartialChannel:
         """Return a handle on the channel ``channel_id``, without fetching it."""
         return PartialChannel(self.client, Snowflake.coerce(channel_id))
 
-    async def fetch_channels(self) -> Generator[Channel] | NetworkError:
+    async def fetch_channels(self, *, cache: bool = False) -> Generator[Channel] | NetworkError:
         """GET /guilds/{guild_id}/channels - the guild's channels, threads excluded."""
-        return self._entities(await self.client.get(t"/guilds/{self.id}/channels"), ChannelModel, Channel)
+        return self._entities(await self.client.get(t"/guilds/{self.id}/channels", cache=cache), ChannelModel, Channel)
 
     async def create_channel(
         self,
@@ -92,6 +92,7 @@ class BaseGuild(ClientBound):
         *,
         after: BaseMember | BaseUser | None = None,
         limit: int = MAX_MEMBERS_PER_PAGE,
+        cache: bool = False,
     ) -> Generator[Member] | NetworkError:
         """GET /guilds/{guild_id}/members - one page of members, by user ID, after the member ``after``.
 
@@ -99,7 +100,7 @@ class BaseGuild(ClientBound):
         Needs the GUILD_MEMBERS intent.
         """
         params = {"limit": str(limit), "after": "0" if after is None else str(after.id)}
-        return self._members(await self.client.get(t"/guilds/{self.id}/members", params=params))
+        return self._members(await self.client.get(t"/guilds/{self.id}/members", params=params, cache=cache))
 
     async def search_members(self, query: str, *, limit: int = 1) -> Generator[Member] | NetworkError:
         """GET /guilds/{guild_id}/members/search - the members whose username or nickname starts with ``query``."""
@@ -110,44 +111,49 @@ class BaseGuild(ClientBound):
         """Return a handle on the role ``role_id`` of this guild, without fetching it."""
         return PartialRole(self.client, Snowflake.coerce(role_id), self.id)
 
-    async def fetch_roles(self) -> Generator[Role] | NetworkError:
+    async def fetch_roles(self, *, cache: bool = False) -> Generator[Role] | NetworkError:
         """GET /guilds/{guild_id}/roles - every role of the guild."""
-        result = await self.client.get(t"/guilds/{self.id}/roles")
+        result = await self.client.get(t"/guilds/{self.id}/roles", cache=cache)
         if is_network_error(result):
             return result
         return (Role(self.client, RoleModel.model_validate(item), self.id) for item in result.json())
 
-    async def fetch_emojis(self) -> Generator[Emoji] | NetworkError:
+    async def fetch_emojis(self, *, cache: bool = False) -> Generator[Emoji] | NetworkError:
         """GET /guilds/{guild_id}/emojis - the guild's custom emojis."""
-        result = await self.client.get(t"/guilds/{self.id}/emojis")
+        result = await self.client.get(t"/guilds/{self.id}/emojis", cache=cache)
         if is_network_error(result):
             return result
         return (Emoji(self.client, EmojiModel.model_validate(item), self.id) for item in result.json())
 
-    async def fetch_emoji(self, emoji_id: SnowflakeLike) -> Emoji | NetworkError:
+    async def fetch_emoji(self, emoji_id: SnowflakeLike, *, cache: bool = False) -> Emoji | NetworkError:
         """GET /guilds/{guild_id}/emojis/{emoji_id}."""
-        parsed = parse(await self.client.get(t"/guilds/{self.id}/emojis/{emoji_id}"), EmojiModel)
+        parsed = parse(await self.client.get(t"/guilds/{self.id}/emojis/{emoji_id}", cache=cache), EmojiModel)
         return parsed if is_network_error(parsed) else Emoji(self.client, parsed, self.id)
 
-    async def fetch_stickers(self) -> Generator[Sticker] | NetworkError:
+    async def fetch_stickers(self, *, cache: bool = False) -> Generator[Sticker] | NetworkError:
         """GET /guilds/{guild_id}/stickers - the guild's own stickers."""
-        return self._entities(await self.client.get(t"/guilds/{self.id}/stickers"), StickerModel, Sticker)
+        return self._entities(await self.client.get(t"/guilds/{self.id}/stickers", cache=cache), StickerModel, Sticker)
 
-    async def fetch_invites(self) -> Generator[Invite] | NetworkError:
+    async def fetch_invites(self, *, cache: bool = False) -> Generator[Invite] | NetworkError:
         """GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD."""
-        return self._entities(await self.client.get(t"/guilds/{self.id}/invites"), InviteModel, Invite)
+        return self._entities(await self.client.get(t"/guilds/{self.id}/invites", cache=cache), InviteModel, Invite)
 
-    async def fetch_voice_state(self, member: BaseMember | BaseUser | None = None) -> VoiceState | NetworkError:
+    async def fetch_voice_state(
+        self,
+        member: BaseMember | BaseUser | None = None,
+        *,
+        cache: bool = False,
+    ) -> VoiceState | NetworkError:
         """GET /guilds/{guild_id}/voice-states/{user_id} - ``member``'s voice state here, or the bot's without one.
 
         Fails when they aren't connected to a voice channel of the guild.
         """
         route = t"/guilds/{self.id}/voice-states/@me" if member is None else t"/guilds/{self.id}/voice-states/{member.id}"
-        return self._entity(await self.client.get(route), VoiceStateModel, VoiceState)
+        return self._entity(await self.client.get(route, cache=cache), VoiceStateModel, VoiceState)
 
-    async def fetch_welcome_screen(self) -> WelcomeScreen | NetworkError:
+    async def fetch_welcome_screen(self, *, cache: bool = False) -> WelcomeScreen | NetworkError:
         """GET /guilds/{guild_id}/welcome-screen; needs MANAGE_GUILD unless the screen is enabled."""
-        parsed = parse(await self.client.get(t"/guilds/{self.id}/welcome-screen"), WelcomeScreenModel)
+        parsed = parse(await self.client.get(t"/guilds/{self.id}/welcome-screen", cache=cache), WelcomeScreenModel)
         return parsed if is_network_error(parsed) else WelcomeScreen(self.client, parsed, self.id)
 
     async def leave(self) -> NetworkError | None:

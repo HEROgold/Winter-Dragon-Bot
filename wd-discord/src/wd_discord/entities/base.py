@@ -16,6 +16,10 @@ Every method returns failures as values (:data:`~wd_discord.client.NetworkError`
 can't be read as the expected model is a failure too (:data:`~wd_discord.errors.JsonErrorCode.GENERAL_ERROR`).
 
 Entities expose their IDs and the actions they take; read the rest of what Discord sent from ``entity.model``.
+
+Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``cache=True`` to accept an answer up to
+:attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>` seconds old instead; see :meth:`Client.request
+<wd_discord.client.Client.request>`.
 """
 
 from __future__ import annotations
@@ -137,8 +141,8 @@ class Partial[E](ClientBound, ABC):
     id: Snowflake
 
     @abstractmethod
-    async def fetch(self) -> E | NetworkError:
-        """Fetch the full entity."""
+    async def fetch(self, *, cache: bool = False) -> E | NetworkError:
+        """Fetch the full entity; with ``cache``, a recent answer may be reused."""
 
 
 class _PartialFactory[E](Protocol):
@@ -155,6 +159,6 @@ class EntityStore[P: Partial[object]](Store):
         """Return a handle on the object ``id``, without fetching it."""
         return self.partial_type(self.client, Snowflake.coerce(id))
 
-    async def fetch[E](self: _PartialFactory[E], id: SnowflakeLike) -> E | NetworkError:  # noqa: A002 - Discord's name for it
-        """Fetch the object ``id``."""
-        return await self.partial(id).fetch()
+    async def fetch[E](self: _PartialFactory[E], id: SnowflakeLike, *, cache: bool = False) -> E | NetworkError:  # noqa: A002 - Discord's name for it
+        """Fetch the object ``id``; with ``cache``, a recent answer may be reused."""
+        return await self.partial(id).fetch(cache=cache)

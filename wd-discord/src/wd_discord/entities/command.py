@@ -43,12 +43,12 @@ class BaseGlobalCommand(ClientBound):
     async def _path(self) -> Template | NetworkError:
         return await self.client.application.commands.path(self.id)
 
-    async def fetch(self) -> GlobalCommand | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> GlobalCommand | NetworkError:
         """GET /applications/{application_id}/commands/{command_id}."""
         path = await self._path()
         if is_network_error(path):
             return path
-        return self._entity(await self.client.get(path), ApplicationCommand, GlobalCommand)
+        return self._entity(await self.client.get(path, cache=cache), ApplicationCommand, GlobalCommand)
 
     async def edit(self, params: ApplicationCommandParams) -> GlobalCommand | NetworkError:
         """PATCH /applications/{application_id}/commands/{command_id} - replace the command's definition."""
@@ -153,12 +153,12 @@ class GlobalCommandStore(EntityStore[PartialGlobalCommand]):
             return path
         return self._entity(await self.client.post(path, json=params.to_json()), ApplicationCommand, GlobalCommand)
 
-    async def fetch_all(self) -> Generator[GlobalCommand] | NetworkError:
+    async def fetch_all(self, *, cache: bool = False) -> Generator[GlobalCommand] | NetworkError:
         """GET /applications/{application_id}/commands - every registered global command."""
         path = await self.path()
         if is_network_error(path):
             return path
-        return self._entities(await self.client.get(path), ApplicationCommand, GlobalCommand)
+        return self._entities(await self.client.get(path, cache=cache), ApplicationCommand, GlobalCommand)
 
     async def overwrite(self, params: Iterable[ApplicationCommandParams]) -> Generator[GlobalCommand] | NetworkError:
         """PUT /applications/{application_id}/commands - replace every global command with ``params``.
@@ -194,12 +194,12 @@ class BaseGuildCommand(ClientBound):
         path = await self.client.application.guild_commands(self.guild).path()
         return path if is_network_error(path) else path + t"/{self.id}"
 
-    async def fetch(self) -> GuildCommand | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> GuildCommand | NetworkError:
         """GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}."""
         path = await self._path()
         if is_network_error(path):
             return path
-        return self._entity(await self.client.get(path), ApplicationCommand, GuildCommand)
+        return self._entity(await self.client.get(path, cache=cache), ApplicationCommand, GuildCommand)
 
     async def edit(self, params: ApplicationCommandParams) -> GuildCommand | NetworkError:
         """PATCH /applications/{application_id}/guilds/{guild_id}/commands/{command_id} - replace the definition."""
@@ -254,9 +254,9 @@ class GuildCommandStore(Store):
         """Return a handle on the guild command ``command_id``, without fetching it."""
         return PartialGuildCommand(self.client, Snowflake.coerce(command_id), self.guild_id)
 
-    async def fetch(self, command_id: SnowflakeLike) -> GuildCommand | NetworkError:
+    async def fetch(self, command_id: SnowflakeLike, *, cache: bool = False) -> GuildCommand | NetworkError:
         """GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}."""
-        return await self.partial(command_id).fetch()
+        return await self.partial(command_id).fetch(cache=cache)
 
     async def create(self, params: ApplicationCommandParams) -> GuildCommand | NetworkError:
         """POST /applications/{application_id}/guilds/{guild_id}/commands - register a command in the guild.
@@ -268,12 +268,12 @@ class GuildCommandStore(Store):
             return path
         return self._entity(await self.client.post(path, json=params.to_json()), ApplicationCommand, GuildCommand)
 
-    async def fetch_all(self) -> Generator[GuildCommand] | NetworkError:
+    async def fetch_all(self, *, cache: bool = False) -> Generator[GuildCommand] | NetworkError:
         """GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild."""
         path = await self.path()
         if is_network_error(path):
             return path
-        return self._entities(await self.client.get(path), ApplicationCommand, GuildCommand)
+        return self._entities(await self.client.get(path, cache=cache), ApplicationCommand, GuildCommand)
 
     async def overwrite(self, params: Iterable[ApplicationCommandParams]) -> Generator[GuildCommand] | NetworkError:
         """PUT /applications/{application_id}/guilds/{guild_id}/commands - replace the guild's commands with ``params``.

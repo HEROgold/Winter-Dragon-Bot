@@ -71,9 +71,9 @@ class BaseMessage(ClientBound):
     def _path(self) -> Template:
         return t"/channels/{self.channel_id}/messages/{self.id}"
 
-    async def fetch(self) -> Message | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> Message | NetworkError:
         """GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild."""
-        return self._entity(await self.client.get(self._path), MessageModel, Message)
+        return self._entity(await self.client.get(self._path, cache=cache), MessageModel, Message)
 
     async def edit(
         self,

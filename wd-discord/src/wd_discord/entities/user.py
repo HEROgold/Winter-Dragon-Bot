@@ -39,9 +39,9 @@ class BaseUser(ClientBound):
         """A clickable mention of the user, as ``<@id>``."""
         return f"<@{self.id}>"
 
-    async def fetch(self) -> User | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> User | NetworkError:
         """GET /users/{user_id}."""
-        return self._entity(await self.client.get(t"/users/{self.id}"), UserModel, User)
+        return self._entity(await self.client.get(t"/users/{self.id}", cache=cache), UserModel, User)
 
     async def dm(self) -> Channel | NetworkError:
         """POST /users/@me/channels - open the DM channel with this user, or return the one already open."""

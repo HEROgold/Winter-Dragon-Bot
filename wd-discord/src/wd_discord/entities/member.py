@@ -58,9 +58,9 @@ class BaseMember(ClientBound):
     def _path(self) -> Template:
         return t"/guilds/{self.guild_id}/members/{self.id}"
 
-    async def fetch(self) -> Member | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> Member | NetworkError:
         """GET /guilds/{guild_id}/members/{user_id}."""
-        return self._member(await self.client.get(self._path))
+        return self._member(await self.client.get(self._path, cache=cache))
 
     async def _edit(self, payload: JsonPayload, reason: AuditLogReason | str | None) -> Member | NetworkError:
         """PATCH /guilds/{guild_id}/members/{user_id} with ``payload``."""

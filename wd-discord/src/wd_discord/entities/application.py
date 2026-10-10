@@ -178,9 +178,9 @@ class CurrentApplication:
         self.commands = GlobalCommandStore(client, PartialGlobalCommand)
         """The application's global commands."""
 
-    async def fetch(self) -> Application | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> Application | NetworkError:
         """GET /applications/@me - the application object."""
-        result = await self.client.get(t"/applications/@me")
+        result = await self.client.get(t"/applications/@me", cache=cache)
         if is_network_error(result):
             return result
         return Application(self.client, ApplicationModel.model_validate(result.json()))
@@ -213,6 +213,7 @@ class CurrentApplication:
         user: BaseUser | None = None,
         guild: BaseGuild | None = None,
         exclude_ended: bool = False,
+        cache: bool = False,
     ) -> Generator[Entitlement] | NetworkError:
         """GET /applications/{application_id}/entitlements - the application's entitlements, optionally for one owner."""
         application_id = await self.id()
@@ -223,7 +224,7 @@ class CurrentApplication:
             params["user_id"] = str(user.id)
         if guild is not None:
             params["guild_id"] = str(guild.id)
-        result = await self.client.get(t"/applications/{application_id}/entitlements", params=params)
+        result = await self.client.get(t"/applications/{application_id}/entitlements", params=params, cache=cache)
         if is_network_error(result):
             return result
         return (Entitlement(self.client, EntitlementModel.model_validate(item)) for item in result.json())

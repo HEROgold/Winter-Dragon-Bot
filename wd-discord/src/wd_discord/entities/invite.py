@@ -77,9 +77,9 @@ class Invite(Entity[InviteModel]):
         """Whether members who join through the invite are removed again when they disconnect without a role."""
         return bool(self.model.temporary)
 
-    async def fetch(self) -> Invite | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> Invite | NetworkError:
         """GET /invites/{invite_code}."""
-        return self._entity(await self.client.get(t"/invites/{self.code}"), InviteModel, Invite)
+        return self._entity(await self.client.get(t"/invites/{self.code}", cache=cache), InviteModel, Invite)
 
     async def delete(self, *, reason: AuditLogReason | str | None = None) -> Invite | NetworkError:
         """DELETE /invites/{invite_code} - revoke the invite; needs MANAGE_CHANNELS on its channel, or MANAGE_GUILD."""

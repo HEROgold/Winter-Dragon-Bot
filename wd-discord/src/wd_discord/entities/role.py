@@ -49,9 +49,9 @@ class BaseRole(ClientBound):
         """Whether this is the guild's ``@everyone`` role, which shares the guild's ID."""
         return self.id == self.guild_id
 
-    async def fetch(self) -> Role | NetworkError:
+    async def fetch(self, *, cache: bool = False) -> Role | NetworkError:
         """GET /guilds/{guild_id}/roles/{role_id}."""
-        return self._role(await self.client.get(t"/guilds/{self.guild_id}/roles/{self.id}"))
+        return self._role(await self.client.get(t"/guilds/{self.guild_id}/roles/{self.id}", cache=cache))
 
     async def delete(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/roles/{role_id}; needs MANAGE_ROLES."""
