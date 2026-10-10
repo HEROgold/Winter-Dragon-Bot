@@ -32,3 +32,10 @@ class URLS:
     def api_version(self) -> str:
         """Get the API version as a string."""
         return f"v{self.version}"
+
+
+class RestCache:
+    """How long a REST read asked to be cached is reused before it's sent again."""
+
+    ttl = DiscordConfig(30.0)
+    """Seconds a cached read stays valid; a write under the same guild, channel or user drops it sooner."""

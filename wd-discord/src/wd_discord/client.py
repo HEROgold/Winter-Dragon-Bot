@@ -25,12 +25,13 @@ The client is the transport level of wd-discord. Resource operations live in the
 from __future__ import annotations
 
 lazy import asyncio
+lazy import time
 lazy from functools import wraps
 lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, QueryParams, RequestError
-lazy from wd_config.discord import URLS
+lazy from wd_config.discord import URLS, RestCache
 
 lazy from wd_discord import ShardManager
 lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
@@ -123,6 +124,11 @@ def _inflight_key(method: str, path: str, kwargs: RequestKwargs) -> InflightKey 
     return path, tuple(sorted(params))
 
 
+def _resource(path: str) -> tuple[str, ...]:
+    """Return the top-level resource ``path`` is under (``/guilds/1/roles`` is under ``("guilds", "1")``)."""
+    return tuple(path.strip("/").split("/")[:2])
+
+
 class Client(LoggerMixin):
     """An async Discord REST client pinned to the configured API version (v10 by default)."""
 
@@ -145,6 +151,8 @@ class Client(LoggerMixin):
         self.base_url = f"{URLS.base}/v{self.version}"
         self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
         self._inflight: dict[InflightKey, asyncio.Future[Response | ApiResponseError]] = {}
+        self._cached: dict[InflightKey, tuple[float, Response]] = {}
+        """Reads asked to be cached, with the :func:`time.monotonic` time each stops being valid."""
         self.application = CurrentApplication(self, application_id)
         self.users = UserStore(self, PartialUser)
         self.channels = EntityStore(self, PartialChannel)
@@ -182,7 +190,14 @@ class Client(LoggerMixin):
         await self._client.aclose()
 
     @returns_known_exception(RequestError)
-    async def request(self, method: str, route: Template, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
+    async def request(
+        self,
+        method: str,
+        route: Template,
+        *,
+        cache: bool = False,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response | ApiResponseError:
         """Send a request, returning the :class:`Response` or a parsed error value.
 
         Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and 4xx/5xx
@@ -195,17 +210,48 @@ class Client(LoggerMixin):
         A GET that matches one already in flight (same path and query parameters) joins it instead of being sent
         again; every caller gets that one answer, failures included. A caller that's cancelled leaves the read
         running for the others.
+
+        With ``cache``, such a GET's success is reused for :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>`
+        seconds. Changes made elsewhere stay unseen for up to that long, but any write this client sends drops
+        the cached reads under the same guild, channel or user (``/guilds/{id}/...``) at once.
         """
         resolved = Route(route)
         key = _inflight_key(method, resolved.path, kwargs)
         if key is None:
-            return await self._send(method, resolved, **kwargs)
+            result = await self._send(method, resolved, **kwargs)
+            if method != "GET":
+                self._forget_cached_under(resolved.path)
+            return result
+        if cache and (hit := self._cached_read(key)) is not None:
+            return hit
         shared = self._inflight.get(key)
         if shared is None:
             shared = asyncio.ensure_future(self._send(method, resolved, **kwargs))
             self._inflight[key] = shared
             shared.add_done_callback(lambda done: self._forget_inflight(key, done))
-        return await asyncio.shield(shared)
+        result = await asyncio.shield(shared)
+        if cache and not is_network_error(result):
+            self._remember(key, result)
+        return result
+
+    def _cached_read(self, key: InflightKey) -> Response | None:
+        """Return the cached read of ``key`` while it's valid, else ``None``."""
+        match self._cached.get(key):
+            case (expires, response) if expires > time.monotonic():
+                return response
+            case _:
+                return None
+
+    def _remember(self, key: InflightKey, response: Response) -> None:
+        """Cache ``response`` as the read of ``key``, dropping every read that's no longer valid."""
+        now = time.monotonic()
+        self._cached = {cached: entry for cached, entry in self._cached.items() if entry[0] > now}
+        self._cached[key] = (now + RestCache.ttl, response)
+
+    def _forget_cached_under(self, path: str) -> None:
+        """Drop every cached read under the same top-level resource as ``path``, which a write just changed."""
+        resource = _resource(path)
+        self._cached = {key: entry for key, entry in self._cached.items() if _resource(key[0]) != resource}
 
     def _forget_inflight(self, key: InflightKey, done: asyncio.Future[Response | ApiResponseError]) -> None:
         """Drop the finished read ``done`` so the next GET of ``key`` goes out fresh."""
@@ -241,9 +287,9 @@ class Client(LoggerMixin):
         self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
         return error
 
-    async def get(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
-        """Send a GET request."""
-        return await self.request("GET", route, **kwargs)
+    async def get(self, route: Template, *, cache: bool = False, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`)."""
+        return await self.request("GET", route, cache=cache, **kwargs)
 
     async def post(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a POST request."""

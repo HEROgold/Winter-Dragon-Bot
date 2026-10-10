@@ -59,6 +59,11 @@ Endpoints for the discord API.
 - attributes: base, version
 - `@property api_version -> str` — Get the API version as a string.
 
+### `class RestCache`
+How long a REST read asked to be cached is reused before it's sent again.
+
+- attributes: ttl
+
 ## `wd_config.errors` — `wd-config/src/wd_config/errors.py`
 
 ### `class ConfigError(Exception)`

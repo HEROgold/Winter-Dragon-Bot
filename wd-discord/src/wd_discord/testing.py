@@ -21,14 +21,13 @@ lazy from wd_discord.client import (  # pyright: ignore[reportPrivateUsage] - th
     Client,
     _parse_error,
 )
-lazy from wd_discord.route import Route
 
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from string.templatelib import Template
 
     from wd_discord.errors.api import ApiResponseError
+    from wd_discord.route import Route
     from wd_discord.snowflake import SnowflakeLike
 
 
@@ -130,9 +129,13 @@ class RecordingClient(Client):
         ]
 
     @override
-    async def request(self, method: str, route: Template, **kwargs: Any) -> Response | ApiResponseError:  # pyright: ignore[reportIncompatibleMethodOverride] - the parent's decorator widens its declared return
-        """Record the request (with its rendered path) and return its canned reply."""
-        path = Route(route).path
+    async def _send(self, method: str, resolved: Route, **kwargs: Any) -> Response | ApiResponseError:
+        """Record the request (with its rendered path) and return its canned reply.
+
+        Only the transport is replaced, so identical reads in flight and cached reads are shared as the real
+        client shares them, and are recorded once.
+        """
+        path = resolved.path
         self.sent.append(
             SentRequest(
                 method,

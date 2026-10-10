@@ -66,14 +66,15 @@ The built-in Discord REST client for wd-discord.
 - `type NetworkError = ApiResponseError | RequestError`
 - `type RequestResult = Response | NetworkError`
 - `returns_known_exception[**P, T, E: Exception](*exceptions: type[E]) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T | E]]]` — Async analog of :func:`herogold.errors.with_known_exception`.
+- `type InflightKey = tuple[str, tuple[tuple[str, str], ...]]`
 - `is_network_error(value: object) -> TypeIs[NetworkError]` — Whether ``value`` is a failed request: a Discord API error or a network error.
 
 ### `class Client(LoggerMixin)`
 An async Discord REST client pinned to the configured API version (v10 by default).
 
 - `async aclose() -> None` — Close the underlying httpxyz transport.
-- `@returns_known_exception async request(method: str, route: Template, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
-- `async get(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request.
+- `@returns_known_exception async request(method: str, route: Template, *, cache: bool=False, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
+- `async get(route: Template, *, cache: bool=False, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`).
 - `async post(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a POST request.
 - `async patch(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
 - `async put(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.
@@ -457,7 +458,6 @@ A client that records requests instead of sending them, and answers with canned 
 - `fail(method: str, path: str, error: ApiResponseError) -> None` — Answer every ``method`` request to ``path`` with ``error``.
 - `requests_to(method: str, path: str) -> list[SentRequest]` — Return the recorded ``method`` requests to ``path``, oldest first.
 - `interaction_responses() -> list[Any]` — Return the bodies of every initial interaction response sent, oldest first.
-- `async request(method: str, route: Template, **kwargs: Any) -> Response | ApiResponseError` — Record the request (with its rendered path) and return its canned reply.
 
 ## `wd_discord.timestamp` — `wd-discord/src/wd_discord/timestamp.py`
 Discord timestamp markup: ``<t:EPOCH:STYLE>``, shown in each reader's own timezone and locale.
