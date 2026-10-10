@@ -27,9 +27,9 @@ async def invite_channel(client: Client, guild_id: int) -> BaseChannel | Network
     guild = await client.guilds.fetch(guild_id)
     if is_network_error(guild):
         return guild
-    if guild.model.system_channel_id is not None:
-        return client.channels.partial(guild.model.system_channel_id)
-    channels = await guild.channels()
+    if guild.system_channel is not None:
+        return guild.system_channel
+    channels = await guild.fetch_channels()
     if is_network_error(channels):
         return channels
     return next((channel for channel in channels if channel.type == ChannelType.GUILD_TEXT), None)

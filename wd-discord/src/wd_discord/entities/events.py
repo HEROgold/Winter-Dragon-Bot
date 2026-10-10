@@ -9,7 +9,7 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.entities.guild import Guild
+lazy from wd_discord.entities.guild import GatewayGuild
 lazy from wd_discord.entities.interaction import (
     AnyInteraction,
     AutocompleteInteraction,
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from wd_discord.models import DiscordModel
 
 
-type BoundEvent = AnyInteraction | Message | Guild | Ready | VoiceState
+type BoundEvent = AnyInteraction | Message | GatewayGuild | Ready | VoiceState
 """Every entity :func:`bind` can return; ``match`` on it to handle each event."""
 
 
@@ -49,7 +49,7 @@ def bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel:
         case MessageModel():
             return Message(client, model)
         case GuildCreate():
-            return Guild(client, model)
+            return GatewayGuild(client, model)
         case ReadyModel():
             return Ready(client, model)
         case VoiceStateUpdate():
@@ -76,7 +76,7 @@ def event_entities() -> Mapping[EventName, type | TypeAliasType]:
     return {
         EventName.READY: Ready,
         EventName.MESSAGE_CREATE: Message,
-        EventName.GUILD_CREATE: Guild,
+        EventName.GUILD_CREATE: GatewayGuild,
         EventName.INTERACTION_CREATE: AnyInteraction,
         EventName.VOICE_STATE_UPDATE: VoiceState,
     }

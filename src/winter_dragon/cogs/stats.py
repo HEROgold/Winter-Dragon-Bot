@@ -27,8 +27,8 @@ if TYPE_CHECKING:
     lazy from datetime import datetime
 
     lazy from wd_bot.commands import Command
-    lazy from wd_discord import Client, CommandInteraction, NetworkError
-    lazy from wd_discord.entities import BaseGuild
+    lazy from wd_discord import Client, CommandInteraction, Member, NetworkError
+    lazy from wd_discord.entities import BaseChannel, BaseGuild
 
 
 class StatKind(StrEnum):
@@ -89,16 +89,16 @@ class GuildCounts:
 async def count_bots(guild: BaseGuild) -> int | NetworkError:
     """Count the bots among ``guild``'s members, a page of members at a time."""
     bots = 0
-    after: Snowflake | None = None
+    after: Member | None = None
     while True:
-        page = await guild.members(after=after)
+        page = await guild.fetch_members(after=after)
         if is_network_error(page):
             return page
         members = list(page)
         bots += sum(member.bot for member in members)
         if len(members) < MAX_MEMBERS_PER_PAGE:
             return bots
-        after = members[-1].id
+        after = members[-1]
 
 
 async def guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError:
@@ -135,14 +135,14 @@ def channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str:
             return CATEGORY_NAME
 
 
-def stats_embed(name: str, counts: GuildCounts, afk_channel_id: Snowflake | None) -> Embed:
+def stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed:
     """Return the embed /stats show answers with."""
     fields = [
         EmbedField(name="Users", value=str(counts.users), inline=True),
         EmbedField(name="Bots", value=str(counts.bots), inline=True),
         EmbedField(name="Online", value=str(counts.online_users), inline=True),
         EmbedField(name="Created on", value=DiscordTime(counts.created).with_relative(), inline=True),
-        EmbedField(name="AFK channel", value="None" if afk_channel_id is None else f"<#{afk_channel_id}>", inline=True),
+        EmbedField(name="AFK channel", value="None" if afk_channel is None else afk_channel.mention, inline=True),
     ]
     return Embed(title=f"{name} Stats", description=f"Information about {name}", fields=fields)
 
@@ -200,7 +200,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         """
         guild = self.bot.client.guilds.partial(guild_id)
         counts = await guild_counts(guild)
-        channels = await guild.channels()
+        channels = await guild.fetch_channels()
         if is_network_error(counts) or is_network_error(channels):
             self.logger.warning(t"Could not read guild {guild_id} to update its stats: {counts} {channels}")
             return
@@ -290,7 +290,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         if guild is None or counts is None or is_network_error(guild) or is_network_error(counts):
             await interaction.respond("I couldn't read this server's counts.", ephemeral=True)
             return
-        await interaction.respond(embeds=[stats_embed(guild.name, counts, guild.afk_channel_id)])
+        await interaction.respond(embeds=[stats_embed(guild.name, counts, guild.afk_channel)])
 
     @Cog.command(name="add", description="Add a category of channels showing this server's member counts")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def add(self, interaction: CommandInteraction) -> None:

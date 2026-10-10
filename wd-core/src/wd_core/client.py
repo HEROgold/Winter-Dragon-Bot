@@ -38,6 +38,10 @@ class JsonPayload(TypedDict, total=False):
     type: InteractionCallbackType
     default_member_permissions: str
     channel_id: str | None
+    nick: str | None
+    communication_disabled_until: str | None
+    delete_message_seconds: int
+    messages: list[str]
 
 
 class OverwritePayload(TypedDict):

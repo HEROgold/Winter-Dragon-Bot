@@ -43,14 +43,19 @@ RESOLVED = ResolvedData(users={"4": TARGET}, roles={"8": ROLE}, channels={"9": C
 
 async def _invoke(command: Command, make_interaction: InteractionFactory, option_type: int, value: str) -> None:
     interaction = make_interaction(
-        "cmd", options=[InteractionDataOption(name="target", type=option_type, value=value)], resolved=RESOLVED
+        "cmd",
+        options=[InteractionDataOption(name="target", type=option_type, value=value)],
+        resolved=RESOLVED,
+        guild_id=1,
     )
     assert await command.invoke(object(), interaction)
 
 
 def test_channel_option_limited_to_categories() -> None:
     async def handler(
-        self: object, interaction: CommandInteraction, target: Annotated[Channel, ChannelTypes(ChannelType.GUILD_CATEGORY)]
+        self: object,
+        interaction: CommandInteraction,
+        target: Annotated[Channel, ChannelTypes(ChannelType.GUILD_CATEGORY)],
     ) -> None:
         """Handle."""
 
@@ -78,7 +83,9 @@ def test_optional_annotated_channel_option() -> None:
 
 def test_channel_types_on_a_non_channel_parameter_is_refused() -> None:
     async def handler(
-        self: object, interaction: CommandInteraction, target: Annotated[str, ChannelTypes(ChannelType.GUILD_TEXT)]
+        self: object,
+        interaction: CommandInteraction,
+        target: Annotated[str, ChannelTypes(ChannelType.GUILD_TEXT)],
     ) -> None:
         """Handle."""
 
@@ -112,7 +119,9 @@ async def test_role_option_resolves_to_the_role(make_interaction: InteractionFac
 
 @pytest.mark.parametrize(("value", "expected"), [("4", "target"), ("8", "Members")])
 async def test_mentionable_option_resolves_a_user_or_a_role(
-    make_interaction: InteractionFactory, value: str, expected: str
+    make_interaction: InteractionFactory,
+    value: str,
+    expected: str,
 ) -> None:
     received: list[BoundUser | Role] = []
 

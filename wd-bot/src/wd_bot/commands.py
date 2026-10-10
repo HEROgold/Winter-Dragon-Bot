@@ -13,7 +13,7 @@ lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
-lazy from wd_discord import Channel, User
+lazy from wd_discord import Channel, Role, User
 lazy from wd_discord.interactions import (
     MAX_CHOICES,
     ApplicationCommandOption,
@@ -21,7 +21,7 @@ lazy from wd_discord.interactions import (
     ApplicationCommandParams,
 )
 lazy from wd_discord.resources.channel import Channel as ChannelModel
-lazy from wd_discord.resources.guild import Role
+lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.user import User as UserModel
 lazy from wd_discord.snowflake import Snowflake
 
@@ -34,7 +34,8 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
-    lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
+    lazy from wd_discord.entities import Resolved
+    lazy from wd_discord.gateway.events import InteractionDataOption
     lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
     lazy from wd_discord.permissions import ChannelType, Permissions
     lazy from wd_discord.snowflake import SnowflakeLike
@@ -50,9 +51,10 @@ _OPTION_TYPE_MAP: dict[type, ApplicationCommandOptionType] = {
     Channel: ApplicationCommandOptionType.CHANNEL,
     ChannelModel: ApplicationCommandOptionType.CHANNEL,
     Role: ApplicationCommandOptionType.ROLE,
+    RoleModel: ApplicationCommandOptionType.ROLE,
 }
-_MENTIONABLES = (frozenset({User, Role}), frozenset({UserModel, Role}))
-"""The unions a parameter is annotated with to take a MENTIONABLE option: a user or a role."""
+_MENTIONABLES = frozenset(frozenset({user, role}) for user in (User, UserModel) for role in (Role, RoleModel))
+"""The unions a parameter is annotated with to take a MENTIONABLE option: a user or a role, entity or model."""
 
 
 class ChannelTypes:
@@ -313,9 +315,10 @@ class Command(AppCommand):
     def _build_kwargs(self, interaction: CommandInteraction, options: Sequence[InteractionDataOption]) -> dict[str, object]:
         """Map each submitted option to a handler argument, resolving user, channel, role and mentionable options.
 
-        A parameter annotated with a bound entity (:class:`wd_discord.User`, :class:`wd_discord.Channel`) gets one bound
-        to the interaction's client; one annotated with the data model gets the model. Options the handler doesn't
-        declare, and objects missing from the interaction's resolved data, are skipped with a warning.
+        A parameter annotated with a bound entity (:class:`wd_discord.User`, :class:`wd_discord.Role`,
+        :class:`wd_discord.Channel`) gets one bound to the interaction's client; one annotated with the data model gets
+        the model. Options the handler doesn't declare, and objects missing from the interaction's resolved data, are
+        skipped with a warning.
         """
         kwargs: dict[str, object] = {}
         for option in options:
@@ -333,17 +336,9 @@ class Command(AppCommand):
     def _argument(self, interaction: CommandInteraction, param_type: object, option: InteractionDataOption) -> object:
         """Return the handler argument for ``option``, or ``None`` when the object it names wasn't resolved."""
         option_type = self._option_types[option.name]
-        resolved = interaction.resolved
-        roles = resolved.roles if resolved else None
-        if option_type is ApplicationCommandOptionType.USER:
-            return _user(interaction, resolved, option, entity=param_type is User)
-        if option_type is ApplicationCommandOptionType.ROLE:
-            return _lookup(roles, option)
-        if option_type is ApplicationCommandOptionType.MENTIONABLE:
-            return _user(interaction, resolved, option, entity=User in get_args(param_type)) or _lookup(roles, option)
-        if option_type is ApplicationCommandOptionType.CHANNEL:
-            channel = _lookup(resolved.channels if resolved else None, option)
-            return Channel(interaction.client, channel) if channel is not None and param_type is Channel else channel
+        if option_type in _RESOLVED_TYPES:
+            resolved = interaction.resolved
+            return None if resolved is None else _resolve(resolved, option_type, param_type, str(option.value))
         if param_type is float and isinstance(option.value, int):
             return float(option.value)  # Discord sends a whole NUMBER as an integer
         return option.value
@@ -363,23 +358,33 @@ def _union(types: Iterable[object]) -> object:
     return reduce(operator.or_, types)
 
 
-def _lookup[T](resolved: dict[str, T] | None, option: InteractionDataOption) -> T | None:
-    """Return the object of ``resolved`` that ``option``'s value names by ID, if any."""
-    return None if resolved is None else resolved.get(str(option.value))
+_RESOLVED_TYPES = frozenset(
+    {
+        ApplicationCommandOptionType.USER,
+        ApplicationCommandOptionType.ROLE,
+        ApplicationCommandOptionType.MENTIONABLE,
+        ApplicationCommandOptionType.CHANNEL,
+    },
+)
+"""The option types whose value is an ID naming an object in the interaction's resolved data."""
 
 
-def _user(
-    interaction: CommandInteraction,
-    resolved: ResolvedData | None,
-    option: InteractionDataOption,
-    *,
-    entity: bool,
-) -> User | UserModel | None:
-    """Return the user ``option`` names, bound to the interaction's client when ``entity``; ``None`` if unresolved."""
-    user = _lookup(resolved.users if resolved else None, option)
-    if user is None:
-        return None
-    return User(interaction.client, user) if entity else user
+def _resolve(resolved: Resolved, option_type: ApplicationCommandOptionType, param_type: object, value: str) -> object:
+    """Return the object ``value`` names, as the entity when ``param_type`` asks for it, else as its model.
+
+    ``None`` when Discord didn't send it along.
+    """
+    members = get_args(param_type) or (param_type,)
+    found: User | Role | Channel | None = None
+    if option_type in {ApplicationCommandOptionType.USER, ApplicationCommandOptionType.MENTIONABLE}:
+        found = resolved.user(value)
+    if found is None and option_type in {ApplicationCommandOptionType.ROLE, ApplicationCommandOptionType.MENTIONABLE}:
+        found = resolved.role(value)
+    if option_type is ApplicationCommandOptionType.CHANNEL:
+        found = resolved.channel(value)
+    if found is None or type(found) in members:
+        return found
+    return found.model
 
 
 class CommandGroup(AppCommand):

@@ -25,14 +25,14 @@ lazy from wd_discord import (
     Permissions,
     is_network_error,
 )
-lazy from wd_discord.gateway import EventName, GuildCreate
+lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 lazy from wd_discord.resources.channel.params import MAX_USER_LIMIT
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord import CommandInteraction, Guild, NetworkError, PartialMember, VoiceState
+    lazy from wd_discord import CommandInteraction, GatewayGuild, NetworkError, PartialMember, VoiceState
     lazy from wd_discord.snowflake import Snowflake
 
 
@@ -135,13 +135,11 @@ class AutoChannels(
         return channel_id in self.voice[guild_id].values()
 
     @Cog.listener(EventName.GUILD_CREATE)
-    async def on_guild_create(self, guild: Guild) -> None:
+    async def on_guild_create(self, guild: GatewayGuild) -> None:
         """Learn who is in which voice channel, then delete the automatic channels that emptied while offline."""
-        if not isinstance(guild.model, GuildCreate):
-            return
         guild_id = int(guild.id)
         self.voice[guild_id] = {
-            int(state.user_id): int(state.channel_id) for state in guild.model.voice_states if state.channel_id is not None
+            int(state.user.id): int(state.channel.id) for state in guild.voice_states if state.channel is not None
         }
         with Session(self.bind) as session:
             channels = list(session.exec(select(AutoChannel).where(AutoChannel.guild_id == guild_id)))
@@ -152,12 +150,12 @@ class AutoChannels(
     @Cog.listener(EventName.VOICE_STATE_UPDATE)
     async def on_voice_state_update(self, state: VoiceState) -> None:
         """Give a member joining the hub their own channel, and delete an automatic channel the member left empty."""
-        if state.guild_id is None:
+        if state.guild is None:
             return
-        guild_id, user_id = int(state.guild_id), int(state.user_id)
+        guild_id, user_id = int(state.guild.id), int(state.user.id)
         async with self._lock:
             before = self.voice[guild_id].pop(user_id, None)
-            after = None if state.channel_id is None else int(state.channel_id)
+            after = None if state.channel is None else int(state.channel.id)
             if after is not None:
                 self.voice[guild_id][user_id] = after
             with Session(self.bind) as session:
@@ -179,7 +177,8 @@ class AutoChannels(
             existing = owned_channel(session, guild_id, user_id)
             count = len(session.exec(select(AutoChannel).where(AutoChannel.guild_id == guild_id)).all())
             settings = settings_of(session, user_id)
-        if existing is not None and not is_network_error(await member.move_to(existing.channel_id, reason=CREATE_REASON)):
+        own = None if existing is None else member.guild.channel(existing.channel_id)
+        if own is not None and not is_network_error(await member.move_to(own, reason=CREATE_REASON)):
             return
         if existing is not None:  # their channel is gone: forget it and make a new one
             await self.delete_channel(existing)
@@ -208,7 +207,7 @@ class AutoChannels(
         params = GuildChannelParams(
             name=settings.name or default_name(full.display_name),
             type=ChannelType.GUILD_VOICE,
-            parent_id=hub_channel.parent_id,
+            parent_id=None if hub_channel.parent is None else hub_channel.parent.id,
             user_limit=settings.user_limit,
             permission_overwrites=[owner_overwrite(full.id)],
         )
@@ -220,7 +219,7 @@ class AutoChannels(
             session.add(record)
             session.commit()
             session.refresh(record)
-        moved = await full.move_to(channel.id, reason=CREATE_REASON)
+        moved = await full.move_to(channel, reason=CREATE_REASON)
         if is_network_error(moved):  # they left the hub before their channel was ready
             await self.delete_channel(record)
             return moved

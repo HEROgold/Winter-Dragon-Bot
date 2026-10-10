@@ -6,7 +6,7 @@ import pytest
 import wd_discord.resources.guild.features as _guild_features
 import wd_discord.snowflake as _snowflake
 from wd_config.bot import Settings
-from wd_discord.resources.application import Application
+from wd_discord.entities import Application
 from wd_discord.testing import RecordingClient
 
 
@@ -77,7 +77,7 @@ async def test_explicit_application_id_wins() -> None:
     assert client.sent == []
 
 
-async def test_fetch_returns_the_application_model() -> None:
+async def test_fetch_returns_the_application_entity() -> None:
     client = RecordingClient()
     client.reply("GET", "/applications/@me", _APPLICATION_FIELDS)
 

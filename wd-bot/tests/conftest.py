@@ -73,6 +73,9 @@ class InteractionFactory(Protocol):
 ASKER = User.model_validate({"id": "3", "username": "asker", "discriminator": "0"})
 """The default invoking user of :func:`make_interaction`."""
 
+DEFAULT_GUILD_ID = 1
+"""The guild a :func:`make_interaction` member is in when the test names none: Discord sends members with their guild."""
+
 
 @pytest.fixture
 def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
@@ -103,7 +106,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
             member=None
             if permissions is None
             else GuildMember(user=user, roles=[], joined_at=None, deaf=False, mute=False, permissions=permissions),
-            guild_id=guild_id,
+            guild_id=DEFAULT_GUILD_ID if guild_id is None and permissions is not None else guild_id,
             channel_id=channel_id,
             app_permissions=app_permissions,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),

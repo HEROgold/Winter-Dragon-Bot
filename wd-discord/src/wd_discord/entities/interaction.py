@@ -17,9 +17,12 @@ lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import Entity, no_content
-lazy from wd_discord.entities.channel import PartialChannel
+lazy from wd_discord.entities.channel import Channel, PartialChannel
+lazy from wd_discord.entities.entitlement import Entitlement
 lazy from wd_discord.entities.guild import PartialGuild
+lazy from wd_discord.entities.member import Member
 lazy from wd_discord.entities.message import Message
+lazy from wd_discord.entities.resolved import Resolved
 lazy from wd_discord.entities.user import User
 lazy from wd_discord.files import request_body
 lazy from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
@@ -31,19 +34,19 @@ lazy from wd_discord.responses import InteractionCallbackType, MessageFlags, mes
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Generator, Sequence
     from string.templatelib import Template
 
     from wd_core.client import JsonPayload
 
-    from wd_discord.client import NetworkError
+    from wd_discord.client import Client, NetworkError
     from wd_discord.components import ActionRow, ComponentType
     from wd_discord.embed import Embed
     from wd_discord.files import File
-    from wd_discord.gateway.events import InteractionDataOption, InteractionType, ResolvedData
+    from wd_discord.gateway.events import InteractionDataOption, InteractionType
     from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType, Locale
     from wd_discord.permissions import Permissions
-    from wd_discord.resources.guild import GuildMember
+    from wd_discord.resources.channel import Channel as ChannelModel
     from wd_discord.responses import MessageData
     from wd_discord.snowflake import Snowflake
 
@@ -92,9 +95,12 @@ class Interaction[M: InteractionModel](Entity[M]):
         return None if user is None else User(self.client, user)
 
     @property
-    def member(self) -> GuildMember | None:
+    def member(self) -> Member | None:
         """The invoking guild member, when invoked in a guild."""
-        return self.model.member
+        member, guild_id = self.model.member, self.model.guild_id
+        if member is None or member.user is None or guild_id is None:
+            return None
+        return Member(self.client, member, guild_id)
 
     @property
     def guild(self) -> PartialGuild | None:
@@ -103,10 +109,18 @@ class Interaction[M: InteractionModel](Entity[M]):
         return None if guild_id is None else PartialGuild(self.client, guild_id)
 
     @property
-    def channel(self) -> PartialChannel | None:
-        """The channel the interaction was sent from, if any."""
+    def channel(self) -> Channel | PartialChannel | None:
+        """The channel the interaction was sent from, in full when Discord sent it along (it usually does)."""
+        if self.model.channel is not None:
+            return _full_channel(self.client, self.model.channel, self.model.guild_id)
         channel_id = self.model.channel_id
         return None if channel_id is None else PartialChannel(self.client, channel_id)
+
+    @property
+    def entitlements(self) -> Generator[Entitlement]:
+        """The invoking user's and guild's entitlements to the application's SKUs."""
+        for entitlement in self.model.entitlements or []:
+            yield Entitlement(self.client, entitlement)
 
     @property
     def locale(self) -> Locale | None:
@@ -241,9 +255,10 @@ class CommandInteraction(Interaction[CommandInteractionModel]):
         return self.model.data.options
 
     @property
-    def resolved(self) -> ResolvedData | None:
-        """Full objects for the IDs referenced by option values."""
-        return self.model.data.resolved
+    def resolved(self) -> Resolved | None:
+        """Full objects for the users, roles and channels the option values name."""
+        resolved = self.model.data.resolved
+        return None if resolved is None else Resolved(self.client, resolved, self.model.guild_id)
 
 
 class ComponentInteraction(Interaction[ComponentInteractionModel]):
@@ -265,9 +280,9 @@ class ComponentInteraction(Interaction[ComponentInteractionModel]):
         return self.model.data.values or []
 
     @property
-    def message(self) -> Mapping[str, object]:
-        """The message the component is attached to, as sent."""
-        return self.model.message
+    def message(self) -> Message:
+        """The message the component is attached to."""
+        return Message(self.client, MessageModel.model_validate(self.model.message))
 
     async def update(
         self,
@@ -307,6 +322,12 @@ class AutocompleteInteraction(Interaction[AutocompleteInteractionModel]):
         """The option values typed so far; the one being typed has ``focused`` set."""
         return self.model.data.options
 
+    @property
+    def resolved(self) -> Resolved | None:
+        """Full objects for the users, roles and channels the option values typed so far name."""
+        resolved = self.model.data.resolved
+        return None if resolved is None else Resolved(self.client, resolved, self.model.guild_id)
+
     async def suggest(self, choices: Sequence[ApplicationCommandOptionChoice]) -> NetworkError | None:
         """Offer ``choices`` (at most 25) for the focused option."""
         data: MessageData = {"choices": [choice.model_dump(mode="json", exclude_none=True) for choice in choices]}
@@ -315,3 +336,10 @@ class AutocompleteInteraction(Interaction[AutocompleteInteractionModel]):
 
 class UnknownInteraction(Interaction[InteractionModel]):
     """An interaction type without its own class yet (PING, MODAL_SUBMIT)."""
+
+
+def _full_channel(client: Client, channel: ChannelModel, guild_id: Snowflake | None) -> Channel:
+    """Return the channel Discord sent with an interaction, given the interaction's guild when it left that out."""
+    if channel.guild_id is None and guild_id is not None:
+        channel = channel.model_copy(update={"guild_id": guild_id})
+    return Channel(client, channel)

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Generator
 
     lazy from wd_discord import AnyInteraction, Client
-    lazy from wd_discord.resources.application import Application
+    lazy from wd_discord.entities import Application
     lazy from wd_discord.snowflake import SnowflakeLike
 
 
@@ -37,7 +37,7 @@ def member_has(interaction: AnyInteraction, permissions: Permissions) -> bool:
 def owner_ids(application: Application) -> Generator[Snowflake]:
     """Yield the IDs of the users owning ``application``: its team's accepted members, or else its owner."""
     if application.team is not None:
-        yield application.team.owner_user_id
+        yield application.team.owner.id
         for member in application.team.members:
             if member.membership_state is MembershipState.ACCEPTED:
                 yield member.user.id

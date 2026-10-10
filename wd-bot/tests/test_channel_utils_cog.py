@@ -7,6 +7,7 @@ from urllib.parse import unquote
 
 import pytest
 from wd_bot.commands import CommandGroup
+from wd_discord import PermissionOverwrite as BoundOverwrite
 from wd_discord import User as BoundUser
 from wd_discord.audit import REASON_HEADER
 from wd_discord.errors import ApiResponseError, JsonErrorCode
@@ -17,9 +18,10 @@ from wd_discord.resources.channel import Channel as ChannelModel
 from wd_discord.resources.channel import PermissionOverwrite
 from wd_discord.resources.guild import Role
 from wd_discord.resources.user import User
+from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient
 
-from winter_dragon.cogs.channel_utils import DELETE_PERMISSIONS, ChannelUtils, deleted, locked_overwrite
+from winter_dragon.cogs.channel_utils import DELETE_PERMISSIONS, ChannelUtils, deleted, locked_permissions
 
 
 if TYPE_CHECKING:
@@ -91,16 +93,19 @@ def test_commands_need_manage_channels_and_a_guild() -> None:
     assert next(group.subcommands["lock"].options()).type is ApplicationCommandOptionType.MENTIONABLE
 
 
-def test_locked_overwrite_keeps_other_permissions() -> None:
-    existing = PermissionOverwrite.model_validate({"id": "4", "type": 1, "allow": str(SEND | 1024), "deny": "64"})
-    locked = locked_overwrite([existing], BoundUser(RecordingClient(), TARGET), lock=True)
-    assert (locked.allow, locked.deny) == (Permissions(1024), Permissions(64) | Permissions.SEND_MESSAGES)
-    unlocked = locked_overwrite(
-        [existing.model_copy(update={"deny": Permissions(64) | Permissions.SEND_MESSAGES})],
-        BoundUser(RecordingClient(), TARGET),
+def test_locked_permissions_keep_the_others() -> None:
+    client = RecordingClient()
+    model = PermissionOverwrite.model_validate({"id": "4", "type": 1, "allow": str(SEND | 1024), "deny": "64"})
+    existing = BoundOverwrite(client, model, Snowflake(CHANNEL_ID), Snowflake(GUILD_ID))
+    locked = locked_permissions([existing], BoundUser(client, TARGET), lock=True)
+    assert locked == (Permissions(1024), Permissions(64) | Permissions.SEND_MESSAGES)
+    denied = model.model_copy(update={"deny": Permissions(64) | Permissions.SEND_MESSAGES})
+    _, deny = locked_permissions(
+        [BoundOverwrite(client, denied, Snowflake(CHANNEL_ID), Snowflake(GUILD_ID))],
+        BoundUser(client, TARGET),
         lock=False,
     )
-    assert unlocked.deny == Permissions(64)
+    assert deny == Permissions(64)
 
 
 def _delete_category(make_interaction: InteractionFactory, app_permissions: Permissions | None = None) -> CommandInteraction:
@@ -213,7 +218,9 @@ async def test_unlock_removes_an_overwrite_left_empty(
     discord_client: RecordingClient,
 ) -> None:
     discord_client.reply(
-        "GET", f"/channels/{CHANNEL_ID}", _text_channel({"id": "4", "type": 1, "allow": "0", "deny": str(SEND)})
+        "GET",
+        f"/channels/{CHANNEL_ID}",
+        _text_channel({"id": "4", "type": 1, "allow": "0", "deny": str(SEND)}),
     )
     interaction = make_interaction(
         "channel-utils",

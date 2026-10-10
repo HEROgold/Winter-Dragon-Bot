@@ -35,7 +35,7 @@ Gives a member who joins the hub their own voice channel, and deletes it once it
 
 - `async load() -> None` — Create the autochannel tables if missing.
 - `occupied(guild_id: int, channel_id: int) -> bool` — Whether anyone is in the voice channel ``channel_id``, as far as the gateway told.
-- `@Cog.listener async on_guild_create(guild: Guild) -> None` — Learn who is in which voice channel, then delete the automatic channels that emptied while offline.
+- `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Learn who is in which voice channel, then delete the automatic channels that emptied while offline.
 - `@Cog.listener async on_voice_state_update(state: VoiceState) -> None` — Give a member joining the hub their own channel, and delete an automatic channel the member left empty.
 - `async give_channel(member: Member | PartialMember, hub: AutoChannelHub) -> None` — Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
 - `async create_channel(member: Member | PartialMember, hub: AutoChannelHub, settings: AutoChannelSettings) -> NetworkError | None` — Create ``member``'s channel in the hub's category, move them into it and remember it.
@@ -61,7 +61,7 @@ Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
 The /channel-utils command group: delete a whole category, and lock or unlock a channel for a role or member.
 
 - module names: UNLOCKABLE, DELETE_PERMISSIONS
-- `locked_overwrite(existing: Iterable[PermissionOverwrite], target: User | Role, *, lock: bool) -> OverwriteParams` — Return ``target``'s overwrite among ``existing`` with SEND_MESSAGES denied (``lock``) or no longer denied.
+- `locked_permissions(existing: Iterable[PermissionOverwrite], target: User | Role, *, lock: bool) -> tuple[Permissions, Permissions]` — Return what ``target``'s overwrite among ``existing`` allows and denies, with SEND_MESSAGES denied or not.
 - `deleted(result: Channel | NetworkError) -> bool` — Whether a channel delete left the channel gone: it succeeded, or the channel was gone already.
 - `mention(target: User | Role) -> str` — Return a clickable mention of the user or role ``target``.
 
@@ -181,7 +181,7 @@ The /stats command group: a guild's member counts, shown on demand and as the na
 - `async count_bots(guild: BaseGuild) -> int | NetworkError` — Count the bots among ``guild``'s members, a page of members at a time.
 - `async guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError` — Read ``guild``'s member, bot and online counts.
 - `channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str` — Return the name of the stats channel showing ``kind``.
-- `stats_embed(name: str, counts: GuildCounts, afk_channel_id: Snowflake | None) -> Embed` — Return the embed /stats show answers with.
+- `stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed` — Return the embed /stats show answers with.
 - `guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]` — Return the stats channels recorded for the guild ``guild_id``, category included.
 - `stats_guild_ids(session: Session) -> Generator[int]` — Yield every guild with stats channels.
 

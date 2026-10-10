@@ -11,7 +11,7 @@
 from collections.abc import Awaitable, Callable
 from typing import Any, Literal, overload
 
-from wd_discord.entities import AnyInteraction, Guild, Message, Ready, VoiceState
+from wd_discord.entities import AnyInteraction, GatewayGuild, Message, Ready, VoiceState
 from wd_discord.gateway import EventName
 
 type _BoundHandler[T] = Callable[[Any, T], Awaitable[None]]
@@ -21,7 +21,7 @@ def listener(name: Literal[EventName.READY]) -> Callable[[_BoundHandler[Ready]],
 @overload
 def listener(name: Literal[EventName.MESSAGE_CREATE]) -> Callable[[_BoundHandler[Message]], _BoundHandler[Message]]: ...
 @overload
-def listener(name: Literal[EventName.GUILD_CREATE]) -> Callable[[_BoundHandler[Guild]], _BoundHandler[Guild]]: ...
+def listener(name: Literal[EventName.GUILD_CREATE]) -> Callable[[_BoundHandler[GatewayGuild]], _BoundHandler[GatewayGuild]]: ...
 @overload
 def listener(
     name: Literal[EventName.INTERACTION_CREATE],

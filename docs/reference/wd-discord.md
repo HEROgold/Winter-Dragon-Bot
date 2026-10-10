@@ -9,10 +9,11 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 - exports: URLS, AnyInteraction, ApiResponseError, Application, AuditLogReason, AutocompleteInteraction, BoundEvent,
   Channel, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField,
-  EventName, Gateway, GatewayActivity, GatewayBotInfo, GlobalCommand, Guild, GuildCommand, GuildCreate, Interaction,
-  Invite, Member, Message, NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild,
-  PartialMember, PartialUser, Permissions, RawEvent, Ready, Sentry, ShardManager, Snowflake, Status, Token, TokenType,
-  UnknownInteraction, User, VoiceState, bind, is_network_error
+  Emoji, Entitlement, EventName, Gateway, GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild,
+  GuildCommand, GuildCreate, Interaction, Invite, Member, Message, NetworkError, PartialChannel, PartialEmoji,
+  PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser,
+  PermissionOverwrite, Permissions, RawEvent, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status, Sticker,
+  Team, TeamMember, ThreadMember, Token, TokenType, UnknownInteraction, User, VoiceState, bind, is_network_error
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).

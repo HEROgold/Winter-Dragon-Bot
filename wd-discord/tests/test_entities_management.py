@@ -41,7 +41,8 @@ async def test_guild_create_channel_posts_params_with_reason() -> None:
     channel = await client.guilds.partial(1).create_channel(params, reason="Setting up")
 
     assert isinstance(channel, Channel)
-    assert channel.parent_id == Snowflake(10)
+    assert channel.parent is not None
+    assert channel.parent.id == Snowflake(10)
     sent = client.sent[0]
     assert sent.json == {"name": "Lobby", "type": 2, "parent_id": "10"}
     assert sent.headers == {REASON_HEADER: "Setting up"}
@@ -67,16 +68,21 @@ async def test_channel_edit_and_delete() -> None:
 async def test_channel_set_and_delete_permissions() -> None:
     client = RecordingClient()
     channel = client.channels.partial(20)
-    overwrite = OverwriteParams(id=Snowflake(5), type=OverwriteType.MEMBER, deny=Permissions.SEND_MESSAGES)
+    member = client.guilds.partial(1).member(5)
+    role = client.guilds.partial(1).role(6)
 
-    assert await channel.set_permissions(overwrite, reason="Lock") is None
-    assert await channel.delete_permissions(5) is None
+    assert await channel.set_permissions(member, deny=Permissions.SEND_MESSAGES, reason="Lock") is None
+    assert await channel.set_permissions(role, allow=Permissions.VIEW_CHANNEL) is None
+    assert await channel.delete_permissions(member) is None
 
     assert [(sent.method, sent.path) for sent in client.sent] == [
         ("PUT", "/channels/20/permissions/5"),
+        ("PUT", "/channels/20/permissions/6"),
         ("DELETE", "/channels/20/permissions/5"),
     ]
-    assert client.sent[0].json == overwrite.to_json()
+    member_overwrite = OverwriteParams(id=Snowflake(5), type=OverwriteType.MEMBER, deny=Permissions.SEND_MESSAGES)
+    role_overwrite = OverwriteParams(id=Snowflake(6), type=OverwriteType.ROLE, allow=Permissions.VIEW_CHANNEL)
+    assert [client.sent[0].json, client.sent[1].json] == [member_overwrite.to_json(), role_overwrite.to_json()]
 
 
 async def test_guild_fetch_with_counts_asks_for_them() -> None:
@@ -94,7 +100,8 @@ async def test_guild_members_page() -> None:
     client = RecordingClient()
     client.reply("GET", "/guilds/1/members", [MEMBER_JSON, BOT_MEMBER_JSON])
 
-    members = await client.guilds.partial(1).members(after=2, limit=50)
+    guild = client.guilds.partial(1)
+    members = await guild.fetch_members(after=guild.member(2), limit=50)
 
     assert not is_network_error(members)
     first, second = members
@@ -109,7 +116,7 @@ async def test_member_move_to_patches_the_voice_channel() -> None:
     client.reply("PATCH", "/guilds/1/members/3", MEMBER_JSON)
     member = client.guilds.partial(1).member(3)
 
-    moved = await member.move_to(20, reason="Own channel")
+    moved = await member.move_to(client.channels.partial(20), reason="Own channel")
     await member.move_to(None)
 
     assert isinstance(moved, Member)
@@ -122,7 +129,7 @@ async def test_an_unreadable_response_is_a_failure_not_an_exception() -> None:
     client.reply("GET", "/guilds/1/channels", [VOICE_JSON, {"id": "x"}])
 
     deleted = await client.channels.partial(20).delete()
-    channels = await client.guilds.partial(1).channels()
+    channels = await client.guilds.partial(1).fetch_channels()
 
     assert isinstance(deleted, ApiResponseError)
     assert (deleted.code, deleted.status) == (JsonErrorCode.GENERAL_ERROR, 204)

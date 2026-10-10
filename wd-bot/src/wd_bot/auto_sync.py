@@ -69,4 +69,4 @@ class CommandSyncer(LoggerMixin):
         """Return the command store behind ``scope``."""
         if scope.guild_id is None:
             return client.application.commands
-        return client.application.guild_commands(scope.guild_id)
+        return client.application.guild_commands(client.guilds.partial(scope.guild_id))

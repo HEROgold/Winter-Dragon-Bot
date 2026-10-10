@@ -8,13 +8,11 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
-lazy from wd_discord import Channel, User, is_network_error
+lazy from wd_discord import Channel, Role, User, is_network_error
 lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
-lazy from wd_discord.resources.channel import OverwriteParams, OverwriteType
-lazy from wd_discord.resources.guild import Role  # noqa: TC002
 
 
 if TYPE_CHECKING:
@@ -22,8 +20,7 @@ if TYPE_CHECKING:
 
     lazy from wd_bot.commands import Command
     lazy from wd_discord import CommandInteraction, NetworkError
-    lazy from wd_discord.entities import PartialGuild
-    lazy from wd_discord.resources.channel import PermissionOverwrite
+    lazy from wd_discord.entities import PartialGuild, PermissionOverwrite
 
 
 UNLOCKABLE = frozenset(
@@ -40,15 +37,16 @@ DELETE_PERMISSIONS = Permissions.VIEW_CHANNEL | Permissions.MANAGE_CHANNELS
 """What the bot needs on a channel to delete it: Discord answers 50001 Missing Access without VIEW_CHANNEL."""
 
 
-def locked_overwrite(
+def locked_permissions(
     existing: Iterable[PermissionOverwrite],
     target: User | Role,
     *,
     lock: bool,
-) -> OverwriteParams:
-    """Return ``target``'s overwrite among ``existing`` with SEND_MESSAGES denied (``lock``) or no longer denied.
+) -> tuple[Permissions, Permissions]:
+    """Return what ``target``'s overwrite among ``existing`` allows and denies, with SEND_MESSAGES denied or not.
 
-    Everything else the overwrite allows or denies stays as it was; a target without one starts from nothing.
+    ``lock`` denies SEND_MESSAGES, otherwise it's no longer denied. Everything else the overwrite allows or denies
+    stays as it was; a target without one starts from nothing.
     """
     overwrite = next((overwrite for overwrite in existing if overwrite.id == target.id), None)
     allow = Permissions(0) if overwrite is None else overwrite.allow
@@ -58,8 +56,7 @@ def locked_overwrite(
         deny |= Permissions.SEND_MESSAGES
     else:
         deny &= ~Permissions.SEND_MESSAGES
-    kind = OverwriteType.MEMBER if isinstance(target, User) else OverwriteType.ROLE
-    return OverwriteParams(id=target.id, type=kind, allow=allow, deny=deny)
+    return allow, deny
 
 
 def deleted(result: Channel | NetworkError) -> bool:
@@ -71,7 +68,7 @@ def deleted(result: Channel | NetworkError) -> bool:
 
 def mention(target: User | Role) -> str:
     """Return a clickable mention of the user or role ``target``."""
-    return target.mention if isinstance(target, User) else f"<@&{target.id}>"
+    return target.mention
 
 
 class ChannelUtils(
@@ -132,14 +129,14 @@ class ChannelUtils(
         """
         full_guild = await guild.fetch()
         bot = await guild.member(interaction.application_id).fetch()
-        channels = await guild.channels()
+        channels = await guild.fetch_channels()
         if is_network_error(full_guild) or is_network_error(bot) or is_network_error(channels):
             return "I couldn't read this server's channels, roles or my own roles."
         channels = list(channels)
         whole = next((channel for channel in channels if channel.id == category.id), None)
         if whole is None:
             return "That category is gone."
-        doomed = [*(channel for channel in channels if channel.parent_id == category.id), whole]
+        doomed = [*(channel for channel in channels if channel.parent is not None and channel.parent.id == category.id), whole]
         solver = PermissionSolver(full_guild.model, bot.model)
         blocked = [channel.name for channel in doomed if DELETE_PERMISSIONS not in solver.in_channel(channel.model)]
         if blocked:
@@ -169,14 +166,14 @@ class ChannelUtils(
         if channel.type in UNLOCKABLE:
             await interaction.respond("You can't lock or unlock this channel.", ephemeral=True)
             return
-        existing = channel.model.permission_overwrites or []
-        overwrite = locked_overwrite(existing, target, lock=lock)
+        existing = list(channel.overwrites)
+        allow, deny = locked_permissions(existing, target, lock=lock)
         action = "Locked" if lock else "Unlocked"
         reason = self._reason(interaction, self.lock if lock else self.unlock, f"{action} for {target.id}")
-        if overwrite.allow or overwrite.deny:
-            failure = await channel.set_permissions(overwrite, reason=reason)
+        if allow or deny:
+            failure = await channel.set_permissions(target, allow=allow, deny=deny, reason=reason)
         elif any(old.id == target.id for old in existing):
-            failure = await channel.delete_permissions(overwrite.id, reason=reason)
+            failure = await channel.delete_permissions(target, reason=reason)
         else:
             failure = None  # nothing was denied, so there's nothing to undo
         if failure is not None:
