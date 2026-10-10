@@ -142,41 +142,6 @@ MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message).
 - fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None, author: User, content: str, timestamp: str,
   edited_timestamp: str | None, tts: bool, mention_everyone: bool
 
-### `class MessageCreatePayload(TypedDict)`
-The raw ``d`` payload of a MESSAGE_CREATE dispatch, as delivered by the gateway (subset).
-
-- fields: id: str, channel_id: str, guild_id: NotRequired[str], author: Mapping[str, object], content: str, timestamp:
-  str, edited_timestamp: NotRequired[str | None], tts: bool, mention_everyone: bool
-
-### `class ReadyPayload(TypedDict)`
-The raw ``d`` payload of a READY dispatch, as delivered by the gateway (subset).
-
-- fields: v: int, user: Mapping[str, object], guilds: list[Mapping[str, object]], session_id: str, resume_gateway_url:
-  str, shard: NotRequired[list[int]], application: NotRequired[Mapping[str, object]]
-
-### `class GuildCreatePayload(TypedDict)`
-The raw ``d`` payload of a GUILD_CREATE dispatch, as delivered by the gateway (subset of the guild fields).
-
-- fields: id: str, name: str, icon: str | None, owner_id: str, afk_timeout: int, roles: list[Mapping[str, object]],
-  emojis: list[Mapping[str, object]], features: list[str], joined_at: NotRequired[str], large: NotRequired[bool],
-  unavailable: NotRequired[bool], member_count: NotRequired[int], channels: NotRequired[list[Mapping[str, object]]],
-  threads: NotRequired[list[Mapping[str, object]]], members: NotRequired[list[Mapping[str, object]]], voice_states:
-  NotRequired[list[Mapping[str, object]]], presences: NotRequired[list[Mapping[str, object]]]
-
-### `class VoiceStateUpdatePayload(TypedDict)`
-The raw ``d`` payload of a VOICE_STATE_UPDATE dispatch, as delivered by the gateway.
-
-- fields: guild_id: NotRequired[str], channel_id: str | None, user_id: str, member: NotRequired[Mapping[str, object]],
-  session_id: str, deaf: bool, mute: bool, self_deaf: bool, self_mute: bool, self_stream: NotRequired[bool], self_video:
-  bool, suppress: bool, request_to_speak_timestamp: str | None
-
-### `class InteractionCreatePayload(TypedDict)`
-The raw ``d`` payload of an INTERACTION_CREATE dispatch, as delivered by the gateway (subset).
-
-- fields: id: str, application_id: str, type: int, data: NotRequired[Mapping[str, object]], guild_id: NotRequired[str],
-  channel_id: NotRequired[str], member: NotRequired[Mapping[str, object]], user: NotRequired[Mapping[str, object]],
-  token: str, version: int
-
 ### `class EventName(StrEnum)`
 Every dispatch event name Discord currently defines.
 

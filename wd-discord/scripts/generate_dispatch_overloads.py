@@ -3,7 +3,7 @@
 `dispatch.pyi` is generated, not hand-written: it holds one `@overload` of `parse_dispatch`
 per modeled `EventName` member, and hand-maintaining that list is exactly the kind of thing
 that silently drifts out of sync with the enum it's supposed to describe. This script is the
-single source of truth for how a modeled event maps to its payload/model type names;
+single source of truth for how a modeled event maps to its model;
 `dispatch.pyi` is its output.
 
 Usage (from the repo root, via `uv run` - see the PEP 723 header below for how this
@@ -13,12 +13,11 @@ script gets `wd_discord` importable without being part of the main project env):
     uv run wd-discord/scripts/generate_dispatch_overloads.py --check   # verify it's up to date (CI/pre-push)
 
 Only members with `EventName.X.model is not None` get an overload - RawEvent-only events
-(most of them, today) have nothing precise to say yet, and fall through to the general
+have nothing precise to say yet, and fall through to the general
 `(name: str, data: Mapping[str, object]) -> DiscordModel` overload already. A member's model
-name comes straight from `member.model.__name__` (the real class, no guessing); its payload
-TypedDict name is assumed to be `PascalCase(event name) + "Payload"` (e.g. MessageCreatePayload
-for MESSAGE_CREATE) since payload TypedDicts aren't attached to EventName the way models are -
-give an event's payload TypedDict that name in events.py and this convention finds it.
+name comes straight from `member.model.__name__` (the real class, no guessing). ``data`` stays
+``Mapping[str, object]`` in every overload: it's the decoded JSON frame, and the model is what
+gives it a shape.
 """
 # /// script
 # requires-python = ">=3.15"
@@ -52,7 +51,7 @@ _HEADER_TEMPLATE = """\
 #     uv run wd-discord/scripts/generate_dispatch_overloads.py
 #
 # One overload per EventName member that has a model wired up (EventName.X.model is not None) -
-# see generate_dispatch_overloads.py for the naming convention and why members without a model
+# see generate_dispatch_overloads.py for why members without a model
 # aren't listed here individually (they already resolve fine through the general fallback below).
 # (no module docstring here on purpose - ruff's PYI021 flags docstrings in stub files)
 
@@ -71,20 +70,6 @@ def parse_dispatch(name: str, data: Mapping[str, object]) -> DiscordModel: ...
 """
 
 
-def _pascal_case(event_name: str) -> str:
-    return "".join(word.capitalize() for word in event_name.split("_"))
-
-
-def payload_name_for(event_name: str) -> str:
-    """Return the payload TypedDict name a modeled event's overload should reference.
-
-    Always PascalCase(event_name) + "Payload" (e.g. MessageCreatePayload for MESSAGE_CREATE) -
-    payload TypedDicts aren't attached to EventName members the way models are, so this is a
-    naming convention rather than something read off the member itself.
-    """
-    return f"{_pascal_case(event_name)}Payload"
-
-
 def render() -> str:
     """Render dispatch.pyi's full source (unformatted - the caller runs ruff format on it)."""
     overload_lines: list[str] = []
@@ -92,12 +77,12 @@ def render() -> str:
     for member in EventName:
         if member.model is None:
             continue
-        payload = payload_name_for(member.name)
         model = member.model.__name__
-        referenced_names.add(payload)
         referenced_names.add(model)
         overload_lines.append("@overload")
-        overload_lines.append(f"def parse_dispatch(name: Literal[EventName.{member.name}], data: {payload}) -> {model}: ...")
+        overload_lines.append(
+            f"def parse_dispatch(name: Literal[EventName.{member.name}], data: Mapping[str, object]) -> {model}: ...",
+        )
 
     events_import = ", ".join(["EventName", *sorted(referenced_names)])
     header = _HEADER_TEMPLATE.format(events_import=events_import)

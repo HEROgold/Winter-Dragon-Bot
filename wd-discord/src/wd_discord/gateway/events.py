@@ -18,10 +18,8 @@ letting generated content live next to hand-written runtime logic in the same fi
 "data-carrying enum" pattern (a custom ``__new__``), so the name and its model live in exactly one place - but
 only ``READY``/``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE``/``VOICE_STATE_UPDATE`` have a real model
 wired up so far;
-every other member's ``model`` is ``None`` (dispatches as :class:`RawEvent`) until its
-payload/model classes get built
-(add them here, then run the generator - see its own docstring for the naming convention it
-expects).
+every other member's ``model`` is ``None`` (dispatches as :class:`RawEvent`) until its model gets built
+(add it here, attach it to the member, then run the generator).
 
 These are data only; :func:`wd_discord.entities.events.bind` wraps them in the client-bound entities a
 listener receives.
@@ -35,7 +33,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 lazy from enum import IntEnum, StrEnum
-lazy from typing import NotRequired, Self, TypedDict, cast
+lazy from typing import Self, cast
 
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 
@@ -270,94 +268,6 @@ class Message(DiscordModel):
     tts: bool
     mention_everyone: bool
     # TODO(Phase 2): mentions[]/attachments[]/embeds[]/reactions[] need their own models.
-
-
-class MessageCreatePayload(TypedDict):
-    """The raw ``d`` payload of a MESSAGE_CREATE dispatch, as delivered by the gateway (subset).
-
-    Mirrors :class:`Message`'s fields; kept as a separate TypedDict (rather than typing
-    :func:`~wd_discord.gateway.dispatch.parse_dispatch`'s ``data`` param directly off the
-    pydantic model) so callers get a plain-dict shape to construct without needing pydantic, and
-    so the wire shape and the parsed model can diverge (e.g. ``author`` here is the raw nested
-    user object, not a ``User``).
-    """
-
-    id: str
-    channel_id: str
-    guild_id: NotRequired[str]
-    author: Mapping[str, object]
-    content: str
-    timestamp: str
-    edited_timestamp: NotRequired[str | None]
-    tts: bool
-    mention_everyone: bool
-
-
-class ReadyPayload(TypedDict):
-    """The raw ``d`` payload of a READY dispatch, as delivered by the gateway (subset)."""
-
-    v: int
-    user: Mapping[str, object]
-    guilds: list[Mapping[str, object]]
-    session_id: str
-    resume_gateway_url: str
-    shard: NotRequired[list[int]]
-    application: NotRequired[Mapping[str, object]]
-
-
-class GuildCreatePayload(TypedDict):
-    """The raw ``d`` payload of a GUILD_CREATE dispatch, as delivered by the gateway (subset of the guild fields)."""
-
-    id: str
-    name: str
-    icon: str | None
-    owner_id: str
-    afk_timeout: int
-    roles: list[Mapping[str, object]]
-    emojis: list[Mapping[str, object]]
-    features: list[str]
-    joined_at: NotRequired[str]
-    large: NotRequired[bool]
-    unavailable: NotRequired[bool]
-    member_count: NotRequired[int]
-    channels: NotRequired[list[Mapping[str, object]]]
-    threads: NotRequired[list[Mapping[str, object]]]
-    members: NotRequired[list[Mapping[str, object]]]
-    voice_states: NotRequired[list[Mapping[str, object]]]
-    presences: NotRequired[list[Mapping[str, object]]]
-
-
-class VoiceStateUpdatePayload(TypedDict):
-    """The raw ``d`` payload of a VOICE_STATE_UPDATE dispatch, as delivered by the gateway."""
-
-    guild_id: NotRequired[str]
-    channel_id: str | None
-    user_id: str
-    member: NotRequired[Mapping[str, object]]
-    session_id: str
-    deaf: bool
-    mute: bool
-    self_deaf: bool
-    self_mute: bool
-    self_stream: NotRequired[bool]
-    self_video: bool
-    suppress: bool
-    request_to_speak_timestamp: str | None
-
-
-class InteractionCreatePayload(TypedDict):
-    """The raw ``d`` payload of an INTERACTION_CREATE dispatch, as delivered by the gateway (subset)."""
-
-    id: str
-    application_id: str
-    type: int
-    data: NotRequired[Mapping[str, object]]
-    guild_id: NotRequired[str]
-    channel_id: NotRequired[str]
-    member: NotRequired[Mapping[str, object]]
-    user: NotRequired[Mapping[str, object]]
-    token: str
-    version: int
 
 
 class EventName(StrEnum):
