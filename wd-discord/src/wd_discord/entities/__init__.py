@@ -19,6 +19,16 @@ lazy from .command import (
     PartialGlobalCommand,
     PartialGuildCommand,
 )
+lazy from .dispatches import (
+    ChannelPinsUpdate,
+    GuildDelete,
+    ThreadCreate,
+    ThreadDelete,
+    ThreadListSync,
+    ThreadMembersUpdate,
+    VoiceChannelStartTimeUpdate,
+    VoiceChannelStatusUpdate,
+)
 lazy from .emoji import Emoji, Sticker
 lazy from .entitlement import Entitlement
 lazy from .events import BoundEvent, bind, event_entities
@@ -55,6 +65,7 @@ __all__ = [
     "BaseUser",
     "BoundEvent",
     "Channel",
+    "ChannelPinsUpdate",
     "ClientBound",
     "CommandEntity",
     "CommandInteraction",
@@ -71,6 +82,7 @@ __all__ = [
     "Guild",
     "GuildCommand",
     "GuildCommandStore",
+    "GuildDelete",
     "Interaction",
     "Invite",
     "Member",
@@ -94,10 +106,16 @@ __all__ = [
     "Store",
     "Team",
     "TeamMember",
+    "ThreadCreate",
+    "ThreadDelete",
+    "ThreadListSync",
     "ThreadMember",
+    "ThreadMembersUpdate",
     "UnknownInteraction",
     "User",
     "UserStore",
+    "VoiceChannelStartTimeUpdate",
+    "VoiceChannelStatusUpdate",
     "VoiceState",
     "WelcomeScreen",
     "WelcomeScreenChannel",

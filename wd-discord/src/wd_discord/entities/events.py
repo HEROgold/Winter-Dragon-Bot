@@ -7,9 +7,21 @@ an entity yet (anything parsed as :class:`~wd_discord.gateway.events.RawEvent`) 
 
 from __future__ import annotations
 
-lazy from typing import TYPE_CHECKING
+lazy from functools import cache
+lazy from typing import TYPE_CHECKING, cast
 
-lazy from wd_discord.entities.guild import GatewayGuild
+lazy from wd_discord.entities.channel import Channel, ThreadMember
+lazy from wd_discord.entities.dispatches import (
+    ChannelPinsUpdate,
+    GuildDelete,
+    ThreadCreate,
+    ThreadDelete,
+    ThreadListSync,
+    ThreadMembersUpdate,
+    VoiceChannelStartTimeUpdate,
+    VoiceChannelStatusUpdate,
+)
+lazy from wd_discord.entities.guild import GatewayGuild, Guild
 lazy from wd_discord.entities.interaction import (
     AnyInteraction,
     AutocompleteInteraction,
@@ -20,55 +32,82 @@ lazy from wd_discord.entities.interaction import (
 lazy from wd_discord.entities.message import Message
 lazy from wd_discord.entities.ready import Ready
 lazy from wd_discord.entities.voice import VoiceState
-lazy from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
-lazy from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
-lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
-lazy from wd_discord.gateway.events import EventName, GuildCreate, VoiceStateUpdate
-lazy from wd_discord.gateway.events import Interaction as InteractionModel
-lazy from wd_discord.gateway.events import Message as MessageModel
-lazy from wd_discord.gateway.events import Ready as ReadyModel
+lazy from wd_discord.gateway import events as wire
+lazy from wd_discord.gateway.events import EventName
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-    from typing import TypeAliasType
+    from collections.abc import Callable, Mapping
+    from typing import Any, TypeAliasType
 
     from wd_discord.client import Client
+    from wd_discord.entities.base import Entity
     from wd_discord.models import DiscordModel
 
 
-type BoundEvent = AnyInteraction | Message | GatewayGuild | Ready | VoiceState
+type BoundEvent = (
+    AnyInteraction
+    | Message
+    | GatewayGuild
+    | Guild
+    | Channel
+    | ThreadMember
+    | Ready
+    | VoiceState
+    | GuildDelete
+    | ChannelPinsUpdate
+    | ThreadCreate
+    | ThreadDelete
+    | ThreadListSync
+    | ThreadMembersUpdate
+    | VoiceChannelStatusUpdate
+    | VoiceChannelStartTimeUpdate
+)
 """Every entity :func:`bind` can return; ``match`` on it to handle each event."""
 
 
 def bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel:
     """Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none."""
-    match model:
-        case InteractionModel():
-            return _bind_interaction(client, model)
-        case MessageModel():
-            return Message(client, model)
-        case GuildCreate():
-            return GatewayGuild(client, model)
-        case ReadyModel():
-            return Ready(client, model)
-        case VoiceStateUpdate():
-            return VoiceState(client, model)
-        case _:
-            return model
+    binder = _binders().get(type(model))
+    # The table pairs each model with its own entity, which is one of BoundEvent's members.
+    return model if binder is None else cast("BoundEvent", binder(client, model))
 
 
-def _bind_interaction(client: Client, model: InteractionModel) -> AnyInteraction:
-    """Wrap an interaction ``model`` in the bound class matching its type."""
-    match model:
-        case CommandInteractionModel():
-            return CommandInteraction(client, model)
-        case ComponentInteractionModel():
-            return ComponentInteraction(client, model)
-        case AutocompleteInteractionModel():
-            return AutocompleteInteraction(client, model)
-        case _:
-            return UnknownInteraction(client, model)
+@cache
+def _binders() -> Mapping[type[DiscordModel], Callable[..., Entity[Any]]]:
+    """Return what builds the entity of each dispatch model, keyed by the model's exact class.
+
+    An entity that needs more than the client and the model gets a function here instead of its class.
+    """
+    return {
+        wire.Ready: Ready,
+        wire.Message: Message,
+        wire.GuildCreate: GatewayGuild,
+        wire.CommandInteraction: CommandInteraction,
+        wire.ComponentInteraction: ComponentInteraction,
+        wire.AutocompleteInteraction: AutocompleteInteraction,
+        wire.UnknownInteraction: UnknownInteraction,
+        wire.VoiceStateUpdate: VoiceState,
+        wire.GuildUpdate: Guild,
+        wire.GuildDelete: GuildDelete,
+        wire.ChannelCreate: Channel,
+        wire.ChannelUpdate: Channel,
+        wire.ChannelDelete: Channel,
+        wire.ChannelPinsUpdate: ChannelPinsUpdate,
+        wire.ThreadCreate: ThreadCreate,
+        wire.ThreadUpdate: Channel,
+        wire.ThreadDelete: ThreadDelete,
+        wire.ThreadListSync: ThreadListSync,
+        wire.ThreadMemberUpdate: _thread_member,
+        wire.ThreadMembersUpdate: ThreadMembersUpdate,
+        wire.VoiceChannelStatusUpdate: VoiceChannelStatusUpdate,
+        wire.VoiceChannelStartTimeUpdate: VoiceChannelStartTimeUpdate,
+    }
+
+
+def _thread_member(client: Client, model: wire.ThreadMemberUpdate) -> ThreadMember:
+    """Wrap the bot's updated membership of a thread; the event always names the thread."""
+    return ThreadMember(client, model, model.id)
 
 
 def event_entities() -> Mapping[EventName, type | TypeAliasType]:
@@ -79,4 +118,18 @@ def event_entities() -> Mapping[EventName, type | TypeAliasType]:
         EventName.GUILD_CREATE: GatewayGuild,
         EventName.INTERACTION_CREATE: AnyInteraction,
         EventName.VOICE_STATE_UPDATE: VoiceState,
+        EventName.GUILD_UPDATE: Guild,
+        EventName.GUILD_DELETE: GuildDelete,
+        EventName.CHANNEL_CREATE: Channel,
+        EventName.CHANNEL_UPDATE: Channel,
+        EventName.CHANNEL_DELETE: Channel,
+        EventName.CHANNEL_PINS_UPDATE: ChannelPinsUpdate,
+        EventName.THREAD_CREATE: ThreadCreate,
+        EventName.THREAD_UPDATE: Channel,
+        EventName.THREAD_DELETE: ThreadDelete,
+        EventName.THREAD_LIST_SYNC: ThreadListSync,
+        EventName.THREAD_MEMBER_UPDATE: ThreadMember,
+        EventName.THREAD_MEMBERS_UPDATE: ThreadMembersUpdate,
+        EventName.VOICE_CHANNEL_STATUS_UPDATE: VoiceChannelStatusUpdate,
+        EventName.VOICE_CHANNEL_START_TIME_UPDATE: VoiceChannelStartTimeUpdate,
     }

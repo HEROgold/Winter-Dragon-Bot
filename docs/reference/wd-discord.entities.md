@@ -8,13 +8,14 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord.entities` — `wd-discord/src/wd_discord/entities/__init__.py`
 
 - exports: AnyInteraction, Application, AutocompleteInteraction, BaseChannel, BaseGlobalCommand, BaseGuild,
-  BaseGuildCommand, BaseMember, BaseMessage, BaseRole, BaseUser, BoundEvent, Channel, ClientBound, CommandEntity,
-  CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Emoji, Entitlement, Entity, EntityStore,
-  GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, Interaction, Invite, Member,
-  Message, Partial, PartialChannel, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember,
-  PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget, ReactionEmoji, Ready, Resolved, Role,
-  Sticker, Store, Team, TeamMember, ThreadMember, UnknownInteraction, User, UserStore, VoiceState, WelcomeScreen,
-  WelcomeScreenChannel, bind, event_entities
+  BaseGuildCommand, BaseMember, BaseMessage, BaseRole, BaseUser, BoundEvent, Channel, ChannelPinsUpdate, ClientBound,
+  CommandEntity, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Emoji, Entitlement, Entity,
+  EntityStore, GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, GuildDelete,
+  Interaction, Invite, Member, Message, Partial, PartialChannel, PartialGlobalCommand, PartialGuild,
+  PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget,
+  ReactionEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync,
+  ThreadMember, ThreadMembersUpdate, UnknownInteraction, User, UserStore, VoiceChannelStartTimeUpdate,
+  VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel, bind, event_entities
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -247,6 +248,67 @@ One guild's commands for the application: list them, or replace them all.
 - `async fetch_all(*, cache: bool=False) -> Generator[GuildCommand] | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild.
 - `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GuildCommand] | NetworkError` — PUT /applications/{application_id}/guilds/{guild_id}/commands - replace the guild's commands with ``params``.
 
+## `wd_discord.entities.dispatches` — `wd-discord/src/wd_discord/entities/dispatches.py`
+Gateway events that are about more than one entity, bound to the client that received them.
+
+### `class GuildDelete(Entity[GuildDeleteModel])`
+GUILD_DELETE: the bot left or was removed from a guild, or the guild went offline.
+
+- `@property guild -> PartialGuild` — The guild the bot lost.
+- `@property unavailable -> bool` — Whether the guild only went offline; it comes back as a GUILD_CREATE. ``False`` when the bot left it.
+
+### `class ChannelPinsUpdate(Entity[ChannelPinsUpdateModel])`
+CHANNEL_PINS_UPDATE: a message in a channel was pinned or unpinned.
+
+- `@property channel -> PartialChannel` — The channel whose pins changed.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+- `@property last_pin_timestamp -> datetime | None` — When the newest pinned message was pinned; ``None`` once nothing is pinned.
+
+### `class ThreadCreate(Entity[ThreadCreateModel])`
+THREAD_CREATE: a thread was created, or the bot was added to a private thread.
+
+- `@property thread -> Channel` — The thread.
+- `@property newly_created -> bool` — Whether the thread is new; ``False`` when the bot was added to an existing private thread.
+
+### `class ThreadDelete(Entity[ThreadDeleteModel])`
+THREAD_DELETE: a thread the bot could see was deleted.
+
+- `@property thread -> PartialChannel` — The deleted thread.
+- `@property guild -> PartialGuild` — The thread's guild.
+- `@property parent -> PartialChannel | None` — The channel the thread was in.
+- `@property type -> ChannelType` — The kind of thread it was.
+
+### `class ThreadListSync(Entity[ThreadListSyncModel])`
+THREAD_LIST_SYNC: the bot gained access to channels, and these are their active threads.
+
+- `@property guild -> PartialGuild` — The guild of the synced channels.
+- `@property channels -> Generator[PartialChannel] | None` — The channels whose threads were synced; ``None`` when it's the whole guild.
+- `@property threads -> Generator[Channel]` — The active threads in the synced channels.
+- `@property members -> Generator[ThreadMember]` — The bot's own membership of each of :attr:`threads` it has joined.
+
+### `class ThreadMembersUpdate(Entity[ThreadMembersUpdateModel])`
+THREAD_MEMBERS_UPDATE: members joined or left a thread.
+
+- `@property thread -> PartialChannel` — The thread whose members changed.
+- `@property guild -> PartialGuild` — The thread's guild.
+- `@property member_count -> int` — Roughly how many members the thread has; stops counting at 50.
+- `@property added_members -> Generator[Member]` — The guild members who joined the thread.
+- `@property removed_members -> Generator[PartialMember]` — The members who left the thread.
+
+### `class VoiceChannelStatusUpdate(Entity[VoiceChannelStatusUpdateModel])`
+VOICE_CHANNEL_STATUS_UPDATE: a voice channel's status was set or cleared.
+
+- `@property channel -> PartialChannel` — The voice channel.
+- `@property guild -> PartialGuild` — The voice channel's guild.
+- `@property status -> str | None` — The channel's new status; ``None`` once cleared.
+
+### `class VoiceChannelStartTimeUpdate(Entity[VoiceChannelStartTimeUpdateModel])`
+VOICE_CHANNEL_START_TIME_UPDATE: a voice session in a channel started or ended.
+
+- `@property channel -> PartialChannel` — The voice channel.
+- `@property guild -> PartialGuild` — The voice channel's guild.
+- `@property voice_start_time -> datetime | None` — When the channel's current voice session started; ``None`` once nobody is in it.
+
 ## `wd_discord.entities.emoji` — `wd-discord/src/wd_discord/entities/emoji.py`
 Guild emojis and stickers (https://docs.discord.com/developers/resources/emoji, .../resources/sticker).
 
@@ -301,7 +363,7 @@ A user's or guild's access to one of the application's SKUs.
 ## `wd_discord.entities.events` — `wd-discord/src/wd_discord/entities/events.py`
 Gateway dispatch events bound to the client that received them.
 
-- `type BoundEvent = AnyInteraction | Message | GatewayGuild | Ready | VoiceState`
+- `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate`
 - `bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
 - `event_entities() -> Mapping[EventName, type | TypeAliasType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
 

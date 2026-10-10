@@ -8,12 +8,14 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord` — `wd-discord/src/wd_discord/__init__.py`
 
 - exports: URLS, AnyInteraction, ApiResponseError, Application, AuditLogReason, AutocompleteInteraction, BoundEvent,
-  Channel, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField,
-  Emoji, Entitlement, EventName, Gateway, GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild,
-  GuildCommand, GuildCreate, Interaction, Invite, Member, Message, NetworkError, PartialChannel, PartialEmoji,
-  PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser,
-  PermissionOverwrite, Permissions, RawEvent, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status, Sticker,
-  Team, TeamMember, ThreadMember, Token, TokenType, UnknownInteraction, User, VoiceState, bind, is_network_error
+  Channel, ChannelPinsUpdate, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel,
+  Embed, EmbedField, Emoji, Entitlement, EventName, Gateway, GatewayActivity, GatewayBotInfo, GatewayGuild,
+  GlobalCommand, Guild, GuildCommand, GuildCreate, GuildDelete, Interaction, Invite, Member, Message, NetworkError,
+  PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage,
+  PartialRole, PartialUser, PermissionOverwrite, Permissions, RawEvent, Ready, Resolved, Role, Sentry, ShardManager,
+  Snowflake, Status, Sticker, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember,
+  ThreadMembersUpdate, Token, TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate,
+  VoiceChannelStatusUpdate, VoiceState, bind, is_network_error
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
@@ -65,8 +67,8 @@ The built-in Discord REST client for wd-discord.
 - module names: DEFAULT_USER_AGENT_URL, DEFAULT_USER_AGENT_VERSION
 - `type NetworkError = ApiResponseError | RequestError`
 - `type RequestResult = Response | NetworkError`
-- `returns_known_exception[**P, T, E: Exception](*exceptions: type[E]) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T | E]]]` — Async analog of :func:`herogold.errors.with_known_exception`.
 - `type InflightKey = tuple[str, tuple[tuple[str, str], ...]]`
+- `returns_known_exception[**P, T, E: Exception](*exceptions: type[E]) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T | E]]]` — Async analog of :func:`herogold.errors.with_known_exception`.
 - `is_network_error(value: object) -> TypeIs[NetworkError]` — Whether ``value`` is a failed request: a Discord API error or a network error.
 
 ### `class Client(LoggerMixin)`

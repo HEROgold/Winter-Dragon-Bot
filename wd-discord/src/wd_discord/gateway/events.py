@@ -32,6 +32,7 @@ lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``).
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime
 lazy from enum import IntEnum, StrEnum
 lazy from typing import Self, cast
 
@@ -40,8 +41,9 @@ lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 from wd_discord.components import ComponentType
 from wd_discord.interactions import ApplicationIntegrationType, InteractionContextType, Locale
 from wd_discord.models import DiscordModel
-from wd_discord.permissions import PermissionsField
+from wd_discord.permissions import ChannelType, PermissionsField
 from wd_discord.resources.channel.channel import Channel
+from wd_discord.resources.channel.thread import ThreadMember
 from wd_discord.resources.entitlement import Entitlement
 from wd_discord.resources.guild.guild import Guild
 from wd_discord.resources.guild.member import GuildMember
@@ -107,6 +109,129 @@ class VoiceStateUpdate(VoiceState):
 
     Someone joined, left or moved between voice channels, or changed their mute/deafen state.
     """
+
+
+class GuildUpdate(Guild):
+    """GUILD_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-update): the guild's new state."""
+
+
+class GuildDelete(UnavailableGuild):
+    """GUILD_DELETE (https://docs.discord.com/developers/events/gateway-events#guild-delete).
+
+    The guild went offline when ``unavailable`` is set; without it, the bot left or was removed.
+    """
+
+
+class ChannelCreate(Channel):
+    """CHANNEL_CREATE (https://docs.discord.com/developers/events/gateway-events#channel-create): a new guild channel."""
+
+
+class ChannelUpdate(Channel):
+    """CHANNEL_UPDATE (https://docs.discord.com/developers/events/gateway-events#channel-update): the channel's new state."""
+
+
+class ChannelDelete(Channel):
+    """CHANNEL_DELETE (https://docs.discord.com/developers/events/gateway-events#channel-delete): the channel as it was."""
+
+
+class ChannelPinsUpdate(DiscordModel):
+    """CHANNEL_PINS_UPDATE (https://docs.discord.com/developers/events/gateway-events#channel-pins-update).
+
+    A message was pinned or unpinned; not sent when a pinned message is deleted.
+    """
+
+    guild_id: Snowflake | None = None
+    channel_id: Snowflake
+    last_pin_timestamp: datetime | None = None
+
+
+class ThreadCreate(Channel):
+    """THREAD_CREATE (https://docs.discord.com/developers/events/gateway-events#thread-create).
+
+    A thread was created (``newly_created``), or the bot was added to a private thread (``member`` is then set).
+    """
+
+    newly_created: bool | None = None
+
+
+class ThreadUpdate(Channel):
+    """THREAD_UPDATE (https://docs.discord.com/developers/events/gateway-events#thread-update): the thread's new state."""
+
+
+class ThreadDelete(DiscordModel):
+    """THREAD_DELETE (https://docs.discord.com/developers/events/gateway-events#thread-delete): which thread is gone."""
+
+    id: Snowflake
+    guild_id: Snowflake
+    parent_id: Snowflake | None = None
+    type: ChannelType
+
+
+class ThreadListSync(DiscordModel):
+    """THREAD_LIST_SYNC (https://docs.discord.com/developers/events/gateway-events#thread-list-sync).
+
+    The bot gained access to channels; these are their active threads. Without ``channel_ids`` the whole guild was
+    synced. A listed channel without threads here has none, so any the bot knew of are stale.
+    """
+
+    guild_id: Snowflake
+    channel_ids: list[Snowflake] | None = None
+    threads: list[Channel]
+    members: list[ThreadMember]
+    """The bot's own membership of each of ``threads`` it has joined."""
+
+
+class ThreadMemberUpdate(ThreadMember):
+    """THREAD_MEMBER_UPDATE (https://docs.discord.com/developers/events/gateway-events#thread-member-update).
+
+    The bot's own membership of a thread changed.
+    """
+
+    id: Snowflake  # pyrefly: ignore[bad-override-mutable-attribute] - always sent with this event
+    """The thread's ID."""
+    guild_id: Snowflake
+
+
+class AddedThreadMember(ThreadMember):
+    """A thread member as THREAD_MEMBERS_UPDATE adds it: with the guild member and their presence."""
+
+    member: GuildMember
+    presence: Mapping[str, object] | None = None
+
+
+class ThreadMembersUpdate(DiscordModel):
+    """THREAD_MEMBERS_UPDATE (https://docs.discord.com/developers/events/gateway-events#thread-members-update).
+
+    Members joined or left a thread. Without the GUILD_MEMBERS intent, only the bot's own changes are sent.
+    """
+
+    id: Snowflake
+    """The thread's ID."""
+    guild_id: Snowflake
+    member_count: int
+    """Roughly how many members the thread has; stops counting at 50."""
+    added_members: list[AddedThreadMember] | None = None
+    removed_member_ids: list[Snowflake] | None = None
+
+
+class VoiceChannelStatusUpdate(DiscordModel):
+    """VOICE_CHANNEL_STATUS_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-channel-status-update)."""
+
+    id: Snowflake
+    """The voice channel's ID."""
+    guild_id: Snowflake
+    status: str | None
+    """The channel's new status; ``None`` once cleared."""
+
+
+class VoiceChannelStartTimeUpdate(DiscordModel):
+    """VOICE_CHANNEL_START_TIME_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-channel-start-time-update)."""
+
+    id: Snowflake
+    """The voice channel's ID."""
+    guild_id: Snowflake
+    voice_start_time: int | None = None
+    """When the current voice session in the channel started, as Unix seconds; ``None`` once nobody is in it."""
 
 
 class InteractionType(IntEnum):
@@ -306,24 +431,24 @@ class EventName(StrEnum):
     AUTO_MODERATION_RULE_DELETE = "AUTO_MODERATION_RULE_DELETE"
     AUTO_MODERATION_ACTION_EXECUTION = "AUTO_MODERATION_ACTION_EXECUTION"
 
-    CHANNEL_CREATE = "CHANNEL_CREATE"
-    CHANNEL_UPDATE = "CHANNEL_UPDATE"
-    CHANNEL_DELETE = "CHANNEL_DELETE"
-    CHANNEL_PINS_UPDATE = "CHANNEL_PINS_UPDATE"
+    CHANNEL_CREATE = ("CHANNEL_CREATE", ChannelCreate)
+    CHANNEL_UPDATE = ("CHANNEL_UPDATE", ChannelUpdate)
+    CHANNEL_DELETE = ("CHANNEL_DELETE", ChannelDelete)
+    CHANNEL_PINS_UPDATE = ("CHANNEL_PINS_UPDATE", ChannelPinsUpdate)
 
-    THREAD_CREATE = "THREAD_CREATE"
-    THREAD_UPDATE = "THREAD_UPDATE"
-    THREAD_DELETE = "THREAD_DELETE"
-    THREAD_LIST_SYNC = "THREAD_LIST_SYNC"
-    THREAD_MEMBER_UPDATE = "THREAD_MEMBER_UPDATE"
-    THREAD_MEMBERS_UPDATE = "THREAD_MEMBERS_UPDATE"
+    THREAD_CREATE = ("THREAD_CREATE", ThreadCreate)
+    THREAD_UPDATE = ("THREAD_UPDATE", ThreadUpdate)
+    THREAD_DELETE = ("THREAD_DELETE", ThreadDelete)
+    THREAD_LIST_SYNC = ("THREAD_LIST_SYNC", ThreadListSync)
+    THREAD_MEMBER_UPDATE = ("THREAD_MEMBER_UPDATE", ThreadMemberUpdate)
+    THREAD_MEMBERS_UPDATE = ("THREAD_MEMBERS_UPDATE", ThreadMembersUpdate)
 
     ENTITLEMENT_CREATE = "ENTITLEMENT_CREATE"
     ENTITLEMENT_UPDATE = "ENTITLEMENT_UPDATE"
     ENTITLEMENT_DELETE = "ENTITLEMENT_DELETE"
 
-    GUILD_UPDATE = "GUILD_UPDATE"
-    GUILD_DELETE = "GUILD_DELETE"
+    GUILD_UPDATE = ("GUILD_UPDATE", GuildUpdate)
+    GUILD_DELETE = ("GUILD_DELETE", GuildDelete)
     GUILD_AUDIT_LOG_ENTRY_CREATE = "GUILD_AUDIT_LOG_ENTRY_CREATE"
     GUILD_BAN_ADD = "GUILD_BAN_ADD"
     GUILD_BAN_REMOVE = "GUILD_BAN_REMOVE"
@@ -381,6 +506,8 @@ class EventName(StrEnum):
     USER_UPDATE = "USER_UPDATE"
 
     VOICE_CHANNEL_EFFECT_SEND = "VOICE_CHANNEL_EFFECT_SEND"
+    VOICE_CHANNEL_START_TIME_UPDATE = ("VOICE_CHANNEL_START_TIME_UPDATE", VoiceChannelStartTimeUpdate)
+    VOICE_CHANNEL_STATUS_UPDATE = ("VOICE_CHANNEL_STATUS_UPDATE", VoiceChannelStatusUpdate)
     VOICE_STATE_UPDATE = ("VOICE_STATE_UPDATE", VoiceStateUpdate)
     VOICE_SERVER_UPDATE = "VOICE_SERVER_UPDATE"
 

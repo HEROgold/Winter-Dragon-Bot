@@ -80,6 +80,70 @@ GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-cr
 ### `class VoiceStateUpdate(VoiceState)`
 VOICE_STATE_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-state-update).
 
+### `class GuildUpdate(Guild)`
+GUILD_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-update): the guild's new state.
+
+### `class GuildDelete(UnavailableGuild)`
+GUILD_DELETE (https://docs.discord.com/developers/events/gateway-events#guild-delete).
+
+### `class ChannelCreate(Channel)`
+CHANNEL_CREATE (https://docs.discord.com/developers/events/gateway-events#channel-create): a new guild channel.
+
+### `class ChannelUpdate(Channel)`
+CHANNEL_UPDATE (https://docs.discord.com/developers/events/gateway-events#channel-update): the channel's new state.
+
+### `class ChannelDelete(Channel)`
+CHANNEL_DELETE (https://docs.discord.com/developers/events/gateway-events#channel-delete): the channel as it was.
+
+### `class ChannelPinsUpdate(DiscordModel)`
+CHANNEL_PINS_UPDATE (https://docs.discord.com/developers/events/gateway-events#channel-pins-update).
+
+- fields: guild_id: Snowflake | None, channel_id: Snowflake, last_pin_timestamp: datetime | None
+
+### `class ThreadCreate(Channel)`
+THREAD_CREATE (https://docs.discord.com/developers/events/gateway-events#thread-create).
+
+- fields: newly_created: bool | None
+
+### `class ThreadUpdate(Channel)`
+THREAD_UPDATE (https://docs.discord.com/developers/events/gateway-events#thread-update): the thread's new state.
+
+### `class ThreadDelete(DiscordModel)`
+THREAD_DELETE (https://docs.discord.com/developers/events/gateway-events#thread-delete): which thread is gone.
+
+- fields: id: Snowflake, guild_id: Snowflake, parent_id: Snowflake | None, type: ChannelType
+
+### `class ThreadListSync(DiscordModel)`
+THREAD_LIST_SYNC (https://docs.discord.com/developers/events/gateway-events#thread-list-sync).
+
+- fields: guild_id: Snowflake, channel_ids: list[Snowflake] | None, threads: list[Channel], members: list[ThreadMember]
+
+### `class ThreadMemberUpdate(ThreadMember)`
+THREAD_MEMBER_UPDATE (https://docs.discord.com/developers/events/gateway-events#thread-member-update).
+
+- fields: id: Snowflake, guild_id: Snowflake
+
+### `class AddedThreadMember(ThreadMember)`
+A thread member as THREAD_MEMBERS_UPDATE adds it: with the guild member and their presence.
+
+- fields: member: GuildMember, presence: Mapping[str, object] | None
+
+### `class ThreadMembersUpdate(DiscordModel)`
+THREAD_MEMBERS_UPDATE (https://docs.discord.com/developers/events/gateway-events#thread-members-update).
+
+- fields: id: Snowflake, guild_id: Snowflake, member_count: int, added_members: list[AddedThreadMember] | None,
+  removed_member_ids: list[Snowflake] | None
+
+### `class VoiceChannelStatusUpdate(DiscordModel)`
+VOICE_CHANNEL_STATUS_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-channel-status-update).
+
+- fields: id: Snowflake, guild_id: Snowflake, status: str | None
+
+### `class VoiceChannelStartTimeUpdate(DiscordModel)`
+VOICE_CHANNEL_START_TIME_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-channel-start-time-update).
+
+- fields: id: Snowflake, guild_id: Snowflake, voice_start_time: int | None
+
 ### `class InteractionType(IntEnum)`
 The kind of interaction an INTERACTION_CREATE dispatch carries.
 
@@ -160,8 +224,8 @@ Every dispatch event name Discord currently defines.
   MESSAGE_DELETE, MESSAGE_DELETE_BULK, MESSAGE_REACTION_ADD, MESSAGE_REACTION_REMOVE, MESSAGE_REACTION_REMOVE_ALL,
   MESSAGE_REACTION_REMOVE_EMOJI, MESSAGE_POLL_VOTE_ADD, MESSAGE_POLL_VOTE_REMOVE, PRESENCE_UPDATE,
   STAGE_INSTANCE_CREATE, STAGE_INSTANCE_UPDATE, STAGE_INSTANCE_DELETE, SUBSCRIPTION_CREATE, SUBSCRIPTION_UPDATE,
-  SUBSCRIPTION_DELETE, TYPING_START, USER_UPDATE, VOICE_CHANNEL_EFFECT_SEND, VOICE_STATE_UPDATE, VOICE_SERVER_UPDATE,
-  WEBHOOKS_UPDATE
+  SUBSCRIPTION_DELETE, TYPING_START, USER_UPDATE, VOICE_CHANNEL_EFFECT_SEND, VOICE_CHANNEL_START_TIME_UPDATE,
+  VOICE_CHANNEL_STATUS_UPDATE, VOICE_STATE_UPDATE, VOICE_SERVER_UPDATE, WEBHOOKS_UPDATE
 
 ## `wd_discord.gateway.sharding` — `wd-discord/src/wd_discord/gateway/sharding.py`
 Gateway sharding (https://docs.discord.com/developers/events/gateway#sharding).
