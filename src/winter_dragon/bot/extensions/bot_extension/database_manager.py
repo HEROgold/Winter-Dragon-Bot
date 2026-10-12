@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 from typing import override
 
 import discord
@@ -280,8 +280,8 @@ class OnPresenceUpdate(AuditEvent, action=AuditLogAction.member_update):
         member = after or before
         helper.add_db_user(member)
         Presence.remove_old_presences(member.id)
-        date_time = datetime.datetime.now(tz=datetime.UTC)
-        ten_sec_ago = date_time - datetime.timedelta(seconds=10)
+        date_time = dt.datetime.now(tz=dt.UTC)
+        ten_sec_ago = date_time - dt.timedelta(seconds=10)
         helper.logger.debug(f"presence update for {member}, at {date_time}")
         # Every guild a member is in calls this event.
         # Filter out updates from <10 seconds ago

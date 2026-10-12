@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import time
 from typing import Unpack
 
@@ -84,7 +84,7 @@ class BotMetrics(GroupCog, auto_load=True):
             discord.Embed(
                 title=":ping_pong: Pong!",
                 color=color,
-                timestamp=datetime.datetime.now(datetime.UTC),
+                timestamp=dt.datetime.now(dt.UTC),
             )
             .add_field(
                 name="Websocket",
@@ -126,7 +126,7 @@ class BotMetrics(GroupCog, auto_load=True):
         embed = discord.Embed(
             title="Performance",
             color=0,
-            timestamp=datetime.datetime.now(datetime.UTC),
+            timestamp=dt.datetime.now(dt.UTC),
         )
 
         worst_color = 0

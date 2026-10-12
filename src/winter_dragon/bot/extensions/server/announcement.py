@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 import discord
 from discord import app_commands
@@ -27,7 +27,7 @@ class Announce(Cog, auto_load=True):
         avatar = member.avatar.url if member.avatar else member.default_avatar.url
         emb = discord.Embed(title="Announcement!", description=f"{message}")
         emb.set_author(name=(member.display_name), icon_url=avatar)
-        emb.timestamp = datetime.datetime.now()  # noqa: DTZ005
+        emb.timestamp = dt.datetime.now()  # noqa: DTZ005
         await interaction.response.send_message(embed=emb)
         if self.mention_all and isinstance(interaction.channel, discord.abc.Messageable):
             mass_ping = await interaction.channel.send("<@everyone>")

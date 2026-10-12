@@ -12,7 +12,7 @@ from herogold.log import LoggerMixin
 
 
 if TYPE_CHECKING:
-    import datetime
+    import datetime as dt
 
 
 type CoroutineFunction = Callable[..., Coroutine[Any, Any, Any]]
@@ -28,7 +28,7 @@ class Loop[FT: CoroutineFunction](tasks.Loop, LoggerMixin):
         seconds: float,
         hours: float,
         minutes: float,
-        time: datetime.time | Sequence[datetime.time],
+        time: dt.time | Sequence[dt.time],
         count: int | None,
         reconnect: bool,
         name: str | None,
@@ -59,7 +59,7 @@ def loop[FT: CoroutineFunction](  # noqa: PLR0913
     seconds: float = 0,
     minutes: float = 0,
     hours: float = 0,
-    time: datetime.time | Sequence[datetime.time] = MISSING,
+    time: dt.time | Sequence[dt.time] = MISSING,
     count: int | None = None,
     reconnect: bool = True,
     name: str | None = None,
