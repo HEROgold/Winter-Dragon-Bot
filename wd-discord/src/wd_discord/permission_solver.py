@@ -3,6 +3,9 @@
 Follows https://docs.discord.com/developers/topics/permissions#permission-overwrites: the guild's owner may do
 everything; otherwise the ``@everyone`` role and the member's roles add up, ADMINISTRATOR grants everything, and a
 channel's overwrites apply in order: ``@everyone``, then the member's roles together, then the member.
+
+Which roles a member may give follows https://docs.discord.com/developers/topics/permissions#permission-hierarchy:
+only roles ranked below their own highest, ranked by position with the lower ID first on a tie.
 """
 
 from __future__ import annotations
@@ -15,10 +18,10 @@ lazy from wd_discord.resources.channel import OverwriteType
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Generator, Iterable
 
     from wd_discord.resources.channel import Channel, PermissionOverwrite
-    from wd_discord.resources.guild import Guild, GuildMember
+    from wd_discord.resources.guild import Guild, GuildMember, Role
     from wd_discord.snowflake import Snowflake
 
 
@@ -55,6 +58,33 @@ class PermissionSolver:
                 permissions |= role.permissions
         return Permissions.all() if Permissions.ADMINISTRATOR in permissions else permissions
 
+    def can_give_role(self, role: Role) -> bool:
+        """Whether the member may give ``role`` to someone, or take it away.
+
+        The owner may, for any role; anyone else needs MANAGE_ROLES (ADMINISTRATOR includes it) and a role ranked
+        above ``role``. Nobody gives ``@everyone`` or a managed role, which an integration hands out.
+        """
+        if role.id == self.guild.id or role.managed:
+            return False
+        if self.guild.owner_id == self.member_id:
+            return True
+        if Permissions.MANAGE_ROLES not in self.base():
+            return False
+        own = [_rank(candidate) for candidate in self.guild.roles if self._has_role(candidate.id)]
+        return bool(own) and max(own) > _rank(role)
+
+    def ungiveable_roles(self) -> Generator[Role]:
+        """Yield the guild's roles the member can't give though someone could, highest first.
+
+        Leaves out ``@everyone``, managed roles (nobody gives those) and the member's own roles.
+        """
+        candidates = [
+            role
+            for role in self.guild.roles
+            if role.id != self.guild.id and not role.managed and not self._has_role(role.id) and not self.can_give_role(role)
+        ]
+        yield from sorted(candidates, key=_rank, reverse=True)
+
     def in_channel(self, channel: Channel) -> Permissions:
         """Return the member's permissions in ``channel``: :meth:`base` with its overwrites applied."""
         permissions = self.base()
@@ -82,3 +112,8 @@ def _apply(permissions: Permissions, overwrites: Iterable[PermissionOverwrite]) 
         deny |= overwrite.deny
         allow |= overwrite.allow
     return (permissions & ~deny) | allow
+
+
+def _rank(role: Role) -> tuple[int, int]:
+    """Return where ``role`` sits in the hierarchy: a higher position ranks higher, and so does a lower ID on a tie."""
+    return role.position, -int(role.id)

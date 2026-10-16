@@ -138,3 +138,24 @@ async def test_fetching_roles_replaces_the_cached_roles() -> None:
     guild = client.guilds.partial(7)
     await guild.fetch_roles()
     assert [role.name for role in guild.roles or []] == ["new"]
+
+
+def test_a_member_s_roles_are_full_when_the_cache_knows_them() -> None:
+    from wd_discord import PartialRole
+
+    client = connected(members=[{**MEMBER, "roles": ["8", "404"]}])
+    member = client.guilds.partial(7).get_member(3)
+    assert member is not None
+    known, unknown = member.roles
+    assert isinstance(known, Role)
+    assert known.name == "mods"
+    assert unknown == PartialRole(client, Snowflake(404), Snowflake(7))
+
+
+def test_the_cached_guild_carries_its_current_roles() -> None:
+    client = connected()
+    client.receive(parse_dispatch(EventName.GUILD_ROLE_DELETE, {"guild_id": "7", "role_id": "8"}))
+    client.receive(parse_dispatch(EventName.GUILD_ROLE_CREATE, {"guild_id": "7", "role": {**ROLE, "id": "9"}}))
+    cached = client.guilds.partial(7).cached
+    assert cached is not None
+    assert [role.id for role in cached.model.roles] == [Snowflake(9)]

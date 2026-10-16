@@ -125,5 +125,8 @@ class UserStore(EntityStore[PartialUser]):
     """Users the client can see."""
 
     async def me(self) -> CurrentUser | NetworkError:
-        """GET /users/@me - the user behind the client's token."""
-        return self._entity(await self.client.get(t"/users/@me"), UserModel, CurrentUser)
+        """GET /users/@me - the user behind the client's token; the client's cache keeps it."""
+        me = self._entity(await self.client.get(t"/users/@me"), UserModel, CurrentUser)
+        if not is_network_error(me):
+            self.client.cache.user = me.model
+        return me

@@ -191,8 +191,9 @@ https://docs.discord.com/developers/resources/entitlement#entitlement-object.
 Pydantic v2 models for the Discord v10 Guild object and its related structures.
 
 - exports: DefaultMessageNotificationLevel, Emoji, ExplicitContentFilterLevel, Guild, GuildFeature, GuildMember,
-  GuildMemberFlags, IncidentsData, MFALevel, NSFWLevel, PartialGuild, PremiumTier, Role, RoleColors, RoleTags, Sticker,
-  StickerFormatType, StickerType, SystemChannelFlags, VerificationLevel, WelcomeScreen, WelcomeScreenChannel
+  GuildMemberFlags, IncidentsData, MFALevel, MemberParams, NSFWLevel, PartialGuild, PremiumTier, Role, RoleColors,
+  RoleTags, Sticker, StickerFormatType, StickerType, SystemChannelFlags, VerificationLevel, WelcomeScreen,
+  WelcomeScreenChannel
 
 ## `wd_discord.resources.guild.emoji` — `wd-discord/src/wd_discord/resources/guild/emoji.py`
 Discord emoji model.
@@ -298,6 +299,17 @@ https://docs.discord.com/developers/resources/guild#guild-member-object.
   list[Snowflake], joined_at: datetime | None, premium_since: datetime | None, deaf: bool, mute: bool, flags:
   GuildMemberFlags, pending: bool | None, permissions: PermissionsField | None, communication_disabled_until: datetime |
   None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None
+
+## `wd_discord.resources.guild.params` — `wd-discord/src/wd_discord/resources/guild/params.py`
+Request bodies for modifying guild members (https://docs.discord.com/developers/resources/guild#modify-guild-member).
+
+### `class MemberParams(BaseModel)`
+The member attributes to change; the rest stay as they are.
+
+- fields: nick: str | None, roles: list[Snowflake] | None, mute: bool | None, deaf: bool | None, channel_id: Snowflake |
+  None, communication_disabled_until: datetime | None, flags: GuildMemberFlags | None
+- attributes: model_config
+- `to_json() -> MemberPayload` — Return the request body: the fields passed, ``None`` as ``null``.
 
 ## `wd_discord.resources.guild.partial_guild` — `wd-discord/src/wd_discord/resources/guild/partial_guild.py`
 The partial guild Discord sends inside an interaction (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object).

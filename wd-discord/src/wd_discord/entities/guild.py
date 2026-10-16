@@ -14,6 +14,7 @@ lazy from wd_discord.entities.invite import Invite
 lazy from wd_discord.entities.member import Member, PartialMember
 lazy from wd_discord.entities.role import PartialRole, Role
 lazy from wd_discord.entities.voice import VoiceState
+lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Emoji as EmojiModel
 lazy from wd_discord.resources.guild import Guild as GuildModel
@@ -71,7 +72,7 @@ class BaseGuild(ClientBound):
     def cached(self) -> Guild | None:
         """The guild as the client last saw it, from the gateway or a fetch."""
         state = self._state
-        return None if state is None else Guild(self.client, state.guild)
+        return None if state is None else Guild(self.client, state.current_guild())
 
     @property
     def channels(self) -> Generator[Channel] | None:
@@ -151,6 +152,30 @@ class BaseGuild(ClientBound):
         state = self._state
         voice = None if state is None or state.voice_states is None else state.voice_states.get(member.id)
         return None if voice is None else VoiceState(self.client, voice)
+
+    async def own_permissions(self) -> PermissionSolver | NetworkError:
+        """Return what the client's own member may do in the guild, roles to give included.
+
+        Reads the guild, the client's own user and its member here from the cache, fetching each one it doesn't know
+        once; every fetch fills the cache, so the next call needs none.
+        """
+        guild = self.cached
+        if guild is None:
+            guild = await self.fetch(cache=True)
+            if is_network_error(guild):
+                return guild
+        me = self.client.cache.user
+        if me is None:
+            current = await self.client.users.me()
+            if is_network_error(current):
+                return current
+            me = current.model
+        own = self.get_member(me.id)
+        if own is None:
+            own = await self.member(me.id).fetch(cache=True)
+            if is_network_error(own):
+                return own
+        return PermissionSolver(guild.model, own.model)
 
     # --- From Discord: a request each, whose answer also updates the cache ------------------------
 

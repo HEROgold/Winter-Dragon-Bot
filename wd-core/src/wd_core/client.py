@@ -53,6 +53,18 @@ class OverwritePayload(TypedDict):
     deny: str
 
 
+class MemberPayload(TypedDict, total=False):
+    """The attributes of a guild member to change; ``None`` clears what Discord lets clear."""
+
+    nick: str | None
+    roles: list[str] | None
+    mute: bool | None
+    deaf: bool | None
+    channel_id: str | None
+    communication_disabled_until: str | None
+    flags: int | None
+
+
 class ChannelPayload(TypedDict, total=False):
     """The settings of a guild channel to create or change."""
 
@@ -74,7 +86,7 @@ class RequestKwargs(TypedDict, total=False, closed=True):
     content: RequestContent
     data: RequestData
     files: RequestFiles
-    json: JsonPayload | MessageData | ChannelPayload | OverwritePayload | list[JsonPayload]
+    json: JsonPayload | MessageData | ChannelPayload | MemberPayload | OverwritePayload | list[JsonPayload]
     params: QueryParamTypes
     headers: HeaderTypes
     cookies: CookieTypes

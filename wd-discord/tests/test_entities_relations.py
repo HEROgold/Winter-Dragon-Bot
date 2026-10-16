@@ -160,7 +160,7 @@ async def test_member_moderation_routes() -> None:
         ("DELETE", "/guilds/1/bans/9"),
         ("DELETE", "/guilds/1/members/9"),
     ]
-    assert client.sent[2].json == {"communication_disabled_until": "2026-10-11T00:00:00+00:00"}
+    assert client.sent[2].json == {"communication_disabled_until": "2026-10-11T00:00:00Z"}
     assert client.sent[3].json == {"nick": "Boss"}
     assert client.sent[4].json == {"delete_message_seconds": 60}
 

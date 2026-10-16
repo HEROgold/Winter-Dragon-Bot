@@ -51,6 +51,15 @@ class GuildState:
     presences: dict[Snowflake, Presence] | None = None
     """The members' presences, by user ID."""
 
+    def current_guild(self) -> Guild:
+        """Return the guild's data with its roles, emojis and stickers as they are now, not as it was sent."""
+        current = {
+            "roles": list(self.roles.values()),
+            "emojis": list(self.emojis.values()),
+            "stickers": list(self.stickers.values()),
+        }
+        return self.guild.model_copy(update=current)
+
     def set_guild(self, guild: Guild) -> None:
         """Take ``guild`` as the guild's data, with the roles, emojis and stickers it carries."""
         self.guild = guild

@@ -407,6 +407,7 @@ What can be done to a guild knowing only its ID: read it, its channels, members,
 - `get_role(role_id: SnowflakeLike) -> Role | None` — Return the role ``role_id`` if the client knows it.
 - `get_emoji(emoji_id: SnowflakeLike) -> Emoji | None` — Return the custom emoji ``emoji_id`` if the client knows it.
 - `get_voice_state(member: BaseMember | BaseUser) -> VoiceState | None` — Return ``member``'s voice state here if the client knows they're in a voice channel.
+- `async own_permissions() -> PermissionSolver | NetworkError` — Return what the client's own member may do in the guild, roles to give included.
 - `async fetch(*, with_counts: bool=False, cache: bool=False) -> Guild | NetworkError` — GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
 - `channel(channel_id: SnowflakeLike) -> PartialChannel` — Return a handle on the channel ``channel_id``, without fetching it.
 - `async fetch_channels(*, cache: bool=False) -> Generator[Channel] | NetworkError` — GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
@@ -595,7 +596,8 @@ What can be done to a guild member knowing only their guild and user ID: read, e
 
 - `@property mention -> str` — A clickable mention of the member, as ``<@id>``.
 - `@property guild -> PartialGuild` — The guild the member is in.
-- `async fetch(*, cache: bool=False) -> Member | NetworkError` — GET /guilds/{guild_id}/members/{user_id}.
+- `async fetch(*, cache: bool=False) -> Member | NetworkError` — GET /guilds/{guild_id}/members/{user_id}; the answer also updates the client's cache.
+- `async edit(params: MemberParams, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - change what ``params`` names; each field needs its permission.
 - `async move_to(channel: BaseChannel | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - move the member to the voice ``channel``.
 - `async set_nick(nick: str | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - set the member's nickname, or clear it with ``None``.
 - `async timeout(until: datetime | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - time the member out until ``until`` (at most 28 days ahead).
@@ -615,7 +617,7 @@ A guild member, as Discord returned them; always with their user.
 - `@property nick -> str | None` — The member's guild nickname, if set.
 - `@property display_name -> str` — The member's guild nickname, else their global display name, else their username.
 - `@property avatar -> ImageHash | None` — The member's guild-specific avatar, if set.
-- `@property roles -> Generator[PartialRole]` — The member's roles, ``@everyone`` excluded.
+- `@property roles -> Generator[Role | PartialRole]` — The member's roles, ``@everyone`` excluded: in full when the client's cache knows them.
 - `@property joined_at -> datetime | None` — When the member joined the guild; ``None`` for a guest in a voice channel.
 - `@property premium_since -> datetime | None` — When the member started boosting the guild; ``None`` when not boosting.
 - `@property deaf -> bool` — Whether the member is deafened in voice channels.
@@ -774,7 +776,7 @@ A user known only by ID.
 ### `@dataclass class UserStore(EntityStore[PartialUser])`
 Users the client can see.
 
-- `async me() -> CurrentUser | NetworkError` — GET /users/@me - the user behind the client's token.
+- `async me() -> CurrentUser | NetworkError` — GET /users/@me - the user behind the client's token; the client's cache keeps it.
 
 ## `wd_discord.entities.voice` — `wd-discord/src/wd_discord/entities/voice.py`
 Voice states (https://docs.discord.com/developers/resources/voice#voice-state-object).

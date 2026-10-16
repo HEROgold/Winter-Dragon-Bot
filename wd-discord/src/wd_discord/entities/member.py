@@ -11,7 +11,7 @@ lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_conte
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.role import PartialRole
 lazy from wd_discord.entities.user import PartialUser, User
-lazy from wd_discord.resources.guild import GuildMember
+lazy from wd_discord.resources.guild import GuildMember, MemberParams
 
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from wd_discord.audit import AuditLogReason
     from wd_discord.client import NetworkError, RequestResult
     from wd_discord.entities.channel import BaseChannel
-    from wd_discord.entities.role import BaseRole
+    from wd_discord.entities.role import BaseRole, Role
     from wd_discord.image import ImageHash
     from wd_discord.permissions import Permissions
     from wd_discord.resources.guild.member import GuildMemberFlags
@@ -59,12 +59,18 @@ class BaseMember(ClientBound):
         return t"/guilds/{self.guild_id}/members/{self.id}"
 
     async def fetch(self, *, cache: bool = False) -> Member | NetworkError:
-        """GET /guilds/{guild_id}/members/{user_id}."""
-        return self._member(await self.client.get(self._path, cache=cache))
+        """GET /guilds/{guild_id}/members/{user_id}; the answer also updates the client's cache."""
+        member = self._member(await self.client.get(self._path, cache=cache))
+        if not is_network_error(member):
+            self.client.cache.store_members(self.guild_id, [member.model])
+        return member
 
-    async def _edit(self, payload: JsonPayload, reason: AuditLogReason | str | None) -> Member | NetworkError:
-        """PATCH /guilds/{guild_id}/members/{user_id} with ``payload``."""
-        return self._member(await self.client.patch(self._path, json=payload, headers=reason_headers(reason)))
+    async def edit(self, params: MemberParams, *, reason: AuditLogReason | str | None = None) -> Member | NetworkError:
+        """PATCH /guilds/{guild_id}/members/{user_id} - change what ``params`` names; each field needs its permission.
+
+        ``params.roles`` replaces every role the member has: send the ones to keep too.
+        """
+        return self._member(await self.client.patch(self._path, json=params.to_json(), headers=reason_headers(reason)))
 
     async def move_to(
         self,
@@ -77,14 +83,14 @@ class BaseMember(ClientBound):
         ``None`` disconnects them. Fails when the member isn't connected to voice; needs MOVE_MEMBERS, and CONNECT on
         the target channel.
         """
-        return await self._edit({"channel_id": None if channel is None else str(channel.id)}, reason)
+        return await self.edit(MemberParams(channel_id=None if channel is None else channel.id), reason=reason)
 
     async def set_nick(self, nick: str | None, *, reason: AuditLogReason | str | None = None) -> Member | NetworkError:
         """PATCH /guilds/{guild_id}/members/{user_id} - set the member's nickname, or clear it with ``None``.
 
         Needs MANAGE_NICKNAMES; the guild owner's nickname can't be changed by anyone else.
         """
-        return await self._edit({"nick": nick}, reason)
+        return await self.edit(MemberParams(nick=nick), reason=reason)
 
     async def timeout(
         self,
@@ -96,7 +102,7 @@ class BaseMember(ClientBound):
 
         ``None`` lifts the timeout. Needs MODERATE_MEMBERS.
         """
-        return await self._edit({"communication_disabled_until": None if until is None else until.isoformat()}, reason)
+        return await self.edit(MemberParams(communication_disabled_until=until), reason=reason)
 
     async def add_role(self, role: BaseRole, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
         """PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role."""
@@ -176,10 +182,11 @@ class Member(Entity[GuildMember], BaseMember):
         return self.model.avatar
 
     @property
-    def roles(self) -> Generator[PartialRole]:
-        """The member's roles, ``@everyone`` excluded."""
+    def roles(self) -> Generator[Role | PartialRole]:
+        """The member's roles, ``@everyone`` excluded: in full when the client's cache knows them."""
+        guild = self.guild
         for role_id in self.model.roles:
-            yield PartialRole(self.client, role_id, self.guild_id)
+            yield guild.get_role(role_id) or PartialRole(self.client, role_id, self.guild_id)
 
     @property
     def joined_at(self) -> datetime | None:

@@ -145,3 +145,29 @@ async def test_api_errors_keep_the_http_status_and_name_unknown_resources() -> N
     assert isinstance(error, ApiResponseError)
     assert (error.code, error.status, error.unknown_resource) == (JsonErrorCode.UNKNOWN_CHANNEL, 404, True)
     assert not ApiResponseError(code=JsonErrorCode.MISSING_ACCESS, message="Missing Access").unknown_resource
+
+
+def test_member_params_send_what_was_passed_none_included() -> None:
+    from wd_discord.resources.guild import MemberParams
+
+    assert MemberParams(roles=[Snowflake(8), Snowflake(9)]).to_json() == {"roles": ["8", "9"]}
+    assert MemberParams(nick=None, communication_disabled_until=None).to_json() == {
+        "nick": None,
+        "communication_disabled_until": None,
+    }
+    assert MemberParams().to_json() == {}
+
+
+async def test_member_edit_patches_the_member_with_a_reason() -> None:
+    from wd_discord.resources.guild import MemberParams
+
+    client = RecordingClient()
+    client.reply("PATCH", "/guilds/1/members/3", MEMBER_JSON)
+    member = client.guilds.partial(1).member(3)
+
+    edited = await member.edit(MemberParams(roles=[Snowflake(8)], mute=True), reason="Rejoined")
+
+    assert isinstance(edited, Member)
+    [sent] = client.sent
+    assert sent.json == {"roles": ["8"], "mute": True}
+    assert sent.headers == AuditLogReason("Rejoined").headers()

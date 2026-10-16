@@ -72,6 +72,7 @@ What the client knows of one guild.
   | None, roles: dict[Snowflake, Role], emojis: dict[Snowflake, Emoji], stickers: dict[Snowflake, Sticker], members:
   dict[Snowflake, GuildMember], members_complete: bool, voice_states: dict[Snowflake, VoiceState] | None, presences:
   dict[Snowflake, Presence] | None
+- `current_guild() -> Guild` — Return the guild's data with its roles, emojis and stickers as they are now, not as it was sent.
 - `set_guild(guild: Guild) -> None` — Take ``guild`` as the guild's data, with the roles, emojis and stickers it carries.
 
 ### `class StateCache`
@@ -317,6 +318,8 @@ The permissions ``member`` holds in ``guild``, and in each of its channels.
 - fields: guild: Guild, member: GuildMember
 - `@property member_id -> Snowflake` — The member's user ID.
 - `base() -> Permissions` — Return the member's guild-wide permissions, before any channel overwrites.
+- `can_give_role(role: Role) -> bool` — Whether the member may give ``role`` to someone, or take it away.
+- `ungiveable_roles() -> Generator[Role]` — Yield the guild's roles the member can't give though someone could, highest first.
 - `in_channel(channel: Channel) -> Permissions` — Return the member's permissions in ``channel``: :meth:`base` with its overwrites applied.
 
 ## `wd_discord.permissions` — `wd-discord/src/wd_discord/permissions.py`

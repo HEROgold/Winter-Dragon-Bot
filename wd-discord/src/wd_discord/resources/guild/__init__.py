@@ -16,6 +16,7 @@ lazy from wd_discord.resources.guild.features import (
 lazy from wd_discord.resources.guild.guild import Guild
 lazy from wd_discord.resources.guild.incidents_data import IncidentsData
 lazy from wd_discord.resources.guild.member import GuildMember, GuildMemberFlags
+lazy from wd_discord.resources.guild.params import MemberParams
 lazy from wd_discord.resources.guild.partial_guild import PartialGuild
 lazy from wd_discord.resources.guild.role import Role, RoleColors, RoleTags
 lazy from wd_discord.resources.guild.sticker import Sticker, StickerFormatType, StickerType
@@ -32,6 +33,7 @@ __all__ = [
     "GuildMemberFlags",
     "IncidentsData",
     "MFALevel",
+    "MemberParams",
     "NSFWLevel",
     "PartialGuild",
     "PremiumTier",
