@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import re
 from random import Random
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
-from wd_bot.registry import CommandRegistry
+from wd_bot.testing import detached_cog
 from wd_discord.permissions import Permissions
 from wd_errors import Refused
 
@@ -252,9 +251,7 @@ def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -
 
 
 def _cog(engine: Engine, client: RecordingClient) -> Tournaments:
-    cog = Tournaments.__new__(Tournaments)
-    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
+    cog = detached_cog(Tournaments, engine=engine, client=client)
     cog.rng = Random(0)
     return cog
 

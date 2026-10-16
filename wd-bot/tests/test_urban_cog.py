@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import httpxyz
 import pytest
+from wd_bot.testing import detached_cog
 from wd_config.urban import UrbanSettings
 from wd_discord.embed import MAX_EMBED_CHARACTERS
 from wd_discord.gateway.events import InteractionDataOption
@@ -43,8 +43,7 @@ def _http(handler: httpxyz.Response | Exception) -> httpxyz.AsyncClient:
 
 
 def _cog(http: httpxyz.AsyncClient) -> Urban:
-    cog = Urban.__new__(Urban)
-    cog.bot = SimpleNamespace()  # pyright: ignore[reportAttributeAccessIssue]
+    cog = detached_cog(Urban)
     cog.http = http
     return cog
 

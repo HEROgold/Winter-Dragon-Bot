@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
+from wd_bot.testing import detached_cog
 from wd_config.bot import Settings
 from wd_discord.permissions import ChannelType
 from wd_discord.testing import GUILD_JSON, RecordingClient
@@ -38,8 +38,7 @@ async def test_uptime_replies_with_the_launch_time(
     make_interaction: InteractionFactory, discord_client: RecordingClient
 ) -> None:
     launch = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
-    cog = Uptime.__new__(Uptime)
-    cog.bot = SimpleNamespace(launch_time=launch)  # pyright: ignore[reportAttributeAccessIssue]
+    cog = detached_cog(Uptime, launch_time=launch)
 
     await Uptime.bot_uptime.invoke(cog, make_interaction("uptime"), [])
 
@@ -59,8 +58,7 @@ def _invite_cog(
     client.reply("GET", f"/guilds/{SUPPORT_GUILD_ID}/channels", channels or [])
     for channel_id in ("10", "11"):
         client.reply("POST", f"/channels/{channel_id}/invites", {"code": f"code{channel_id}"})
-    cog = Invite.__new__(Invite)
-    cog.bot = SimpleNamespace(client=client)  # pyright: ignore[reportAttributeAccessIssue]
+    cog = detached_cog(Invite, client=client)
     return cog, client
 
 

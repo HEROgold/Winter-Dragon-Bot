@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import pytest
 from sqlmodel import Session, select
-from wd_bot.registry import GLOBAL, CommandRegistry
+from wd_bot.registry import GLOBAL
+from wd_bot.testing import detached_cog
 from wd_config.steam import SteamSettings
 from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.interactions import ApplicationCommand
@@ -109,10 +109,7 @@ def _cog(engine: Engine) -> tuple[SteamSales, RecordingClient]:
     client = RecordingClient()
     client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
     client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
-    cog = SteamSales.__new__(SteamSales)
-    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
-    return cog, client
+    return detached_cog(SteamSales, engine=engine, client=client), client
 
 
 def _replies(client: RecordingClient) -> list[dict[str, object]]:

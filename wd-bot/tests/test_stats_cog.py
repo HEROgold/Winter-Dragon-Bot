@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
 from wd_bot.checks import is_owner, member_has
-from wd_bot.registry import CommandRegistry
+from wd_bot.testing import detached_cog
 from wd_discord.permissions import Permissions
 from wd_discord.testing import GUILD_JSON, RecordingClient
 
@@ -63,10 +62,7 @@ def _guild_api(client: RecordingClient) -> None:
 
 
 def _cog(engine: Engine, client: RecordingClient) -> Stats:
-    cog = Stats.__new__(Stats)
-    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
-    return cog
+    return detached_cog(Stats, engine=engine, client=client)
 
 
 def _reply(client: RecordingClient) -> str:

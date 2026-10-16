@@ -264,3 +264,8 @@ The bot's commands per scope, next to what Discord last reported for that scope.
 Derive a stable signature string for a command's callable, used to detect definition drift.
 
 - `command_signature(func: Callable[..., object]) -> str` — Return a stable string form of ``func``'s signature, used to detect when it has changed.
+
+## `wd_bot.testing` — `wd-bot/src/wd_bot/testing.py`
+Test helpers for cogs: build one to call its handlers on, without a running bot.
+
+- `detached_cog[C: Cog](cls: type[C], *, engine: Engine | None=None, **bot: object) -> C` — Return a ``cls`` built without :meth:`Cog.__init <wd_bot.cogs.Cog.__init__>`: no auto-load task, no hot reload.

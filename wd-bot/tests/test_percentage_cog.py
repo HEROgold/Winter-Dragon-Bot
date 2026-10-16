@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 lazy import random
-lazy from types import SimpleNamespace
 lazy from typing import TYPE_CHECKING
 
+from wd_bot.testing import detached_cog
 lazy from wd_discord import User as BoundUser
 lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 lazy from wd_discord.resources.user import User
@@ -80,9 +80,7 @@ def _interaction(make_interaction: InteractionFactory, asker: User | None) -> Co
 
 def _cog() -> Love:
     """Build a Love cog without running Cog.__init__; the handler only talks to its interaction."""
-    cog = Love.__new__(Love)
-    cog.bot = SimpleNamespace()  # pyright: ignore[reportAttributeAccessIssue]
-    return cog
+    return detached_cog(Love)
 
 
 async def test_handler_replies_with_love_embed(

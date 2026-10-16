@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
-from wd_bot.registry import CommandRegistry
+from wd_bot.testing import detached_cog
 from wd_discord import Guild, Permissions, VoiceState, bind
 from wd_discord.gateway import EventName, parse_dispatch
 from wd_discord.gateway.events import InteractionDataOption, ResolvedData
@@ -75,9 +74,7 @@ def _state(client: RecordingClient, channel_id: int | None, user_id: int = MEMBE
 
 
 def _cog(engine: Engine, client: RecordingClient) -> AutoChannels:
-    cog = AutoChannels.__new__(AutoChannels)
-    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
+    cog = detached_cog(AutoChannels, engine=engine, client=client)
     cog.voice = VoiceOccupancy()
     cog._lock = asyncio.Lock()  # noqa: SLF001 - what __init__ sets up
     return cog

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-lazy from types import SimpleNamespace
 lazy from typing import TYPE_CHECKING
 lazy from unittest.mock import AsyncMock
 
 lazy from wd_bot.cogs import Cog
 lazy from wd_bot.commands import CommandGroup
 lazy from wd_bot.registry import GLOBAL, CommandRegistry
+lazy from wd_bot.testing import detached_cog
 lazy from wd_discord.interactions import ApplicationCommand, InteractionContextType
 lazy from wd_discord.permissions import Permissions
 
@@ -61,8 +61,7 @@ async def test_list_commands_replies_with_status_embed(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    cog = BotCommands.__new__(BotCommands)
-    cog.bot = SimpleNamespace(registry=_registry(), client=discord_client)  # pyright: ignore[reportAttributeAccessIssue]
+    cog = detached_cog(BotCommands, registry=_registry(), client=discord_client)
 
     await BotCommands.list_commands.invoke(cog, make_interaction("bot-commands", guild_id=1))
 
@@ -77,8 +76,7 @@ async def test_resync_responds_then_rereads_discord_before_syncing(
     responses_before_sync: list[int] = []
     sync = AsyncMock(side_effect=lambda *_a, **_k: responses_before_sync.append(len(discord_client.interaction_responses())))
     registry = _registry()
-    cog = BotCommands.__new__(BotCommands)
-    cog.bot = SimpleNamespace(registry=registry, client=discord_client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
+    cog = detached_cog(BotCommands, registry=registry, client=discord_client, sync_commands=sync)
 
     await BotCommands.resync.invoke(cog, make_interaction("bot-commands", guild_id=1))
 

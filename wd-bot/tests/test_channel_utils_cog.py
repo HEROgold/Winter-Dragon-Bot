@@ -7,6 +7,7 @@ from urllib.parse import unquote
 
 import pytest
 from wd_bot.commands import CommandGroup
+from wd_bot.testing import detached_cog
 from wd_discord import PermissionOverwrite as BoundOverwrite
 from wd_discord import User as BoundUser
 from wd_discord.audit import REASON_HEADER
@@ -66,7 +67,7 @@ BOT_MEMBER: Mapping[str, object] = {
 
 
 def _cog() -> ChannelUtils:
-    return ChannelUtils.__new__(ChannelUtils)
+    return detached_cog(ChannelUtils)
 
 
 def _reply(discord_client: RecordingClient) -> str:

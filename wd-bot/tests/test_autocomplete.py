@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
+from wd_bot.testing import detached_cog
 from wd_discord import AutocompleteInteraction
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
@@ -61,9 +61,7 @@ def _autocomplete(client: RecordingClient, name: str, options: list[InteractionD
 
 
 def _cog[C: Cog](cls: type[C]) -> C:
-    cog = cls.__new__(cls)
-    cog.bot = SimpleNamespace()  # pyright: ignore[reportAttributeAccessIssue]
-    return cog
+    return detached_cog(cls)
 
 
 def test_float_parameter_is_a_number_option() -> None:

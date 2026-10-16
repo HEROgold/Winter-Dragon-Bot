@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlmodel import Session
-from wd_bot.registry import CommandRegistry
+from wd_bot.testing import detached_cog
 from wd_discord import Member, MemberRemove, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
 from wd_discord.testing import GUILD_JSON, RecordingClient
@@ -89,10 +88,7 @@ def _given(client: RecordingClient) -> list[str] | None:
 
 
 def _cog(engine: Engine, client: RecordingClient) -> AutoReassign:
-    cog = AutoReassign.__new__(AutoReassign)
-    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
-    return cog
+    return detached_cog(AutoReassign, engine=engine, client=client)
 
 
 @pytest.fixture

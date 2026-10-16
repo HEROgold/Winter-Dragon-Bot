@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from sqlmodel import Session, select
-from wd_bot.registry import CommandRegistry
+from wd_bot.testing import detached_cog
 from wd_discord.gateway.events import InteractionDataOption
 
 from winter_dragon.cogs.fuel import CarFuels, Fuel, render_efficiency_graph
@@ -27,10 +26,7 @@ FOLLOWUP = "/webhooks/2/tok"
 
 
 def _cog(engine: Engine) -> Fuel:
-    cog = Fuel.__new__(Fuel)
-    cog.bot = SimpleNamespace(registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
-    return cog
+    return detached_cog(Fuel, engine=engine)
 
 
 def _numbers(**values: float) -> list[InteractionDataOption]:

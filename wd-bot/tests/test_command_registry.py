@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from wd_bot.auto_sync import CommandSyncer
 from wd_bot.cogs import Cog, GroupCog
 from wd_bot.registry import GLOBAL, CommandPath, CommandRegistry, Scope, definition_matches
+from wd_bot.testing import detached_cog
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.interactions import ApplicationCommand, ApplicationCommandParams, InteractionContextType
 from wd_discord.snowflake import Snowflake
@@ -48,9 +48,7 @@ class _GuildOnly(Cog, auto_load=False):
 
 def _cog[C: Cog](cls: type[C], registry: CommandRegistry) -> C:
     """Build ``cls`` without Cog.__init__, on a bot that only has ``registry``."""
-    cog = cls.__new__(cls)
-    cog.bot = SimpleNamespace(registry=registry)  # pyright: ignore[reportAttributeAccessIssue]
-    return cog
+    return detached_cog(cls, registry=registry)
 
 
 def _reported(params: ApplicationCommandParams, command_id: int = 42, **discord_fills: object) -> dict[str, object]:

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
-from wd_bot.registry import CommandRegistry
+from wd_bot.testing import detached_cog
 from wd_discord import AutocompleteInteraction
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
@@ -50,10 +49,7 @@ def _cog(engine: Engine) -> tuple[Reminders, RecordingClient]:
     client = RecordingClient()
     client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
     client.reply("POST", SEND_DM, MESSAGE_JSON)
-    cog = Reminders.__new__(Reminders)
-    cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
-    cog.session = Session(engine)
-    return cog, client
+    return detached_cog(Reminders, engine=engine, client=client), client
 
 
 def _options(**values: str | int) -> list[InteractionDataOption]:
