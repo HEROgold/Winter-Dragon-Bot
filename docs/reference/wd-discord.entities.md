@@ -394,6 +394,19 @@ Guilds (https://docs.discord.com/developers/resources/guild).
 ### `class BaseGuild(ClientBound)`
 What can be done to a guild knowing only its ID: read it, its channels, members, roles and expressions.
 
+- `@property cached -> Guild | None` — The guild as the client last saw it, from the gateway or a fetch.
+- `@property channels -> Generator[Channel] | None` — The guild's channels, threads excluded.
+- `@property threads -> Generator[Channel] | None` — The guild's active threads the bot can see.
+- `@property members -> Generator[Member] | None` — Every member of the guild; ``None`` unless the client has them all (see :meth:`get_member`).
+- `@property roles -> Generator[Role] | None` — The guild's roles, ``@everyone`` included.
+- `@property emojis -> Generator[Emoji] | None` — The guild's custom emojis.
+- `@property stickers -> Generator[Sticker] | None` — The guild's own stickers.
+- `@property voice_states -> Generator[VoiceState] | None` — Who is in which of the guild's voice channels.
+- `get_channel(channel_id: SnowflakeLike) -> Channel | None` — Return the channel or thread ``channel_id`` of the guild if the client knows it.
+- `get_member(user_id: SnowflakeLike) -> Member | None` — Return the member ``user_id`` if the client has seen them; in a large guild it may not have.
+- `get_role(role_id: SnowflakeLike) -> Role | None` — Return the role ``role_id`` if the client knows it.
+- `get_emoji(emoji_id: SnowflakeLike) -> Emoji | None` — Return the custom emoji ``emoji_id`` if the client knows it.
+- `get_voice_state(member: BaseMember | BaseUser) -> VoiceState | None` — Return ``member``'s voice state here if the client knows they're in a voice channel.
 - `async fetch(*, with_counts: bool=False, cache: bool=False) -> Guild | NetworkError` — GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
 - `channel(channel_id: SnowflakeLike) -> PartialChannel` — Return a handle on the channel ``channel_id``, without fetching it.
 - `async fetch_channels(*, cache: bool=False) -> Generator[Channel] | NetworkError` — GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
@@ -428,13 +441,11 @@ A guild, as Discord returned it.
 - `@property rules_channel -> Channel | PartialChannel | None` — A community guild's rules channel.
 - `@property public_updates_channel -> Channel | PartialChannel | None` — The channel a community guild receives notices from Discord in.
 - `@property safety_alerts_channel -> Channel | PartialChannel | None` — The channel a community guild receives safety alerts from Discord in.
-- `@property roles -> Generator[Role]` — The guild's roles, ``@everyone`` included.
+- `@property roles -> Generator[Role]` — The guild's roles, ``@everyone`` included: as cached, else as this guild's data has them.
 - `@property default_role -> Role | PartialRole` — The ``@everyone`` role, which shares the guild's ID.
-- `get_role(role_id: SnowflakeLike) -> Role | None` — Return the role ``role_id`` from the guild's data, without a request; ``None`` if it isn't one of them.
-- `get_member(user_id: SnowflakeLike) -> Member | None` — Return the member ``user_id`` from the guild's data, without a request; a fetched guild has none.
-- `get_channel(channel_id: SnowflakeLike) -> Channel | None` — Return the channel ``channel_id`` from the guild's data, without a request; a fetched guild has none.
-- `@property emojis -> Generator[Emoji]` — The guild's custom emojis.
-- `@property stickers -> Generator[Sticker]` — The guild's own stickers.
+- `get_role(role_id: SnowflakeLike) -> Role | None` — Return the role ``role_id``, as cached or else from this guild's data.
+- `@property emojis -> Generator[Emoji]` — The guild's custom emojis: as cached, else as this guild's data has them.
+- `@property stickers -> Generator[Sticker]` — The guild's own stickers: as cached, else as this guild's data has them.
 - `@property features -> list[str]` — The guild's enabled features, such as ``COMMUNITY``.
 - `@property verification_level -> VerificationLevel` — What a member must have done before they may talk.
 - `@property mfa_level -> MFALevel` — Whether moderators need two-factor authentication.
@@ -451,15 +462,15 @@ A guild, as Discord returned it.
 ### `class GatewayGuild(Guild)`
 A guild as GUILD_CREATE sent it: with its channels, threads, members and voice states.
 
-- `@property channels -> Generator[Channel]` — The guild's channels, threads excluded.
-- `@property threads -> Generator[Channel]` — The active threads the bot can see.
-- `@property members -> Generator[Member]` — The members Discord sent along; see the class docstring for which.
-- `@property voice_states -> Generator[VoiceState]` — Who is in which of the guild's voice channels.
+- `@property channels -> Generator[Channel]` — The guild's channels, threads excluded: as cached, else as GUILD_CREATE sent them.
+- `@property threads -> Generator[Channel]` — The active threads the bot can see: as cached, else as GUILD_CREATE sent them.
+- `@property members -> Generator[Member]` — Every member when the client has them all, else the ones GUILD_CREATE sent; see the class docstring.
+- `@property voice_states -> Generator[VoiceState]` — Who is in which voice channel: as cached, else as GUILD_CREATE sent it.
 - `@property member_count -> int | None` — How many members the guild has.
 - `@property large -> bool` — Whether the guild is past the gateway's large threshold, so ``members`` is incomplete.
 - `@property joined_at -> str | None` — When the bot joined the guild, as an ISO 8601 timestamp.
-- `get_member(user_id: SnowflakeLike) -> Member | None` — Return the member ``user_id`` if Discord sent them along, without a request.
-- `get_channel(channel_id: SnowflakeLike) -> Channel | None` — Return the channel or thread ``channel_id`` of the guild, without a request.
+- `get_member(user_id: SnowflakeLike) -> Member | None` — Return the member ``user_id`` as cached, or if GUILD_CREATE sent them along.
+- `get_channel(channel_id: SnowflakeLike) -> Channel | None` — Return the channel or thread ``channel_id`` as cached, or if GUILD_CREATE sent it.
 
 ### `class PartialGuild(BaseGuild, Partial[Guild])`
 A guild known only by ID.

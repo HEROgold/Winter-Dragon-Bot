@@ -79,6 +79,12 @@ Every guild, channel and the bot's own user, as the gateway last described them.
 
 - `guild(guild_id: Snowflake) -> GuildState | None` — Return what's known of the guild ``guild_id``, or ``None``.
 - `channel(channel_id: Snowflake) -> Channel | None` — Return the guild channel, thread or DM ``channel_id``, or ``None``.
+- `store_guild(guild: Guild) -> None` — Take a fetched ``guild`` as the latest data of it, with its roles, emojis and stickers.
+- `store_channels(guild_id: Snowflake, channels: Iterable[Channel]) -> None` — Take ``channels`` as every channel of a known guild, threads excluded.
+- `store_roles(guild_id: Snowflake, roles: Iterable[Role]) -> None` — Take ``roles`` as every role of a known guild.
+- `store_emojis(guild_id: Snowflake, emojis: Iterable[Emoji]) -> None` — Take ``emojis`` as every custom emoji of a known guild.
+- `store_stickers(guild_id: Snowflake, stickers: Iterable[Sticker]) -> None` — Take ``stickers`` as every sticker of a known guild.
+- `store_members(guild_id: Snowflake, members: Iterable[GuildMember]) -> None` — Add or replace ``members`` of a known guild; the others stay as they were.
 - `apply(model: DiscordModel) -> DiscordModel | None` — Bring the cache up to date with a parsed dispatch ``model``.
 
 ## `wd_discord.client` — `wd-discord/src/wd_discord/client.py`

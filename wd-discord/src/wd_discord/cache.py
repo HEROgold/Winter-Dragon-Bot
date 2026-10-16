@@ -20,7 +20,7 @@ lazy from wd_discord.gateway import events as wire
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from wd_discord.gateway.presence import Presence
     from wd_discord.models import DiscordModel
@@ -87,6 +87,49 @@ class StateCache:
         if state is None:
             return None
         return (state.channels or {}).get(channel_id) or (state.threads or {}).get(channel_id)
+
+    # --- Remembering REST answers ---------------------------------------------------
+
+    def store_guild(self, guild: Guild) -> None:
+        """Take a fetched ``guild`` as the latest data of it, with its roles, emojis and stickers."""
+        state = self.guilds.get(guild.id)
+        if state is None:
+            self.guilds[guild.id] = state = GuildState(guild=guild)
+        state.set_guild(guild)
+
+    def store_channels(self, guild_id: Snowflake, channels: Iterable[Channel]) -> None:
+        """Take ``channels`` as every channel of a known guild, threads excluded."""
+        state = self.guilds.get(guild_id)
+        if state is None:
+            return
+        for channel_id in state.channels or {}:
+            self._channel_guilds.pop(channel_id, None)
+        state.channels = {channel.id: channel.model_copy(update={"guild_id": guild_id}) for channel in channels}
+        self._channel_guilds.update(dict.fromkeys(state.channels, guild_id))
+
+    def store_roles(self, guild_id: Snowflake, roles: Iterable[Role]) -> None:
+        """Take ``roles`` as every role of a known guild."""
+        state = self.guilds.get(guild_id)
+        if state is not None:
+            state.roles = {role.id: role for role in roles}
+
+    def store_emojis(self, guild_id: Snowflake, emojis: Iterable[Emoji]) -> None:
+        """Take ``emojis`` as every custom emoji of a known guild."""
+        state = self.guilds.get(guild_id)
+        if state is not None:
+            state.emojis = {emoji.id: emoji for emoji in emojis if emoji.id is not None}
+
+    def store_stickers(self, guild_id: Snowflake, stickers: Iterable[Sticker]) -> None:
+        """Take ``stickers`` as every sticker of a known guild."""
+        state = self.guilds.get(guild_id)
+        if state is not None:
+            state.stickers = {sticker.id: sticker for sticker in stickers}
+
+    def store_members(self, guild_id: Snowflake, members: Iterable[GuildMember]) -> None:
+        """Add or replace ``members`` of a known guild; the others stay as they were."""
+        state = self.guilds.get(guild_id)
+        if state is not None:
+            state.members.update((member.user.id, member) for member in members if member.user is not None)
 
     # --- Applying gateway events -----------------------------------------------------
 

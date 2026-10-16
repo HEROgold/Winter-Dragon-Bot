@@ -7,7 +7,7 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from wd_discord.audit import reason_headers
 lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_content, parse
+lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_content, parse, parse_all
 lazy from wd_discord.entities.channel import Channel, PartialChannel
 lazy from wd_discord.entities.emoji import Emoji, Sticker
 lazy from wd_discord.entities.invite import Invite
@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from wd_discord.audit import AuditLogReason
+    from wd_discord.cache import GuildState
     from wd_discord.client import NetworkError, RequestResult
     from wd_discord.entities.member import BaseMember
     from wd_discord.entities.user import BaseUser
@@ -60,10 +61,107 @@ class BaseGuild(ClientBound):
         def id(self) -> Snowflake:
             """The ID this object acts on."""
 
+    # --- From the client's cache: no request, ``None`` when the client doesn't know it -----------
+
+    @property
+    def _state(self) -> GuildState | None:
+        return self.client.cache.guild(self.id)
+
+    @property
+    def cached(self) -> Guild | None:
+        """The guild as the client last saw it, from the gateway or a fetch."""
+        state = self._state
+        return None if state is None else Guild(self.client, state.guild)
+
+    @property
+    def channels(self) -> Generator[Channel] | None:
+        """The guild's channels, threads excluded."""
+        state = self._state
+        if state is None or state.channels is None:
+            return None
+        return (Channel(self.client, channel) for channel in state.channels.values())
+
+    @property
+    def threads(self) -> Generator[Channel] | None:
+        """The guild's active threads the bot can see."""
+        state = self._state
+        if state is None or state.threads is None:
+            return None
+        return (Channel(self.client, thread) for thread in state.threads.values())
+
+    @property
+    def members(self) -> Generator[Member] | None:
+        """Every member of the guild; ``None`` unless the client has them all (see :meth:`get_member`)."""
+        state = self._state
+        if state is None or not state.members_complete:
+            return None
+        return (Member(self.client, member, self.id) for member in state.members.values())
+
+    @property
+    def roles(self) -> Generator[Role] | None:
+        """The guild's roles, ``@everyone`` included."""
+        state = self._state
+        return None if state is None else (Role(self.client, role, self.id) for role in state.roles.values())
+
+    @property
+    def emojis(self) -> Generator[Emoji] | None:
+        """The guild's custom emojis."""
+        state = self._state
+        return None if state is None else (Emoji(self.client, emoji, self.id) for emoji in state.emojis.values())
+
+    @property
+    def stickers(self) -> Generator[Sticker] | None:
+        """The guild's own stickers."""
+        state = self._state
+        return None if state is None else (Sticker(self.client, sticker) for sticker in state.stickers.values())
+
+    @property
+    def voice_states(self) -> Generator[VoiceState] | None:
+        """Who is in which of the guild's voice channels."""
+        state = self._state
+        if state is None or state.voice_states is None:
+            return None
+        return (VoiceState(self.client, voice) for voice in state.voice_states.values())
+
+    def get_channel(self, channel_id: SnowflakeLike) -> Channel | None:
+        """Return the channel or thread ``channel_id`` of the guild if the client knows it."""
+        channel = self.client.cache.channel(Snowflake.coerce(channel_id))
+        return None if channel is None or channel.guild_id != self.id else Channel(self.client, channel)
+
+    def get_member(self, user_id: SnowflakeLike) -> Member | None:
+        """Return the member ``user_id`` if the client has seen them; in a large guild it may not have."""
+        state = self._state
+        member = None if state is None else state.members.get(Snowflake.coerce(user_id))
+        return None if member is None else Member(self.client, member, self.id)
+
+    def get_role(self, role_id: SnowflakeLike) -> Role | None:
+        """Return the role ``role_id`` if the client knows it."""
+        state = self._state
+        role = None if state is None else state.roles.get(Snowflake.coerce(role_id))
+        return None if role is None else Role(self.client, role, self.id)
+
+    def get_emoji(self, emoji_id: SnowflakeLike) -> Emoji | None:
+        """Return the custom emoji ``emoji_id`` if the client knows it."""
+        state = self._state
+        emoji = None if state is None else state.emojis.get(Snowflake.coerce(emoji_id))
+        return None if emoji is None else Emoji(self.client, emoji, self.id)
+
+    def get_voice_state(self, member: BaseMember | BaseUser) -> VoiceState | None:
+        """Return ``member``'s voice state here if the client knows they're in a voice channel."""
+        state = self._state
+        voice = None if state is None or state.voice_states is None else state.voice_states.get(member.id)
+        return None if voice is None else VoiceState(self.client, voice)
+
+    # --- From Discord: a request each, whose answer also updates the cache ------------------------
+
     async def fetch(self, *, with_counts: bool = False, cache: bool = False) -> Guild | NetworkError:
         """GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts."""
         params = {"with_counts": "true"} if with_counts else {}
-        return self._entity(await self.client.get(t"/guilds/{self.id}", params=params, cache=cache), GuildModel, Guild)
+        parsed = parse(await self.client.get(t"/guilds/{self.id}", params=params, cache=cache), GuildModel)
+        if is_network_error(parsed):
+            return parsed
+        self.client.cache.store_guild(parsed)
+        return Guild(self.client, parsed)
 
     def channel(self, channel_id: SnowflakeLike) -> PartialChannel:
         """Return a handle on the channel ``channel_id``, without fetching it."""
@@ -71,7 +169,11 @@ class BaseGuild(ClientBound):
 
     async def fetch_channels(self, *, cache: bool = False) -> Generator[Channel] | NetworkError:
         """GET /guilds/{guild_id}/channels - the guild's channels, threads excluded."""
-        return self._entities(await self.client.get(t"/guilds/{self.id}/channels", cache=cache), ChannelModel, Channel)
+        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/channels", cache=cache), ChannelModel)
+        if is_network_error(parsed):
+            return parsed
+        self.client.cache.store_channels(self.id, parsed)
+        return (Channel(self.client, channel) for channel in parsed)
 
     async def create_channel(
         self,
@@ -100,7 +202,11 @@ class BaseGuild(ClientBound):
         Needs the GUILD_MEMBERS intent.
         """
         params = {"limit": str(limit), "after": "0" if after is None else str(after.id)}
-        return self._members(await self.client.get(t"/guilds/{self.id}/members", params=params, cache=cache))
+        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/members", params=params, cache=cache), GuildMember)
+        if is_network_error(parsed):
+            return parsed
+        self.client.cache.store_members(self.id, parsed)
+        return (Member(self.client, member, self.id) for member in parsed)
 
     async def search_members(self, query: str, *, limit: int = 1) -> Generator[Member] | NetworkError:
         """GET /guilds/{guild_id}/members/search - the members whose username or nickname starts with ``query``."""
@@ -113,17 +219,19 @@ class BaseGuild(ClientBound):
 
     async def fetch_roles(self, *, cache: bool = False) -> Generator[Role] | NetworkError:
         """GET /guilds/{guild_id}/roles - every role of the guild."""
-        result = await self.client.get(t"/guilds/{self.id}/roles", cache=cache)
-        if is_network_error(result):
-            return result
-        return (Role(self.client, RoleModel.model_validate(item), self.id) for item in result.json())
+        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/roles", cache=cache), RoleModel)
+        if is_network_error(parsed):
+            return parsed
+        self.client.cache.store_roles(self.id, parsed)
+        return (Role(self.client, role, self.id) for role in parsed)
 
     async def fetch_emojis(self, *, cache: bool = False) -> Generator[Emoji] | NetworkError:
         """GET /guilds/{guild_id}/emojis - the guild's custom emojis."""
-        result = await self.client.get(t"/guilds/{self.id}/emojis", cache=cache)
-        if is_network_error(result):
-            return result
-        return (Emoji(self.client, EmojiModel.model_validate(item), self.id) for item in result.json())
+        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/emojis", cache=cache), EmojiModel)
+        if is_network_error(parsed):
+            return parsed
+        self.client.cache.store_emojis(self.id, parsed)
+        return (Emoji(self.client, emoji, self.id) for emoji in parsed)
 
     async def fetch_emoji(self, emoji_id: SnowflakeLike, *, cache: bool = False) -> Emoji | NetworkError:
         """GET /guilds/{guild_id}/emojis/{emoji_id}."""
@@ -132,7 +240,11 @@ class BaseGuild(ClientBound):
 
     async def fetch_stickers(self, *, cache: bool = False) -> Generator[Sticker] | NetworkError:
         """GET /guilds/{guild_id}/stickers - the guild's own stickers."""
-        return self._entities(await self.client.get(t"/guilds/{self.id}/stickers", cache=cache), StickerModel, Sticker)
+        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/stickers", cache=cache), StickerModel)
+        if is_network_error(parsed):
+            return parsed
+        self.client.cache.store_stickers(self.id, parsed)
+        return (Sticker(self.client, sticker) for sticker in parsed)
 
     async def fetch_invites(self, *, cache: bool = False) -> Generator[Invite] | NetworkError:
         """GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD."""
@@ -246,40 +358,38 @@ class Guild(Entity[GuildModel], BaseGuild):
         return self._channel(self.model.safety_alerts_channel_id)
 
     @property
+    @override
     def roles(self) -> Generator[Role]:
-        """The guild's roles, ``@everyone`` included."""
-        for role in self.model.roles:
-            yield Role(self.client, role, self.id)
+        """The guild's roles, ``@everyone`` included: as cached, else as this guild's data has them."""
+        cached = super().roles
+        return cached if cached is not None else (Role(self.client, role, self.id) for role in self.model.roles)
 
     @property
     def default_role(self) -> Role | PartialRole:
         """The ``@everyone`` role, which shares the guild's ID."""
         return self.get_role(self.id) or self.role(self.id)
 
+    @override
     def get_role(self, role_id: SnowflakeLike) -> Role | None:
-        """Return the role ``role_id`` from the guild's data, without a request; ``None`` if it isn't one of them."""
+        """Return the role ``role_id``, as cached or else from this guild's data."""
         wanted = Snowflake.coerce(role_id)
-        return next((role for role in self.roles if role.id == wanted), None)
-
-    def get_member(self, user_id: SnowflakeLike) -> Member | None:  # noqa: ARG002 - GatewayGuild knows members
-        """Return the member ``user_id`` from the guild's data, without a request; a fetched guild has none."""
-        return None
-
-    def get_channel(self, channel_id: SnowflakeLike) -> Channel | None:  # noqa: ARG002 - GatewayGuild knows channels
-        """Return the channel ``channel_id`` from the guild's data, without a request; a fetched guild has none."""
-        return None
+        return super().get_role(wanted) or next((role for role in self.roles if role.id == wanted), None)
 
     @property
+    @override
     def emojis(self) -> Generator[Emoji]:
-        """The guild's custom emojis."""
-        for emoji in self.model.emojis:
-            yield Emoji(self.client, emoji, self.id)
+        """The guild's custom emojis: as cached, else as this guild's data has them."""
+        cached = super().emojis
+        return cached if cached is not None else (Emoji(self.client, emoji, self.id) for emoji in self.model.emojis)
 
     @property
+    @override
     def stickers(self) -> Generator[Sticker]:
-        """The guild's own stickers."""
-        for sticker in self.model.stickers or []:
-            yield Sticker(self.client, sticker)
+        """The guild's own stickers: as cached, else as this guild's data has them."""
+        cached = super().stickers
+        if cached is not None:
+            return cached
+        return (Sticker(self.client, sticker) for sticker in self.model.stickers or [])
 
     @property
     def features(self) -> list[str]:
@@ -359,29 +469,41 @@ class GatewayGuild(Guild):
         model: GuildCreate  # pyright: ignore[reportIncompatibleVariableOverride]
 
     @property
+    @override
     def channels(self) -> Generator[Channel]:
-        """The guild's channels, threads excluded."""
-        for channel in self.model.channels:
-            yield Channel(self.client, channel.model_copy(update={"guild_id": self.id}))
+        """The guild's channels, threads excluded: as cached, else as GUILD_CREATE sent them."""
+        cached = super().channels
+        if cached is not None:
+            return cached
+        return (Channel(self.client, channel.model_copy(update={"guild_id": self.id})) for channel in self.model.channels)
 
     @property
+    @override
     def threads(self) -> Generator[Channel]:
-        """The active threads the bot can see."""
-        for thread in self.model.threads:
-            yield Channel(self.client, thread.model_copy(update={"guild_id": self.id}))
+        """The active threads the bot can see: as cached, else as GUILD_CREATE sent them."""
+        cached = super().threads
+        if cached is not None:
+            return cached
+        return (Channel(self.client, thread.model_copy(update={"guild_id": self.id})) for thread in self.model.threads)
 
     @property
+    @override
     def members(self) -> Generator[Member]:
-        """The members Discord sent along; see the class docstring for which."""
-        for member in self.model.members:
-            if member.user is not None:
-                yield Member(self.client, member, self.id)
+        """Every member when the client has them all, else the ones GUILD_CREATE sent; see the class docstring."""
+        cached = super().members
+        if cached is not None:
+            return cached
+        return (Member(self.client, member, self.id) for member in self.model.members if member.user is not None)
 
     @property
+    @override
     def voice_states(self) -> Generator[VoiceState]:
-        """Who is in which of the guild's voice channels."""
-        for state in self.model.voice_states:
-            yield VoiceState(self.client, state.model_copy(update={"guild_id": self.id}))
+        """Who is in which voice channel: as cached, else as GUILD_CREATE sent it."""
+        cached = super().voice_states
+        if cached is not None:
+            return cached
+        updated = (voice.model_copy(update={"guild_id": self.id}) for voice in self.model.voice_states)
+        return (VoiceState(self.client, voice) for voice in updated)
 
     @property
     def member_count(self) -> int | None:
@@ -400,15 +522,16 @@ class GatewayGuild(Guild):
 
     @override
     def get_member(self, user_id: SnowflakeLike) -> Member | None:
-        """Return the member ``user_id`` if Discord sent them along, without a request."""
+        """Return the member ``user_id`` as cached, or if GUILD_CREATE sent them along."""
         wanted = Snowflake.coerce(user_id)
-        return next((member for member in self.members if member.id == wanted), None)
+        return super().get_member(wanted) or next((member for member in self.members if member.id == wanted), None)
 
     @override
     def get_channel(self, channel_id: SnowflakeLike) -> Channel | None:
-        """Return the channel or thread ``channel_id`` of the guild, without a request."""
+        """Return the channel or thread ``channel_id`` as cached, or if GUILD_CREATE sent it."""
         wanted = Snowflake.coerce(channel_id)
-        return next((channel for channel in (*self.channels, *self.threads) if channel.id == wanted), None)
+        cached = super().get_channel(wanted)
+        return cached or next((channel for channel in (*self.channels, *self.threads) if channel.id == wanted), None)
 
 
 class PartialGuild(BaseGuild, Partial[Guild]):
