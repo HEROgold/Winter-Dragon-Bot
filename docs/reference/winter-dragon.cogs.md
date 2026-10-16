@@ -12,7 +12,7 @@ The /autoreassign command group: a member who leaves and rejoins a guild gets th
 - `is_enabled(session: Session, guild_id: int) -> bool` — Whether the guild ``guild_id`` gives rejoining members their roles back.
 - `remembered_roles(session: Session, guild_id: int, user_id: int | None=None) -> Generator[RememberedRole]` — Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one.
 - `forget(session: Session, guild_id: int, user_id: int | None=None) -> list[RememberedRole]` — Delete the roles :func:`remembered_roles` yields, and return them; the caller commits.
-- `assignable(client: Client, guild_id: Snowflake, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]` — Yield the roles of ``role_ids`` that can be given back: those the guild still has and that aren't managed.
+- `giveable(bot: PermissionSolver, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]` — Yield the roles of ``role_ids`` the bot may give: still in the guild, not managed, and below its highest role.
 
 ### `class AutoReassignGuild(SQLModel, table=True)`
 A guild that gives rejoining members their roles back.

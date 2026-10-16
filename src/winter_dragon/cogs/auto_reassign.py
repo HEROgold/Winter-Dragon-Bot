@@ -1,7 +1,11 @@
 """The /autoreassign command group: a member who leaves and rejoins a guild gets their roles back.
 
 GUILD_MEMBER_REMOVE names only the user, so the roles come from the member the client's cache held until then;
-a member the cache never saw (in a large guild, before they spoke or changed) leaves nothing to remember.
+a member the cache never saw (in a large guild, before they spoke or changed) leaves nothing to remember. A
+database-backed member cache that would close that gap is HEROgold/Winter-Dragon-Bot#210.
+
+Only the roles the bot may give come back (below its highest role, not managed, not deleted meanwhile), in one
+request that keeps whatever roles the member got on joining, e.g. from a verification bot.
 """
 
 from __future__ import annotations
@@ -16,13 +20,15 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import Permissions, is_network_error
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
+lazy from wd_discord.resources.guild import MemberParams
 lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Generator, Iterable
 
-    lazy from wd_discord import Client, CommandInteraction, Member, MemberRemove
+    lazy from wd_discord import CommandInteraction, Member, MemberRemove
+    lazy from wd_discord.permission_solver import PermissionSolver
 
 
 REASSIGN_REASON = "Member joined again; gave back the roles they had when they left"
@@ -37,7 +43,7 @@ class AutoReassignGuild(SQLModel, table=True):
 class RememberedRole(SQLModel, table=True):
     """A role a member had when they left a guild that gives roles back."""
 
-    # TODO: Should this be a reference to Guild User and Role tables?
+    # Bare IDs until wd-db has Guild, User and Role tables to reference; see HEROgold/Winter-Dragon-Bot#210 and HER-360.
 
     guild_id: int = Field(sa_type=BigInteger, index=True)
     user_id: int = Field(sa_type=BigInteger, index=True)
@@ -68,16 +74,12 @@ def forget(session: Session, guild_id: int, user_id: int | None = None) -> list[
     return remembered
 
 
-def assignable(client: Client, guild_id: Snowflake, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]:
-    """Yield the roles of ``role_ids`` that can be given back: those the guild still has and that aren't managed.
-
-    A managed role belongs to an integration (a bot's own role, a booster role), which Discord alone hands out.
-    When the client doesn't know the guild, every role is tried, and Discord refuses the ones it must.
-    """
-    state = client.cache.guild(guild_id)
+def giveable(bot: PermissionSolver, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]:
+    """Yield the roles of ``role_ids`` the bot may give: still in the guild, not managed, and below its highest role."""
+    roles = {role.id: role for role in bot.guild.roles}
     for role_id in role_ids:
-        role = None if state is None else state.roles.get(role_id)
-        if state is None or (role is not None and not role.managed):
+        role = roles.get(role_id)
+        if role is not None and bot.can_give_role(role):
             yield role_id
 
 
@@ -119,11 +121,35 @@ class AutoReassign(
                 return
             role_ids = [Snowflake(row.role_id) for row in forget(session, guild_id, int(member.id))]
             session.commit()
-        guild = member.guild
-        for role_id in assignable(self.bot.client, member.guild_id, role_ids):
-            added = await member.add_role(guild.role(role_id), reason=REASSIGN_REASON)
+        if not role_ids:
+            return
+        bot = await member.guild.own_permissions()
+        if is_network_error(bot):
+            # One role Discord refuses would fail a single request for all of them, so each goes out on its own.
+            self.logger.warning(t"Could not tell which roles I may give in {guild_id}, trying each: {bot}")
+            await self._give_one_by_one(member, role_ids)
+            return
+        given = list(giveable(bot, role_ids))
+        if skipped := len(role_ids) - len(given):
+            self.logger.info(t"Not giving {skipped} remembered role(s) back to {member.id} in {guild_id}: I may not")
+        await self._give(member, given)
+
+    async def _give_one_by_one(self, member: Member, role_ids: Iterable[Snowflake]) -> None:
+        """Add each of ``role_ids`` in its own request, so Discord refuses only the ones it must."""
+        for role_id in role_ids:
+            added = await member.add_role(member.guild.role(role_id), reason=REASSIGN_REASON)
             if is_network_error(added):
-                self.logger.warning(t"Could not give role {role_id} back to {member.id} in {guild_id}: {added}")
+                self.logger.warning(t"Could not give role {role_id} back to {member.id} in {member.guild_id}: {added}")
+
+    async def _give(self, member: Member, role_ids: Iterable[Snowflake]) -> None:
+        """Add ``role_ids`` to the member's roles in one request, keeping every role they have already."""
+        current = list(member.model.roles)
+        added = [role_id for role_id in role_ids if role_id not in current]
+        if not added:
+            return
+        edited = await member.edit(MemberParams(roles=[*current, *added]), reason=REASSIGN_REASON)
+        if is_network_error(edited):
+            self.logger.warning(t"Could not give roles {added} back to {member.id} in {member.guild_id}: {edited}")
 
     async def _role_managers_only(self, interaction: CommandInteraction) -> bool:
         """Whether the invoker may turn giving roles back on or off; tells them otherwise."""
@@ -142,10 +168,20 @@ class AutoReassign(
             if not is_enabled(session, int(guild.id)):
                 session.add(AutoReassignGuild(guild_id=int(guild.id)))
                 session.commit()
-        await interaction.respond(
-            "Members who leave and rejoin now get their roles back; my role must be above the roles to give.",
-            ephemeral=True,
-        )
+        message = "Members who leave and rejoin now get their roles back; my role must be above the roles to give."
+        bot = await guild.own_permissions()
+        warning = None if is_network_error(bot) else self._ungiveable_warning(bot)
+        await interaction.respond(message if warning is None else f"{message} {warning}", ephemeral=True)
+
+    @staticmethod
+    def _ungiveable_warning(bot: PermissionSolver) -> str | None:
+        """Say what keeps the bot from giving roles back in its guild, or ``None`` when nothing does."""
+        if Permissions.MANAGE_ROLES not in bot.base():
+            return "I don't have the Manage Roles permission, so I can't give any roles back until I get it."
+        above = [f"<@&{role.id}>" for role in bot.ungiveable_roles()]
+        if not above:
+            return None
+        return f"These roles are above my highest role, so I can't give them back: {', '.join(above)}. Move my role above them."
 
     @Cog.command(name="disable", description="Stop giving rejoining members their roles back")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def disable(self, interaction: CommandInteraction) -> None:
