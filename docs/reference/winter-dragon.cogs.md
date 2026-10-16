@@ -91,14 +91,13 @@ The /channel-utils command group: delete a whole category, and lock or unlock a 
 - module names: UNLOCKABLE, DELETE_PERMISSIONS
 - `locked_permissions(existing: Iterable[PermissionOverwrite], target: User | Role, *, lock: bool) -> tuple[Permissions, Permissions]` — Return what ``target``'s overwrite among ``existing`` allows and denies, with SEND_MESSAGES denied or not.
 - `deleted(result: Channel | NetworkError) -> bool` — Whether a channel delete left the channel gone: it succeeded, or the channel was gone already.
-- `mention(target: User | Role) -> str` — Return a clickable mention of the user or role ``target``.
 
 ### `class ChannelUtils(GroupCog, name='channel-utils', description='Manage channels', default_member_permissions=Permissions.MANAGE_CHANNELS, contexts=[InteractionContextType.GUILD])`
 Moderation helpers for channels: removing a category with its channels, and locking channels.
 
-- `@Cog.command async delete_category(interaction: CommandInteraction, category: Channel) -> None` — Delete every channel in ``category``, then the category itself.
-- `@Cog.command async lock(interaction: CommandInteraction, target: User | Role) -> None` — Deny ``target`` SEND_MESSAGES in the channel the command was used in.
-- `@Cog.command async unlock(interaction: CommandInteraction, target: User | Role) -> None` — Stop denying ``target`` SEND_MESSAGES in the channel the command was used in.
+- `@Cog.command async delete_category(interaction: GuildCommandInteraction, category: Channel) -> None` — Delete every channel in ``category``, then the category itself.
+- `@Cog.command async lock(interaction: GuildCommandInteraction, target: User | Role) -> None` — Deny ``target`` SEND_MESSAGES in the channel the command was used in.
+- `@Cog.command async unlock(interaction: GuildCommandInteraction, target: User | Role) -> None` — Stop denying ``target`` SEND_MESSAGES in the channel the command was used in.
 
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.
