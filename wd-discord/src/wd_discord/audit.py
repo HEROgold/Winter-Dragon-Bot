@@ -26,7 +26,11 @@ class AuditLogReason:
         return {REASON_HEADER: quote(self.text[:MAX_REASON_LENGTH], safe=" ")}
 
 
-def reason_headers(reason: AuditLogReason | str | None) -> dict[str, str]:
+type Reason = AuditLogReason | str | None
+"""Why the bot makes a change, for the audit log: wrapped, as plain text, or not given."""
+
+
+def reason_headers(reason: Reason) -> dict[str, str]:
     """Return the headers for ``reason``: none without one, else the audit-log reason header."""
     if reason is None:
         return {}

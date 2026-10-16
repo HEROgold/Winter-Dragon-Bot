@@ -22,7 +22,8 @@ Public names only — open the file when you need a body. Index: [API reference]
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
 
 - module names: MAX_REASON_LENGTH, REASON_HEADER
-- `reason_headers(reason: AuditLogReason | str | None) -> dict[str, str]` — Return the headers for ``reason``: none without one, else the audit-log reason header.
+- `type Reason = AuditLogReason | str | None`
+- `reason_headers(reason: Reason) -> dict[str, str]` — Return the headers for ``reason``: none without one, else the audit-log reason header.
 
 ### `@dataclass class AuditLogReason`
 Why the bot made a change, as shown in the guild's audit log.

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from wd_core.client import JsonPayload
 
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.client import NetworkError, RequestResult
     from wd_discord.entities.channel import BaseChannel
     from wd_discord.entities.role import BaseRole, Role
@@ -65,7 +65,7 @@ class BaseMember(ClientBound):
             self.client.cache.store_members(self.guild_id, [member.model])
         return member
 
-    async def edit(self, params: MemberParams, *, reason: AuditLogReason | str | None = None) -> Member | NetworkError:
+    async def edit(self, params: MemberParams, *, reason: Reason = None) -> Member | NetworkError:
         """PATCH /guilds/{guild_id}/members/{user_id} - change what ``params`` names; each field needs its permission.
 
         ``params.roles`` replaces every role the member has: send the ones to keep too.
@@ -76,7 +76,7 @@ class BaseMember(ClientBound):
         self,
         channel: BaseChannel | None,
         *,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> Member | NetworkError:
         """PATCH /guilds/{guild_id}/members/{user_id} - move the member to the voice ``channel``.
 
@@ -85,7 +85,7 @@ class BaseMember(ClientBound):
         """
         return await self.edit(MemberParams(channel_id=None if channel is None else channel.id), reason=reason)
 
-    async def set_nick(self, nick: str | None, *, reason: AuditLogReason | str | None = None) -> Member | NetworkError:
+    async def set_nick(self, nick: str | None, *, reason: Reason = None) -> Member | NetworkError:
         """PATCH /guilds/{guild_id}/members/{user_id} - set the member's nickname, or clear it with ``None``.
 
         Needs MANAGE_NICKNAMES; the guild owner's nickname can't be changed by anyone else.
@@ -96,7 +96,7 @@ class BaseMember(ClientBound):
         self,
         until: datetime | None,
         *,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> Member | NetworkError:
         """PATCH /guilds/{guild_id}/members/{user_id} - time the member out until ``until`` (at most 28 days ahead).
 
@@ -104,15 +104,15 @@ class BaseMember(ClientBound):
         """
         return await self.edit(MemberParams(communication_disabled_until=until), reason=reason)
 
-    async def add_role(self, role: BaseRole, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def add_role(self, role: BaseRole, *, reason: Reason = None) -> NetworkError | None:
         """PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role."""
         return no_content(await self.client.put(self._path + t"/roles/{role.id}", json={}, headers=reason_headers(reason)))
 
-    async def remove_role(self, role: BaseRole, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def remove_role(self, role: BaseRole, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role."""
         return no_content(await self.client.delete(self._path + t"/roles/{role.id}", headers=reason_headers(reason)))
 
-    async def kick(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def kick(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/members/{user_id} - remove the member from the guild; needs KICK_MEMBERS."""
         return no_content(await self.client.delete(self._path, headers=reason_headers(reason)))
 
@@ -120,7 +120,7 @@ class BaseMember(ClientBound):
         self,
         *,
         delete_message_seconds: int = 0,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> NetworkError | None:
         """PUT /guilds/{guild_id}/bans/{user_id} - ban the member; needs BAN_MEMBERS.
 
@@ -130,7 +130,7 @@ class BaseMember(ClientBound):
         route = t"/guilds/{self.guild_id}/bans/{self.id}"
         return no_content(await self.client.put(route, json=payload, headers=reason_headers(reason)))
 
-    async def unban(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def unban(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/bans/{user_id} - lift the ban on this user; needs BAN_MEMBERS."""
         return no_content(await self.client.delete(t"/guilds/{self.guild_id}/bans/{self.id}", headers=reason_headers(reason)))
 

@@ -37,7 +37,7 @@ lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Awaitable, Callable, Generator, Iterable
 
     from httpxyz import Response
 
@@ -83,6 +83,28 @@ def parse_all[M: DiscordModel](result: RequestResult, model: type[M]) -> list[M]
         return result
     parsed = _validate_all(result, model)
     return _unreadable(result, model, parsed) if isinstance(parsed, ValueError) else parsed
+
+
+async def every_page[T](
+    fetch: Callable[[T | None], Awaitable[Iterable[T] | NetworkError]],
+    page_size: int,
+) -> list[T] | NetworkError:
+    """Return every item of a paged list, or the failure of a page.
+
+    ``fetch`` gets the page after the item it's given, the first page for ``None``; a page shorter than
+    ``page_size`` is the last.
+    """
+    items: list[T] = []
+    last: T | None = None
+    while True:
+        page = await fetch(last)
+        if is_network_error(page):
+            return page
+        fetched = list(page)
+        items.extend(fetched)
+        if len(fetched) < page_size or not fetched:
+            return items
+        last = fetched[-1]
 
 
 def no_content(result: RequestResult) -> NetworkError | None:

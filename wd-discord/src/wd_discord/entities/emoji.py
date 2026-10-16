@@ -18,7 +18,7 @@ lazy from wd_discord.resources.guild import Sticker as StickerModel
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
     from wd_discord.resources.guild.sticker import StickerFormatType, StickerType
     from wd_discord.snowflake import Snowflake
@@ -78,7 +78,7 @@ class Emoji(Entity[EmojiModel]):
         parsed = parse(result, EmojiModel)
         return parsed if is_network_error(parsed) else Emoji(self.client, parsed, self.guild_id)
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/emojis/{emoji_id}; needs MANAGE_GUILD_EXPRESSIONS."""
         return no_content(await self.client.delete(t"/guilds/{self.guild_id}/emojis/{self.id}", headers=reason_headers(reason)))
 
@@ -136,7 +136,7 @@ class Sticker(Entity[StickerModel]):
         """GET /stickers/{sticker_id}."""
         return self._entity(await self.client.get(t"/stickers/{self.id}", cache=cache), StickerModel, Sticker)
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/stickers/{sticker_id} - delete a guild sticker; needs MANAGE_GUILD_EXPRESSIONS.
 
         A standard sticker belongs to no guild, so deleting one fails with Discord's error.

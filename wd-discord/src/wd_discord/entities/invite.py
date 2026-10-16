@@ -17,7 +17,7 @@ lazy from wd_discord.snowflake import Snowflake
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
 
 
@@ -81,7 +81,7 @@ class Invite(Entity[InviteModel]):
         """GET /invites/{invite_code}."""
         return self._entity(await self.client.get(t"/invites/{self.code}", cache=cache), InviteModel, Invite)
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> Invite | NetworkError:
+    async def delete(self, *, reason: Reason = None) -> Invite | NetworkError:
         """DELETE /invites/{invite_code} - revoke the invite; needs MANAGE_CHANNELS on its channel, or MANAGE_GUILD."""
         result = await self.client.delete(t"/invites/{self.code}", headers=reason_headers(reason))
         return self._entity(result, InviteModel, Invite)

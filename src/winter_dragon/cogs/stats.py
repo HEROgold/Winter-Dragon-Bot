@@ -15,7 +15,6 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_config.stats import StatsSettings
 lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
-lazy from wd_discord.entities.guild import MAX_MEMBERS_PER_PAGE
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 lazy from wd_discord.snowflake import Snowflake
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Generator, Iterable, Mapping
     lazy from datetime import datetime
 
-    lazy from wd_discord import Client, GuildCommandInteraction, Member, NetworkError
+    lazy from wd_discord import Client, GuildCommandInteraction, NetworkError
     lazy from wd_discord.entities import BaseChannel, BaseGuild
 
 
@@ -87,18 +86,11 @@ class GuildCounts:
 
 
 async def count_bots(guild: BaseGuild) -> int | NetworkError:
-    """Count the bots among ``guild``'s members, a page of members at a time."""
-    bots = 0
-    after: Member | None = None
-    while True:
-        page = await guild.fetch_members(after=after)
-        if is_network_error(page):
-            return page
-        members = list(page)
-        bots += sum(member.bot for member in members)
-        if len(members) < MAX_MEMBERS_PER_PAGE:
-            return bots
-        after = members[-1]
+    """Count the bots among ``guild``'s members."""
+    members = await guild.all_members()
+    if is_network_error(members):
+        return members
+    return sum(member.bot for member in members)
 
 
 async def guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError:

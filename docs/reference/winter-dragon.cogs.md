@@ -211,7 +211,7 @@ Stores reminders and DMs them to their users when due, from a background task.
 The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels.
 
 - module names: SHOWN, CATEGORY_NAME, STATS_TABLES
-- `async count_bots(guild: BaseGuild) -> int | NetworkError` — Count the bots among ``guild``'s members, a page of members at a time.
+- `async count_bots(guild: BaseGuild) -> int | NetworkError` — Count the bots among ``guild``'s members.
 - `async guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError` — Read ``guild``'s member, bot and online counts.
 - `channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str` — Return the name of the stats channel showing ``kind``.
 - `plan_renames(stats: Iterable[StatChannel], names: Mapping[int, str | None], counts: GuildCounts, peak: int) -> RenamePlan` — Plan updating ``stats`` to ``counts`` and ``peak``, given each existing channel's name by ID.

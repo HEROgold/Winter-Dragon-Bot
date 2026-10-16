@@ -7,7 +7,7 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from wd_discord.audit import reason_headers
 lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_content, parse, parse_all
+lazy from wd_discord.entities.base import ClientBound, Entity, Partial, every_page, no_content, parse, parse_all
 lazy from wd_discord.entities.channel import Channel, PartialChannel
 lazy from wd_discord.entities.emoji import Emoji, Sticker
 lazy from wd_discord.entities.invite import Invite
@@ -31,7 +31,7 @@ lazy from wd_discord.snowflake import Snowflake
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.cache import GuildState
     from wd_discord.client import NetworkError, RequestResult
     from wd_discord.entities.member import BaseMember
@@ -204,7 +204,7 @@ class BaseGuild(ClientBound):
         self,
         params: GuildChannelParams,
         *,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> Channel | NetworkError:
         """POST /guilds/{guild_id}/channels - create a channel or category; needs MANAGE_CHANNELS."""
         result = await self.client.post(t"/guilds/{self.id}/channels", json=params.to_json(), headers=reason_headers(reason))
@@ -232,6 +232,21 @@ class BaseGuild(ClientBound):
             return parsed
         self.client.cache.store_members(self.id, parsed)
         return (Member(self.client, member, self.id) for member in parsed)
+
+    async def all_members(
+        self,
+        *,
+        page_size: int = MAX_MEMBERS_PER_PAGE,
+        cache: bool = False,
+    ) -> Generator[Member] | NetworkError:
+        """Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent."""
+        members = await every_page(
+            lambda after: self.fetch_members(after=after, limit=page_size, cache=cache),
+            page_size,
+        )
+        if is_network_error(members):
+            return members
+        return (member for member in members)
 
     async def search_members(self, query: str, *, limit: int = 1) -> Generator[Member] | NetworkError:
         """GET /guilds/{guild_id}/members/search - the members whose username or nickname starts with ``query``."""

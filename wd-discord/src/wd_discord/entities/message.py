@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from string.templatelib import Template
 
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
     from wd_discord.embed import Embed
@@ -89,7 +89,7 @@ class BaseMessage(ClientBound):
         payload = message_data(content=content, embeds=embeds, components=components)
         return self._entity(await self.client.patch(self._path, json=payload), MessageModel, Message)
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /channels/{channel_id}/messages/{message_id}; someone else's message needs MANAGE_MESSAGES."""
         return no_content(await self.client.delete(self._path, json={}, headers=reason_headers(reason)))
 
@@ -108,12 +108,12 @@ class BaseMessage(ClientBound):
         route = self._path + t"/reactions" if emoji is None else self._path + t"/reactions/{reaction_name(emoji)}"
         return no_content(await self.client.delete(route, json={}))
 
-    async def pin(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def pin(self, *, reason: Reason = None) -> NetworkError | None:
         """PUT /channels/{channel_id}/messages/pins/{message_id}; needs PIN_MESSAGES."""
         route = t"/channels/{self.channel_id}/messages/pins/{self.id}"
         return no_content(await self.client.put(route, json={}, headers=reason_headers(reason)))
 
-    async def unpin(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def unpin(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /channels/{channel_id}/messages/pins/{message_id}; needs PIN_MESSAGES."""
         route = t"/channels/{self.channel_id}/messages/pins/{self.id}"
         return no_content(await self.client.delete(route, json={}, headers=reason_headers(reason)))

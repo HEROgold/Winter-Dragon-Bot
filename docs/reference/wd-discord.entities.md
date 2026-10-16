@@ -71,6 +71,7 @@ Bases of the high-level API: client-bound entities and the stores that create th
 - module names: logger
 - `parse[M: DiscordModel](result: RequestResult, model: type[M]) -> M | NetworkError` — Return the failure in ``result``, or its JSON body validated as ``model``; an unreadable body is a failure.
 - `parse_all[M: DiscordModel](result: RequestResult, model: type[M]) -> list[M] | NetworkError` — Return the failure in ``result``, or each item of its JSON array validated as ``model``.
+- `async every_page[T](fetch: Callable[[T | None], Awaitable[Iterable[T] | NetworkError]], page_size: int) -> list[T] | NetworkError` — Return every item of a paged list, or the failure of a page.
 - `no_content(result: RequestResult) -> NetworkError | None` — Return the failure in ``result``, or ``None`` for an endpoint that answers without a body.
 
 ### `@dataclass class ClientBound`
@@ -113,14 +114,14 @@ What can be done in a channel knowing only its ID: read, edit or delete it, send
 - `message(message_id: SnowflakeLike) -> PartialMessage` — Return a handle on the message ``message_id`` in this channel, without fetching it.
 - `async fetch_messages(*, before: BaseMessage | None=None, after: BaseMessage | None=None, around: BaseMessage | None=None, limit: int=MAX_MESSAGES_PER_PAGE, cache: bool=False) -> Generator[Message] | NetworkError` — GET /channels/{channel_id}/messages - one page of messages, newest first; needs READ_MESSAGE_HISTORY.
 - `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — POST /channels/{channel_id}/messages - send a message; DM channels included.
-- `async delete_messages(messages: Iterable[BaseMessage], *, reason: AuditLogReason | str | None=None) -> NetworkError | None` — POST /channels/{channel_id}/messages/bulk-delete - delete 2 to 100 messages at once; needs MANAGE_MESSAGES.
+- `async delete_messages(messages: Iterable[BaseMessage], *, reason: Reason=None) -> NetworkError | None` — POST /channels/{channel_id}/messages/bulk-delete - delete 2 to 100 messages at once; needs MANAGE_MESSAGES.
 - `async trigger_typing() -> NetworkError | None` — POST /channels/{channel_id}/typing - show the bot as typing for about 10 seconds, or until it sends.
 - `async create_invite(*, max_age: int=DEFAULT_INVITE_MAX_AGE, max_uses: int=1, temporary: bool=False, unique: bool=True) -> Invite | NetworkError` — POST /channels/{channel_id}/invites - create an invite to this channel.
 - `async fetch_invites(*, cache: bool=False) -> Generator[Invite] | NetworkError` — GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS.
-- `async edit(params: ChannelParams, *, reason: AuditLogReason | str | None=None) -> Channel | NetworkError` — PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> Channel | NetworkError` — DELETE /channels/{channel_id} - delete the channel, or close a DM; returns the deleted channel.
-- `async set_permissions(target: PermissionTarget, *, allow: Permissions | None=None, deny: Permissions | None=None, reason: AuditLogReason | str | None=None) -> NetworkError | None` — PUT /channels/{channel_id}/permissions/{overwrite_id} - set ``target``'s overwrite on the channel.
-- `async delete_permissions(target: PermissionTarget, *, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /channels/{channel_id}/permissions/{overwrite_id} - remove a role's or member's overwrite.
+- `async edit(params: ChannelParams, *, reason: Reason=None) -> Channel | NetworkError` — PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
+- `async delete(*, reason: Reason=None) -> Channel | NetworkError` — DELETE /channels/{channel_id} - delete the channel, or close a DM; returns the deleted channel.
+- `async set_permissions(target: PermissionTarget, *, allow: Permissions | None=None, deny: Permissions | None=None, reason: Reason=None) -> NetworkError | None` — PUT /channels/{channel_id}/permissions/{overwrite_id} - set ``target``'s overwrite on the channel.
+- `async delete_permissions(target: PermissionTarget, *, reason: Reason=None) -> NetworkError | None` — DELETE /channels/{channel_id}/permissions/{overwrite_id} - remove a role's or member's overwrite.
 - `async join_thread() -> NetworkError | None` — PUT /channels/{channel_id}/thread-members/@me - add the bot to this thread.
 - `async leave_thread() -> NetworkError | None` — DELETE /channels/{channel_id}/thread-members/@me - remove the bot from this thread.
 - `async add_thread_member(user: BaseUser | BaseMember) -> NetworkError | None` — PUT /channels/{channel_id}/thread-members/{user_id} - add someone to this thread; needs SEND_MESSAGES.
@@ -170,7 +171,7 @@ One role's or member's permission overwrite on a guild channel.
 - `@property channel -> PartialChannel` — The channel the overwrite is set on.
 - `@property allow -> Permissions` — The permissions the overwrite grants.
 - `@property deny -> Permissions` — The permissions the overwrite takes away.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /channels/{channel_id}/permissions/{overwrite_id}; needs MANAGE_ROLES.
+- `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /channels/{channel_id}/permissions/{overwrite_id}; needs MANAGE_ROLES.
 
 ### `@dataclass class ThreadMember(Entity[ThreadMemberModel])`
 A user's membership of a thread.
@@ -344,7 +345,7 @@ A guild's custom emoji, as Discord returned it.
 - `@property available -> bool` — Whether the emoji can be used; ``False`` after the guild lost the boosts it needs.
 - `@property mention -> str` — The emoji as it's written in a message: ``<:name:id>``, or ``<a:name:id>`` when animated.
 - `async fetch(*, cache: bool=False) -> Emoji | NetworkError` — GET /guilds/{guild_id}/emojis/{emoji_id}.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/emojis/{emoji_id}; needs MANAGE_GUILD_EXPRESSIONS.
+- `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/emojis/{emoji_id}; needs MANAGE_GUILD_EXPRESSIONS.
 
 ### `class Sticker(Entity[StickerModel])`
 A sticker, as Discord returned it: a guild's own, or a standard one from a pack.
@@ -359,7 +360,7 @@ A sticker, as Discord returned it: a guild's own, or a standard one from a pack.
 - `@property guild -> PartialGuild | None` — The guild that owns the sticker; ``None`` for a standard sticker.
 - `@property user -> User | None` — Who uploaded a guild sticker; only sent with MANAGE_GUILD_EXPRESSIONS.
 - `async fetch(*, cache: bool=False) -> Sticker | NetworkError` — GET /stickers/{sticker_id}.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/stickers/{sticker_id} - delete a guild sticker; needs MANAGE_GUILD_EXPRESSIONS.
+- `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/stickers/{sticker_id} - delete a guild sticker; needs MANAGE_GUILD_EXPRESSIONS.
 
 ## `wd_discord.entities.entitlement` — `wd-discord/src/wd_discord/entities/entitlement.py`
 Entitlements (https://docs.discord.com/developers/resources/entitlement).
@@ -411,9 +412,10 @@ What can be done to a guild knowing only its ID: read it, its channels, members,
 - `async fetch(*, with_counts: bool=False, cache: bool=False) -> Guild | NetworkError` — GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
 - `channel(channel_id: SnowflakeLike) -> PartialChannel` — Return a handle on the channel ``channel_id``, without fetching it.
 - `async fetch_channels(*, cache: bool=False) -> Generator[Channel] | NetworkError` — GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
-- `async create_channel(params: GuildChannelParams, *, reason: AuditLogReason | str | None=None) -> Channel | NetworkError` — POST /guilds/{guild_id}/channels - create a channel or category; needs MANAGE_CHANNELS.
+- `async create_channel(params: GuildChannelParams, *, reason: Reason=None) -> Channel | NetworkError` — POST /guilds/{guild_id}/channels - create a channel or category; needs MANAGE_CHANNELS.
 - `member(user_id: SnowflakeLike) -> PartialMember` — Return a handle on the member ``user_id`` of this guild, without fetching them.
 - `async fetch_members(*, after: BaseMember | BaseUser | None=None, limit: int=MAX_MEMBERS_PER_PAGE, cache: bool=False) -> Generator[Member] | NetworkError` — GET /guilds/{guild_id}/members - one page of members, by user ID, after the member ``after``.
+- `async all_members(*, page_size: int=MAX_MEMBERS_PER_PAGE, cache: bool=False) -> Generator[Member] | NetworkError` — Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent.
 - `async search_members(query: str, *, limit: int=1) -> Generator[Member] | NetworkError` — GET /guilds/{guild_id}/members/search - the members whose username or nickname starts with ``query``.
 - `role(role_id: SnowflakeLike) -> PartialRole` — Return a handle on the role ``role_id`` of this guild, without fetching it.
 - `async fetch_roles(*, cache: bool=False) -> Generator[Role] | NetworkError` — GET /guilds/{guild_id}/roles - every role of the guild.
@@ -586,7 +588,7 @@ An invite to a guild channel, as Discord returned it.
 - `@property max_age -> int | None` — The seconds the invite stays valid after creation; ``0`` for forever.
 - `@property temporary -> bool` — Whether members who join through the invite are removed again when they disconnect without a role.
 - `async fetch(*, cache: bool=False) -> Invite | NetworkError` — GET /invites/{invite_code}.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> Invite | NetworkError` — DELETE /invites/{invite_code} - revoke the invite; needs MANAGE_CHANNELS on its channel, or MANAGE_GUILD.
+- `async delete(*, reason: Reason=None) -> Invite | NetworkError` — DELETE /invites/{invite_code} - revoke the invite; needs MANAGE_CHANNELS on its channel, or MANAGE_GUILD.
 
 ## `wd_discord.entities.member` — `wd-discord/src/wd_discord/entities/member.py`
 Guild members (https://docs.discord.com/developers/resources/guild#guild-member-object).
@@ -597,15 +599,15 @@ What can be done to a guild member knowing only their guild and user ID: read, e
 - `@property mention -> str` — A clickable mention of the member, as ``<@id>``.
 - `@property guild -> PartialGuild` — The guild the member is in.
 - `async fetch(*, cache: bool=False) -> Member | NetworkError` — GET /guilds/{guild_id}/members/{user_id}; the answer also updates the client's cache.
-- `async edit(params: MemberParams, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - change what ``params`` names; each field needs its permission.
-- `async move_to(channel: BaseChannel | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - move the member to the voice ``channel``.
-- `async set_nick(nick: str | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - set the member's nickname, or clear it with ``None``.
-- `async timeout(until: datetime | None, *, reason: AuditLogReason | str | None=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - time the member out until ``until`` (at most 28 days ahead).
-- `async add_role(role: BaseRole, *, reason: AuditLogReason | str | None=None) -> NetworkError | None` — PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role.
-- `async remove_role(role: BaseRole, *, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role.
-- `async kick(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/members/{user_id} - remove the member from the guild; needs KICK_MEMBERS.
-- `async ban(*, delete_message_seconds: int=0, reason: AuditLogReason | str | None=None) -> NetworkError | None` — PUT /guilds/{guild_id}/bans/{user_id} - ban the member; needs BAN_MEMBERS.
-- `async unban(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/bans/{user_id} - lift the ban on this user; needs BAN_MEMBERS.
+- `async edit(params: MemberParams, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - change what ``params`` names; each field needs its permission.
+- `async move_to(channel: BaseChannel | None, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - move the member to the voice ``channel``.
+- `async set_nick(nick: str | None, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - set the member's nickname, or clear it with ``None``.
+- `async timeout(until: datetime | None, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - time the member out until ``until`` (at most 28 days ahead).
+- `async add_role(role: BaseRole, *, reason: Reason=None) -> NetworkError | None` — PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role.
+- `async remove_role(role: BaseRole, *, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/members/{user_id}/roles/{role_id}; needs MANAGE_ROLES and a higher role.
+- `async kick(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/members/{user_id} - remove the member from the guild; needs KICK_MEMBERS.
+- `async ban(*, delete_message_seconds: int=0, reason: Reason=None) -> NetworkError | None` — PUT /guilds/{guild_id}/bans/{user_id} - ban the member; needs BAN_MEMBERS.
+- `async unban(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/bans/{user_id} - lift the ban on this user; needs BAN_MEMBERS.
 
 ### `@dataclass class Member(Entity[GuildMember], BaseMember)`
 A guild member, as Discord returned them; always with their user.
@@ -646,12 +648,12 @@ What can be done to a message knowing only its channel and ID: read, edit, delet
 - `@property jump_url -> str` — A link that opens the message; works in DMs and guilds alike.
 - `async fetch(*, cache: bool=False) -> Message | NetworkError` — GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild.
 - `async edit(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — PATCH /channels/{channel_id}/messages/{message_id} - edit a message the bot sent.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /channels/{channel_id}/messages/{message_id}; someone else's message needs MANAGE_MESSAGES.
+- `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /channels/{channel_id}/messages/{message_id}; someone else's message needs MANAGE_MESSAGES.
 - `async add_reaction(emoji: ReactionEmoji) -> NetworkError | None` — PUT /channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me - react as the bot.
 - `async remove_reaction(emoji: ReactionEmoji, user: BaseUser | BaseMember | None=None) -> NetworkError | None` — DELETE .../reactions/{emoji}/{user_id} - take back the bot's reaction, or ``user``'s (needs MANAGE_MESSAGES).
 - `async clear_reactions(emoji: ReactionEmoji | None=None) -> NetworkError | None` — DELETE .../reactions[/{emoji}] - remove every reaction, or every one with ``emoji``; needs MANAGE_MESSAGES.
-- `async pin(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — PUT /channels/{channel_id}/messages/pins/{message_id}; needs PIN_MESSAGES.
-- `async unpin(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /channels/{channel_id}/messages/pins/{message_id}; needs PIN_MESSAGES.
+- `async pin(*, reason: Reason=None) -> NetworkError | None` — PUT /channels/{channel_id}/messages/pins/{message_id}; needs PIN_MESSAGES.
+- `async unpin(*, reason: Reason=None) -> NetworkError | None` — DELETE /channels/{channel_id}/messages/pins/{message_id}; needs PIN_MESSAGES.
 
 ### `class Message(Entity[MessageModel], BaseMessage)`
 A message, as Discord returned or dispatched it.
@@ -721,7 +723,7 @@ What can be done to a role knowing only its guild and ID: read it, delete it, me
 - `@property mention -> str` — A clickable mention of the role, as ``<@&id>``; ``@everyone`` for the guild's default role.
 - `@property is_default -> bool` — Whether this is the guild's ``@everyone`` role, which shares the guild's ID.
 - `async fetch(*, cache: bool=False) -> Role | NetworkError` — GET /guilds/{guild_id}/roles/{role_id}.
-- `async delete(*, reason: AuditLogReason | str | None=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/roles/{role_id}; needs MANAGE_ROLES.
+- `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/roles/{role_id}; needs MANAGE_ROLES.
 
 ### `@dataclass class Role(Entity[RoleModel], BaseRole)`
 A role, as Discord returned it.

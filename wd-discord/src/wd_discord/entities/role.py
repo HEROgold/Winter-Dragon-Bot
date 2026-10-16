@@ -13,7 +13,7 @@ lazy from wd_discord.resources.guild import Role as RoleModel
 
 
 if TYPE_CHECKING:
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.client import NetworkError, RequestResult
     from wd_discord.image import ImageHash
     from wd_discord.permissions import Permissions
@@ -53,7 +53,7 @@ class BaseRole(ClientBound):
         """GET /guilds/{guild_id}/roles/{role_id}."""
         return self._role(await self.client.get(t"/guilds/{self.guild_id}/roles/{self.id}", cache=cache))
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/roles/{role_id}; needs MANAGE_ROLES."""
         return no_content(await self.client.delete(t"/guilds/{self.guild_id}/roles/{self.id}", headers=reason_headers(reason)))
 

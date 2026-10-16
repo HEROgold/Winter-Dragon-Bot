@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from wd_core.client import JsonPayload
 
-    from wd_discord.audit import AuditLogReason
+    from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
     from wd_discord.embed import Embed
@@ -122,7 +122,7 @@ class BaseChannel(ClientBound):
         self,
         messages: Iterable[BaseMessage],
         *,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> NetworkError | None:
         """POST /channels/{channel_id}/messages/bulk-delete - delete 2 to 100 messages at once; needs MANAGE_MESSAGES.
 
@@ -155,7 +155,7 @@ class BaseChannel(ClientBound):
         """GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS."""
         return self._entities(await self.client.get(t"/channels/{self.id}/invites", cache=cache), InviteModel, Invite)
 
-    async def edit(self, params: ChannelParams, *, reason: AuditLogReason | str | None = None) -> Channel | NetworkError:
+    async def edit(self, params: ChannelParams, *, reason: Reason = None) -> Channel | NetworkError:
         """PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
 
         Renaming a channel is rate limited to twice per 10 minutes.
@@ -163,7 +163,7 @@ class BaseChannel(ClientBound):
         result = await self.client.patch(t"/channels/{self.id}", json=params.to_json(), headers=reason_headers(reason))
         return self._entity(result, ChannelModel, Channel)
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> Channel | NetworkError:
+    async def delete(self, *, reason: Reason = None) -> Channel | NetworkError:
         """DELETE /channels/{channel_id} - delete the channel, or close a DM; returns the deleted channel.
 
         Deleting a category leaves its channels in place, outside any category.
@@ -180,7 +180,7 @@ class BaseChannel(ClientBound):
         *,
         allow: Permissions | None = None,
         deny: Permissions | None = None,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> NetworkError | None:
         """PUT /channels/{channel_id}/permissions/{overwrite_id} - set ``target``'s overwrite on the channel.
 
@@ -200,7 +200,7 @@ class BaseChannel(ClientBound):
         self,
         target: PermissionTarget,
         *,
-        reason: AuditLogReason | str | None = None,
+        reason: Reason = None,
     ) -> NetworkError | None:
         """DELETE /channels/{channel_id}/permissions/{overwrite_id} - remove a role's or member's overwrite."""
         route = t"/channels/{self.id}/permissions/{target.id}"
@@ -424,7 +424,7 @@ class PermissionOverwrite(Entity[PermissionOverwriteModel]):
         """The permissions the overwrite takes away."""
         return self.model.deny
 
-    async def delete(self, *, reason: AuditLogReason | str | None = None) -> NetworkError | None:
+    async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /channels/{channel_id}/permissions/{overwrite_id}; needs MANAGE_ROLES."""
         route = t"/channels/{self.channel_id}/permissions/{self.id}"
         return no_content(await self.client.delete(route, headers=reason_headers(reason)))

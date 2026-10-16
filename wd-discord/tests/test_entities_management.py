@@ -183,3 +183,22 @@ async def test_a_delete_left_the_resource_gone_when_it_worked_or_it_was_gone_alr
 
     assert [is_gone(result) for result in results] == [True, True, False]
     assert is_gone(None)  # what a delete answering 204 No Content returns
+
+
+async def test_all_members_reads_page_after_page_until_a_short_one() -> None:
+    client = RecordingClient()
+    page = [{**MEMBER_JSON, "user": {"id": str(user_id), "username": "u", "discriminator": "0"}} for user_id in (3, 4, 5)]
+    client.reply_each("GET", "/guilds/1/members", page[:2], page[2:])
+
+    members = await client.guilds.partial(1).all_members(page_size=2)
+
+    assert not is_network_error(members)
+    assert [int(member.id) for member in members] == [3, 4, 5]
+    assert [sent.params for sent in client.sent] == [{"limit": "2", "after": "0"}, {"limit": "2", "after": "4"}]
+
+
+async def test_all_members_fails_when_a_page_does() -> None:
+    client = RecordingClient()
+    client.reply("GET", "/guilds/1/members", {"code": 50001, "message": "Missing Access"}, status=403)
+
+    assert isinstance(await client.guilds.partial(1).all_members(), ApiResponseError)
