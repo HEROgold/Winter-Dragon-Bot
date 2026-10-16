@@ -209,7 +209,7 @@ def test_plan_renames_only_changed_channels_and_drops_missing_ones() -> None:
     assert [stat.channel_id for stat in plan.gone] == [43]
 
 
-async def test_remove_forgets_only_channels_that_are_gone(
+async def test_remove_forgets_only_channels_that_are_gone_and_keeps_their_category(
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -231,5 +231,6 @@ async def test_remove_forgets_only_channels_that_are_gone(
     await Stats.remove.invoke(_cog(engine, discord_client), interaction, [])
 
     with Session(engine) as session:
-        assert {stat.channel_id for stat in session.exec(select(StatChannel))} == {41}
+        assert {stat.channel_id for stat in session.exec(select(StatChannel))} == {40, 41}
+    assert discord_client.requests_to("DELETE", "/channels/40") == []  # the category stays while a channel is left in it
     assert _reply(discord_client) == "I couldn't delete every stats channel; run it again to retry the rest."

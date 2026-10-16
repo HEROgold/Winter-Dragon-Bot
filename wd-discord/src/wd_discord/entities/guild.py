@@ -239,7 +239,11 @@ class BaseGuild(ClientBound):
         page_size: int = MAX_MEMBERS_PER_PAGE,
         cache: bool = False,
     ) -> Generator[Member] | NetworkError:
-        """Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent."""
+        """Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent.
+
+        ``page_size`` is capped at Discord's :data:`MAX_MEMBERS_PER_PAGE`, since a page shorter than it ends the list.
+        """
+        page_size = min(page_size, MAX_MEMBERS_PER_PAGE)
         members = await every_page(
             lambda after: self.fetch_members(after=after, limit=page_size, cache=cache),
             page_size,

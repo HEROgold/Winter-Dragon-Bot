@@ -204,8 +204,8 @@ class AutoChannels(
     async def give_channel(self, member: Member | PartialMember, hub: AutoChannelHub) -> None:
         """Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
 
-        A member whose channel is gone gets a new one; one who couldn't be moved for another reason (they left voice
-        meanwhile, say) keeps theirs.
+        A member whose channel is gone (Discord no longer knows it) gets a new one; one who couldn't be moved for
+        another reason (they left voice meanwhile, say) keeps theirs.
         """
         guild_id, user_id = int(member.guild_id), int(member.id)
         with Session(self.bind) as session:
@@ -213,12 +213,15 @@ class AutoChannels(
             count = len(session.exec(select(AutoChannel).where(AutoChannel.guild_id == guild_id)).all())
             settings = settings_of(session, user_id)
         if existing is not None:
-            moved = await member.move_to(member.guild.channel(existing.channel_id), reason=CREATE_REASON)
-            if not (isinstance(moved, ApiResponseError) and moved.unknown_resource):
-                if is_network_error(moved):
-                    self.logger.debug(t"Could not move {user_id} to their channel {existing.channel_id}: {moved}")
+            own = member.guild.channel(existing.channel_id)
+            moved = await member.move_to(own, reason=CREATE_REASON)
+            if not is_network_error(moved):
                 return
-            await self.delete_channel(existing)
+            found = await own.fetch()
+            if not (isinstance(found, ApiResponseError) and found.unknown_resource):
+                self.logger.debug(t"Could not move {user_id} to their channel {existing.channel_id}: {moved}")
+                return
+            self._forget(existing)
             count -= 1
         if hub.max_channels and count >= hub.max_channels:
             await self._tell(member, "This server has as many automatic channels as it allows; try again later.")
@@ -262,6 +265,10 @@ class AutoChannels(
         if not is_gone(deleted):
             self.logger.warning(t"Could not delete automatic channel {channel.channel_id}: {deleted}")
             return
+        self._forget(channel)
+
+    def _forget(self, channel: AutoChannel) -> None:
+        """Forget the automatic ``channel``, which is gone."""
         with Session(self.bind) as session:
             found = session.get(AutoChannel, channel.id)
             if found is not None:

@@ -43,7 +43,12 @@ def member_has(interaction: AnyInteraction, permissions: Permissions) -> bool:
     return Permissions.ADMINISTRATOR in member.permissions or permissions in member.permissions
 
 
-SHOWN_NAMES = {Permissions.MANAGE_GUILD: "Manage Server"}
+SHOWN_NAMES = {
+    Permissions.MANAGE_GUILD: "Manage Server",
+    Permissions.VIEW_GUILD_INSIGHTS: "View Server Insights",
+    Permissions.MANAGE_GUILD_EXPRESSIONS: "Manage Expressions",
+    Permissions.MODERATE_MEMBERS: "Timeout Members",
+}
 """Permissions Discord's client shows under another name than the API's."""
 
 

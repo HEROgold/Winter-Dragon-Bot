@@ -240,6 +240,7 @@ async def test_a_failed_move_to_their_channel_keeps_it(engine: Engine, client: R
     )
     not_in_voice = {"code": 40032, "message": "Target user is not connected to voice."}
     client.reply("PATCH", f"/guilds/{GUILD_ID}/members/{MEMBER_ID}", not_in_voice, status=400)
+    client.reply("GET", "/channels/60", NEW_CHANNEL)
 
     await _cog(engine, client).on_voice_state_update(_state(client, HUB_ID))
 
@@ -258,3 +259,20 @@ async def test_an_empty_channel_that_cant_be_deleted_is_kept_to_retry(engine: En
 
     assert len(client.requests_to("DELETE", "/channels/60")) == 1
     assert [channel.channel_id for channel in _channels(engine)] == [60]
+
+
+async def test_an_owner_whose_channel_was_deleted_by_hand_gets_a_new_one(engine: Engine, client: RecordingClient) -> None:
+    _seed(
+        engine,
+        AutoChannelHub(guild_id=GUILD_ID, channel_id=HUB_ID),
+        AutoChannel(guild_id=GUILD_ID, owner_id=MEMBER_ID, channel_id=61),
+    )
+    invalid = {"code": 50035, "message": "Invalid Form Body"}
+    client.reply("PATCH", f"/guilds/{GUILD_ID}/members/{MEMBER_ID}", invalid, status=400)
+    client.reply("GET", "/channels/61", {"code": 10003, "message": "Unknown Channel"}, status=404)
+
+    await _cog(engine, client).on_voice_state_update(_state(client, HUB_ID))
+
+    assert client.requests_to("DELETE", "/channels/61") == []  # it's gone: just forget it
+    assert len(client.requests_to("POST", f"/guilds/{GUILD_ID}/channels")) == 1
+    assert 61 not in [channel.channel_id for channel in _channels(engine)]

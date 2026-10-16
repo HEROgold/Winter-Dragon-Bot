@@ -291,11 +291,14 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
     async def remove_channels(self, client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool:
         """Delete the channels of ``stats``, category last, forgetting each one that's gone; whether all of them are.
 
-        A channel that couldn't be deleted for another reason stays recorded, so removing again retries it.
+        A channel that couldn't be deleted for another reason stays recorded, so removing again retries it; so does the
+        category while any of its channels is left.
         """
         ordered = sorted(stats, key=lambda stat: stat.kind is StatKind.CATEGORY)
         gone: list[StatChannel] = []
-        for stat in ordered:
+        for tried, stat in enumerate(ordered):
+            if stat.kind is StatKind.CATEGORY and len(gone) < tried:
+                continue
             deleted = await client.channels.partial(stat.channel_id).delete(reason=reason)
             if is_gone(deleted):
                 gone.append(stat)

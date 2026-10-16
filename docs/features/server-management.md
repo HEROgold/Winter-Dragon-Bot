@@ -44,7 +44,7 @@ Configurable greeting for new members, set up through an interactive menu (`/wel
 
 Live server statistics, both on demand (`/stats show`) and as a locked "Stats" category of voice channels whose names carry the counts: total users, online users, bots, creation date and peak online. Counts come from Discord's approximate member and presence counts plus a paged member listing for the bots; bots are taken to be online, so online users is presences minus bots. The peak is stored, not read back from a channel name. The cog's own background task renames only the channels whose name changed, every `update_interval` seconds (Discord allows two renames per channel per 10 minutes), and forgets channels deleted by hand.
 
-Everyone can use `show`; `add` and `remove` need Manage Channels, checked per subcommand since Discord only gates the group as a whole; `reset` recreates every guild's stats channels and is for the bot's owners (the application owner or its team). `remove` forgets only the channels that are gone; one it couldn't delete stays recorded, so running it again retries it, and `reset` leaves such a guild's channels in place rather than adding a second set.
+Everyone can use `show`; `add` and `remove` need Manage Channels, checked per subcommand since Discord only gates the group as a whole; `reset` recreates every guild's stats channels and is for the bot's owners (the application owner or its team). `remove` forgets only the channels that are gone; one it couldn't delete stays recorded, as does the category holding it, so running it again retries them, and `reset` leaves such a guild's channels in place rather than adding a second set.
 
 Surface: `/stats show | add | remove | reset`
 
