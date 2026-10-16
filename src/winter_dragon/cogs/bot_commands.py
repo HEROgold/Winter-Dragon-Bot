@@ -28,11 +28,11 @@ def describe_sync_status(registry: CommandRegistry) -> Generator[str]:
 class BotCommands(
     GroupCog,
     name="bot-commands",
-    description="Inspect and push the bot's application commands",
+    description="Inspect and manage the bot's application commands",
     default_member_permissions=Permissions.MANAGE_GUILD,
     contexts=[InteractionContextType.GUILD],
 ):
-    """Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
+    """Admin ``/bot-commands`` group for inspecting/managing application-command sync.
 
     Guild-only: Discord doesn't enforce ``default_member_permissions`` in DMs, so the group must not
     show up there.
@@ -48,6 +48,7 @@ class BotCommands(
         embed = Embed(title="Registered commands", description="\n".join(lines) or "No commands registered.")
         await interaction.respond(embeds=[embed])
 
+    # TODO: Should only be allowed by Bot developers!
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
         name="resync",
         description="Re-read the commands from Discord and push any differences",
@@ -57,4 +58,5 @@ class BotCommands(
         await interaction.respond("Resyncing commands…")
         self.bot.registry.forget()
         await self.bot.sync_commands(self.bot.client)
+        await interaction.respond("Resync finished.")
         self.logger.info(t"Command resync finished")

@@ -36,12 +36,17 @@ lazy from .entitlement import Entitlement
 lazy from .events import BoundEvent, bind, event_entities
 lazy from .guild import BaseGuild, GatewayGuild, Guild, PartialGuild, WelcomeScreen, WelcomeScreenChannel
 lazy from .interaction import (
+    AnyGuildInteraction,
     AnyInteraction,
     AutocompleteInteraction,
     CommandInteraction,
     ComponentInteraction,
+    GuildCommandInteraction,
+    GuildComponentInteraction,
+    InGuild,
     Interaction,
     UnknownInteraction,
+    narrow_to_guild,
 )
 lazy from .invite import Invite
 lazy from .member import BaseMember, Member, PartialMember
@@ -55,6 +60,7 @@ lazy from .voice import VoiceState
 
 
 __all__ = [
+    "AnyGuildInteraction",
     "AnyInteraction",
     "Application",
     "AutocompleteInteraction",
@@ -84,8 +90,11 @@ __all__ = [
     "GlobalCommandStore",
     "Guild",
     "GuildCommand",
+    "GuildCommandInteraction",
     "GuildCommandStore",
+    "GuildComponentInteraction",
     "GuildDelete",
+    "InGuild",
     "Interaction",
     "Invite",
     "Member",
@@ -127,4 +136,5 @@ __all__ = [
     "WelcomeScreenChannel",
     "bind",
     "event_entities",
+    "narrow_to_guild",
 ]

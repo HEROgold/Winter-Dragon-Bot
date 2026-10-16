@@ -21,9 +21,9 @@ lazy from wd_discord import (
     CommandInteraction,
     ComponentInteraction,
     GatewayBotInfo,
-    bind,
     is_network_error,
 )
+lazy from wd_errors import Refused
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 
@@ -115,7 +115,11 @@ class Bot(LoggerMixin):
         )
 
     async def add_cog(self, cog: Cog) -> None:
-        """Register a cog and any of its @Cog.listener()-tagged methods."""
+        """Register a cog and any of its @Cog.listener()-tagged methods.
+
+        Raises :class:`TypeError` when a handler expects a guild interaction its command or cog wouldn't give it.
+        """
+        type(cog).check_guild_handlers()
         self.cogs[cog.__cog_name__] = cog
         for _, member in inspect.getmembers(cog, predicate=inspect.iscoroutinefunction):
             event = getattr(member, "__listener_event__", None)
@@ -210,11 +214,14 @@ class Bot(LoggerMixin):
             self.logger.exception(t"Startup command sync failed; continuing without it")
 
     async def _dispatch(self, event_name: str, payload: DiscordModel) -> None:
-        """Bind a parsed gateway dispatch event to the client, then fan it out to every registered listener for it.
+        """Let the client take a parsed gateway dispatch, then fan the bound event out to every listener for it.
+
+        :meth:`Client.receive <wd_discord.client.Client.receive>` updates the client's cache first, so listeners
+        read state that already includes the event.
 
         An interaction is also routed to its command or component handler.
         """
-        event = bind(self.client, payload)
+        event = self.client.receive(payload).event
         if isinstance(event, CommandInteraction | ComponentInteraction):
             self.loop.create_task(self._dispatch_interaction(event))
         for handler in self._listeners.get(event_name, []):
@@ -223,6 +230,8 @@ class Bot(LoggerMixin):
     async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], payload: object) -> None:
         try:
             await handler(payload)
+        except Refused as refused:
+            self.logger.warning(t"Listener {handler!r} refused {payload!r}: {refused.message} ({refused.cause})")
         except Exception:
             self.logger.exception(t"Unhandled exception in listener {handler!r} for {payload!r}")
 

@@ -7,6 +7,7 @@ so each gets its own class exposing the entities as relations next to those fact
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 lazy from datetime import UTC, datetime
 lazy from typing import TYPE_CHECKING
 
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from wd_discord.permissions import ChannelType
+    from wd_discord.resources.guild import GuildMember
 
 
 class GuildDelete(Entity[GuildDeleteModel]):
@@ -210,8 +212,12 @@ class VoiceChannelStartTimeUpdate(Entity[VoiceChannelStartTimeUpdateModel]):
         return None if seconds is None else datetime.fromtimestamp(seconds, UTC)
 
 
+@dataclass(frozen=True)
 class MemberRemove(Entity[GuildMemberRemoveModel]):
     """GUILD_MEMBER_REMOVE: someone left a guild, or was kicked or banned from it."""
+
+    _left: GuildMember | None = None
+    """The membership the client's cache held until this event; the event itself names only the user."""
 
     @property
     def guild(self) -> PartialGuild:
@@ -222,6 +228,11 @@ class MemberRemove(Entity[GuildMemberRemoveModel]):
     def user(self) -> User:
         """Who left."""
         return User(self.client, self.model.user)
+
+    @property
+    def member(self) -> Member | None:
+        """The member as they were before leaving, roles included; ``None`` when the cache didn't know them."""
+        return None if self._left is None else Member(self.client, self._left, self.model.guild_id)
 
 
 class MembersChunk(Entity[GuildMembersChunkModel]):

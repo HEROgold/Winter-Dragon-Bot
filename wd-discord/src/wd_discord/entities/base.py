@@ -96,6 +96,7 @@ class ClientBound:
 
     client: Client
 
+    # In reality[M: DiscordModel, E: Entity[M]]
     def _entity[M: DiscordModel, E: Entity[Any]](
         self,
         result: RequestResult,
@@ -106,6 +107,7 @@ class ClientBound:
         parsed = parse(result, model)
         return parsed if is_network_error(parsed) else entity(self.client, parsed)
 
+    # In reality [M: DiscordModel, E: Entity[M]]
     def _entities[M: DiscordModel, E: Entity[Any]](
         self,
         result: RequestResult,

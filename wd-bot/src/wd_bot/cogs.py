@@ -8,6 +8,7 @@ lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, Ty
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session, SQLModel
 lazy from wd_db.constants import engine
+lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
@@ -21,12 +22,13 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable
 
     lazy from sqlalchemy import Connection, Engine
-    lazy from wd_discord.interactions import InteractionContextType
     lazy from wd_discord.permissions import Permissions
     lazy from wd_discord.snowflake import SnowflakeLike
 
     lazy from wd_bot.bot import Bot
     lazy from wd_bot.commands import AppCommand
+    lazy from wd_discord import AnyInteraction
+
     lazy from wd_bot.registry import CommandMention
 
 
@@ -36,11 +38,13 @@ def command(
     default_member_permissions: Permissions | None = None,
     contexts: Iterable[InteractionContextType] | None = None,
     guild_ids: Iterable[SnowflakeLike] | None = None,
+    requires: Permissions | None = None,
 ) -> Callable[[Callable[..., Awaitable[None]]], Command]:
     """Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 
     ``guild_ids`` registers the command in just those guilds instead of globally; on a :class:`GroupCog`
-    the group's ``guild_ids`` apply instead.
+    the group's ``guild_ids`` apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
+    before the handler runs; use it for a subcommand needing more than its group.
     """
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
@@ -51,6 +55,7 @@ def command(
             default_member_permissions=default_member_permissions,
             contexts=contexts,
             guild_ids=guild_ids,
+            requires=requires,
         )
 
     return decorator
@@ -156,6 +161,31 @@ class Cog(LoggerMixin):
         """Return the path a user types to run ``command`` from this cog: ``/name``."""
         return CommandPath(command.name)
 
+    @classmethod
+    def guild_only(cls) -> bool:
+        """Whether the cog is used in guilds only: every one of its commands is; its components inherit this."""
+        commands = list(cls.commands())
+        return bool(commands) and all(command.guild_only for command in commands)
+
+    @classmethod
+    def check_guild_handlers(cls) -> None:
+        """Raise :class:`TypeError` if a handler expects a guild interaction it wouldn't get."""
+        for command in cls.commands():
+            if command.wants_guild and not (command.guild_only or cls.guild_only()):
+                msg = f"{cls.__name__}.{command.name} takes a guild interaction, but isn't registered with contexts=[GUILD]"
+                raise TypeError(msg)
+        for handler in cls.components():
+            if handler.wants_guild and not cls.guild_only():
+                msg = f"{cls.__name__} component {handler.prefix!r} takes a guild interaction, but the cog isn't guild-only"
+                raise TypeError(msg)
+
+    @classmethod
+    def audit_reason(cls, interaction: AnyInteraction, command: Command, action: str) -> str:
+        """Return the audit-log reason for ``action``: what was done, by whom, with which command."""
+        user = interaction.user
+        who = "someone" if user is None else f"{user.username} ({user.id})"
+        return f"{action} by {who} using /{cls.path_of(command)}"
+
     def mention(self, command: Command, *, guild: SnowflakeLike | None = None) -> CommandMention:
         """Return a mention of ``command``, as seen from ``guild``: clickable once Discord reported it, else ``/name``.
 
@@ -241,6 +271,12 @@ class GroupCog(Cog):
     def path_of(cls, command: Command) -> CommandPath:
         """Return the path a user types to run the subcommand ``command``: ``/<group> <command>``."""
         return CommandPath(cls.group_name, command.name)
+
+    @classmethod
+    @override
+    def guild_only(cls) -> bool:
+        """Whether the group is offered in guilds only; its subcommands and components then get guild interactions."""
+        return cls.group_contexts == [InteractionContextType.GUILD]
 
 
 def _kebab_case(name: str) -> str:

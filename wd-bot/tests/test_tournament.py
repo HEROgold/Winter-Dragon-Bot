@@ -279,7 +279,7 @@ async def test_the_join_button_signs_up_and_refreshes_the_card(
         tournament_id = _tournament(session, team_size=2).id
     cog = _cog(engine, discord_client)
 
-    await Tournaments.join_button.invoke(cog, make_component_interaction(f"tourney-join:{tournament_id}"), [str(tournament_id)])
+    await Tournaments.join_button.invoke(cog, make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID), [str(tournament_id)])
 
     update = _response(discord_client)
     assert update["type"] == 7  # UPDATE_MESSAGE
@@ -304,7 +304,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
     cog = _cog(engine, discord_client)
 
     args = [str(match_id), "win", str(winner)]
-    await Tournaments.match_control.invoke(cog, make_component_interaction("tourney-match:" + ":".join(args)), args)
+    await Tournaments.match_control.invoke(cog, make_component_interaction("tourney-match:" + ":".join(args), guild_id=GUILD_ID), args)
 
     assert "wins" in _response(discord_client)["data"]["embeds"][0]["description"]  # pyright: ignore[reportIndexIssue]
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
@@ -328,7 +328,7 @@ async def test_only_match_players_can_use_the_vote_buttons(
         vote_id = vote.id
     cog = _cog(engine, discord_client)
 
-    await Tournaments.vote_button.invoke(cog, make_component_interaction(f"tourney-vote:{vote_id}:0"), [str(vote_id), "0"])
+    await Tournaments.vote_button.invoke(cog, make_component_interaction(f"tourney-vote:{vote_id}:0", guild_id=GUILD_ID), [str(vote_id), "0"])
 
     assert _response(discord_client)["data"]["content"] == "Only the players of this match can vote."  # pyright: ignore[reportIndexIssue]
     with Session(engine) as session:
@@ -357,7 +357,7 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
     cog = _cog(engine, discord_client)
 
     await Tournaments.participants_button.invoke(
-        cog, make_component_interaction(f"tourney-participants:{tournament_id}"), [str(tournament_id)],
+        cog, make_component_interaction(f"tourney-participants:{tournament_id}", guild_id=GUILD_ID), [str(tournament_id)],
     )
 
     data = _response(discord_client)["data"]

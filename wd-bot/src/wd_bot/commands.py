@@ -13,18 +13,21 @@ lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
-lazy from wd_discord import Channel, Role, User
+lazy from wd_discord import Channel, Role, User, narrow_to_guild
 lazy from wd_discord.interactions import (
     MAX_CHOICES,
     ApplicationCommandOption,
     ApplicationCommandOptionType,
     ApplicationCommandParams,
+    InteractionContextType,
 )
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.user import User as UserModel
 lazy from wd_discord.snowflake import Snowflake
+lazy from wd_errors import Refused
 
+lazy from wd_bot.checks import answer_refusal, require_guild, require_permissions
 lazy from wd_bot.cogs import Cog
 lazy from wd_bot.registry import GLOBAL, Scope
 lazy from wd_bot.signature import command_signature
@@ -36,7 +39,7 @@ if TYPE_CHECKING:
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
     lazy from wd_discord.entities import Resolved
     lazy from wd_discord.gateway.events import InteractionDataOption
-    lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
+    lazy from wd_discord.interactions import ApplicationCommandOptionChoice
     lazy from wd_discord.permissions import ChannelType, Permissions
     lazy from wd_discord.snowflake import SnowflakeLike
 
@@ -96,6 +99,8 @@ class AppCommand(LoggerMixin, ABC):
         self.description = description
         self.default_member_permissions = default_member_permissions
         self.contexts = None if contexts is None else list(contexts)
+        self.guild_only = self.contexts == [InteractionContextType.GUILD]
+        """Whether Discord offers the command in guilds only, so its handler gets a guild interaction."""
         self.scopes: frozenset[Scope] = (
             frozenset({GLOBAL}) if guild_ids is None else frozenset(Scope(Snowflake.coerce(guild)) for guild in guild_ids)
         )
@@ -153,8 +158,13 @@ class Command(AppCommand):
         default_member_permissions: Permissions | None = None,
         contexts: Iterable[InteractionContextType] | None = None,
         guild_ids: Iterable[SnowflakeLike] | None = None,
+        requires: Permissions | None = None,
     ) -> None:
-        """Wrap ``func`` as a command named ``name`` with the given ``description``."""
+        """Wrap ``func`` as a command named ``name`` with the given ``description``.
+
+        ``requires`` is checked by wd-bot before ``func`` runs; unlike ``default_member_permissions`` it works on a
+        subcommand too.
+        """
         super().__init__(
             name=name,
             description=description,
@@ -163,6 +173,9 @@ class Command(AppCommand):
             guild_ids=guild_ids,
         )
         self.func = func
+        self.requires = requires
+        self.wants_guild = wants_guild_interaction(func)
+        """Whether the handler's ``interaction`` is annotated as a guild interaction; it must then be guild-only."""
         self.owner: type[Cog] | None = None
         """The cog class this command was defined on; set when that class is created."""
         self._autocompletes: dict[str, AutocompleteHandler] = {}
@@ -279,7 +292,14 @@ class Command(AppCommand):
             options = interaction.options
         kwargs = self._build_kwargs(interaction, options)
         try:
+            if self.guild_only:
+                interaction = require_guild(interaction)
+            if self.requires is not None:
+                require_permissions(interaction, self.requires)
             await self.func(cog, interaction, **kwargs)
+        except Refused as refused:
+            self.logger.debug(t"Command '{self.name}' refused: {refused.message} ({refused.cause})")
+            await answer_refusal(interaction, refused)
         except Exception:
             self.logger.exception(t"Unhandled exception in command '{self.name}'")
             return False
@@ -351,6 +371,19 @@ class Command(AppCommand):
         """Remember the cog class this command is defined on, so a mention from any cog can find its path."""
         if issubclass(owner, Cog):
             self.owner = owner
+
+
+GUILD_INTERACTIONS = frozenset({"GuildCommandInteraction", "GuildComponentInteraction"})
+
+
+def wants_guild_interaction(func: Callable[..., object]) -> bool:
+    """Whether ``func``'s ``interaction`` parameter is annotated as a guild interaction.
+
+    Reads the annotation's name: cogs import interaction types for type checking only, so it often can't be resolved.
+    """
+    parameters = inspect_signature(func, annotation_format=annotationlib.Format.STRING).parameters
+    annotation = parameters["interaction"].annotation if "interaction" in parameters else Parameter.empty
+    return isinstance(annotation, str) and annotation.rpartition(".")[2] in GUILD_INTERACTIONS
 
 
 def _union(types: Iterable[object]) -> object:
@@ -454,6 +487,12 @@ class CommandGroup(AppCommand):
         if (chosen := self._chosen(interaction.options)) is None:
             return False
         subcommand, options = chosen
+        if self.guild_only:
+            narrowed = narrow_to_guild(interaction)
+            if narrowed is None:
+                await answer_refusal(interaction, Refused("This only works in a server."))
+                return True
+            interaction = narrowed
         return await subcommand.invoke(cog, interaction, options)
 
     async def complete(self, cog: Cog, interaction: AutocompleteInteraction) -> bool:

@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_errors` — `wd-errors/src/wd_errors/__init__.py`
 
-- exports: Activity, BaseError, ErrorCode, ErrorMessage, ErrorNode, Platform
+- exports: Activity, BaseError, ErrorCode, ErrorMessage, ErrorNode, Platform, Refused, unwrap
 
 ## `wd_errors.base` — `wd-errors/src/wd_errors/base.py`
 Base error classes for the wd-discord package.
@@ -65,6 +65,14 @@ Factory for creating Error errors.
 - fields: registry: ClassVar[dict[type[DiscordException], list[type[DiscordError]]]], logger: ClassVar
 - `@classmethod register(error: type[DiscordException], error_type: type[DiscordError]) -> None` — Register an Error error class for a category.
 - `@classmethod get_handlers(bot: BotBase, exception: DiscordException, *, interaction: Interaction | None=None, ctx: Context[Bot] | None=None) -> Generator[DiscordError]` — Get the Error error class for a category.
+
+## `wd_errors.refused` — `wd-errors/src/wd_errors/refused.py`
+Refusing an action: stop a command, button or listener and tell the user why.
+
+- `unwrap[T](result: T | NetworkError, message: str) -> T` — Return ``result``, or refuse with ``message`` when it's a failed Discord call.
+
+### `class Refused(BaseError)`
+An action that can't go ahead; :attr:`message` tells the user who asked why.
 
 ## `wd_errors.size` — `wd-errors/src/wd_errors/size.py`
 Size errors.

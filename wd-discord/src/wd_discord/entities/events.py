@@ -40,6 +40,7 @@ lazy from wd_discord.entities.user import CurrentUser
 lazy from wd_discord.entities.voice import VoiceState
 lazy from wd_discord.gateway import events as wire
 lazy from wd_discord.gateway.events import EventName
+lazy from wd_discord.resources.guild import GuildMember
 
 
 if TYPE_CHECKING:
@@ -79,8 +80,14 @@ type BoundEvent = (
 """Every entity :func:`bind` can return; ``match`` on it to handle each event."""
 
 
-def bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel:
-    """Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none."""
+def bind(client: Client, model: DiscordModel, previous: DiscordModel | None = None) -> BoundEvent | DiscordModel:
+    """Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
+
+    ``previous`` is what the event replaced in the client's cache. Only GUILD_MEMBER_REMOVE uses it: the member
+    is gone from the cache once it's applied, and the event names only the user.
+    """
+    if isinstance(model, wire.GuildMemberRemove):
+        return MemberRemove(client, model, previous if isinstance(previous, GuildMember) else None)
     binder = _binders().get(type(model))
     # The table pairs each model with its own entity, which is one of BoundEvent's members.
     return model if binder is None else cast("BoundEvent", binder(client, model))
@@ -116,7 +123,6 @@ def _binders() -> Mapping[type[DiscordModel], Callable[..., ClientBound]]:
         wire.VoiceChannelStatusUpdate: VoiceChannelStatusUpdate,
         wire.VoiceChannelStartTimeUpdate: VoiceChannelStartTimeUpdate,
         wire.GuildMemberAdd: _member,
-        wire.GuildMemberRemove: MemberRemove,
         wire.GuildMembersChunk: MembersChunk,
         wire.GuildRoleCreate: _role,
         wire.GuildRoleUpdate: _role,
@@ -146,6 +152,8 @@ def _thread_member(client: Client, model: wire.ThreadMemberUpdate) -> ThreadMemb
     return ThreadMember(client, model, model.id)
 
 
+# TODO:
+# I'd like `type | TypeAliasType` to be more specific. They seem to be some form of Entity[...]
 def event_entities() -> Mapping[EventName, type | TypeAliasType]:
     """Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``."""
     return {

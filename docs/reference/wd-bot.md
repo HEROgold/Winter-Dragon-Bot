@@ -60,9 +60,13 @@ A forever-running Discord bot: connects to the gateway, loads extensions, dispat
 - `@with_known_exception @Config.with_kwarg async start(token: str) -> None` — Start the bot with a token from the config file, or a provided token. Provided token takes precedence.
 
 ## `wd_bot.checks` — `wd-bot/src/wd_bot/checks.py`
-Checks a command makes before acting: whether the invoker holds some permissions, or owns the bot.
+Checks made before a command or component acts, and answering the user when one refuses.
 
 - `member_has(interaction: AnyInteraction, permissions: Permissions) -> bool` — Whether the guild member invoking ``interaction`` holds every one of ``permissions`` in its channel.
+- `permission_names(permissions: Permissions) -> str` — Return ``permissions`` as Discord shows them: ``Manage Channels and Manage Guild``.
+- `require_permissions(interaction: AnyInteraction, permissions: Permissions) -> None` — Refuse unless the member invoking ``interaction`` holds every one of ``permissions``.
+- `require_guild(interaction: CommandInteraction | ComponentInteraction) -> GuildCommandInteraction | GuildComponentInteraction` — Return ``interaction`` as sent from a guild, or refuse when it wasn't.
+- `async answer_refusal(interaction: AnyInteraction, refused: Refused) -> None` — Tell the user behind ``interaction``, privately, why their action was refused.
 - `owner_ids(application: Application) -> Generator[Snowflake]` — Yield the IDs of the users owning ``application``: its team's accepted members, or else its owner.
 - `async is_owner(client: Client, user_id: SnowflakeLike) -> bool` — Whether the user ``user_id`` owns the bot; ``False`` when the application can't be read.
 
@@ -70,7 +74,7 @@ Checks a command makes before acting: whether the invoker holds some permissions
 Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency.
 
 - module names: default_flags
-- `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None, guild_ids: Iterable[SnowflakeLike] | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
+- `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None, guild_ids: Iterable[SnowflakeLike] | None=None, requires: Permissions | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 - `component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ComponentHandler]` — Tag a Cog method as the handler for components whose ``custom_id`` starts with ``prefix``.
 
 ### `class BotArgs(TypedDict)`
@@ -93,6 +97,9 @@ A wd-native feature unit: a class whose methods can be tagged with @Cog.listener
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield what this cog registers as top-level Discord commands: each of its commands.
 - `@classmethod components() -> Generator[ComponentHandler]` — Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases.
 - `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run ``command`` from this cog: ``/name``.
+- `@classmethod guild_only() -> bool` — Whether the cog is used in guilds only: every one of its commands is; its components inherit this.
+- `@classmethod check_guild_handlers() -> None` — Raise :class:`TypeError` if a handler expects a guild interaction it wouldn't get.
+- `@classmethod audit_reason(interaction: AnyInteraction, command: Command, action: str) -> str` — Return the audit-log reason for ``action``: what was done, by whom, with which command.
 - `mention(command: Command, *, guild: SnowflakeLike | None=None) -> CommandMention` — Return a mention of ``command``, as seen from ``guild``: clickable once Discord reported it, else ``/name``.
 - `@property bind -> Engine | Connection` — The database the cog's injected session connects to; open short-lived sessions on it per operation.
 - `create_tables(*models: type[SQLModel]) -> None` — Create the tables of ``models`` that don't exist yet, in :attr:`bind`; each named after its model, lowercased.
@@ -107,11 +114,14 @@ A cog whose commands are registered as subcommands of one Discord command, ``/<g
   ClassVar[list[SnowflakeLike] | None]
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield this cog's single top-level Discord command: the group holding its commands.
 - `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run the subcommand ``command``: ``/<group> <command>``.
+- `@classmethod guild_only() -> bool` — Whether the group is offered in guilds only; its subcommands and components then get guild interactions.
 
 ## `wd_bot.commands` — `wd-bot/src/wd_bot/commands.py`
 Application commands: the shared :class:`AppCommand` base, plain :class:`Command` and :class:`CommandGroup`.
 
+- module names: GUILD_INTERACTIONS
 - `type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]`
+- `wants_guild_interaction(func: Callable[..., object]) -> bool` — Whether ``func``'s ``interaction`` parameter is annotated as a guild interaction.
 
 ### `class ChannelTypes`
 Limit a channel option to some kinds of channel: ``category: Annotated[Channel, ChannelTypes(GUILD_CATEGORY)]``.

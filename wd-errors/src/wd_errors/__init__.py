@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 lazy from .base import Activity, BaseError, ErrorCode, ErrorMessage, ErrorNode, Platform
+lazy from .refused import Refused, unwrap
 
 
 __all__ = [
@@ -12,6 +13,8 @@ __all__ = [
     "ErrorMessage",
     "ErrorNode",
     "Platform",
+    "Refused",
+    "unwrap",
 ]
 
 _ = ""  # < Trick for ruff. so that imports below don't get auto-sorted.

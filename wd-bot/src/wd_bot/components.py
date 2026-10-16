@@ -10,6 +10,10 @@ lazy from typing import TYPE_CHECKING, Self
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord.components import MAX_CUSTOM_ID_LENGTH
+lazy from wd_errors import Refused
+
+lazy from wd_bot.checks import answer_refusal, require_guild
+lazy from wd_bot.commands import wants_guild_interaction
 
 
 if TYPE_CHECKING:
@@ -43,6 +47,8 @@ class ComponentHandler(LoggerMixin):
             raise ValueError(msg)
         self.func = func
         self.prefix = prefix
+        self.wants_guild = wants_guild_interaction(func)
+        """Whether the handler's ``interaction`` is annotated as a guild interaction; its cog must then be guild-only."""
 
     def custom_id(self, *args: str | int) -> str:
         """Build a ``custom_id`` routed to this handler, carrying ``args``.
@@ -62,7 +68,12 @@ class ComponentHandler(LoggerMixin):
     async def invoke(self, cog: Cog, interaction: ComponentInteraction, args: Sequence[str]) -> bool:
         """Call the handler; return ``False`` if it raised (the exception is logged)."""
         try:
+            if type(cog).guild_only():
+                interaction = require_guild(interaction)
             await self.func(cog, interaction, *args)
+        except Refused as refused:
+            self.logger.debug(t"Component '{self.prefix}' refused: {refused.message} ({refused.cause})")
+            await answer_refusal(interaction, refused)
         except Exception:
             self.logger.exception(t"Unhandled exception in component handler '{self.prefix}'")
             return False

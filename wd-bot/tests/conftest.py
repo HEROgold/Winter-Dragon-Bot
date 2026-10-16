@@ -75,14 +75,30 @@ ASKER = User.model_validate({"id": "3", "username": "asker", "discriminator": "0
 
 DEFAULT_GUILD_ID = 1
 """The guild a :func:`make_interaction` member is in when the test names none: Discord sends members with their guild."""
+DEFAULT_CHANNEL_ID = 2
+"""The channel a guild interaction comes from when a test doesn't say."""
+
+
+def _sender(
+    user: User | None,
+    guild_id: int | None,
+    channel_id: int | None,
+    permissions: Permissions | None,
+) -> dict[str, object]:
+    """Return who sent an interaction from where, as Discord does: from a guild, the user comes inside ``member``."""
+    if guild_id is None and permissions is None:
+        return {"user": user, "channel_id": channel_id}
+    member = GuildMember(user=user, roles=[], joined_at=None, deaf=False, mute=False, permissions=permissions)
+    channel = channel_id if channel_id is not None else DEFAULT_CHANNEL_ID
+    return {"member": member, "guild_id": DEFAULT_GUILD_ID if guild_id is None else guild_id, "channel_id": channel}
 
 
 @pytest.fixture
 def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
     """Return a builder for a ``/name`` interaction with the given options, invoked by ``user``, bound to ``discord_client``.
 
-    ``guild_id`` and ``channel_id`` say where it was sent from; by default, nowhere in particular. ``permissions``
-    makes ``user`` a guild member holding them; ``app_permissions`` are the bot's in that channel.
+    ``guild_id`` and ``channel_id`` say where it was sent from; by default, nowhere in particular. From a guild,
+    ``user`` is a member holding ``permissions``; ``app_permissions`` are the bot's in that channel.
     """
 
     def build(  # noqa: PLR0913 - one keyword per interaction field a test may set
@@ -102,12 +118,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
             type=InteractionType.APPLICATION_COMMAND,
             token="tok",  # noqa: S106
             version=1,
-            user=user,
-            member=None
-            if permissions is None
-            else GuildMember(user=user, roles=[], joined_at=None, deaf=False, mute=False, permissions=permissions),
-            guild_id=DEFAULT_GUILD_ID if guild_id is None and permissions is not None else guild_id,
-            channel_id=channel_id,
+            **_sender(user, guild_id, channel_id, permissions),  # pyright: ignore[reportArgumentType]
             app_permissions=app_permissions,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),
         )
@@ -119,23 +130,39 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
 class ComponentInteractionFactory(Protocol):
     """Builds a button-click interaction, as the ``make_component_interaction`` fixture returns."""
 
-    def __call__(self, custom_id: str, *, user: User | None = ...) -> ComponentInteraction:
+    def __call__(
+        self,
+        custom_id: str,
+        *,
+        user: User | None = ...,
+        guild_id: int | None = None,
+        permissions: Permissions | None = None,
+    ) -> ComponentInteraction:
         """Build the interaction."""
         ...
 
 
 @pytest.fixture
 def make_component_interaction(discord_client: RecordingClient) -> ComponentInteractionFactory:
-    """Return a builder for a click on the button ``custom_id``, by ``user``, bound to ``discord_client``."""
+    """Return a builder for a click on the button ``custom_id``, by ``user``, bound to ``discord_client``.
 
-    def build(custom_id: str, *, user: User | None = ASKER) -> ComponentInteraction:
+    ``guild_id`` makes it a click on a message in that guild, by a member holding ``permissions``.
+    """
+
+    def build(
+        custom_id: str,
+        *,
+        user: User | None = ASKER,
+        guild_id: int | None = None,
+        permissions: Permissions | None = None,
+    ) -> ComponentInteraction:
         model = ComponentInteractionModel(
             id="1",
             application_id="2",
             type=InteractionType.MESSAGE_COMPONENT,
             token="tok",  # noqa: S106
             version=1,
-            user=user,
+            **_sender(user, guild_id, None, permissions),  # pyright: ignore[reportArgumentType]
             data=MessageComponentData(custom_id=custom_id, component_type=ComponentType.BUTTON),
             message={"id": "11"},
         )

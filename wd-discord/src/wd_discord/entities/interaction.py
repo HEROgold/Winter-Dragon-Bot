@@ -13,7 +13,7 @@ editing the original response and sending follow-ups.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, overload
 
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import Entity, no_content
@@ -66,7 +66,8 @@ class ResponseState:
 class Interaction[M: InteractionModel](Entity[M]):
     """The fields and responses every interaction shares."""
 
-    _state: ResponseState = field(default_factory=ResponseState, init=False, repr=False, compare=False)
+    _state: ResponseState = field(default_factory=ResponseState, repr=False, compare=False, kw_only=True)
+    """Shared with a :func:`narrow_to_guild` view of the same interaction, so either one sees the other's response."""
 
     @property
     def id(self) -> Snowflake:
@@ -343,3 +344,81 @@ def _full_channel(client: Client, channel: ChannelModel, guild_id: Snowflake | N
     if channel.guild_id is None and guild_id is not None:
         channel = channel.model_copy(update={"guild_id": guild_id})
     return Channel(client, channel)
+
+
+class InGuild:
+    """What an interaction sent from a guild always has: the guild, the channel, and the member who sent it.
+
+    Mixed in before the interaction class, so these properties replace the optional ones; build one with
+    :func:`narrow_to_guild`, which checks Discord sent them.
+    """
+
+    if TYPE_CHECKING:
+        client: Client
+        model: InteractionModel
+
+    @property
+    def guild_id(self) -> Snowflake:
+        """The ID of the guild the interaction was sent from."""
+        return _required(self.model.guild_id, "guild_id")
+
+    @property
+    def guild(self) -> PartialGuild:
+        """The guild the interaction was sent from."""
+        return PartialGuild(self.client, self.guild_id)
+
+    @property
+    def channel(self) -> Channel | PartialChannel:
+        """The channel the interaction was sent from, in full when Discord sent it along (it usually does)."""
+        if self.model.channel is not None:
+            return _full_channel(self.client, self.model.channel, self.model.guild_id)
+        return PartialChannel(self.client, _required(self.model.channel_id, "channel_id"))
+
+    @property
+    def member(self) -> Member:
+        """The guild member who sent the interaction."""
+        return Member(self.client, _required(self.model.member, "member"), self.guild_id)
+
+    @property
+    def user(self) -> User:
+        """The user who sent the interaction."""
+        return self.member.user
+
+
+class GuildCommandInteraction(InGuild, CommandInteraction):
+    """Someone ran an application command in a guild."""
+
+
+class GuildComponentInteraction(InGuild, ComponentInteraction):
+    """Someone clicked a component on a message in a guild."""
+
+
+type AnyGuildInteraction = GuildCommandInteraction | GuildComponentInteraction
+
+
+def _required[T](value: T | None, name: str) -> T:
+    """Return ``value``; only :func:`narrow_to_guild` builds guild interactions, and it checked it's there."""
+    if value is None:
+        msg = f"A guild interaction without {name}"
+        raise ValueError(msg)
+    return value
+
+
+@overload
+def narrow_to_guild(interaction: CommandInteraction) -> GuildCommandInteraction | None: ...
+@overload
+def narrow_to_guild(interaction: ComponentInteraction) -> GuildComponentInteraction | None: ...
+def narrow_to_guild(interaction: CommandInteraction | ComponentInteraction) -> AnyGuildInteraction | None:
+    """Return ``interaction`` as sent from a guild, sharing its response state; ``None`` if it wasn't.
+
+    Discord sends a guild interaction with its guild, channel and member (and the member's user).
+    """
+    if isinstance(interaction, InGuild):
+        # Using TypeIs would be more precise, and should fix the ty:ignore.
+        return interaction  # ty: ignore[invalid-return-type]
+    model = interaction.model
+    if model.guild_id is None or model.channel_id is None or model.member is None or model.member.user is None:
+        return None
+    if isinstance(interaction, CommandInteraction):
+        return GuildCommandInteraction(interaction.client, interaction.model, _state=interaction._state)  # noqa: SLF001 - the same interaction
+    return GuildComponentInteraction(interaction.client, interaction.model, _state=interaction._state)  # noqa: SLF001

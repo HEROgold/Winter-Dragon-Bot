@@ -10,12 +10,13 @@ Public names only — open the file when you need a body. Index: [API reference]
 - exports: URLS, AnyInteraction, ApiResponseError, Application, AuditLogReason, AutocompleteInteraction, BoundEvent,
   Channel, ChannelPinsUpdate, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel,
   Embed, EmbedField, Emoji, Entitlement, EventName, Gateway, GatewayActivity, GatewayBotInfo, GatewayGuild,
-  GlobalCommand, Guild, GuildCommand, GuildCreate, GuildDelete, Interaction, Invite, Member, MemberRemove, MembersChunk,
-  Message, NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand,
-  PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, Permissions, Presence, RawEvent, Ready,
-  Resolved, Role, Sentry, ShardManager, Snowflake, Status, Sticker, Team, TeamMember, ThreadCreate, ThreadDelete,
-  ThreadListSync, ThreadMember, ThreadMembersUpdate, Token, TokenType, UnknownInteraction, User,
-  VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind, is_network_error
+  GlobalCommand, Guild, GuildCommand, GuildCommandInteraction, GuildComponentInteraction, GuildCreate, GuildDelete,
+  Interaction, Invite, Member, MemberRemove, MembersChunk, Message, NetworkError, PartialChannel, PartialEmoji,
+  PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser,
+  PermissionOverwrite, Permissions, Presence, RawEvent, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status,
+  Sticker, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, Token,
+  TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind,
+  is_network_error, narrow_to_guild
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
@@ -61,6 +62,25 @@ Represents a content type.
 
 - attributes: json, urlencoded, multipart
 
+## `wd_discord.cache` — `wd-discord/src/wd_discord/cache.py`
+The client's view of Discord, kept current by the gateway.
+
+### `@dataclass class GuildState`
+What the client knows of one guild.
+
+- fields: guild: Guild, unavailable: bool, channels: dict[Snowflake, Channel] | None, threads: dict[Snowflake, Channel]
+  | None, roles: dict[Snowflake, Role], emojis: dict[Snowflake, Emoji], stickers: dict[Snowflake, Sticker], members:
+  dict[Snowflake, GuildMember], members_complete: bool, voice_states: dict[Snowflake, VoiceState] | None, presences:
+  dict[Snowflake, Presence] | None
+- `set_guild(guild: Guild) -> None` — Take ``guild`` as the guild's data, with the roles, emojis and stickers it carries.
+
+### `class StateCache`
+Every guild, channel and the bot's own user, as the gateway last described them.
+
+- `guild(guild_id: Snowflake) -> GuildState | None` — Return what's known of the guild ``guild_id``, or ``None``.
+- `channel(channel_id: Snowflake) -> Channel | None` — Return the guild channel, thread or DM ``channel_id``, or ``None``.
+- `apply(model: DiscordModel) -> DiscordModel | None` — Bring the cache up to date with a parsed dispatch ``model``.
+
 ## `wd_discord.client` — `wd-discord/src/wd_discord/client.py`
 The built-in Discord REST client for wd-discord.
 
@@ -70,6 +90,11 @@ The built-in Discord REST client for wd-discord.
 - `type InflightKey = tuple[str, tuple[tuple[str, str], ...]]`
 - `returns_known_exception[**P, T, E: Exception](*exceptions: type[E]) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T | E]]]` — Async analog of :func:`herogold.errors.with_known_exception`.
 - `is_network_error(value: object) -> TypeIs[NetworkError]` — Whether ``value`` is a failed request: a Discord API error or a network error.
+
+### `@dataclass class Received`
+A gateway dispatch as :meth:`Client.receive` took it.
+
+- fields: event: BoundEvent | DiscordModel, previous: DiscordModel | None
 
 ### `class Client(LoggerMixin)`
 An async Discord REST client pinned to the configured API version (v10 by default).
@@ -81,6 +106,7 @@ An async Discord REST client pinned to the configured API version (v10 by defaul
 - `async patch(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
 - `async put(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.
 - `async delete(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a DELETE request.
+- `receive(model: DiscordModel) -> Received` — Take a parsed gateway dispatch: bring :attr:`cache` up to date with it, then bind it to this client.
 - `async get_gateway_bot() -> GatewayBotInfo | NetworkError` — GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info.
 - `async get_shard_manager(info: GatewayBotInfo, *, intents: Intents | None=None) -> ShardManager` — Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`.
 

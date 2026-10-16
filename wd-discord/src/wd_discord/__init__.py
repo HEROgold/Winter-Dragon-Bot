@@ -29,6 +29,8 @@ lazy from wd_discord.entities import (
     GlobalCommand,
     Guild,
     GuildCommand,
+    GuildCommandInteraction,
+    GuildComponentInteraction,
     GuildDelete,
     Interaction,
     Invite,
@@ -63,6 +65,7 @@ lazy from wd_discord.entities import (
     VoiceChannelStatusUpdate,
     VoiceState,
     bind,
+    narrow_to_guild,
 )
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import (
@@ -110,6 +113,8 @@ __all__ = [
     "GlobalCommand",
     "Guild",
     "GuildCommand",
+    "GuildCommandInteraction",
+    "GuildComponentInteraction",
     "GuildCreate",
     "GuildDelete",
     "Interaction",
@@ -156,4 +161,5 @@ __all__ = [
     "VoiceState",
     "bind",
     "is_network_error",
+    "narrow_to_guild",
 ]

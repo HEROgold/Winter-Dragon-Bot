@@ -7,16 +7,16 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord.entities` — `wd-discord/src/wd_discord/entities/__init__.py`
 
-- exports: AnyInteraction, Application, AutocompleteInteraction, BaseChannel, BaseGlobalCommand, BaseGuild,
-  BaseGuildCommand, BaseMember, BaseMessage, BaseRole, BaseUser, BoundEvent, Channel, ChannelPinsUpdate, ClientBound,
-  CommandEntity, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Emoji, Entitlement, Entity,
-  EntityStore, GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand, GuildCommandStore, GuildDelete,
-  Interaction, Invite, Member, MemberRemove, MembersChunk, Message, Partial, PartialChannel, PartialGlobalCommand,
-  PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite,
-  PermissionTarget, Presence, ReactionEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember, ThreadCreate,
-  ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, UnknownInteraction, User, UserStore,
-  VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel, bind,
-  event_entities
+- exports: AnyGuildInteraction, AnyInteraction, Application, AutocompleteInteraction, BaseChannel, BaseGlobalCommand,
+  BaseGuild, BaseGuildCommand, BaseMember, BaseMessage, BaseRole, BaseUser, BoundEvent, Channel, ChannelPinsUpdate,
+  ClientBound, CommandEntity, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Emoji,
+  Entitlement, Entity, EntityStore, GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand,
+  GuildCommandInteraction, GuildCommandStore, GuildComponentInteraction, GuildDelete, InGuild, Interaction, Invite,
+  Member, MemberRemove, MembersChunk, Message, Partial, PartialChannel, PartialGlobalCommand, PartialGuild,
+  PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget,
+  Presence, ReactionEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember, ThreadCreate, ThreadDelete,
+  ThreadListSync, ThreadMember, ThreadMembersUpdate, UnknownInteraction, User, UserStore, VoiceChannelStartTimeUpdate,
+  VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel, bind, event_entities, narrow_to_guild
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -310,11 +310,12 @@ VOICE_CHANNEL_START_TIME_UPDATE: a voice session in a channel started or ended.
 - `@property guild -> PartialGuild` — The voice channel's guild.
 - `@property voice_start_time -> datetime | None` — When the channel's current voice session started; ``None`` once nobody is in it.
 
-### `class MemberRemove(Entity[GuildMemberRemoveModel])`
+### `@dataclass class MemberRemove(Entity[GuildMemberRemoveModel])`
 GUILD_MEMBER_REMOVE: someone left a guild, or was kicked or banned from it.
 
 - `@property guild -> PartialGuild` — The guild they left.
 - `@property user -> User` — Who left.
+- `@property member -> Member | None` — The member as they were before leaving, roles included; ``None`` when the cache didn't know them.
 
 ### `class MembersChunk(Entity[GuildMembersChunkModel])`
 GUILD_MEMBERS_CHUNK: one part of the members a Request Guild Members (opcode 8) asked for.
@@ -382,7 +383,7 @@ A user's or guild's access to one of the application's SKUs.
 Gateway dispatch events bound to the client that received them.
 
 - `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate | Member | MemberRemove | MembersChunk | Role | PartialRole | CurrentUser | Presence`
-- `bind(client: Client, model: DiscordModel) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
+- `bind(client: Client, model: DiscordModel, previous: DiscordModel | None=None) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
 - `event_entities() -> Mapping[EventName, type | TypeAliasType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
 
 ## `wd_discord.entities.guild` — `wd-discord/src/wd_discord/entities/guild.py`
@@ -482,6 +483,8 @@ One channel a welcome screen suggests.
 Interactions bound to the client that answers them.
 
 - `type AnyInteraction = CommandInteraction | ComponentInteraction | AutocompleteInteraction | UnknownInteraction`
+- `type AnyGuildInteraction = GuildCommandInteraction | GuildComponentInteraction`
+- `narrow_to_guild(interaction: CommandInteraction | ComponentInteraction) -> AnyGuildInteraction | None` — Return ``interaction`` as sent from a guild, sharing its response state; ``None`` if it wasn't.
 
 ### `@dataclass class ResponseState`
 Whether an interaction already got its one initial response.
@@ -539,6 +542,21 @@ Someone is typing a value for an autocomplete option.
 
 ### `class UnknownInteraction(Interaction[InteractionModel])`
 An interaction type without its own class yet (PING, MODAL_SUBMIT).
+
+### `class InGuild`
+What an interaction sent from a guild always has: the guild, the channel, and the member who sent it.
+
+- `@property guild_id -> Snowflake` — The ID of the guild the interaction was sent from.
+- `@property guild -> PartialGuild` — The guild the interaction was sent from.
+- `@property channel -> Channel | PartialChannel` — The channel the interaction was sent from, in full when Discord sent it along (it usually does).
+- `@property member -> Member` — The guild member who sent the interaction.
+- `@property user -> User` — The user who sent the interaction.
+
+### `class GuildCommandInteraction(InGuild, CommandInteraction)`
+Someone ran an application command in a guild.
+
+### `class GuildComponentInteraction(InGuild, ComponentInteraction)`
+Someone clicked a component on a message in a guild.
 
 ## `wd_discord.entities.invite` — `wd-discord/src/wd_discord/entities/invite.py`
 Invites (https://docs.discord.com/developers/resources/invite).

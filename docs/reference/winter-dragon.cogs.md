@@ -5,6 +5,34 @@ Cogs for the winter_dragon example bot (see run_test_bot.py).
 
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
+## `winter_dragon.cogs.auto_reassign` — `src/winter_dragon/cogs/auto_reassign.py`
+The /autoreassign command group: a member who leaves and rejoins a guild gets their roles back.
+
+- module names: REASSIGN_REASON, AUTO_REASSIGN_TABLES
+- `is_enabled(session: Session, guild_id: int) -> bool` — Whether the guild ``guild_id`` gives rejoining members their roles back.
+- `remembered_roles(session: Session, guild_id: int, user_id: int | None=None) -> Generator[RememberedRole]` — Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one.
+- `forget(session: Session, guild_id: int, user_id: int | None=None) -> list[RememberedRole]` — Delete the roles :func:`remembered_roles` yields, and return them; the caller commits.
+- `assignable(client: Client, guild_id: Snowflake, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]` — Yield the roles of ``role_ids`` that can be given back: those the guild still has and that aren't managed.
+
+### `class AutoReassignGuild(SQLModel, table=True)`
+A guild that gives rejoining members their roles back.
+
+- fields: guild_id: int
+
+### `class RememberedRole(SQLModel, table=True)`
+A role a member had when they left a guild that gives roles back.
+
+- fields: guild_id: int, user_id: int, role_id: int
+
+### `class AutoReassign(GroupCog, name='autoreassign', description='Give members who leave and rejoin the roles they had', contexts=[InteractionContextType.GUILD])`
+Remembers a leaving member's roles, and gives them back when they rejoin.
+
+- `async load() -> None` — Create the auto-reassign tables if missing.
+- `@Cog.listener async on_member_remove(event: MemberRemove) -> None` — Remember the roles of a member leaving a guild that gives roles back, replacing what was remembered.
+- `@Cog.listener async on_member_add(member: Member) -> None` — Give a rejoining member the roles remembered from when they left, then forget them.
+- `@Cog.command async enable(interaction: CommandInteraction) -> None` — Start remembering leaving members' roles in this guild; needs MANAGE_ROLES.
+- `@Cog.command async disable(interaction: CommandInteraction) -> None` — Stop remembering roles in this guild, and forget those remembered; needs MANAGE_ROLES.
+
 ## `winter_dragon.cogs.autochannel` — `src/winter_dragon/cogs/autochannel.py`
 The /autochannel command group: joining a guild's hub voice channel gives a member a voice channel of their own.
 
@@ -51,8 +79,8 @@ Admin command group for inspecting and forcing the application-command sync stat
 
 - `describe_sync_status(registry: CommandRegistry) -> Generator[str]` — Yield one "name (scope): synced|pending" line per registered command, scope by scope.
 
-### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and push the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
-Admin ``/bot-commands`` group for inspecting/forcing application-command sync.
+### `class BotCommands(GroupCog, name='bot-commands', description="Inspect and manage the bot's application commands", default_member_permissions=Permissions.MANAGE_GUILD, contexts=[InteractionContextType.GUILD])`
+Admin ``/bot-commands`` group for inspecting/managing application-command sync.
 
 - `@Cog.command async list_commands(interaction: CommandInteraction) -> None` — Show every registered command's synced/pending state.
 - `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it.

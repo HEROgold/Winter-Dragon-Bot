@@ -26,6 +26,7 @@ from __future__ import annotations
 
 lazy import asyncio
 lazy import time
+lazy from dataclasses import dataclass
 lazy from functools import wraps
 lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
@@ -44,9 +45,11 @@ lazy from wd_discord.authenticate import (
     render_header,
     user_agent,
 )
+lazy from wd_discord.cache import StateCache
 lazy from wd_discord.entities.application import CurrentApplication
 lazy from wd_discord.entities.base import EntityStore
 lazy from wd_discord.entities.channel import PartialChannel
+lazy from wd_discord.entities.events import bind
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import PartialUser, UserStore
 lazy from wd_discord.errors.api import ApiResponseError
@@ -63,6 +66,8 @@ if TYPE_CHECKING:
     lazy from wd_core.client import RequestKwargs
     lazy from wd_core.intents import Intents
 
+    lazy from wd_discord.entities.events import BoundEvent
+    lazy from wd_discord.models import DiscordModel
     lazy from wd_discord.snowflake import SnowflakeLike
 
 
@@ -129,6 +134,16 @@ def _resource(path: str) -> tuple[str, ...]:
     return tuple(path.strip("/").split("/")[:2])
 
 
+@dataclass(frozen=True)
+class Received:
+    """A gateway dispatch as :meth:`Client.receive` took it."""
+
+    event: BoundEvent | DiscordModel
+    """The event bound to the client, or its data model when it has no entity."""
+    previous: DiscordModel | None
+    """What the event replaced in the cache (a role before its GUILD_ROLE_UPDATE), when the cache knew it."""
+
+
 class Client(LoggerMixin):
     """An async Discord REST client pinned to the configured API version (v10 by default)."""
 
@@ -153,6 +168,8 @@ class Client(LoggerMixin):
         self._inflight: dict[InflightKey, asyncio.Future[Response | ApiResponseError]] = {}
         self._cached: dict[InflightKey, tuple[float, Response]] = {}
         """Reads asked to be cached, with the :func:`time.monotonic` time each stops being valid."""
+        self.cache = StateCache()
+        """What the gateway told this client so far; see :meth:`receive`."""
         self.application = CurrentApplication(self, application_id)
         self.users = UserStore(self, PartialUser)
         self.channels = EntityStore(self, PartialChannel)
@@ -310,6 +327,15 @@ class Client(LoggerMixin):
         return await self.request("DELETE", route, **kwargs)
 
     # --- Gateway bootstrap ----------------------------------------------------------
+
+    def receive(self, model: DiscordModel) -> Received:
+        """Take a parsed gateway dispatch: bring :attr:`cache` up to date with it, then bind it to this client.
+
+        Call it for every dispatch, in the order they arrive, before handing the event to listeners, so what a
+        listener reads from the cache already includes its event.
+        """
+        previous = self.cache.apply(model)
+        return Received(bind(self, model, previous), previous)
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
