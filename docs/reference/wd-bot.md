@@ -62,8 +62,9 @@ A forever-running Discord bot: connects to the gateway, loads extensions, dispat
 ## `wd_bot.checks` — `wd-bot/src/wd_bot/checks.py`
 Checks made before a command or component acts, and answering the user when one refuses.
 
+- module names: SHOWN_NAMES
 - `member_has(interaction: AnyInteraction, permissions: Permissions) -> bool` — Whether the guild member invoking ``interaction`` holds every one of ``permissions`` in its channel.
-- `permission_names(permissions: Permissions) -> str` — Return ``permissions`` as Discord shows them: ``Manage Channels and Manage Guild``.
+- `permission_names(permissions: Permissions) -> str` — Return ``permissions`` as Discord's client shows them: ``Manage Channels and Manage Server``.
 - `require_permissions(interaction: AnyInteraction, permissions: Permissions) -> None` — Refuse unless the member invoking ``interaction`` holds every one of ``permissions``.
 - `require_guild(interaction: CommandInteraction | ComponentInteraction) -> GuildCommandInteraction | GuildComponentInteraction` — Return ``interaction`` as sent from a guild, or refuse when it wasn't.
 - `async answer_refusal(interaction: AnyInteraction, refused: Refused) -> None` — Tell the user behind ``interaction``, privately, why their action was refused.

@@ -43,9 +43,13 @@ def member_has(interaction: AnyInteraction, permissions: Permissions) -> bool:
     return Permissions.ADMINISTRATOR in member.permissions or permissions in member.permissions
 
 
+SHOWN_NAMES = {Permissions.MANAGE_GUILD: "Manage Server"}
+"""Permissions Discord's client shows under another name than the API's."""
+
+
 def permission_names(permissions: Permissions) -> str:
-    """Return ``permissions`` as Discord shows them: ``Manage Channels and Manage Guild``."""
-    return " and ".join((flag.name or "").replace("_", " ").title() for flag in permissions)
+    """Return ``permissions`` as Discord's client shows them: ``Manage Channels and Manage Server``."""
+    return " and ".join(SHOWN_NAMES.get(flag) or (flag.name or "").replace("_", " ").title() for flag in permissions)
 
 
 def require_permissions(interaction: AnyInteraction, permissions: Permissions) -> None:

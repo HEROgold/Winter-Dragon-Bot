@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
@@ -22,6 +21,7 @@ from winter_dragon.cogs.autochannel import (
     AutoChannelHub,
     AutoChannels,
     AutoChannelSettings,
+    VoiceOccupancy,
 )
 
 
@@ -78,7 +78,7 @@ def _cog(engine: Engine, client: RecordingClient) -> AutoChannels:
     cog = AutoChannels.__new__(AutoChannels)
     cog.bot = SimpleNamespace(client=client, registry=CommandRegistry())  # pyright: ignore[reportAttributeAccessIssue]
     cog.session = Session(engine)
-    cog.voice = defaultdict(dict)
+    cog.voice = VoiceOccupancy()
     cog._lock = asyncio.Lock()  # noqa: SLF001 - what __init__ sets up
     return cog
 
@@ -153,7 +153,8 @@ async def test_the_guild_limit_stops_new_channels(engine: Engine, client: Record
 async def test_leaving_an_empty_channel_deletes_it(engine: Engine, client: RecordingClient) -> None:
     _seed(engine, AutoChannel(guild_id=GUILD_ID, owner_id=MEMBER_ID, channel_id=60))
     cog = _cog(engine, client)
-    cog.voice[GUILD_ID] = {MEMBER_ID: 60, 4: 60}
+    cog.voice.move(GUILD_ID, MEMBER_ID, 60)
+    cog.voice.move(GUILD_ID, 4, 60)
 
     await cog.on_voice_state_update(_state(client, None))
     assert client.requests_to("DELETE", "/channels/60") == []  # someone is still in it
@@ -178,7 +179,7 @@ async def test_guild_create_cleans_up_channels_emptied_while_offline(engine: Eng
     cog = _cog(engine, client)
     await cog.on_guild_create(guild)
 
-    assert cog.voice[GUILD_ID] == {4: 61}
+    assert (cog.voice.occupied(GUILD_ID, 61), cog.voice.occupied(GUILD_ID, 60)) == (True, False)
     assert [sent.path for sent in client.sent if sent.method == "DELETE"] == ["/channels/60"]
     assert [channel.channel_id for channel in _channels(engine)] == [61]
 
@@ -232,3 +233,31 @@ async def test_mark_needs_manage_server(
     await AutoChannels.mark.invoke(_cog(engine, discord_client), interaction, interaction.options)
 
     assert discord_client.interaction_responses()[0]["data"]["content"] == "You need the Manage Server permission for that."
+
+
+async def test_a_failed_move_to_their_channel_keeps_it(engine: Engine, client: RecordingClient) -> None:
+    _seed(
+        engine,
+        AutoChannelHub(guild_id=GUILD_ID, channel_id=HUB_ID),
+        AutoChannel(guild_id=GUILD_ID, owner_id=MEMBER_ID, channel_id=60),
+    )
+    not_in_voice = {"code": 40032, "message": "Target user is not connected to voice."}
+    client.reply("PATCH", f"/guilds/{GUILD_ID}/members/{MEMBER_ID}", not_in_voice, status=400)
+
+    await _cog(engine, client).on_voice_state_update(_state(client, HUB_ID))
+
+    assert client.requests_to("POST", f"/guilds/{GUILD_ID}/channels") == []
+    assert client.requests_to("DELETE", "/channels/60") == []
+    assert [channel.channel_id for channel in _channels(engine)] == [60]
+
+
+async def test_an_empty_channel_that_cant_be_deleted_is_kept_to_retry(engine: Engine, client: RecordingClient) -> None:
+    _seed(engine, AutoChannel(guild_id=GUILD_ID, owner_id=MEMBER_ID, channel_id=60))
+    client.reply("DELETE", "/channels/60", {"code": 50001, "message": "Missing Access"}, status=403)
+    cog = _cog(engine, client)
+    cog.voice.move(GUILD_ID, MEMBER_ID, 60)
+
+    await cog.on_voice_state_update(_state(client, None))
+
+    assert len(client.requests_to("DELETE", "/channels/60")) == 1
+    assert [channel.channel_id for channel in _channels(engine)] == [60]

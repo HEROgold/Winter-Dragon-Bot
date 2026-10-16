@@ -39,6 +39,7 @@ The /autochannel command group: joining a guild's hub voice channel gives a memb
 - module names: MAX_NAME_LENGTH, OWNER_PERMISSIONS, CREATE_REASON, AUTOCHANNEL_TABLES
 - `owner_overwrite(user_id: Snowflake) -> OverwriteParams` — Return the overwrite letting the member ``user_id`` run their own channel.
 - `default_name(display_name: str) -> str` — Return the name of a member's channel when they didn't choose one.
+- `channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams` — Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
 - `hub_of(session: Session, guild_id: int) -> AutoChannelHub | None` — Return the guild ``guild_id``'s hub, if it has one.
 - `owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel | None` — Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any.
 - `settings_of(session: Session, user_id: int) -> AutoChannelSettings` — Return the member ``user_id``'s channel settings; defaults when they never set any.
@@ -58,21 +59,27 @@ How a member wants their automatic channels: its name and user limit, in every g
 
 - fields: user_id: int, name: str | None, user_limit: int
 
+### `@dataclass class VoiceOccupancy`
+Who is in which voice channel, per guild, as far as the gateway told.
+
+- `reset(guild_id: int, states: Iterable[VoiceState]) -> None` — Forget what was known about ``guild_id``, and learn ``states`` instead.
+- `move(guild_id: int, user_id: int, channel_id: int | None) -> int | None` — Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were.
+- `occupied(guild_id: int, channel_id: int) -> bool` — Whether anyone is in the voice channel ``channel_id``.
+
 ### `class AutoChannels(GroupCog, name='autochannel', description='Voice channels of your own, made by joining the hub channel', contexts=[InteractionContextType.GUILD])`
 Gives a member who joins the hub their own voice channel, and deletes it once it's empty.
 
 - `async load() -> None` — Create the autochannel tables if missing.
-- `occupied(guild_id: int, channel_id: int) -> bool` — Whether anyone is in the voice channel ``channel_id``, as far as the gateway told.
 - `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Learn who is in which voice channel, then delete the automatic channels that emptied while offline.
 - `@Cog.listener async on_voice_state_update(state: VoiceState) -> None` — Give a member joining the hub their own channel, and delete an automatic channel the member left empty.
 - `async give_channel(member: Member | PartialMember, hub: AutoChannelHub) -> None` — Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
-- `async create_channel(member: Member | PartialMember, hub: AutoChannelHub, settings: AutoChannelSettings) -> NetworkError | None` — Create ``member``'s channel in the hub's category, move them into it and remember it.
-- `async delete_channel(channel: AutoChannel) -> None` — Delete the automatic ``channel`` and forget it; one already deleted is just forgotten.
-- `@Cog.command async setup(interaction: CommandInteraction, category_name: str, hub_name: str) -> None` — Create the category ``category_name`` holding the hub voice channel ``hub_name``; needs MANAGE_GUILD.
-- `@Cog.command async mark(interaction: CommandInteraction, channel: Channel) -> None` — Make ``channel`` the guild's hub, replacing the one it had; needs MANAGE_GUILD.
-- `@Cog.command async guild_limit(interaction: CommandInteraction, limit: int) -> None` — Allow at most ``limit`` automatic channels at once, 0 for no limit; needs MANAGE_GUILD.
-- `@Cog.command async set_limit(interaction: CommandInteraction, limit: int) -> None` — Remember ``limit`` as the invoker's user limit, and apply it to their channel here if they have one.
-- `@Cog.command async set_name(interaction: CommandInteraction, name: str) -> None` — Remember ``name`` as the invoker's channel name, and rename their channel here if they have one.
+- `async create_channel(member: Member | PartialMember, hub: AutoChannelHub, settings: AutoChannelSettings) -> NetworkError | None` — Create ``member``'s channel in the hub's category, remember it and move them into it.
+- `async delete_channel(channel: AutoChannel) -> None` — Delete the automatic ``channel`` and forget it once it's gone; one that's left is tried again later.
+- `@Cog.command async setup(interaction: GuildCommandInteraction, category_name: str, hub_name: str) -> None` — Create the category ``category_name`` holding the hub voice channel ``hub_name``.
+- `@Cog.command async mark(interaction: GuildCommandInteraction, channel: Channel) -> None` — Make ``channel`` the guild's hub, replacing the one it had.
+- `@Cog.command async guild_limit(interaction: GuildCommandInteraction, limit: int) -> None` — Allow at most ``limit`` automatic channels at once, 0 for no limit.
+- `@Cog.command async set_limit(interaction: GuildCommandInteraction, limit: int) -> None` — Remember ``limit`` as the invoker's user limit, and apply it to their channel here if they have one.
+- `@Cog.command async set_name(interaction: GuildCommandInteraction, name: str) -> None` — Remember ``name`` as the invoker's channel name, and rename their channel here if they have one.
 
 ## `winter_dragon.cogs.bot_commands` — `src/winter_dragon/cogs/bot_commands.py`
 Admin command group for inspecting and forcing the application-command sync state.
