@@ -13,7 +13,7 @@ lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
-lazy from wd_discord import Channel, Role, User, narrow_to_guild
+lazy from wd_discord import Channel, Role, User
 lazy from wd_discord.interactions import (
     MAX_CHOICES,
     ApplicationCommandOption,
@@ -292,7 +292,7 @@ class Command(AppCommand):
             options = interaction.options
         kwargs = self._build_kwargs(interaction, options)
         try:
-            if self.guild_only:
+            if self.guild_only or (self.owner is not None and self.owner.guild_only()):
                 interaction = require_guild(interaction)
             if self.requires is not None:
                 require_permissions(interaction, self.requires)
@@ -487,12 +487,6 @@ class CommandGroup(AppCommand):
         if (chosen := self._chosen(interaction.options)) is None:
             return False
         subcommand, options = chosen
-        if self.guild_only:
-            narrowed = narrow_to_guild(interaction)
-            if narrowed is None:
-                await answer_refusal(interaction, Refused("This only works in a server."))
-                return True
-            interaction = narrowed
         return await subcommand.invoke(cog, interaction, options)
 
     async def complete(self, cog: Cog, interaction: AutocompleteInteraction) -> bool:

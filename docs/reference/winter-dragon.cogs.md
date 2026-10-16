@@ -90,7 +90,6 @@ The /channel-utils command group: delete a whole category, and lock or unlock a 
 
 - module names: UNLOCKABLE, DELETE_PERMISSIONS
 - `locked_permissions(existing: Iterable[PermissionOverwrite], target: User | Role, *, lock: bool) -> tuple[Permissions, Permissions]` — Return what ``target``'s overwrite among ``existing`` allows and denies, with SEND_MESSAGES denied or not.
-- `deleted(result: Channel | NetworkError) -> bool` — Whether a channel delete left the channel gone: it succeeded, or the channel was gone already.
 
 ### `class ChannelUtils(GroupCog, name='channel-utils', description='Manage channels', default_member_permissions=Permissions.MANAGE_CHANNELS, contexts=[InteractionContextType.GUILD])`
 Moderation helpers for channels: removing a category with its channels, and locking channels.
@@ -208,6 +207,8 @@ The /stats command group: a guild's member counts, shown on demand and as the na
 - `async count_bots(guild: BaseGuild) -> int | NetworkError` — Count the bots among ``guild``'s members, a page of members at a time.
 - `async guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError` — Read ``guild``'s member, bot and online counts.
 - `channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str` — Return the name of the stats channel showing ``kind``.
+- `plan_renames(stats: Iterable[StatChannel], names: Mapping[int, str | None], counts: GuildCounts, peak: int) -> RenamePlan` — Plan updating ``stats`` to ``counts`` and ``peak``, given each existing channel's name by ID.
+- `category_params(guild_id: int) -> GuildChannelParams` — Return the stats category: listed first, visible to everyone, and joined by nobody.
 - `stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed` — Return the embed /stats show answers with.
 - `guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]` — Return the stats channels recorded for the guild ``guild_id``, category included.
 - `stats_guild_ids(session: Session) -> Generator[int]` — Yield every guild with stats channels.
@@ -234,19 +235,24 @@ How many members a guild has, how many are bots and how many are online; Discord
 - `@property users -> int` — Members that aren't bots.
 - `@property online_users -> int` — Members online that aren't bots, taking every bot to be online.
 
+### `@dataclass class RenamePlan`
+What an update does to a guild's stats channels: rename those showing stale counts, forget deleted ones.
+
+- fields: renames: dict[int, str], gone: list[StatChannel]
+
 ### `class Stats(GroupCog, name='stats', description="Show this server's member counts", contexts=[InteractionContextType.GUILD])`
 Shows a guild's member counts, and keeps a locked category of voice channels named after them up to date.
 
 - `async load() -> None` — Create the stats tables if missing, then start the background task renaming the stats channels.
 - `async unload() -> None` — Stop the background task.
 - `async update_all() -> None` — Update the stats channels of every guild that has them.
-- `async update_guild(guild_id: int) -> None` — Rename ``guild_id``'s stats channels to the current counts, and record a new peak.
+- `async update_guild(guild_id: int) -> None` — Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones.
 - `async create_channels(client: Client, guild_id: int, *, reason: str) -> NetworkError | None` — Create ``guild_id``'s locked stats category and its channels, named after the current counts.
-- `async remove_channels(client: Client, stats: Iterable[StatChannel], *, reason: str) -> None` — Delete the channels of ``stats``, category last, and forget them; channels already gone are just forgotten.
-- `@Cog.command async show(interaction: CommandInteraction) -> None` — Answer with an embed of the guild's member counts.
-- `@Cog.command async add(interaction: CommandInteraction) -> None` — Create the stats channels, unless the guild has them already; needs MANAGE_CHANNELS.
-- `@Cog.command async remove(interaction: CommandInteraction) -> None` — Delete the guild's stats channels; needs MANAGE_CHANNELS.
-- `@Cog.command async reset(interaction: CommandInteraction) -> None` — Delete and recreate every guild's stats channels; only the bot's owners may.
+- `async remove_channels(client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool` — Delete the channels of ``stats``, category last, forgetting each one that's gone; whether all of them are.
+- `@Cog.command async show(interaction: GuildCommandInteraction) -> None` — Answer with an embed of the guild's member counts.
+- `@Cog.command async add(interaction: GuildCommandInteraction) -> None` — Create the stats channels, unless the guild has them already.
+- `@Cog.command async remove(interaction: GuildCommandInteraction) -> None` — Delete the guild's stats channels.
+- `@Cog.command async reset(interaction: GuildCommandInteraction) -> None` — Delete and recreate every guild's stats channels; only the bot's owners may.
 
 ## `winter_dragon.cogs.steam.cog` — `src/winter_dragon/cogs/steam/cog.py`
 The /steam command group, its page buttons, and the background scrape of Steam's specials.

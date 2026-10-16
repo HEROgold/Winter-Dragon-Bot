@@ -15,7 +15,7 @@ Public names only — open the file when you need a body. Index: [API reference]
   PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser,
   PermissionOverwrite, Permissions, Presence, RawEvent, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status,
   Sticker, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, Token,
-  TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind,
+  TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind, is_gone,
   is_network_error, narrow_to_guild
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
@@ -97,6 +97,7 @@ The built-in Discord REST client for wd-discord.
 - `type InflightKey = tuple[str, tuple[tuple[str, str], ...]]`
 - `returns_known_exception[**P, T, E: Exception](*exceptions: type[E]) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T | E]]]` — Async analog of :func:`herogold.errors.with_known_exception`.
 - `is_network_error(value: object) -> TypeIs[NetworkError]` — Whether ``value`` is a failed request: a Discord API error or a network error.
+- `is_gone(result: object) -> bool` — Whether a delete answering ``result`` left the resource gone: it worked, or the resource was gone already.
 
 ### `@dataclass class Received`
 A gateway dispatch as :meth:`Client.receive` took it.

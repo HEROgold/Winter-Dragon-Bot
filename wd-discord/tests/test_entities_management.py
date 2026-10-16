@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wd_discord import AuditLogReason, Channel, ChannelType, Guild, Member, Permissions, is_network_error
+from wd_discord import AuditLogReason, Channel, ChannelType, Guild, Member, Permissions, is_gone, is_network_error
 from wd_discord.audit import MAX_REASON_LENGTH, REASON_HEADER
 from wd_discord.errors import ApiResponseError, JsonErrorCode
 from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
@@ -171,3 +171,15 @@ async def test_member_edit_patches_the_member_with_a_reason() -> None:
     [sent] = client.sent
     assert sent.json == {"roles": ["8"], "mute": True}
     assert sent.headers == AuditLogReason("Rejoined").headers()
+
+
+async def test_a_delete_left_the_resource_gone_when_it_worked_or_it_was_gone_already() -> None:
+    client = RecordingClient()
+    client.reply("DELETE", "/channels/20", VOICE_JSON)
+    client.reply("DELETE", "/channels/21", {"code": 10003, "message": "Unknown Channel"}, status=404)
+    client.reply("DELETE", "/channels/22", {"code": 50001, "message": "Missing Access"}, status=403)
+
+    results = [await client.channels.partial(channel_id).delete() for channel_id in (20, 21, 22)]
+
+    assert [is_gone(result) for result in results] == [True, True, False]
+    assert is_gone(None)  # what a delete answering 204 No Content returns

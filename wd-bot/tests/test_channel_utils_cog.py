@@ -10,7 +10,6 @@ from wd_bot.commands import CommandGroup
 from wd_discord import PermissionOverwrite as BoundOverwrite
 from wd_discord import User as BoundUser
 from wd_discord.audit import REASON_HEADER
-from wd_discord.errors import ApiResponseError, JsonErrorCode
 from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 from wd_discord.interactions import ApplicationCommandOptionType
 from wd_discord.permissions import ChannelType, Permissions
@@ -21,7 +20,7 @@ from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient
 
-from winter_dragon.cogs.channel_utils import DELETE_PERMISSIONS, ChannelUtils, deleted, locked_permissions
+from winter_dragon.cogs.channel_utils import DELETE_PERMISSIONS, ChannelUtils, locked_permissions
 
 
 if TYPE_CHECKING:
@@ -177,11 +176,6 @@ async def test_delete_category_refuses_up_front_without_the_bot_permissions(
     assert _reply(discord_client) == "I need the View Channels and Manage Channels permissions to do that."
 
 
-def test_a_channel_already_gone_counts_as_deleted() -> None:
-    assert deleted(ApiResponseError(code=JsonErrorCode.UNKNOWN_CHANNEL, message="Unknown Channel"))
-    assert not deleted(ApiResponseError(code=JsonErrorCode.MISSING_ACCESS, message="Missing Access"))
-
-
 @pytest.mark.parametrize(
     ("target", "option_type", "resolved", "overwrite_type"),
     [
@@ -226,6 +220,7 @@ async def test_unlock_removes_an_overwrite_left_empty(
         "channel-utils",
         options=[InteractionDataOption(name="target", type=9, value="4")],
         resolved=ResolvedData(users={"4": TARGET}),
+        guild_id=GUILD_ID,
         channel_id=CHANNEL_ID,
     )
 
@@ -244,6 +239,7 @@ async def test_unlock_without_an_overwrite_changes_nothing(
         "channel-utils",
         options=[InteractionDataOption(name="target", type=9, value="4")],
         resolved=ResolvedData(users={"4": TARGET}),
+        guild_id=GUILD_ID,
         channel_id=CHANNEL_ID,
     )
 
@@ -258,6 +254,7 @@ async def test_lock_refuses_threads(make_interaction: InteractionFactory, discor
         "channel-utils",
         options=[InteractionDataOption(name="target", type=9, value="4")],
         resolved=ResolvedData(users={"4": TARGET}),
+        guild_id=GUILD_ID,
         channel_id=CHANNEL_ID,
     )
 

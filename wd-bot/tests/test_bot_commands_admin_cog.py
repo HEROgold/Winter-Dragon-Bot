@@ -64,7 +64,7 @@ async def test_list_commands_replies_with_status_embed(
     cog = BotCommands.__new__(BotCommands)
     cog.bot = SimpleNamespace(registry=_registry(), client=discord_client)  # pyright: ignore[reportAttributeAccessIssue]
 
-    await BotCommands.list_commands.invoke(cog, make_interaction("bot-commands"))
+    await BotCommands.list_commands.invoke(cog, make_interaction("bot-commands", guild_id=1))
 
     (response,) = discord_client.interaction_responses()
     assert response["data"]["embeds"][0]["description"] == "other (global): pending\nping (global): synced"
@@ -80,7 +80,7 @@ async def test_resync_responds_then_rereads_discord_before_syncing(
     cog = BotCommands.__new__(BotCommands)
     cog.bot = SimpleNamespace(registry=registry, client=discord_client, sync_commands=sync)  # pyright: ignore[reportAttributeAccessIssue]
 
-    await BotCommands.resync.invoke(cog, make_interaction("bot-commands"))
+    await BotCommands.resync.invoke(cog, make_interaction("bot-commands", guild_id=1))
 
     assert responses_before_sync == [1]
     sync.assert_awaited_once_with(discord_client)

@@ -108,6 +108,11 @@ def is_network_error(value: object) -> TypeIs[NetworkError]:
     return isinstance(value, ApiResponseError | RequestError)
 
 
+def is_gone(result: object) -> bool:
+    """Whether a delete answering ``result`` left the resource gone: it worked, or the resource was gone already."""
+    return not is_network_error(result) or (isinstance(result, ApiResponseError) and result.unknown_resource)
+
+
 def _parse_error(response: Response) -> ApiResponseError:
     """Parse a failed Discord response body into a type-safe :class:`ApiResponseError`."""
     try:

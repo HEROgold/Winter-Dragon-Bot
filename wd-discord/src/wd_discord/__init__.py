@@ -11,7 +11,7 @@ lazy from wd_config.discord import URLS
 
 lazy from wd_discord.audit import AuditLogReason
 lazy from wd_discord.authenticate import Token, TokenType
-lazy from wd_discord.client import Client, NetworkError, is_network_error
+lazy from wd_discord.client import Client, NetworkError, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.entities import (
     AnyInteraction,
@@ -160,6 +160,7 @@ __all__ = [
     "VoiceChannelStatusUpdate",
     "VoiceState",
     "bind",
+    "is_gone",
     "is_network_error",
     "narrow_to_guild",
 ]

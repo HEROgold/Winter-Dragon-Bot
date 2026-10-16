@@ -7,7 +7,7 @@ lazy from typing import TYPE_CHECKING
 
 lazy import pytest
 lazy from wd_bot.bot import Bot
-lazy from wd_bot.cogs import Cog
+lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import GuildCommandInteraction, narrow_to_guild
 lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
 lazy from wd_discord.interactions import InteractionContextType
@@ -167,3 +167,24 @@ def test_unwrap_passes_values_and_refuses_failures() -> None:
     with pytest.raises(Refused, match="see that channel") as refused:
         unwrap(error, "I can't see that channel.")
     assert refused.value.cause is error
+
+
+async def test_a_subcommand_of_a_guild_only_group_gets_a_guild_interaction(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    class Group(GroupCog, name="g", description="d", contexts=GUILD, auto_load=False):
+        seen: list[int]
+
+        @Cog.command(name="sub", description="d")
+        async def sub(self, interaction: GuildCommandInteraction) -> None:
+            self.seen.append(int(interaction.guild_id))
+
+    cog = Group.__new__(Group)
+    cog.seen = []
+
+    await Group.sub.invoke(cog, make_interaction("g", guild_id=7))
+    await Group.sub.invoke(cog, make_interaction("g"))
+
+    assert cog.seen == [7]
+    assert _only_answer(discord_client)["content"] == "This only works in a server."

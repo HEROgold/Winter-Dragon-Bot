@@ -8,8 +8,7 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
-lazy from wd_discord import Channel, Role, User, is_network_error
-lazy from wd_discord.errors import ApiResponseError
+lazy from wd_discord import Channel, Role, User, is_gone
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
@@ -19,7 +18,7 @@ lazy from wd_errors import Refused, unwrap
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
 
-    lazy from wd_discord import GuildCommandInteraction, NetworkError
+    lazy from wd_discord import GuildCommandInteraction
     lazy from wd_discord.entities import PermissionOverwrite
 
 
@@ -59,13 +58,6 @@ def locked_permissions(
     return allow, deny
 
 
-def deleted(result: Channel | NetworkError) -> bool:
-    """Whether a channel delete left the channel gone: it succeeded, or the channel was gone already."""
-    if not is_network_error(result):
-        return True
-    return isinstance(result, ApiResponseError) and result.unknown_resource
-
-
 class ChannelUtils(
     GroupCog,
     name="channel-utils",
@@ -92,11 +84,11 @@ class ChannelUtils(
         await interaction.defer(ephemeral=True)
         *channels, whole = await self._deletable(interaction, category)
         reason = self.audit_reason(interaction, self.delete_category, f"Deleted category {category.name}")
-        failed = [channel.name for channel in channels if not deleted(await channel.delete(reason=reason))]
+        failed = [channel.name for channel in channels if not is_gone(await channel.delete(reason=reason))]
         if failed:
             msg = f"I couldn't delete: {', '.join(map(str, failed))}. The category stays."
             raise Refused(msg)
-        if not deleted(await whole.delete(reason=reason)):
+        if not is_gone(await whole.delete(reason=reason)):
             msg = "I deleted the channels, but couldn't delete the category."
             raise Refused(msg)
         await interaction.followup(f"Deleted the category {category.name} and its channels.", ephemeral=True)
