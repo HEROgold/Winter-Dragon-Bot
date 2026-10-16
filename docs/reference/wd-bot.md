@@ -127,6 +127,14 @@ Application commands: the shared :class:`AppCommand` base, plain :class:`Command
 ### `class ChannelTypes`
 Limit a channel option to some kinds of channel: ``category: Annotated[Channel, ChannelTypes(GUILD_CATEGORY)]``.
 
+### `@dataclass class OptionSpec`
+A handler parameter as a Discord option: what Discord asks for, and what the handler gets.
+
+- fields: name: str, param_type: object, option_type: ApplicationCommandOptionType, required: bool, channel_types:
+  list[ChannelType] | None
+- `definition(*, autocomplete: bool) -> ApplicationCommandOption` — Return the option as Discord defines it.
+- `argument(interaction: CommandInteraction, value: object) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
+
 ### `class AppCommand(LoggerMixin, ABC)`
 What every application command shares: its name, description and where Discord lets it be used.
 

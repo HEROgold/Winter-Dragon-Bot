@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 lazy import annotationlib
 lazy import operator
 lazy from abc import ABC, abstractmethod
@@ -14,6 +15,7 @@ lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord import Channel, Role, User
+lazy from wd_discord.entities import Resolved
 lazy from wd_discord.interactions import (
     MAX_CHOICES,
     ApplicationCommandOption,
@@ -37,7 +39,6 @@ if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Generator, Iterable, Sequence
 
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
-    lazy from wd_discord.entities import Resolved
     lazy from wd_discord.gateway.events import InteractionDataOption
     lazy from wd_discord.interactions import ApplicationCommandOptionChoice
     lazy from wd_discord.permissions import ChannelType, Permissions
@@ -68,6 +69,47 @@ class ChannelTypes:
     def __init__(self, *types: ChannelType) -> None:
         """Only let channels of ``types`` be picked."""
         self.types = list(types)
+
+
+@dataclass(frozen=True, slots=True)
+class OptionSpec:
+    """A handler parameter as a Discord option: what Discord asks for, and what the handler gets."""
+
+    name: str
+    param_type: object
+    """The handler's type for it: a ``_OPTION_TYPE_MAP`` key, or a mentionable union."""
+    option_type: ApplicationCommandOptionType
+    required: bool
+    channel_types: list[ChannelType] | None = None
+    """The kinds of channel a channel option may name; ``None`` allows any."""
+
+    def definition(self, *, autocomplete: bool) -> ApplicationCommandOption:
+        """Return the option as Discord defines it."""
+        return ApplicationCommandOption(
+            type=self.option_type,
+            name=self.name,
+            description=self.name,
+            required=self.required,
+            channel_types=self.channel_types,
+            autocomplete=True if autocomplete else None,
+        )
+
+    def argument(self, interaction: CommandInteraction, value: object) -> object:
+        """Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
+
+        A parameter annotated with a bound entity gets one bound to the interaction's client; one annotated with the
+        data model gets the model.
+        """
+        resolvers = _RESOLVERS.get(self.option_type)
+        if resolvers is not None:
+            resolved = interaction.resolved
+            found = None if resolved is None else next(filter(None, (find(resolved, str(value)) for find in resolvers)), None)
+            if found is None or type(found) in (get_args(self.param_type) or (self.param_type,)):
+                return found
+            return found.model
+        if self.param_type is float and isinstance(value, int):
+            return float(value)  # Discord sends a whole NUMBER as an integer
+        return value
 
 
 type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]
@@ -179,20 +221,17 @@ class Command(AppCommand):
         self.owner: type[Cog] | None = None
         """The cog class this command was defined on; set when that class is created."""
         self._autocompletes: dict[str, AutocompleteHandler] = {}
-        self._param_types: dict[str, object] = {}
-        """Each option's handler type: a ``_OPTION_TYPE_MAP`` key, or a mentionable union."""
-        self._option_types: dict[str, ApplicationCommandOptionType] = {}
-        self._channel_types: dict[str, list[ChannelType]] = {}
-        self._param_required: dict[str, bool] = {}
         annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
         parameters = inspect_signature(func, annotation_format=annotationlib.Format.STRING).parameters
-        for param_name, param in parameters.items():
-            if param_name in ("self", "interaction"):
-                continue
-            self._parse_parameter(param, annotations.get(param_name, Parameter.empty))
+        self._options = {
+            name: self._option_of(param, annotations.get(name, Parameter.empty))
+            for name, param in parameters.items()
+            if name not in ("self", "interaction")
+        }
+        """The handler's parameters as Discord options, by name."""
 
-    def _parse_parameter(self, param: Parameter, annotation: object) -> None:
-        """Record handler parameter ``param``'s option type, channel-type filter, and whether it's required.
+    def _option_of(self, param: Parameter, annotation: object) -> OptionSpec:
+        """Return handler parameter ``param`` as an option: its type, channel-type filter, and whether it's required.
 
         A default value or a ``T | None`` annotation makes the option optional. ``Annotated[Channel, ChannelTypes(...)]``
         limits a channel option, and ``User | Role`` takes a MENTIONABLE. Raises ``TypeError`` if the type has no
@@ -221,11 +260,7 @@ class Command(AppCommand):
         if channel_types and option_type is not ApplicationCommandOptionType.CHANNEL:
             msg = f"Command {self.name!r}: ChannelTypes only applies to a channel parameter, not {param.name!r}"
             raise TypeError(msg)
-        self._param_types[param.name] = param_type
-        self._option_types[param.name] = option_type
-        self._param_required[param.name] = required
-        if channel_types:
-            self._channel_types[param.name] = channel_types
+        return OptionSpec(param.name, param_type, option_type, required, channel_types or None)
 
     @staticmethod
     def _resolve(annotation: object, func: Callable[..., object]) -> object:
@@ -243,15 +278,8 @@ class Command(AppCommand):
 
     def options(self) -> Generator[ApplicationCommandOption]:
         """Yield this command's Discord option definitions, derived from its handler's parameters."""
-        for param_name, option_type in self._option_types.items():
-            yield ApplicationCommandOption(
-                type=option_type,
-                name=param_name,
-                description=param_name,
-                required=self._param_required[param_name],
-                channel_types=self._channel_types.get(param_name),
-                autocomplete=True if param_name in self._autocompletes else None,
-            )
+        for name, option in self._options.items():
+            yield option.definition(autocomplete=name in self._autocompletes)
 
     def _own_signature(self) -> Generator[str]:
         """Yield the handler's parameter signature, and which options autocomplete when any do."""
@@ -266,7 +294,8 @@ class Command(AppCommand):
         shows at most the first :data:`~wd_discord.interactions.MAX_CHOICES`. Only STRING, INTEGER and NUMBER
         options autocomplete. Use it right below the command, like ``@remove.autocomplete("reminder")``.
         """
-        if self._param_types.get(option) not in (str, int, float):
+        spec = self._options.get(option)
+        if spec is None or spec.param_type not in (str, int, float):
             msg = f"Command {self.name!r}: option {option!r} isn't a str, int or float parameter, so it can't autocomplete"
             raise TypeError(msg)
 
@@ -335,33 +364,21 @@ class Command(AppCommand):
     def _build_kwargs(self, interaction: CommandInteraction, options: Sequence[InteractionDataOption]) -> dict[str, object]:
         """Map each submitted option to a handler argument, resolving user, channel, role and mentionable options.
 
-        A parameter annotated with a bound entity (:class:`wd_discord.User`, :class:`wd_discord.Role`,
-        :class:`wd_discord.Channel`) gets one bound to the interaction's client; one annotated with the data model gets
-        the model. Options the handler doesn't declare, and objects missing from the interaction's resolved data, are
-        skipped with a warning.
+        Options the handler doesn't declare, and objects missing from the interaction's resolved data, are skipped with
+        a warning.
         """
         kwargs: dict[str, object] = {}
         for option in options:
-            param_type = self._param_types.get(option.name)
-            if param_type is None:
+            spec = self._options.get(option.name)
+            if spec is None:
                 self.logger.warning(t"Unknown option '{option.name}' for command '{self.name}', skipping it")
                 continue
-            value = self._argument(interaction, param_type, option)
+            value = spec.argument(interaction, option.value)
             if value is None:
                 self.logger.warning(t"Unresolved '{option.value}' for option '{option.name}' in command '{self.name}'")
                 continue
             kwargs[option.name] = value
         return kwargs
-
-    def _argument(self, interaction: CommandInteraction, param_type: object, option: InteractionDataOption) -> object:
-        """Return the handler argument for ``option``, or ``None`` when the object it names wasn't resolved."""
-        option_type = self._option_types[option.name]
-        if option_type in _RESOLVED_TYPES:
-            resolved = interaction.resolved
-            return None if resolved is None else _resolve(resolved, option_type, param_type, str(option.value))
-        if param_type is float and isinstance(option.value, int):
-            return float(option.value)  # Discord sends a whole NUMBER as an integer
-        return option.value
 
     def __get__(self, instance: object, owner: type) -> Self:
         """Allow a Command to be accessed as a plain attribute on a Cog instance without binding it like a method."""
@@ -391,33 +408,15 @@ def _union(types: Iterable[object]) -> object:
     return reduce(operator.or_, types)
 
 
-_RESOLVED_TYPES = frozenset(
-    {
-        ApplicationCommandOptionType.USER,
-        ApplicationCommandOptionType.ROLE,
-        ApplicationCommandOptionType.MENTIONABLE,
-        ApplicationCommandOptionType.CHANNEL,
-    },
-)
-"""The option types whose value is an ID naming an object in the interaction's resolved data."""
+type _Resolver = Callable[[Resolved, str], User | Role | Channel | None]
 
-
-def _resolve(resolved: Resolved, option_type: ApplicationCommandOptionType, param_type: object, value: str) -> object:
-    """Return the object ``value`` names, as the entity when ``param_type`` asks for it, else as its model.
-
-    ``None`` when Discord didn't send it along.
-    """
-    members = get_args(param_type) or (param_type,)
-    found: User | Role | Channel | None = None
-    if option_type in {ApplicationCommandOptionType.USER, ApplicationCommandOptionType.MENTIONABLE}:
-        found = resolved.user(value)
-    if found is None and option_type in {ApplicationCommandOptionType.ROLE, ApplicationCommandOptionType.MENTIONABLE}:
-        found = resolved.role(value)
-    if option_type is ApplicationCommandOptionType.CHANNEL:
-        found = resolved.channel(value)
-    if found is None or type(found) in members:
-        return found
-    return found.model
+_RESOLVERS: dict[ApplicationCommandOptionType, tuple[_Resolver, ...]] = {
+    ApplicationCommandOptionType.USER: (Resolved.user,),
+    ApplicationCommandOptionType.ROLE: (Resolved.role,),
+    ApplicationCommandOptionType.MENTIONABLE: (Resolved.user, Resolved.role),
+    ApplicationCommandOptionType.CHANNEL: (Resolved.channel,),
+}
+"""How to find the object an ID option names in the interaction's resolved data, tried in order."""
 
 
 class CommandGroup(AppCommand):
