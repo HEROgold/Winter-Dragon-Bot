@@ -19,3 +19,17 @@ Docs and skills link to files and name symbols (``client.py `returns_known_excep
 ## Import style
 
 Prefer lazy imports (import inside the function/method that uses the name) over module-level imports. Module-level imports are only used when required by the tooling/library itself (e.g. pydantic needs types resolvable at class-definition time).
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on HEROgold/Winter-Dragon-Bot via `gh`; new issues auto-sync to Linear. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
