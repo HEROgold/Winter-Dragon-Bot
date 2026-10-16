@@ -86,6 +86,8 @@ async def test_resync_responds_then_rereads_discord_before_syncing(
     sync.assert_awaited_once_with(discord_client)
     assert not registry.is_known(GLOBAL)
     assert discord_client.interaction_responses() == [{"type": 4, "data": {"content": "Resyncing commands…"}}]
+    (finished,) = discord_client.requests_to("POST", "/webhooks/2/tok")
+    assert finished.json == {"content": "Resync finished."}
 
 
 def test_group_is_guild_only() -> None:

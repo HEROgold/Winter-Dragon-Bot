@@ -78,10 +78,7 @@ async def answer_refusal(interaction: AnyInteraction, refused: Refused) -> None:
 
     Answers in a follow-up when the interaction got its initial response (or was deferred) already.
     """
-    if interaction.responded:
-        await interaction.followup(refused.message, ephemeral=True)
-    else:
-        await interaction.respond(refused.message, ephemeral=True)
+    await interaction.respond(refused.message, ephemeral=True)
 
 
 def owner_ids(application: Application) -> Generator[Snowflake]:
