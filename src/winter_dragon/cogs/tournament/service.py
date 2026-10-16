@@ -1,7 +1,7 @@
 """What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
-Each action takes an open session and leaves committing to the caller. An action that isn't allowed returns why, as a
-message for the player; ``None`` means it was done.
+Each action takes an open session and leaves committing to the caller. An action that isn't allowed raises
+:class:`~wd_errors.Refused` saying why, for the player; the caller then drops the session's changes.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from __future__ import annotations
 lazy from typing import TYPE_CHECKING
 
 from sqlmodel import Session, col, select
+lazy from wd_errors import Refused
 
 lazy from .bracket import first_round, next_match, round_count, split_into_teams, valid_options
 lazy from .models import (
@@ -30,10 +31,6 @@ lazy from .models import (
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
     lazy from random import Random
-
-
-type Refusal = str | None
-"""Why an action wasn't allowed, or ``None`` when it was done."""
 
 
 def active_tournament(session: Session, guild_id: int) -> Tournament | None:
@@ -86,25 +83,29 @@ def _id(record: Tournament | TournamentTeam | TournamentMatch | MatchVote) -> in
 # --- Sign-up ---------------------------------------------------------------------------------------------------------
 
 
-def sign_up(session: Session, tournament: Tournament, user_id: int) -> Refusal:
+def sign_up(session: Session, tournament: Tournament, user_id: int) -> None:
     """Sign ``user_id`` up for a solo tournament."""
     if tournament.status is not TournamentStatus.SIGNUP:
-        return "Sign-up for this tournament is closed."
+        msg = "Sign-up for this tournament is closed."
+        raise Refused(msg)
     if tournament.mode is not TeamMode.SOLO:
-        return "Teams sign up for this tournament; ask a captain to add you, or register a team."
+        msg = "Teams sign up for this tournament; ask a captain to add you, or register a team."
+        raise Refused(msg)
     if player_of(session, _id(tournament), user_id) is not None:
-        return "You're signed up already."
+        msg = "You're signed up already."
+        raise Refused(msg)
     session.add(TournamentPlayer(tournament_id=_id(tournament), user_id=user_id))
-    return None
 
 
-def withdraw(session: Session, tournament: Tournament, user_id: int) -> Refusal:
+def withdraw(session: Session, tournament: Tournament, user_id: int) -> None:
     """Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team."""
     if tournament.status is not TournamentStatus.SIGNUP:
-        return "The tournament has started; ask the organiser to forfeit your matches instead."
+        msg = "The tournament has started; ask the organiser to forfeit your matches instead."
+        raise Refused(msg)
     player = player_of(session, _id(tournament), user_id)
     if player is None:
-        return "You aren't signed up."
+        msg = "You aren't signed up."
+        raise Refused(msg)
     team = None if player.team_id is None else session.get(TournamentTeam, player.team_id)
     if team is not None and team.captain_id == user_id:
         for teammate in session.exec(select(TournamentPlayer).where(TournamentPlayer.team_id == team.id)):
@@ -112,24 +113,26 @@ def withdraw(session: Session, tournament: Tournament, user_id: int) -> Refusal:
         session.delete(team)
     else:
         session.delete(player)
-    return None
 
 
-def create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> Refusal:
+def create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> None:
     """Register the team ``name`` with ``captain_id`` as its captain and first player."""
     if tournament.status is not TournamentStatus.SIGNUP:
-        return "Sign-up for this tournament is closed."
+        msg = "Sign-up for this tournament is closed."
+        raise Refused(msg)
     if tournament.mode is not TeamMode.CAPTAINS:
-        return "Players sign up alone for this tournament, and are put in teams when it starts."
+        msg = "Players sign up alone for this tournament, and are put in teams when it starts."
+        raise Refused(msg)
     if player_of(session, _id(tournament), captain_id) is not None:
-        return "You're in this tournament already."
+        msg = "You're in this tournament already."
+        raise Refused(msg)
     if any(team.name.casefold() == name.casefold() for team in teams_of(session, _id(tournament))):
-        return "A team has that name already."
+        msg = "A team has that name already."
+        raise Refused(msg)
     team = TournamentTeam(tournament_id=_id(tournament), name=name, captain_id=captain_id)
     session.add(team)
     session.flush()
     session.add(TournamentPlayer(tournament_id=_id(tournament), user_id=captain_id, team_id=team.id))
-    return None
 
 
 def _captained(session: Session, tournament: Tournament, captain_id: int) -> TournamentTeam | None:
@@ -137,48 +140,55 @@ def _captained(session: Session, tournament: Tournament, captain_id: int) -> Tou
     return session.exec(query).first()
 
 
-def add_to_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> Refusal:
+def add_to_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None:
     """Add ``user_id`` to the team ``captain_id`` captains."""
     if tournament.status is not TournamentStatus.SIGNUP:
-        return "Sign-up for this tournament is closed."
+        msg = "Sign-up for this tournament is closed."
+        raise Refused(msg)
     team = _captained(session, tournament, captain_id)
     if team is None:
-        return "Only a team's captain can add players to it."
+        msg = "Only a team's captain can add players to it."
+        raise Refused(msg)
     if player_of(session, _id(tournament), user_id) is not None:
-        return "They're in this tournament already."
+        msg = "They're in this tournament already."
+        raise Refused(msg)
     if len(roster(session, _id(team))) >= tournament.team_size:
-        return f"Your team is full: teams have {tournament.team_size} players."
+        msg = f"Your team is full: teams have {tournament.team_size} players."
+        raise Refused(msg)
     session.add(TournamentPlayer(tournament_id=_id(tournament), user_id=user_id, team_id=team.id))
-    return None
 
 
-def remove_from_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> Refusal:
+def remove_from_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None:
     """Take ``user_id`` off the team ``captain_id`` captains."""
     if tournament.status is not TournamentStatus.SIGNUP:
-        return "The tournament has started; teams can't change any more."
+        msg = "The tournament has started; teams can't change any more."
+        raise Refused(msg)
     team = _captained(session, tournament, captain_id)
     if team is None:
-        return "Only a team's captain can remove players from it."
+        msg = "Only a team's captain can remove players from it."
+        raise Refused(msg)
     player = player_of(session, _id(tournament), user_id)
     if player is None or player.team_id != team.id or user_id == captain_id:
-        return "They aren't a player you can remove from your team."
+        msg = "They aren't a player you can remove from your team."
+        raise Refused(msg)
     session.delete(player)
-    return None
 
 
 # --- The bracket -----------------------------------------------------------------------------------------------------
 
 
-def start(session: Session, tournament: Tournament, rng: Random) -> Refusal:
+def start(session: Session, tournament: Tournament, rng: Random) -> None:
     """Form the teams of a solo tournament, then lay out the bracket and give the byes their wins."""
     if tournament.status is not TournamentStatus.SIGNUP:
-        return "The tournament has started already."
+        msg = "The tournament has started already."
+        raise Refused(msg)
     tournament_id = _id(tournament)
-    if tournament.mode is TeamMode.SOLO and (refusal := _draw_teams(session, tournament, rng)) is not None:
-        return refusal
+    if tournament.mode is TeamMode.SOLO:
+        _draw_teams(session, tournament, rng)
     teams = teams_of(session, tournament_id)
     if len(teams) < 2:  # noqa: PLR2004 - a match needs two teams
-        return "I need at least two teams."
+        msg = "I need at least two teams."
+        raise Refused(msg)
     team_ids = [_id(team) for team in teams]
     rng.shuffle(team_ids)
     rounds = round_count(len(team_ids))
@@ -193,15 +203,15 @@ def start(session: Session, tournament: Tournament, rng: Random) -> Refusal:
         if team_b is None:
             _decide(session, tournament, match, team_a, MatchPhase.FINISHED)
     tournament.status = TournamentStatus.RUNNING
-    return None
 
 
-def _draw_teams(session: Session, tournament: Tournament, rng: Random) -> Refusal:
+def _draw_teams(session: Session, tournament: Tournament, rng: Random) -> None:
     """Shuffle a solo tournament's players into teams; the first player drawn into a team captains it."""
     players = players_of(session, _id(tournament))
     split = split_into_teams([player.user_id for player in players], tournament.team_size, rng)
     if not split:
-        return f"I need at least {2 * tournament.team_size} players for two teams of {tournament.team_size}."
+        msg = f"I need at least {2 * tournament.team_size} players for two teams of {tournament.team_size}."
+        raise Refused(msg)
     by_user = {player.user_id: player for player in players}
     for number, members in enumerate(split, 1):
         team = TournamentTeam(tournament_id=_id(tournament), name=f"Team {number}", captain_id=members[0])
@@ -209,7 +219,6 @@ def _draw_teams(session: Session, tournament: Tournament, rng: Random) -> Refusa
         session.flush()
         for user_id in members:
             by_user[user_id].team_id = team.id
-    return None
 
 
 def _match_at(session: Session, tournament_id: int, round_: int, slot: int) -> TournamentMatch:
@@ -243,14 +252,14 @@ def _decide(session: Session, tournament: Tournament, match: TournamentMatch, wi
     session.add(following)
 
 
-def advance(session: Session, match: TournamentMatch) -> Refusal:
+def advance(session: Session, match: TournamentMatch) -> None:
     """Move ``match`` on to its next phase: from ready to the bans, the picks, and live."""
     following = match.phase.next
     if following is None:
-        return "Report the winner to finish this match." if match.phase is MatchPhase.LIVE else "This match can't move on."
+        msg = "Report the winner to finish this match." if match.phase is MatchPhase.LIVE else "This match can't move on."
+        raise Refused(msg)
     match.phase = following
     session.add(match)
-    return None
 
 
 def report(
@@ -260,16 +269,18 @@ def report(
     winner_id: int,
     *,
     forfeit: bool = False,
-) -> Refusal:
+) -> None:
     """Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited."""
     if match.phase.decided:
-        return "This match is decided already."
+        msg = "This match is decided already."
+        raise Refused(msg)
     if winner_id not in (match.team_a_id, match.team_b_id) or None in (match.team_a_id, match.team_b_id):
-        return "That team doesn't play this match."
+        msg = "That team doesn't play this match."
+        raise Refused(msg)
     if not forfeit and match.phase is not MatchPhase.LIVE:
-        return "The match isn't live yet; a team can forfeit, though."
+        msg = "The match isn't live yet; a team can forfeit, though."
+        raise Refused(msg)
     _decide(session, tournament, match, winner_id, MatchPhase.FORFEIT if forfeit else MatchPhase.FINISHED)
-    return None
 
 
 def cancel(session: Session, tournament: Tournament) -> None:
@@ -289,19 +300,21 @@ def team_in_match(session: Session, match: TournamentMatch, user_id: int) -> Tou
     return None
 
 
-def draft(session: Session, match: TournamentMatch, captain_id: int, kind: DraftKind, value: str) -> Refusal:
+def draft(session: Session, match: TournamentMatch, captain_id: int, kind: DraftKind, value: str) -> None:
     """Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase."""
     phase = MatchPhase.BAN if kind is DraftKind.BAN else MatchPhase.PICK
     if match.phase is not phase:
-        return f"This match isn't in its {kind.value} phase."
+        msg = f"This match isn't in its {kind.value} phase."
+        raise Refused(msg)
     team = team_in_match(session, match, captain_id)
     if team is None or team.captain_id != captain_id:
-        return f"Only a captain playing this match can {kind.value}."
+        msg = f"Only a captain playing this match can {kind.value}."
+        raise Refused(msg)
     taken = session.exec(select(DraftChoice).where(DraftChoice.match_id == match.id, DraftChoice.value == value)).first()
     if taken is not None:
-        return f"{value} is {'banned' if taken.kind is DraftKind.BAN else 'picked'} already."
+        msg = f"{value} is {'banned' if taken.kind is DraftKind.BAN else 'picked'} already."
+        raise Refused(msg)
     session.add(DraftChoice(match_id=_id(match), team_id=_id(team), kind=kind, value=value))
-    return None
 
 
 def drafts_of(session: Session, match_id: int) -> list[DraftChoice]:
@@ -309,30 +322,33 @@ def drafts_of(session: Session, match_id: int) -> list[DraftChoice]:
     return list(session.exec(select(DraftChoice).where(DraftChoice.match_id == match_id).order_by(col(DraftChoice.id))))
 
 
-def open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote | str:
-    """Open a vote on ``question`` among ``options`` for the players of ``match``; or say why it can't be."""
+def open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote:
+    """Open a vote on ``question`` among ``options`` for the players of ``match``."""
     if match.phase.decided:
-        return "This match is decided already."
+        msg = "This match is decided already."
+        raise Refused(msg)
     if not valid_options(options):
-        return "Give between 2 and 10 different answers, separated by commas, each short enough for a button."
+        msg = "Give between 2 and 10 different answers, separated by commas, each short enough for a button."
+        raise Refused(msg)
     vote = MatchVote(match_id=_id(match), question=question, options="\n".join(options))
     session.add(vote)
     session.flush()
     return vote
 
 
-def cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> Refusal:
+def cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> None:
     """Record ``user_id``'s answer ``choice`` to ``vote``, replacing their earlier one."""
     if not vote.open:
-        return "This vote is closed."
+        msg = "This vote is closed."
+        raise Refused(msg)
     match = session.get(TournamentMatch, vote.match_id)
     if match is None or team_in_match(session, match, user_id) is None:
-        return "Only the players of this match can vote."
+        msg = "Only the players of this match can vote."
+        raise Refused(msg)
     ballot = session.exec(select(MatchBallot).where(MatchBallot.vote_id == vote.id, MatchBallot.user_id == user_id)).first()
     ballot = ballot or MatchBallot(vote_id=_id(vote), user_id=user_id, choice=choice)
     ballot.choice = choice
     session.add(ballot)
-    return None
 
 
 def choices_of(session: Session, vote_id: int) -> list[int]:

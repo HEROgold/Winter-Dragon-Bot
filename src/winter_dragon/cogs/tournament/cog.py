@@ -13,9 +13,11 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import User  # noqa: TC002
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
 lazy from wd_discord.permissions import Permissions
+lazy from wd_errors import Refused
 
 lazy from .bracket import parse_options, round_count
 lazy from .cards import (
+    MatchAction,
     bracket_embed,
     match_buttons,
     match_embed,
@@ -28,7 +30,6 @@ lazy from .cards import (
 )
 lazy from .models import TOURNAMENT_TABLES, DraftKind, MatchVote, TeamMode, Tournament, TournamentMatch, TournamentStatus
 lazy from .service import (
-    Refusal,
     active_tournament,
     add_to_team,
     advance,
@@ -52,7 +53,12 @@ lazy from .service import (
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord import AnyInteraction, AutocompleteInteraction, CommandInteraction, ComponentInteraction
+    lazy from wd_discord import (
+        AnyGuildInteraction,
+        AutocompleteInteraction,
+        GuildCommandInteraction,
+        GuildComponentInteraction,
+    )
     lazy from wd_discord.components import ActionRow
     lazy from wd_discord.embed import Embed
 
@@ -61,15 +67,43 @@ MAX_NAME_LENGTH = 100
 MAX_TEAM_SIZE = 25
 
 
-def is_organiser(interaction: AnyInteraction, tournament: Tournament) -> bool:
+def is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool:
     """Whether the invoker runs ``tournament``: they created it, or they may manage the server."""
-    user = interaction.user
-    return (user is not None and int(user.id) == tournament.organiser_id) or member_has(interaction, Permissions.MANAGE_GUILD)
+    return int(interaction.user.id) == tournament.organiser_id or member_has(interaction, Permissions.MANAGE_GUILD)
+
+
+def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None:
+    """Refuse unless the invoker runs ``tournament``."""
+    if not is_organiser(interaction, tournament):
+        msg = "Only the tournament's organiser, or someone who can manage the server, can do that."
+        raise Refused(msg)
+
+
+def stored[M](session: Session, model: type[M], record_id: int, gone: str) -> M:
+    """Return the ``model`` stored as ``record_id``; refuse with ``gone`` when there's none."""
+    record = session.get(model, record_id)
+    if record is None:
+        raise Refused(gone)
+    return record
 
 
 def team_names(session: Session, tournament_id: int) -> dict[int, str]:
     """Return each team's name by its ID."""
     return {team.id: team.name for team in teams_of(session, tournament_id) if team.id is not None}
+
+
+def play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None:
+    """Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one."""
+    if action is MatchAction.NEXT:
+        advance(session, match)
+        return
+    team = int(team_id)
+    other = match.team_b_id if team == match.team_a_id else match.team_a_id
+    winner = team if action is MatchAction.WIN else other
+    if winner is None:
+        msg = "That team doesn't play this match."
+        raise Refused(msg)
+    report(session, tournament, match, winner, forfeit=action is MatchAction.FORFEIT)
 
 
 class Tournaments(
@@ -78,7 +112,10 @@ class Tournaments(
     description="Run a team tournament: sign-up, a bracket, drafts and votes",
     contexts=[InteractionContextType.GUILD],
 ):
-    """Runs one tournament per guild: players sign up, teams form, and a single-elimination bracket plays out."""
+    """Runs one tournament per guild: players sign up, teams form, and a single-elimination bracket plays out.
+
+    Every action refuses with :class:`~wd_errors.Refused` from inside its session, which drops the session's changes.
+    """
 
     rng = Random()  # noqa: S311 - drawing teams and seeds isn't cryptography
     """Draws the teams and seeds; tests replace it with a seeded one."""
@@ -88,41 +125,13 @@ class Tournaments(
         """Create the tournament tables if missing."""
         self.create_tables(*TOURNAMENT_TABLES)
 
-    async def _active(self, interaction: AnyInteraction, session: Session) -> Tournament | None:
-        """Return the guild's running or signing-up tournament; tell the invoker when there's none."""
-        guild = interaction.guild
-        tournament = None if guild is None else active_tournament(session, int(guild.id))
+    def _active(self, interaction: AnyGuildInteraction, session: Session) -> Tournament:
+        """Return the guild's running or signing-up tournament; refuse when there's none."""
+        tournament = active_tournament(session, int(interaction.guild_id))
         if tournament is None:
-            await interaction.respond(f"There's no tournament here; {self.mention(self.create)} starts one.", ephemeral=True)
+            msg = f"There's no tournament here; {self.mention(self.create)} starts one."
+            raise Refused(msg)
         return tournament
-
-    async def _organiser(self, interaction: AnyInteraction, tournament: Tournament) -> bool:
-        """Whether the invoker runs ``tournament``; tells them otherwise."""
-        if is_organiser(interaction, tournament):
-            return True
-        await interaction.respond(
-            "Only the tournament's organiser, or someone who can manage the server, can do that.",
-            ephemeral=True,
-        )
-        return False
-
-    async def _done(self, interaction: AnyInteraction, session: Session, refusal: Refusal, success: str) -> bool:
-        """Commit and answer ``success``, or answer ``refusal`` and drop the changes; return whether it was done."""
-        if refusal is not None:
-            session.rollback()
-            await interaction.respond(refusal, ephemeral=True)
-            return False
-        session.commit()
-        await interaction.respond(success, ephemeral=True)
-        return True
-
-    @staticmethod
-    def _user_id(interaction: AnyInteraction) -> int:
-        user = interaction.user
-        if user is None:
-            msg = "Guild interactions always have a user"
-            raise ValueError(msg)
-        return int(user.id)
 
     # --- Sign-up ---------------------------------------------------------------------------------------------------
 
@@ -151,33 +160,27 @@ class Tournaments(
         )
         return embed, buttons
 
-    @Cog.command(name="create", description="Open sign-up for a tournament in this channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def create(self, interaction: CommandInteraction, name: str, team_size: int, captains: bool = False) -> None:  # noqa: FBT001, FBT002 - a command option
+    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+        name="create",
+        description="Open sign-up for a tournament in this channel",
+        requires=Permissions.MANAGE_GUILD,
+    )
+    async def create(self, interaction: GuildCommandInteraction, name: str, team_size: int, captains: bool = False) -> None:  # noqa: FBT001, FBT002 - a command option
         """Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
 
-        Needs MANAGE_GUILD; the creator organises it.
+        The creator organises it.
         """
-        guild, channel = interaction.guild, interaction.channel
-        if guild is None or channel is None or not member_has(interaction, Permissions.MANAGE_GUILD):
-            await interaction.respond("You need the Manage Server permission to open a tournament.", ephemeral=True)
-            return
         if not (0 < len(name) <= MAX_NAME_LENGTH and 0 < team_size <= MAX_TEAM_SIZE):
-            await interaction.respond(
-                f"Give a name under {MAX_NAME_LENGTH} characters and a team size from 1 to {MAX_TEAM_SIZE}.",
-                ephemeral=True,
-            )
-            return
+            msg = f"Give a name under {MAX_NAME_LENGTH} characters and a team size from 1 to {MAX_TEAM_SIZE}."
+            raise Refused(msg)
         with Session(self.bind) as session:
-            if active_tournament(session, int(guild.id)) is not None:
-                await interaction.respond(
-                    f"This server has a tournament going; {self.mention(self.cancel_tournament)} ends it.",
-                    ephemeral=True,
-                )
-                return
+            if active_tournament(session, int(interaction.guild_id)) is not None:
+                msg = f"This server has a tournament going; {self.mention(self.cancel_tournament)} ends it."
+                raise Refused(msg)
             tournament = Tournament(
-                guild_id=int(guild.id),
-                channel_id=int(channel.id),
-                organiser_id=self._user_id(interaction),
+                guild_id=int(interaction.guild_id),
+                channel_id=int(interaction.channel.id),
+                organiser_id=int(interaction.user.id),
                 name=name,
                 mode=TeamMode.CAPTAINS if captains else TeamMode.SOLO,
                 team_size=team_size,
@@ -189,115 +192,91 @@ class Tournaments(
         await interaction.respond(embeds=[embed], components=buttons)
 
     @Cog.command(name="join", description="Sign up for this server's tournament")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def join(self, interaction: CommandInteraction) -> None:
+    async def join(self, interaction: GuildCommandInteraction) -> None:
         """Sign the invoker up for the guild's solo tournament."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None:
-                return
-            await self._done(
-                interaction,
-                session,
-                sign_up(session, tournament, self._user_id(interaction)),
-                "You're signed up!",
-            )
+            sign_up(session, self._active(interaction, session), int(interaction.user.id))
+            session.commit()
+        await interaction.respond("You're signed up!", ephemeral=True)
 
     @Cog.command(name="leave", description="Withdraw from this server's tournament before it starts")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def leave(self, interaction: CommandInteraction) -> None:
+    async def leave(self, interaction: GuildCommandInteraction) -> None:
         """Take the invoker out of the tournament; a captain leaving disbands their team."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None:
-                return
-            await self._done(
-                interaction,
-                session,
-                withdraw(session, tournament, self._user_id(interaction)),
-                "You've left the tournament.",
-            )
+            withdraw(session, self._active(interaction, session), int(interaction.user.id))
+            session.commit()
+        await interaction.respond("You've left the tournament.", ephemeral=True)
 
     @Cog.component("tourney-join")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def join_button(self, interaction: ComponentInteraction, tournament_id: str) -> None:
+    async def join_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
         """Sign the clicker up, then refresh the sign-up card."""
         await self._signup_click(interaction, tournament_id, join=True)
 
     @Cog.component("tourney-leave")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def leave_button(self, interaction: ComponentInteraction, tournament_id: str) -> None:
+    async def leave_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
         """Take the clicker out, then refresh the sign-up card."""
         await self._signup_click(interaction, tournament_id, join=False)
 
     @Cog.component("tourney-participants")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def participants_button(self, interaction: ComponentInteraction, tournament_id: str) -> None:
+    async def participants_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
         """Show the clicker, and only them, everyone signed up so far."""
         with Session(self.bind) as session:
-            tournament = session.get(Tournament, int(tournament_id))
-            if tournament is None:
-                await interaction.respond("This tournament is gone.", ephemeral=True)
-                return
+            tournament = stored(session, Tournament, int(tournament_id), "This tournament is gone.")
             rosters, solo = self._participants(session, tournament)
             embed = participants_embed(tournament, rosters, solo)
         await interaction.respond(embeds=[embed], ephemeral=True)
 
-    async def _signup_click(self, interaction: ComponentInteraction, tournament_id: str, *, join: bool) -> None:
+    async def _signup_click(self, interaction: GuildComponentInteraction, tournament_id: str, *, join: bool) -> None:
         with Session(self.bind) as session:
-            tournament = session.get(Tournament, int(tournament_id))
-            if tournament is None:
-                await interaction.respond("This tournament is gone.", ephemeral=True)
-                return
-            user_id = self._user_id(interaction)
-            refusal = sign_up(session, tournament, user_id) if join else withdraw(session, tournament, user_id)
-            if refusal is not None:
-                await interaction.respond(refusal, ephemeral=True)
-                return
+            tournament = stored(session, Tournament, int(tournament_id), "This tournament is gone.")
+            user_id = int(interaction.user.id)
+            if join:
+                sign_up(session, tournament, user_id)
+            else:
+                withdraw(session, tournament, user_id)
             session.commit()
             embed, buttons = self._signup_card(session, tournament)
         await interaction.update(embeds=[embed], components=buttons)
 
     @Cog.command(name="team-create", description="Register a team for this server's tournament, as its captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def team_create(self, interaction: CommandInteraction, name: str) -> None:
+    async def team_create(self, interaction: GuildCommandInteraction, name: str) -> None:
         """Register the team ``name`` captained by the invoker."""
         if not 0 < len(name) <= MAX_NAME_LENGTH:
-            await interaction.respond(f"Keep the team name under {MAX_NAME_LENGTH} characters.", ephemeral=True)
-            return
+            msg = f"Keep the team name under {MAX_NAME_LENGTH} characters."
+            raise Refused(msg)
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None:
-                return
-            refusal = create_team(session, tournament, self._user_id(interaction), name)
-            success = f"Team **{name}** is registered; add players with {self.mention(self.team_add)}."
-            await self._done(interaction, session, refusal, success)
+            create_team(session, self._active(interaction, session), int(interaction.user.id), name)
+            session.commit()
+        await interaction.respond(
+            f"Team **{name}** is registered; add players with {self.mention(self.team_add)}.",
+            ephemeral=True,
+        )
 
     @Cog.command(name="team-add", description="Add a player to the team you captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def team_add(self, interaction: CommandInteraction, player: User) -> None:
+    async def team_add(self, interaction: GuildCommandInteraction, player: User) -> None:
         """Add ``player`` to the invoker's team."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None:
-                return
-            refusal = add_to_team(session, tournament, self._user_id(interaction), int(player.id))
-            await self._done(interaction, session, refusal, f"Added {player.mention} to your team.")
+            add_to_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
+            session.commit()
+        await interaction.respond(f"Added {player.mention} to your team.", ephemeral=True)
 
     @Cog.command(name="team-remove", description="Remove a player from the team you captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def team_remove(self, interaction: CommandInteraction, player: User) -> None:
+    async def team_remove(self, interaction: GuildCommandInteraction, player: User) -> None:
         """Remove ``player`` from the invoker's team."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None:
-                return
-            refusal = remove_from_team(session, tournament, self._user_id(interaction), int(player.id))
-            await self._done(interaction, session, refusal, f"Removed {player.mention} from your team.")
+            remove_from_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
+            session.commit()
+        await interaction.respond(f"Removed {player.mention} from your team.", ephemeral=True)
 
     # --- Running it ------------------------------------------------------------------------------------------------
 
     @Cog.command(name="start", description="Close sign-up, form the teams and draw the bracket")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def start_tournament(self, interaction: CommandInteraction) -> None:
+    async def start_tournament(self, interaction: GuildCommandInteraction) -> None:
         """Start the tournament and show its bracket; organisers only."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None or not await self._organiser(
-                interaction,
-                tournament,
-            ):
-                return
-            refusal = start(session, tournament, self.rng)
-            if refusal is not None:
-                session.rollback()
-                await interaction.respond(refusal, ephemeral=True)
-                return
+            tournament = self._active(interaction, session)
+            require_organiser(interaction, tournament)
+            start(session, tournament, self.rng)
             session.commit()
             embed = bracket_embed(tournament, matches_of(session, tournament.id or 0), team_names(session, tournament.id or 0))
         await interaction.respond(
@@ -306,11 +285,10 @@ class Tournaments(
         )
 
     @Cog.command(name="bracket", description="Show the tournament's bracket")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def bracket(self, interaction: CommandInteraction) -> None:
+    async def bracket(self, interaction: GuildCommandInteraction) -> None:
         """Show the bracket, or the sign-up card before the tournament starts."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None:
-                return
+            tournament = self._active(interaction, session)
             if tournament.status is TournamentStatus.SIGNUP:
                 embed, _ = self._signup_card(session, tournament)
             else:
@@ -322,14 +300,11 @@ class Tournaments(
         await interaction.respond(embeds=[embed])
 
     @Cog.command(name="cancel", description="Call off this server's tournament")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def cancel_tournament(self, interaction: CommandInteraction) -> None:
+    async def cancel_tournament(self, interaction: GuildCommandInteraction) -> None:
         """Cancel the tournament; organisers only."""
         with Session(self.bind) as session:
-            if (tournament := await self._active(interaction, session)) is None or not await self._organiser(
-                interaction,
-                tournament,
-            ):
-                return
+            tournament = self._active(interaction, session)
+            require_organiser(interaction, tournament)
             cancel(session, tournament)
             session.commit()
             name = tournament.name
@@ -337,23 +312,23 @@ class Tournaments(
 
     # --- Matches ---------------------------------------------------------------------------------------------------
 
-    async def _match(
-        self,
-        interaction: AnyInteraction,
-        session: Session,
-        match_id: int,
-    ) -> tuple[Tournament, TournamentMatch] | None:
-        """Return the guild's running tournament and its match ``match_id``; tell the invoker when there's no such match."""
-        tournament = await self._active(interaction, session)
-        if tournament is None:
-            return None
+    def _match(self, interaction: AnyGuildInteraction, session: Session, match_id: int) -> tuple[Tournament, TournamentMatch]:
+        """Return the guild's running tournament and its match ``match_id``; refuse when there's no such match."""
+        tournament = self._active(interaction, session)
         match = session.get(TournamentMatch, match_id)
         if match is None or match.tournament_id != tournament.id:
-            await interaction.respond(
-                f"This tournament has no match #{match_id}; {self.mention(self.bracket)} lists them.",
-                ephemeral=True,
-            )
-            return None
+            msg = f"This tournament has no match #{match_id}; {self.mention(self.bracket)} lists them."
+            raise Refused(msg)
+        return tournament, match
+
+    @staticmethod
+    def _running_match(session: Session, match_id: int) -> tuple[Tournament, TournamentMatch]:
+        """Return the match ``match_id`` and its tournament; refuse unless that tournament is running."""
+        match = session.get(TournamentMatch, match_id)
+        tournament = None if match is None else session.get(Tournament, match.tournament_id)
+        if match is None or tournament is None or tournament.status is not TournamentStatus.RUNNING:
+            msg = "This match's tournament isn't running any more."
+            raise Refused(msg)
         return tournament, match
 
     def _match_card(self, session: Session, tournament: Tournament, match: TournamentMatch) -> tuple[Embed, list[ActionRow]]:
@@ -365,40 +340,25 @@ class Tournaments(
         return embed, match_buttons(self.match_control, match, names)
 
     @Cog.command(name="match", description="Show a match's card, with the organiser's controls")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def match_card(self, interaction: CommandInteraction, match: int) -> None:
+    async def match_card(self, interaction: GuildCommandInteraction, match: int) -> None:
         """Post the card of match ``match``."""
         with Session(self.bind) as session:
-            if (found := await self._match(interaction, session, match)) is None:
-                return
-            embed, buttons = self._match_card(session, *found)
+            embed, buttons = self._match_card(session, *self._match(interaction, session, match))
         await interaction.respond(embeds=[embed], components=buttons)
 
     @Cog.component("tourney-match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def match_control(self, interaction: ComponentInteraction, match_id: str, action: str, team_id: str = "") -> None:
+    async def match_control(
+        self,
+        interaction: GuildComponentInteraction,
+        match_id: str,
+        action: str,
+        team_id: str = "",
+    ) -> None:
         """Move a match to its next phase, report its winner, or record a forfeit; organisers only."""
         with Session(self.bind) as session:
-            match = session.get(TournamentMatch, int(match_id))
-            tournament = None if match is None else session.get(Tournament, match.tournament_id)
-            if match is None or tournament is None or tournament.status is not TournamentStatus.RUNNING:
-                await interaction.respond("This match's tournament isn't running any more.", ephemeral=True)
-                return
-            if not await self._organiser(interaction, tournament):
-                return
-            if action == "next":
-                refusal = advance(session, match)
-            else:
-                team = int(team_id)
-                other = match.team_b_id if team == match.team_a_id else match.team_a_id
-                winner = team if action == "win" else other
-                refusal = (
-                    "That team doesn't play this match."
-                    if winner is None
-                    else report(session, tournament, match, winner, forfeit=action == "forfeit")
-                )
-            if refusal is not None:
-                session.rollback()
-                await interaction.respond(refusal, ephemeral=True)
-                return
+            tournament, match = self._running_match(session, int(match_id))
+            require_organiser(interaction, tournament)
+            play(session, tournament, match, MatchAction(action), team_id)
             session.commit()
             embed, buttons = self._match_card(session, tournament, match)
             finished = tournament.status is TournamentStatus.FINISHED
@@ -407,40 +367,33 @@ class Tournaments(
         if finished:
             await interaction.followup(f"🏆 **{tournament.name}** is over!", embeds=[final])
 
-    async def _draft(self, interaction: CommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
+    async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
         with Session(self.bind) as session:
-            if (found := await self._match(interaction, session, match)) is None:
-                return
-            refusal = draft(session, found[1], self._user_id(interaction), kind, choice)
-            verb = "banned" if kind is DraftKind.BAN else "picked"
-            await self._done(interaction, session, refusal, f"Your team {verb} **{choice}** in match #{match}.")
+            _, found = self._match(interaction, session, match)
+            draft(session, found, int(interaction.user.id), kind, choice)
+            session.commit()
+        verb = "banned" if kind is DraftKind.BAN else "picked"
+        await interaction.respond(f"Your team {verb} **{choice}** in match #{match}.", ephemeral=True)
 
     @Cog.command(name="ban", description="Ban something from your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def ban(self, interaction: CommandInteraction, match: int, choice: str) -> None:
+    async def ban(self, interaction: GuildCommandInteraction, match: int, choice: str) -> None:
         """Record the invoker's team banning ``choice`` in ``match``."""
         await self._draft(interaction, match, choice, DraftKind.BAN)
 
     @Cog.command(name="pick", description="Pick something for your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def pick(self, interaction: CommandInteraction, match: int, choice: str) -> None:
+    async def pick(self, interaction: GuildCommandInteraction, match: int, choice: str) -> None:
         """Record the invoker's team picking ``choice`` in ``match``."""
         await self._draft(interaction, match, choice, DraftKind.PICK)
 
     # --- Votes -----------------------------------------------------------------------------------------------------
 
     @Cog.command(name="vote", description="Let a match's players vote, e.g. on a map; answers separated by commas")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def vote(self, interaction: CommandInteraction, match: int, question: str, answers: str) -> None:
+    async def vote(self, interaction: GuildCommandInteraction, match: int, question: str, answers: str) -> None:
         """Post a vote on ``question`` for the players of ``match``; organisers only."""
         with Session(self.bind) as session:
-            if (found := await self._match(interaction, session, match)) is None or not await self._organiser(
-                interaction,
-                found[0],
-            ):
-                return
-            opened = open_vote(session, found[1], question[:200], parse_options(answers))
-            if isinstance(opened, str):
-                session.rollback()
-                await interaction.respond(opened, ephemeral=True)
-                return
+            tournament, found = self._match(interaction, session, match)
+            require_organiser(interaction, tournament)
+            opened = open_vote(session, found, question[:200], parse_options(answers))
             session.commit()
             session.refresh(opened)
             embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
@@ -469,34 +422,23 @@ class Tournaments(
         ]
 
     @Cog.component("tourney-vote")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def vote_button(self, interaction: ComponentInteraction, vote_id: str, choice: str) -> None:
+    async def vote_button(self, interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None:
         """Record the clicker's answer, then refresh the tally."""
         with Session(self.bind) as session:
-            vote = session.get(MatchVote, int(vote_id))
-            if vote is None:
-                await interaction.respond("This vote is gone.", ephemeral=True)
-                return
-            refusal = cast(session, vote, self._user_id(interaction), int(choice))
-            if refusal is not None:
-                await interaction.respond(refusal, ephemeral=True)
-                return
+            vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
+            cast(session, vote, int(interaction.user.id), int(choice))
             session.commit()
             embed = vote_embed(vote, choices_of(session, int(vote_id)))
             buttons = vote_buttons(self.vote_button, self.close_vote_button, vote)
         await interaction.update(embeds=[embed], components=buttons)
 
     @Cog.component("tourney-close")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def close_vote_button(self, interaction: ComponentInteraction, vote_id: str) -> None:
+    async def close_vote_button(self, interaction: GuildComponentInteraction, vote_id: str) -> None:
         """Close the vote and show the final tally; organisers only."""
         with Session(self.bind) as session:
-            vote = session.get(MatchVote, int(vote_id))
-            match = None if vote is None else session.get(TournamentMatch, vote.match_id)
-            tournament = None if match is None else session.get(Tournament, match.tournament_id)
-            if vote is None or tournament is None:
-                await interaction.respond("This vote is gone.", ephemeral=True)
-                return
-            if not await self._organiser(interaction, tournament):
-                return
+            vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
+            match = stored(session, TournamentMatch, vote.match_id, "This vote is gone.")
+            require_organiser(interaction, stored(session, Tournament, match.tournament_id, "This vote is gone."))
             vote.open = False
             session.add(vote)
             session.commit()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+lazy from enum import StrEnum
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING
 
@@ -34,6 +35,17 @@ PHASE_LABELS = {
     MatchPhase.FINISHED: "🏁 Finished",
     MatchPhase.FORFEIT: "🏳️ Forfeit",
 }
+
+
+class MatchAction(StrEnum):
+    """What one of the organiser's buttons under a match card does; it's part of the button's custom ID."""
+
+    NEXT = "next"
+    """Move the match on to its next phase."""
+    WIN = "win"
+    """Report the button's team as the winner."""
+    FORFEIT = "forfeit"
+    """Record the button's team forfeiting."""
 
 
 def mentions(user_ids: Sequence[int]) -> str:
@@ -171,31 +183,37 @@ def match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapp
     following = match.phase.next
     if following is not None:
         label = f"Next: {PHASE_LABELS[following]}"
-        rows.append(
-            ActionRow(
-                components=[Button(style=ButtonStyle.PRIMARY, label=label, custom_id=handler.custom_id(match.id, "next"))],
-            ),
-        )
+        custom_id = handler.custom_id(match.id, MatchAction.NEXT)
+        rows.append(ActionRow(components=[Button(style=ButtonStyle.PRIMARY, label=label, custom_id=custom_id)]))
     if match.phase is MatchPhase.LIVE:
-        wins = [
+        rows.append(_team_buttons(handler, match.id, teams, names, MatchAction.WIN))
+    rows.append(_team_buttons(handler, match.id, teams, names, MatchAction.FORFEIT))
+    return rows
+
+
+TEAM_BUTTONS = {MatchAction.WIN: (ButtonStyle.SUCCESS, "won"), MatchAction.FORFEIT: (ButtonStyle.DANGER, "forfeits")}
+"""The style and label ending of the per-team buttons under a match card."""
+
+
+def _team_buttons(
+    handler: ComponentHandler,
+    match_id: int,
+    teams: Sequence[int],
+    names: Mapping[int, str],
+    action: MatchAction,
+) -> ActionRow:
+    """Return a row with a button per team of the match doing ``action`` for that team."""
+    style, verb = TEAM_BUTTONS[action]
+    return ActionRow(
+        components=[
             Button(
-                style=ButtonStyle.SUCCESS,
-                label=f"{names.get(team, '?')} won"[:80],
-                custom_id=handler.custom_id(match.id, "win", team),
+                style=style,
+                label=f"{names.get(team, '?')} {verb}"[:80],
+                custom_id=handler.custom_id(match_id, action, team),
             )
             for team in teams
-        ]
-        rows.append(ActionRow(components=wins))
-    forfeits = [
-        Button(
-            style=ButtonStyle.DANGER,
-            label=f"{names.get(team, '?')} forfeits"[:80],
-            custom_id=handler.custom_id(match.id, "forfeit", team),
-        )
-        for team in teams
-    ]
-    rows.append(ActionRow(components=forfeits))
-    return rows
+        ],
+    )
 
 
 def vote_options(vote: MatchVote) -> list[str]:

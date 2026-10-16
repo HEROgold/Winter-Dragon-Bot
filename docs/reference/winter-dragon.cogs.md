@@ -485,7 +485,7 @@ The arithmetic of a single-elimination bracket, and of splitting players into te
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: MAX_FIELD_LENGTH, MAX_DESCRIPTION_LENGTH, PHASE_LABELS
+- module names: MAX_FIELD_LENGTH, MAX_DESCRIPTION_LENGTH, PHASE_LABELS, TEAM_BUTTONS
 - `mentions(user_ids: Sequence[int]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.
 - `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int], *, team_create: CommandMention, team_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per team.
 - `signup_buttons(join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join, Leave and Participants buttons under a sign-up card.
@@ -498,38 +498,46 @@ The messages a tournament shows: its sign-up card, bracket, match cards and vote
 - `vote_embed(vote: MatchVote, choices: Sequence[int]) -> Embed` — Return a vote: its question, and each answer's votes so far.
 - `vote_buttons(choose: ComponentHandler, close: ComponentHandler, vote: MatchVote) -> list[ActionRow]` — Return one button per answer, then the organiser's Close button; none once the vote is closed.
 
+### `class MatchAction(StrEnum)`
+What one of the organiser's buttons under a match card does; it's part of the button's custom ID.
+
+- attributes: NEXT, WIN, FORFEIT
+
 ## `winter_dragon.cogs.tournament.cog` — `src/winter_dragon/cogs/tournament/cog.py`
 The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes.
 
 - module names: MAX_NAME_LENGTH, MAX_TEAM_SIZE
-- `is_organiser(interaction: AnyInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
+- `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
+- `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
+- `stored[M](session: Session, model: type[M], record_id: int, gone: str) -> M` — Return the ``model`` stored as ``record_id``; refuse with ``gone`` when there's none.
 - `team_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
+- `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one.
 
 ### `class Tournaments(GroupCog, name='tournament', description='Run a team tournament: sign-up, a bracket, drafts and votes', contexts=[InteractionContextType.GUILD])`
 Runs one tournament per guild: players sign up, teams form, and a single-elimination bracket plays out.
 
 - attributes: rng
 - `async load() -> None` — Create the tournament tables if missing.
-- `@Cog.command async create(interaction: CommandInteraction, name: str, team_size: int, captains: bool=False) -> None` — Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
-- `@Cog.command async join(interaction: CommandInteraction) -> None` — Sign the invoker up for the guild's solo tournament.
-- `@Cog.command async leave(interaction: CommandInteraction) -> None` — Take the invoker out of the tournament; a captain leaving disbands their team.
-- `@Cog.component async join_button(interaction: ComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
-- `@Cog.component async leave_button(interaction: ComponentInteraction, tournament_id: str) -> None` — Take the clicker out, then refresh the sign-up card.
-- `@Cog.component async participants_button(interaction: ComponentInteraction, tournament_id: str) -> None` — Show the clicker, and only them, everyone signed up so far.
-- `@Cog.command async team_create(interaction: CommandInteraction, name: str) -> None` — Register the team ``name`` captained by the invoker.
-- `@Cog.command async team_add(interaction: CommandInteraction, player: User) -> None` — Add ``player`` to the invoker's team.
-- `@Cog.command async team_remove(interaction: CommandInteraction, player: User) -> None` — Remove ``player`` from the invoker's team.
-- `@Cog.command async start_tournament(interaction: CommandInteraction) -> None` — Start the tournament and show its bracket; organisers only.
-- `@Cog.command async bracket(interaction: CommandInteraction) -> None` — Show the bracket, or the sign-up card before the tournament starts.
-- `@Cog.command async cancel_tournament(interaction: CommandInteraction) -> None` — Cancel the tournament; organisers only.
-- `@Cog.command async match_card(interaction: CommandInteraction, match: int) -> None` — Post the card of match ``match``.
-- `@Cog.component async match_control(interaction: ComponentInteraction, match_id: str, action: str, team_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
-- `@Cog.command async ban(interaction: CommandInteraction, match: int, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
-- `@Cog.command async pick(interaction: CommandInteraction, match: int, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
-- `@Cog.command async vote(interaction: CommandInteraction, match: int, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
+- `@Cog.command async create(interaction: GuildCommandInteraction, name: str, team_size: int, captains: bool=False) -> None` — Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
+- `@Cog.command async join(interaction: GuildCommandInteraction) -> None` — Sign the invoker up for the guild's solo tournament.
+- `@Cog.command async leave(interaction: GuildCommandInteraction) -> None` — Take the invoker out of the tournament; a captain leaving disbands their team.
+- `@Cog.component async join_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
+- `@Cog.component async leave_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Take the clicker out, then refresh the sign-up card.
+- `@Cog.component async participants_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Show the clicker, and only them, everyone signed up so far.
+- `@Cog.command async team_create(interaction: GuildCommandInteraction, name: str) -> None` — Register the team ``name`` captained by the invoker.
+- `@Cog.command async team_add(interaction: GuildCommandInteraction, player: User) -> None` — Add ``player`` to the invoker's team.
+- `@Cog.command async team_remove(interaction: GuildCommandInteraction, player: User) -> None` — Remove ``player`` from the invoker's team.
+- `@Cog.command async start_tournament(interaction: GuildCommandInteraction) -> None` — Start the tournament and show its bracket; organisers only.
+- `@Cog.command async bracket(interaction: GuildCommandInteraction) -> None` — Show the bracket, or the sign-up card before the tournament starts.
+- `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction) -> None` — Cancel the tournament; organisers only.
+- `@Cog.command async match_card(interaction: GuildCommandInteraction, match: int) -> None` — Post the card of match ``match``.
+- `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, team_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
+- `@Cog.command async ban(interaction: GuildCommandInteraction, match: int, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
+- `@Cog.command async pick(interaction: GuildCommandInteraction, match: int, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
+- `@Cog.command async vote(interaction: GuildCommandInteraction, match: int, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
 - `@vote.autocomplete @pick.autocomplete @ban.autocomplete @match_card.autocomplete async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournament's undecided matches whose line contains what was typed.
-- `@Cog.component async vote_button(interaction: ComponentInteraction, vote_id: str, choice: str) -> None` — Record the clicker's answer, then refresh the tally.
-- `@Cog.component async close_vote_button(interaction: ComponentInteraction, vote_id: str) -> None` — Close the vote and show the final tally; organisers only.
+- `@Cog.component async vote_button(interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None` — Record the clicker's answer, then refresh the tally.
+- `@Cog.component async close_vote_button(interaction: GuildComponentInteraction, vote_id: str) -> None` — Close the vote and show the final tally; organisers only.
 
 ## `winter_dragon.cogs.tournament.models` — `src/winter_dragon/cogs/tournament/models.py`
 The tournament tables: a tournament, its teams and players, its bracket's matches, their drafts and votes.
@@ -598,27 +606,26 @@ One player's answer to a vote; voting again changes it.
 ## `winter_dragon.cogs.tournament.service` — `src/winter_dragon/cogs/tournament/service.py`
 What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
-- `type Refusal = str | None`
 - `active_tournament(session: Session, guild_id: int) -> Tournament | None` — Return the guild's tournament that isn't over, if it has one.
 - `players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]` — Return everyone signed up for the tournament, in sign-up order.
 - `player_of(session: Session, tournament_id: int, user_id: int) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
 - `teams_of(session: Session, tournament_id: int) -> list[TournamentTeam]` — Return the tournament's teams, in the order they were formed.
 - `roster(session: Session, team_id: int) -> list[int]` — Return the user IDs of the team's players.
 - `matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
-- `sign_up(session: Session, tournament: Tournament, user_id: int) -> Refusal` — Sign ``user_id`` up for a solo tournament.
-- `withdraw(session: Session, tournament: Tournament, user_id: int) -> Refusal` — Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team.
-- `create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> Refusal` — Register the team ``name`` with ``captain_id`` as its captain and first player.
-- `add_to_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> Refusal` — Add ``user_id`` to the team ``captain_id`` captains.
-- `remove_from_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> Refusal` — Take ``user_id`` off the team ``captain_id`` captains.
-- `start(session: Session, tournament: Tournament, rng: Random) -> Refusal` — Form the teams of a solo tournament, then lay out the bracket and give the byes their wins.
-- `advance(session: Session, match: TournamentMatch) -> Refusal` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
-- `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> Refusal` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
+- `sign_up(session: Session, tournament: Tournament, user_id: int) -> None` — Sign ``user_id`` up for a solo tournament.
+- `withdraw(session: Session, tournament: Tournament, user_id: int) -> None` — Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team.
+- `create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> None` — Register the team ``name`` with ``captain_id`` as its captain and first player.
+- `add_to_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None` — Add ``user_id`` to the team ``captain_id`` captains.
+- `remove_from_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None` — Take ``user_id`` off the team ``captain_id`` captains.
+- `start(session: Session, tournament: Tournament, rng: Random) -> None` — Form the teams of a solo tournament, then lay out the bracket and give the byes their wins.
+- `advance(session: Session, match: TournamentMatch) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
+- `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off.
 - `team_in_match(session: Session, match: TournamentMatch, user_id: int) -> TournamentTeam | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
-- `draft(session: Session, match: TournamentMatch, captain_id: int, kind: DraftKind, value: str) -> Refusal` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
+- `draft(session: Session, match: TournamentMatch, captain_id: int, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
 - `drafts_of(session: Session, match_id: int) -> list[DraftChoice]` — Return the bans and picks made in the match, in the order they were made.
-- `open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote | str` — Open a vote on ``question`` among ``options`` for the players of ``match``; or say why it can't be.
-- `cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> Refusal` — Record ``user_id``'s answer ``choice`` to ``vote``, replacing their earlier one.
+- `open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote` — Open a vote on ``question`` among ``options`` for the players of ``match``.
+- `cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> None` — Record ``user_id``'s answer ``choice`` to ``vote``, replacing their earlier one.
 - `choices_of(session: Session, vote_id: int) -> list[int]` — Return every answer given to the vote.
 
 ## `winter_dragon.cogs.uptime` — `src/winter_dragon/cogs/uptime.py`

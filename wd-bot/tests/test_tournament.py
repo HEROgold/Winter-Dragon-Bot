@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from random import Random
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -10,6 +11,7 @@ import pytest
 from sqlmodel import Session, select
 from wd_bot.registry import CommandRegistry
 from wd_discord.permissions import Permissions
+from wd_errors import Refused
 
 from winter_dragon.cogs.tournament import service
 from winter_dragon.cogs.tournament.bracket import first_round, parse_options, round_name, split_into_teams, tally
@@ -51,9 +53,14 @@ def _tournament(session: Session, mode: TeamMode = TeamMode.SOLO, team_size: int
 def _solo(session: Session, players: int, team_size: int = 1) -> Tournament:
     tournament = _tournament(session, team_size=team_size)
     for user_id in range(100, 100 + players):
-        assert service.sign_up(session, tournament, user_id) is None
+        service.sign_up(session, tournament, user_id)
     session.commit()
     return tournament
+
+
+def _refused(message: str) -> pytest.RaisesExc[Refused]:
+    """Expect a refusal with ``message``."""
+    return pytest.raises(Refused, match=re.escape(message))
 
 
 def _round(session: Session, tournament: Tournament, round_: int) -> list[TournamentMatch]:
@@ -90,23 +97,29 @@ def test_vote_options_and_tally() -> None:
 def test_solo_sign_up_refuses_twice_and_captains_tournaments(engine: Engine) -> None:
     with Session(engine) as session:
         solo = _tournament(session)
-        assert service.sign_up(session, solo, 5) is None
+        service.sign_up(session, solo, 5)
         session.commit()
-        assert service.sign_up(session, solo, 5) == "You're signed up already."
+        with _refused("You're signed up already."):
+            service.sign_up(session, solo, 5)
         captains = _tournament(session, TeamMode.CAPTAINS)
-        assert service.sign_up(session, captains, 6) is not None
+        with pytest.raises(Refused):
+            service.sign_up(session, captains, 6)
 
 
 def test_captains_build_teams_within_the_size(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
-        assert service.create_team(session, tournament, 10, "Reds") is None
-        assert service.create_team(session, tournament, 11, "reds") == "A team has that name already."
-        assert service.add_to_team(session, tournament, 10, 12) is None
-        assert service.add_to_team(session, tournament, 10, 13) == "Your team is full: teams have 2 players."
-        assert service.add_to_team(session, tournament, 12, 13) == "Only a team's captain can add players to it."
-        assert service.remove_from_team(session, tournament, 10, 10) == "They aren't a player you can remove from your team."
-        assert service.remove_from_team(session, tournament, 10, 12) is None
+        service.create_team(session, tournament, 10, "Reds")
+        with _refused("A team has that name already."):
+            service.create_team(session, tournament, 11, "reds")
+        service.add_to_team(session, tournament, 10, 12)
+        with _refused("Your team is full: teams have 2 players."):
+            service.add_to_team(session, tournament, 10, 13)
+        with _refused("Only a team's captain can add players to it."):
+            service.add_to_team(session, tournament, 12, 13)
+        with _refused("They aren't a player you can remove from your team."):
+            service.remove_from_team(session, tournament, 10, 10)
+        service.remove_from_team(session, tournament, 10, 12)
         session.commit()
         (team,) = service.teams_of(session, tournament.id or 0)
         assert service.roster(session, team.id or 0) == [10]
@@ -118,7 +131,7 @@ def test_a_captain_leaving_disbands_their_team(engine: Engine) -> None:
         service.create_team(session, tournament, 10, "Reds")
         service.add_to_team(session, tournament, 10, 12)
         session.commit()
-        assert service.withdraw(session, tournament, 10) is None
+        service.withdraw(session, tournament, 10)
         session.commit()
         assert service.teams_of(session, tournament.id or 0) == []
         assert service.players_of(session, tournament.id or 0) == []
@@ -130,13 +143,14 @@ def test_a_captain_leaving_disbands_their_team(engine: Engine) -> None:
 def test_start_needs_two_teams(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _solo(session, players=3, team_size=2)
-        assert service.start(session, tournament, Random(0)) == "I need at least 4 players for two teams of 2."
+        with _refused("I need at least 4 players for two teams of 2."):
+            service.start(session, tournament, Random(0))
 
 
 def test_start_draws_teams_and_gives_byes_their_wins(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _solo(session, players=5)
-        assert service.start(session, tournament, Random(0)) is None
+        service.start(session, tournament, Random(0))
         session.commit()
 
         assert tournament.status is TournamentStatus.RUNNING
@@ -158,18 +172,23 @@ def test_a_match_moves_through_its_phases_and_the_final_crowns_a_champion(engine
         (final,) = _round(session, tournament, 0)
         winner = final.team_a_id or 0
 
-        assert service.report(session, tournament, final, winner) == "The match isn't live yet; a team can forfeit, though."
+        with _refused("The match isn't live yet; a team can forfeit, though."):
+            service.report(session, tournament, final, winner)
         phases = []
-        while service.advance(session, final) is None:
+        while final.phase is not MatchPhase.LIVE:
+            service.advance(session, final)
             phases.append(final.phase)
         assert phases == [MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE]
-        assert service.advance(session, final) == "Report the winner to finish this match."
-        assert service.report(session, tournament, final, 999) == "That team doesn't play this match."
-        assert service.report(session, tournament, final, winner) is None
+        with _refused("Report the winner to finish this match."):
+            service.advance(session, final)
+        with _refused("That team doesn't play this match."):
+            service.report(session, tournament, final, 999)
+        service.report(session, tournament, final, winner)
 
         assert (final.phase, final.winner_id) == (MatchPhase.FINISHED, winner)
         assert (tournament.status, tournament.winner_team_id) == (TournamentStatus.FINISHED, winner)
-        assert service.report(session, tournament, final, winner) == "This match is decided already."
+        with _refused("This match is decided already."):
+            service.report(session, tournament, final, winner)
 
 
 def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
@@ -177,7 +196,7 @@ def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
         tournament = _solo(session, players=4)
         service.start(session, tournament, Random(0))
         match = _round(session, tournament, 0)[1]
-        assert service.report(session, tournament, match, match.team_b_id or 0, forfeit=True) is None
+        service.report(session, tournament, match, match.team_b_id or 0, forfeit=True)
         assert match.phase is MatchPhase.FORFEIT
         (final,) = _round(session, tournament, 1)
         assert final.team_b_id == match.team_b_id
@@ -196,12 +215,15 @@ def test_only_a_playing_captain_drafts_in_the_right_phase(engine: Engine) -> Non
         captain = team_a.captain_id
         teammate = next(user for user in service.roster(session, team_a.id or 0) if user != captain)
 
-        assert service.draft(session, match, captain, DraftKind.BAN, "Dust") == "This match isn't in its ban phase."
+        with _refused("This match isn't in its ban phase."):
+            service.draft(session, match, captain, DraftKind.BAN, "Dust")
         service.advance(session, match)
-        assert service.draft(session, match, teammate, DraftKind.BAN, "Dust") == "Only a captain playing this match can ban."
-        assert service.draft(session, match, captain, DraftKind.BAN, "Dust") is None
+        with _refused("Only a captain playing this match can ban."):
+            service.draft(session, match, teammate, DraftKind.BAN, "Dust")
+        service.draft(session, match, captain, DraftKind.BAN, "Dust")
         session.flush()
-        assert service.draft(session, match, captain, DraftKind.BAN, "Dust") == "Dust is banned already."
+        with _refused("Dust is banned already."):
+            service.draft(session, match, captain, DraftKind.BAN, "Dust")
         assert [draft.value for draft in service.drafts_of(session, match.id or 0)] == ["Dust"]
 
 
@@ -211,17 +233,19 @@ def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -
         service.start(session, tournament, Random(0))
         (match,) = _round(session, tournament, 0)
         vote = service.open_vote(session, match, "Map?", ["Dust", "Mirage"])
-        assert not isinstance(vote, str)
-        assert service.open_vote(session, match, "Map?", ["Dust"]) != vote
+        with _refused("Give between 2 and 10 different answers"):
+            service.open_vote(session, match, "Map?", ["Dust"])
 
-        assert service.cast(session, vote, 999, 0) == "Only the players of this match can vote."
-        assert service.cast(session, vote, 100, 0) is None
+        with _refused("Only the players of this match can vote."):
+            service.cast(session, vote, 999, 0)
+        service.cast(session, vote, 100, 0)
         session.flush()
-        assert service.cast(session, vote, 100, 1) is None
+        service.cast(session, vote, 100, 1)
         session.flush()
         assert service.choices_of(session, vote.id or 0) == [1]
         vote.open = False
-        assert service.cast(session, vote, 101, 0) == "This vote is closed."
+        with _refused("This vote is closed."):
+            service.cast(session, vote, 101, 0)
 
 
 # --- The cog ---------------------------------------------------------------------------------------------------------
@@ -254,7 +278,7 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     await Tournaments.create.invoke(
         cog, make_interaction("tournament", options=options, guild_id=GUILD_ID, channel_id=20), options
     )
-    assert _response(discord_client)["data"]["content"] == "You need the Manage Server permission to open a tournament."  # pyright: ignore[reportIndexIssue]
+    assert _response(discord_client)["data"]["content"] == "You need the Manage Server permission for that."  # pyright: ignore[reportIndexIssue]
 
     interaction = make_interaction(
         "tournament", options=options, guild_id=GUILD_ID, channel_id=20, permissions=Permissions.MANAGE_GUILD
@@ -279,7 +303,9 @@ async def test_the_join_button_signs_up_and_refreshes_the_card(
         tournament_id = _tournament(session, team_size=2).id
     cog = _cog(engine, discord_client)
 
-    await Tournaments.join_button.invoke(cog, make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID), [str(tournament_id)])
+    await Tournaments.join_button.invoke(
+        cog, make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID), [str(tournament_id)]
+    )
 
     update = _response(discord_client)
     assert update["type"] == 7  # UPDATE_MESSAGE
@@ -304,7 +330,9 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
     cog = _cog(engine, discord_client)
 
     args = [str(match_id), "win", str(winner)]
-    await Tournaments.match_control.invoke(cog, make_component_interaction("tourney-match:" + ":".join(args), guild_id=GUILD_ID), args)
+    await Tournaments.match_control.invoke(
+        cog, make_component_interaction("tourney-match:" + ":".join(args), guild_id=GUILD_ID), args
+    )
 
     assert "wins" in _response(discord_client)["data"]["embeds"][0]["description"]  # pyright: ignore[reportIndexIssue]
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
@@ -328,7 +356,9 @@ async def test_only_match_players_can_use_the_vote_buttons(
         vote_id = vote.id
     cog = _cog(engine, discord_client)
 
-    await Tournaments.vote_button.invoke(cog, make_component_interaction(f"tourney-vote:{vote_id}:0", guild_id=GUILD_ID), [str(vote_id), "0"])
+    await Tournaments.vote_button.invoke(
+        cog, make_component_interaction(f"tourney-vote:{vote_id}:0", guild_id=GUILD_ID), [str(vote_id), "0"]
+    )
 
     assert _response(discord_client)["data"]["content"] == "Only the players of this match can vote."  # pyright: ignore[reportIndexIssue]
     with Session(engine) as session:
@@ -351,13 +381,15 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
 ) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
-        assert service.create_team(session, tournament, 5, "Reds") is None
+        service.create_team(session, tournament, 5, "Reds")
         session.commit()
         tournament_id = tournament.id
     cog = _cog(engine, discord_client)
 
     await Tournaments.participants_button.invoke(
-        cog, make_component_interaction(f"tourney-participants:{tournament_id}", guild_id=GUILD_ID), [str(tournament_id)],
+        cog,
+        make_component_interaction(f"tourney-participants:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
     )
 
     data = _response(discord_client)["data"]

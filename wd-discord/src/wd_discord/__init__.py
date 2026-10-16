@@ -14,6 +14,7 @@ lazy from wd_discord.authenticate import Token, TokenType
 lazy from wd_discord.client import Client, NetworkError, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.entities import (
+    AnyGuildInteraction,
     AnyInteraction,
     Application,
     AutocompleteInteraction,
@@ -87,6 +88,7 @@ lazy from wd_discord.snowflake import Snowflake
 
 __all__ = [
     "URLS",
+    "AnyGuildInteraction",
     "AnyInteraction",
     "ApiResponseError",
     "Application",

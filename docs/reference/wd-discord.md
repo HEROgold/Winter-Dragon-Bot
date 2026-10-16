@@ -7,16 +7,16 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord` — `wd-discord/src/wd_discord/__init__.py`
 
-- exports: URLS, AnyInteraction, ApiResponseError, Application, AuditLogReason, AutocompleteInteraction, BoundEvent,
-  Channel, ChannelPinsUpdate, ChannelType, Client, CommandInteraction, ComponentInteraction, CurrentUser, DiscordModel,
-  Embed, EmbedField, Emoji, Entitlement, EventName, Gateway, GatewayActivity, GatewayBotInfo, GatewayGuild,
-  GlobalCommand, Guild, GuildCommand, GuildCommandInteraction, GuildComponentInteraction, GuildCreate, GuildDelete,
-  Interaction, Invite, Member, MemberRemove, MembersChunk, Message, NetworkError, PartialChannel, PartialEmoji,
-  PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser,
-  PermissionOverwrite, Permissions, Presence, RawEvent, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status,
-  Sticker, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, Token,
-  TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind, is_gone,
-  is_network_error, narrow_to_guild
+- exports: URLS, AnyGuildInteraction, AnyInteraction, ApiResponseError, Application, AuditLogReason,
+  AutocompleteInteraction, BoundEvent, Channel, ChannelPinsUpdate, ChannelType, Client, CommandInteraction,
+  ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField, Emoji, Entitlement, EventName, Gateway,
+  GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild, GuildCommand, GuildCommandInteraction,
+  GuildComponentInteraction, GuildCreate, GuildDelete, Interaction, Invite, Member, MemberRemove, MembersChunk, Message,
+  NetworkError, PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember,
+  PartialMessage, PartialRole, PartialUser, PermissionOverwrite, Permissions, Presence, RawEvent, Ready, Resolved, Role,
+  Sentry, ShardManager, Snowflake, Status, Sticker, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync,
+  ThreadMember, ThreadMembersUpdate, Token, TokenType, UnknownInteraction, User, VoiceChannelStartTimeUpdate,
+  VoiceChannelStatusUpdate, VoiceState, bind, is_gone, is_network_error, narrow_to_guild
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
