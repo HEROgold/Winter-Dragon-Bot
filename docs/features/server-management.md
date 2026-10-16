@@ -26,6 +26,8 @@ Self-service temporary voice channels. An admin marks a channel as the "hub"; jo
 
 Who is in which voice channel is tracked in memory from GUILD_CREATE's voice states and every VOICE_STATE_UPDATE; on startup, channels that emptied while the bot was offline are deleted.
 
+A member is only given a new channel when Discord says their old one is gone; if moving them fails for another reason (they left voice meanwhile, say), they keep it. An empty channel whose delete fails stays recorded, and the next time it empties, or the bot starts, the delete is tried again.
+
 Surface: `/autochannel setup | mark | guild-limit | limit | name` (`setup`, `mark` and `guild-limit` need Manage Server).
 
 **Status:** ✅ Ported to `src/winter_dragon/cogs/autochannel.py`, with cog-local `autochannelhub`, `autochannel` and `autochannelsettings` tables. `guild_limit` became `guild-limit`, and now caps the number of channels (on `main` it was stored but never enforced).
@@ -42,7 +44,7 @@ Configurable greeting for new members, set up through an interactive menu (`/wel
 
 Live server statistics, both on demand (`/stats show`) and as a locked "Stats" category of voice channels whose names carry the counts: total users, online users, bots, creation date and peak online. Counts come from Discord's approximate member and presence counts plus a paged member listing for the bots; bots are taken to be online, so online users is presences minus bots. The peak is stored, not read back from a channel name. The cog's own background task renames only the channels whose name changed, every `update_interval` seconds (Discord allows two renames per channel per 10 minutes), and forgets channels deleted by hand.
 
-Everyone can use `show`; `add` and `remove` need Manage Channels, checked per subcommand since Discord only gates the group as a whole; `reset` recreates every guild's stats channels and is for the bot's owners (the application owner or its team).
+Everyone can use `show`; `add` and `remove` need Manage Channels, checked per subcommand since Discord only gates the group as a whole; `reset` recreates every guild's stats channels and is for the bot's owners (the application owner or its team). `remove` forgets only the channels that are gone; one it couldn't delete stays recorded, so running it again retries it, and `reset` leaves such a guild's channels in place rather than adding a second set.
 
 Surface: `/stats show | add | remove | reset`
 
