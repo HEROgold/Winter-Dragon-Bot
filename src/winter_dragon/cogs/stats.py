@@ -10,24 +10,24 @@ lazy from typing import TYPE_CHECKING, override
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
 from wd_db.extension.model import SQLModel
-lazy from wd_bot.checks import is_owner, member_has
+lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_config.stats import StatsSettings
-lazy from wd_discord import ChannelType, Permissions, is_network_error
+lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.entities.guild import MAX_MEMBERS_PER_PAGE
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_discord.timestamp import DiscordTime
+lazy from wd_errors import Refused, unwrap
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Iterable
+    lazy from collections.abc import Generator, Iterable, Mapping
     lazy from datetime import datetime
 
-    lazy from wd_bot.commands import Command
-    lazy from wd_discord import Client, CommandInteraction, Member, NetworkError
+    lazy from wd_discord import Client, GuildCommandInteraction, Member, NetworkError
     lazy from wd_discord.entities import BaseChannel, BaseGuild
 
 
@@ -135,6 +135,43 @@ def channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str:
             return CATEGORY_NAME
 
 
+@dataclass(frozen=True, slots=True)
+class RenamePlan:
+    """What an update does to a guild's stats channels: rename those showing stale counts, forget deleted ones."""
+
+    renames: dict[int, str]
+    """The new name of each channel, by ID, whose name changes."""
+    gone: list[StatChannel]
+    """The stats channels deleted by hand."""
+
+
+def plan_renames(stats: Iterable[StatChannel], names: Mapping[int, str | None], counts: GuildCounts, peak: int) -> RenamePlan:
+    """Plan updating ``stats`` to ``counts`` and ``peak``, given each existing channel's name by ID.
+
+    Only names that change are renamed, since Discord allows two renames per channel per 10 minutes; the category
+    keeps whatever name it was given.
+    """
+    renames: dict[int, str] = {}
+    gone: list[StatChannel] = []
+    for stat in stats:
+        if stat.channel_id not in names:
+            gone.append(stat)
+        elif stat.kind is not StatKind.CATEGORY and names[stat.channel_id] != (name := channel_name(stat.kind, counts, peak)):
+            renames[stat.channel_id] = name
+    return RenamePlan(renames, gone)
+
+
+def category_params(guild_id: int) -> GuildChannelParams:
+    """Return the stats category: listed first, visible to everyone, and joined by nobody."""
+    everyone = OverwriteParams(
+        id=Snowflake(guild_id),  # the @everyone role shares the guild's ID
+        type=OverwriteType.ROLE,
+        allow=Permissions.VIEW_CHANNEL,
+        deny=Permissions.CONNECT,
+    )
+    return GuildChannelParams(name=CATEGORY_NAME, type=ChannelType.GUILD_CATEGORY, position=0, permission_overwrites=[everyone])
+
+
 def stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed:
     """Return the embed /stats show answers with."""
     fields = [
@@ -193,11 +230,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
             await self.update_guild(guild_id)
 
     async def update_guild(self, guild_id: int) -> None:
-        """Rename ``guild_id``'s stats channels to the current counts, and record a new peak.
-
-        Only channels whose name changes are renamed, since Discord allows two renames per channel per 10 minutes.
-        Channels deleted by hand are forgotten.
-        """
+        """Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones."""
         guild = self.bot.client.guilds.partial(guild_id)
         counts = await guild_counts(guild)
         channels = await guild.fetch_channels()
@@ -207,16 +240,14 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         names = {int(channel.id): channel.name for channel in channels}
         with Session(self.bind) as session:
             peak = self._raise_peak(session, guild_id, counts.online_users)
-            for stat in guild_stat_channels(session, guild_id):
-                if stat.channel_id not in names:
-                    session.delete(stat)
-                    continue
-                name = channel_name(stat.kind, counts, peak)
-                if stat.kind is not StatKind.CATEGORY and names[stat.channel_id] != name:
-                    renamed = await self.bot.client.channels.partial(stat.channel_id).edit(ChannelParams(name=name))
-                    if is_network_error(renamed):
-                        self.logger.warning(t"Could not rename stats channel {stat.channel_id}: {renamed}")
+            plan = plan_renames(guild_stat_channels(session, guild_id), names, counts, peak)
+            for stat in plan.gone:
+                session.delete(stat)
             session.commit()
+        for channel_id, name in plan.renames.items():
+            renamed = await self.bot.client.channels.partial(channel_id).edit(ChannelParams(name=name))
+            if is_network_error(renamed):
+                self.logger.warning(t"Could not rename stats channel {channel_id}: {renamed}")
 
     @staticmethod
     def _raise_peak(session: Session, guild_id: int, online: int) -> int:
@@ -234,115 +265,117 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         counts = await guild_counts(guild)
         if is_network_error(counts):
             return counts
-        everyone = OverwriteParams(
-            id=Snowflake(guild_id),  # the @everyone role shares the guild's ID
-            type=OverwriteType.ROLE,
-            allow=Permissions.VIEW_CHANNEL,
-            deny=Permissions.CONNECT,
-        )
-        category = await guild.create_channel(
-            GuildChannelParams(
-                name=CATEGORY_NAME,
-                type=ChannelType.GUILD_CATEGORY,
-                position=0,
-                permission_overwrites=[everyone],
-            ),
-            reason=reason,
-        )
-        if is_network_error(category):
-            return category
-        created = [StatChannel(guild_id=guild_id, channel_id=int(category.id), kind=StatKind.CATEGORY)]
-        failure = None
         with Session(self.bind) as session:
             peak = self._raise_peak(session, guild_id, counts.online_users)
-            for kind in SHOWN:
-                params = GuildChannelParams(
-                    name=channel_name(kind, counts, peak),
-                    type=ChannelType.GUILD_VOICE,
-                    parent_id=category.id,
-                )
-                channel = await guild.create_channel(params, reason=reason)
-                if is_network_error(channel):
-                    failure = channel
-                    break
-                created.append(StatChannel(guild_id=guild_id, channel_id=int(channel.id), kind=kind))
+            session.commit()
+        names = {kind: channel_name(kind, counts, peak) for kind in SHOWN}
+        created, failure = await self._create_stat_channels(guild, names, reason=reason)
+        with Session(self.bind) as session:
             session.add_all(created)
             session.commit()
         return failure
 
-    async def remove_channels(self, client: Client, stats: Iterable[StatChannel], *, reason: str) -> None:
-        """Delete the channels of ``stats``, category last, and forget them; channels already gone are just forgotten."""
+    @staticmethod
+    async def _create_stat_channels(
+        guild: BaseGuild,
+        names: Mapping[StatKind, str],
+        *,
+        reason: str,
+    ) -> tuple[list[StatChannel], NetworkError | None]:
+        """Create the stats category and a channel per entry of ``names``; return what was made and what stopped it."""
+        guild_id = int(guild.id)
+        category = await guild.create_channel(category_params(guild_id), reason=reason)
+        if is_network_error(category):
+            return [], category
+        created = [StatChannel(guild_id=guild_id, channel_id=int(category.id), kind=StatKind.CATEGORY)]
+        for kind, name in names.items():
+            params = GuildChannelParams(name=name, type=ChannelType.GUILD_VOICE, parent_id=category.id)
+            channel = await guild.create_channel(params, reason=reason)
+            if is_network_error(channel):
+                return created, channel
+            created.append(StatChannel(guild_id=guild_id, channel_id=int(channel.id), kind=kind))
+        return created, None
+
+    async def remove_channels(self, client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool:
+        """Delete the channels of ``stats``, category last, forgetting each one that's gone; whether all of them are.
+
+        A channel that couldn't be deleted for another reason stays recorded, so removing again retries it.
+        """
         ordered = sorted(stats, key=lambda stat: stat.kind is StatKind.CATEGORY)
+        gone: list[StatChannel] = []
+        for stat in ordered:
+            deleted = await client.channels.partial(stat.channel_id).delete(reason=reason)
+            if is_gone(deleted):
+                gone.append(stat)
+            else:
+                self.logger.warning(t"Could not delete stats channel {stat.channel_id}: {deleted}")
         with Session(self.bind) as session:
-            for stat in ordered:
-                deleted = await client.channels.partial(stat.channel_id).delete(reason=reason)
-                if is_network_error(deleted):
-                    self.logger.warning(t"Could not delete stats channel {stat.channel_id}: {deleted}")
+            for stat in gone:
                 session.delete(session.merge(stat))
             session.commit()
+        return len(gone) == len(ordered)
 
     @Cog.command(name="show", description="Show this server's member counts")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def show(self, interaction: CommandInteraction) -> None:
+    async def show(self, interaction: GuildCommandInteraction) -> None:
         """Answer with an embed of the guild's member counts."""
-        partial = interaction.guild
-        guild = None if partial is None else await partial.fetch()
-        counts = None if partial is None else await guild_counts(partial)
-        if guild is None or counts is None or is_network_error(guild) or is_network_error(counts):
-            await interaction.respond("I couldn't read this server's counts.", ephemeral=True)
-            return
+        unreadable = "I couldn't read this server's counts."
+        guild = unwrap(await interaction.guild.fetch(), unreadable)
+        counts = unwrap(await guild_counts(interaction.guild), unreadable)
         await interaction.respond(embeds=[stats_embed(guild.name, counts, guild.afk_channel)])
 
-    @Cog.command(name="add", description="Add a category of channels showing this server's member counts")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def add(self, interaction: CommandInteraction) -> None:
-        """Create the stats channels, unless the guild has them already; needs MANAGE_CHANNELS."""
-        guild = interaction.guild
-        if guild is None or not member_has(interaction, Permissions.MANAGE_CHANNELS):
-            await interaction.respond("You need the Manage Channels permission for that.", ephemeral=True)
-            return
+    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+        name="add",
+        description="Add a category of channels showing this server's member counts",
+        requires=Permissions.MANAGE_CHANNELS,
+    )
+    async def add(self, interaction: GuildCommandInteraction) -> None:
+        """Create the stats channels, unless the guild has them already."""
+        guild_id = int(interaction.guild_id)
         with Session(self.bind) as session:
-            exists = bool(guild_stat_channels(session, int(guild.id)))
+            exists = bool(guild_stat_channels(session, guild_id))
         if exists:
-            await interaction.respond(
-                f"This server has stats channels already; {self.mention(self.remove)} removes them.",
-                ephemeral=True,
-            )
-            return
+            msg = f"This server has stats channels already; {self.mention(self.remove)} removes them."
+            raise Refused(msg)
         await interaction.defer(ephemeral=True)
-        failure = await self.create_channels(self.bot.client, int(guild.id), reason=self._reason(interaction, self.add))
-        message = "Stats channels are set up." if failure is None else f"I couldn't set up every stats channel: {failure}"
-        await interaction.followup(message, ephemeral=True)
+        reason = self.audit_reason(interaction, self.add, "Requested")
+        if (failure := await self.create_channels(self.bot.client, guild_id, reason=reason)) is not None:
+            msg = f"I couldn't set up every stats channel: {failure}"
+            raise Refused(msg, cause=failure)
+        await interaction.followup("Stats channels are set up.", ephemeral=True)
 
-    @Cog.command(name="remove", description="Remove the stats category and its channels")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def remove(self, interaction: CommandInteraction) -> None:
-        """Delete the guild's stats channels; needs MANAGE_CHANNELS."""
-        guild = interaction.guild
-        if guild is None or not member_has(interaction, Permissions.MANAGE_CHANNELS):
-            await interaction.respond("You need the Manage Channels permission for that.", ephemeral=True)
-            return
+    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+        name="remove",
+        description="Remove the stats category and its channels",
+        requires=Permissions.MANAGE_CHANNELS,
+    )
+    async def remove(self, interaction: GuildCommandInteraction) -> None:
+        """Delete the guild's stats channels."""
         with Session(self.bind) as session:
-            stats = guild_stat_channels(session, int(guild.id))
+            stats = guild_stat_channels(session, int(interaction.guild_id))
         if not stats:
-            await interaction.respond(f"This server has no stats channels; {self.mention(self.add)} adds them.", ephemeral=True)
-            return
+            msg = f"This server has no stats channels; {self.mention(self.add)} adds them."
+            raise Refused(msg)
         await interaction.defer(ephemeral=True)
-        await self.remove_channels(self.bot.client, stats, reason=self._reason(interaction, self.remove))
+        reason = self.audit_reason(interaction, self.remove, "Requested")
+        if not await self.remove_channels(self.bot.client, stats, reason=reason):
+            msg = "I couldn't delete every stats channel; run it again to retry the rest."
+            raise Refused(msg)
         await interaction.followup("Removed the stats channels.", ephemeral=True)
 
     @Cog.command(name="reset", description="Recreate the stats channels of every server (bot owners only)")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def reset(self, interaction: CommandInteraction) -> None:
+    async def reset(self, interaction: GuildCommandInteraction) -> None:
         """Delete and recreate every guild's stats channels; only the bot's owners may."""
-        user = interaction.user
-        if user is None or not await is_owner(self.bot.client, user.id):
-            await interaction.respond("Only the bot's owners can do that.", ephemeral=True)
-            return
+        if not await is_owner(self.bot.client, interaction.user.id):
+            msg = "Only the bot's owners can do that."
+            raise Refused(msg)
         await interaction.defer(ephemeral=True)
-        reason = self._reason(interaction, self.reset)
+        reason = self.audit_reason(interaction, self.reset, "Requested")
         with Session(self.bind) as session:
             by_guild = {guild_id: guild_stat_channels(session, guild_id) for guild_id in stats_guild_ids(session)}
         failed = []
         for guild_id, stats in by_guild.items():
-            await self.remove_channels(self.bot.client, stats, reason=reason)
-            if await self.create_channels(self.bot.client, guild_id, reason=reason) is not None:
+            removed = await self.remove_channels(self.bot.client, stats, reason=reason)
+            if not removed or await self.create_channels(self.bot.client, guild_id, reason=reason) is not None:
                 failed.append(guild_id)
         self.logger.info(t"Reset the stats channels of {len(by_guild)} guilds, failing for {failed}")
         message = f"Reset the stats channels of {len(by_guild)} servers."
@@ -350,10 +383,3 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
             message if not failed else f"{message} Failed for: {', '.join(map(str, failed))}",
             ephemeral=True,
         )
-
-    @classmethod
-    def _reason(cls, interaction: CommandInteraction, command: Command) -> str:
-        """Return the audit-log reason for using ``command``, naming who asked for it."""
-        user = interaction.user
-        who = "someone" if user is None else f"{user.username} ({user.id})"
-        return f"Requested by {who} using /{cls.path_of(command)}"

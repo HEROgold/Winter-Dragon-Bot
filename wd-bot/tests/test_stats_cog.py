@@ -13,7 +13,16 @@ from wd_bot.registry import CommandRegistry
 from wd_discord.permissions import Permissions
 from wd_discord.testing import GUILD_JSON, RecordingClient
 
-from winter_dragon.cogs.stats import GuildCounts, PeakOnline, StatChannel, StatKind, Stats, channel_name, stats_embed
+from winter_dragon.cogs.stats import (
+    GuildCounts,
+    PeakOnline,
+    StatChannel,
+    StatKind,
+    Stats,
+    channel_name,
+    plan_renames,
+    stats_embed,
+)
 
 
 if TYPE_CHECKING:
@@ -187,3 +196,44 @@ async def test_is_owner_reads_the_application(user_id: int, *, expected: bool) -
 def test_member_has_counts_administrators(make_interaction: InteractionFactory) -> None:
     assert member_has(make_interaction(permissions=Permissions.ADMINISTRATOR), Permissions.MANAGE_CHANNELS)
     assert not member_has(make_interaction(), Permissions.MANAGE_CHANNELS)
+
+
+def test_plan_renames_only_changed_channels_and_drops_missing_ones() -> None:
+    stats = [
+        StatChannel(guild_id=GUILD_ID, channel_id=40, kind=StatKind.CATEGORY),
+        StatChannel(guild_id=GUILD_ID, channel_id=41, kind=StatKind.USERS),
+        StatChannel(guild_id=GUILD_ID, channel_id=42, kind=StatKind.PEAK),
+        StatChannel(guild_id=GUILD_ID, channel_id=43, kind=StatKind.BOTS),
+    ]
+    names = {40: "Renamed by hand", 41: "Total Users: 8", 42: "Peak Online: 1"}
+
+    plan = plan_renames(stats, names, COUNTS, peak=5)
+
+    assert plan.renames == {42: "Peak Online: 5"}
+    assert [stat.channel_id for stat in plan.gone] == [43]
+
+
+async def test_remove_forgets_only_channels_that_are_gone(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("DELETE", "/channels/41", {"code": 50001, "message": "Missing Access"}, status=403)
+    discord_client.reply("DELETE", "/channels/42", {"code": 10003, "message": "Unknown Channel"}, status=404)
+    discord_client.reply("DELETE", "/channels/40", {"id": "40", "type": 4})
+    with Session(engine) as session:
+        session.add_all(
+            [
+                StatChannel(guild_id=GUILD_ID, channel_id=40, kind=StatKind.CATEGORY),
+                StatChannel(guild_id=GUILD_ID, channel_id=41, kind=StatKind.USERS),
+                StatChannel(guild_id=GUILD_ID, channel_id=42, kind=StatKind.BOTS),
+            ],
+        )
+        session.commit()
+    interaction = make_interaction("stats", guild_id=GUILD_ID, permissions=Permissions.MANAGE_CHANNELS)
+
+    await Stats.remove.invoke(_cog(engine, discord_client), interaction, [])
+
+    with Session(engine) as session:
+        assert {stat.channel_id for stat in session.exec(select(StatChannel))} == {41}
+    assert _reply(discord_client) == "I couldn't delete every stats channel; run it again to retry the rest."
