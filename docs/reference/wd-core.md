@@ -25,7 +25,7 @@ The settings of a guild channel to create or change.
 - fields: name: str, type: int, topic: str, position: int, bitrate: int, user_limit: int, rate_limit_per_user: int,
   nsfw: bool, parent_id: str, permission_overwrites: list[OverwritePayload]
 
-### `class RequestKwargs(TypedDict, total=False)`
+### `class RequestKwargs(TypedDict, total=False, closed=True)`
 The keyword arguments accepted by :meth:`Client.request` and its convenience methods.
 
 - fields: content: RequestContent, data: RequestData, files: RequestFiles, json: JsonPayload | MessageData |

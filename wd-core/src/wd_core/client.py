@@ -68,7 +68,7 @@ class ChannelPayload(TypedDict, total=False):
     permission_overwrites: list[OverwritePayload]
 
 
-class RequestKwargs(TypedDict, total=False):
+class RequestKwargs(TypedDict, total=False, closed=True):
     """The keyword arguments accepted by :meth:`Client.request` and its convenience methods."""
 
     content: RequestContent
