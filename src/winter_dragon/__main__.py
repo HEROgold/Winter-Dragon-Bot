@@ -23,7 +23,7 @@ lazy from . import cogs
 async def main() -> None:
     """Construct the bot and run it forever."""
     bot = Bot(extensions_package=cogs)
-    # bot.start() is decorated with @Config.with_kwarg("Tokens", "discord_token"), which
+    # bot.start() is decorated with @BotConfig.with_kwarg("Tokens", "discord_token"), reading bot.ini, which
     # injects `token` into kwargs at call time - real, but not reflected in its type
     # signature, so `token` still looks required here.
     Sentry()

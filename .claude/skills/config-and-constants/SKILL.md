@@ -1,6 +1,6 @@
 ---
 name: config-and-constants
-description: Where configurable values, constants, and derived settings live in WinterDragonV2 (confkit Config descriptors, config.ini/discord.ini, Settings classes). Use when adding a setting, a constant, an env-like value, a URL/port/token, or when unsure what the source of truth for a value is.
+description: Where configurable values, constants, and derived settings live in WinterDragonV2 (confkit Config descriptors, config.ini/discord.ini/bot.ini, Settings classes). Use when adding a setting, a constant, an env-like value, a URL/port/token, or when unsure what the source of truth for a value is.
 ---
 
 # Config, constants & source of truth
@@ -20,17 +20,19 @@ Configuration is the **confkit descriptor system** — not `os.environ`, not dot
 ```python
 class Settings:
     log_level = Config(logging.DEBUG)
-    application_id = Config[int | None](0, optional=True)
+    bot_name = Config("WinterDragon")
     created_color = Config(Hex(0x00FF00))          # confkit data types: Hex, List, Enum
 ```
 
-Surfaces, one class per concern: `Settings` ([bot.py](../../../wd-config/src/wd_config/bot.py)), `DbUrl` ([db.py](../../../wd-config/src/wd_config/db.py)), `SentrySettings` ([sentry.py](../../../wd-config/src/wd_config/sentry.py)), plus per-cog `ReminderSettings`, `SteamSettings`, `UrbanSettings` — the full list with attributes is [docs/reference/wd-config.md](../../../docs/reference/wd-config.md). A new cog's settings get their own module + class there. Access is static (`Settings.BOT_SCOPE`) — reads/writes go live to the ini file.
+Surfaces, one class per concern: `Settings` ([bot.py](../../../wd-config/src/wd_config/bot.py)), `DbUrl` ([db.py](../../../wd-config/src/wd_config/db.py)), `SentrySettings` ([sentry.py](../../../wd-config/src/wd_config/sentry.py)), plus per-cog `ReminderSettings`, `SteamSettings`, `UrbanSettings` — the full list with attributes is [docs/reference/wd-config.md](../../../docs/reference/wd-config.md). A new cog's settings get their own module + class there. Access is static (`Settings.bot_name`) — reads/writes go live to the ini file.
 
 **Second scope:** `DiscordConfig[T]` binds to `discord.ini` ([wd_config/discord.py](../../../wd-config/src/wd_config/discord.py)). Gotcha: after `set_file`, it must reset `_parser = UNSET` and `_has_read_config = False` because `__init_subclass__` copies parent parser state — copy that block if you ever add a third scope. Both ini paths are declared once in [wd_config/constants.py](../../../wd-config/src/wd_config/constants.py).
 
 **`discord.ini` is internal-only; its existence is the switch.** If the file is absent when `DiscordConfig` is defined, its in-code defaults apply and nothing is written (`write_on_edit` is set from `DISCORD_CONFIG_FILE.exists()`, and an `_OptionalFileWatcher` lets reads work without the file). Create it (even empty) to expose the scope, and confkit fills in the defaults on the next start; delete it to reset. So a `DiscordConfig` setting (e.g. `RateLimit.max_retries`, `UserAgent.url`) is a developer knob, not an operator one: never require it to be set.
 
-**Injecting config into functions:** the decorator form `@Config.with_kwarg("Tokens", "discord_token")` passes a config value as a kwarg (see `Bot.start` in [wd_bot/bot.py](../../../wd-bot/src/wd_bot/bot.py): `@Config.with_kwarg("Tokens", "discord_token", name="token")`). Type checkers don't see the injected kwarg, so call sites carry a coded ignore — prefer it over reading config inside the function body.
+**Scopes live with their package:** wd-bot's `BotConfig[T]` binds to `bot.ini` in [wd_bot/settings.py](../../../wd-bot/src/wd_bot/settings.py), with `Tokens.discord_token` and `BotSettings` (`application_id`, `BOT_SCOPE`, `intents`, `permissions`, `auto_reload_*`). Intents and permissions are stored as ints; wrap them (`Intents(BotSettings.intents)`) when reading. wd-discord never reads `bot.ini`: wd-bot passes `application_id` into `Client`.
+
+**Injecting config into functions:** the decorator form `@Config.with_kwarg("Section", "setting")` passes a config value as a kwarg (see `Bot.start` in [wd_bot/bot.py](../../../wd-bot/src/wd_bot/bot.py): `@BotConfig.with_kwarg("Tokens", "discord_token", name="token")`). Type checkers don't see the injected kwarg, so call sites carry a coded ignore — prefer it over reading config inside the function body.
 
 ## Derived values: `Combined`
 
@@ -54,7 +56,7 @@ Discord API base + version are config (`URLS` in [wd_config/discord.py](../../..
 
 ## First-launch & unset values
 
-[wd_config/parser.py](../../../wd-config/src/wd_config/parser.py): on first run the `ConfigParser` subclass creates the ini, writes defaults with the `"!!"` sentinel (e.g. `[Tokens] discord_token = !!`), and raises `FirstTimeLaunchError`. `is_valid()` / `get_invalid()` treat `"!!"` as "operator must fill this in". New required-but-secret settings should default to `"!!"`, not an empty string.
+[wd_config/parser.py](../../../wd-config/src/wd_config/parser.py) `OperatorFiles` owns the check and knows no settings. A scope with operator settings registers its file next to its `set_file` with one line, `OperatorFiles.register(BOT_CONFIG_FILE)`; internal-only files (`discord.ini`) don't. A required operator setting defaults to `REQUIRED` (`"!!"`), not an empty string, so confkit writes `!!` on first launch. `Bot.start` calls `OperatorFiles.check()` before connecting, which raises `FirstTimeLaunchError` listing each `file:section:key` still at `!!`; `OperatorFiles.unset()` yields the same entries.
 
 ## Rules of thumb
 

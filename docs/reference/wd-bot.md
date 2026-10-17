@@ -36,11 +36,6 @@ Module that contains the bot.
 
 - module names: COMMAND_ERROR_REPLY
 
-### `class BotConfig`
-Basic bot configuration values.
-
-- attributes: Intents, Permissions
-
 ### `class MissingError(Exception)`
 Raised when a required attribute is missing.
 
@@ -57,7 +52,7 @@ A forever-running Discord bot: connects to the gateway, loads extensions, dispat
 - `async reload_extension(module_name: str) -> None` — Re-import the extension module ``module_name``, swap its cogs for fresh ones and sync what changed.
 - `async load_extension(extension: str) -> None` — Load a single extension from :attr:`extensions_package`.
 - `async load_extensions() -> None` — Load all cogs from :attr:`extensions_package`.
-- `@with_known_exception @Config.with_kwarg async start(token: str) -> None` — Start the bot with a token from the config file, or a provided token. Provided token takes precedence.
+- `@with_known_exception @BotConfig.with_kwarg async start(token: str) -> None` — Start the bot with the token from bot.ini.
 
 ## `wd_bot.checks` — `wd-bot/src/wd_bot/checks.py`
 Checks made before a command or component acts, and answering the user when one refuses.
@@ -198,7 +193,7 @@ Runtime `listener()` decorator: tag a Cog method as a gateway dispatch-event lis
 ## `wd_bot.paths` — `wd-bot/src/wd_bot/paths.py`
 Centralized filesystem paths shared across the bot codebase.
 
-- module names: BOT_CONFIG, CORE_DIR, PACKAGE_DIR, ROOT_DIR, EXTENSIONS, DYNAMIC_DIR, IMG_DIR, METRICS_FILE
+- module names: CORE_DIR, PACKAGE_DIR, ROOT_DIR, EXTENSIONS, DYNAMIC_DIR, IMG_DIR, METRICS_FILE
 
 ## `wd_bot.permissions` — `wd-bot/src/wd_bot/permissions.py`
 Module for handling permission related things in Discord bot interactions.
@@ -259,6 +254,24 @@ The bot's commands per scope, next to what Discord last reported for that scope.
 - `is_synced(scope: Scope, name: str) -> bool` — Whether the command ``name`` in ``scope`` is on Discord as currently defined.
 - `command_id(name: str, guild_id: Snowflake | None=None) -> Snowflake | None` — Return the Discord ID of the top-level command ``name``: the guild's own first, then the global one.
 - `mention(path: CommandPath, guild_id: Snowflake | None=None) -> CommandMention` — Return a mention of the command at ``path``, as seen from ``guild_id``.
+
+## `wd_bot.settings` — `wd-bot/src/wd_bot/settings.py`
+wd-bot's settings, backed by their own bot.ini file (operator and internal settings together).
+
+- module names: BOT_CONFIG_FILE
+
+### `class BotConfig[T](Config[T])`
+Config descriptor scoped to the bot settings file.
+
+### `class Tokens`
+Secrets the operator fills in.
+
+- attributes: discord_token
+
+### `class BotSettings`
+How the bot connects to and presents itself on Discord.
+
+- attributes: application_id, BOT_SCOPE, intents, permissions, auto_reload_extensions, auto_reload_poll_seconds
 
 ## `wd_bot.signature` — `wd-bot/src/wd_bot/signature.py`
 Derive a stable signature string for a command's callable, used to detect definition drift.

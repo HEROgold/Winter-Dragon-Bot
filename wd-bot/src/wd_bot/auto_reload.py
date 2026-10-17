@@ -10,7 +10,8 @@ lazy from pathlib import Path
 lazy from typing import TYPE_CHECKING, ClassVar
 
 lazy from herogold.log import LoggerMixin, getLogger
-lazy from wd_config.bot import Settings
+
+lazy from wd_bot.settings import BotSettings
 
 
 if TYPE_CHECKING:
@@ -114,7 +115,7 @@ class AutoReloadWatcher(LoggerMixin):
     def _should_watch(self) -> bool:
         return (
             self.flags.is_enabled
-            and Settings.auto_reload_extensions
+            and BotSettings.auto_reload_extensions
             and self.module_name.startswith(f"{self.bot.extensions_package.__name__}.")
         )
 
@@ -136,7 +137,7 @@ class AutoReloadWatcher(LoggerMixin):
 
     @classmethod
     async def _watch_extension_file(cls, module_name: str) -> None:
-        interval = float(Settings.auto_reload_poll_seconds or 1.5)
+        interval = float(BotSettings.auto_reload_poll_seconds)
         if interval <= 0:
             interval = 1.5
         this_task = asyncio.current_task()

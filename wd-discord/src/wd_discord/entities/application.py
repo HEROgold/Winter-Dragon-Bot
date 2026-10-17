@@ -4,8 +4,6 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_config.bot import Settings
-
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import Entity
 lazy from wd_discord.entities.command import GlobalCommandStore, GuildCommandStore, PartialGlobalCommand
@@ -188,19 +186,14 @@ class CurrentApplication:
     async def id(self) -> Snowflake | NetworkError:
         """Return the application's ID, fetching and caching it when unknown.
 
-        Prefers a configured ``Settings.application_id``. Otherwise fetches it once with :meth:`fetch` and
-        writes it back into ``Settings``, so later clients don't fetch it again.
+        Prefers the ``application_id`` this was built with. Otherwise fetches it once with :meth:`fetch`.
         """
         if self._id is not None:
-            return self._id
-        if Settings.application_id:
-            self._id = Snowflake.coerce(Settings.application_id)
             return self._id
         application = await self.fetch()
         if is_network_error(application):
             return application
         self._id = application.id
-        Settings().application_id = int(application.id)
         return self._id
 
     def guild_commands(self, guild: BaseGuild) -> GuildCommandStore:

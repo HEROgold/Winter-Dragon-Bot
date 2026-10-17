@@ -2,12 +2,13 @@
 
 Run from the repo root with: uv run python .claude/skills/run-wd-discord/driver.py
 
-Reads the bot token from config.ini [Tokens] discord_token, then:
+Reads the bot token from bot.ini [Tokens] discord_token, then:
 1. REST:    GET /users/@me and /gateway/bot via wd_discord.client.Client
 2. Gateway: connect + IDENTIFY, wait for READY, then close cleanly
 
 Exits 0 only if both surfaces worked. Never prints the token.
 """
+
 from __future__ import annotations
 
 lazy import asyncio
@@ -20,12 +21,12 @@ lazy from wd_discord.gateway.sharding import GatewayBotInfo
 
 
 def load_token() -> str:
-    """Read the bot token from config.ini, refusing the '!!' first-launch sentinel."""
+    """Read the bot token from bot.ini, refusing the '!!' first-launch sentinel."""
     parser = configparser.ConfigParser()
-    parser.read("config.ini")
+    parser.read("bot.ini")
     token = parser.get("Tokens", "discord_token", fallback="!!").strip('"')
     if token in ("!!", ""):
-        print("FAIL: config.ini [Tokens] discord_token is unset ('!!' sentinel).")
+        print("FAIL: bot.ini [Tokens] discord_token is unset ('!!' sentinel).")
         sys.exit(2)
     return token
 

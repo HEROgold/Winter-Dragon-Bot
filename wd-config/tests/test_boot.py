@@ -79,30 +79,46 @@ def test_prewritten_value_is_the_resolved_setting(boot_config: BootConfig) -> No
 
 
 FIRST_LAUNCH = """
+from pathlib import Path
 from wd_config.errors import FirstTimeLaunchError
-from wd_config.parser import ConfigParser
+from wd_config.parser import OperatorFiles
+for name in ("a.ini", "b.ini"):
+    OperatorFiles.register(Path(name))
 try:
-    ConfigParser()
-except FirstTimeLaunchError:
-    result = {"raised": True}
+    OperatorFiles.check()
+except FirstTimeLaunchError as e:
+    result = {"raised": True, "message": str(e)}
 else:
     result = {"raised": False}
-parser = ConfigParser()
-result |= {"valid": parser.is_valid(), "invalid": list(parser.get_invalid())}
+result["unset"] = list(OperatorFiles.unset())
 """
 
 
-def test_first_launch_writes_token_placeholder_and_raises(boot_config: BootConfig) -> None:
-    """With no config.ini, ConfigParser raises FirstTimeLaunchError and writes a `!!` discord token."""
-    boot = boot_config(FIRST_LAUNCH)
+def test_first_launch_lists_every_unset_value_and_raises(boot_config: BootConfig) -> None:
+    """Each `!!` value in a registered file is reported as `file:section:key`, and the check raises."""
+    boot = boot_config(
+        FIRST_LAUNCH,
+        files={
+            "a.ini": "[Tokens]\ndiscord_token = !!\nother = set\n",
+            "b.ini": "[Db]\npassword = !!\n",
+        },
+    )
 
     assert boot.values["raised"] is True
-    assert boot.files["config.ini"] == {"Tokens": {"discord_token": "!!"}}
-    assert boot.values["invalid"] == ["Tokens:discord_token"]
+    assert boot.values["unset"] == ["a.ini:Tokens:discord_token", "b.ini:Db:password"]
+    assert "a.ini:Tokens:discord_token" in boot.values["message"]
+    assert "b.ini:Db:password" in boot.values["message"]
 
 
-def test_existing_config_does_not_raise(boot_config: BootConfig) -> None:
-    """An existing config.ini is read, and a filled-in token reports no invalid settings."""
-    boot = boot_config(FIRST_LAUNCH, files={"config.ini": "[Tokens]\ndiscord_token = abc\n"})
+def test_filled_in_operator_files_pass(boot_config: BootConfig) -> None:
+    """Registered files without `!!` values, or not written yet, pass the check."""
+    boot = boot_config(FIRST_LAUNCH, files={"a.ini": "[Tokens]\ndiscord_token = abc\n"})
 
-    assert boot.values == {"raised": False, "valid": True, "invalid": []}
+    assert boot.values == {"raised": False, "unset": []}
+
+
+def test_unregistered_files_are_not_checked(boot_config: BootConfig) -> None:
+    """A `!!` in a file no scope registered (such as discord.ini) is not an operator value."""
+    boot = boot_config(FIRST_LAUNCH, files={"discord.ini": "[URLS]\nbase = !!\n"})
+
+    assert boot.values == {"raised": False, "unset": []}

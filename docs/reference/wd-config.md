@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_config` — `wd-config/src/wd_config/__init__.py`
 
-- exports: Config, ConfigParser, DiscordConfig
+- exports: Config, DiscordConfig, OperatorFiles
 
 ## `wd_config.bot` — `wd-config/src/wd_config/bot.py`
 Application wide bot settings.
@@ -17,10 +17,9 @@ Application wide bot settings.
 ### `class Settings`
 Application wide Settings.
 
-- attributes: log_level, bot_name, support_guild_id, prefix, application_id, bot_invite, auto_reload_extensions,
-  auto_reload_poll_seconds, created_color, changed_color, deleted_color, bot_status_messages, PROTOCOL_PREFIX,
-  SERVER_IP, WEBSITE_PORT, WEBSITE_URL, steam_redirect, TIME_FORMAT, DATE_FORMAT, DATETIME_FORMAT, OAUTH_SCOPE,
-  BOT_SCOPE
+- attributes: log_level, bot_name, support_guild_id, prefix, bot_invite, created_color, changed_color, deleted_color,
+  bot_status_messages, PROTOCOL_PREFIX, SERVER_IP, WEBSITE_PORT, WEBSITE_URL, steam_redirect, TIME_FORMAT, DATE_FORMAT,
+  DATETIME_FORMAT, OAUTH_SCOPE
 
 ## `wd_config.config` — `wd-config/src/wd_config/config.py`
 
@@ -83,12 +82,16 @@ Base class for all configuration-related exceptions.
 Raised when it's detected that WinterDragon is launched for the first time.
 
 ## `wd_config.parser` — `wd-config/src/wd_config/parser.py`
+The first-launch check: operator-facing ini files must have every required value filled in.
 
-### `class ConfigParser(configparser.ConfigParser)`
-Custom config parser that handles the config file.
+- module names: REQUIRED
 
-- `is_valid() -> bool` — Check if the config is valid.
-- `get_invalid() -> Generator[str]` — Get all invalid config values.
+### `class OperatorFiles`
+The ini files an operator edits; each scope with operator settings registers its file here.
+
+- `@classmethod register(file: Path) -> None` — Check ``file`` on first launch; a scope calls this once, next to its ``set_file``.
+- `@classmethod unset() -> Generator[str]` — Yield ``file:section:key`` for every value still at the :data:`REQUIRED` default.
+- `@classmethod check() -> None` — Raise :class:`FirstTimeLaunchError` listing every required value the operator hasn't filled in.
 
 ## `wd_config.reminder` — `wd-config/src/wd_config/reminder.py`
 Settings for personal reminders.

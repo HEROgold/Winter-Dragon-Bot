@@ -12,9 +12,8 @@ lazy from typing import TYPE_CHECKING
 lazy import wd_cogs
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
-lazy from wd_config import Config
-lazy from wd_config.bot import Settings
-lazy from wd_core.constants import BOT_PERMISSIONS, intents
+lazy from wd_config import OperatorFiles
+lazy from wd_core.intents import Intents
 lazy from wd_discord import (
     AutocompleteInteraction,
     Client,
@@ -23,6 +22,7 @@ lazy from wd_discord import (
     GatewayBotInfo,
     is_network_error,
 )
+lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
@@ -33,6 +33,7 @@ lazy from wd_bot.extensions import ExtensionDiscovery
 lazy from wd_bot.registry import CommandRegistry
 
 lazy from .cogs import Cog, GroupCog
+lazy from .settings import BotConfig, BotSettings
 
 
 if TYPE_CHECKING:
@@ -40,7 +41,6 @@ if TYPE_CHECKING:
     lazy from importlib.machinery import ModuleSpec
     lazy from types import ModuleType
 
-    lazy from wd_core.intents import Intents
     lazy from wd_discord import AnyInteraction
     lazy from wd_discord.models import DiscordModel
     lazy from wd_discord.snowflake import Snowflake
@@ -52,13 +52,6 @@ if TYPE_CHECKING:
 
 COMMAND_ERROR_REPLY = "Something went wrong running this command."
 """Ephemeral reply sent when a command handler raises."""
-
-
-class BotConfig:
-    """Basic bot configuration values."""
-
-    Intents = Config(intents)
-    Permissions = Config(BOT_PERMISSIONS)
 
 
 class MissingError(Exception):
@@ -79,18 +72,18 @@ class Bot(LoggerMixin):
     def __init__(
         self,
         *,
-        intents: Intents = BotConfig.Intents,
+        intents: Intents | None = None,
         description: str | None = None,
         extensions_package: ModuleType = wd_cogs,
     ) -> None:
-        """Initialize the Bot with the given intents and an optional description.
+        """Initialize the Bot with the given intents (default: ``BotSettings.intents``) and an optional description.
 
         ``extensions_package`` is the package :meth:`load_extensions` discovers cogs from -
         defaults to the shared ``wd_cogs`` catalog, but a bot built on its own cog package
         (e.g. ``winter_dragon.cogs``) can point discovery at that instead.
         """
         self.launch_time = datetime.datetime.now(datetime.UTC)
-        self.intents = intents
+        self.intents = Intents(BotSettings.intents) if intents is None else intents
         self.description = description
         self.extensions_package = extensions_package
         self.cogs = {}
@@ -105,13 +98,14 @@ class Bot(LoggerMixin):
 
     def get_bot_invite(self) -> str:
         """Get the link to invite the bot to a server."""
-        if not Settings.application_id:
-            msg = "Settings.application_id is not configured."
+        if not BotSettings.application_id:
+            msg = "BotSettings.application_id is not configured."
             raise ValueError(msg)
-        scope = "%20".join(Settings.BOT_SCOPE)
+        scope = "%20".join(BotSettings.BOT_SCOPE)
+        permissions = Permissions(BotSettings.permissions)
         return (
             "https://discord.com/api/oauth2/authorize"
-            f"?client_id={Settings.application_id}&permissions={int(BotConfig.Permissions)}&scope={scope}"
+            f"?client_id={BotSettings.application_id}&permissions={int(permissions)}&scope={scope}"
         )
 
     async def add_cog(self, cog: Cog) -> None:
@@ -370,11 +364,16 @@ class Bot(LoggerMixin):
         return gw_info
 
     @with_known_exception(StartupError)
-    @Config.with_kwarg("Tokens", "discord_token", name="token")
+    @BotConfig.with_kwarg("Tokens", "discord_token", name="token")
     async def start(self, token: str) -> None:
-        """Start the bot with a token from the config file, or a provided token. Provided token takes precedence."""
+        """Start the bot with the token from bot.ini.
+
+        Raises :class:`~wd_config.errors.FirstTimeLaunchError` before connecting while any operator file
+        still holds a ``!!`` value.
+        """
+        OperatorFiles.check()
         self.loop = asyncio.get_running_loop()
-        async with Client(token) as client:
+        async with Client(token, application_id=BotSettings.application_id or None) as client:
             self.client = client
             gw_info = await self._fetch_gateway_info(client)
             manager = await client.get_shard_manager(gw_info, intents=self.intents)

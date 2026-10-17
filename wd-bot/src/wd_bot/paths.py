@@ -5,8 +5,6 @@ from __future__ import annotations
 lazy from pathlib import Path
 
 
-BOT_CONFIG = Path("config.ini")
-
 CORE_DIR = Path(__file__).parent
 PACKAGE_DIR = CORE_DIR.parent
 ROOT_DIR = PACKAGE_DIR.parent

@@ -1,6 +1,6 @@
 """Shared fixtures for the wd-discord test suite.
 
-Live tests are gated on a real bot token read from the repo ``config.ini`` (``[Tokens]
+Live tests are gated on a real bot token read from the repo ``bot.ini`` (``[Tokens]
 discord_token``). When the token is missing or still the ``!!`` placeholder, those tests
 are skipped so the unit suite stays green offline and in CI.
 """
@@ -22,31 +22,29 @@ if TYPE_CHECKING:
     lazy from collections.abc import AsyncIterator, Callable
 
 
-def _find_config_ini() -> Path | None:
-    """Walk up from this file to locate the repo ``config.ini``."""
+def _read_repo_ini(name: str) -> configparser.ConfigParser:
+    """Parse the repo ini file ``name``, found by walking up from this file (empty parser if not found)."""
+    parser = configparser.ConfigParser(interpolation=None)
     for parent in Path(__file__).resolve().parents:
-        candidate = parent / "config.ini"
+        candidate = parent / name
         if candidate.is_file():
-            return candidate
-    return None
+            parser.read(candidate, encoding="utf-8")
+            break
+    return parser
 
 
 @pytest.fixture(scope="session")
 def config() -> configparser.ConfigParser:
     """The parsed repo config.ini (empty parser if not found)."""
-    parser = configparser.ConfigParser(interpolation=None)
-    path = _find_config_ini()
-    if path is not None:
-        parser.read(path, encoding="utf-8")
-    return parser
+    return _read_repo_ini("config.ini")
 
 
 @pytest.fixture(scope="session")
-def token(config: configparser.ConfigParser) -> str:
-    """The bot token, or skip the test if it is unset/placeholder."""
-    value = config.get("Tokens", "discord_token", fallback="").strip()
+def token() -> str:
+    """The bot token from bot.ini, or skip the test if it is unset/placeholder."""
+    value = _read_repo_ini("bot.ini").get("Tokens", "discord_token", fallback="").strip()
     if not value or "!!" in value:
-        pytest.skip("No usable discord_token in config.ini; skipping live test.")
+        pytest.skip("No usable discord_token in bot.ini; skipping live test.")
     return value
 
 

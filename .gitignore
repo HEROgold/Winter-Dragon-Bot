@@ -6,6 +6,7 @@ postgres
 */build
 config.ini
 discord.ini
+bot.ini
 logs/*
 .env
 site/

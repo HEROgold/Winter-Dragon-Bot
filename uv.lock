@@ -736,6 +736,7 @@ name = "wd-bot"
 version = "0.1.0"
 source = { editable = "wd-bot" }
 dependencies = [
+    { name = "confkit" },
     { name = "herogold", extra = ["orm"] },
     { name = "wd-cogs" },
     { name = "wd-config" },
@@ -747,6 +748,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "confkit", specifier = ">=2.0.0" },
     { name = "herogold", extras = ["orm"], specifier = ">=4.0.0" },
     { name = "wd-cogs", editable = "wd-cogs" },
     { name = "wd-config", editable = "wd-config" },

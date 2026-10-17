@@ -1,47 +1,55 @@
+"""The first-launch check: operator-facing ini files must have every required value filled in."""
+
 from __future__ import annotations
 
 lazy import configparser
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, ClassVar, override
 
-lazy from .constants import CONFIG_FILE
 lazy from .errors import FirstTimeLaunchError
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Generator
+    lazy from pathlib import Path
 
 
-class ConfigParser(configparser.ConfigParser):
-    """Custom config parser that handles the config file."""
+REQUIRED = "!!"
+"""Default of a setting the operator must fill in before the bot can start."""
 
-    def __init__(self) -> None:
-        """Initialize the config parser."""
-        super().__init__()
-        try:
-            with CONFIG_FILE.open():
-                pass
-        except FileNotFoundError as e:
-            CONFIG_FILE.touch(exist_ok=True)
-            self._write_defaults()
-            msg = f"First time launch detected, please edit settings with value !! in {CONFIG_FILE}"
-            raise FirstTimeLaunchError(msg) from e
-        self.read(CONFIG_FILE)
 
-    def _write_defaults(self) -> None:
-        self["Tokens"] = {
-            "discord_token": "!!",
-        }
-        with CONFIG_FILE.open("w") as fp:
-            self.write(fp)
+class _CaseKeepingParser(configparser.ConfigParser):
+    """Reports keys with their case as written, not lowercased."""
 
-    def is_valid(self) -> bool:
-        """Check if the config is valid."""
-        return all("!!" not in i for i in self.get_invalid())
+    @override
+    def optionxform(self, optionstr: str) -> str:
+        return optionstr
 
-    def get_invalid(self) -> Generator[str]:
-        """Get all invalid config values."""
-        for section in self.sections():
-            for setting in self.options(section):
-                if self[section][setting] == "!!":
-                    yield f"{section}:{setting}"
 
+class OperatorFiles:
+    """The ini files an operator edits; each scope with operator settings registers its file here."""
+
+    _files: ClassVar[list[Path]] = []
+
+    @classmethod
+    def register(cls, file: Path) -> None:
+        """Check ``file`` on first launch; a scope calls this once, next to its ``set_file``."""
+        if file not in cls._files:
+            cls._files.append(file)
+
+    @classmethod
+    def unset(cls) -> Generator[str]:
+        """Yield ``file:section:key`` for every value still at the :data:`REQUIRED` default."""
+        for file in cls._files:
+            parser = _CaseKeepingParser(interpolation=None)
+            parser.read(file, encoding="utf-8")
+            for section in parser.sections():
+                for key, value in parser[section].items():
+                    if value.strip() == REQUIRED:
+                        yield f"{file}:{section}:{key}"
+
+    @classmethod
+    def check(cls) -> None:
+        """Raise :class:`FirstTimeLaunchError` listing every required value the operator hasn't filled in."""
+        if unset := list(cls.unset()):
+            msg = f"First time launch detected, please fill in these settings (still {REQUIRED}): {', '.join(unset)}"
+            raise FirstTimeLaunchError(msg)
