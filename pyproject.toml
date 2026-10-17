@@ -53,6 +53,7 @@ addopts = ["--import-mode=importlib"]
 testpaths = [
     "wd-discord/tests",
     "wd-bot/tests",
+    "wd-config/tests",
     # "wd-db/tests",
     # ...add other wd-* packages as they get tests
 ]
