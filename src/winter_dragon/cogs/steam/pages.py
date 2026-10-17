@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     lazy from winter_dragon.cogs.steam.models import SteamSale
 
 
-ITEMS_PER_PAGE = 5
 MAX_FIELD_NAME_LENGTH = 256
 """Discord's limit on an embed field's name."""
 HTTP_SCHEMES = ("https://", "http://")
@@ -62,7 +61,7 @@ def _sale_field(name: str, sale: SteamSale, properties: Mapping[int, set[SaleTyp
 
 def page_count(total: int) -> int:
     """Return how many /steam show pages ``total`` sales take; at least one."""
-    return max(1, -(-total // ITEMS_PER_PAGE))
+    return max(1, -(-total // SteamSettings.items_per_page))
 
 
 def build_page(
@@ -75,8 +74,9 @@ def build_page(
     """Build page ``page`` (0-based, clamped to the valid range) of the /steam show listing of ``sales``."""
     pages = page_count(len(sales))
     page = min(max(page, 0), pages - 1)
-    start = page * ITEMS_PER_PAGE
-    on_page = sales[start : start + ITEMS_PER_PAGE]
+    per_page = SteamSettings.items_per_page
+    start = page * per_page
+    on_page = sales[start : start + per_page]
     return Embed(
         title=f"🎮 Steam Sales - Page {page + 1}",
         description="New free and discounted games on Steam",

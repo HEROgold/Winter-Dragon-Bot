@@ -274,7 +274,7 @@ Shows a guild's member counts, and keeps a locked category of voice channels nam
 ## `winter_dragon.cogs.steam.cog` — `src/winter_dragon/cogs/steam/cog.py`
 The /steam command group, its page buttons, and the background scrape of Steam's specials.
 
-- module names: DEFAULT_THRESHOLD, MAX_PERCENT, MIN_SLEEP_SECONDS, SALE_END_HOUR_UTC, ROLLOVER_GRACE
+- module names: MAX_PERCENT
 - `next_scrape_time(now: datetime, interval: timedelta) -> datetime` — Return when to scrape next: after ``interval``, or just after Steam's daily rollover if that comes first.
 - `sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Generator[tuple[int, int | None]]` — Yield the ``(percent, limit)`` of each query a scrape makes.
 - `utc_now() -> datetime` — Return the current time in UTC.
@@ -290,7 +290,7 @@ Lists Steam sales on request and DMs subscribers new ones, re-checking sales rig
 - `@Cog.command async add(interaction: CommandInteraction) -> None` — Subscribe the invoking user to Steam sale DMs.
 - `@Cog.command async percentage(interaction: CommandInteraction, percent: int) -> None` — Set the minimum discount the invoking user is notified about.
 - `@Cog.command async remove(interaction: CommandInteraction) -> None` — Unsubscribe the invoking user from Steam sale DMs.
-- `@Cog.command async show(interaction: CommandInteraction, percent: int=DEFAULT_THRESHOLD) -> None` — Show the first page of current sales of at least ``percent``, with buttons to page through them.
+- `@Cog.command async show(interaction: CommandInteraction, percent: int | None=None) -> None` — Show the first page of current sales of at least ``percent``, with buttons to page through them.
 - `@Cog.component async show_page(interaction: ComponentInteraction, owner_id: str, percent: str, page: str) -> None` — Turn a /steam show listing to ``page``; only the user who ran the command may.
 
 ## `winter_dragon.cogs.steam.models` — `src/winter_dragon/cogs/steam/models.py`
@@ -333,7 +333,7 @@ Sends each subscriber one DM with the sales above their threshold discovered sin
 ## `winter_dragon.cogs.steam.pages` — `src/winter_dragon/cogs/steam/pages.py`
 Embeds and buttons that show Steam sales: the pages of /steam show and the sale DMs.
 
-- module names: ITEMS_PER_PAGE, MAX_FIELD_NAME_LENGTH, HTTP_SCHEMES
+- module names: MAX_FIELD_NAME_LENGTH, HTTP_SCHEMES
 - `format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str` — Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps.
 - `page_count(total: int) -> int` — Return how many /steam show pages ``total`` sales take; at least one.
 - `build_page(sales: Sequence[SteamSale], properties: Mapping[int, set[SaleTypes]], *, page: int, color: int) -> Embed` — Build page ``page`` (0-based, clamped to the valid range) of the /steam show listing of ``sales``.
@@ -343,8 +343,7 @@ Embeds and buttons that show Steam sales: the pages of /steam show and the sale 
 ## `winter_dragon.cogs.steam.scrapers` — `src/winter_dragon/cogs/steam/scrapers.py`
 Find Steam sales through Steam's store web APIs.
 
-- module names: STORE_API_URL, QUERY_URL, GET_ITEMS_URL, QUERY_PAGE_SIZE, GET_ITEMS_BATCH_SIZE, TOP_SELLERS_SORT,
-  MIN_DISCOUNT_FILTER, REQUEST_TIMEOUT_SECONDS, LANGUAGE, RATE_LIMITED
+- module names: STORE_API_URL, QUERY_URL, GET_ITEMS_URL, TOP_SELLERS_SORT, MIN_DISCOUNT_FILTER, RATE_LIMITED
 
 ### `class ScrapeFailure(Enum)`
 Why Steam gave no answer, as opposed to answering "not on sale".
@@ -371,7 +370,9 @@ Settings for the Steam sale finder, in its ``cogs.ini`` section.
 How often Steam is scraped, and how its sales are shown.
 
 - attributes: country_code, stored_percent, complete_percent, top_sellers, request_interval, update_interval,
-  outdated_after, recheck_delay, embed_color, steam_redirect
+  outdated_after, recheck_delay, embed_color, steam_redirect, default_threshold, min_sleep, sale_end_hour,
+  rollover_grace, query_page_size, get_items_batch_size, request_timeout, language, initial_backoff, max_backoff,
+  items_per_page
 
 ## `winter_dragon.cogs.steam.store` — `src/winter_dragon/cogs/steam/store.py`
 Storing and querying Steam sales and their subscribers.
@@ -450,8 +451,6 @@ The answer of ``IStoreBrowseService/GetItems``.
 
 ## `winter_dragon.cogs.steam.throttle` — `src/winter_dragon/cogs/steam/throttle.py`
 Space out requests to Steam, and stop sending them for a while once Steam rate-limits us.
-
-- module names: INITIAL_BACKOFF_SECONDS, MAX_BACKOFF_SECONDS
 
 ### `@dataclass class RequestThrottle`
 Lets requests through at least ``interval`` seconds apart, and none at all while paused by a rate limit.

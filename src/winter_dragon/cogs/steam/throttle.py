@@ -7,14 +7,11 @@ lazy import time
 lazy from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING
 
+lazy from winter_dragon.cogs.steam.settings import SteamSettings
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable
-
-
-INITIAL_BACKOFF_SECONDS = 300.0
-"""How long requests pause after a rate-limit answer without a ``Retry-After``; doubles on each further one."""
-MAX_BACKOFF_SECONDS = 3600.0 * 6
 
 
 @dataclass
@@ -34,7 +31,7 @@ class RequestThrottle:
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False, repr=False)
     _next_slot: float = field(default=0.0, init=False)
     _paused_until: float = field(default=0.0, init=False)
-    _backoff: float = field(default=INITIAL_BACKOFF_SECONDS, init=False)
+    _backoff: float = field(default_factory=lambda: SteamSettings.initial_backoff, init=False)
 
     @property
     def paused(self) -> bool:
@@ -55,10 +52,10 @@ class RequestThrottle:
     def rate_limited(self, retry_after: float | None) -> float:
         """Pause requests for ``retry_after`` seconds, or the current backoff when Steam didn't say; return the pause."""
         pause = retry_after if retry_after is not None and retry_after > 0 else self._backoff
-        self._backoff = min(self._backoff * 2, MAX_BACKOFF_SECONDS)
+        self._backoff = min(self._backoff * 2, SteamSettings.max_backoff)
         self._paused_until = self.clock() + pause
         return pause
 
     def succeeded(self) -> None:
         """Reset the backoff after a request Steam answered normally."""
-        self._backoff = INITIAL_BACKOFF_SECONDS
+        self._backoff = SteamSettings.initial_backoff

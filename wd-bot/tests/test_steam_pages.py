@@ -10,7 +10,7 @@ from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS
 
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale
-from winter_dragon.cogs.steam.pages import ITEMS_PER_PAGE, build_notification, build_page, format_sale, page_buttons
+from winter_dragon.cogs.steam.pages import build_notification, build_page, format_sale, page_buttons
 from winter_dragon.cogs.steam.settings import SteamSettings
 
 
@@ -65,7 +65,7 @@ def test_build_page_numbers_sales_across_pages() -> None:
 
 
 def test_build_page_clamps_out_of_range_pages() -> None:
-    sales = [sale(index) for index in range(ITEMS_PER_PAGE + 1)]
+    sales = [sale(index) for index in range(SteamSettings.items_per_page + 1)]
     assert build_page(sales, {}, page=99, color=COLOR).title == "🎮 Steam Sales - Page 2"
     assert build_page(sales, {}, page=-1, color=COLOR).title == "🎮 Steam Sales - Page 1"
 

@@ -39,16 +39,10 @@ if TYPE_CHECKING:
 STORE_API_URL = "https://api.steampowered.com"
 QUERY_URL = f"{STORE_API_URL}/IStoreQueryService/Query/v1/"
 GET_ITEMS_URL = f"{STORE_API_URL}/IStoreBrowseService/GetItems/v1/"
-QUERY_PAGE_SIZE = 1000
-"""Items per ``Query`` request; the most Steam returns at once."""
-GET_ITEMS_BATCH_SIZE = 200
-"""Items per ``GetItems`` request; Steam rejects the URL of a few hundred more."""
 TOP_SELLERS_SORT = 10
 """The ``Query`` sort ordering items by global sales, best-selling first (not in SteamDB's protobufs; found by trying)."""
 MIN_DISCOUNT_FILTER = range(1, 100)
 """The ``min_discount_percent`` values Steam honours: it ignores 100 (matching every item), and 0 matches full price."""
-REQUEST_TIMEOUT_SECONDS = 30.0
-LANGUAGE = "english"
 RATE_LIMITED = 429
 
 
@@ -117,10 +111,10 @@ class SteamScraper(LoggerMixin):
         Prices are read in the store region ``country_code``, or :attr:`SteamSettings.country_code` when not given.
         """
         self._owns_http = http is None
-        self.http = http or AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS)
+        self.http = http or AsyncClient(timeout=SteamSettings.request_timeout)
         self.throttle = throttle or RequestThrottle(SteamSettings.request_interval)
         self.context = {
-            "language": LANGUAGE,
+            "language": SteamSettings.language,
             "country_code": SteamSettings.country_code if country_code is None else country_code,
         }
 
@@ -177,12 +171,13 @@ class SteamScraper(LoggerMixin):
     async def query_sales(self, percent: int, limit: int | None = None) -> AsyncGenerator[ScrapedSale]:
         """Yield the sales of at least ``percent``, best-selling first: the first ``limit``, or every one without.
 
-        Pages through the results :data:`QUERY_PAGE_SIZE` at a time, stopping early at the last result or at a page
-        that fails to load.
+        Pages through the results :attr:`SteamSettings.query_page_size` at a time, stopping early at the last result or
+        at a page that fails to load.
         """
         start = examined = yielded = 0
         while limit is None or start < limit:
-            count = QUERY_PAGE_SIZE if limit is None else min(QUERY_PAGE_SIZE, limit - start)
+            page_size = SteamSettings.query_page_size
+            count = page_size if limit is None else min(page_size, limit - start)
             page = await self._call(QUERY_URL, self._query(percent, start, count), QueryResponse)
             if page is None:
                 break
@@ -204,10 +199,10 @@ class SteamScraper(LoggerMixin):
     ) -> AsyncGenerator[tuple[StoreItemID, ScrapedSale | ScrapeFailure | None]]:
         """Yield each item with its current sale, ``None`` when it isn't on sale, or why Steam gave no answer.
 
-        Looks the items up :data:`GET_ITEMS_BATCH_SIZE` at a time; an item missing from Steam's answer counts as no
-        answer, so it's retried later instead of taken for ended.
+        Looks the items up :attr:`SteamSettings.get_items_batch_size` at a time; an item missing from Steam's answer
+        counts as no answer, so it's retried later instead of taken for ended.
         """
-        for batch in batched(items, GET_ITEMS_BATCH_SIZE, strict=False):
+        for batch in batched(items, SteamSettings.get_items_batch_size, strict=False):
             request: dict[str, object] = {
                 "ids": [item.as_request() for item in batch],
                 "context": self.context,

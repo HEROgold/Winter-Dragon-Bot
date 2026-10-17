@@ -147,7 +147,7 @@ async def test_add_subscribes_once(
     with Session(engine) as session:
         (user,) = session.exec(select(SteamUsers)).all()
     assert user.id == ASKER_ID
-    assert user.sale_threshold == module.DEFAULT_THRESHOLD
+    assert user.sale_threshold == SteamSettings.default_threshold
     first, second = _replies(discord_client)
     assert "</steam show:42>" in str(first["content"])
     assert second == {"content": "Already in the list of recipients", "flags": 64}

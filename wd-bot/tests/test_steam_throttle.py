@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from winter_dragon.cogs.steam.throttle import INITIAL_BACKOFF_SECONDS, RequestThrottle
+from winter_dragon.cogs.steam.settings import SteamSettings
+from winter_dragon.cogs.steam.throttle import RequestThrottle
 
 
 class FakeClock:
@@ -52,7 +53,7 @@ async def test_retry_after_pauses_requests_for_that_long() -> None:
 
 async def test_backoff_doubles_until_a_request_succeeds() -> None:
     throttle, _clock = _throttle()
-    assert throttle.rate_limited(None) == INITIAL_BACKOFF_SECONDS
-    assert throttle.rate_limited(None) == 2 * INITIAL_BACKOFF_SECONDS
+    assert throttle.rate_limited(None) == SteamSettings.initial_backoff
+    assert throttle.rate_limited(None) == 2 * SteamSettings.initial_backoff
     throttle.succeeded()
-    assert throttle.rate_limited(None) == INITIAL_BACKOFF_SECONDS
+    assert throttle.rate_limited(None) == SteamSettings.initial_backoff

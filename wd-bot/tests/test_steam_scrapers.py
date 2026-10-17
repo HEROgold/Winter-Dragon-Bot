@@ -11,12 +11,11 @@ from pydantic import TypeAdapter
 
 from winter_dragon.cogs.steam.models import SaleTypes
 from winter_dragon.cogs.steam.scrapers import (
-    GET_ITEMS_BATCH_SIZE,
-    QUERY_PAGE_SIZE,
     ScrapedSale,
     ScrapeFailure,
     SteamScraper,
 )
+from winter_dragon.cogs.steam.settings import SteamSettings
 from winter_dragon.cogs.steam.store_api import StoreItem
 from winter_dragon.cogs.steam.throttle import RequestThrottle
 from winter_dragon.cogs.steam.urls import SteamURL, StoreItemID, StoreItemKind
@@ -105,7 +104,8 @@ def _items_input(request: httpxyz.Request) -> ItemsRequest:
 
 
 def _query_server(
-    items: list[dict[str, object]], requests: list[QueryRequest]
+    items: list[dict[str, object]],
+    requests: list[QueryRequest],
 ) -> Callable[[httpxyz.Request], httpxyz.Response]:
     """Answer ``Query`` requests like Steam: the page of ``items`` asked for, and their total count."""
 
@@ -209,16 +209,16 @@ async def test_query_sends_a_discount_filter_steam_honours(percent: int, sent: i
 
 async def test_query_pages_through_every_result_without_a_limit() -> None:
     requests: list[QueryRequest] = []
-    items = [_item(index) for index in range(QUERY_PAGE_SIZE + 5)]
+    items = [_item(index) for index in range(SteamSettings.query_page_size + 5)]
     async with _scraper(_query_server(items, requests)) as scraper:
         sales = [sale async for sale in scraper.query_sales(50)]
-    assert len(sales) == QUERY_PAGE_SIZE + 5
+    assert len(sales) == SteamSettings.query_page_size + 5
     assert len(requests) == 2
 
 
 async def test_query_stops_at_the_limit() -> None:
     requests: list[QueryRequest] = []
-    items = [_item(index) for index in range(QUERY_PAGE_SIZE + 5)]
+    items = [_item(index) for index in range(SteamSettings.query_page_size + 5)]
     async with _scraper(_query_server(items, requests)) as scraper:
         sales = [sale async for sale in scraper.query_sales(50, limit=3)]
     assert [sale.id for sale in sales] == [0, 1, 2]
@@ -227,7 +227,7 @@ async def test_query_stops_at_the_limit() -> None:
 
 
 async def test_query_keeps_the_pages_before_a_failing_one() -> None:
-    items = [_item(index) for index in range(QUERY_PAGE_SIZE + 5)]
+    items = [_item(index) for index in range(SteamSettings.query_page_size + 5)]
     serve = _query_server(items, [])
 
     def respond(request: httpxyz.Request) -> httpxyz.Response:
@@ -235,7 +235,7 @@ async def test_query_keeps_the_pages_before_a_failing_one() -> None:
 
     async with _scraper(respond) as scraper:
         sales = [sale async for sale in scraper.query_sales(50)]
-    assert len(sales) == QUERY_PAGE_SIZE
+    assert len(sales) == SteamSettings.query_page_size
 
 
 async def test_unexpected_answer_is_no_answer() -> None:
@@ -262,11 +262,11 @@ async def test_get_sales_asks_in_batches() -> None:
         asked.append(len(ids))
         return httpxyz.Response(200, json={"response": {"store_items": [_item(entry["appid"]) for entry in ids]}})
 
-    items = [StoreItemID(StoreItemKind.APP, app_id) for app_id in range(GET_ITEMS_BATCH_SIZE + 1)]
+    items = [StoreItemID(StoreItemKind.APP, app_id) for app_id in range(SteamSettings.get_items_batch_size + 1)]
     async with _scraper(respond) as scraper:
         results = [sale async for _item_id, sale in scraper.get_sales(items)]
 
-    assert asked == [GET_ITEMS_BATCH_SIZE, 1]
+    assert asked == [SteamSettings.get_items_batch_size, 1]
     assert all(isinstance(sale, ScrapedSale) for sale in results)
 
 

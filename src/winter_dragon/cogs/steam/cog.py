@@ -26,24 +26,17 @@ if TYPE_CHECKING:
     lazy from winter_dragon.cogs.steam.models import SteamSale
 
 
-DEFAULT_THRESHOLD = 100
-"""The discount /steam show lists by default, and a new subscriber's threshold: free games only."""
 MAX_PERCENT = 100
-MIN_SLEEP_SECONDS = 60.0
-"""The loop never sleeps less than this, so a failing re-check is retried at most once a minute."""
-SALE_END_HOUR_UTC = 17
-"""The hour (UTC) Steam starts and ends most sales: 10:00 Pacific during daylight saving time."""
-ROLLOVER_GRACE = timedelta(minutes=5)
-"""How long after Steam's daily rollover the extra scrape runs, giving the store time to update."""
 
 
 def next_scrape_time(now: datetime, interval: timedelta) -> datetime:
     """Return when to scrape next: after ``interval``, or just after Steam's daily rollover if that comes first.
 
-    Steam starts and ends most sales at the rollover (:data:`SALE_END_HOUR_UTC`), so scraping right after it picks up
+    Steam starts and ends most sales at the rollover (:attr:`SteamSettings.sale_end_hour`), so scraping right after it picks up
     new sales the same day instead of up to ``interval`` later.
     """
-    rollover = now.replace(hour=SALE_END_HOUR_UTC, minute=0, second=0, microsecond=0) + ROLLOVER_GRACE
+    rollover = now.replace(hour=SteamSettings.sale_end_hour, minute=0, second=0, microsecond=0)
+    rollover += timedelta(seconds=SteamSettings.rollover_grace)
     if rollover <= now:
         rollover += timedelta(days=1)
     return min(now + interval, rollover)
@@ -113,7 +106,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             with Session(self.bind) as session:
                 next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
             wake = min(next_scrape, next_recheck) if next_recheck is not None else next_scrape
-            await asyncio.sleep(max(MIN_SLEEP_SECONDS, (wake - utc_now()).total_seconds()))
+            await asyncio.sleep(max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds()))
 
     async def _guarded(self, work: Coroutine[object, object, None]) -> None:
         """Run ``work``, logging instead of raising, so one failed run never stops the loop."""
@@ -200,7 +193,13 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                     ephemeral=True,
                 )
                 return
-            session.add(SteamUsers(id=int(user.id), last_notification=utc_now()))
+            session.add(
+                SteamUsers(
+                    id=int(user.id),
+                    last_notification=utc_now(),
+                    sale_threshold=SteamSettings.default_threshold,
+                ),
+            )
             session.commit()
         await interaction.respond(
             content=f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales.",
@@ -252,8 +251,13 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         name="show",
         description="Get a list of steam games that are on sale for the given percentage or higher",
     )
-    async def show(self, interaction: CommandInteraction, percent: int = DEFAULT_THRESHOLD) -> None:
-        """Show the first page of current sales of at least ``percent``, with buttons to page through them."""
+    async def show(self, interaction: CommandInteraction, percent: int | None = None) -> None:
+        """Show the first page of current sales of at least ``percent``, with buttons to page through them.
+
+        ``percent`` defaults to :attr:`SteamSettings.default_threshold`.
+        """
+        if percent is None:
+            percent = SteamSettings.default_threshold
         user = interaction.user
         if user is None:
             return
