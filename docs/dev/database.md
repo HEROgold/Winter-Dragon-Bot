@@ -5,7 +5,7 @@ Winter Dragon stores its data with [SQLModel](https://sqlmodel.tiangolo.com/) on
 
 ## Connection
 
-- The connection URL is assembled from the `DbUrl` settings in `config.ini` (`wd_config.db`) into
+- The connection URL is assembled from the `DbUrl` settings in `database.ini` (`wd_db.settings`) into
   `wd_db.constants.DATABASE_URL`.
 - `wd_db.constants` creates the process-wide `engine` and `session` when it is imported, so PostgreSQL needs
   the psycopg driver installed.
