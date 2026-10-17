@@ -41,15 +41,43 @@ DiscordConfig._watcher = _OptionalFileWatcher(DISCORD_CONFIG_FILE)  # pyright: i
 
 @dataclass
 class URLS:
-    """Endpoints for the discord API."""
+    """Every Discord host the library talks to or links to, and the API version they speak.
+
+    No Discord host is hardcoded outside these settings; URLs are built from them when they're needed.
+    """
 
     base = DiscordConfig("https://discord.com/api")
+    """The REST API root, without the version (https://docs.discord.com/developers/reference#api-reference-base-url)."""
     version = DiscordConfig(10)
+    """The API version used for both the REST base and the gateway `?v=` query."""
+    gateway = DiscordConfig("wss://gateway.discord.gg")
+    """The gateway host used when `/gateway/bot` wasn't asked (https://docs.discord.com/developers/topics/gateway#connecting)."""
+    cdn = DiscordConfig("https://cdn.discordapp.com")
+    """The CDN host images are served from (https://docs.discord.com/developers/reference#image-formatting)."""
+    web = DiscordConfig("https://discord.com")
+    """The web client host: message jump links and the OAuth2 authorization URL live here."""
+    invite = DiscordConfig("https://discord.gg")
+    """The host invite links are shared on (https://docs.discord.com/developers/resources/invite)."""
 
     @property
     def api_version(self) -> str:
         """Get the API version as a string."""
         return f"v{self.version}"
+
+    @property
+    def gateway_query(self) -> str:
+        """The `?v=...&encoding=json` query appended to a gateway URL (https://docs.discord.com/developers/topics/gateway#connecting)."""
+        return f"?v={self.version}&encoding=json"
+
+    @property
+    def gateway_url(self) -> str:
+        """The default gateway URL: the configured gateway host with the version and encoding query."""
+        return f"{self.gateway}/{self.gateway_query}"
+
+    @property
+    def oauth2_authorize(self) -> str:
+        """The OAuth2 authorization URL bot invites are built on (https://docs.discord.com/developers/topics/oauth2#authorization-url)."""
+        return f"{self.web}/oauth2/authorize"
 
 
 class RestCache:

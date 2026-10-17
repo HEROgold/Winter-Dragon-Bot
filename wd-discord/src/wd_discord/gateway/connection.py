@@ -23,6 +23,7 @@ lazy from enum import IntEnum
 lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 lazy from herogold.log import LoggerMixin
+lazy from wd_config.discord import URLS
 lazy from wd_core.intents import Intents
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
@@ -38,9 +39,6 @@ if TYPE_CHECKING:
     lazy from websockets.asyncio.client import ClientConnection
 
     lazy from wd_discord.models import DiscordModel
-
-# Default well-known gateway URL, already pinned to API v10 + JSON encoding.
-DEFAULT_GATEWAY_URL = "wss://gateway.discord.gg/?v=10&encoding=json"
 
 
 class _DispatchFrame(TypedDict):
@@ -184,16 +182,17 @@ class Gateway(LoggerMixin):
         token: str,
         *,
         intents: Intents | None = None,
-        url: str = DEFAULT_GATEWAY_URL,
+        url: str | None = None,
         shard: tuple[int, int] | None = None,
     ) -> None:
         """Create a gateway for ``token`` with the given ``intents`` (default: none).
 
+        ``url`` defaults to :attr:`~wd_config.discord.URLS.gateway_url`, the configured host and API version.
         ``shard`` is the ``(shard_id, num_shards)`` pair sent in IDENTIFY when sharding.
         """
         self.token = token
         self.intents = intents or Intents.none()
-        self.url = url
+        self.url = url if url is not None else URLS().gateway_url
         self.shard = shard
         self._ws: ClientConnection | None = None
         self._heartbeat_task: asyncio.Task[None] | None = None

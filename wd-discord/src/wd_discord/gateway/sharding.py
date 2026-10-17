@@ -19,6 +19,7 @@ lazy import asyncio
 lazy from typing import TYPE_CHECKING, Any, Self
 
 lazy from herogold.errors import with_known_exception
+lazy from wd_config.discord import URLS
 lazy from wd_core.intents import Intents
 
 lazy from wd_discord.models import DiscordModel
@@ -36,8 +37,6 @@ if TYPE_CHECKING:
 
     lazy from .events import Ready
 
-# Query string appended to the gateway URL from /gateway/bot (same pinning as DEFAULT_GATEWAY_URL).
-GATEWAY_URL_QUERY = "?v=10&encoding=json"
 # Seconds between IDENTIFY batches: max_concurrency IDENTIFYs are allowed per 5 seconds.
 IDENTIFY_BATCH_DELAY = 5.0
 
@@ -84,8 +83,8 @@ class GatewayBotInfo(DiscordModel):
 
     @property
     def connect_url(self) -> str:
-        """The WSS URL with the version/encoding query this library speaks."""
-        return f"{self.url}{GATEWAY_URL_QUERY}"
+        """The WSS URL with the configured version and the encoding this library speaks."""
+        return f"{self.url}{URLS().gateway_query}"
 
 
 def parse_gateway_bot(payload: dict[str, Any]) -> GatewayBotInfo:

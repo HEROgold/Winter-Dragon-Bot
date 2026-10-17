@@ -191,15 +191,16 @@ A file to upload with a message; Discord shows it as one of the message's attach
 ## `wd_discord.image` — `wd-discord/src/wd_discord/image.py`
 Discord CDN image hashes and formats (https://docs.discord.com/developers/reference#image-formatting).
 
-### `class ImageHash`
-https://docs.discord.com/developers/reference#image-formatting.
-
-- attributes: base_url
-
 ### `class ImageFormats(StrEnum)`
 Valid image formats supported by Discord.
 
 - attributes: JPG, JPEG, PNG, WebP, GIF, Lottie
+
+### `class ImageHash`
+https://docs.discord.com/developers/reference#image-formatting.
+
+- `@property base_url -> str` — The configured CDN host (:attr:`~wd_config.discord.URLS.cdn`), with a trailing slash.
+- `url(path: str, fmt: ImageFormats=ImageFormats.PNG) -> str` — Return the CDN URL of this image under ``path`` (e.g. ``avatars/{user_id}``) in format ``fmt``.
 
 ## `wd_discord.interactions` — `wd-discord/src/wd_discord/interactions.py`
 Discord application commands (https://docs.discord.com/developers/interactions/application-commands).

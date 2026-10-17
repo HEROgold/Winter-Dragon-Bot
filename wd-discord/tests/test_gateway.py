@@ -1,10 +1,12 @@
 """Live test: connect the Gateway, identify, and send a presence/activity update."""
+
 from __future__ import annotations
 
 lazy import asyncio
 lazy from typing import TYPE_CHECKING
 
 lazy import pytest
+lazy from wd_config.discord import URLS
 lazy from wd_discord import Activity, Gateway, GatewayActivity, Status
 
 
@@ -26,9 +28,7 @@ async def test_gateway_connect_and_update_presence(
 ) -> None:
     """Open the gateway WebSocket, await READY, then push an activity/status update."""
     info = assert_success(await client.get_gateway_bot())
-    url = f"{info['url']}?v=10&encoding=json"
-
-    gateway = Gateway(token, url=url)
+    gateway = Gateway(token, url=f"{info['url']}{URLS().gateway_query}")
     try:
         ready = await asyncio.wait_for(gateway.connect(), timeout=CONNECT_TIMEOUT)
         assert ready.session_id

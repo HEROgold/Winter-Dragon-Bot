@@ -14,6 +14,10 @@ from wd_config.discord import URLS, RateLimit, RestCache, UserAgent
 result = {
     "base": URLS.base,
     "version": URLS.version,
+    "gateway": URLS.gateway,
+    "cdn": URLS.cdn,
+    "web": URLS.web,
+    "invite": URLS.invite,
     "ttl": RestCache.ttl,
     "max_retries": RateLimit.max_retries,
     "user_agent_url": UserAgent.url,
@@ -24,6 +28,10 @@ result = {
 DISCORD_DEFAULTS = {
     "base": "https://discord.com/api",
     "version": 10,
+    "gateway": "wss://gateway.discord.gg",
+    "cdn": "https://cdn.discordapp.com",
+    "web": "https://discord.com",
+    "invite": "https://discord.gg",
     "ttl": 30.0,
     "max_retries": 5,
     "user_agent_url": "https://github.com/HEROgold/WinterDragon",
@@ -53,7 +61,14 @@ def test_empty_discord_ini_is_filled_with_defaults(boot_config: BootConfig) -> N
 
     assert boot.values == DISCORD_DEFAULTS
     assert boot.files["discord.ini"] == {
-        "URLS": {"base": "https://discord.com/api", "version": "10"},
+        "URLS": {
+            "base": "https://discord.com/api",
+            "version": "10",
+            "gateway": "wss://gateway.discord.gg",
+            "cdn": "https://cdn.discordapp.com",
+            "web": "https://discord.com",
+            "invite": "https://discord.gg",
+        },
         "RestCache": {"ttl": "30.0"},
         "RateLimit": {"max_retries": "5"},
         "UserAgent": {"url": "https://github.com/HEROgold/WinterDragon", "version": "0.1.0"},
@@ -122,3 +137,75 @@ def test_unregistered_files_are_not_checked(boot_config: BootConfig) -> None:
     boot = boot_config(FIRST_LAUNCH, files={"discord.ini": "[URLS]\nbase = !!\n"})
 
     assert boot.values == {"raised": False, "unset": []}
+
+
+DISCORD_URLS = """
+from wd_config.discord import URLS
+from wd_discord.client import Client
+from wd_discord.entities.message import PartialMessage
+from wd_discord.gateway import Gateway, parse_gateway_bot
+from wd_discord.image import ImageHash
+from wd_discord.resources.invite import Invite
+from wd_discord.snowflake import Snowflake
+
+client = Client("token")
+info = parse_gateway_bot(
+    {
+        "url": "wss://gw.example",
+        "shards": 1,
+        "session_start_limit": {"total": 1, "remaining": 1, "reset_after": 0, "max_concurrency": 1},
+    },
+)
+result = {
+    "api": client.base_url,
+    "gateway": Gateway("token").url,
+    "shard_gateway": info.connect_url,
+    "jump": PartialMessage(client, Snowflake(2), Snowflake(1)).jump_url,
+    "image": ImageHash("abc").url("avatars/7"),
+    "invite": Invite(code="xyz").url,
+    "authorize": URLS().oauth2_authorize,
+}
+"""
+
+
+def test_discord_urls_follow_defaults(boot_config: BootConfig) -> None:
+    """Without discord.ini every Discord URL uses today's hosts and API v10."""
+    boot = boot_config(DISCORD_URLS)
+
+    assert boot.values == {
+        "api": "https://discord.com/api/v10",
+        "gateway": "wss://gateway.discord.gg/?v=10&encoding=json",
+        "shard_gateway": "wss://gw.example?v=10&encoding=json",
+        "jump": "https://discord.com/channels/@me/1/2",
+        "image": "https://cdn.discordapp.com/avatars/7/abc.png",
+        "invite": "https://discord.gg/xyz",
+        "authorize": "https://discord.com/oauth2/authorize",
+    }
+
+
+def test_configured_version_moves_gateway_and_api_together(boot_config: BootConfig) -> None:
+    """Changing the API version in discord.ini changes the REST base and every gateway query at once."""
+    boot = boot_config(DISCORD_URLS, files={"discord.ini": "[URLS]\nversion = 9\n"})
+
+    assert boot.values["api"] == "https://discord.com/api/v9"
+    assert boot.values["gateway"] == "wss://gateway.discord.gg/?v=9&encoding=json"
+    assert boot.values["shard_gateway"] == "wss://gw.example?v=9&encoding=json"
+
+
+def test_configured_hosts_flow_into_urls(boot_config: BootConfig) -> None:
+    """Custom hosts in discord.ini are used for the gateway, CDN images, jump links, invites and OAuth2."""
+    hosts = (
+        "[URLS]\nbase = https://api.example/api\ngateway = wss://gateway.example\n"
+        "cdn = https://cdn.example\nweb = https://web.example\ninvite = https://inv.example\n"
+    )
+    boot = boot_config(DISCORD_URLS, files={"discord.ini": hosts})
+
+    assert boot.values == {
+        "api": "https://api.example/api/v10",
+        "gateway": "wss://gateway.example/?v=10&encoding=json",
+        "shard_gateway": "wss://gw.example?v=10&encoding=json",
+        "jump": "https://web.example/channels/@me/1/2",
+        "image": "https://cdn.example/avatars/7/abc.png",
+        "invite": "https://inv.example/xyz",
+        "authorize": "https://web.example/oauth2/authorize",
+    }

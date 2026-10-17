@@ -7,15 +7,13 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord.gateway` — `wd-discord/src/wd_discord/gateway/__init__.py`
 
-- exports: DEFAULT_GATEWAY_URL, EventName, Gateway, GatewayActivity, GatewayBotInfo, GuildCreate, Message, Opcode,
-  RawEvent, Ready, SessionStartLimit, ShardManager, Status, UnavailableGuild, build_identify, build_presence,
-  fetch_gateway_bot, identify_batches, parse_dispatch, parse_gateway_bot, parse_ready, rate_limit_key,
-  shard_id_for_guild
+- exports: EventName, Gateway, GatewayActivity, GatewayBotInfo, GuildCreate, Message, Opcode, RawEvent, Ready,
+  SessionStartLimit, ShardManager, Status, UnavailableGuild, build_identify, build_presence, fetch_gateway_bot,
+  identify_batches, parse_dispatch, parse_gateway_bot, parse_ready, rate_limit_key, shard_id_for_guild
 
 ## `wd_discord.gateway.connection` — `wd-discord/src/wd_discord/gateway/connection.py`
 A minimal Discord Gateway (WebSocket) connection for wd-discord.
 
-- module names: DEFAULT_GATEWAY_URL
 - `type GatewayFrame = _DispatchFrame | _HeartbeatRequestFrame | _ReconnectFrame | _InvalidSessionFrame | _HeartbeatAckFrame`
 - `build_presence(activities: list[GatewayActivity], status: Status | str=Status.online, *, afk: bool=False, since: int | None=None) -> dict[str, Any]` — Build the ``d`` payload for a Presence Update (object -> API).
 - `build_identify(token: str, intents: Intents, *, shard: tuple[int, int] | None=None, presence: dict[str, Any] | None=None) -> dict[str, Any]` — Build the ``d`` payload for an IDENTIFY (object -> API).
@@ -343,7 +341,7 @@ https://docs.discord.com/developers/events/gateway-events#presence-update-presen
 ## `wd_discord.gateway.sharding` — `wd-discord/src/wd_discord/gateway/sharding.py`
 Gateway sharding (https://docs.discord.com/developers/events/gateway#sharding).
 
-- module names: GATEWAY_URL_QUERY, IDENTIFY_BATCH_DELAY
+- module names: IDENTIFY_BATCH_DELAY
 - `shard_id_for_guild(guild_id: int, num_shards: int) -> int` — Return the shard a guild's events are routed to: ``(guild_id >> 22) % num_shards``.
 - `rate_limit_key(shard_id: int, max_concurrency: int) -> int` — Return a shard's IDENTIFY rate-limit bucket: ``shard_id % max_concurrency``.
 - `identify_batches(shard_ids: list[int], max_concurrency: int) -> list[list[int]]` — Group ``shard_ids`` (ascending) into batches that may IDENTIFY concurrently.
@@ -359,7 +357,7 @@ The ``session_start_limit`` object from ``GET /gateway/bot``.
 The ``GET /gateway/bot`` response (API -> object via :func:`parse_gateway_bot`).
 
 - fields: url: str, shards: int, session_start_limit: SessionStartLimit
-- `@property connect_url -> str` — The WSS URL with the version/encoding query this library speaks.
+- `@property connect_url -> str` — The WSS URL with the configured version and the encoding this library speaks.
 
 ### `class ShardManager`
 Run one :class:`Gateway` per shard, respecting the IDENTIFY rate limits.

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 
+lazy from wd_config.discord import URLS
+
 lazy from wd_discord.audit import reason_headers
 lazy from wd_discord.entities.base import ClientBound, Entity, Partial, no_content
 lazy from wd_discord.entities.channel import PartialChannel
@@ -65,7 +67,7 @@ class BaseMessage(ClientBound):
     @property
     def jump_url(self) -> str:
         """A link that opens the message; works in DMs and guilds alike."""
-        return f"https://discord.com/channels/@me/{self.channel_id}/{self.id}"
+        return f"{URLS.web}/channels/@me/{self.channel_id}/{self.id}"
 
     @property
     def _path(self) -> Template:
@@ -175,7 +177,7 @@ class Message(Entity[MessageModel], BaseMessage):
     def jump_url(self) -> str:
         """A link that opens the message."""
         guild = "@me" if self.model.guild_id is None else str(self.model.guild_id)
-        return f"https://discord.com/channels/{guild}/{self.channel_id}/{self.id}"
+        return f"{URLS.web}/channels/{guild}/{self.channel_id}/{self.id}"
 
 
 @dataclass(frozen=True)

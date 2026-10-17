@@ -1,15 +1,29 @@
 """Discord CDN image hashes and formats (https://docs.discord.com/developers/reference#image-formatting)."""
+
 from __future__ import annotations
 
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, Any
 
 lazy from pydantic_core import core_schema
+lazy from wd_config.discord import URLS
 
 
 if TYPE_CHECKING:
     lazy from pydantic import GetCoreSchemaHandler
     lazy from pydantic_core import CoreSchema
+
+
+class ImageFormats(StrEnum):
+    """Valid image formats supported by Discord."""
+
+    JPG = ".jpg"
+    JPEG = ".jpeg"
+    """Could be either .jpg or .jpeg."""
+    PNG = ".png"
+    WebP = ".webp"
+    GIF = ".gif"
+    Lottie = ".json"
 
 
 class ImageHash:
@@ -19,11 +33,21 @@ class ImageHash:
     from the raw hash string and serialised back to it.
     """
 
-    base_url = "https://cdn.discordapp.com/"
-
     def __init__(self, hash_: str) -> None:
         """Store the CDN image ``hash_``."""
         self.hash = hash_
+
+    @property
+    def base_url(self) -> str:
+        """The configured CDN host (:attr:`~wd_config.discord.URLS.cdn`), with a trailing slash."""
+        return f"{URLS.cdn}/"
+
+    def url(self, path: str, fmt: ImageFormats = ImageFormats.PNG) -> str:
+        """Return the CDN URL of this image under ``path`` (e.g. ``avatars/{user_id}``) in format ``fmt``.
+
+        https://docs.discord.com/developers/reference#image-formatting-cdn-endpoints
+        """
+        return f"{self.base_url}{path}/{self.hash}{fmt}"
 
     def __eq__(self, other: object) -> bool:
         """Two hashes are equal when their hash strings match."""
@@ -62,15 +86,3 @@ class ImageHash:
                 when_used="json",
             ),
         )
-
-
-class ImageFormats(StrEnum):
-    """Valid image formats supported by Discord."""
-
-    JPG = ".jpg"
-    JPEG = ".jpeg"
-    """Could be either .jpg or .jpeg."""
-    PNG = ".png"
-    WebP = ".webp"
-    GIF = ".gif"
-    Lottie = ".json"

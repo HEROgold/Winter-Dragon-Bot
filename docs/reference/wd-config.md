@@ -61,10 +61,13 @@ Discord-scoped configuration, backed by its own discord.ini file.
 Config descriptor scoped to the discord settings file.
 
 ### `@dataclass class URLS`
-Endpoints for the discord API.
+Every Discord host the library talks to or links to, and the API version they speak.
 
-- attributes: base, version
+- attributes: base, version, gateway, cdn, web, invite
 - `@property api_version -> str` — Get the API version as a string.
+- `@property gateway_query -> str` — The `?v=...&encoding=json` query appended to a gateway URL (https://docs.discord.com/developers/topics/gateway#connecting).
+- `@property gateway_url -> str` — The default gateway URL: the configured gateway host with the version and encoding query.
+- `@property oauth2_authorize -> str` — The OAuth2 authorization URL bot invites are built on (https://docs.discord.com/developers/topics/oauth2#authorization-url).
 
 ### `class RestCache`
 How long a REST read asked to be cached is reused before it's sent again.

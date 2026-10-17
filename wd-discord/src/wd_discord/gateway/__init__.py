@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 lazy from .connection import (
-    DEFAULT_GATEWAY_URL,
     Gateway,
     GatewayActivity,
     Opcode,
@@ -27,7 +26,6 @@ lazy from .sharding import (
 
 
 __all__ = [
-    "DEFAULT_GATEWAY_URL",
     "EventName",
     "Gateway",
     "GatewayActivity",

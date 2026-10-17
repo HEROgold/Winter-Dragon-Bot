@@ -1,7 +1,10 @@
 """The Discord invite resource."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
+
+lazy from wd_config.discord import URLS
 
 from wd_discord.models import DiscordModel
 
@@ -27,4 +30,4 @@ class Invite(DiscordModel):
     @property
     def url(self) -> str:
         """The invite's shareable URL."""
-        return f"https://discord.gg/{self.code}"
+        return f"{URLS.invite}/{self.code}"
