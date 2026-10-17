@@ -22,9 +22,17 @@ Application wide Settings.
   DATETIME_FORMAT, OAUTH_SCOPE
 
 ## `wd_config.config` — `wd-config/src/wd_config/config.py`
+The WinterDragon `Config` descriptor and how each scope binds its own ini file.
+
+### `class OptionalFileWatcher(FileWatcher)`
+A `FileWatcher` that treats a missing file as unchanged instead of failing to `stat` it.
+
+- `has_changed() -> bool`
 
 ### `class Config[T](CKConfig[T])`
 Config descriptor for WinterDragon.
+
+- `@classmethod bind(file: Path, *, operator: bool=False, optional: bool=False) -> None` — Give this scope its own ``file``, so no other scope's parser overwrites it.
 
 ## `wd_config.constants` — `wd-config/src/wd_config/constants.py`
 

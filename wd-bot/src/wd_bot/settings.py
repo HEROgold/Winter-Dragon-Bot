@@ -5,8 +5,7 @@ from __future__ import annotations
 lazy from pathlib import Path
 
 lazy from confkit.data_types import List
-lazy from confkit.sentinels import UNSET
-lazy from wd_config import Config, OperatorFiles
+lazy from wd_config import Config
 lazy from wd_config.parser import REQUIRED
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
 
@@ -18,12 +17,7 @@ class BotConfig[T](Config[T]):
     """Config descriptor scoped to the bot settings file."""
 
 
-BotConfig.set_file(BOT_CONFIG_FILE)
-# __init_subclass__ copies the parent's parser and read-state; reset them so this
-# scope detects its own parser and reads BOT_CONFIG_FILE, not CONFIG_FILE.
-BotConfig._parser = UNSET  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-BotConfig._has_read_config = False  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-OperatorFiles.register(BOT_CONFIG_FILE)
+BotConfig.bind(BOT_CONFIG_FILE, operator=True)
 
 
 class Tokens:
