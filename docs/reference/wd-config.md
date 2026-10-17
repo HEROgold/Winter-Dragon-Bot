@@ -64,6 +64,16 @@ How long a REST read asked to be cached is reused before it's sent again.
 
 - attributes: ttl
 
+### `class RateLimit`
+How the REST client handles Discord's 429 responses.
+
+- attributes: max_retries
+
+### `class UserAgent`
+The `User-Agent` header the REST client sends, in Discord's `DiscordBot (url, version)` form.
+
+- attributes: url, version
+
 ## `wd_config.errors` — `wd-config/src/wd_config/errors.py`
 
 ### `class ConfigError(Exception)`

@@ -92,7 +92,6 @@ Every guild, channel and the bot's own user, as the gateway last described them.
 ## `wd_discord.client` — `wd-discord/src/wd_discord/client.py`
 The built-in Discord REST client for wd-discord.
 
-- module names: DEFAULT_USER_AGENT_URL, DEFAULT_USER_AGENT_VERSION
 - `type NetworkError = ApiResponseError | RequestError`
 - `type RequestResult = Response | NetworkError`
 - `type InflightKey = tuple[str, tuple[tuple[str, str], ...]]`
@@ -367,7 +366,7 @@ Represents the permissions a member has in a guild or channel.
 ## `wd_discord.rate_limit` — `wd-discord/src/wd_discord/rate_limit.py`
 Utilities for handling rate limits.
 
-- module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAJOR_PARAM_PREFIXES, MAX_RATE_LIMIT_RETRIES
+- module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAJOR_PARAM_PREFIXES
 
 ### `class Buckets(StrEnum)`
 Represents the different buckets for rate limits.
@@ -425,7 +424,7 @@ Runs a single logical request through the rate-limit retry loop.
 - `async acquire() -> None` — Wait on every limiter for this handler's route key before sending.
 - `update(headers: Headers) -> None` — Update the rate limiters with the response headers for this handler's route key.
 - `async wait_on_rate_limit(response: Response) -> None` — Parse a 429's body/headers and wait via the matching limiter before retrying.
-- `async send[R: Response](func: Callable[[], CoroutineType[Any, Any, R]]) -> R` — Call ``func()`` under the rate-limit retry loop, waking it up to :data:`MAX_RATE_LIMIT_RETRIES` times.
+- `async send[R: Response](func: Callable[[], CoroutineType[Any, Any, R]]) -> R` — Call ``func()`` under the rate-limit retry loop, retrying a 429 up to ``RateLimit.max_retries`` times.
 
 ## `wd_discord.responses` — `wd-discord/src/wd_discord/responses.py`
 Interaction responses (https://docs.discord.com/developers/interactions/receiving-and-responding).

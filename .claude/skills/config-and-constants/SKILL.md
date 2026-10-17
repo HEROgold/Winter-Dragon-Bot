@@ -28,6 +28,8 @@ Surfaces, one class per concern: `Settings` ([bot.py](../../../wd-config/src/wd_
 
 **Second scope:** `DiscordConfig[T]` binds to `discord.ini` ([wd_config/discord.py](../../../wd-config/src/wd_config/discord.py)). Gotcha: after `set_file`, it must reset `_parser = UNSET` and `_has_read_config = False` because `__init_subclass__` copies parent parser state — copy that block if you ever add a third scope. Both ini paths are declared once in [wd_config/constants.py](../../../wd-config/src/wd_config/constants.py).
 
+**`discord.ini` is internal-only; its existence is the switch.** If the file is absent when `DiscordConfig` is defined, its in-code defaults apply and nothing is written (`write_on_edit` is set from `DISCORD_CONFIG_FILE.exists()`, and an `_OptionalFileWatcher` lets reads work without the file). Create it (even empty) to expose the scope, and confkit fills in the defaults on the next start; delete it to reset. So a `DiscordConfig` setting (e.g. `RateLimit.max_retries`, `UserAgent.url`) is a developer knob, not an operator one: never require it to be set.
+
 **Injecting config into functions:** the decorator form `@Config.with_kwarg("Tokens", "discord_token")` passes a config value as a kwarg (see `Bot.start` in [wd_bot/bot.py](../../../wd-bot/src/wd_bot/bot.py): `@Config.with_kwarg("Tokens", "discord_token", name="token")`). Type checkers don't see the injected kwarg, so call sites carry a coded ignore — prefer it over reading config inside the function body.
 
 ## Derived values: `Combined`

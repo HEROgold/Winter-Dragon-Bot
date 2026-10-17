@@ -19,6 +19,7 @@ lazy from http import HTTPStatus
 lazy from typing import TYPE_CHECKING, Any, ClassVar
 
 lazy from herogold.log import LoggerMixin, getLogger
+lazy from wd_config.discord import RateLimit
 lazy from wd_errors.base import BaseError
 
 lazy from wd_discord.utils.xor import XORError, xor
@@ -221,8 +222,6 @@ class SharedRateLimiter(RateLimiter):
 
 MAJOR_PARAM_PREFIXES = ("guilds", "channels", "webhooks")
 
-MAX_RATE_LIMIT_RETRIES = 5
-
 
 class RouteKey(str):
     """A string that uniquely identifies a Discord rate-limit bucket.
@@ -296,13 +295,15 @@ class RateLimitHandler(LoggerMixin):
                 await self.limiters["bucket"].on_429(self.key, retry_after)
 
     async def send[R: Response](self, func: Callable[[], CoroutineType[Any, Any, R]]) -> R:
-        """Call ``func()`` under the rate-limit retry loop, waking it up to :data:`MAX_RATE_LIMIT_RETRIES` times.
+        """Call ``func()`` under the rate-limit retry loop, retrying a 429 up to ``RateLimit.max_retries`` times.
+
+        :attr:`~wd_config.discord.RateLimit.max_retries` comes from discord.ini, defaulting to 5.
 
         ``func`` takes no arguments (the caller closes over whatever it needs, e.g.
         ``lambda: self._client.request(method, path, **kwargs)``) - this method's only job is
         acquiring/updating the limiters and retrying on a 429, not building the request itself.
         """
-        while self.tries < MAX_RATE_LIMIT_RETRIES:
+        while self.tries < RateLimit.max_retries:
             await self.acquire()
             response = await func()
             self.update(response.headers)
@@ -315,5 +316,5 @@ class RateLimitHandler(LoggerMixin):
             backoff = 2**self.tries
             self.logger.warning(t"Backoff {backoff}s for {self.key} after 429 rate-limit response")
             await asyncio.sleep(backoff)
-        msg = f"Exceeded {MAX_RATE_LIMIT_RETRIES} rate-limit retries for {self.key}"
+        msg = f"Exceeded {RateLimit.max_retries} rate-limit retries for {self.key}"
         raise MaxRetriesExceededError(msg)

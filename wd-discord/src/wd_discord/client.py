@@ -32,7 +32,7 @@ lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, QueryParams, RequestError
-lazy from wd_config.discord import URLS, RestCache
+lazy from wd_config.discord import URLS, RateLimit, RestCache, UserAgent
 
 lazy from wd_discord import ShardManager
 lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
@@ -54,7 +54,7 @@ lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import PartialUser, UserStore
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.rate_limit import MAX_RATE_LIMIT_RETRIES, MaxRetriesExceededError, RateLimitHandler
+lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler
 lazy from wd_discord.route import Route
 
 
@@ -70,10 +70,6 @@ if TYPE_CHECKING:
     lazy from wd_discord.models import DiscordModel
     lazy from wd_discord.snowflake import SnowflakeLike
 
-
-# Discord requires a valid User-Agent or requests may be blocked with a Cloudflare error.
-DEFAULT_USER_AGENT_URL = "https://github.com/HEROgold/WinterDragon"
-DEFAULT_USER_AGENT_VERSION = "0.1.0"
 
 type NetworkError = ApiResponseError | RequestError
 type RequestResult = Response | NetworkError
@@ -191,8 +187,8 @@ class Client(LoggerMixin):
             render_header(get_auth_header(self.token_type, self.token)),
             render_header(
                 user_agent(
-                    UserAgentURL(DEFAULT_USER_AGENT_URL),
-                    UserAgentVersion(DEFAULT_USER_AGENT_VERSION),
+                    UserAgentURL(UserAgent.url),
+                    UserAgentVersion(UserAgent.version),
                     MetaData(""),
                 ),
             ),
@@ -227,7 +223,7 @@ class Client(LoggerMixin):
         and per-route :mod:`wd_discord.rate_limit` limiters so normal operation shouldn't cause a
         429 in the first place; if one still happens, waits Discord's own ``retry_after`` plus an
         extra exponential backoff (``2 ** attempt`` seconds) and retries transparently (up to
-        :data:`MAX_RATE_LIMIT_RETRIES` times) rather than surfacing the 429 to the caller.
+        :attr:`~wd_config.discord.RateLimit.max_retries` times) rather than surfacing the 429 to the caller.
 
         A GET that matches one already in flight (same path and query parameters) joins it instead of being sent
         again; every caller gets that one answer, failures included. A caller that's cancelled leaves the read
@@ -299,7 +295,7 @@ class Client(LoggerMixin):
         try:
             response = await handler.send(send_once)
         except MaxRetriesExceededError:
-            self.logger.exception(t"Giving up on {method} {path} after {MAX_RATE_LIMIT_RETRIES} rate-limit retries")
+            self.logger.exception(t"Giving up on {method} {path} after {RateLimit.max_retries} rate-limit retries")
             return ApiResponseError(code=0, message="Exceeded rate-limit retries")
 
         if response.is_success:
