@@ -16,6 +16,8 @@ lazy from matplotlib.figure import Figure
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord.files import File
 
+lazy from winter_dragon.config import CogConfig
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
@@ -23,8 +25,15 @@ if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction
 
 
-GRAPH_SIZE_INCHES = (10, 6)
-GRAPH_FILENAME = "fuel_efficiency.png"
+class FuelSettings:
+    """Settings for /fuel, in its ``cogs.ini`` section."""
+
+    graph_width_inches = CogConfig(10)
+    """The width of the efficiency graph, in inches."""
+    graph_height_inches = CogConfig(6)
+    """The height of the efficiency graph, in inches."""
+    graph_filename = CogConfig("fuel_efficiency.png")
+    """The file name the efficiency graph is attached as."""
 
 
 class CarFuels(SQLModel, table=True):
@@ -48,7 +57,7 @@ class CarFuels(SQLModel, table=True):
 def render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes:
     """Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out."""
     ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.timestamp)
-    figure = Figure(figsize=GRAPH_SIZE_INCHES)
+    figure = Figure(figsize=(FuelSettings.graph_width_inches, FuelSettings.graph_height_inches))
     axes = figure.subplots()
     axes.plot(
         date2num([refuel.timestamp for refuel in ordered]),
@@ -110,6 +119,6 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         await interaction.defer(ephemeral=True)
         graph = await asyncio.to_thread(render_efficiency_graph, refuels)
         await interaction.respond(
-            files=[File(GRAPH_FILENAME, graph, content_type="image/png", description="Fuel efficiency over time")],
+            files=[File(FuelSettings.graph_filename, graph, content_type="image/png", description="Fuel efficiency over time")],
             ephemeral=True,
         )

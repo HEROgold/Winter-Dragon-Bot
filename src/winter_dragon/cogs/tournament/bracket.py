@@ -5,6 +5,8 @@ from __future__ import annotations
 lazy from math import ceil, log2
 lazy from typing import TYPE_CHECKING
 
+lazy from wd_discord.components import MAX_BUTTON_LABEL_LENGTH
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable, Sequence
@@ -14,8 +16,6 @@ if TYPE_CHECKING:
 MIN_TEAMS = 2
 MAX_VOTE_OPTIONS = 10
 """The most answers a vote offers: two rows of buttons."""
-MAX_OPTION_LENGTH = 80
-"""Discord's limit on a button label."""
 
 
 def split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]:
@@ -79,7 +79,7 @@ def parse_options(text: str) -> list[str]:
 
 def valid_options(options: Sequence[str]) -> bool:
     """Whether ``options`` can be voted on: 2 to :data:`MAX_VOTE_OPTIONS` answers that fit on a button."""
-    return MIN_TEAMS <= len(options) <= MAX_VOTE_OPTIONS and all(len(option) <= MAX_OPTION_LENGTH for option in options)
+    return MIN_TEAMS <= len(options) <= MAX_VOTE_OPTIONS and all(len(option) <= MAX_BUTTON_LABEL_LENGTH for option in options)
 
 
 def tally(option_count: int, choices: Iterable[int]) -> list[int]:

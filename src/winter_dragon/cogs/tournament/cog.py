@@ -15,6 +15,8 @@ lazy from wd_discord.interactions import ApplicationCommandOptionChoice, Interac
 lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 
+lazy from winter_dragon.config import CogConfig
+
 lazy from .bracket import parse_options, round_count
 lazy from .cards import (
     MatchAction,
@@ -63,8 +65,13 @@ if TYPE_CHECKING:
     lazy from wd_discord.embed import Embed
 
 
-MAX_NAME_LENGTH = 100
-MAX_TEAM_SIZE = 25
+class TournamentSettings:
+    """Settings for /tournament, in its ``cogs.ini`` section."""
+
+    max_name_length = CogConfig(100)
+    """The longest tournament or team name accepted."""
+    max_team_size = CogConfig(25)
+    """The most players one team may have."""
 
 
 def is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool:
@@ -170,8 +177,9 @@ class Tournaments(
 
         The creator organises it.
         """
-        if not (0 < len(name) <= MAX_NAME_LENGTH and 0 < team_size <= MAX_TEAM_SIZE):
-            msg = f"Give a name under {MAX_NAME_LENGTH} characters and a team size from 1 to {MAX_TEAM_SIZE}."
+        max_name, max_size = TournamentSettings.max_name_length, TournamentSettings.max_team_size
+        if not (0 < len(name) <= max_name and 0 < team_size <= max_size):
+            msg = f"Give a name under {max_name} characters and a team size from 1 to {max_size}."
             raise Refused(msg)
         with Session(self.bind) as session:
             if active_tournament(session, int(interaction.guild_id)) is not None:
@@ -241,8 +249,8 @@ class Tournaments(
     @Cog.command(name="team-create", description="Register a team for this server's tournament, as its captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def team_create(self, interaction: GuildCommandInteraction, name: str) -> None:
         """Register the team ``name`` captained by the invoker."""
-        if not 0 < len(name) <= MAX_NAME_LENGTH:
-            msg = f"Keep the team name under {MAX_NAME_LENGTH} characters."
+        if not 0 < len(name) <= TournamentSettings.max_name_length:
+            msg = f"Keep the team name under {TournamentSettings.max_name_length} characters."
             raise Refused(msg)
         with Session(self.bind) as session:
             create_team(session, self._active(interaction, session), int(interaction.user.id), name)

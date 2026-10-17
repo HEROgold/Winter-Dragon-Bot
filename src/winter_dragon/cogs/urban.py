@@ -9,7 +9,15 @@ lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS, Embed, EmbedField, EmbedFooter
+lazy from wd_discord.embed import (
+    MAX_EMBED_CHARACTERS,
+    MAX_EMBED_FIELD_NAME_LENGTH,
+    MAX_EMBED_FIELD_VALUE_LENGTH,
+    MAX_EMBED_FIELDS,
+    Embed,
+    EmbedField,
+    EmbedFooter,
+)
 lazy from wd_errors import BaseError
 
 lazy from winter_dragon.config import CogConfig
@@ -23,19 +31,18 @@ if TYPE_CHECKING:
 
 DEFINE_URL = "https://api.urbandictionary.com/v0/define"
 RANDOM_URL = "https://api.urbandictionary.com/v0/random"
-REQUEST_TIMEOUT_SECONDS = 10.0
-MAX_FIELD_VALUE = 1024
-"""Discord's limit on the length of an embed field's value."""
 ELLIPSIS = "…"
 
 
 class UrbanSettings:
-    """Which Urban Dictionary lookups are allowed, and how much of a result is shown."""
+    """Settings for /urban, in its ``cogs.ini`` section."""
 
     allow_random = CogConfig(default=True)
     """Whether /urban random may be used; random definitions are often not safe for work."""
     max_definitions = CogConfig(5)
     """How many definitions one reply shows at most."""
+    request_timeout = CogConfig(10.0)
+    """Seconds to wait for Urban Dictionary to answer."""
 
 
 class Definition(BaseModel):
@@ -67,8 +74,8 @@ def definition_field(index: int, definition: Definition) -> EmbedField:
     """Return the embed field showing ``definition``, numbered ``index``, with its votes and link."""
     footer = f"\n:thumbsup: {definition.thumbs_up} :thumbsdown: {definition.thumbs_down}\n{definition.permalink}"
     return EmbedField(
-        name=truncate(f"{index}. {definition.word}", 256),
-        value=truncate(definition.definition, MAX_FIELD_VALUE - len(footer)) + footer,
+        name=truncate(f"{index}. {definition.word}", MAX_EMBED_FIELD_NAME_LENGTH),
+        value=truncate(definition.definition, MAX_EMBED_FIELD_VALUE_LENGTH - len(footer)) + footer,
     )
 
 
@@ -95,7 +102,7 @@ class UrbanDictionary(LoggerMixin):
     def __init__(self, http: AsyncClient | None = None) -> None:
         """Ask through ``http``, or through a client of its own (closed on exit) when not given."""
         self._owns_http = http is None
-        self.http = http or AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS)
+        self.http = http or AsyncClient(timeout=UrbanSettings.request_timeout)
 
     async def __aenter__(self) -> Self:
         """Enter the context, returning the client."""

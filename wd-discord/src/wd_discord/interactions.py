@@ -102,6 +102,8 @@ class Locale(StrEnum):
 
 MAX_OPTIONS = 25
 MAX_CHOICES = 25
+MAX_CHOICE_NAME_LENGTH = 100
+"""A command option choice name, autocomplete results included, holds up to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-choice-structure)."""
 CHAT_INPUT_NAME_PATTERN = r"^[-_\u02BC\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$"
 
 

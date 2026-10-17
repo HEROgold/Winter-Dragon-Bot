@@ -12,7 +12,7 @@ from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.model import SQLModel
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import AutocompleteInteraction, is_network_error
-lazy from wd_discord.interactions import ApplicationCommandOptionChoice
+lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
 
 lazy from winter_dragon.config import CogConfig
@@ -24,20 +24,18 @@ if TYPE_CHECKING:
     lazy from wd_discord import Client, CommandInteraction
 
 
-MAX_DELAY = timedelta(days=3650)
-"""How far ahead a reminder may be set, or how long a repeating one may wait between reminders."""
-MAX_CONTENT_LENGTH = 1000
-"""The longest reminder text accepted, keeping the reminder DM well within Discord's message limit."""
-MAX_CHOICE_NAME_LENGTH = 100
-"""Discord's limit on the length of an autocomplete choice's name."""
 SECONDS_PER_UNIT = {"minutes": 60, "hours": 3600, "days": 86400, "weeks": 604800}
 
 
 class ReminderSettings:
-    """How often due reminders are looked for."""
+    """Settings for reminders, in their ``cogs.ini`` section."""
 
     check_interval = CogConfig(60)
     """Seconds between two looks for due reminders; a reminder arrives at most this late."""
+    max_delay_days = CogConfig(3650)
+    """Days ahead a reminder may be set, or a repeating one may wait between reminders."""
+    max_content_length = CogConfig(1000)
+    """The longest reminder text accepted, keeping the reminder DM well within Discord's message limit."""
 
 
 class ReminderBase(SQLModel):
@@ -73,12 +71,14 @@ def utc_now() -> datetime:
 
 
 def delay_from(**amounts: int) -> timedelta | None:
-    """Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's not in (0, MAX_DELAY].
+    """Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
+
+    The range is (0, :attr:`ReminderSettings.max_delay_days`].
 
     Adds whole seconds as integers first, so an absurd amount is refused rather than overflowing ``timedelta``.
     """
     seconds = sum(SECONDS_PER_UNIT[unit] * amount for unit, amount in amounts.items())
-    if not 0 < seconds <= MAX_DELAY.total_seconds():
+    if not 0 < seconds <= timedelta(days=ReminderSettings.max_delay_days).total_seconds():
         return None
     return timedelta(seconds=seconds)
 
@@ -211,9 +211,10 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     async def _validated(self, interaction: CommandInteraction, content: str, delay: timedelta | None) -> timedelta | None:
         """Return ``delay`` if a new reminder of ``content`` may wait that long; else tell the invoking user why not."""
         if delay is None:
-            message = f"Give me a time between 1 minute and {MAX_DELAY.days} days from now, so I can remind you!"
-        elif len(content) > MAX_CONTENT_LENGTH:
-            message = f"Keep your reminder under {MAX_CONTENT_LENGTH} characters."
+            days = ReminderSettings.max_delay_days
+            message = f"Give me a time between 1 minute and {days} days from now, so I can remind you!"
+        elif len(content) > ReminderSettings.max_content_length:
+            message = f"Keep your reminder under {ReminderSettings.max_content_length} characters."
         else:
             return delay
         await interaction.respond(message, ephemeral=True)

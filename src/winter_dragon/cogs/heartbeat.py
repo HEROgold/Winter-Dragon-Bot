@@ -6,12 +6,18 @@ lazy import asyncio
 
 lazy from wd_bot.cogs import Cog
 
+lazy from winter_dragon.config import CogConfig
 
-HEARTBEAT_INTERVAL_SECONDS = 60
+
+class HeartbeatSettings:
+    """Settings for the heartbeat, in its ``cogs.ini`` section."""
+
+    interval = CogConfig(60)
+    """Seconds between two heartbeat log lines."""
 
 
 class Heartbeat(Cog):
-    """Logs "still alive" roughly once a minute for as long as the bot keeps running."""
+    """Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long as the bot keeps running."""
 
     async def load(self) -> None:
         """Start the heartbeat background task once registered with the bot."""
@@ -20,5 +26,5 @@ class Heartbeat(Cog):
     async def _beat(self) -> None:
         """Log a heartbeat forever, at the configured interval."""
         while True:
-            await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
+            await asyncio.sleep(HeartbeatSettings.interval)
             self.logger.debug(t"Heartbeat: still alive")

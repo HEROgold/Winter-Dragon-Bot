@@ -6,7 +6,14 @@ lazy from textwrap import dedent
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
-lazy from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS, Embed, EmbedField, EmbedFooter
+lazy from wd_discord.embed import (
+    MAX_EMBED_CHARACTERS,
+    MAX_EMBED_FIELD_NAME_LENGTH,
+    MAX_EMBED_FIELDS,
+    Embed,
+    EmbedField,
+    EmbedFooter,
+)
 lazy from wd_discord.timestamp import DiscordTime
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes
@@ -21,8 +28,6 @@ if TYPE_CHECKING:
     lazy from winter_dragon.cogs.steam.models import SteamSale
 
 
-MAX_FIELD_NAME_LENGTH = 256
-"""Discord's limit on an embed field's name."""
 HTTP_SCHEMES = ("https://", "http://")
 """The URL schemes Discord renders masked links for."""
 
@@ -56,7 +61,7 @@ def _install_url(app_id: int) -> str | None:
 
 def _sale_field(name: str, sale: SteamSale, properties: Mapping[int, set[SaleTypes]]) -> EmbedField:
     """Build the embed field describing ``sale``."""
-    return EmbedField(name=name[:MAX_FIELD_NAME_LENGTH], value=format_sale(sale, properties.get(sale.id or 0, set())))
+    return EmbedField(name=name[:MAX_EMBED_FIELD_NAME_LENGTH], value=format_sale(sale, properties.get(sale.id or 0, set())))
 
 
 def page_count(total: int) -> int:

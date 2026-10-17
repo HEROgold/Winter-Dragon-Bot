@@ -108,8 +108,12 @@ Moderation helpers for channels: removing a category with its channels, and lock
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.
 
-- module names: GRAPH_SIZE_INCHES, GRAPH_FILENAME
 - `render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes` — Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out.
+
+### `class FuelSettings`
+Settings for /fuel, in its ``cogs.ini`` section.
+
+- attributes: graph_width_inches, graph_height_inches, graph_filename
 
 ### `class CarFuels(SQLModel, table=True)`
 One refuel a user logged; ``user_id`` is their Discord user ID.
@@ -127,18 +131,25 @@ Logs a user's refuels and graphs their fuel efficiency.
 ## `winter_dragon.cogs.heartbeat` — `src/winter_dragon/cogs/heartbeat.py`
 A cog demonstrating independent background work, not just reacting to dispatch events.
 
-- module names: HEARTBEAT_INTERVAL_SECONDS
+### `class HeartbeatSettings`
+Settings for the heartbeat, in its ``cogs.ini`` section.
+
+- attributes: interval
 
 ### `class Heartbeat(Cog)`
-Logs "still alive" roughly once a minute for as long as the bot keeps running.
+Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long as the bot keeps running.
 
 - `async load() -> None` — Start the heartbeat background task once registered with the bot.
 
 ## `winter_dragon.cogs.invite` — `src/winter_dragon/cogs/invite.py`
 The /invite command group: invite the bot to a guild, or join the support guild.
 
-- module names: SUPPORT_INVITE_MAX_AGE
 - `async invite_channel(client: Client, guild_id: int) -> BaseChannel | NetworkError | None` — Return the channel to invite people to in the guild ``guild_id``: its system channel, else its first text channel.
+
+### `class InviteSettings`
+Settings for /invite, in its ``cogs.ini`` section.
+
+- attributes: support_invite_max_age
 
 ### `class Invite(GroupCog, name='invite', description='Invite the bot to your guild, or join its support guild')`
 Cog for inviting the bot to a guild or getting support.
@@ -162,6 +173,11 @@ A cog with a single command: a random compatibility percentage between two users
 - `calculate_percentage(user_id_a: int, user_id_b: int) -> int` — Compute a random 0-100 percentage, seeded by both user IDs (order-independent).
 - `build_love_embed(target: User, percent: int) -> Embed` — Build the "Love Meter" embed for ``target`` with the given compatibility ``percent``.
 
+### `class PercentageSettings`
+Settings for /love, in its ``cogs.ini`` section.
+
+- attributes: love_color
+
 ### `class Love(Cog)`
 Cog for the /love command.
 
@@ -170,11 +186,10 @@ Cog for the /love command.
 ## `winter_dragon.cogs.reminder` — `src/winter_dragon/cogs/reminder.py`
 The /reminder command group: one-off and repeating reminders, sent as DMs by a background task.
 
-- module names: MAX_DELAY, MAX_CONTENT_LENGTH, MAX_CHOICE_NAME_LENGTH, SECONDS_PER_UNIT, REMINDER_TABLES,
-  CHOICE_PREFIXES: dict[type[AnyReminder], str]
+- module names: SECONDS_PER_UNIT, REMINDER_TABLES, CHOICE_PREFIXES: dict[type[AnyReminder], str]
 - `type AnyReminder = Reminder | TimedReminder`
 - `utc_now() -> datetime` — Return the current time in UTC.
-- `delay_from(**amounts: int) -> timedelta | None` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's not in (0, MAX_DELAY].
+- `delay_from(**amounts: int) -> timedelta | None` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
 - `next_occurrence(due: datetime, repeat_every: timedelta, now: datetime) -> datetime` — Return the first time after ``now`` that a reminder due at ``due`` and repeating every ``repeat_every`` is due.
 - `reminder_message(content: str) -> str` — Return the DM reminding someone of ``content``.
 - `choice_value(reminder: AnyReminder) -> str` — Return the autocomplete value naming ``reminder``: its table and ID, like ``repeat:12``.
@@ -184,9 +199,9 @@ The /reminder command group: one-off and repeating reminders, sent as DMs by a b
 - `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
 
 ### `class ReminderSettings`
-How often due reminders are looked for.
+Settings for reminders, in their ``cogs.ini`` section.
 
-- attributes: check_interval
+- attributes: check_interval, max_delay_days, max_content_length
 
 ### `class ReminderBase(SQLModel)`
 What one-off and repeating reminders share; ``user_id`` is the Discord user to remind.
@@ -215,7 +230,7 @@ Stores reminders and DMs them to their users when due, from a background task.
 ## `winter_dragon.cogs.stats` — `src/winter_dragon/cogs/stats.py`
 The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels.
 
-- module names: SHOWN, CATEGORY_NAME, STATS_TABLES
+- module names: SHOWN, STATS_TABLES
 - `async count_bots(guild: BaseGuild) -> int | NetworkError` — Count the bots among ``guild``'s members.
 - `async guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError` — Read ``guild``'s member, bot and online counts.
 - `channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str` — Return the name of the stats channel showing ``kind``.
@@ -226,9 +241,9 @@ The /stats command group: a guild's member counts, shown on demand and as the na
 - `stats_guild_ids(session: Session) -> Generator[int]` — Yield every guild with stats channels.
 
 ### `class StatsSettings`
-How often the stats channels are renamed to show the current counts.
+Settings for the stats channels, in their ``cogs.ini`` section.
 
-- attributes: update_interval
+- attributes: update_interval, category_name
 
 ### `class StatKind(StrEnum)`
 What a stats channel shows; the category holding them is one too.
@@ -333,7 +348,7 @@ Sends each subscriber one DM with the sales above their threshold discovered sin
 ## `winter_dragon.cogs.steam.pages` — `src/winter_dragon/cogs/steam/pages.py`
 Embeds and buttons that show Steam sales: the pages of /steam show and the sale DMs.
 
-- module names: MAX_FIELD_NAME_LENGTH, HTTP_SCHEMES
+- module names: HTTP_SCHEMES
 - `format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str` — Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps.
 - `page_count(total: int) -> int` — Return how many /steam show pages ``total`` sales take; at least one.
 - `build_page(sales: Sequence[SteamSale], properties: Mapping[int, set[SaleTypes]], *, page: int, color: int) -> Embed` — Build page ``page`` (0-based, clamped to the valid range) of the /steam show listing of ``sales``.
@@ -490,7 +505,7 @@ A Steam store URL.
 ## `winter_dragon.cogs.tournament.bracket` — `src/winter_dragon/cogs/tournament/bracket.py`
 The arithmetic of a single-elimination bracket, and of splitting players into teams; no database, no Discord.
 
-- module names: MIN_TEAMS, MAX_VOTE_OPTIONS, MAX_OPTION_LENGTH
+- module names: MIN_TEAMS, MAX_VOTE_OPTIONS
 - `split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]` — Shuffle ``user_ids`` into teams of ``team_size``; players left over join the first teams, one each.
 - `round_count(teams: int) -> int` — Return how many rounds a bracket of ``teams`` teams takes.
 - `first_round(team_ids: Sequence[int]) -> list[tuple[int, int | None]]` — Pair ``team_ids`` for the first round, in seed order; ``None`` is a bye.
@@ -503,7 +518,7 @@ The arithmetic of a single-elimination bracket, and of splitting players into te
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: MAX_FIELD_LENGTH, MAX_DESCRIPTION_LENGTH, PHASE_LABELS, TEAM_BUTTONS
+- module names: PHASE_LABELS, TEAM_BUTTONS
 - `mentions(user_ids: Sequence[int]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.
 - `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int], *, team_create: CommandMention, team_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per team.
 - `signup_buttons(join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join, Leave and Participants buttons under a sign-up card.
@@ -524,12 +539,16 @@ What one of the organiser's buttons under a match card does; it's part of the bu
 ## `winter_dragon.cogs.tournament.cog` — `src/winter_dragon/cogs/tournament/cog.py`
 The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes.
 
-- module names: MAX_NAME_LENGTH, MAX_TEAM_SIZE
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
 - `stored[M](session: Session, model: type[M], record_id: int, gone: str) -> M` — Return the ``model`` stored as ``record_id``; refuse with ``gone`` when there's none.
 - `team_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
 - `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one.
+
+### `class TournamentSettings`
+Settings for /tournament, in its ``cogs.ini`` section.
+
+- attributes: max_name_length, max_team_size
 
 ### `class Tournaments(GroupCog, name='tournament', description='Run a team tournament: sign-up, a bracket, drafts and votes', contexts=[InteractionContextType.GUILD])`
 Runs one tournament per guild: players sign up, teams form, and a single-elimination bracket plays out.
@@ -659,16 +678,16 @@ Cog for showing the bot's uptime.
 ## `winter_dragon.cogs.urban` — `src/winter_dragon/cogs/urban.py`
 The /urban command group: look up a term, or random terms, on Urban Dictionary.
 
-- module names: DEFINE_URL, RANDOM_URL, REQUEST_TIMEOUT_SECONDS, MAX_FIELD_VALUE, ELLIPSIS
+- module names: DEFINE_URL, RANDOM_URL, ELLIPSIS
 - `truncate(text: str, limit: int) -> str` — Return ``text``, cut to ``limit`` characters with an ellipsis when it's longer.
 - `definition_field(index: int, definition: Definition) -> EmbedField` — Return the embed field showing ``definition``, numbered ``index``, with its votes and link.
 - `definition_fields(definitions: Sequence[Definition], limit: int, budget: int) -> Generator[EmbedField]` — Yield a field for each of the first ``limit`` definitions, stopping before their text exceeds ``budget``.
 - `build_embed(title: str, definitions: Sequence[Definition], limit: int) -> Embed` — Return an embed titled ``title`` showing up to ``limit`` of ``definitions``, within Discord's embed limits.
 
 ### `class UrbanSettings`
-Which Urban Dictionary lookups are allowed, and how much of a result is shown.
+Settings for /urban, in its ``cogs.ini`` section.
 
-- attributes: allow_random, max_definitions
+- attributes: allow_random, max_definitions, request_timeout
 
 ### `class Definition(BaseModel)`
 One definition of a term, as Urban Dictionary's API returns it.

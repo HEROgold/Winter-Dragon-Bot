@@ -32,10 +32,12 @@ if TYPE_CHECKING:
 
 
 class StatsSettings:
-    """How often the stats channels are renamed to show the current counts."""
+    """Settings for the stats channels, in their ``cogs.ini`` section."""
 
     update_interval = CogConfig(3600)
     """Seconds between two updates; Discord lets a channel be renamed only twice per 10 minutes, so keep it long."""
+    category_name = CogConfig("Stats")
+    """The name of the category holding the stats channels."""
 
 
 class StatKind(StrEnum):
@@ -51,7 +53,6 @@ class StatKind(StrEnum):
 
 SHOWN = (StatKind.USERS, StatKind.ONLINE, StatKind.BOTS, StatKind.CREATED, StatKind.PEAK)
 """The stats channels, in the order they're listed in the category."""
-CATEGORY_NAME = "Stats"
 
 
 class StatChannel(SQLModel, table=True):
@@ -132,7 +133,7 @@ def channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str:
         case StatKind.PEAK:
             return f"Peak Online: {peak}"
         case StatKind.CATEGORY:
-            return CATEGORY_NAME
+            return StatsSettings.category_name
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,7 +170,12 @@ def category_params(guild_id: int) -> GuildChannelParams:
         allow=Permissions.VIEW_CHANNEL,
         deny=Permissions.CONNECT,
     )
-    return GuildChannelParams(name=CATEGORY_NAME, type=ChannelType.GUILD_CATEGORY, position=0, permission_overwrites=[everyone])
+    return GuildChannelParams(
+        name=StatsSettings.category_name,
+        type=ChannelType.GUILD_CATEGORY,
+        position=0,
+        permission_overwrites=[everyone],
+    )
 
 
 def stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed:

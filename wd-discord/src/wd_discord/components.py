@@ -24,6 +24,8 @@ MAX_ACTION_ROW_BUTTONS = 5
 MAX_MESSAGE_COMPONENTS = 40
 """A message holds up to 40 components in total, counting nested ones."""
 MAX_CUSTOM_ID_LENGTH = 100
+MAX_BUTTON_LABEL_LENGTH = 80
+"""A button label holds up to 80 characters (https://docs.discord.com/developers/components/reference#button)."""
 
 
 class ComponentType(IntEnum):
@@ -75,7 +77,7 @@ class Button(BaseModel):
 
     type: Literal[ComponentType.BUTTON] = ComponentType.BUTTON
     style: ButtonStyle
-    label: Annotated[str, StringConstraints(max_length=80)] | None = None
+    label: Annotated[str, StringConstraints(max_length=MAX_BUTTON_LABEL_LENGTH)] | None = None
     custom_id: CustomId | None = None
     sku_id: Snowflake | None = None
     url: Annotated[str, StringConstraints(max_length=512)] | None = None

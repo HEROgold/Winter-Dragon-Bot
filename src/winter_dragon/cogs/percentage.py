@@ -5,15 +5,25 @@ from __future__ import annotations
 lazy import random
 lazy from typing import TYPE_CHECKING
 
+lazy from confkit.data_types import Hex
 lazy from wd_bot.cogs import Cog
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
 lazy from wd_discord import User  # noqa: TC002
 lazy from wd_discord.embed import Embed, EmbedField
 
+lazy from winter_dragon.config import CogConfig
+
 
 if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction
+
+
+class PercentageSettings:
+    """Settings for /love, in its ``cogs.ini`` section."""
+
+    love_color = CogConfig(Hex(0xFF0000))
+    """The color of the Love Meter embed."""
 
 
 def calculate_percentage(user_id_a: int, user_id_b: int) -> int:
@@ -28,7 +38,7 @@ def build_love_embed(target: User, percent: int) -> Embed:
     return Embed(
         title="Love Meter",
         description=" ",
-        color=0xFF0000,
+        color=PercentageSettings.love_color,
         fields=[
             EmbedField(
                 name=name,

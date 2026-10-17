@@ -121,7 +121,7 @@ An async Discord REST client pinned to the configured API version (v10 by defaul
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
 Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
 
-- module names: MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH
+- module names: MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH
 - `type CustomId = str`
 - `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
@@ -158,7 +158,8 @@ Constants used throughout the library.
 ## `wd_discord.embed` — `wd-discord/src/wd_discord/embed.py`
 A minimal Discord embed model.
 
-- module names: MAX_EMBED_FIELDS, MAX_EMBED_CHARACTERS
+- module names: MAX_EMBED_FIELDS, MAX_EMBED_CHARACTERS, MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH,
+  MAX_EMBED_FIELD_NAME_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH
 
 ### `class EmbedField(DiscordModel)`
 One entry in an embed's ``fields`` array.
@@ -205,7 +206,7 @@ https://docs.discord.com/developers/reference#image-formatting.
 ## `wd_discord.interactions` — `wd-discord/src/wd_discord/interactions.py`
 Discord application commands (https://docs.discord.com/developers/interactions/application-commands).
 
-- module names: MAX_OPTIONS, MAX_CHOICES, CHAT_INPUT_NAME_PATTERN
+- module names: MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, CHAT_INPUT_NAME_PATTERN
 - `type Name = str`
 - `type ChatInputName = str`
 - `type Description = str`

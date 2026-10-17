@@ -13,9 +13,17 @@ from wd_discord.models import DiscordModel
 
 
 MAX_EMBED_FIELDS = 25
-"""An embed holds up to 25 fields."""
+"""An embed holds up to 25 fields (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""
 MAX_EMBED_CHARACTERS = 6000
-"""The combined length of an embed's title, description, field names/values and footer text."""
+"""The combined length of an embed's title, description, field names/values and footer text (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""
+MAX_EMBED_TITLE_LENGTH = 256
+"""An embed title holds up to 256 characters (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""
+MAX_EMBED_DESCRIPTION_LENGTH = 4096
+"""An embed description holds up to 4096 characters (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""
+MAX_EMBED_FIELD_NAME_LENGTH = 256
+"""An embed field name holds up to 256 characters (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""
+MAX_EMBED_FIELD_VALUE_LENGTH = 1024
+"""An embed field value holds up to 1024 characters (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""
 
 
 class EmbedField(DiscordModel):

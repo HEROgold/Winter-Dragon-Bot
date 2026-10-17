@@ -7,7 +7,7 @@ lazy from itertools import batched
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import MAX_ACTION_ROW_BUTTONS, ActionRow, Button, ButtonStyle
-lazy from wd_discord.embed import Embed, EmbedField
+lazy from wd_discord.embed import MAX_EMBED_DESCRIPTION_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH, Embed, EmbedField
 
 lazy from .bracket import round_name, tally
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
@@ -22,10 +22,6 @@ if TYPE_CHECKING:
     lazy from .models import DraftChoice, MatchVote, Tournament, TournamentMatch
 
 
-MAX_FIELD_LENGTH = 1024
-"""Discord's limit on an embed field's value."""
-MAX_DESCRIPTION_LENGTH = 4096
-"""Discord's limit on an embed's description."""
 PHASE_LABELS = {
     MatchPhase.WAITING: "⏳ Waiting for teams",
     MatchPhase.READY: "🟦 Ready",
@@ -51,7 +47,7 @@ class MatchAction(StrEnum):
 def mentions(user_ids: Sequence[int]) -> str:
     """Return the users as mentions, or a dash for nobody; cut to fit an embed field."""
     text = ", ".join(f"<@{user_id}>" for user_id in user_ids) or "—"
-    return text if len(text) <= MAX_FIELD_LENGTH else text[: MAX_FIELD_LENGTH - 1] + "…"
+    return text if len(text) <= MAX_EMBED_FIELD_VALUE_LENGTH else text[: MAX_EMBED_FIELD_VALUE_LENGTH - 1] + "…"
 
 
 def signup_embed(
@@ -115,8 +111,8 @@ def participants_embed(
             for name, players in rosters.items()
         ]
     text = "\n".join(lines) or "Nobody has signed up yet."
-    if len(text) > MAX_DESCRIPTION_LENGTH:
-        text = text[: MAX_DESCRIPTION_LENGTH - 1] + "…"
+    if len(text) > MAX_EMBED_DESCRIPTION_LENGTH:
+        text = text[: MAX_EMBED_DESCRIPTION_LENGTH - 1] + "…"
     return Embed(title=f"🏆 {tournament.name}: {count} participant{'' if count == 1 else 's'}", description=text)
 
 
@@ -141,7 +137,9 @@ def bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], na
     fields = [
         EmbedField(
             name=round_name(round_, rounds),
-            value="\n".join(match_line(match, names) for match in matches if match.round == round_)[:MAX_FIELD_LENGTH],
+            value="\n".join(match_line(match, names) for match in matches if match.round == round_)[
+                :MAX_EMBED_FIELD_VALUE_LENGTH
+            ],
         )
         for round_ in range(rounds)
     ]
@@ -166,7 +164,7 @@ def match_embed(
         bans = ", ".join(draft.value for draft in own if draft.kind is DraftKind.BAN) or "—"
         picks = ", ".join(draft.value for draft in own if draft.kind is DraftKind.PICK) or "—"
         value = f"{mentions(rosters.get(team_id, []))}\nBans: {bans}\nPicks: {picks}"
-        fields.append(EmbedField(name=names.get(team_id, "?"), value=value[:MAX_FIELD_LENGTH], inline=True))
+        fields.append(EmbedField(name=names.get(team_id, "?"), value=value[:MAX_EMBED_FIELD_VALUE_LENGTH], inline=True))
     title = f"Match #{match.id} — {round_name(match.round, rounds)}"
     description = PHASE_LABELS[match.phase]
     if match.phase.decided and match.winner_id is not None:
@@ -214,6 +212,7 @@ def _team_buttons(
             for team in teams
         ],
     )
+
 
 # Maybe namespace vote_ into a vote class?
 def vote_options(vote: MatchVote) -> list[str]:
