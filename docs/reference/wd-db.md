@@ -39,3 +39,21 @@ Mixin class to provide a session for database operations.
 Module with helper methods for the database package.
 
 - `get_foreign_key(table: type[SQLModel], column: str='id') -> str` — Get the foreign key for a given table and column.
+
+## `wd_db.settings` — `wd-db/src/wd_db/settings.py`
+wd-db's settings, backed by their own database.ini file.
+
+- module names: DATABASE_CONFIG_FILE
+
+### `class DatabaseConfig[T](Config[T])`
+Config descriptor scoped to the database settings file.
+
+### `class DbUrl`
+The database URL components; ``wd_db.constants.DATABASE_URL`` is assembled from them.
+
+- attributes: driver_name, database, username, password, host, port
+
+### `class ApiTableSettings`
+How :class:`wd_db.extension.api_table.ApiTable` talks to external APIs.
+
+- attributes: request_timeout

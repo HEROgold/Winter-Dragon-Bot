@@ -5,3 +5,4 @@ lazy from pathlib import Path
 
 CONFIG_FILE = Path("config.ini")
 DISCORD_CONFIG_FILE = Path("discord.ini")
+SENTRY_CONFIG_FILE = Path("sentry.ini")

@@ -36,7 +36,7 @@ Config descriptor for WinterDragon.
 
 ## `wd_config.constants` — `wd-config/src/wd_config/constants.py`
 
-- module names: CONFIG_FILE, DISCORD_CONFIG_FILE
+- module names: CONFIG_FILE, DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
 
 ## `wd_config.data_types` — `wd-config/src/wd_config/data_types.py`
 Custom confkit data types shared across settings.
@@ -45,14 +45,6 @@ Custom confkit data types shared across settings.
 A data type that combines multiple Config descriptors and literals.
 
 - `convert(value: str) -> str` — Convert from a string to the combined data type.
-
-## `wd_config.db` — `wd-config/src/wd_config/db.py`
-Configurable database connection settings.
-
-### `class DbUrl`
-Class containing database URL components.
-
-- attributes: driver_name, database, username, password, host, port
 
 ## `wd_config.discord` — `wd-config/src/wd_config/discord.py`
 Discord-scoped configuration, backed by its own discord.ini file.
@@ -113,7 +105,10 @@ How often due reminders are looked for.
 - attributes: check_interval
 
 ## `wd_config.sentry` — `wd-config/src/wd_config/sentry.py`
-Configurable Sentry settings.
+Configurable Sentry settings, backed by their own sentry.ini file.
+
+### `class SentryConfig[T](Config[T])`
+Config descriptor scoped to the Sentry settings file.
 
 ### `class Environments(enum.StrEnum)`
 Enum for different environments.
@@ -124,6 +119,7 @@ Enum for different environments.
 Configurable Sentry settings.
 
 - attributes: Telemetry, dsn, environment
+- `@classmethod resolved_dsn() -> str | None` — Return the DSN to pass to ``sentry_sdk.init``: ``None`` while it's empty or still :data:`REQUIRED`.
 
 ## `wd_config.stats` — `wd-config/src/wd_config/stats.py`
 Settings for the guild stats channels.

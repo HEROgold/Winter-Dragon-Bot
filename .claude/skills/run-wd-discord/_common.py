@@ -4,34 +4,35 @@ These are throwaway test drivers for the run-wd-discord skill, not library code,
 ``print`` for a human-readable OK/FAIL summary. The library layer (``Client``/``DiscordModel``)
 does the structured logging into ``./logs`` — see the plan.
 
-All drivers read the bot token from ``config.ini`` [Tokens] discord_token and never print it.
+All drivers read the bot token from ``bot.ini`` [Tokens] discord_token and never print it.
 """
+
 from __future__ import annotations
 
-import configparser
-from pathlib import Path
+lazy import configparser
+lazy from pathlib import Path
 
 
-def _repo_root() -> Path:
-    """Walk up from this file to the repo root (the dir holding config.ini)."""
+def _find_ini(name: str) -> Path:
+    """Walk up from this file to the nearest ini file ``name`` (falls back to the working directory)."""
     for parent in Path(__file__).resolve().parents:
-        if (parent / "config.ini").is_file():
-            return parent
-    return Path.cwd()
+        if (parent / name).is_file():
+            return parent / name
+    return Path.cwd() / name
 
 
-def _config() -> configparser.ConfigParser:
-    """Parse the repo config.ini (interpolation off so % in formats don't blow up)."""
+def _config(name: str = "config.ini") -> configparser.ConfigParser:
+    """Parse the repo ini file ``name`` (interpolation off so % in formats don't blow up)."""
     parser = configparser.ConfigParser(interpolation=None)
-    parser.read(_repo_root() / "config.ini", encoding="utf-8")
+    parser.read(_find_ini(name), encoding="utf-8")
     return parser
 
 
 def load_token() -> str:
     """Read the bot token, exiting(2) on the '!!' first-launch sentinel. Never printed."""
-    token = _config().get("Tokens", "discord_token", fallback="!!").strip('"').strip()
+    token = _config("bot.ini").get("Tokens", "discord_token", fallback="!!").strip('"').strip()
     if token in ("!!", ""):
-        print("FAIL: config.ini [Tokens] discord_token is unset ('!!' sentinel).")
+        print("FAIL: bot.ini [Tokens] discord_token is unset ('!!' sentinel).")
         raise SystemExit(2)
     return token
 

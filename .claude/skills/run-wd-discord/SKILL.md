@@ -5,14 +5,14 @@ description: Run and drive the Winter Dragon Discord bot / wd-discord client liv
 
 # Run: the Discord bot and client (live)
 
-All paths relative to the repo root. Everything here needs a real bot token in `config.ini` under `[Tokens] discord_token`; `!!` is the "unset" sentinel. Never print `config.ini`.
+All paths relative to the repo root. Everything here needs a real bot token in `bot.ini` under `[Tokens] discord_token`; `!!` is the "unset" sentinel. Never print `bot.ini`.
 
 ## Which one to run
 
 | Goal | Command |
 |---|---|
 | Whole bot, time-boxed, no Postgres | `uv run python -m winter_dragon.run_test_bot` — real `wd_bot.Bot` with `winter_dragon.cogs`, local sqlite engine, stops after 10 minutes |
-| Whole bot, production shape | `uv run python -m winter_dragon` — `Bot(extensions_package=cogs).start()`; needs Postgres (`DbUrl` config + psycopg2) |
+| Whole bot, production shape | `uv run python -m winter_dragon` — `Bot(extensions_package=cogs).start()`; needs Postgres (`DbUrl` in `database.ini` + psycopg2) |
 | REST auth + gateway handshake only | `uv run python .claude/skills/run-wd-discord/driver.py` |
 | Live checks of one area | `uv run python .claude/skills/run-wd-discord/verify_{rest,gateway,models,emoji,sentry}.py`, or `verify_all.py` for all |
 | Gateway dispatch → `parse_dispatch` | `uv run python tests/verify_bot_events.py [seconds]` |

@@ -30,7 +30,7 @@ uv run pytest wd-bot/tests -k steam -q
 
 ## Live/integration tests
 
-`wd-discord/tests/conftest.py` builds a real `Client` from `config.ini`'s `[Tokens] discord_token` and skips when the token is the `!!` placeholder. Integration-marked tests hit the real Discord API — run them deliberately: `uv run pytest -m integration`.
+`wd-discord/tests/conftest.py` builds a real `Client` from `bot.ini`'s `[Tokens] discord_token` and skips when the token is the `!!` placeholder. Integration-marked tests hit the real Discord API — run them deliberately: `uv run pytest -m integration`.
 
 ## Gotchas
 

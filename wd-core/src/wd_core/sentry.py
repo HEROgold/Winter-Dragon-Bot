@@ -13,7 +13,7 @@ class Sentry:
         """Initialize Sentry."""
         sentry_sdk.init(
             environment=SentrySettings.environment.value,
-            dsn=SentrySettings.dsn,
+            dsn=SentrySettings.resolved_dsn(),
             # Add data like request headers and IP for users,
             # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
             send_default_pii=True,

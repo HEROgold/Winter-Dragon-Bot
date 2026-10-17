@@ -1,8 +1,11 @@
 """Extension for databases, integrating api's with the database layer."""
+
 from __future__ import annotations
 
 lazy from abc import abstractmethod
 lazy from typing import TYPE_CHECKING, Any, ClassVar, Required, Self, TypedDict, Unpack
+
+lazy from wd_db.settings import ApiTableSettings
 
 lazy from .model import SQLModel
 
@@ -91,11 +94,11 @@ class ApiTable(SQLModel, table=True):
 
     @classmethod
     def _get_response(cls, url: str) -> Response:
-        response = cls.http_client.get(url, headers=cls.get_headers(), timeout=10)
+        response = cls.http_client.get(url, headers=cls.get_headers(), timeout=ApiTableSettings.request_timeout)
         response.raise_for_status()
         return response
 
-    def validate(self) -> None: # pyright: ignore[reportIncompatibleMethodOverride]  # ty:ignore[invalid-method-override]
+    def validate(self) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]  # ty:ignore[invalid-method-override]
         """Validate that all required parameters are set."""
         missing_params = [param for param in self.required_params if not hasattr(self, param) or getattr(self, param) is None]
         if missing_params:
