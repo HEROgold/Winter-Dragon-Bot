@@ -7,10 +7,6 @@ nothing is written; once it exists (even empty) it is read and confkit fills in 
 from __future__ import annotations
 
 lazy from dataclasses import dataclass
-lazy from typing import override
-
-lazy from confkit.sentinels import UNSET
-lazy from confkit.watcher import FileWatcher
 
 lazy from .config import Config
 lazy from .constants import DISCORD_CONFIG_FILE
@@ -20,23 +16,7 @@ class DiscordConfig[T](Config[T]):
     """Config descriptor scoped to the discord settings file."""
 
 
-class _OptionalFileWatcher(FileWatcher):
-    """A `FileWatcher` that treats a missing file as unchanged instead of failing to `stat` it."""
-
-    @override
-    def has_changed(self) -> bool:
-        return self.filepath.exists() and super().has_changed()
-
-
-DiscordConfig.set_file(DISCORD_CONFIG_FILE)
-# __init_subclass__ copies the parent's parser and read-state; reset them so this
-# scope detects its own parser and reads DISCORD_CONFIG_FILE, not CONFIG_FILE.
-DiscordConfig._parser = UNSET  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-DiscordConfig._has_read_config = False  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
-# Defaults always live in memory; they're written to discord.ini only when a developer created it,
-# and reading a setting must not need the file to exist.
-DiscordConfig.write_on_edit = DISCORD_CONFIG_FILE.exists()
-DiscordConfig._watcher = _OptionalFileWatcher(DISCORD_CONFIG_FILE)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+DiscordConfig.bind(DISCORD_CONFIG_FILE, optional=True)
 
 
 @dataclass

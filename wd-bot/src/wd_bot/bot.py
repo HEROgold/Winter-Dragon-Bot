@@ -13,6 +13,7 @@ lazy import wd_cogs
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from wd_config import OperatorFiles
+lazy from wd_config.discord import URLS
 lazy from wd_core.intents import Intents
 lazy from wd_discord import (
     AutocompleteInteraction,
@@ -103,10 +104,7 @@ class Bot(LoggerMixin):
             raise ValueError(msg)
         scope = "%20".join(BotSettings.BOT_SCOPE)
         permissions = Permissions(BotSettings.permissions)
-        return (
-            "https://discord.com/api/oauth2/authorize"
-            f"?client_id={BotSettings.application_id}&permissions={int(permissions)}&scope={scope}"
-        )
+        return f"{URLS().oauth2_authorize}?client_id={BotSettings.application_id}&permissions={int(permissions)}&scope={scope}"
 
     async def add_cog(self, cog: Cog) -> None:
         """Register a cog and any of its @Cog.listener()-tagged methods.

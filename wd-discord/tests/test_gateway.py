@@ -33,7 +33,7 @@ async def test_gateway_connect_and_update_presence(
         ready = await asyncio.wait_for(gateway.connect(), timeout=CONNECT_TIMEOUT)
         assert ready.session_id
         assert ready.resume_gateway_url.startswith("wss://")
-        assert ready.user.get("bot") is True
+        assert ready.user.bot is True
 
         # Sending a presence update (op 3); a clean send (no exception) means it was accepted.
         await gateway.update_presence(
