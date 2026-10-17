@@ -70,7 +70,7 @@ def test_prewritten_bot_ini_values_resolve(boot_config: BootConfig) -> None:
 
 def test_bot_settings_stay_out_of_config_ini(boot_config: BootConfig) -> None:
     """No bot setting lands in config.ini next to the remaining application-wide settings."""
-    boot = boot_config(BOT_SETTINGS + "import wd_config.bot\n")
+    boot = boot_config(BOT_SETTINGS + "import winter_dragon.config\n")
     config = boot.files["config.ini"]
 
     assert "Tokens" not in config

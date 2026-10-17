@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 from wd_bot.testing import detached_cog
-from wd_config.bot import Settings
 from wd_discord.permissions import ChannelType
 from wd_discord.testing import GUILD_JSON, RecordingClient
 
 from winter_dragon.cogs.invite import Invite
 from winter_dragon.cogs.uptime import Uptime, uptime_message
+from winter_dragon.config import Settings
 
 
 if TYPE_CHECKING:

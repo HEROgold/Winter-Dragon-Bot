@@ -8,7 +8,6 @@ lazy from confkit import Config as CKConfig
 lazy from confkit.sentinels import UNSET
 lazy from confkit.watcher import FileWatcher
 
-lazy from .constants import CONFIG_FILE
 lazy from .parser import OperatorFiles
 
 
@@ -45,6 +44,3 @@ class Config[T](CKConfig[T]):
             cls._watcher = OptionalFileWatcher(file)  # pyright: ignore[reportPrivateUsage]
         if operator:
             OperatorFiles.register(file)
-
-
-Config.set_file(CONFIG_FILE)

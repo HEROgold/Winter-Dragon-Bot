@@ -5,12 +5,20 @@
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
 ## `winter_dragon.config` — `src/winter_dragon/config.py`
-The app's own config scopes: cog settings in ``cogs.ini``.
+The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``.
 
-- module names: COGS_CONFIG_FILE
+- module names: CONFIG_FILE, COGS_CONFIG_FILE
 
-### `class CogConfig[T](Config[T])`
+### `class Config[T](BaseConfig[T])`
+Config descriptor scoped to the app-wide settings file.
+
+### `class CogConfig[T](BaseConfig[T])`
 Config descriptor scoped to the cog settings file; every cog shares it, one section per settings class.
+
+### `class Settings`
+Application-wide settings.
+
+- attributes: bot_name, support_guild_id, log_level, created_color, changed_color, deleted_color, bot_status_messages
 
 ## `winter_dragon.run_test_bot` — `src/winter_dragon/run_test_bot.py`
 Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.

@@ -77,7 +77,7 @@ def test_prewritten_values_resolve_and_build_the_url(boot_config: BootConfig) ->
 
 def test_database_and_sentry_settings_stay_out_of_config_ini(boot_config: BootConfig) -> None:
     """No database or Sentry section lands in config.ini."""
-    boot = boot_config(SETTINGS + "import wd_config.bot\n")
+    boot = boot_config(SETTINGS + "import winter_dragon.config\n")
     config = boot.files.get("config.ini", {})
 
     assert {"DbUrl", "ApiTableSettings", "SentrySettings"}.isdisjoint(config)

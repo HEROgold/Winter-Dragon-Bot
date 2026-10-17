@@ -9,18 +9,6 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 - exports: Config, DiscordConfig, OperatorFiles
 
-## `wd_config.bot` — `wd-config/src/wd_config/bot.py`
-Application wide bot settings.
-
-- module names: GENERATED_MSG
-
-### `class Settings`
-Application wide Settings.
-
-- attributes: log_level, bot_name, support_guild_id, prefix, bot_invite, created_color, changed_color, deleted_color,
-  bot_status_messages, PROTOCOL_PREFIX, SERVER_IP, WEBSITE_PORT, WEBSITE_URL, TIME_FORMAT, DATE_FORMAT, DATETIME_FORMAT,
-  OAUTH_SCOPE
-
 ## `wd_config.config` — `wd-config/src/wd_config/config.py`
 The WinterDragon `Config` descriptor and how each scope binds its own ini file.
 
@@ -35,16 +23,9 @@ Config descriptor for WinterDragon.
 - `@classmethod bind(file: Path, *, operator: bool=False, optional: bool=False) -> None` — Give this scope its own ``file``, so no other scope's parser overwrites it.
 
 ## `wd_config.constants` — `wd-config/src/wd_config/constants.py`
+The ini files of the scopes wd-config binds itself.
 
-- module names: CONFIG_FILE, DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
-
-## `wd_config.data_types` — `wd-config/src/wd_config/data_types.py`
-Custom confkit data types shared across settings.
-
-### `class Combined(BaseDataType[str])`
-A data type that combines multiple Config descriptors and literals.
-
-- `convert(value: str) -> str` — Convert from a string to the combined data type.
+- module names: DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
 
 ## `wd_config.discord` — `wd-config/src/wd_config/discord.py`
 Discord-scoped configuration, backed by its own discord.ini file.

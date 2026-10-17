@@ -5,9 +5,10 @@ from __future__ import annotations
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_config.bot import Settings
 lazy from wd_discord import is_network_error
 lazy from wd_discord.permissions import ChannelType
+
+lazy from winter_dragon.config import Settings
 
 
 if TYPE_CHECKING:

@@ -40,8 +40,8 @@ DISCORD_DEFAULTS = {
 
 
 def test_empty_dir_writes_config_ini_but_not_discord_ini(boot_config: BootConfig) -> None:
-    """Booting with no ini files writes config.ini; discord.ini is internal-only, so it isn't created."""
-    boot = boot_config(DISCORD_SETTINGS + "import wd_config.bot\n")
+    """Booting the app writes its config.ini; discord.ini is internal-only, so it isn't created."""
+    boot = boot_config(DISCORD_SETTINGS + "import winter_dragon.config\n")
 
     assert "Settings" in boot.files["config.ini"]
     assert "discord.ini" not in boot.files
@@ -77,7 +77,7 @@ def test_empty_discord_ini_is_filled_with_defaults(boot_config: BootConfig) -> N
 
 def test_discord_settings_stay_out_of_config_ini(boot_config: BootConfig) -> None:
     """Discord-scoped settings are never written to config.ini."""
-    boot = boot_config(DISCORD_SETTINGS + "import wd_config.bot\n", files={"discord.ini": ""})
+    boot = boot_config(DISCORD_SETTINGS + "import winter_dragon.config\n", files={"discord.ini": ""})
 
     for section in ("URLS", "RestCache", "RateLimit", "UserAgent"):
         assert section not in boot.files["config.ini"]
