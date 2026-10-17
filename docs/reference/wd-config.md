@@ -18,8 +18,8 @@ Application wide bot settings.
 Application wide Settings.
 
 - attributes: log_level, bot_name, support_guild_id, prefix, bot_invite, created_color, changed_color, deleted_color,
-  bot_status_messages, PROTOCOL_PREFIX, SERVER_IP, WEBSITE_PORT, WEBSITE_URL, steam_redirect, TIME_FORMAT, DATE_FORMAT,
-  DATETIME_FORMAT, OAUTH_SCOPE
+  bot_status_messages, PROTOCOL_PREFIX, SERVER_IP, WEBSITE_PORT, WEBSITE_URL, TIME_FORMAT, DATE_FORMAT, DATETIME_FORMAT,
+  OAUTH_SCOPE
 
 ## `wd_config.config` — `wd-config/src/wd_config/config.py`
 The WinterDragon `Config` descriptor and how each scope binds its own ini file.
@@ -96,14 +96,6 @@ The ini files an operator edits; each scope with operator settings registers its
 - `@classmethod unset() -> Generator[str]` — Yield ``file:section:key`` for every value still at the :data:`REQUIRED` default.
 - `@classmethod check() -> None` — Raise :class:`FirstTimeLaunchError` listing every required value the operator hasn't filled in.
 
-## `wd_config.reminder` — `wd-config/src/wd_config/reminder.py`
-Settings for personal reminders.
-
-### `class ReminderSettings`
-How often due reminders are looked for.
-
-- attributes: check_interval
-
 ## `wd_config.sentry` — `wd-config/src/wd_config/sentry.py`
 Configurable Sentry settings, backed by their own sentry.ini file.
 
@@ -120,28 +112,3 @@ Configurable Sentry settings.
 
 - attributes: Telemetry, dsn, environment
 - `@classmethod resolved_dsn() -> str | None` — Return the DSN to pass to ``sentry_sdk.init``: ``None`` while it's empty or still :data:`REQUIRED`.
-
-## `wd_config.stats` — `wd-config/src/wd_config/stats.py`
-Settings for the guild stats channels.
-
-### `class StatsSettings`
-How often the stats channels are renamed to show the current counts.
-
-- attributes: update_interval
-
-## `wd_config.steam` — `wd-config/src/wd_config/steam.py`
-Settings for the Steam sale finder.
-
-### `class SteamSettings`
-How often Steam is scraped, and how its sales are shown.
-
-- attributes: country_code, stored_percent, complete_percent, top_sellers, request_interval, update_interval,
-  outdated_after, recheck_delay, embed_color
-
-## `wd_config.urban` — `wd-config/src/wd_config/urban.py`
-Settings for the Urban Dictionary lookup.
-
-### `class UrbanSettings`
-Which Urban Dictionary lookups are allowed, and how much of a result is shown.
-
-- attributes: allow_random, max_definitions

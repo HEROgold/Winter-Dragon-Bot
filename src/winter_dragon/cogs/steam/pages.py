@@ -5,12 +5,12 @@ from __future__ import annotations
 lazy from textwrap import dedent
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_config.bot import Settings
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS, Embed, EmbedField, EmbedFooter
 lazy from wd_discord.timestamp import DiscordTime
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes
+lazy from winter_dragon.cogs.steam.settings import SteamSettings
 
 
 if TYPE_CHECKING:
@@ -45,11 +45,11 @@ def format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str:
 
 
 def _install_url(app_id: int) -> str | None:
-    """Return the link installing ``app_id`` through :attr:`Settings.steam_redirect`, or ``None`` without one.
+    """Return the link installing ``app_id`` through :attr:`SteamSettings.steam_redirect`, or ``None`` without one.
 
     Discord only renders masked links to http(s) URLs, so a bare ``steam://`` redirect would show as raw markdown.
     """
-    redirect = str(Settings.steam_redirect).rstrip("/")
+    redirect = str(SteamSettings.steam_redirect).rstrip("/")
     if not redirect.startswith(HTTP_SCHEMES):
         return None
     return f"{redirect}/install/{app_id}"

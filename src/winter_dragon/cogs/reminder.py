@@ -11,10 +11,11 @@ from sqlmodel import Field, Session, col, select
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.model import SQLModel
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_config.reminder import ReminderSettings
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
+
+lazy from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:
@@ -30,6 +31,13 @@ MAX_CONTENT_LENGTH = 1000
 MAX_CHOICE_NAME_LENGTH = 100
 """Discord's limit on the length of an autocomplete choice's name."""
 SECONDS_PER_UNIT = {"minutes": 60, "hours": 3600, "days": 86400, "weeks": 604800}
+
+
+class ReminderSettings:
+    """How often due reminders are looked for."""
+
+    check_interval = CogConfig(60)
+    """Seconds between two looks for due reminders; a reminder arrives at most this late."""
 
 
 class ReminderBase(SQLModel):

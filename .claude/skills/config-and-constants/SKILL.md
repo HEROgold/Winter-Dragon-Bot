@@ -24,7 +24,9 @@ class Settings:
     created_color = Config(Hex(0x00FF00))          # confkit data types: Hex, List, Enum
 ```
 
-Surfaces, one class per concern: `Settings` ([bot.py](../../../wd-config/src/wd_config/bot.py)), plus per-cog `ReminderSettings`, `SteamSettings`, `UrbanSettings` — the full list with attributes is [docs/reference/wd-config.md](../../../docs/reference/wd-config.md). A new cog's settings get their own module + class there. Access is static (`Settings.bot_name`) — reads/writes go live to the ini file.
+Surfaces, one class per concern: `Settings` ([bot.py](../../../wd-config/src/wd_config/bot.py)) — the full list with attributes is [docs/reference/wd-config.md](../../../docs/reference/wd-config.md). Access is static (`Settings.bot_name`) — reads/writes go live to the ini file.
+
+**Cog settings live with their cog**, declared with the app's `CogConfig[T]` from [winter_dragon/config.py](../../../src/winter_dragon/config.py), bound to `cogs.ini` (an operator file). Every cog shares that one file, one section per settings class (the section name is the class name, so keep it stable): `ReminderSettings` and `StatsSettings` and `UrbanSettings` sit in their cog module, `SteamSettings` in [cogs/steam/settings.py](../../../src/winter_dragon/cogs/steam/settings.py). A new cog's settings are a class in (or next to) the cog, with `CogConfig(...)` attributes — never a new module in `wd-config`, and never a second `Config` subclass on `cogs.ini`.
 
 **Second scope:** `DiscordConfig[T]` binds to `discord.ini` ([wd_config/discord.py](../../../wd-config/src/wd_config/discord.py)). Gotcha: after `set_file`, it must reset `_parser = UNSET` and `_has_read_config = False` because `__init_subclass__` copies parent parser state — copy that block if you ever add a third scope. Both ini paths are declared once in [wd_config/constants.py](../../../wd-config/src/wd_config/constants.py).
 

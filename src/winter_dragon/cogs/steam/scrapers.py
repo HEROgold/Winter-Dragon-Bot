@@ -20,6 +20,7 @@ lazy from httpxyz import AsyncClient, RequestError
 lazy from pydantic import ValidationError
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes
+lazy from winter_dragon.cogs.steam.settings import SteamSettings
 lazy from winter_dragon.cogs.steam.store_api import DLC_APP_TYPE, FOUND, ItemsResponse, QueryResponse
 lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
 lazy from winter_dragon.cogs.steam.urls import StoreItemKind
@@ -47,9 +48,6 @@ TOP_SELLERS_SORT = 10
 MIN_DISCOUNT_FILTER = range(1, 100)
 """The ``min_discount_percent`` values Steam honours: it ignores 100 (matching every item), and 0 matches full price."""
 REQUEST_TIMEOUT_SECONDS = 30.0
-DEFAULT_REQUEST_INTERVAL = 1.5
-"""Seconds between requests for a scraper given no throttle."""
-DEFAULT_COUNTRY_CODE = "US"
 LANGUAGE = "english"
 RATE_LIMITED = 429
 
@@ -111,17 +109,20 @@ class SteamScraper(LoggerMixin):
         http: AsyncClient | None = None,
         throttle: RequestThrottle | None = None,
         *,
-        country_code: str = DEFAULT_COUNTRY_CODE,
+        country_code: str | None = None,
     ) -> None:
         """Ask through ``http``, or through a client of its own (closed on exit) when not given.
 
         Pass the same ``throttle`` to every scraper, so request spacing and rate-limit pauses span all of them.
-        Prices are read in the store region ``country_code``.
+        Prices are read in the store region ``country_code``, or :attr:`SteamSettings.country_code` when not given.
         """
         self._owns_http = http is None
         self.http = http or AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS)
-        self.throttle = throttle or RequestThrottle(DEFAULT_REQUEST_INTERVAL)
-        self.context = {"language": LANGUAGE, "country_code": country_code}
+        self.throttle = throttle or RequestThrottle(SteamSettings.request_interval)
+        self.context = {
+            "language": LANGUAGE,
+            "country_code": SteamSettings.country_code if country_code is None else country_code,
+        }
 
     async def __aenter__(self) -> Self:
         """Enter the context, returning the scraper."""

@@ -7,11 +7,10 @@ from typing import TYPE_CHECKING
 import httpxyz
 import pytest
 from wd_bot.testing import detached_cog
-from wd_config.urban import UrbanSettings
 from wd_discord.embed import MAX_EMBED_CHARACTERS
 from wd_discord.gateway.events import InteractionDataOption
 
-from winter_dragon.cogs.urban import Definition, LookupFailed, Urban, UrbanDictionary, build_embed
+from winter_dragon.cogs.urban import Definition, LookupFailed, Urban, UrbanDictionary, UrbanSettings, build_embed
 
 
 if TYPE_CHECKING:

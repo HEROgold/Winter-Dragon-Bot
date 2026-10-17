@@ -48,7 +48,7 @@ Everyone can use `show`; `add` and `remove` need Manage Channels, checked per su
 
 Surface: `/stats show | add | remove | reset`
 
-Settings (`[StatsSettings]` in `config.ini`): `update_interval`.
+Settings (`[StatsSettings]` in `cogs.ini`): `update_interval`.
 
 **Status:** ✅ Ported to `src/winter_dragon/cogs/stats.py`, with cog-local `statchannel` and `peakonline` tables replacing `main`'s tagged channels.
 **Source on `main`:** `src/winter_dragon/bot/extensions/server/stats.py`

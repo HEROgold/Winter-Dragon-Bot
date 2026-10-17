@@ -9,9 +9,10 @@ lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_config.urban import UrbanSettings
 lazy from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS, Embed, EmbedField, EmbedFooter
 lazy from wd_errors import BaseError
+
+lazy from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:
@@ -26,6 +27,15 @@ REQUEST_TIMEOUT_SECONDS = 10.0
 MAX_FIELD_VALUE = 1024
 """Discord's limit on the length of an embed field's value."""
 ELLIPSIS = "…"
+
+
+class UrbanSettings:
+    """Which Urban Dictionary lookups are allowed, and how much of a result is shown."""
+
+    allow_random = CogConfig(default=True)
+    """Whether /urban random may be used; random definitions are often not safe for work."""
+    max_definitions = CogConfig(5)
+    """How many definitions one reply shows at most."""
 
 
 class Definition(BaseModel):

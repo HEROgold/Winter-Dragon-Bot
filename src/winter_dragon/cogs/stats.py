@@ -12,7 +12,6 @@ from sqlmodel import Field, Session, select
 from wd_db.extension.model import SQLModel
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_config.stats import StatsSettings
 lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.interactions import InteractionContextType
@@ -21,6 +20,8 @@ lazy from wd_discord.snowflake import Snowflake
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.config import CogConfig
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Generator, Iterable, Mapping
@@ -28,6 +29,13 @@ if TYPE_CHECKING:
 
     lazy from wd_discord import Client, GuildCommandInteraction, NetworkError
     lazy from wd_discord.entities import BaseChannel, BaseGuild
+
+
+class StatsSettings:
+    """How often the stats channels are renamed to show the current counts."""
+
+    update_interval = CogConfig(3600)
+    """Seconds between two updates; Discord lets a channel be renamed only twice per 10 minutes, so keep it long."""
 
 
 class StatKind(StrEnum):

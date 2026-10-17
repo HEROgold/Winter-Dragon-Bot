@@ -5,6 +5,7 @@ postgres
 *.egg-info
 */build
 config.ini
+cogs.ini
 discord.ini
 bot.ini
 database.ini

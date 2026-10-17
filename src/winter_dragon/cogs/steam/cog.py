@@ -8,12 +8,12 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_config.steam import SteamSettings
 
 lazy from winter_dragon.cogs.steam.models import STEAM_TABLES, SteamUsers
 lazy from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
 lazy from winter_dragon.cogs.steam.pages import build_page, page_buttons, page_count
 lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure, SteamScraper
+lazy from winter_dragon.cogs.steam.settings import SteamSettings
 lazy from winter_dragon.cogs.steam.store import SteamSaleStore
 lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
 
@@ -137,7 +137,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
             seen: set[int] = set()
             sent_before = self.throttle.sent
-            async with SteamScraper(throttle=self.throttle, country_code=SteamSettings.country_code) as scraper:
+            async with SteamScraper(throttle=self.throttle) as scraper:
                 for query_percent, limit in sale_queries(percent, SteamSettings.complete_percent, SteamSettings.top_sellers):
                     async for scraped in scraper.query_sales(query_percent, limit):
                         if scraped.id not in seen:
@@ -163,7 +163,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             due = store.due_rechecks(now=now, delay=self._recheck_delay)
             if not due or self.throttle.paused:
                 return
-            async with SteamScraper(throttle=self.throttle, country_code=SteamSettings.country_code) as scraper:
+            async with SteamScraper(throttle=self.throttle) as scraper:
                 await self._recheck(scraper, store, due, now)
 
     async def _recheck(self, scraper: SteamScraper, store: SteamSaleStore, sales: Iterable[SteamSale], now: datetime) -> None:

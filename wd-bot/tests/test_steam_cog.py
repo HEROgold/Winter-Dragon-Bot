@@ -9,7 +9,6 @@ import pytest
 from sqlmodel import Session, select
 from wd_bot.registry import GLOBAL
 from wd_bot.testing import detached_cog
-from wd_config.steam import SteamSettings
 from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.interactions import ApplicationCommand
 from wd_discord.testing import RecordingClient
@@ -18,6 +17,7 @@ import winter_dragon.cogs.steam.cog as module
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamUsers
 from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure
+from winter_dragon.cogs.steam.settings import SteamSettings
 from winter_dragon.cogs.steam.store import SteamSaleStore
 from winter_dragon.cogs.steam.urls import SteamURL, StoreItemID
 

@@ -16,7 +16,7 @@ Members opt in to DMs, set the minimum discount they care about, and browse curr
 
 Surface: `/steam add | percentage | remove | show`
 
-Settings (`[SteamSettings]` in `config.ini`): `country_code`, `stored_percent`, `complete_percent`, `top_sellers`, `request_interval`, `update_interval`, `outdated_after`, `recheck_delay`, `embed_color`. The install link needs `[Settings] steam_redirect` to be an https redirect to `steam://`; Discord won't render a raw `steam://` link.
+Settings (`[SteamSettings]` in `cogs.ini`): `country_code`, `stored_percent`, `complete_percent`, `top_sellers`, `request_interval`, `update_interval`, `outdated_after`, `recheck_delay`, `embed_color`, `steam_redirect`. The install link needs `steam_redirect` to be an https redirect to `steam://`; Discord won't render a raw `steam://` link.
 
 **Status:** ✅ Ported to `src/winter_dragon/cogs/steam/`.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/steam/`
@@ -27,7 +27,7 @@ Personal reminders, one-shot or repeating on an interval, with a command to canc
 
 Surface: `/reminder add | repeat | remove`
 
-Settings (`[ReminderSettings]` in `config.ini`): `check_interval`.
+Settings (`[ReminderSettings]` in `cogs.ini`): `check_interval`.
 
 **Status:** ✅ Ported to `src/winter_dragon/cogs/reminder.py`; it keeps `main`'s `reminder`/`timedreminder` tables.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/reminder.py`
@@ -43,7 +43,7 @@ A personal log for vehicle refuelling — record a fill-up (`/fuel add`) and ren
 
 Look up a term, or pull random definitions (`/urban search | random`), rendered as embeds in-channel. Long definitions are cut to fit Discord's embed limits.
 
-Settings (`[UrbanSettings]` in `config.ini`): `allow_random`, `max_definitions`.
+Settings (`[UrbanSettings]` in `cogs.ini`): `allow_random`, `max_definitions`.
 
 **Status:** ✅ Ported to `src/winter_dragon/cogs/urban.py`.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/urban.py`

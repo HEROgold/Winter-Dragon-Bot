@@ -183,6 +183,11 @@ The /reminder command group: one-off and repeating reminders, sent as DMs by a b
 - `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
 - `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
 
+### `class ReminderSettings`
+How often due reminders are looked for.
+
+- attributes: check_interval
+
 ### `class ReminderBase(SQLModel)`
 What one-off and repeating reminders share; ``user_id`` is the Discord user to remind.
 
@@ -219,6 +224,11 @@ The /stats command group: a guild's member counts, shown on demand and as the na
 - `stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed` — Return the embed /stats show answers with.
 - `guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]` — Return the stats channels recorded for the guild ``guild_id``, category included.
 - `stats_guild_ids(session: Session) -> Generator[int]` — Yield every guild with stats channels.
+
+### `class StatsSettings`
+How often the stats channels are renamed to show the current counts.
+
+- attributes: update_interval
 
 ### `class StatKind(StrEnum)`
 What a stats channel shows; the category holding them is one too.
@@ -334,7 +344,7 @@ Embeds and buttons that show Steam sales: the pages of /steam show and the sale 
 Find Steam sales through Steam's store web APIs.
 
 - module names: STORE_API_URL, QUERY_URL, GET_ITEMS_URL, QUERY_PAGE_SIZE, GET_ITEMS_BATCH_SIZE, TOP_SELLERS_SORT,
-  MIN_DISCOUNT_FILTER, REQUEST_TIMEOUT_SECONDS, DEFAULT_REQUEST_INTERVAL, DEFAULT_COUNTRY_CODE, LANGUAGE, RATE_LIMITED
+  MIN_DISCOUNT_FILTER, REQUEST_TIMEOUT_SECONDS, LANGUAGE, RATE_LIMITED
 
 ### `class ScrapeFailure(Enum)`
 Why Steam gave no answer, as opposed to answering "not on sale".
@@ -353,6 +363,15 @@ Asks Steam's store APIs for sales; use as ``async with SteamScraper() as scraper
 
 - `async query_sales(percent: int, limit: int | None=None) -> AsyncGenerator[ScrapedSale]` — Yield the sales of at least ``percent``, best-selling first: the first ``limit``, or every one without.
 - `async get_sales(items: Iterable[StoreItemID]) -> AsyncGenerator[tuple[StoreItemID, ScrapedSale | ScrapeFailure | None]]` — Yield each item with its current sale, ``None`` when it isn't on sale, or why Steam gave no answer.
+
+## `winter_dragon.cogs.steam.settings` — `src/winter_dragon/cogs/steam/settings.py`
+Settings for the Steam sale finder, in its ``cogs.ini`` section.
+
+### `class SteamSettings`
+How often Steam is scraped, and how its sales are shown.
+
+- attributes: country_code, stored_percent, complete_percent, top_sellers, request_interval, update_interval,
+  outdated_after, recheck_delay, embed_color, steam_redirect
 
 ## `winter_dragon.cogs.steam.store` — `src/winter_dragon/cogs/steam/store.py`
 Storing and querying Steam sales and their subscribers.
@@ -646,6 +665,11 @@ The /urban command group: look up a term, or random terms, on Urban Dictionary.
 - `definition_field(index: int, definition: Definition) -> EmbedField` — Return the embed field showing ``definition``, numbered ``index``, with its votes and link.
 - `definition_fields(definitions: Sequence[Definition], limit: int, budget: int) -> Generator[EmbedField]` — Yield a field for each of the first ``limit`` definitions, stopping before their text exceeds ``budget``.
 - `build_embed(title: str, definitions: Sequence[Definition], limit: int) -> Embed` — Return an embed titled ``title`` showing up to ``limit`` of ``definitions``, within Discord's embed limits.
+
+### `class UrbanSettings`
+Which Urban Dictionary lookups are allowed, and how much of a result is shown.
+
+- attributes: allow_random, max_definitions
 
 ### `class Definition(BaseModel)`
 One definition of a term, as Urban Dictionary's API returns it.
