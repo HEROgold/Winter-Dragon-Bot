@@ -166,6 +166,8 @@ def category_params(guild_id: int) -> GuildChannelParams:
 
 def stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed:
     """Return the embed /stats show answers with."""
+    # I'd rather have these patterns as a subclass.
+    # First asses pro's vs cons on this vs subclass.
     fields = [
         EmbedField(name="Users", value=str(counts.users), inline=True),
         EmbedField(name="Bots", value=str(counts.bots), inline=True),

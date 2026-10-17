@@ -215,7 +215,7 @@ def _team_buttons(
         ],
     )
 
-
+# Maybe namespace vote_ into a vote class?
 def vote_options(vote: MatchVote) -> list[str]:
     """Return the vote's answers."""
     return vote.options.split("\n")
