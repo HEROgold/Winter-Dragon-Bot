@@ -178,7 +178,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: "no"
+    # Runs alongside the bot: up after a crash or a Docker restart; `docker compose stop api` ends it.
+    restart: unless-stopped
     networks:
       - default
 
