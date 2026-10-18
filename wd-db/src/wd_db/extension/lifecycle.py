@@ -8,11 +8,12 @@ exists soft-deleted restores it (:func:`create_or_restore`).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 lazy from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field
+from wd_types.clock import utc_now
 lazy from sqlalchemy import Column, Engine, Index, and_, false, inspect, text, update
 lazy from sqlalchemy.orm import declared_attr
 lazy from sqlmodel import col, select
@@ -32,11 +33,6 @@ if TYPE_CHECKING:
 
 LIFECYCLE_COLUMNS = ("created_at", "updated_at", "deleted_at")
 """The columns every lifecycle table carries, in the order :func:`ensure_lifecycle_columns` adds them."""
-
-
-def utc_now() -> datetime:
-    """Return the current time in UTC."""
-    return datetime.now(UTC)
 
 
 @dataclass(frozen=True)

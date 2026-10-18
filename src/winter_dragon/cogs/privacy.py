@@ -13,7 +13,7 @@ are kept for :data:`USAGE_RETENTION`.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 lazy import asyncio
 lazy from dataclasses import KW_ONLY, dataclass
 lazy from enum import StrEnum, auto
@@ -31,6 +31,7 @@ lazy from wd_db.extension.lifecycle import alive, create_or_restore, lifecycle_m
 lazy from wd_discord import CommandInteraction
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import ApplicationCommandOptionType
+lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.tournament.models import Tournament
 lazy from winter_dragon.cogs.tournament.service import open_signups_of, withdraw
@@ -48,11 +49,6 @@ PURGE_INTERVAL = timedelta(days=1)
 """How often the purge runs."""
 USAGE_RETENTION = timedelta(days=365)
 """How long command usage counts are kept, alive or not."""
-
-
-def utc_now() -> datetime:
-    """Return the current time in UTC; what the listeners take for now."""
-    return datetime.now(UTC)
 
 
 class DepartedGuild(DiscordKeyedModel, table=True):
@@ -164,7 +160,7 @@ class Privacy(Cog):
         """Purge every :data:`PURGE_INTERVAL`, forever; a failing pass is logged and the next one runs as usual."""
         while True:
             try:
-                await self.purge(datetime.now(UTC))
+                await self.purge(utc_now())
             except Exception:
                 self.logger.exception(t"Purging soft-deleted records failed")
             await asyncio.sleep(PURGE_INTERVAL.total_seconds())

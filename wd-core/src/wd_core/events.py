@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 lazy from abc import ABC, abstractmethod
-lazy from datetime import UTC, datetime
 lazy from typing import TYPE_CHECKING, ClassVar, Self
 
 lazy from herogold.log import LoggerMixin
 lazy from herogold.orm.model import BaseModel
+lazy from wd_types.clock import utc_now
 lazy from wd_types.protocol import Mentionable
 
 
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Generator, Iterable
 
     lazy from sqlalchemy.orm import Session
+
 
 class AuditLog(BaseModel):
     """Database model for audit logs."""
@@ -86,12 +87,13 @@ class AuditEvent(ABC):
             type="rich",
             url=None,
             description=f"Performed by {self.entry.user} with target {target}. with extra {self.entry.extra}",
-            timestamp=datetime.now(UTC),
+            timestamp=utc_now(),
         )
 
     def __init_subclass__(cls: type[Self], action: AuditLogAction) -> None:
         """Register the subclass with the factory."""
         AuditEventFactory.register(action, cls)
+
 
 class LogChannel(GuildChannel, Messageable, ABC):
     """A wrapper around GuildChannel to allow for easier logging."""
@@ -133,6 +135,7 @@ class AuditEventHandler(LoggerMixin):
         for channel in channels:
             if await channel.filter(audit_action):
                 await channel.send(embed=embed)
+
 
 class AuditEventFactory:
     """Factory for creating audit events."""

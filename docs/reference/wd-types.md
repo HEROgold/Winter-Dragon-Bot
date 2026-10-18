@@ -12,6 +12,11 @@ Contains type aliases for WinterDragon.
 - `type MaybeAwaitable[T] = T | Awaitable[T]`
 - `type MaybeAwaitableFunc[**P, T] = Callable[P, MaybeAwaitable[T]]`
 
+## `wd_types.clock` — `wd-types/src/wd_types/clock.py`
+The one clock: every "now" in the workspace comes from :func:`utc_now`.
+
+- `utc_now() -> datetime` — Return the current time as an aware UTC datetime.
+
 ## `wd_types.protocol` — `wd-types/src/wd_types/protocol.py`
 Contains protocols for WinterDragon.
 

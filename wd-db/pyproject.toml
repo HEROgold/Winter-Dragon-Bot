@@ -14,10 +14,12 @@ dependencies = [
     "sqlalchemy>=2.0.0",
     "sqlmodel>=0.0.22",
     "wd-config",
+    "wd-types",
 ]
 
 [tool.uv.sources]
 wd-config = { workspace = true }
+wd-types = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]

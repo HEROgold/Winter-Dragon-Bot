@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 lazy import asyncio
-lazy from datetime import UTC, datetime, timedelta
+lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete
+lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.steam.models import STEAM_TABLES, SteamUsers
 lazy from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
@@ -52,11 +53,6 @@ def sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Gener
     yield max(percent, complete_percent), None
     if percent < complete_percent:
         yield percent, top_sellers
-
-
-def utc_now() -> datetime:
-    """Return the current time in UTC."""
-    return datetime.now(UTC)
 
 
 class SteamSales(GroupCog, name="steam", description="Get notified about free and discounted Steam games"):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 lazy import asyncio
 lazy from io import BytesIO
 lazy from typing import TYPE_CHECKING, ClassVar, override
@@ -11,6 +11,7 @@ from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
+from wd_types.clock import utc_now
 lazy from matplotlib.dates import DateFormatter, date2num
 lazy from matplotlib.figure import Figure
 lazy from wd_bot.cogs import Cog, GroupCog
@@ -49,7 +50,7 @@ class CarFuels(LifecycleModel, table=True):
     """How far was driven since the previous refuel."""
     price: float
     """The total price paid."""
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC), sa_type=AwareDateTime)
+    timestamp: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime)
 
     @property
     def efficiency(self) -> float:

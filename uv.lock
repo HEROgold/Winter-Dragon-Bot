@@ -863,6 +863,7 @@ dependencies = [
     { name = "sentry-sdk" },
     { name = "wd-config" },
     { name = "wd-discord" },
+    { name = "wd-types" },
 ]
 
 [package.metadata]
@@ -870,6 +871,7 @@ requires-dist = [
     { name = "sentry-sdk", specifier = ">=2.61.0" },
     { name = "wd-config", editable = "wd-config" },
     { name = "wd-discord", editable = "wd-discord" },
+    { name = "wd-types", editable = "wd-types" },
 ]
 
 [[package]]
@@ -883,6 +885,7 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
     { name = "wd-config" },
+    { name = "wd-types" },
 ]
 
 [package.metadata]
@@ -893,6 +896,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.22" },
     { name = "wd-config", editable = "wd-config" },
+    { name = "wd-types", editable = "wd-types" },
 ]
 
 [[package]]

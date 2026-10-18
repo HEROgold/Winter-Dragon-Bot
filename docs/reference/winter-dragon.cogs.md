@@ -190,7 +190,6 @@ Cog for the /love command.
 Privacy: soft-deleted records are purged for good once they've been deleted for :data:`RETENTION`.
 
 - module names: RETENTION, PURGE_INTERVAL, USAGE_RETENTION, PRIVACY_TABLES
-- `utc_now() -> datetime` — Return the current time in UTC; what the listeners take for now.
 - `command_path(interaction: CommandInteraction) -> str` — Return the full name of the command ``interaction`` ran, with its group and subcommand: ``reminder add``.
 - `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
 
@@ -239,7 +238,6 @@ The /reminder command group: one-off and repeating reminders, sent as DMs by a b
 
 - module names: SECONDS_PER_UNIT, REMINDER_TABLES, CHOICE_PREFIXES: dict[type[AnyReminder], str]
 - `type AnyReminder = Reminder | TimedReminder`
-- `utc_now() -> datetime` — Return the current time in UTC.
 - `delay_from(**amounts: int) -> timedelta | None` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
 - `next_occurrence(due: datetime, repeat_every: timedelta, now: datetime) -> datetime` — Return the first time after ``now`` that a reminder due at ``due`` and repeating every ``repeat_every`` is due.
 - `reminder_message(content: str) -> str` — Return the DM reminding someone of ``content``.
@@ -343,7 +341,6 @@ The /steam command group, its page buttons, and the background scrape of Steam's
 - module names: MAX_PERCENT
 - `next_scrape_time(now: datetime, interval: timedelta) -> datetime` — Return when to scrape next: after ``interval``, or just after Steam's daily rollover if that comes first.
 - `sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Generator[tuple[int, int | None]]` — Yield the ``(percent, limit)`` of each query a scrape makes.
-- `utc_now() -> datetime` — Return the current time in UTC.
 
 ### `class SteamSales(GroupCog, name='steam', description='Get notified about free and discounted Steam games')`
 Lists Steam sales on request and DMs subscribers new ones, re-checking sales right after they end.

@@ -11,6 +11,7 @@ dependencies = [
     "sentry-sdk>=2.61.0",
     "wd-config",
     "wd-discord",
+    "wd-types",
 ]
 
 [build-system]
@@ -20,3 +21,4 @@ build-backend = "uv_build"
 [tool.uv.sources]
 wd-config = { workspace = true }
 wd-discord = { workspace = true }
+wd-types = { workspace = true }

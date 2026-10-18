@@ -49,7 +49,6 @@ A timestamp column that always stores and reads back aware UTC datetimes, also o
 The lifecycle every bot table follows: timestamps, soft delete, create-or-restore and a declared owner.
 
 - module names: LIFECYCLE_COLUMNS
-- `utc_now() -> datetime` — Return the current time in UTC.
 - `alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]` — Return a select of ``model``'s rows that aren't soft-deleted; use it for every read.
 - `soft_delete(session: Session, row: LifecycleModel, *, at: datetime | None=None) -> None` — Soft-delete ``row``: stamp its ``deleted_at`` with ``at`` (default now), hiding it from :func:`alive`. Caller commits.
 - `create_or_restore[M: LifecycleModel](session: Session, row: M) -> M` — Insert ``row``, or restore the soft-deleted row with the same ``id`` or natural key; return the stored row.

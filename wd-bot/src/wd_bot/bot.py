@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 lazy import asyncio
-lazy import datetime
 lazy import inspect
 lazy import sys
 lazy from importlib.util import find_spec, module_from_spec
@@ -29,6 +28,7 @@ lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
+lazy from wd_types.clock import utc_now
 
 lazy from wd_bot.auto_sync import CommandSyncer
 lazy from wd_bot.components import parse_custom_id
@@ -40,6 +40,7 @@ lazy from .settings import BotConfig, BotSettings
 
 
 if TYPE_CHECKING:
+    lazy import datetime
     lazy from collections.abc import AsyncGenerator, Awaitable, Callable, Generator, Iterable
     lazy from importlib.machinery import ModuleSpec
     lazy from types import ModuleType
@@ -100,7 +101,7 @@ class Bot(LoggerMixin):
         defaults to the shared ``wd_cogs`` catalog, but a bot built on its own cog package
         (e.g. ``winter_dragon.cogs``) can point discovery at that instead.
         """
-        self.launch_time = datetime.datetime.now(datetime.UTC)
+        self.launch_time = utc_now()
         self.intents = Intents(BotSettings.intents) if intents is None else intents
         self.description = description
         self.extensions_package = extensions_package

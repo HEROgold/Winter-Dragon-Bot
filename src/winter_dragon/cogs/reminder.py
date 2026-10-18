@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 lazy import asyncio
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
@@ -15,6 +15,7 @@ lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, s
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
+lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
@@ -67,11 +68,6 @@ REMINDER_TABLES = (Reminder, TimedReminder)
 """Every table the reminder cog creates on load."""
 CHOICE_PREFIXES: dict[type[AnyReminder], str] = {Reminder: "once", TimedReminder: "repeat"}
 """How an autocomplete choice's value says which table its reminder is in."""
-
-
-def utc_now() -> datetime:
-    """Return the current time in UTC."""
-    return datetime.now(UTC)
 
 
 def delay_from(**amounts: int) -> timedelta | None:
