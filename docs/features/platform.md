@@ -72,5 +72,5 @@ A reusable layer over Discord's component API — buttons, selects, modals, menu
 
 A Docker Compose stack runs the whole system: Redis, Postgres, the bot, the workers, the API, the frontend, and the administrative UIs (pgAdmin, Grafana, redis-commander).
 
-**Status:** 🟡 The compose file exists on `v2`. The infrastructure services work. The `bot` service's entry point (`python -m winter_dragon`) now exists, but the container hasn't been verified end to end. `workers` and `api` still crash-loop because their modules don't exist.
+**Status:** 🟡 The compose file exists on `v2`. The infrastructure services work. The `bot` service's entry point (`python -m winter_dragon`) now exists, but the container hasn't been verified end to end. The `web` service runs the dashboard (`python -m winter_dragon.web`). `workers` still crash-loops because its module doesn't exist.
 **Source on `main`:** `docker-compose.yml`, `bot-dockerfile`

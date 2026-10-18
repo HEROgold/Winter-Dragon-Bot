@@ -58,11 +58,11 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
-# Documents the port used by the `api` service; bot/workers don't listen.
+# Documents the port used by the `web` service (the dashboard); bot/workers don't listen.
 EXPOSE 8001
 
 # Port-independent liveness check that works for all three services
-# (bot, workers, api) built from this image.
+# (bot, workers, web) built from this image.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD ["python", "-c", "import winter_dragon"]
 

@@ -66,5 +66,5 @@ value-modeling, config-and-constants).
 ## Infrastructure
 
 `docker-compose.yml` provides PostgreSQL, Redis, pgAdmin, Grafana and Redis Commander. The `bot` service
-runs `python -m winter_dragon`. The `api` and `workers` services point at modules that don't exist yet —
-see [Planned](../planned.md).
+runs `python -m winter_dragon`, and the `web` service runs the dashboard (`python -m winter_dragon.web`, port
+8001). The `workers` service points at a module that doesn't exist yet — see [Planned](../planned.md).

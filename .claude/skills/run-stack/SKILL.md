@@ -7,7 +7,7 @@ description: Start and smoke-check the WinterDragonV2 docker compose stack (post
 
 All commands from the repo root. Docker Desktop must be running (verified against server 29.5.2).
 
-**Do not `docker compose up` the whole file.** `api` and `workers` run `python -m winter_dragon.api` / `.workers`, which don't exist — they crash-loop. `bot` runs `python -m winter_dragon`, which now exists (`src/winter_dragon/__main__.py`), but the container has not been re-verified since. Bring up the infra services, and run the bot on the host (run-wd-discord skill) unless you are deliberately testing the container.
+**Do not `docker compose up` the whole file.** `workers` runs `python -m winter_dragon.workers`, which doesn't exist — it crash-loops. `web` runs the dashboard (`python -m winter_dragon.web`, port 8001) and needs a filled-in `dashboard.ini` with `host = 0.0.0.0`. `bot` runs `python -m winter_dragon`, which now exists (`src/winter_dragon/__main__.py`), but the container has not been re-verified since. Bring up the infra services, and run the bot on the host (run-wd-discord skill) unless you are deliberately testing the container.
 
 ## Run (agent path) — verified 2026-07-07
 
@@ -43,5 +43,5 @@ docker compose down          # keep volumes (postgres/grafana data persist)
 
 ## Gotchas
 
-- `api`/`workers` services: `winter_dragon.api` / `winter_dragon.workers` don't exist; there is no HTTP API or worker service in the tree yet (see docs/planned.md).
+- `workers` service: `winter_dragon.workers` doesn't exist; there is no worker service in the tree yet (see docs/planned.md).
 - The compose file publishes no postgres port; to reach it from the host tooling use `docker compose exec postgres psql -U postgres winter_dragon`.
