@@ -10,6 +10,7 @@ discord.ini
 bot.ini
 database.ini
 sentry.ini
+dashboard.ini
 logs/*
 .env
 site/

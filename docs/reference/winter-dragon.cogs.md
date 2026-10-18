@@ -193,6 +193,10 @@ Privacy: soft-deleted records are purged for good once they've been deleted for 
 - module names: RETENTION, PURGE_INTERVAL, USAGE_RETENTION, PRIVACY_TABLES
 - `command_path(interaction: CommandInteraction) -> str` — Return the full name of the command ``interaction`` ran, with its group and subcommand: ``reminder add``.
 - `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
+- `stored_models(bind: Engine | Connection) -> list[type[LifecycleModel]]` — Return every lifecycle model whose table exists in ``bind``, children first.
+- `hide_owned(session: Session, models: Iterable[type[LifecycleModel]], now: datetime, *, member: int | None=None, guild: int | None=None) -> None` — Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``.
+- `hide_member_data(bind: Engine | Connection, member_id: int, now: datetime) -> bool` — Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
+- `deletion_steps(bind: Engine | Connection, member_id: int) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 
 ### `class DepartedGuild(DiscordKeyedModel, table=True)`
 A guild that removed the bot, whose data is hidden until it's back or purged; ``id`` is the guild's.
@@ -228,7 +232,7 @@ Purges soft-deleted records daily, and hides the data of departed guilds and of 
 - `async unload() -> None` — Stop the background task.
 - `@Cog.listener async on_guild_delete(event: GuildDelete) -> None` — Hide the data of a guild that removed the bot; a guild that only went offline keeps it.
 - `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Bring back the data a guild had when it removed the bot, if it's back within :data:`RETENTION`.
-- `async request_deletion(member_id: int, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now``; :meth:`purge` deletes it for good later.
+- `async request_deletion(member_id: int, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later.
 - `deletion_steps(member_id: int) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 - `@Cog.listener async on_interaction(interaction: AnyInteraction) -> None` — Count a run of an application command; autocomplete and component interactions don't count.
 - `usage(member_id: int) -> Generator[UsageCount]` — Yield the member ``member_id``'s command usage counts, day by day.

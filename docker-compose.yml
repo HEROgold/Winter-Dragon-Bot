@@ -147,13 +147,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python -m winter_dragon.api
+    # The dashboard (winter_dragon.web). dashboard.ini holds its OAuth2 client secret and session key; set
+    # host = 0.0.0.0 in it so the port mapping reaches the server. A list anchor can't be extended, so the
+    # shared mounts are repeated here with dashboard.ini added.
+    command: python -m winter_dragon.web
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
       REDIS_HOST: redis
-      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
-      DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI:-http://localhost:3000}
-    volumes: *app-volumes
+    volumes:
+      - ./src:/app/src
+      - ./wd-bot/src:/app/wd-bot/src
+      - ./wd-config/src:/app/wd-config/src
+      - ./wd-core/src:/app/wd-core/src
+      - ./wd-db/src:/app/wd-db/src
+      - ./wd-discord/src:/app/wd-discord/src
+      - ./wd-errors/src:/app/wd-errors/src
+      - ./wd-types/src:/app/wd-types/src
+      - ./wd-cogs/src:/app/wd-cogs/src
+      - ./logs:/app/logs
+      - ./bot.ini:/app/bot.ini
+      - ./config.ini:/app/config.ini
+      - ./cogs.ini:/app/cogs.ini
+      - ./database.ini:/app/database.ini
+      - ./sentry.ini:/app/sentry.ini
+      - ./dashboard.ini:/app/dashboard.ini
     ports:
       - "8001:8001"
     depends_on:

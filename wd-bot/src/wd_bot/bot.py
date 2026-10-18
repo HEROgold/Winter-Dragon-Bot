@@ -73,6 +73,21 @@ def error_embed(interaction_id: Snowflake) -> Embed:
     )
 
 
+def invite_url() -> str:
+    """Return the link to invite the bot to a server, with the scopes and permissions in ``bot.ini``.
+
+    Raises:
+        ValueError: ``BotSettings.application_id`` isn't set.
+
+    """
+    if not BotSettings.application_id:
+        msg = "BotSettings.application_id is not configured."
+        raise ValueError(msg)
+    scope = "%20".join(BotSettings.BOT_SCOPE)
+    permissions = Permissions(BotSettings.permissions)
+    return f"{URLS().oauth2_authorize}?client_id={BotSettings.application_id}&permissions={int(permissions)}&scope={scope}"
+
+
 class MissingError(Exception):
     """Raised when a required attribute is missing."""
 
@@ -116,13 +131,8 @@ class Bot(LoggerMixin):
         """Pushes :attr:`registry` changes to Discord."""
 
     def get_bot_invite(self) -> str:
-        """Get the link to invite the bot to a server."""
-        if not BotSettings.application_id:
-            msg = "BotSettings.application_id is not configured."
-            raise ValueError(msg)
-        scope = "%20".join(BotSettings.BOT_SCOPE)
-        permissions = Permissions(BotSettings.permissions)
-        return f"{URLS().oauth2_authorize}?client_id={BotSettings.application_id}&permissions={int(permissions)}&scope={scope}"
+        """Get the link to invite the bot to a server, as :func:`invite_url` builds it."""
+        return invite_url()
 
     async def add_cog(self, cog: Cog) -> None:
         """Register a cog and any of its @Cog.listener()-tagged methods.

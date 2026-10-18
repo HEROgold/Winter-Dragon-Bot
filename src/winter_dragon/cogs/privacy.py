@@ -40,6 +40,7 @@ lazy from winter_dragon.cogs.tournament.service import open_signups_of, withdraw
 if TYPE_CHECKING:
     lazy from collections.abc import Generator, Iterable
 
+    lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord import AnyInteraction, GatewayGuild, GuildDelete
 
 
@@ -137,6 +138,68 @@ def purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleMo
     return sorted(models, key=lambda model: rank[model.__table__.name], reverse=True)
 
 
+def stored_models(bind: Engine | Connection) -> list[type[LifecycleModel]]:
+    """Return every lifecycle model whose table exists in ``bind``, children first.
+
+    Call it before opening a session: inspecting borrows a connection, which on a single-connection pool (sqlite in
+    memory) rolls back that session's pending writes when it's returned.
+    """
+    existing = set(inspect(bind).get_table_names())
+    return [model for model in purge_order(lifecycle_models()) if model.__table__.name in existing]
+
+
+def hide_owned(
+    session: Session,
+    models: Iterable[type[LifecycleModel]],
+    now: datetime,
+    *,
+    member: int | None = None,
+    guild: int | None = None,
+) -> None:
+    """Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``."""
+    for model in models:
+        for row in session.exec(owned_by(model, member=member, guild=guild)).all():
+            soft_delete(session, row, at=now)
+
+
+def hide_member_data(bind: Engine | Connection, member_id: int, now: datetime) -> bool:
+    """Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
+
+    That's every row a member owns, also those a guild owns too, and their sign-up to each tournament that hasn't
+    started, by the rule ``/tournament leave`` follows. Does nothing while an earlier request is hidden but not
+    purged yet; one that never got hidden (hiding failed) is hidden now. What the member stores afterwards is new
+    data, which this request leaves be.
+    """
+    models = stored_models(bind)
+    with Session(bind) as session:
+        request = session.get(DeletionRequest, member_id)
+        if request is not None and request.hidden_at is not None and request.purged_at is None:
+            return False
+        if request is None or request.purged_at is not None:
+            request = request or DeletionRequest(id=member_id, requested_at=now)
+            request.requested_at, request.hidden_at, request.purged_at = now, None, None
+            session.add(request)
+            session.commit()
+        if Tournament in models:
+            for tournament in list(open_signups_of(session, member_id)):
+                withdraw(session, tournament, member_id)
+        hide_owned(session, models, now, member=member_id)
+        request.hidden_at = now
+        session.add(request)
+        session.commit()
+    return True
+
+
+def deletion_steps(bind: Engine | Connection, member_id: int) -> Generator[tuple[DeletionStep, datetime]]:
+    """Yield the steps the member ``member_id``'s deletion request got through, with when, in order."""
+    if DeletionRequest not in stored_models(bind):
+        return
+    with Session(bind) as session:
+        request = session.get(DeletionRequest, member_id)
+        if request is not None:
+            yield from request.steps
+
+
 class Privacy(Cog):
     """Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked."""
 
@@ -165,29 +228,6 @@ class Privacy(Cog):
                 self.logger.exception(t"Purging soft-deleted records failed")
             await asyncio.sleep(PURGE_INTERVAL.total_seconds())
 
-    def _stored_models(self) -> list[type[LifecycleModel]]:
-        """Return every lifecycle model whose table exists in :attr:`bind`, children first.
-
-        Call it before opening a session: inspecting borrows a connection, which on a single-connection pool (sqlite in
-        memory) rolls back that session's pending writes when it's returned.
-        """
-        existing = set(inspect(self.bind).get_table_names())
-        return [model for model in purge_order(lifecycle_models()) if model.__table__.name in existing]
-
-    @staticmethod
-    def _hide_owned(
-        session: Session,
-        models: Iterable[type[LifecycleModel]],
-        now: datetime,
-        *,
-        member: int | None = None,
-        guild: int | None = None,
-    ) -> None:
-        """Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``."""
-        for model in models:
-            for row in session.exec(owned_by(model, member=member, guild=guild)).all():
-                soft_delete(session, row, at=now)
-
     @staticmethod
     def _departure(session: Session, guild_id: int) -> DepartedGuild | None:
         """Return the guild's departure that isn't over yet, if any."""
@@ -200,12 +240,12 @@ class Privacy(Cog):
         """Hide the data of a guild that removed the bot; a guild that only went offline keeps it."""
         if event.unavailable:
             return
-        guild_id, now, models = int(event.guild.id), utc_now(), self._stored_models()
+        guild_id, now, models = int(event.guild.id), utc_now(), stored_models(self.bind)
         with Session(self.bind) as session:
             if self._departure(session, guild_id) is not None:
                 return
             create_or_restore(session, DepartedGuild(id=guild_id, departed_at=now))
-            self._hide_owned(session, models, now, guild=guild_id)
+            hide_owned(session, models, now, guild=guild_id)
             session.commit()
         self.logger.info(t"Guild {guild_id} removed the bot; hid its data")
 
@@ -216,7 +256,7 @@ class Privacy(Cog):
         Only rows hidden at or after the departure come back; what the guild deleted before it stays deleted, and so
         do the rows of members who asked for deletion since.
         """
-        guild_id, now, models = int(guild.id), utc_now(), self._stored_models()
+        guild_id, now, models = int(guild.id), utc_now(), stored_models(self.bind)
         with Session(self.bind) as session:
             departure = self._departure(session, guild_id)
             if departure is None:
@@ -247,38 +287,13 @@ class Privacy(Cog):
     # --- Member deletion requests ------------------------------------------------------------------------------------
 
     async def request_deletion(self, member_id: int, now: datetime) -> None:
-        """Hide all of the member ``member_id``'s data at ``now``; :meth:`purge` deletes it for good later.
-
-        That's every row a member owns, also those a guild owns too, and their sign-up to each tournament that hasn't
-        started, by the rule ``/tournament leave`` follows. Does nothing while an earlier request is hidden but not
-        purged yet; one that never got hidden (hiding failed) is hidden now. What the member stores afterwards is new
-        data, which this request leaves be.
-        """
-        models = self._stored_models()
-        with Session(self.bind) as session:
-            request = session.get(DeletionRequest, member_id)
-            if request is not None and request.hidden_at is not None and request.purged_at is None:
-                return
-            if request is None or request.purged_at is not None:
-                request = request or DeletionRequest(id=member_id, requested_at=now)
-                request.requested_at, request.hidden_at, request.purged_at = now, None, None
-                session.add(request)
-                session.commit()
-            if Tournament in models:
-                for tournament in list(open_signups_of(session, member_id)):
-                    withdraw(session, tournament, member_id)
-            self._hide_owned(session, models, now, member=member_id)
-            request.hidden_at = now
-            session.add(request)
-            session.commit()
-        self.logger.info(t"Member {member_id} asked for their data to be deleted; hid it")
+        """Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later."""
+        if hide_member_data(self.bind, member_id, now):
+            self.logger.info(t"Member {member_id} asked for their data to be deleted; hid it")
 
     def deletion_steps(self, member_id: int) -> Generator[tuple[DeletionStep, datetime]]:
         """Yield the steps the member ``member_id``'s deletion request got through, with when, in order."""
-        with Session(self.bind) as session:
-            request = session.get(DeletionRequest, member_id)
-            if request is not None:
-                yield from request.steps
+        yield from deletion_steps(self.bind, member_id)
 
     # --- Command usage ---------------------------------------------------------------------------------------------------
 
@@ -332,7 +347,7 @@ class Privacy(Cog):
         so one that fails (a row still pointing at it, say) is logged and skipped while the rest go. Running it again
         at the same ``now`` deletes nothing more.
         """
-        cutoff, models = now - RETENTION, self._stored_models()
+        cutoff, models = now - RETENTION, stored_models(self.bind)
         if DepartedGuild in models:
             self._end_departures(now, cutoff)
         if DeletionRequest in models:

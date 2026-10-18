@@ -31,12 +31,20 @@ dependencies = [
   "httpxyz>=0.42.0",
   "pydantic>=2.13.5",
   "matplotlib>=3.11.2",
+  "fastapi>=0.120",
+  "jinja2>=3.1",
+  "uvicorn>=0.38",
+  "itsdangerous>=2.2",
+  "python-multipart>=0.0.20",
+  "tzdata>=2026.5",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.14.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "zensical>=0.0.55",
 ]
 docs = [
   "zensical>=0.0.55",

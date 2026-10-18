@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block main %}
+<main>
+  <section class="hero">
+    <div class="hero-copy">
+      <h1 class="hero-title">Reminders, Steam sales, tournaments and voice channels, from one bot.</h1>
+      <p class="page-lead">Sign in with Discord to manage what {{ bot_name }} does for you, and to see everything it stores about you.</p>
+      <div class="hero-actions">
+        {% if account %}
+          <a class="button button-primary" href="/me">Go to your data</a>
+        {% else %}
+          <a class="button button-primary" href="/auth/discord/login">Sign in with Discord</a>
+        {% endif %}
+        {% if invite %}<a class="button button-quiet" href="{{ invite }}">Add to your server</a>{% endif %}
+      </div>
+    </div>
+
+    <div class="terrain">
+      <svg class="terrain-lines" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path d="M-20 120 C 90 80, 180 160, 300 110 S 520 60, 640 130"/>
+        <path d="M-20 170 C 100 130, 200 210, 310 165 S 510 120, 640 185"/>
+        <path d="M-20 225 C 110 190, 215 265, 320 225 S 500 185, 640 245"/>
+        <path d="M-20 285 C 120 255, 230 320, 330 290 S 495 250, 640 305"/>
+        <path d="M-20 350 C 130 325, 240 380, 340 355 S 490 320, 640 370"/>
+        <path d="M-20 420 C 140 400, 250 445, 350 425 S 485 395, 640 440"/>
+        <path d="M-20 495 C 130 480, 255 515, 360 500 S 500 475, 640 515"/>
+        <path d="M-20 575 C 120 565, 250 590, 365 580 S 510 560, 640 595"/>
+        <path d="M-20 660 C 110 655, 245 670, 370 665 S 520 650, 640 680"/>
+        <path d="M-20 745 C 100 745, 240 755, 375 752 S 530 740, 640 765"/>
+        <path d="M380 210 C 420 190, 470 205, 470 240 S 420 285, 385 265 S 350 225, 380 210"/>
+        <path d="M395 228 C 415 220, 445 228, 444 244 S 418 262, 402 254 S 384 235, 395 228"/>
+      </svg>
+
+      <nav class="signpost" aria-label="Where to go">
+        <div class="signpost-pole" aria-hidden="true"></div>
+        <div class="signpost-plate">
+          <strong>{{ bot_name }}</strong>
+          <span>on Discord</span>
+        </div>
+        <ul class="signpost-arms">
+          <li><a class="arm arm-right" href="/reminders"><span class="arm-name">Reminders</span><span class="marker" aria-hidden="true"></span></a></li>
+          <li><a class="arm arm-left" href="/me"><span class="arm-name">Your data</span><span class="marker" aria-hidden="true"></span></a></li>
+        </ul>
+      </nav>
+    </div>
+  </section>
+
+  <section class="features" aria-labelledby="features-title">
+    <h2 id="features-title">What it does in your server</h2>
+    <dl class="feature-list">
+      {% for feature in features %}
+        <div><dt>{{ feature.name | capitalize }} <code>/{{ feature.name }}</code></dt><dd>{{ feature.description }}.</dd></div>
+      {% endfor %}
+    </dl>
+  </section>
+</main>
+{% endblock %}

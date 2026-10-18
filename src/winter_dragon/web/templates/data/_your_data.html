@@ -1,0 +1,21 @@
+<div id="your-data">
+  {% if records %}
+    <div class="records">
+      {% for record in records %}
+        {# each body loads the first time it's opened #}
+        <details class="record" hx-get="/me/records/{{ record.key }}" hx-trigger="toggle once" hx-target="#record-{{ record.key }}">
+          <summary>
+            <span class="record-name">{{ record.name }}</span>
+            <span class="secondary">{{ record.summary }}</span>
+            <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+          </summary>
+          <div class="record-body" id="record-{{ record.key }}"><p class="secondary">Loading…</p></div>
+        </details>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="secondary">Winter Dragon stores nothing about you right now.</p>
+  {% endif %}
+
+  {% include "data/_deletion.html" %}
+</div>

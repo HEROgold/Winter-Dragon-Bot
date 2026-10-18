@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set active = "data" %}
+
+{% block title %}Your data · {% endblock %}
+
+{% block main %}
+<main class="page">
+  <h1 class="page-title">Your data</h1>
+  <p class="page-lead">Everything Winter Dragon stores about you, grouped by where it's kept.</p>
+
+  <div class="profile">
+    {% if account.avatar_url %}
+      <img class="avatar" src="{{ account.avatar_url }}" alt="">
+    {% else %}
+      <span class="avatar" aria-hidden="true">{{ account.initials }}</span>
+    {% endif %}
+    <div>
+      <div class="profile-name">{{ account.display_name }}</div>
+      <div class="secondary">{{ account.username }} · Discord ID {{ account.id }}</div>
+    </div>
+  </div>
+
+  {% include "data/_your_data.html" %}
+</main>
+{% endblock %}

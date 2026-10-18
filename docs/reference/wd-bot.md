@@ -36,6 +36,7 @@ Module that contains the bot.
 
 - module names: COMMAND_ERROR_REPLY, ERROR_COLOR
 - `error_embed(interaction_id: Snowflake) -> Embed` — Return the reply to the interaction ``interaction_id`` whose handler raised.
+- `invite_url() -> str` — Return the link to invite the bot to a server, with the scopes and permissions in ``bot.ini``.
 
 ### `class MissingError(Exception)`
 Raised when a required attribute is missing.
@@ -44,7 +45,7 @@ Raised when a required attribute is missing.
 A forever-running Discord bot: connects to the gateway, loads extensions, dispatches events.
 
 - fields: launch_time: datetime.datetime, loop: asyncio.AbstractEventLoop, client: Client, cogs: dict[str, Cog]
-- `get_bot_invite() -> str` — Get the link to invite the bot to a server.
+- `get_bot_invite() -> str` — Get the link to invite the bot to a server, as :func:`invite_url` builds it.
 - `async add_cog(cog: Cog) -> None` — Register a cog and any of its @Cog.listener()-tagged methods.
 - `async remove_cog(cog: Cog) -> set[Scope]` — Unregister ``cog``'s listeners, commands and components and unload it; return the command scopes that changed.
 - `@property commands -> Generator[AppCommand]` — Yield every registered top-level command (plain commands and subcommand groups).
