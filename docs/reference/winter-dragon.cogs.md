@@ -110,6 +110,7 @@ Moderation helpers for channels: removing a category with its channels, and lock
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.
 
+- `parse_refuel_date(value: str) -> datetime | None` — Return midnight UTC of the ``YYYY-MM-DD`` day in ``value``, or ``None`` when it isn't one.
 - `render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes` — Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out.
 
 ### `class FuelSettings`
@@ -128,7 +129,7 @@ One refuel a user logged; ``user_id`` is their Discord user ID, and they own it.
 Logs a user's refuels and graphs their fuel efficiency.
 
 - `async load() -> None` — Create the refuel table if missing.
-- `@Cog.command async add(interaction: CommandInteraction, price: float, distance: float, amount: float) -> None` — Store a refuel for the invoking user.
+- `@Cog.command async add(interaction: CommandInteraction, price: float, distance: float, amount: float, date: str | None=None) -> None` — Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now.
 - `@Cog.command async efficiency(interaction: CommandInteraction) -> None` — Reply with a graph of the invoking user's fuel efficiency.
 
 ## `winter_dragon.cogs.heartbeat` — `src/winter_dragon/cogs/heartbeat.py`

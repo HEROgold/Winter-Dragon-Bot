@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 lazy import asyncio
+lazy from datetime import UTC, date, time
 lazy from io import BytesIO
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
@@ -58,6 +59,15 @@ class CarFuels(LifecycleModel, table=True):
         return self.distance / self.amount
 
 
+def parse_refuel_date(value: str) -> datetime | None:
+    """Return midnight UTC of the ``YYYY-MM-DD`` day in ``value``, or ``None`` when it isn't one."""
+    try:
+        day = date.fromisoformat(value.strip())
+    except ValueError:
+        return None
+    return datetime.combine(day, time(), tzinfo=UTC)
+
+
 def render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes:
     """Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out."""
     ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.timestamp)
@@ -91,17 +101,32 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         """Create the refuel table if missing."""
         self.create_tables(CarFuels)
 
-    @Cog.command(name="add", description="Log a refuel: total price, distance driven since the last one, fuel added")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def add(self, interaction: CommandInteraction, price: float, distance: float, amount: float) -> None:
-        """Store a refuel for the invoking user."""
+    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+        name="add",
+        description="Log a refuel: total price, distance driven since the last one, fuel added, optional YYYY-MM-DD date",
+    )
+    async def add(
+        self,
+        interaction: CommandInteraction,
+        price: float,
+        distance: float,
+        amount: float,
+        date: str | None = None,
+    ) -> None:
+        """Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now."""
         user = interaction.user
         if user is None:
             return
         if min(price, distance, amount) <= 0:
             await interaction.respond("The price, distance and amount must all be more than 0.", ephemeral=True)
             return
+        now = utc_now()
+        timestamp = now if date is None else parse_refuel_date(date)
+        if timestamp is None or timestamp > now:
+            await interaction.respond("The date must be a day that has passed, written as YYYY-MM-DD.", ephemeral=True)
+            return
         with Session(self.bind) as session:
-            session.add(CarFuels(user_id=int(user.id), amount=amount, distance=distance, price=price))
+            session.add(CarFuels(user_id=int(user.id), amount=amount, distance=distance, price=price, timestamp=timestamp))
             session.commit()
         await interaction.respond(
             f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {distance / amount:.2f} distance per unit.\n"

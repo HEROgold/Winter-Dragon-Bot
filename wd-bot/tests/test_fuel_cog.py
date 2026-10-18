@@ -6,11 +6,12 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session
-from wd_db.extension.lifecycle import LIFECYCLE_COLUMNS, alive, soft_delete
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import LIFECYCLE_COLUMNS, alive, soft_delete
 from wd_discord.gateway.events import InteractionDataOption
 
 from winter_dragon.cogs.fuel import CarFuels, Fuel, render_efficiency_graph
@@ -68,6 +69,33 @@ async def test_add_refuses_non_positive_values(
     with Session(engine) as session:
         assert session.exec(alive(CarFuels)).all() == []
     assert "more than 0" in discord_client.interaction_responses()[0]["data"]["content"]
+
+
+async def test_add_backdates_a_refuel_to_the_given_day(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+) -> None:
+    options = [*_numbers(price=72.5, distance=600, amount=40), InteractionDataOption(name="date", type=3, value="2026-01-15")]
+    await Fuel.add.invoke(_cog(engine), make_interaction("fuel"), options)
+
+    with Session(engine) as session:
+        (refuel,) = session.exec(alive(CarFuels)).all()
+    assert refuel.timestamp == datetime(2026, 1, 15, tzinfo=UTC)
+
+
+@pytest.mark.parametrize("day", ["15-01-2026", "yesterday", "9999-01-01"])
+async def test_add_refuses_a_bad_or_future_date(
+    day: str,
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    options = [*_numbers(price=72.5, distance=600, amount=40), InteractionDataOption(name="date", type=3, value=day)]
+    await Fuel.add.invoke(_cog(engine), make_interaction("fuel"), options)
+
+    with Session(engine) as session:
+        assert session.exec(alive(CarFuels)).all() == []
+    assert "YYYY-MM-DD" in discord_client.interaction_responses()[0]["data"]["content"]
 
 
 async def test_efficiency_without_refuels_says_so(
