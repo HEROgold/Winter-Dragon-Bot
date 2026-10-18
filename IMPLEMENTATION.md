@@ -56,16 +56,9 @@ GET    /api/user/{discord_id}/audit     — Deletion audit trail
 ✅ **Delete**: Soft delete with audit trail  
 ✅ **Styling**: Inherited gold/dark theme from existing counter app  
 
-## TODO (Implementation Gaps)
+## Open work
 
-These are placeholders awaiting real implementation:
-
-1. **Discord OAuth**: Replace mock token exchange with real Discord API calls
-2. **Database Integration**: Connect API endpoints to actual ORM queries (SQLModel)
-3. **Authentication**: Implement JWT or session-based auth verification
-4. **Soft Delete Migration**: Add `deleted_at` timestamps to user-scoped tables
-5. **Audit Logging**: Wire deletion requests to `UserDataDeletion` table
-6. **Testing**: Add e2e tests for OAuth callback → delete flow
+The files listed above aren't on `v2`. The dashboard and its gaps (real OAuth, ORM-backed endpoints, auth, soft delete, audit logging, e2e tests) are tracked in #238.
 
 ## Local Development
 

@@ -836,6 +836,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "sentry-sdk" },
     { name = "wd-config" },
+    { name = "wd-errors" },
     { name = "websockets" },
 ]
 
@@ -852,6 +853,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "sentry-sdk", specifier = ">=2.61.0" },
     { name = "wd-config", editable = "wd-config" },
+    { name = "wd-errors", editable = "wd-errors" },
     { name = "websockets", specifier = ">=16.0" },
 ]
 

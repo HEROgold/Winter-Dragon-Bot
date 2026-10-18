@@ -5,4 +5,4 @@ keeps the future extension-management utilities colocated until the admin
 dashboard is implemented.
 """
 
-# TODO(Herogold, #1): Build an admin-only web dashboard for bot management.  # noqa: FIX002
+# TODO(Herogold, #238): Build an admin-only web dashboard for bot management.  # noqa: FIX002

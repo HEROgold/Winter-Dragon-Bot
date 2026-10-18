@@ -18,11 +18,11 @@ class Infractions(GroupCog, auto_load=True):
     (Infractions) Ban users when X amount have reached. (Per guild configurable).
     """
 
-    # TODO(Herogold, #8):
+    # TODO(Herogold, #237):
     #     Add automod rules to keep track of.
-    # TODO(Herogold, #9):
+    # TODO(Herogold, #237):
     #     On automod trigger, add infraction (delete old ones).
-    # TODO(Herogold, #10):
+    # TODO(Herogold, #237):
     #     Make rules that can trigger an infraction.
     #     IE: Spamming the same message in more then X amount of channels
 
