@@ -5,15 +5,16 @@ from __future__ import annotations
 from datetime import UTC, datetime
 lazy import asyncio
 lazy from io import BytesIO
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field, Session, select
+from sqlmodel import Field, Session
 from wd_db.extension.columns import AwareDateTime
-from wd_db.extension.model import SQLModel
+from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from matplotlib.dates import DateFormatter, date2num
 lazy from matplotlib.figure import Figure
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_discord.files import File
 
 lazy from winter_dragon.config import CogConfig
@@ -36,8 +37,10 @@ class FuelSettings:
     """The file name the efficiency graph is attached as."""
 
 
-class CarFuels(SQLModel, table=True):
-    """One refuel a user logged; ``user_id`` is their Discord user ID."""
+class CarFuels(LifecycleModel, table=True):
+    """One refuel a user logged; ``user_id`` is their Discord user ID, and they own it."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id")
 
     user_id: int = Field(sa_type=BigInteger, index=True)
     amount: float
@@ -112,7 +115,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         if user is None:
             return
         with Session(self.bind) as session:
-            refuels = session.exec(select(CarFuels).where(CarFuels.user_id == int(user.id))).all()
+            refuels = session.exec(owned_by(CarFuels, member=int(user.id))).all()
         if not refuels:
             await interaction.respond(f"You haven't logged a refuel yet. Use {self.mention(self.add)} first.", ephemeral=True)
             return

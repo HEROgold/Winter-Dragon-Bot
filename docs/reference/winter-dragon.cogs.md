@@ -117,10 +117,11 @@ Settings for /fuel, in its ``cogs.ini`` section.
 
 - attributes: graph_width_inches, graph_height_inches, graph_filename
 
-### `class CarFuels(SQLModel, table=True)`
-One refuel a user logged; ``user_id`` is their Discord user ID.
+### `class CarFuels(LifecycleModel, table=True)`
+One refuel a user logged; ``user_id`` is their Discord user ID, and they own it.
 
-- fields: user_id: int, amount: float, distance: float, price: float, timestamp: datetime
+- fields: ownership: ClassVar[Ownership], user_id: int, amount: float, distance: float, price: float, timestamp:
+  datetime
 - `@property efficiency -> float` — Distance driven per unit of fuel.
 
 ### `class Fuel(GroupCog, name='fuel', description="Track your car's refuels and fuel efficiency")`
