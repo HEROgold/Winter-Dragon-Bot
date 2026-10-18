@@ -55,6 +55,15 @@ class LifecycleCard(LifecycleModel, table=True):
     text: str
 
 
+class LifecycleVote(LifecycleModel, table=True):
+    """A member's vote on a card: owned by its member, and through the card by the board's guild."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="voter_id", through=Through("card_id", LifecycleCard))
+
+    card_id: int = Field(sa_type=BigInteger, foreign_key="lifecyclecard.id")
+    voter_id: int = Field(sa_type=BigInteger)
+
+
 class LifecycleSale(LifecycleModel, table=True):
     """Shared data, owned by no one."""
 
@@ -143,6 +152,18 @@ def test_ownership_through_two_parents_resolves_to_the_top_owner(engine: Engine)
     with Session(engine) as session:
         assert [card.text for card in session.exec(owned_by(LifecycleCard, member=3))] == ["my card"]
         assert [card.text for card in session.exec(owned_by(LifecycleCard, guild=2))] == ["their card"]
+
+
+def test_owned_by_finds_a_member_on_the_row_and_a_guild_through_its_parents(engine: Engine) -> None:
+    board_id = _stored(engine, _board(guild_id=2, owner_id=3))
+    list_id = _stored(engine, LifecycleList(board_id=board_id))
+    card_id = _stored(engine, LifecycleCard(list_id=list_id, text="card"))
+    _stored(engine, LifecycleVote(card_id=card_id, voter_id=9))
+
+    with Session(engine) as session:
+        assert [vote.voter_id for vote in session.exec(owned_by(LifecycleVote, member=9, guild=2))] == [9]
+        assert session.exec(owned_by(LifecycleVote, member=3)).all() == []  # the board's owner didn't vote
+        assert session.exec(owned_by(LifecycleVote, guild=1)).all() == []
 
 
 def test_owned_by_matches_nothing_for_an_undeclared_owner(engine: Engine) -> None:

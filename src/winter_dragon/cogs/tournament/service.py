@@ -8,7 +8,8 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
 lazy from wd_errors import Refused
 
 lazy from .bracket import first_round, next_match, round_count, split_into_teams, valid_options
@@ -32,40 +33,47 @@ if TYPE_CHECKING:
     lazy from collections.abc import Sequence
     lazy from random import Random
 
+    lazy from wd_db.extension.lifecycle import LifecycleModel
+
+
+def alive_record[M: LifecycleModel](session: Session, model: type[M], record_id: int | None) -> M | None:
+    """Return the ``model`` row ``record_id``, unless there's none or it's soft-deleted."""
+    return session.exec(alive(model).where(model.id == record_id)).first()
+
 
 def active_tournament(session: Session, guild_id: int) -> Tournament | None:
     """Return the guild's tournament that isn't over, if it has one."""
-    query = select(Tournament).where(Tournament.guild_id == guild_id, col(Tournament.status).in_(ACTIVE))
+    query = alive(Tournament).where(Tournament.guild_id == guild_id, col(Tournament.status).in_(ACTIVE))
     return session.exec(query).first()
 
 
 def players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]:
     """Return everyone signed up for the tournament, in sign-up order."""
-    query = select(TournamentPlayer).where(TournamentPlayer.tournament_id == tournament_id).order_by(col(TournamentPlayer.id))
+    query = alive(TournamentPlayer).where(TournamentPlayer.tournament_id == tournament_id).order_by(col(TournamentPlayer.id))
     return list(session.exec(query))
 
 
 def player_of(session: Session, tournament_id: int, user_id: int) -> TournamentPlayer | None:
     """Return the user's sign-up for the tournament, if any."""
-    query = select(TournamentPlayer).where(TournamentPlayer.tournament_id == tournament_id, TournamentPlayer.user_id == user_id)
+    query = alive(TournamentPlayer).where(TournamentPlayer.tournament_id == tournament_id, TournamentPlayer.user_id == user_id)
     return session.exec(query).first()
 
 
 def teams_of(session: Session, tournament_id: int) -> list[TournamentTeam]:
     """Return the tournament's teams, in the order they were formed."""
-    query = select(TournamentTeam).where(TournamentTeam.tournament_id == tournament_id).order_by(col(TournamentTeam.id))
+    query = alive(TournamentTeam).where(TournamentTeam.tournament_id == tournament_id).order_by(col(TournamentTeam.id))
     return list(session.exec(query))
 
 
 def roster(session: Session, team_id: int) -> list[int]:
     """Return the user IDs of the team's players."""
-    return [player.user_id for player in session.exec(select(TournamentPlayer).where(TournamentPlayer.team_id == team_id))]
+    return [player.user_id for player in session.exec(alive(TournamentPlayer).where(TournamentPlayer.team_id == team_id))]
 
 
 def matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]:
     """Return the tournament's matches, round by round, top to bottom."""
     query = (
-        select(TournamentMatch)
+        alive(TournamentMatch)
         .where(TournamentMatch.tournament_id == tournament_id)
         .order_by(col(TournamentMatch.round), col(TournamentMatch.slot))
     )
@@ -94,7 +102,7 @@ def sign_up(session: Session, tournament: Tournament, user_id: int) -> None:
     if player_of(session, _id(tournament), user_id) is not None:
         msg = "You're signed up already."
         raise Refused(msg)
-    session.add(TournamentPlayer(tournament_id=_id(tournament), user_id=user_id))
+    create_or_restore(session, TournamentPlayer(tournament_id=_id(tournament), user_id=user_id))
 
 
 def withdraw(session: Session, tournament: Tournament, user_id: int) -> None:
@@ -106,13 +114,13 @@ def withdraw(session: Session, tournament: Tournament, user_id: int) -> None:
     if player is None:
         msg = "You aren't signed up."
         raise Refused(msg)
-    team = None if player.team_id is None else session.get(TournamentTeam, player.team_id)
+    team = alive_record(session, TournamentTeam, player.team_id)
     if team is not None and team.captain_id == user_id:
-        for teammate in session.exec(select(TournamentPlayer).where(TournamentPlayer.team_id == team.id)):
-            session.delete(teammate)
-        session.delete(team)
+        for teammate in session.exec(alive(TournamentPlayer).where(TournamentPlayer.team_id == team.id)).all():
+            soft_delete(session, teammate)
+        soft_delete(session, team)
     else:
-        session.delete(player)
+        soft_delete(session, player)
 
 
 def create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> None:
@@ -132,11 +140,11 @@ def create_team(session: Session, tournament: Tournament, captain_id: int, name:
     team = TournamentTeam(tournament_id=_id(tournament), name=name, captain_id=captain_id)
     session.add(team)
     session.flush()
-    session.add(TournamentPlayer(tournament_id=_id(tournament), user_id=captain_id, team_id=team.id))
+    create_or_restore(session, TournamentPlayer(tournament_id=_id(tournament), user_id=captain_id, team_id=team.id))
 
 
 def _captained(session: Session, tournament: Tournament, captain_id: int) -> TournamentTeam | None:
-    query = select(TournamentTeam).where(TournamentTeam.tournament_id == tournament.id, TournamentTeam.captain_id == captain_id)
+    query = alive(TournamentTeam).where(TournamentTeam.tournament_id == tournament.id, TournamentTeam.captain_id == captain_id)
     return session.exec(query).first()
 
 
@@ -155,7 +163,7 @@ def add_to_team(session: Session, tournament: Tournament, captain_id: int, user_
     if len(roster(session, _id(team))) >= tournament.team_size:
         msg = f"Your team is full: teams have {tournament.team_size} players."
         raise Refused(msg)
-    session.add(TournamentPlayer(tournament_id=_id(tournament), user_id=user_id, team_id=team.id))
+    create_or_restore(session, TournamentPlayer(tournament_id=_id(tournament), user_id=user_id, team_id=team.id))
 
 
 def remove_from_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None:
@@ -171,7 +179,7 @@ def remove_from_team(session: Session, tournament: Tournament, captain_id: int, 
     if player is None or player.team_id != team.id or user_id == captain_id:
         msg = "They aren't a player you can remove from your team."
         raise Refused(msg)
-    session.delete(player)
+    soft_delete(session, player)
 
 
 # --- The bracket -----------------------------------------------------------------------------------------------------
@@ -222,7 +230,7 @@ def _draw_teams(session: Session, tournament: Tournament, rng: Random) -> None:
 
 
 def _match_at(session: Session, tournament_id: int, round_: int, slot: int) -> TournamentMatch:
-    query = select(TournamentMatch).where(
+    query = alive(TournamentMatch).where(
         TournamentMatch.tournament_id == tournament_id,
         TournamentMatch.round == round_,
         TournamentMatch.slot == slot,
@@ -284,9 +292,23 @@ def report(
 
 
 def cancel(session: Session, tournament: Tournament) -> None:
-    """Call the tournament off."""
+    """Call the tournament off: soft-delete it and everything in it, so none of it is seen again."""
+    tournament_id = _id(tournament)
+    match_ids = [_id(match) for match in matches_of(session, tournament_id)]
+    votes = list(session.exec(alive(MatchVote).where(col(MatchVote.match_id).in_(match_ids))))
+    vote_ids = [_id(vote) for vote in votes]
+    rows: list[LifecycleModel] = [
+        *session.exec(alive(MatchBallot).where(col(MatchBallot.vote_id).in_(vote_ids))),
+        *votes,
+        *session.exec(alive(DraftChoice).where(col(DraftChoice.match_id).in_(match_ids))),
+        *session.exec(alive(TournamentMatch).where(TournamentMatch.tournament_id == tournament_id)),
+        *players_of(session, tournament_id),
+        *teams_of(session, tournament_id),
+    ]
+    for row in rows:
+        soft_delete(session, row)
     tournament.status = TournamentStatus.CANCELLED
-    session.add(tournament)
+    soft_delete(session, tournament)
 
 
 # --- Drafts and votes ------------------------------------------------------------------------------------------------
@@ -296,7 +318,7 @@ def team_in_match(session: Session, match: TournamentMatch, user_id: int) -> Tou
     """Return the team ``user_id`` plays for in ``match``, if they play in it."""
     for team_id in (match.team_a_id, match.team_b_id):
         if team_id is not None and user_id in roster(session, team_id):
-            return session.get(TournamentTeam, team_id)
+            return alive_record(session, TournamentTeam, team_id)
     return None
 
 
@@ -310,7 +332,7 @@ def draft(session: Session, match: TournamentMatch, captain_id: int, kind: Draft
     if team is None or team.captain_id != captain_id:
         msg = f"Only a captain playing this match can {kind.value}."
         raise Refused(msg)
-    taken = session.exec(select(DraftChoice).where(DraftChoice.match_id == match.id, DraftChoice.value == value)).first()
+    taken = session.exec(alive(DraftChoice).where(DraftChoice.match_id == match.id, DraftChoice.value == value)).first()
     if taken is not None:
         msg = f"{value} is {'banned' if taken.kind is DraftKind.BAN else 'picked'} already."
         raise Refused(msg)
@@ -319,7 +341,7 @@ def draft(session: Session, match: TournamentMatch, captain_id: int, kind: Draft
 
 def drafts_of(session: Session, match_id: int) -> list[DraftChoice]:
     """Return the bans and picks made in the match, in the order they were made."""
-    return list(session.exec(select(DraftChoice).where(DraftChoice.match_id == match_id).order_by(col(DraftChoice.id))))
+    return list(session.exec(alive(DraftChoice).where(DraftChoice.match_id == match_id).order_by(col(DraftChoice.id))))
 
 
 def open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote:
@@ -341,16 +363,18 @@ def cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> None:
     if not vote.open:
         msg = "This vote is closed."
         raise Refused(msg)
-    match = session.get(TournamentMatch, vote.match_id)
+    match = alive_record(session, TournamentMatch, vote.match_id)
     if match is None or team_in_match(session, match, user_id) is None:
         msg = "Only the players of this match can vote."
         raise Refused(msg)
-    ballot = session.exec(select(MatchBallot).where(MatchBallot.vote_id == vote.id, MatchBallot.user_id == user_id)).first()
-    ballot = ballot or MatchBallot(vote_id=_id(vote), user_id=user_id, choice=choice)
+    ballot = session.exec(alive(MatchBallot).where(MatchBallot.vote_id == vote.id, MatchBallot.user_id == user_id)).first()
+    if ballot is None:
+        create_or_restore(session, MatchBallot(vote_id=_id(vote), user_id=user_id, choice=choice))
+        return
     ballot.choice = choice
     session.add(ballot)
 
 
 def choices_of(session: Session, vote_id: int) -> list[int]:
     """Return every answer given to the vote."""
-    return [ballot.choice for ballot in session.exec(select(MatchBallot).where(MatchBallot.vote_id == vote_id))]
+    return [ballot.choice for ballot in session.exec(alive(MatchBallot).where(MatchBallot.vote_id == vote_id))]

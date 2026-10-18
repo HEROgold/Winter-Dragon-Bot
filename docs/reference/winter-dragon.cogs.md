@@ -544,7 +544,7 @@ The /tournament command group: sign-up, teams, a single-elimination bracket, mat
 
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
-- `stored[M](session: Session, model: type[M], record_id: int, gone: str) -> M` — Return the ``model`` stored as ``record_id``; refuse with ``gone`` when there's none.
+- `stored[M: LifecycleModel](session: Session, model: type[M], record_id: int, gone: str) -> M` — Return the alive ``model`` stored as ``record_id``; refuse with ``gone`` when there's none.
 - `team_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
 - `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one.
 
@@ -606,46 +606,49 @@ Whether a team bans something from the match, or picks it.
 
 - attributes: BAN, PICK
 
-### `class Tournament(SQLModel, table=True)`
-A guild's tournament, run in one channel by its organiser.
+### `class Tournament(LifecycleModel, table=True)`
+A guild's tournament, run in one channel by its organiser; the guild owns it and everything in it.
 
-- fields: guild_id: int, channel_id: int, organiser_id: int, name: str, mode: TeamMode, team_size: int, status:
-  TournamentStatus, winner_team_id: int | None
+- fields: ownership: ClassVar[Ownership], guild_id: int, channel_id: int, organiser_id: int, name: str, mode: TeamMode,
+  team_size: int, status: TournamentStatus, winner_team_id: int | None
 
-### `class TournamentTeam(SQLModel, table=True)`
+### `class TournamentTeam(LifecycleModel, table=True)`
 A team in a tournament; its captain bans and picks for it.
 
-- fields: tournament_id: int, name: str, captain_id: int
+- fields: ownership: ClassVar[Ownership], tournament_id: int, name: str, captain_id: int
 
-### `class TournamentPlayer(SQLModel, table=True)`
+### `class TournamentPlayer(LifecycleModel, table=True)`
 A player signed up for a tournament, and the team they play in once they have one.
 
-- fields: tournament_id: int, user_id: int, team_id: int | None
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], tournament_id: int, user_id: int,
+  team_id: int | None
 
-### `class TournamentMatch(SQLModel, table=True)`
+### `class TournamentMatch(LifecycleModel, table=True)`
 One match of a tournament's single-elimination bracket; round 0 is the first.
 
-- fields: tournament_id: int, round: int, slot: int, team_a_id: int | None, team_b_id: int | None, phase: MatchPhase,
-  winner_id: int | None
+- fields: ownership: ClassVar[Ownership], tournament_id: int, round: int, slot: int, team_a_id: int | None, team_b_id:
+  int | None, phase: MatchPhase, winner_id: int | None
 
-### `class DraftChoice(SQLModel, table=True)`
+### `class DraftChoice(LifecycleModel, table=True)`
 Something a team banned from, or picked for, a match.
 
-- fields: match_id: int, team_id: int, kind: DraftKind, value: str
+- fields: ownership: ClassVar[Ownership], match_id: int, team_id: int, kind: DraftKind, value: str
 
-### `class MatchVote(SQLModel, table=True)`
+### `class MatchVote(LifecycleModel, table=True)`
 A question the players of a match vote on, like which map to play.
 
-- fields: match_id: int, question: str, options: str, open: bool
+- fields: ownership: ClassVar[Ownership], match_id: int, question: str, options: str, open: bool
 
-### `class MatchBallot(SQLModel, table=True)`
+### `class MatchBallot(LifecycleModel, table=True)`
 One player's answer to a vote; voting again changes it.
 
-- fields: vote_id: int, user_id: int, choice: int
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], vote_id: int, user_id: int, choice:
+  int
 
 ## `winter_dragon.cogs.tournament.service` — `src/winter_dragon/cogs/tournament/service.py`
 What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
+- `alive_record[M: LifecycleModel](session: Session, model: type[M], record_id: int | None) -> M | None` — Return the ``model`` row ``record_id``, unless there's none or it's soft-deleted.
 - `active_tournament(session: Session, guild_id: int) -> Tournament | None` — Return the guild's tournament that isn't over, if it has one.
 - `players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]` — Return everyone signed up for the tournament, in sign-up order.
 - `player_of(session: Session, tournament_id: int, user_id: int) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
@@ -660,7 +663,7 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `start(session: Session, tournament: Tournament, rng: Random) -> None` — Form the teams of a solo tournament, then lay out the bracket and give the byes their wins.
 - `advance(session: Session, match: TournamentMatch) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
 - `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
-- `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off.
+- `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
 - `team_in_match(session: Session, match: TournamentMatch, user_id: int) -> TournamentTeam | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
 - `draft(session: Session, match: TournamentMatch, captain_id: int, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
 - `drafts_of(session: Session, match_id: int) -> list[DraftChoice]` — Return the bans and picks made in the match, in the order they were made.

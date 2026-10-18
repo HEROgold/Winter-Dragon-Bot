@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 lazy from enum import StrEnum
+lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field
-from wd_db.extension.model import SQLModel
+from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
 
 
 class TeamMode(StrEnum):
@@ -62,8 +63,10 @@ ACTIVE = (TournamentStatus.SIGNUP, TournamentStatus.RUNNING)
 """The statuses of a tournament that isn't over; a guild has at most one."""
 
 
-class Tournament(SQLModel, table=True):
-    """A guild's tournament, run in one channel by its organiser."""
+class Tournament(LifecycleModel, table=True):
+    """A guild's tournament, run in one channel by its organiser; the guild owns it and everything in it."""
+
+    ownership: ClassVar[Ownership] = Ownership(guild="guild_id")
 
     guild_id: int = Field(sa_type=BigInteger, index=True)
     channel_id: int = Field(sa_type=BigInteger)
@@ -75,24 +78,31 @@ class Tournament(SQLModel, table=True):
     winner_team_id: int | None = None
 
 
-class TournamentTeam(SQLModel, table=True):
+class TournamentTeam(LifecycleModel, table=True):
     """A team in a tournament; its captain bans and picks for it."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
 
     tournament_id: int = Field(index=True)
     name: str
     captain_id: int = Field(sa_type=BigInteger)
 
 
-class TournamentPlayer(SQLModel, table=True):
+class TournamentPlayer(LifecycleModel, table=True):
     """A player signed up for a tournament, and the team they play in once they have one."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("tournament_id", Tournament))
+    natural_key: ClassVar[tuple[str, ...]] = ("tournament_id", "user_id")
 
     tournament_id: int = Field(index=True)
     user_id: int = Field(sa_type=BigInteger)
     team_id: int | None = None
 
 
-class TournamentMatch(SQLModel, table=True):
+class TournamentMatch(LifecycleModel, table=True):
     """One match of a tournament's single-elimination bracket; round 0 is the first."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
 
     tournament_id: int = Field(index=True)
     round: int
@@ -104,8 +114,10 @@ class TournamentMatch(SQLModel, table=True):
     winner_id: int | None = None
 
 
-class DraftChoice(SQLModel, table=True):
+class DraftChoice(LifecycleModel, table=True):
     """Something a team banned from, or picked for, a match."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
 
     match_id: int = Field(index=True)
     team_id: int
@@ -113,8 +125,10 @@ class DraftChoice(SQLModel, table=True):
     value: str
 
 
-class MatchVote(SQLModel, table=True):
+class MatchVote(LifecycleModel, table=True):
     """A question the players of a match vote on, like which map to play."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
 
     match_id: int = Field(index=True)
     question: str
@@ -123,8 +137,11 @@ class MatchVote(SQLModel, table=True):
     open: bool = True
 
 
-class MatchBallot(SQLModel, table=True):
+class MatchBallot(LifecycleModel, table=True):
     """One player's answer to a vote; voting again changes it."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("vote_id", MatchVote))
+    natural_key: ClassVar[tuple[str, ...]] = ("vote_id", "user_id")
 
     vote_id: int = Field(index=True)
     user_id: int = Field(sa_type=BigInteger)

@@ -7,8 +7,10 @@ from random import Random
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import alive, owned_by
+from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.permissions import Permissions
 from wd_errors import Refused
 
@@ -16,9 +18,11 @@ from winter_dragon.cogs.tournament import service
 from winter_dragon.cogs.tournament.bracket import first_round, parse_options, round_name, split_into_teams, tally
 from winter_dragon.cogs.tournament.cog import Tournaments
 from winter_dragon.cogs.tournament.models import (
+    DraftChoice,
     DraftKind,
     MatchBallot,
     MatchPhase,
+    MatchVote,
     TeamMode,
     Tournament,
     TournamentMatch,
@@ -288,7 +292,7 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     labels = [button["label"] for button in data["components"][0]["components"]]  # pyright: ignore[reportIndexIssue]
     assert labels == ["Join", "Leave", "Participants"]
     with Session(engine) as session:
-        assert session.exec(select(Tournament)).one().organiser_id == ORGANISER
+        assert session.exec(alive(Tournament)).one().organiser_id == ORGANISER
 
 
 async def test_the_join_button_signs_up_and_refreshes_the_card(
@@ -308,7 +312,7 @@ async def test_the_join_button_signs_up_and_refreshes_the_card(
     assert update["type"] == 7  # UPDATE_MESSAGE
     assert update["data"]["embeds"][0]["fields"][0] == {"name": "Players (1)", "value": "<@3>", "inline": False}  # pyright: ignore[reportIndexIssue]
     with Session(engine) as session:
-        assert session.exec(select(TournamentPlayer)).one().user_id == ORGANISER
+        assert session.exec(alive(TournamentPlayer)).one().user_id == ORGANISER
 
 
 async def test_the_organiser_reports_the_final_winner_from_the_match_card(
@@ -335,7 +339,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
     assert followup["content"] == "🏆 **Cup** is over!"
     with Session(engine) as session:
-        assert session.exec(select(Tournament)).one().winner_team_id == winner
+        assert session.exec(alive(Tournament)).one().winner_team_id == winner
 
 
 async def test_only_match_players_can_use_the_vote_buttons(
@@ -359,7 +363,7 @@ async def test_only_match_players_can_use_the_vote_buttons(
 
     assert _response(discord_client)["data"]["content"] == "Only the players of this match can vote."  # pyright: ignore[reportIndexIssue]
     with Session(engine) as session:
-        assert session.exec(select(MatchBallot)).all() == []
+        assert session.exec(alive(MatchBallot)).all() == []
 
 
 @pytest.mark.parametrize("captains", [False, True])
@@ -394,3 +398,75 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
     (embed,) = data["embeds"]  # pyright: ignore[reportIndexIssue]
     assert embed["title"] == "🏆 Cup: 1 participant"
     assert embed["description"] == "**Reds** (1/2): <@5>"
+
+
+def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, int]:
+    """Start a two-player solo tournament whose final had a ban and a vote; return it, the final and a captain."""
+    tournament = _solo(session, players=2)
+    service.start(session, tournament, Random(0))
+    (final,) = _round(session, tournament, 0)
+    final.phase = MatchPhase.BAN
+    (captain,) = service.roster(session, final.team_a_id or 0)
+    service.draft(session, final, captain, DraftKind.BAN, "Dust")
+    vote = service.open_vote(session, final, "Map?", ["Mirage", "Nuke"])
+    service.cast(session, vote, captain, 0)
+    session.commit()
+    return tournament, final, captain
+
+
+def test_drafts_votes_and_ballots_belong_to_the_tournaments_guild(engine: Engine) -> None:
+    with Session(engine) as session:
+        _, _, captain = _played_final(session)
+
+        for model in (DraftChoice, MatchVote, MatchBallot):
+            assert len(session.exec(owned_by(model, guild=GUILD_ID)).all()) == 1
+            assert session.exec(owned_by(model, guild=GUILD_ID + 1)).all() == []
+        assert [ballot.user_id for ballot in session.exec(owned_by(MatchBallot, member=captain, guild=GUILD_ID))] == [captain]
+        assert [player.user_id for player in session.exec(owned_by(TournamentPlayer, member=captain))] == [captain]
+
+
+async def test_join_leave_join_signs_up_once(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament_id = _tournament(session, team_size=2).id or 0
+    cog = _cog(engine, discord_client)
+
+    for command in (Tournaments.join, Tournaments.leave, Tournaments.join):
+        await command.invoke(cog, make_interaction("tournament", guild_id=GUILD_ID), [])
+
+    with Session(engine) as session:
+        assert [player.user_id for player in service.players_of(session, tournament_id)] == [ORGANISER]
+
+
+async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament, _, _ = _played_final(session)
+        tournament_id = tournament.id or 0
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", guild_id=GUILD_ID), [])
+
+    with Session(engine) as session:
+        assert service.active_tournament(session, GUILD_ID) is None
+        assert service.players_of(session, tournament_id) == []
+        assert service.teams_of(session, tournament_id) == []
+        assert service.matches_of(session, tournament_id) == []
+        for model in (Tournament, DraftChoice, MatchVote, MatchBallot):
+            assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
+    options = [
+        InteractionDataOption(name="name", type=3, value="Rematch"),
+        InteractionDataOption(name="team_size", type=4, value=1),
+    ]
+    interaction = make_interaction(
+        "tournament", options=options, guild_id=GUILD_ID, channel_id=20, permissions=Permissions.MANAGE_GUILD
+    )
+    await Tournaments.create.invoke(cog, interaction, options)
+    with Session(engine) as session:
+        assert [found.name for found in session.exec(alive(Tournament))] == ["Rematch"]

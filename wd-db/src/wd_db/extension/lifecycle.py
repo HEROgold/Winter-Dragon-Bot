@@ -147,16 +147,25 @@ def _same_key[M: LifecycleModel](session: Session, row: M) -> M | None:
 def owned_by[M: LifecycleModel](model: type[M], *, member: int | None = None, guild: int | None = None) -> SelectOfScalar[M]:
     """Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.
 
-    Matches nothing when the top of the chain declares no owner of the asked kind.
+    Each kind of owner is the column of the nearest table in the chain that declares one, so a row can be owned by
+    its own member and, through its parent, by a guild. Matches nothing when no table in the chain declares an owner
+    of the asked kind.
     """
     statement = alive(model)
-    owner: type[LifecycleModel] = model
-    while (through := owner.ownership.through) is not None:
-        statement = statement.join(through.parent, getattr(owner, through.column) == through.parent.id)
-        owner = through.parent
-    for column, value in ((owner.ownership.member, member), (owner.ownership.guild, guild)):
+    level: type[LifecycleModel] = model
+    member_column = guild_column = None
+    while True:
+        if member_column is None and level.ownership.member is not None:
+            member_column = getattr(level, level.ownership.member)
+        if guild_column is None and level.ownership.guild is not None:
+            guild_column = getattr(level, level.ownership.guild)
+        if (through := level.ownership.through) is None:
+            break
+        statement = statement.join(through.parent, getattr(level, through.column) == through.parent.id)
+        level = through.parent
+    for column, value in ((member_column, member), (guild_column, guild)):
         if value is not None:
-            statement = statement.where(false() if column is None else getattr(owner, column) == value)
+            statement = statement.where(false() if column is None else column == value)
     return statement
 
 
