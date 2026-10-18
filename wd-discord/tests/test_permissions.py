@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 lazy from wd_discord import ChannelType, Permissions
+lazy from wd_discord.permissions import REQUIRES_2FA, TIMED_OUT_PERMISSIONS
 
 
 def test_permission_bit_values() -> None:
@@ -52,3 +53,14 @@ def test_permissions_all_contains_every_member() -> None:
     all_permissions = Permissions.all()
     for permission in Permissions:
         assert permission in all_permissions
+
+
+def test_requires_2fa_matches_discords_starred_permissions() -> None:
+    """The 11 permissions Discord's table marks with ``*``: owner 2FA needed on a 2FA guild."""
+    assert len(REQUIRES_2FA) == 11
+    assert Permissions.ADMINISTRATOR in REQUIRES_2FA
+    assert Permissions.SEND_MESSAGES not in REQUIRES_2FA
+
+
+def test_timed_out_members_keep_only_viewing_and_history() -> None:
+    assert TIMED_OUT_PERMISSIONS == Permissions.VIEW_CHANNEL | Permissions.READ_MESSAGE_HISTORY

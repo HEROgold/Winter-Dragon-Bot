@@ -90,7 +90,7 @@ Admin command group for inspecting and forcing the application-command sync stat
 Admin ``/bot-commands`` group for inspecting/managing application-command sync.
 
 - `@Cog.command async list_commands(interaction: CommandInteraction) -> None` — Show every registered command's synced/pending state.
-- `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it.
+- `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it; owners only.
 
 ## `winter_dragon.cogs.channel_utils` — `src/winter_dragon/cogs/channel_utils.py`
 The /channel-utils command group: delete a whole category, and lock or unlock a channel for a role or member.

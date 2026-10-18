@@ -328,6 +328,7 @@ The permissions ``member`` holds in ``guild``, and in each of its channels.
 ## `wd_discord.permissions` — `wd-discord/src/wd_discord/permissions.py`
 Discord Permissions.
 
+- module names: REQUIRES_2FA, TIMED_OUT_PERMISSIONS
 - `type PermissionsField = Permissions`
 
 ### `class ChannelType(IntEnum)`

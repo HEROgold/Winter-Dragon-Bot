@@ -67,10 +67,6 @@ class Permissions(IntFlag):
     https://docs.discord.com/developers/topics/permissions#permissions-bitwise-permission-flags
     """
 
-    # TODO(HEROgold):
-    # * These permissions require the owner account to use two-factor authentication when used on a guild that has server-wide 2FA enabled.
-    # ** See Permissions for Timed Out Members to understand how permissions are temporarily modified for timed out users.
-
     def validate_channel(self: IsAnnotated[Permissions, ChannelType] | Permissions, channel: ChannelType) -> bool:
         """Check if the permission is valid for the given channel type."""
         return (not hasattr(self, "__metadata__")) or channel in self.__metadata__
@@ -194,6 +190,27 @@ class Permissions(IntFlag):
     """Allows pinning and unpinning messages  T"""
     BYPASS_SLOWMODE: Annotated[Permissions.BYPASS_SLOWMODE, _CommonChannelTypes] = 1 << 52
     """Allows bypassing slowmode restrictions  T, V, S"""
+
+
+
+REQUIRES_2FA = (
+    Permissions.KICK_MEMBERS
+    | Permissions.BAN_MEMBERS
+    | Permissions.ADMINISTRATOR
+    | Permissions.MANAGE_CHANNELS
+    | Permissions.MANAGE_GUILD
+    | Permissions.MANAGE_MESSAGES
+    | Permissions.MANAGE_ROLES
+    | Permissions.MANAGE_WEBHOOKS
+    | Permissions.MANAGE_GUILD_EXPRESSIONS
+    | Permissions.MANAGE_THREADS
+    | Permissions.VIEW_CREATOR_MONETIZATION_ANALYTICS
+)
+"""Permissions that need the bot owner's account to use 2FA when used in a guild with server-wide 2FA enabled
+(https://docs.discord.com/developers/topics/permissions#permissions-bitwise-permission-flags)."""
+TIMED_OUT_PERMISSIONS = Permissions.VIEW_CHANNEL | Permissions.READ_MESSAGE_HISTORY
+"""The only permissions a timed-out member keeps; owners and administrators are exempt
+(https://docs.discord.com/developers/topics/permissions#permissions-for-timed-out-members)."""
 
 
 # Discord serialises permission bitfields as decimal STRINGS on the wire; coerce them into the
