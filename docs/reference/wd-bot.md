@@ -5,6 +5,16 @@ Core bot functionality.
 
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
+## `wd_bot.application` — `wd-bot/src/wd_bot/application.py`
+The bot's application ID: asked from Discord once at startup, never configured.
+
+### `class ApplicationId`
+The ID of the application the bot token belongs to, kept for the rest of the process.
+
+- fields: value: ClassVar[Snowflake | None]
+- `@classmethod async load(client: Client) -> Snowflake` — Fetch the ID of ``client``'s application, keep it in :attr:`value` and return it.
+- `@classmethod get() -> Snowflake` — Return the ID :meth:`load` fetched.
+
 ## `wd_bot.auto_reload` — `wd-bot/src/wd_bot/auto_reload.py`
 File-watcher based hot reload utilities for Discord cogs.
 
@@ -273,7 +283,7 @@ Secrets the operator fills in.
 ### `class BotSettings`
 How the bot connects to and presents itself on Discord.
 
-- attributes: application_id, BOT_SCOPE, intents, permissions, auto_reload_extensions, auto_reload_poll_seconds
+- attributes: BOT_SCOPE, intents, permissions, auto_reload_extensions, auto_reload_poll_seconds
 
 ## `wd_bot.signature` — `wd-bot/src/wd_bot/signature.py`
 Derive a stable signature string for a command's callable, used to detect definition drift.

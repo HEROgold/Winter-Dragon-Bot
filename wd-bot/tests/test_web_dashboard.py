@@ -11,8 +11,10 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
+from wd_bot.application import ApplicationId
 from wd_db.extension.lifecycle import alive
 from wd_discord.resources.user import User
+from wd_discord.snowflake import Snowflake
 
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.web import auth, pages, reminders
@@ -46,6 +48,7 @@ def bind(engine: Engine) -> Engine:
 @pytest.fixture
 def client(bind: Engine, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     """Return a browser on the dashboard at :data:`NOW`, in :data:`ZONE`, not signed in."""
+    monkeypatch.setattr(ApplicationId, "value", Snowflake(2))
     monkeypatch.setattr(reminders, "utc_now", lambda: NOW)
     monkeypatch.setattr(pages, "utc_now", lambda: NOW)
     browser = TestClient(create_app(bind=bind, session_secret="test-secret"))

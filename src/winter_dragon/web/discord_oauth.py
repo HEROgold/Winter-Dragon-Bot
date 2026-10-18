@@ -12,7 +12,7 @@ lazy from urllib.parse import urlencode
 from wd_discord.models import DiscordModel
 lazy from herogold.log import getLogger
 lazy from httpxyz import AsyncClient, BasicAuth, RequestError
-lazy from wd_bot.settings import BotSettings
+lazy from wd_bot.application import ApplicationId
 lazy from wd_config.discord import URLS
 lazy from wd_discord.oauth import OAuthScopes
 lazy from wd_discord.resources.user.user import User
@@ -52,7 +52,7 @@ def authorization_url(state: str) -> str:
     query = urlencode(
         {
             "response_type": "code",
-            "client_id": BotSettings.application_id,
+            "client_id": ApplicationId.get(),
             "scope": OAuthScopes.IDENTIFY,
             "state": state,
             "redirect_uri": redirect_uri(),
@@ -89,7 +89,7 @@ async def signed_in_user(code: str) -> User | None:
 
     Exchanges ``code`` for an access token, reads the user it belongs to, then revokes the token.
     """
-    auth = BasicAuth(str(BotSettings.application_id), DashboardSettings.client_secret)
+    auth = BasicAuth(str(ApplicationId.get()), DashboardSettings.client_secret)
     grant = {"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri()}
     async with AsyncClient(timeout=REQUEST_TIMEOUT) as http:
         granted = await _send(http, "POST", "/oauth2/token", data=grant, auth=auth)

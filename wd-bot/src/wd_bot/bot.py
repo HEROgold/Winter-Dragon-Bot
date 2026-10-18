@@ -30,6 +30,7 @@ lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 lazy from wd_types.clock import utc_now
 
+lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.auto_sync import CommandSyncer
 lazy from wd_bot.components import parse_custom_id
 lazy from wd_bot.extensions import ExtensionDiscovery
@@ -77,15 +78,12 @@ def invite_url() -> str:
     """Return the link to invite the bot to a server, with the scopes and permissions in ``bot.ini``.
 
     Raises:
-        ValueError: ``BotSettings.application_id`` isn't set.
+        RuntimeError: :meth:`ApplicationId.load` hasn't run in this process.
 
     """
-    if not BotSettings.application_id:
-        msg = "BotSettings.application_id is not configured."
-        raise ValueError(msg)
     scope = "%20".join(BotSettings.BOT_SCOPE)
     permissions = Permissions(BotSettings.permissions)
-    return f"{URLS().oauth2_authorize}?client_id={BotSettings.application_id}&permissions={int(permissions)}&scope={scope}"
+    return f"{URLS().oauth2_authorize}?client_id={ApplicationId.get()}&permissions={int(permissions)}&scope={scope}"
 
 
 class MissingError(Exception):
@@ -378,11 +376,15 @@ class Bot(LoggerMixin):
                 self.logger.info(t"Loaded cog {extension}")
 
     async def _fetch_gateway_info(self, client: Client) -> GatewayBotInfo:
-        """Check the token works, then fetch the gateway info; raise :class:`StartupError` if either call fails."""
+        """Check the token works, learn the application ID, then fetch the gateway info.
+
+        Raises :class:`StartupError` if any call fails.
+        """
         me = await client.users.me()
         if is_network_error(me):
             msg = "Failed to get current user from Discord API"
             raise StartupError(msg)
+        await ApplicationId.load(client)
         gw_info = await client.get_gateway_bot()
         if not isinstance(gw_info, GatewayBotInfo):
             msg = "Failed to get gateway bot info from Discord API"
@@ -399,7 +401,7 @@ class Bot(LoggerMixin):
         """
         OperatorFiles.check()
         self.loop = asyncio.get_running_loop()
-        async with Client(token, application_id=BotSettings.application_id or None) as client:
+        async with Client(token) as client:
             self.client = client
             gw_info = await self._fetch_gateway_info(client)
             manager = await client.get_shard_manager(gw_info, intents=self.intents)

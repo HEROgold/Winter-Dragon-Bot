@@ -43,7 +43,6 @@ MOVES = (
         BOT_INI,
         to_section="BotSettings",
         keys={
-            "application_id": "application_id",
             "bot_scope": "BOT_SCOPE",
             "auto_reload_extensions": "auto_reload_extensions",
             "auto_reload_poll_seconds": "auto_reload_poll_seconds",
@@ -55,6 +54,7 @@ MOVES = (
         CONFIG_INI,
         drop=(
             "prefix",
+            "application_id",
             "bot_invite",
             "server_ip",
             "website_port",

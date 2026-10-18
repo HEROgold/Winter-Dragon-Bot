@@ -30,8 +30,6 @@ class Tokens:
 class BotSettings:
     """How the bot connects to and presents itself on Discord."""
 
-    application_id = BotConfig(0)
-    """The bot's application ID; ``0`` looks it up from Discord on first use."""
     BOT_SCOPE = BotConfig(List(["bot"]))
     """OAuth2 scopes requested by the bot invite link."""
     intents = BotConfig(int(intents))

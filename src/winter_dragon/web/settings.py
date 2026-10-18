@@ -29,7 +29,7 @@ class DashboardSettings:
     """The address people open the dashboard on; its ``/auth/discord/callback`` must be one of the application's OAuth2
     redirects in the Discord developer portal."""
     client_secret = DashboardConfig(REQUIRED)
-    """The application's OAuth2 client secret; the client ID is ``bot.ini``'s ``application_id``."""
+    """The application's OAuth2 client secret; the client ID is the bot's application ID, fetched at startup."""
     session_secret = DashboardConfig(REQUIRED)
     """The key session cookies are signed with: any long random string. Changing it signs everyone out."""
     session_days = DashboardConfig(14)

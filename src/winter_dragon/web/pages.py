@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, Form
 lazy from fastapi import HTTPException, Request, status
 lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.bot import invite_url
-lazy from wd_bot.settings import BotSettings
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.privacy import RETENTION, DeletionStep, deletion_steps, hide_member_data
@@ -76,7 +76,7 @@ def _your_data(  # noqa: PLR0913 - the deletion section's state is part of what'
 @router.get("/")
 def landing(request: Request) -> Response:
     """Show what the bot does, with the way in: signing in, or adding it to a server."""
-    invite = invite_url() if BotSettings.application_id else None
+    invite = invite_url() if ApplicationId.value is not None else None
     return render(request, "index.html", features=list(features()), invite=invite, bot_name=Settings.bot_name)
 
 

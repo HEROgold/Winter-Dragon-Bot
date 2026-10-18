@@ -13,7 +13,6 @@ BOT_SETTINGS = """
 from wd_bot.settings import BotSettings, Tokens
 result = {
     "token": Tokens.discord_token,
-    "application_id": BotSettings.application_id,
     "scope": list(BotSettings.BOT_SCOPE),
     "auto_reload": BotSettings.auto_reload_extensions,
     "poll": BotSettings.auto_reload_poll_seconds,
@@ -34,7 +33,6 @@ def test_fresh_boot_writes_bot_ini_defaults(boot_config: BootConfig) -> None:
     values = boot.values
 
     assert values["token"] == "!!"
-    assert values["application_id"] == 0
     assert values["scope"] == ["bot"]
     assert values["auto_reload"] is False
     assert values["poll"] == 5
@@ -51,7 +49,7 @@ def test_prewritten_bot_ini_values_resolve(boot_config: BootConfig) -> None:
         files={
             "bot.ini": (
                 "[Tokens]\ndiscord_token = abc\n"
-                "[BotSettings]\napplication_id = 123\nBOT_SCOPE = bot,applications.commands\n"
+                "[BotSettings]\nBOT_SCOPE = bot,applications.commands\n"
                 "auto_reload_extensions = True\nauto_reload_poll_seconds = 2\nintents = 3\npermissions = 8\n"
             ),
         },
@@ -59,7 +57,6 @@ def test_prewritten_bot_ini_values_resolve(boot_config: BootConfig) -> None:
 
     assert boot.values == {
         "token": "abc",
-        "application_id": 123,
         "scope": ["bot", "applications.commands"],
         "auto_reload": True,
         "poll": 2,
@@ -75,7 +72,7 @@ def test_bot_settings_stay_out_of_config_ini(boot_config: BootConfig) -> None:
 
     assert "Tokens" not in config
     assert "BotSettings" not in config
-    assert {"application_id", "BOT_SCOPE", "auto_reload_extensions", "auto_reload_poll_seconds"}.isdisjoint(
+    assert {"BOT_SCOPE", "auto_reload_extensions", "auto_reload_poll_seconds"}.isdisjoint(
         config["Settings"],
     )
 

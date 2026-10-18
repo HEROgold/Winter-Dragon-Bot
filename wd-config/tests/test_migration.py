@@ -116,7 +116,6 @@ def test_legacy_sections_move_to_their_new_files(boot_config: BootConfig) -> Non
     assert boot.files["bot.ini"] == {
         "Tokens": {"discord_token": "fake-token-123"},
         "BotSettings": {
-            "application_id": "1234567890",
             "BOT_SCOPE": "bot,applications.commands",
             "auto_reload_extensions": "True",
             "auto_reload_poll_seconds": "2",
@@ -174,6 +173,7 @@ def test_dead_sections_and_keys_are_dropped_and_reported(boot_config: BootConfig
             "DbUrl.drivername",
             "LogsManager",
             "Redis",
+            "Settings.application_id",
             "Settings.bot_invite",
             "Settings.date_format",
             "Settings.datetime_format",
@@ -211,13 +211,13 @@ def test_required_placeholder_is_filled_but_real_values_are_kept(boot_config: Bo
         MIGRATE,
         files={
             "config.ini": LEGACY_CONFIG,
-            "bot.ini": "[Tokens]\ndiscord_token = !!\n\n[BotSettings]\napplication_id = 777\n",
+            "bot.ini": "[Tokens]\ndiscord_token = !!\n\n[BotSettings]\nauto_reload_poll_seconds = 7\n",
         },
     )
 
     assert boot.files["bot.ini"]["Tokens"] == {"discord_token": "fake-token-123"}
-    assert boot.files["bot.ini"]["BotSettings"]["application_id"] == "777"
-    assert boot.values["kept"] == ["bot.ini:BotSettings.application_id"]
+    assert boot.files["bot.ini"]["BotSettings"]["auto_reload_poll_seconds"] == "7"
+    assert boot.values["kept"] == ["bot.ini:BotSettings.auto_reload_poll_seconds"]
 
 
 def test_unparseable_intents_are_dropped(boot_config: BootConfig) -> None:
