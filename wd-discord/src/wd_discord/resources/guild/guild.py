@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
+from pydantic import Field
+
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.permissions import PermissionsField
@@ -22,6 +26,14 @@ from wd_discord.resources.guild.welcome_screen import WelcomeScreen
 from wd_discord.snowflake import Snowflake
 
 
+MIN_GUILD_NAME_LENGTH = 2
+"""A guild name holds at least 2 characters (https://docs.discord.com/developers/resources/guild#guild-object-guild-structure)."""
+MAX_GUILD_NAME_LENGTH = 100
+"""A guild name holds up to 100 characters (https://docs.discord.com/developers/resources/guild#guild-object-guild-structure)."""
+
+type GuildName = Annotated[str, Field(min_length=MIN_GUILD_NAME_LENGTH, max_length=MAX_GUILD_NAME_LENGTH)]
+
+
 class Guild(DiscordModel):
     """https://docs.discord.com/developers/resources/guild#guild-object.
 
@@ -32,7 +44,7 @@ class Guild(DiscordModel):
 
     id: Snowflake
     """Guild id."""
-    name: str  # TODO: constrain to 2-100 characters with pydantic StringConstraints.
+    name: GuildName
     """Guild name (2-100 characters, excluding trailing and leading whitespace)."""
     icon: ImageHash | None
     """Icon hash."""

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
+from pydantic import Field
+
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.permissions import PermissionsField
@@ -53,7 +57,7 @@ class Role(DiscordModel):
     """Role icon hash."""
     unicode_emoji: str | None = None
     """Role unicode emoji."""
-    position: int # TODO: Perhaps we want a decorator here, or use pydantic to limit this. Discord's api might be able to tell us what it's max value is, but we don't know it yet.
+    position: Annotated[int, Field(ge=0)]
     """Position of this role (roles with the same position are sorted by id)."""
     permissions: PermissionsField
     """Permission bit set."""

@@ -256,10 +256,13 @@ https://docs.discord.com/developers/resources/guild#guild-object-system-channel-
 ## `wd_discord.resources.guild.guild` — `wd-discord/src/wd_discord/resources/guild/guild.py`
 Discord guild model.
 
+- module names: MIN_GUILD_NAME_LENGTH, MAX_GUILD_NAME_LENGTH
+- `type GuildName = str`
+
 ### `class Guild(DiscordModel)`
 https://docs.discord.com/developers/resources/guild#guild-object.
 
-- fields: id: Snowflake, name: str, icon: ImageHash | None, icon_hash: ImageHash | None, splash: ImageHash | None,
+- fields: id: Snowflake, name: GuildName, icon: ImageHash | None, icon_hash: ImageHash | None, splash: ImageHash | None,
   discovery_splash: ImageHash | None, owner: bool | None, owner_id: Snowflake, permissions: PermissionsField | None,
   afk_channel_id: Snowflake | None, afk_timeout: int, widget_enabled: bool | None, widget_channel_id: Snowflake | None,
   verification_level: VerificationLevel, default_message_notifications: DefaultMessageNotificationLevel,
