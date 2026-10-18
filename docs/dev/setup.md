@@ -21,10 +21,13 @@ uvx pre-commit install
 
 ## Configure
 
-Configuration lives in `config.ini` (bot) and `discord.ini` (Discord API), not environment variables. On the
-first run the bot writes both files with defaults and stops with `FirstTimeLaunchError`. Every value shown as
-`!!` must be filled in, for example `[Tokens] discord_token`. All settings and their defaults are in the
-[`wd_config` reference](../reference/wd-config.md).
+Configuration lives in one ini file per scope, not environment variables: `bot.ini` (token, application ID,
+intents), `config.ini` (app settings and colors), `cogs.ini` (one section per cog), `database.ini` and
+`sentry.ini`. On the first run the bot writes them with defaults and stops with `FirstTimeLaunchError`, listing
+every value still shown as `!!`, for example `bot.ini` `[Tokens] discord_token`. `discord.ini` is internal: it
+is only read if you create it, which exposes the Discord API settings. An old single `config.ini` is split into
+these files on start, with the original kept as `config.ini.bak`. The
+[`config-and-constants` skill](../../.claude/skills/config-and-constants/SKILL.md) has the full table.
 
 ## Run
 
@@ -76,7 +79,8 @@ class Uptime(GroupCog, name="uptime", description="Show how long the bot has bee
 
 - Database tables are `SQLModel` classes with `table=True`, declared next to the cog. The cog creates them
   with `self.create_tables(Model)` (see `winter_dragon/cogs/fuel.py`).
-- Settings go in a new class in `wd-config` (see `SteamSettings`, `UrbanSettings`).
+- Settings go in a class next to the cog, declared with `CogConfig` so they land in `cogs.ini` (see
+  `UrbanSettings` in `winter_dragon/cogs/urban.py`).
 - Buttons use `@Cog.component(prefix)`, gateway events use `@Cog.listener`.
 
 ## Test

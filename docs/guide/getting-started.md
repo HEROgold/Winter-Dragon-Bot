@@ -19,8 +19,9 @@ uv sync
 uv run python -m winter_dragon.run_test_bot
 ```
 
-The first run writes `config.ini` and `discord.ini` and stops. Open `config.ini` and replace every `!!` value,
-at least `[Tokens] discord_token`. Then run the command again. `run_test_bot` uses a local sqlite database and
+The first run writes `bot.ini`, `config.ini`, `cogs.ini`, `database.ini` and `sentry.ini`, then stops and lists
+every `!!` value still to fill in. The bot token goes in `bot.ini` under `[Tokens] discord_token`. Then run the
+command again. `run_test_bot` uses a local sqlite database and
 stops after 10 minutes, which is enough to check that everything works.
 
 To run the bot for real, start PostgreSQL and use the main entry point:
@@ -53,7 +54,8 @@ Everything the `main` branch offers, and what has been ported to `v2` so far, is
 
 ## Troubleshooting
 
-- **The bot stops with `FirstTimeLaunchError`:** `config.ini` still contains `!!` values. Fill them in.
+- **The bot stops with `FirstTimeLaunchError`:** one of the ini files still contains `!!` values; the error
+  names each `file:section:key`. Fill them in.
 - **Import error mentioning psycopg:** `python -m winter_dragon` needs PostgreSQL and its driver. Use
   `run_test_bot` for a sqlite instance instead.
 - **Commands don't show up:** check the bot's log in `logs/` for sync errors, then run `/bot-commands` as an

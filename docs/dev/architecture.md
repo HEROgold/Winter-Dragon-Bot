@@ -37,7 +37,8 @@ Each package's public API is listed in the [API reference](../reference/index.md
 ## Runtime flow
 
 1. `python -m winter_dragon` builds `Bot(extensions_package=winter_dragon.cogs)` and awaits `Bot.start()`.
-   The bot token is injected from `config.ini` (`[Tokens] discord_token`) by `@Config.with_kwarg`.
+   It first migrates an old single `config.ini` into the per-scope files (`config_migration.py`). The bot token is
+   injected from `bot.ini` (`[Tokens] discord_token`) by `@BotConfig.with_kwarg`.
 2. `Bot` discovers every cog module in the extensions package, instantiates each `Cog` with the bot and a
    database session, and creates the tables the cog declares (`Cog.create_tables`).
 3. Application commands are synced with Discord, one scope (global, or one guild) at a time. Each scope is read
