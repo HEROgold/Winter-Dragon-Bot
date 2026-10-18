@@ -42,22 +42,22 @@ The /autochannel command group: joining a guild's hub voice channel gives a memb
 - `channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams` — Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
 - `hub_of(session: Session, guild_id: int) -> AutoChannelHub | None` — Return the guild ``guild_id``'s hub, if it has one.
 - `owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel | None` — Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any.
-- `settings_of(session: Session, user_id: int) -> AutoChannelSettings` — Return the member ``user_id``'s channel settings; defaults when they never set any.
+- `settings_of(session: Session, user_id: int) -> AutoChannelSettings` — Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none.
 
-### `class AutoChannelHub(SQLModel, table=True)`
-A guild's hub: the voice channel that gives whoever joins it a channel of their own.
+### `class AutoChannelHub(DiscordKeyedModel, table=True)`
+A guild's hub: the voice channel that gives whoever joins it a channel of their own; ``id`` is the guild's.
 
-- fields: guild_id: int, channel_id: int, max_channels: int
+- fields: ownership: ClassVar[Ownership], channel_id: int, max_channels: int
 
-### `class AutoChannel(SQLModel, table=True)`
-A member's automatic channel.
+### `class AutoChannel(DiscordKeyedModel, table=True)`
+A member's automatic channel; ``id`` is the channel's.
 
-- fields: guild_id: int, owner_id: int, channel_id: int
+- fields: ownership: ClassVar[Ownership], guild_id: int, owner_id: int
 
-### `class AutoChannelSettings(SQLModel, table=True)`
-How a member wants their automatic channels: its name and user limit, in every guild.
+### `class AutoChannelSettings(DiscordKeyedModel, table=True)`
+How a member wants their automatic channels: its name and user limit, in every guild; ``id`` is the member's.
 
-- fields: user_id: int, name: str | None, user_limit: int
+- fields: ownership: ClassVar[Ownership], name: str | None, user_limit: int
 
 ### `@dataclass class VoiceOccupancy`
 Who is in which voice channel, per guild, as far as the gateway told.

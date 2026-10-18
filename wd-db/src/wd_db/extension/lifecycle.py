@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 lazy from typing import TYPE_CHECKING, Any, ClassVar, override
 
+from sqlalchemy import BigInteger
 from sqlmodel import Field
 lazy from sqlalchemy import Column, Engine, Index, and_, false, inspect, text, update
 lazy from sqlalchemy.orm import declared_attr
@@ -87,6 +88,12 @@ class LifecycleModel(BaseModel):
         if not cls.natural_key:
             return (index,)
         return index, Index(f"uq_{cls.__tablename__}_natural_key", *cls.natural_key, unique=True)
+
+
+class DiscordKeyedModel(LifecycleModel):
+    """A lifecycle model with one row per Discord object, whose ``id`` is that object's Discord ID."""
+
+    id: int = Field(sa_type=BigInteger, primary_key=True, sa_column_kwargs={"autoincrement": False})  # pyrefly: ignore[bad-override] - always given, never generated
 
 
 def alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]:

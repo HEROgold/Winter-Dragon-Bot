@@ -73,6 +73,11 @@ The base of every bot table: ``created_at``, ``updated_at`` and ``deleted_at``, 
 - fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], created_at: datetime, updated_at:
   datetime, deleted_at: datetime | None
 
+### `class DiscordKeyedModel(LifecycleModel)`
+A lifecycle model with one row per Discord object, whose ``id`` is that object's Discord ID.
+
+- fields: id: int
+
 ## `wd_db.extension.model` — `wd-db/src/wd_db/extension/model.py`
 Module for extending SQLModel with custom methods.
 
