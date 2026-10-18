@@ -124,7 +124,7 @@ class Guild(DiscordModel):
     """Custom guild stickers."""
     premium_progress_bar_enabled: bool
     """Whether the guild has the boost progress bar enabled."""
-    safety_alerts_channel_id: Snowflake | None # TODO: Could this Snowflake become Channel object? perhaps using a helper property instead is best.
+    safety_alerts_channel_id: Snowflake | None
     """The id of the channel where admins and moderators of Community guilds receive safety alerts from Discord."""
     incidents_data: IncidentsData | None
     """Information about the current incident actions being applied to the guild, if any."""

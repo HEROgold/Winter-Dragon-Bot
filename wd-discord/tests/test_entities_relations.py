@@ -95,6 +95,14 @@ def test_fetched_guild_relations_are_partial_without_the_data() -> None:
     assert guild.system_channel is None
 
 
+def test_safety_alerts_channel_is_a_channel_handle_not_an_id() -> None:
+    client = RecordingClient()
+    guild = Guild(client, GuildModel.model_validate({**GUILD_WITH_RELATIONS, "safety_alerts_channel_id": "21"}))
+
+    assert guild.safety_alerts_channel == PartialChannel(client, Snowflake(21))
+    assert client.sent == []
+
+
 def test_guild_roles_come_in_full_from_its_own_data() -> None:
     guild = Guild(RecordingClient(), GuildModel.model_validate(GUILD_WITH_RELATIONS))
 
