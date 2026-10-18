@@ -21,6 +21,26 @@ if TYPE_CHECKING:
     lazy from wd_discord.testing import RecordingClient
 
 
+OWNER_ID = "3"
+"""The default invoking user of ``make_interaction``, made the application's owner by :func:`_owned_by`."""
+
+
+def _owned_by(discord_client: RecordingClient, owner_id: str) -> None:
+    """Make Discord report ``owner_id`` as the owner of the bot's application."""
+    application = {
+        "id": "2",
+        "name": "bot",
+        "icon": None,
+        "description": "",
+        "bot_public": True,
+        "bot_require_code_grant": False,
+        "verify_key": "k",
+        "team": None,
+        "owner": {"id": owner_id, "username": "owner", "discriminator": "0"},
+    }
+    discord_client.reply("GET", "/applications/@me", application)
+
+
 class _Commands(Cog, auto_load=False):
     @Cog.command(name="ping", description="d")
     async def ping(self, interaction: CommandInteraction) -> None:
@@ -76,6 +96,7 @@ async def test_resync_responds_then_rereads_discord_before_syncing(
     responses_before_sync: list[int] = []
     sync = AsyncMock(side_effect=lambda *_a, **_k: responses_before_sync.append(len(discord_client.interaction_responses())))
     registry = _registry()
+    _owned_by(discord_client, OWNER_ID)
     cog = detached_cog(BotCommands, registry=registry, client=discord_client, sync_commands=sync)
 
     await BotCommands.resync.invoke(cog, make_interaction("bot-commands", guild_id=1))
@@ -86,6 +107,22 @@ async def test_resync_responds_then_rereads_discord_before_syncing(
     assert discord_client.interaction_responses() == [{"type": 4, "data": {"content": "Resyncing commands…"}}]
     (finished,) = discord_client.requests_to("POST", "/webhooks/2/tok")
     assert finished.json == {"content": "Resync finished."}
+
+
+async def test_resync_is_for_bot_owners_only(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    sync = AsyncMock()
+    registry = _registry()
+    _owned_by(discord_client, "99")
+    cog = detached_cog(BotCommands, registry=registry, client=discord_client, sync_commands=sync)
+
+    await BotCommands.resync.invoke(cog, make_interaction("bot-commands", guild_id=1))
+
+    sync.assert_not_awaited()
+    assert registry.is_known(GLOBAL)
+    assert discord_client.interaction_responses()[0]["data"]["content"] == "Only the bot's owners can do that."
 
 
 def test_group_is_guild_only() -> None:

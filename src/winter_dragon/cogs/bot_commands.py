@@ -4,10 +4,12 @@ from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING
 
+lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permissions import Permissions
+lazy from wd_errors import Refused
 
 
 if TYPE_CHECKING:
@@ -48,13 +50,16 @@ class BotCommands(
         embed = Embed(title="Registered commands", description="\n".join(lines) or "No commands registered.")
         await interaction.respond(embeds=[embed])
 
-    # TODO: Should only be allowed by Bot developers!
     @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
         name="resync",
         description="Re-read the commands from Discord and push any differences",
     )
     async def resync(self, interaction: CommandInteraction) -> None:
-        """Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it."""
+        """Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it; owners only."""
+        user = interaction.user
+        if user is None or not await is_owner(self.bot.client, user.id):
+            msg = "Only the bot's owners can do that."
+            raise Refused(msg)
         await interaction.respond("Resyncing commands…")
         self.bot.registry.forget()
         await self.bot.sync_commands(self.bot.client)
