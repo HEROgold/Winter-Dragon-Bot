@@ -70,8 +70,8 @@ Who a lifecycle table's rows belong to; member deletion and guild departure find
 ### `class LifecycleModel(BaseModel)`
 The base of every bot table: ``created_at``, ``updated_at`` and ``deleted_at``, all aware UTC.
 
-- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], created_at: datetime, updated_at:
-  datetime, deleted_at: datetime | None
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], alive_unique: ClassVar[tuple[str,
+  ...]], created_at: datetime, updated_at: datetime, deleted_at: datetime | None
 
 ### `class DiscordKeyedModel(LifecycleModel)`
 A lifecycle model with one row per Discord object, whose ``id`` is that object's Discord ID.

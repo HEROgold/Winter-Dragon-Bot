@@ -71,6 +71,9 @@ class LifecycleModel(BaseModel):
     """Who this table's rows belong to; no one by default."""
     natural_key: ClassVar[tuple[str, ...]] = ()
     """Columns that together identify a row besides its ``id``; unique, and matched by :func:`create_or_restore`."""
+    alive_unique: ClassVar[tuple[str, ...]] = ()
+    """Columns that together are unique among alive rows only, so a soft-deleted row and the one replacing it may share
+    them; unlike :attr:`natural_key`, :func:`create_or_restore` doesn't match on them."""
 
     created_at: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime)
     updated_at: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime, sa_column_kwargs={"onupdate": utc_now})
@@ -82,12 +85,15 @@ class LifecycleModel(BaseModel):
     @declared_attr.directive
     @classmethod
     def __table_args__(cls) -> tuple[Index, ...]:
-        """Index the alive rows, as herogold's base does, and make :attr:`natural_key` unique."""
+        """Index the alive rows, as herogold's base does, make :attr:`natural_key` unique, and :attr:`alive_unique` unique among alive rows."""
         alive_only = col(cls.deleted_at).is_(None)
-        index = Index(f"idx_{cls.__tablename__}_alive_only", "id", postgresql_where=alive_only, sqlite_where=alive_only)
-        if not cls.natural_key:
-            return (index,)
-        return index, Index(f"uq_{cls.__tablename__}_natural_key", *cls.natural_key, unique=True)
+        indexes = [Index(f"idx_{cls.__tablename__}_alive_only", "id", postgresql_where=alive_only, sqlite_where=alive_only)]
+        if cls.natural_key:
+            indexes.append(Index(f"uq_{cls.__tablename__}_natural_key", *cls.natural_key, unique=True))
+        if cls.alive_unique:
+            name = f"uq_{cls.__tablename__}_alive_unique"
+            indexes.append(Index(name, *cls.alive_unique, unique=True, postgresql_where=alive_only, sqlite_where=alive_only))
+        return tuple(indexes)
 
 
 class DiscordKeyedModel(LifecycleModel):

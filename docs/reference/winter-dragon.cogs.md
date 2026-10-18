@@ -253,15 +253,15 @@ What a stats channel shows; the category holding them is one too.
 
 - attributes: CATEGORY, USERS, ONLINE, BOTS, CREATED, PEAK
 
-### `class StatChannel(SQLModel, table=True)`
-One of a guild's stats channels, or the category holding them.
+### `class StatChannel(DiscordKeyedModel, table=True)`
+One of a guild's stats channels, or the category holding them; ``id`` is the channel's.
 
-- fields: guild_id: int, channel_id: int, kind: StatKind
+- fields: ownership: ClassVar[Ownership], alive_unique: ClassVar[tuple[str, ...]], guild_id: int, kind: StatKind
 
-### `class PeakOnline(SQLModel, table=True)`
-The most users a guild has seen online at once, since its stats channels were added.
+### `class PeakOnline(DiscordKeyedModel, table=True)`
+The most users a guild has seen online at once, since its stats channels were added; ``id`` is the guild's.
 
-- fields: guild_id: int, peak: int
+- fields: ownership: ClassVar[Ownership], peak: int
 
 ### `@dataclass class GuildCounts`
 How many members a guild has, how many are bots and how many are online; Discord's counts are approximate.
@@ -283,7 +283,7 @@ Shows a guild's member counts, and keeps a locked category of voice channels nam
 - `async update_all() -> None` — Update the stats channels of every guild that has them.
 - `async update_guild(guild_id: int) -> None` — Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones.
 - `async create_channels(client: Client, guild_id: int, *, reason: str) -> NetworkError | None` — Create ``guild_id``'s locked stats category and its channels, named after the current counts.
-- `async remove_channels(client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool` — Delete the channels of ``stats``, category last, forgetting each one that's gone; whether all of them are.
+- `async remove_channels(client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool` — Delete the channels of ``stats``, category last, soft-deleting each one that's gone; whether all of them are.
 - `@Cog.command async show(interaction: GuildCommandInteraction) -> None` — Answer with an embed of the guild's member counts.
 - `@Cog.command async add(interaction: GuildCommandInteraction) -> None` — Create the stats channels, unless the guild has them already.
 - `@Cog.command async remove(interaction: GuildCommandInteraction) -> None` — Delete the guild's stats channels.

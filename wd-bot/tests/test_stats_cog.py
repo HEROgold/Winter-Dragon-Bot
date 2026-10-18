@@ -6,7 +6,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session
+from wd_db.extension.lifecycle import alive
 from wd_bot.checks import is_owner, member_has
 from wd_bot.testing import detached_cog
 from wd_discord.permissions import Permissions
@@ -140,8 +141,8 @@ async def test_add_creates_a_locked_category_of_named_channels(
     ]
     assert all(post.json["parent_id"] == "40" for post in posts[1:])
     with Session(engine) as session:
-        assert len(session.exec(select(StatChannel)).all()) == 6
-        assert session.exec(select(PeakOnline)).one().peak == 4
+        assert len(session.exec(alive(StatChannel)).all()) == 6
+        assert session.exec(alive(PeakOnline)).one().peak == 4
     assert _embed(discord_client) == {"description": "Stats channels are set up.", "color": int(Settings.created_color)}
 
 
@@ -157,10 +158,10 @@ async def test_update_renames_only_changed_channels_and_forgets_deleted_ones(eng
     with Session(engine) as session:
         session.add_all(
             [
-                StatChannel(guild_id=GUILD_ID, channel_id=41, kind=StatKind.USERS),
-                StatChannel(guild_id=GUILD_ID, channel_id=42, kind=StatKind.ONLINE),
-                StatChannel(guild_id=GUILD_ID, channel_id=43, kind=StatKind.BOTS),
-                PeakOnline(guild_id=GUILD_ID, peak=9),
+                StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
+                StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.ONLINE),
+                StatChannel(id=43, guild_id=GUILD_ID, kind=StatKind.BOTS),
+                PeakOnline(id=GUILD_ID, peak=9),
             ],
         )
         session.commit()
@@ -170,8 +171,8 @@ async def test_update_renames_only_changed_channels_and_forgets_deleted_ones(eng
     (rename,) = [sent for sent in client.sent if sent.method == "PATCH"]
     assert (rename.path, rename.json) == ("/channels/42", {"name": "Online Users: 4"})
     with Session(engine) as session:
-        assert {stat.channel_id for stat in session.exec(select(StatChannel))} == {41, 42}
-        assert session.exec(select(PeakOnline)).one().peak == 9
+        assert {stat.id for stat in session.exec(alive(StatChannel))} == {41, 42}
+        assert session.exec(alive(PeakOnline)).one().peak == 9
 
 
 async def test_reset_is_for_bot_owners_only(
@@ -203,17 +204,17 @@ def test_member_has_counts_administrators(make_interaction: InteractionFactory) 
 
 def test_plan_renames_only_changed_channels_and_drops_missing_ones() -> None:
     stats = [
-        StatChannel(guild_id=GUILD_ID, channel_id=40, kind=StatKind.CATEGORY),
-        StatChannel(guild_id=GUILD_ID, channel_id=41, kind=StatKind.USERS),
-        StatChannel(guild_id=GUILD_ID, channel_id=42, kind=StatKind.PEAK),
-        StatChannel(guild_id=GUILD_ID, channel_id=43, kind=StatKind.BOTS),
+        StatChannel(id=40, guild_id=GUILD_ID, kind=StatKind.CATEGORY),
+        StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
+        StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.PEAK),
+        StatChannel(id=43, guild_id=GUILD_ID, kind=StatKind.BOTS),
     ]
     names = {40: "Renamed by hand", 41: "Total Users: 8", 42: "Peak Online: 1"}
 
     plan = plan_renames(stats, names, COUNTS, peak=5)
 
     assert plan.renames == {42: "Peak Online: 5"}
-    assert [stat.channel_id for stat in plan.gone] == [43]
+    assert [stat.id for stat in plan.gone] == [43]
 
 
 async def test_remove_forgets_only_channels_that_are_gone_and_keeps_their_category(
@@ -227,9 +228,9 @@ async def test_remove_forgets_only_channels_that_are_gone_and_keeps_their_catego
     with Session(engine) as session:
         session.add_all(
             [
-                StatChannel(guild_id=GUILD_ID, channel_id=40, kind=StatKind.CATEGORY),
-                StatChannel(guild_id=GUILD_ID, channel_id=41, kind=StatKind.USERS),
-                StatChannel(guild_id=GUILD_ID, channel_id=42, kind=StatKind.BOTS),
+                StatChannel(id=40, guild_id=GUILD_ID, kind=StatKind.CATEGORY),
+                StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
+                StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.BOTS),
             ],
         )
         session.commit()
@@ -238,6 +239,39 @@ async def test_remove_forgets_only_channels_that_are_gone_and_keeps_their_catego
     await Stats.remove.invoke(_cog(engine, discord_client), interaction, [])
 
     with Session(engine) as session:
-        assert {stat.channel_id for stat in session.exec(select(StatChannel))} == {40, 41}
+        assert {stat.id for stat in session.exec(alive(StatChannel))} == {40, 41}
     assert discord_client.requests_to("DELETE", "/channels/40") == []  # the category stays while a channel is left in it
     assert _reply(discord_client) == "I couldn't delete every stats channel; run it again to retry the rest."
+
+
+async def test_add_remove_add_renames_only_the_newest_channels_and_keeps_the_peak(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    _guild_api(discord_client)
+    with Session(engine) as session:
+        session.add(PeakOnline(id=GUILD_ID, peak=9))
+        session.commit()
+    first = [{"id": str(40 + index), "type": 2 if index else 4, "guild_id": "1"} for index in range(6)]
+    second = [{"id": str(50 + index), "type": 2 if index else 4, "guild_id": "1"} for index in range(6)]
+    discord_client.reply_each("POST", f"/guilds/{GUILD_ID}/channels", *first, *second)
+    for channel in first:
+        discord_client.reply("DELETE", f"/channels/{channel['id']}", channel)
+    cog = _cog(engine, discord_client)
+
+    for command in (Stats.add, Stats.remove, Stats.add):
+        interaction = make_interaction("stats", guild_id=GUILD_ID, permissions=Permissions.MANAGE_CHANNELS)
+        await command.invoke(cog, interaction, [])
+    stale = [{"id": channel["id"], "type": 2, "name": "stale"} for channel in [*first, *second]]
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}/channels", stale)
+    for channel in second:
+        discord_client.reply("PATCH", f"/channels/{channel['id']}", {**channel, "name": "renamed"})
+    await cog.update_guild(GUILD_ID)
+
+    renamed = sorted(sent.path for sent in discord_client.sent if sent.method == "PATCH")
+    assert renamed == [f"/channels/{channel_id}" for channel_id in range(51, 56)]
+    posts = discord_client.requests_to("POST", f"/guilds/{GUILD_ID}/channels")
+    assert [post.json["name"] for post in posts[6:]][-1] == "Peak Online: 9"
+    with Session(engine) as session:
+        assert session.exec(alive(PeakOnline)).one().peak == 9

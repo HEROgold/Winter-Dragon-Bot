@@ -64,6 +64,15 @@ class LifecycleVote(LifecycleModel, table=True):
     voter_id: int = Field(sa_type=BigInteger)
 
 
+class LifecycleSeat(LifecycleModel, table=True):
+    """A guild's seat of some kind: one alive per guild and kind, replaced rather than restored."""
+
+    alive_unique: ClassVar[tuple[str, ...]] = ("guild_id", "kind")
+
+    guild_id: int = Field(sa_type=BigInteger)
+    kind: str
+
+
 class LifecycleSale(LifecycleModel, table=True):
     """Shared data, owned by no one."""
 
@@ -164,6 +173,22 @@ def test_owned_by_finds_a_member_on_the_row_and_a_guild_through_its_parents(engi
         assert [vote.voter_id for vote in session.exec(owned_by(LifecycleVote, member=9, guild=2))] == [9]
         assert session.exec(owned_by(LifecycleVote, member=3)).all() == []  # the board's owner didn't vote
         assert session.exec(owned_by(LifecycleVote, guild=1)).all() == []
+
+
+def test_alive_unique_allows_a_replacement_of_a_soft_deleted_row(engine: Engine) -> None:
+    first = _stored(engine, LifecycleSeat(guild_id=1, kind="chair"))
+    with Session(engine) as session:
+        old = session.get(LifecycleSeat, first)
+        assert old is not None
+        soft_delete(session, old)
+        session.commit()
+
+    second = _stored(engine, LifecycleSeat(guild_id=1, kind="chair"))
+
+    assert second != first  # a new row, not the old one restored
+    with Session(engine) as session, pytest.raises(IntegrityError):
+        session.add(LifecycleSeat(guild_id=1, kind="chair"))
+        session.commit()
 
 
 def test_owned_by_matches_nothing_for_an_undeclared_owner(engine: Engine) -> None:

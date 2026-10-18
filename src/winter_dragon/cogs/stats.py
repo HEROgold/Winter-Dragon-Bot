@@ -5,13 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 lazy import asyncio
 lazy from enum import StrEnum
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field, Session, select
-from wd_db.extension.model import SQLModel
+from sqlmodel import Field, Session, col, select
+from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.interactions import InteractionContextType
@@ -56,18 +57,24 @@ SHOWN = (StatKind.USERS, StatKind.ONLINE, StatKind.BOTS, StatKind.CREATED, StatK
 """The stats channels, in the order they're listed in the category."""
 
 
-class StatChannel(SQLModel, table=True):
-    """One of a guild's stats channels, or the category holding them."""
+class StatChannel(DiscordKeyedModel, table=True):
+    """One of a guild's stats channels, or the category holding them; ``id`` is the channel's.
+
+    A guild has one alive channel of each kind; removed ones stay soft-deleted while a new set is added.
+    """
+
+    ownership: ClassVar[Ownership] = Ownership(guild="guild_id")
+    alive_unique: ClassVar[tuple[str, ...]] = ("guild_id", "kind")
 
     guild_id: int = Field(sa_type=BigInteger, index=True)
-    channel_id: int = Field(sa_type=BigInteger, unique=True)
     kind: StatKind
 
 
-class PeakOnline(SQLModel, table=True):
-    """The most users a guild has seen online at once, since its stats channels were added."""
+class PeakOnline(DiscordKeyedModel, table=True):
+    """The most users a guild has seen online at once, since its stats channels were added; ``id`` is the guild's."""
 
-    guild_id: int = Field(sa_type=BigInteger, unique=True)
+    ownership: ClassVar[Ownership] = Ownership(guild="id")
+
     peak: int = 0
 
 
@@ -156,10 +163,10 @@ def plan_renames(stats: Iterable[StatChannel], names: Mapping[int, str | None], 
     renames: dict[int, str] = {}
     gone: list[StatChannel] = []
     for stat in stats:
-        if stat.channel_id not in names:
+        if stat.id not in names:
             gone.append(stat)
-        elif stat.kind is not StatKind.CATEGORY and names[stat.channel_id] != (name := channel_name(stat.kind, counts, peak)):
-            renames[stat.channel_id] = name
+        elif stat.kind is not StatKind.CATEGORY and names[stat.id] != (name := channel_name(stat.kind, counts, peak)):
+            renames[stat.id] = name
     return RenamePlan(renames, gone)
 
 
@@ -195,12 +202,12 @@ def stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None)
 
 def guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]:
     """Return the stats channels recorded for the guild ``guild_id``, category included."""
-    return list(session.exec(select(StatChannel).where(StatChannel.guild_id == guild_id)))
+    return list(session.exec(owned_by(StatChannel, guild=guild_id)))
 
 
 def stats_guild_ids(session: Session) -> Generator[int]:
     """Yield every guild with stats channels."""
-    yield from session.exec(select(StatChannel.guild_id).distinct())
+    yield from session.exec(select(StatChannel.guild_id).where(col(StatChannel.deleted_at).is_(None)).distinct())
 
 
 class Stats(GroupCog, name="stats", description="Show this server's member counts", contexts=[InteractionContextType.GUILD]):
@@ -251,7 +258,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
             peak = self._raise_peak(session, guild_id, counts.online_users)
             plan = plan_renames(guild_stat_channels(session, guild_id), names, counts, peak)
             for stat in plan.gone:
-                session.delete(stat)
+                soft_delete(session, stat)
             session.commit()
         for channel_id, name in plan.renames.items():
             renamed = await self.bot.client.channels.partial(channel_id).edit(ChannelParams(name=name))
@@ -261,9 +268,9 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
     @staticmethod
     def _raise_peak(session: Session, guild_id: int, online: int) -> int:
         """Record ``online`` as ``guild_id``'s peak if it's higher than the one recorded; return the peak."""
-        record = session.exec(select(PeakOnline).where(PeakOnline.guild_id == guild_id)).first() or PeakOnline(
-            guild_id=guild_id,
-        )
+        record = session.exec(alive(PeakOnline).where(PeakOnline.id == guild_id)).first()
+        if record is None:
+            return create_or_restore(session, PeakOnline(id=guild_id, peak=online)).peak
         record.peak = max(record.peak, online)
         session.add(record)
         return record.peak
@@ -296,17 +303,17 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         category = await guild.create_channel(category_params(guild_id), reason=reason)
         if is_network_error(category):
             return [], category
-        created = [StatChannel(guild_id=guild_id, channel_id=int(category.id), kind=StatKind.CATEGORY)]
+        created = [StatChannel(id=int(category.id), guild_id=guild_id, kind=StatKind.CATEGORY)]
         for kind, name in names.items():
             params = GuildChannelParams(name=name, type=ChannelType.GUILD_VOICE, parent_id=category.id)
             channel = await guild.create_channel(params, reason=reason)
             if is_network_error(channel):
                 return created, channel
-            created.append(StatChannel(guild_id=guild_id, channel_id=int(channel.id), kind=kind))
+            created.append(StatChannel(id=int(channel.id), guild_id=guild_id, kind=kind))
         return created, None
 
     async def remove_channels(self, client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool:
-        """Delete the channels of ``stats``, category last, forgetting each one that's gone; whether all of them are.
+        """Delete the channels of ``stats``, category last, soft-deleting each one that's gone; whether all of them are.
 
         A channel that couldn't be deleted for another reason stays recorded, so removing again retries it; so does the
         category while any of its channels is left.
@@ -316,14 +323,14 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         for tried, stat in enumerate(ordered):
             if stat.kind is StatKind.CATEGORY and len(gone) < tried:
                 continue
-            deleted = await client.channels.partial(stat.channel_id).delete(reason=reason)
+            deleted = await client.channels.partial(stat.id).delete(reason=reason)
             if is_gone(deleted):
                 gone.append(stat)
             else:
-                self.logger.warning(t"Could not delete stats channel {stat.channel_id}: {deleted}")
+                self.logger.warning(t"Could not delete stats channel {stat.id}: {deleted}")
         with Session(self.bind) as session:
             for stat in gone:
-                session.delete(session.merge(stat))
+                soft_delete(session, session.merge(stat))
             session.commit()
         return len(gone) == len(ordered)
 
