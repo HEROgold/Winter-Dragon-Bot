@@ -7,3 +7,12 @@ node_modules
 __pycache__
 *.pyc
 logs
+.coverage
+.ruff_cache
+dist
+site
+docs
+sketches
+tests
+wd-*/tests
+*.db
