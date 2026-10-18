@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import create_or_restore
 from wd_discord import Member, MemberRemove, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
 from wd_discord.testing import GUILD_JSON, RecordingClient
@@ -29,7 +30,9 @@ BOT_USER = {"id": str(BOT_ID), "username": "bot", "discriminator": "0", "bot": T
 MEMBER_PATH = f"/guilds/{GUILD_ID}/members/{MEMBER_ID}"
 
 
-def _role(role_id: int, *, managed: bool = False, position: int = 1, permissions: Permissions = Permissions.none()) -> dict[str, Any]:
+def _role(
+    role_id: int, *, managed: bool = False, position: int = 1, permissions: Permissions = Permissions.none()
+) -> dict[str, Any]:
     return {
         "id": str(role_id),
         "name": f"role {role_id}",
@@ -51,7 +54,9 @@ def _member(*role_ids: int, user: dict[str, Any] = USER) -> dict[str, Any]:
     return {"user": user, "roles": [str(role_id) for role_id in role_ids], "joined_at": None, "deaf": False, "mute": False}
 
 
-def _connect(client: RecordingClient, roles: list[dict[str, Any]], *member_role_ids: int, bot_role: dict[str, Any] | None = None) -> None:
+def _connect(
+    client: RecordingClient, roles: list[dict[str, Any]], *member_role_ids: int, bot_role: dict[str, Any] | None = None
+) -> None:
     """Have ``client`` connect as the bot and receive the guild, with the member holding ``member_role_ids``."""
     client.receive(parse_ready({"v": 10, "session_id": "s", "resume_gateway_url": "wss://x", "user": BOT_USER, "guilds": []}))
     data = {
@@ -94,7 +99,7 @@ def _cog(engine: Engine, client: RecordingClient) -> AutoReassign:
 @pytest.fixture
 def enabled(engine: Engine) -> None:
     with Session(engine) as session:
-        session.add(AutoReassignGuild(guild_id=GUILD_ID))
+        session.add(AutoReassignGuild(id=GUILD_ID))
         session.commit()
 
 
@@ -179,7 +184,11 @@ async def test_a_guild_the_client_does_not_know_is_fetched_first(engine: Engine)
     with Session(engine) as session:
         session.add_all(RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=role_id) for role_id in (8, 12))
         session.commit()
-    client.reply("GET", f"/guilds/{GUILD_ID}", {**GUILD_JSON, "id": str(GUILD_ID), "roles": [_role(8), _role(12, position=20), _bot_role()]})
+    client.reply(
+        "GET",
+        f"/guilds/{GUILD_ID}",
+        {**GUILD_JSON, "id": str(GUILD_ID), "roles": [_role(8), _role(12, position=20), _bot_role()]},
+    )
     client.reply("GET", "/users/@me", BOT_USER)
     client.reply("GET", f"/guilds/{GUILD_ID}/members/{BOT_ID}", _member(BOT_ROLE, user=BOT_USER))
     client.reply("PATCH", MEMBER_PATH, _member(8))
@@ -289,7 +298,7 @@ async def test_enable_and_disable_need_manage_roles(
     command: Any,
 ) -> None:
     with Session(engine) as session:
-        session.add(AutoReassignGuild(guild_id=GUILD_ID + 1))
+        session.add(AutoReassignGuild(id=GUILD_ID + 1))
         session.commit()
     interaction = make_interaction("autoreassign", guild_id=GUILD_ID, permissions=Permissions.MANAGE_CHANNELS)
 
@@ -326,9 +335,67 @@ async def test_a_fetched_guild_is_not_fetched_again(engine: Engine) -> None:
     client.reply("PATCH", MEMBER_PATH, _member(8))
     for _ in range(2):
         with Session(engine) as session:
-            session.add(RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=8))
+            create_or_restore(session, RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=8))
             session.commit()
         await cog.on_member_add(_join(client))
 
     assert len(client.requests_to("GET", f"/guilds/{GUILD_ID}")) == 1
     assert len(client.requests_to("GET", f"/guilds/{GUILD_ID}/members/{BOT_ID}")) == 1
+
+
+async def test_enable_disable_enable_leaves_it_on(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog = _cog(engine, discord_client)
+
+    for command in (AutoReassign.enable, AutoReassign.disable, AutoReassign.enable):
+        interaction = make_interaction("autoreassign", guild_id=GUILD_ID, permissions=Permissions.MANAGE_ROLES)
+        await command.invoke(cog, interaction, interaction.options)
+
+    assert _enabled(engine)
+    responses = [response["data"]["content"] for response in discord_client.interaction_responses()]
+    assert responses[1] == "Rejoining members no longer get their roles back."
+    assert all(response.startswith("Members who leave and rejoin now get their roles back") for response in responses[::2])
+
+
+@pytest.mark.usefixtures("enabled")
+async def test_after_disable_nothing_comes_back_and_after_enable_again_it_does(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    client = RecordingClient()
+    listener, commands = _cog(engine, client), _cog(engine, discord_client)
+    _connect(client, [_role(8)], 8)
+    await listener.on_member_remove(_leave(client))
+
+    disable = make_interaction("autoreassign", guild_id=GUILD_ID, permissions=Permissions.MANAGE_ROLES)
+    await AutoReassign.disable.invoke(commands, disable, disable.options)
+    await listener.on_member_add(_join(client, 8))
+    assert _given(client) is None
+
+    enable = make_interaction("autoreassign", guild_id=GUILD_ID, permissions=Permissions.MANAGE_ROLES)
+    await AutoReassign.enable.invoke(commands, enable, enable.options)
+    await listener.on_member_remove(_leave(client))
+    await listener.on_member_add(_join(client))
+    assert _given(client) == ["8"]
+
+
+@pytest.mark.usefixtures("enabled")
+async def test_roles_given_back_and_forgotten_never_come_back(engine: Engine) -> None:
+    client = RecordingClient()
+    cog = _cog(engine, client)
+    _connect(client, [_role(8), _role(9)], 8, 9)
+    await cog.on_member_remove(_leave(client))
+    await cog.on_member_add(_join(client))
+    client.receive(
+        parse_dispatch(EventName.GUILD_MEMBER_UPDATE, {**_member(9), "avatar": None, "banner": None, "guild_id": str(GUILD_ID)})
+    )
+
+    await cog.on_member_remove(_leave(client))
+    await cog.on_member_add(_join(client))
+
+    first, second = client.requests_to("PATCH", MEMBER_PATH)
+    assert (sorted(first.json["roles"]), second.json["roles"]) == (["8", "9"], ["9"])

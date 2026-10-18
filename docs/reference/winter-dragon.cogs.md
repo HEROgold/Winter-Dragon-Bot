@@ -10,19 +10,21 @@ The /autoreassign command group: a member who leaves and rejoins a guild gets th
 
 - module names: REASSIGN_REASON, AUTO_REASSIGN_TABLES
 - `is_enabled(session: Session, guild_id: int) -> bool` — Whether the guild ``guild_id`` gives rejoining members their roles back.
+- `guild_setting(session: Session, guild_id: int) -> AutoReassignGuild | None` — Return the alive row turning giving roles back on in the guild ``guild_id``, if any.
 - `remembered_roles(session: Session, guild_id: int, user_id: int | None=None) -> Generator[RememberedRole]` — Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one.
-- `forget(session: Session, guild_id: int, user_id: int | None=None) -> list[RememberedRole]` — Delete the roles :func:`remembered_roles` yields, and return them; the caller commits.
+- `forget(session: Session, guild_id: int, user_id: int | None=None) -> list[RememberedRole]` — Soft-delete the roles :func:`remembered_roles` yields, and return them; the caller commits.
 - `giveable(bot: PermissionSolver, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]` — Yield the roles of ``role_ids`` the bot may give: still in the guild, not managed, and below its highest role.
 
-### `class AutoReassignGuild(SQLModel, table=True)`
-A guild that gives rejoining members their roles back.
+### `class AutoReassignGuild(DiscordKeyedModel, table=True)`
+A guild that gives rejoining members their roles back; ``id`` is the guild's.
 
-- fields: guild_id: int
+- fields: ownership: ClassVar[Ownership]
 
-### `class RememberedRole(SQLModel, table=True)`
+### `class RememberedRole(LifecycleModel, table=True)`
 A role a member had when they left a guild that gives roles back.
 
-- fields: guild_id: int, user_id: int, role_id: int
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], guild_id: int, user_id: int, role_id:
+  int
 
 ### `class AutoReassign(GroupCog, name='autoreassign', description='Give members who leave and rejoin the roles they had', contexts=[InteractionContextType.GUILD])`
 Remembers a leaving member's roles, and gives them back when they rejoin.

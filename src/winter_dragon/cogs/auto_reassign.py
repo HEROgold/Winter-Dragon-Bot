@@ -10,13 +10,14 @@ request that keeps whatever roles the member got on joining, e.g. from a verific
 
 from __future__ import annotations
 
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field, Session, select
-from wd_db.extension.model import SQLModel
+from sqlmodel import Field, Session
+from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import Permissions, is_network_error
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
@@ -34,16 +35,19 @@ if TYPE_CHECKING:
 REASSIGN_REASON = "Member joined again; gave back the roles they had when they left"
 
 
-class AutoReassignGuild(SQLModel, table=True):
-    """A guild that gives rejoining members their roles back."""
+class AutoReassignGuild(DiscordKeyedModel, table=True):
+    """A guild that gives rejoining members their roles back; ``id`` is the guild's."""
 
-    guild_id: int = Field(sa_type=BigInteger, unique=True)
+    ownership: ClassVar[Ownership] = Ownership(guild="id")
 
 
-class RememberedRole(SQLModel, table=True):
+class RememberedRole(LifecycleModel, table=True):
     """A role a member had when they left a guild that gives roles back."""
 
     # Bare IDs until wd-db has Guild, User and Role tables to reference; see HEROgold/Winter-Dragon-Bot#210 and HER-360.
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id", guild="guild_id")
+    natural_key: ClassVar[tuple[str, ...]] = ("guild_id", "user_id", "role_id")
 
     guild_id: int = Field(sa_type=BigInteger, index=True)
     user_id: int = Field(sa_type=BigInteger, index=True)
@@ -55,22 +59,24 @@ AUTO_REASSIGN_TABLES = (AutoReassignGuild, RememberedRole)
 
 def is_enabled(session: Session, guild_id: int) -> bool:
     """Whether the guild ``guild_id`` gives rejoining members their roles back."""
-    return session.exec(select(AutoReassignGuild).where(AutoReassignGuild.guild_id == guild_id)).first() is not None
+    return guild_setting(session, guild_id) is not None
+
+
+def guild_setting(session: Session, guild_id: int) -> AutoReassignGuild | None:
+    """Return the alive row turning giving roles back on in the guild ``guild_id``, if any."""
+    return session.exec(alive(AutoReassignGuild).where(AutoReassignGuild.id == guild_id)).first()
 
 
 def remembered_roles(session: Session, guild_id: int, user_id: int | None = None) -> Generator[RememberedRole]:
     """Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one."""
-    query = select(RememberedRole).where(RememberedRole.guild_id == guild_id)
-    if user_id is not None:
-        query = query.where(RememberedRole.user_id == user_id)
-    yield from session.exec(query)
+    yield from session.exec(owned_by(RememberedRole, guild=guild_id, member=user_id))
 
 
 def forget(session: Session, guild_id: int, user_id: int | None = None) -> list[RememberedRole]:
-    """Delete the roles :func:`remembered_roles` yields, and return them; the caller commits."""
+    """Soft-delete the roles :func:`remembered_roles` yields, and return them; the caller commits."""
     remembered = list(remembered_roles(session, guild_id, user_id))
     for row in remembered:
-        session.delete(row)
+        soft_delete(session, row)
     return remembered
 
 
@@ -107,9 +113,8 @@ class AutoReassign(
             if not is_enabled(session, guild_id):
                 return
             forget(session, guild_id, int(member.id))
-            session.add_all(
-                RememberedRole(guild_id=guild_id, user_id=int(member.id), role_id=int(role.id)) for role in member.roles
-            )
+            for role in member.roles:
+                create_or_restore(session, RememberedRole(guild_id=guild_id, user_id=int(member.id), role_id=int(role.id)))
             session.commit()
 
     @Cog.listener(EventName.GUILD_MEMBER_ADD)
@@ -166,7 +171,7 @@ class AutoReassign(
             return
         with Session(self.bind) as session:
             if not is_enabled(session, int(guild.id)):
-                session.add(AutoReassignGuild(guild_id=int(guild.id)))
+                create_or_restore(session, AutoReassignGuild(id=int(guild.id)))
                 session.commit()
         message = "Members who leave and rejoin now get their roles back; my role must be above the roles to give."
         bot = await guild.own_permissions()
@@ -191,8 +196,8 @@ class AutoReassign(
             return
         guild_id = int(guild.id)
         with Session(self.bind) as session:
-            for row in session.exec(select(AutoReassignGuild).where(AutoReassignGuild.guild_id == guild_id)):
-                session.delete(row)
+            if (setting := guild_setting(session, guild_id)) is not None:
+                soft_delete(session, setting)
             forget(session, guild_id)
             session.commit()
         await interaction.respond("Rejoining members no longer get their roles back.", ephemeral=True)
