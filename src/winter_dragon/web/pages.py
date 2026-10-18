@@ -8,14 +8,17 @@ lazy from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, Form
 lazy from fastapi import HTTPException, Request, status
 lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from sqlmodel import Session
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.bot import invite_url
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.privacy import RETENTION, DeletionStep, deletion_steps, hide_member_data
+lazy from winter_dragon.cogs.reminder import owned_reminders
 lazy from winter_dragon.config import Settings
-lazy from winter_dragon.web.accounts import Account, checked_csrf, signed_in, visitor_zone
+lazy from winter_dragon.web.accounts import Account, checked_csrf, current_account, signed_in, visitor_zone
+lazy from winter_dragon.web.formatting import plural
 lazy from winter_dragon.web.records import features, member_records, record_table
 lazy from winter_dragon.web.responses import database, is_htmx, render, see_other
 
@@ -73,11 +76,40 @@ def _your_data(  # noqa: PLR0913 - the deletion section's state is part of what'
     )
 
 
+@dataclass(frozen=True)
+class Signposts:
+    """What the landing page's signpost arms say a signed-in member will find down each way."""
+
+    reminders: str
+    """How many reminders they have set."""
+    records: str
+    """How many entries the bot stores about them."""
+
+
+def signposts(bind: Engine, member_id: int) -> Signposts:
+    """Return what the signpost arms say for the member ``member_id``."""
+    with Session(bind) as session:
+        reminder_count = sum(1 for _ in owned_reminders(session, member_id))
+    entry_count = sum(record.count for record in member_records(bind, member_id))
+    return Signposts(reminders=plural(reminder_count, "reminder"), records=plural(entry_count, "entry"))
+
+
 @router.get("/")
-def landing(request: Request) -> Response:
-    """Show what the bot does, with the way in: signing in, or adding it to a server."""
+def landing(request: Request, bind: Annotated[Engine, Depends(database)]) -> Response:
+    """Show what the bot does, with the way in: signing in, or adding it to a server.
+
+    A signed-in member's signpost arms say what they'll find: their reminders, and what's stored about them.
+    """
     invite = invite_url() if ApplicationId.value is not None else None
-    return render(request, "index.html", features=list(features()), invite=invite, bot_name=Settings.bot_name)
+    account = current_account(request)
+    return render(
+        request,
+        "index.html",
+        features=list(features()),
+        invite=invite,
+        bot_name=Settings.bot_name,
+        signposts=signposts(bind, account.id) if account is not None else None,
+    )
 
 
 @router.get("/me")

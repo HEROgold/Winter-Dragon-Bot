@@ -103,6 +103,22 @@ def test_the_landing_page_lists_every_command_group(client: TestClient) -> None:
     assert 'href="/auth/discord/login"' in page
 
 
+def test_the_signpost_says_what_a_member_will_find(client: TestClient, bind: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
+    _seed(
+        bind,
+        Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(hours=1)),
+        TimedReminder(content="daily", user_id=MEMBER_ID, timestamp=NOW, repeat_every=timedelta(days=1)),
+        Reminder(content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(hours=1)),
+    )
+    assert 'class="arm-time"' not in client.get("/").text
+
+    _sign_in(client, monkeypatch)
+    page = client.get("/").text
+
+    assert "2 reminders" in page
+    assert "2 entries" in page
+
+
 def test_a_page_that_needs_sign_in_sends_you_to_sign_in(client: TestClient) -> None:
     page = client.get("/me", follow_redirects=False)
     fragment = client.get("/me", headers=HTMX, follow_redirects=False)

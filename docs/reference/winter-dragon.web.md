@@ -68,7 +68,8 @@ How the dashboard writes stored values for people: times in their zone, interval
 The landing page, and the data page: everything the bot stores about the signed-in member, and deleting it.
 
 - module names: router
-- `@router.get landing(request: Request) -> Response` — Show what the bot does, with the way in: signing in, or adding it to a server.
+- `signposts(bind: Engine, member_id: int) -> Signposts` — Return what the signpost arms say for the member ``member_id``.
+- `@router.get landing(request: Request, bind: Engine) -> Response` — Show what the bot does, with the way in: signing in, or adding it to a server.
 - `@router.get data_page(request: Request, account: Account, bind: Engine) -> Response` — Show everything the bot stores about the signed-in member, and the way to delete it.
 - `@router.get record_rows(request: Request, key: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's rows of the table ``key``, when its record is opened.
 - `@router.get deletion_ask(request: Request, account: Account, bind: Engine) -> Response` — Show the deletion section as it first is: what deleting does, and the button to start.
@@ -81,6 +82,11 @@ How far the member's latest deletion request got: each step done, with when.
 - fields: steps: tuple[tuple[DeletionStep, datetime], ...]
 - `@property pending -> bool` — Whether a request is in progress: their data is hidden, but not purged for good yet.
 - `@property purge_due -> datetime | None` — When the data of a pending request is purged for good; ``None`` without one.
+
+### `@dataclass class Signposts`
+What the landing page's signpost arms say a signed-in member will find down each way.
+
+- fields: reminders: str, records: str
 
 ## `winter_dragon.web.records` — `src/winter_dragon/web/records.py`
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
