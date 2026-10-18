@@ -65,6 +65,25 @@ Base class for all configuration-related exceptions.
 ### `class FirstTimeLaunchError(ConfigError)`
 Raised when it's detected that WinterDragon is launched for the first time.
 
+## `wd_config.migration` — `wd-config/src/wd_config/migration.py`
+The one-off migration of an old ini file whose sections now belong to other scopes.
+
+- `migrate(legacy: Path, moves: Iterable[Move]) -> MigrationReport | None` — Migrate ``legacy`` by ``moves``; ``None`` when it holds nothing to move or drop (or doesn't exist).
+
+### `@dataclass class Move`
+Where the keys of one legacy section go.
+
+- fields: section: str, file: Path, to_section: str | None, keys: Mapping[str, str] | None, drop: Collection[str],
+  convert: Mapping[str, Callable[[str], str | None]], defaults: Mapping[str, str] | None
+- `@property target_section -> str` — The section the keys land in.
+- `target_key(key: str) -> str | None` — Return the target key ``key`` moves to, or ``None`` when this move doesn't take it.
+
+### `@dataclass class MigrationReport`
+What one migration did; every entry names a section or ``section.key``.
+
+- fields: backup: Path, moved: tuple[str, ...], dropped: tuple[str, ...], defaulted: tuple[str, ...], kept: tuple[str,
+  ...]
+
 ## `wd_config.parser` — `wd-config/src/wd_config/parser.py`
 The first-launch check: operator-facing ini files must have every required value filled in.
 

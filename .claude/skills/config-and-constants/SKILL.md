@@ -36,6 +36,17 @@ class Settings:
 
 **Scopes live with their package:** wd-bot's `BotConfig[T]` binds to `bot.ini` in [wd_bot/settings.py](../../../wd-bot/src/wd_bot/settings.py), with `Tokens.discord_token` and `BotSettings` (`application_id`, `BOT_SCOPE`, `intents`, `permissions`, `auto_reload_*`). Intents and permissions are stored as ints; wrap them (`Intents(BotSettings.intents)`) when reading. wd-discord never reads `bot.ini`: wd-bot passes `application_id` into `Client`. wd-db's `DatabaseConfig[T]` binds to `database.ini` in [wd_db/settings.py](../../../wd-db/src/wd_db/settings.py), with `DbUrl` (`password` is `REQUIRED`) and `ApiTableSettings.request_timeout`. `SentryConfig[T]` binds to `sentry.ini` in [wd_config/sentry.py](../../../wd-config/src/wd_config/sentry.py) (it stays in wd-config because wd-discord reads `SentrySettings.Telemetry`); `SentrySettings.dsn` is `REQUIRED`, and Sentry is initialised with `SentrySettings.resolved_dsn()`, which treats `!!` as no DSN. All three are operator files: `.bind(file, operator=True)`.
 
+| File | Scope | Owner | Kind |
+| --- | --- | --- | --- |
+| `config.ini` | `Config` (`Settings`) | app, `winter_dragon/config.py` | operator |
+| `cogs.ini` | `CogConfig` (one section per cog settings class) | app, each cog | operator |
+| `bot.ini` | `BotConfig` (`Tokens`, `BotSettings`) | wd-bot | operator (+ wd-bot internals) |
+| `database.ini` | `DatabaseConfig` (`DbUrl`, `ApiTableSettings`) | wd-db | operator |
+| `sentry.ini` | `SentryConfig` (`SentrySettings`) | wd-config | operator |
+| `discord.ini` | `DiscordConfig` (`URLS`, `RestCache`, `RateLimit`, `UserAgent`) | wd-config | internal, only if it exists |
+
+**Migration from the old single `config.ini`.** [`__main__.py`](../../../src/winter_dragon/__main__.py) calls `migrate_legacy_config()` ([winter_dragon/config_migration.py](../../../src/winter_dragon/config_migration.py)) before any settings class is imported, then imports `winter_dragon.config` so `config.ini`/`cogs.ini` are registered before `Bot.start` runs `OperatorFiles.check()`. The app owns the mapping (`MOVES`, one `Move` per legacy section; a whole-section move to `cogs.ini` is one line); the generic engine is `migrate(legacy, moves)` in [wd_config/migration.py](../../../wd-config/src/wd_config/migration.py). It runs only while `config.ini` still holds something to move or drop, backs the original up to `config.ini.bak` (or `.bak.1`, `.bak.2`, ... — a backup is never overwritten), fills a target key only when missing or `!!`, drops and logs undeclared sections/keys, writes an internal (`discord.ini`) value only when it differs from its default, and rewrites `config.ini` with only `[Settings]`. The mapping can't import file paths or internal defaults from the scopes (importing a scope writes its file), so `wd-config/tests/test_migration.py` pins them to the scopes. A setting added after the split never existed in the old file and needs no `Move`.
+
 **Injecting config into functions:** the decorator form `@Config.with_kwarg("Section", "setting")` passes a config value as a kwarg (see `Bot.start` in [wd_bot/bot.py](../../../wd-bot/src/wd_bot/bot.py): `@BotConfig.with_kwarg("Tokens", "discord_token", name="token")`). Type checkers don't see the injected kwarg, so call sites carry a coded ignore — prefer it over reading config inside the function body.
 
 ## Constants

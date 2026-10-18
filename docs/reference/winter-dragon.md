@@ -20,6 +20,12 @@ Application-wide settings.
 
 - attributes: bot_name, support_guild_id, log_level, created_color, changed_color, deleted_color, bot_status_messages
 
+## `winter_dragon.config_migration` — `src/winter_dragon/config_migration.py`
+Where every section of the old single ``config.ini`` lives now, and the startup step that moves it there.
+
+- module names: CONFIG_INI, COGS_INI, BOT_INI, DATABASE_INI, SENTRY_INI, DISCORD_INI, MOVES
+- `migrate_legacy_config() -> MigrationReport | None` — Move the old single ``config.ini`` into the per-scope files, logging what moved and what was dropped.
+
 ## `winter_dragon.run_test_bot` — `src/winter_dragon/run_test_bot.py`
 Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.
 
