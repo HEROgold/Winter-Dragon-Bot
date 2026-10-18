@@ -8,3 +8,8 @@ project-excludes = [
 preset = "strict"
 infer-with-first-use = true
 hover-enabled = true
+
+[errors]
+# herogold's ORM BaseModel (the base of wd_db's LifecycleModel) carries a `custom_data` Relationship descriptor whose
+# get/set types differ; pyrefly flags it on every table class, at a range unrelated to the code, so no line ignore holds.
+bad-dataclass-descriptor = false

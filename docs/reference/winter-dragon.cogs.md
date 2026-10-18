@@ -203,13 +203,13 @@ Settings for reminders, in their ``cogs.ini`` section.
 
 - attributes: check_interval, max_delay_days, max_content_length
 
-### `class ReminderBase(SQLModel)`
-What one-off and repeating reminders share; ``user_id`` is the Discord user to remind.
+### `class ReminderBase(LifecycleModel)`
+What one-off and repeating reminders share; ``user_id`` is the Discord user to remind, who owns it.
 
-- fields: content: str, user_id: int, timestamp: datetime
+- fields: ownership: ClassVar[Ownership], content: str, user_id: int, timestamp: datetime
 
 ### `class Reminder(ReminderBase, table=True)`
-A reminder sent once, then removed.
+A reminder sent once, then soft-deleted.
 
 ### `class TimedReminder(ReminderBase, table=True)`
 A reminder sent again every :attr:`repeat_every`, until removed.
@@ -221,7 +221,7 @@ Stores reminders and DMs them to their users when due, from a background task.
 
 - `async load() -> None` — Create the reminder tables if missing, then start the background task sending due reminders.
 - `async unload() -> None` — Stop the background task.
-- `async send_due(now: datetime) -> int` — DM every reminder due at ``now``; remove one-off ones and move repeating ones on. Return how many were due.
+- `async send_due(now: datetime) -> int` — DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
 - `@Cog.command async add(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0) -> None` — Remind the invoking user of ``reminder`` once, after the given time.
 - `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
 - `@Cog.command async remove(interaction: CommandInteraction, reminder: str) -> None` — Remove the invoking user's reminder named by ``reminder``.

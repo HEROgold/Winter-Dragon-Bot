@@ -45,6 +45,34 @@ A timestamp column that always stores and reads back aware UTC datetimes, also o
 - `process_bind_param(value: datetime | None, dialect: Dialect) -> datetime | None` — Store ``value`` as UTC.
 - `process_result_value(value: datetime | None, dialect: Dialect) -> datetime | None` — Read the stored value back as aware UTC.
 
+## `wd_db.extension.lifecycle` — `wd-db/src/wd_db/extension/lifecycle.py`
+The lifecycle every bot table follows: timestamps, soft delete, create-or-restore and a declared owner.
+
+- module names: LIFECYCLE_COLUMNS
+- `utc_now() -> datetime` — Return the current time in UTC.
+- `alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]` — Return a select of ``model``'s rows that aren't soft-deleted; use it for every read.
+- `soft_delete(session: Session, row: LifecycleModel) -> None` — Soft-delete ``row``: stamp its ``deleted_at``, hiding it from :func:`alive`. The caller commits.
+- `create_or_restore[M: LifecycleModel](session: Session, row: M) -> M` — Insert ``row``, or restore the soft-deleted row with the same ``id`` or natural key; return the stored row.
+- `owned_by[M: LifecycleModel](model: type[M], *, member: int | None=None, guild: int | None=None) -> SelectOfScalar[M]` — Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.
+- `lifecycle_models() -> Generator[type[LifecycleModel]]` — Yield every lifecycle model class that is a table.
+- `ensure_lifecycle_columns(bind: Engine | Connection, *models: type[LifecycleModel]) -> None` — Add the lifecycle columns missing from ``models``' existing tables, as an older bot created them.
+
+### `@dataclass class Through`
+Ownership inherited from a parent table: ``column`` holds the ``id`` of a ``parent`` row.
+
+- fields: column: str, parent: type[LifecycleModel]
+
+### `@dataclass class Ownership`
+Who a lifecycle table's rows belong to; member deletion and guild departure find rows only through this.
+
+- fields: member: str | None, guild: str | None, through: Through | None
+
+### `class LifecycleModel(BaseModel)`
+The base of every bot table: ``created_at``, ``updated_at`` and ``deleted_at``, all aware UTC.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], created_at: datetime, updated_at:
+  datetime, deleted_at: datetime | None
+
 ## `wd_db.extension.model` — `wd-db/src/wd_db/extension/model.py`
 Module for extending SQLModel with custom methods.
 

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 lazy import asyncio
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field, Session, col, select
+from sqlmodel import Field, Session, col
 from wd_db.extension.columns import AwareDateTime
-from wd_db.extension.model import SQLModel
+from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
@@ -39,8 +40,10 @@ class ReminderSettings:
     """The longest reminder text accepted, keeping the reminder DM well within Discord's message limit."""
 
 
-class ReminderBase(SQLModel):
-    """What one-off and repeating reminders share; ``user_id`` is the Discord user to remind."""
+class ReminderBase(LifecycleModel):
+    """What one-off and repeating reminders share; ``user_id`` is the Discord user to remind, who owns it."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id")
 
     content: str
     user_id: int = Field(sa_type=BigInteger, index=True)
@@ -49,7 +52,7 @@ class ReminderBase(SQLModel):
 
 
 class Reminder(ReminderBase, table=True):
-    """A reminder sent once, then removed."""
+    """A reminder sent once, then soft-deleted."""
 
 
 class TimedReminder(ReminderBase, table=True):
@@ -105,8 +108,8 @@ def choice_value(reminder: AnyReminder) -> str:
 
 def owned_reminders(session: Session, user_id: int) -> Generator[AnyReminder]:
     """Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due."""
-    yield from session.exec(select(TimedReminder).where(TimedReminder.user_id == user_id))
-    yield from session.exec(select(Reminder).where(Reminder.user_id == user_id).order_by(col(Reminder.timestamp)))
+    yield from session.exec(owned_by(TimedReminder, member=user_id))
+    yield from session.exec(owned_by(Reminder, member=user_id).order_by(col(Reminder.timestamp)))
 
 
 def find_reminder(session: Session, user_id: int, reminder: str) -> AnyReminder | None:
@@ -117,7 +120,7 @@ def find_reminder(session: Session, user_id: int, reminder: str) -> AnyReminder 
     prefix, _, reminder_id = reminder.partition(":")
     for model, model_prefix in CHOICE_PREFIXES.items():
         if prefix == model_prefix and reminder_id.isdigit():
-            found = session.get(model, int(reminder_id))
+            found = session.exec(alive(model).where(model.id == int(reminder_id))).first()
             if found is not None and found.user_id == user_id:
                 return found
     return next((owned for owned in owned_reminders(session, user_id) if owned.content == reminder), None)
@@ -170,24 +173,24 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
             await asyncio.sleep(ReminderSettings.check_interval)
 
     async def send_due(self, now: datetime) -> int:
-        """DM every reminder due at ``now``; remove one-off ones and move repeating ones on. Return how many were due.
+        """DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
 
         A reminder that couldn't be delivered is handled the same way, rather than retried every check forever.
         """
         due = 0
         with Session(self.bind) as session:
-            for reminder in session.exec(select(Reminder).where(Reminder.timestamp <= now)).all():
+            for reminder in session.exec(alive(Reminder).where(Reminder.timestamp <= now)).all():
                 await self._deliver(reminder)
-                session.delete(reminder)
+                soft_delete(session, reminder)
                 session.commit()
                 due += 1
-            for timed in session.exec(select(TimedReminder).where(TimedReminder.timestamp <= now)).all():
+            for timed in session.exec(alive(TimedReminder).where(TimedReminder.timestamp <= now)).all():
                 await self._deliver(timed)
                 if timed.repeat_every > timedelta(0):
                     timed.timestamp = next_occurrence(timed.timestamp, timed.repeat_every, now)
                     session.add(timed)
                 else:
-                    session.delete(timed)
+                    soft_delete(session, timed)
                 session.commit()
                 due += 1
         return due
@@ -201,7 +204,7 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         due = DiscordTime(reminder.timestamp).with_relative()
         content = reminder.content
         with Session(self.bind) as session:
-            session.add(reminder)
+            create_or_restore(session, reminder)
             session.commit()
         repeat = " and then every so often" if isinstance(reminder, TimedReminder) else ""
         message = f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it."
@@ -263,7 +266,7 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
             found = find_reminder(session, int(user.id), reminder)
             content = None if found is None else found.content
             if found is not None:
-                session.delete(found)
+                soft_delete(session, found)
                 session.commit()
         if content is None:
             await interaction.respond("You have no reminder like that.", ephemeral=True)
