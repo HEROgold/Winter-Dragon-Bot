@@ -25,7 +25,7 @@ A FastAPI service that runs alongside the bot and backs the web dashboard:
 
 A React frontend served by Bun, offering Discord OAuth sign-in and an authenticated view of the user's own data, including the deletion flow above.
 
-**Status:** ❌ Missing — `wd-frontend/` exists on `v2` but is empty.
+**Status:** ❌ Missing — `wd-frontend/` exists on `v2` but is empty. On `v2` the dashboard is rebuilt as htmx 4 and Jinja pages served by the FastAPI service rather than a separate React app ([ADR 0002](../adr/0002-htmx-jinja-dashboard.md)).
 **Source on `main`:** `frontend/`
 
 ## Task queue and workers

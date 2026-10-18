@@ -20,8 +20,9 @@ A FastAPI service (`python -m winter_dragon.api`, port 8001) with interactive do
 
 ## Web dashboard
 
-A React + Bun single-page app on port 3000. Users log in with Discord, see their profile and the data the bot
-stores about them, and can request its deletion. It talks only to the HTTP API above.
+Server-rendered pages served by the FastAPI service above: Jinja templates, with htmx 4 swapping in the HTML
+fragments its routes return (see [ADR 0002](adr/0002-htmx-jinja-dashboard.md)). Users log in with Discord, see
+their profile and the data the bot stores about them, and can request its deletion.
 
 ## Background workers
 
