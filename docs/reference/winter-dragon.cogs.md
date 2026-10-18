@@ -186,6 +186,19 @@ Cog for the /love command.
 
 - `@Cog.command async love(interaction: CommandInteraction, user: User) -> None` — Reply with a random compatibility love between the invoking user and ``user``.
 
+## `winter_dragon.cogs.privacy` — `src/winter_dragon/cogs/privacy.py`
+Privacy: soft-deleted records are purged for good once they've been deleted for :data:`RETENTION`.
+
+- module names: RETENTION, PURGE_INTERVAL
+- `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
+
+### `class Privacy(Cog)`
+Purges soft-deleted records older than :data:`RETENTION` once a day, from a background task.
+
+- `async load() -> None` — Start the background task purging soft-deleted records.
+- `async unload() -> None` — Stop the background task.
+- `async purge(now: datetime) -> None` — Hard-delete every lifecycle row soft-deleted more than :data:`RETENTION` before ``now``, children first.
+
 ## `winter_dragon.cogs.reminder` — `src/winter_dragon/cogs/reminder.py`
 The /reminder command group: one-off and repeating reminders, sent as DMs by a background task.
 
