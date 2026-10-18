@@ -6,6 +6,7 @@ from typing import Annotated
 
 from pydantic import Field
 
+from wd_discord.color import Color
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.permissions import PermissionsField
@@ -32,11 +33,11 @@ class RoleTags(DiscordModel):
 class RoleColors(DiscordModel):
     """https://docs.discord.com/developers/topics/permissions#role-object-role-colors-object."""
 
-    primary_color: int # TODO: Make a Color type, int is a primitive we don't want.
+    primary_color: Color
     """The primary color for the role."""
-    secondary_color: int | None
+    secondary_color: Color | None
     """The secondary color for the role, making the role a gradient."""
-    tertiary_color: int | None
+    tertiary_color: Color | None
     """The tertiary color for the role, making the role a holographic style."""
 
 
@@ -47,7 +48,7 @@ class Role(DiscordModel):
     """Role id."""
     name: str
     """Role name."""
-    color: int
+    color: Color
     """Integer representation of hexadecimal color code."""
     colors: RoleColors | None = None
     """The role's colors."""

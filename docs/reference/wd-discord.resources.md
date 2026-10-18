@@ -334,12 +334,12 @@ https://docs.discord.com/developers/topics/permissions#role-object-role-tags-str
 ### `class RoleColors(DiscordModel)`
 https://docs.discord.com/developers/topics/permissions#role-object-role-colors-object.
 
-- fields: primary_color: int, secondary_color: int | None, tertiary_color: int | None
+- fields: primary_color: Color, secondary_color: Color | None, tertiary_color: Color | None
 
 ### `class Role(DiscordModel)`
 https://docs.discord.com/developers/topics/permissions#role-object.
 
-- fields: id: Snowflake, name: str, color: int, colors: RoleColors | None, hoist: bool, icon: ImageHash | None,
+- fields: id: Snowflake, name: str, color: Color, colors: RoleColors | None, hoist: bool, icon: ImageHash | None,
   unicode_emoji: str | None, position: int, permissions: PermissionsField, managed: bool, mentionable: bool, tags:
   RoleTags | None, flags: int
 
@@ -431,8 +431,8 @@ https://docs.discord.com/developers/resources/user#user-object-user-primary-guil
 https://docs.discord.com/developers/resources/user#user-object.
 
 - fields: id: Snowflake, username: str, discriminator: str, global_name: str | None, avatar: ImageHash | None, bot: bool
-  | None, system: bool | None, mfa_enabled: bool | None, banner: ImageHash | None, accent_color: int | None, locale: str
-  | None, verified: bool | None, email: str | None, flags: int | None, premium_type: int | None, public_flags: int |
+  | None, system: bool | None, mfa_enabled: bool | None, banner: ImageHash | None, accent_color: Color | None, locale:
+  str | None, verified: bool | None, email: str | None, flags: int | None, premium_type: int | None, public_flags: int |
   None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild: UserPrimaryGuild | None
 - `validate_scopes(allowed_scopes: set[OAuthScopes]) -> bool` — Check that every scope-gated field is covered by ``allowed_scopes``.
 

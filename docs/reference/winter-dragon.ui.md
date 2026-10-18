@@ -15,14 +15,14 @@ Confirmation embeds for something created, changed or deleted, in the colors set
 ### `class CreatedEmbed(Embed)`
 Confirms that something was created, in ``Settings.created_color``.
 
-- fields: color: int | None
+- fields: color: Color | None
 
 ### `class ChangedEmbed(Embed)`
 Confirms that something was changed, in ``Settings.changed_color``.
 
-- fields: color: int | None
+- fields: color: Color | None
 
 ### `class DeletedEmbed(Embed)`
 Confirms that something was deleted, in ``Settings.deleted_color``.
 
-- fields: color: int | None
+- fields: color: Color | None

@@ -8,7 +8,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord` — `wd-discord/src/wd_discord/__init__.py`
 
 - exports: URLS, AnyGuildInteraction, AnyInteraction, ApiResponseError, Application, AuditLogReason,
-  AutocompleteInteraction, BoundEvent, Channel, ChannelPinsUpdate, ChannelType, Client, CommandInteraction,
+  AutocompleteInteraction, BoundEvent, Channel, ChannelPinsUpdate, ChannelType, Client, Color, CommandInteraction,
   ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField, Emoji, Entitlement, EventName, Gateway,
   GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild, GuildCommand, GuildCommandInteraction,
   GuildComponentInteraction, GuildCreate, GuildDelete, Interaction, Invite, Member, MemberRemove, MembersChunk, Message,
@@ -118,6 +118,16 @@ An async Discord REST client pinned to the configured API version (v10 by defaul
 - `async get_gateway_bot() -> GatewayBotInfo | NetworkError` — GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info.
 - `async get_shard_manager(info: GatewayBotInfo, *, intents: Intents | None=None) -> ShardManager` — Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`.
 
+## `wd_discord.color` — `wd-discord/src/wd_discord/color.py`
+Discord's RGB color, an integer on the wire.
+
+- module names: MAX_COLOR
+
+### `class Color(int)`
+An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the wire unchanged.
+
+- `@classmethod from_hex(text: str) -> Color` — Parse ``"#00ff00"``, ``"00ff00"`` or ``"0x00ff00"``.
+
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
 Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
 
@@ -174,7 +184,7 @@ The footer shown under an embed.
 ### `class Embed(DiscordModel)`
 A Discord message embed (minimal subset - see module docstring for what's missing).
 
-- fields: title: str | None, description: str | None, color: int | None, fields: list[EmbedField] | None, footer:
+- fields: title: str | None, description: str | None, color: Color | None, fields: list[EmbedField] | None, footer:
   EmbedFooter | None
 - `character_count() -> int` — Return how many characters count towards Discord's :data:`MAX_EMBED_CHARACTERS` limit.
 

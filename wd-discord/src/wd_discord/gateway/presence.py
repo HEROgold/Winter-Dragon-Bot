@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from enum import IntEnum, IntFlag, StrEnum
 
+from wd_discord.color import Color
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.resources.user.collectibles import Collectibles
@@ -139,7 +140,7 @@ class PresenceUser(DiscordModel):
     bot: bool | None = None
     system: bool | None = None
     banner: ImageHash | None = None
-    accent_color: int | None = None
+    accent_color: Color | None = None
     flags: int | None = None
     public_flags: int | None = None
     avatar_decoration_data: Avatar | None = None

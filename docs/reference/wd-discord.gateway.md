@@ -328,7 +328,7 @@ A user's status per platform; a platform they're offline or invisible on is left
 The user a presence is for: only ``id`` is certain, any other user field may come along.
 
 - fields: id: Snowflake, username: str | None, discriminator: str | None, global_name: str | None, avatar: ImageHash |
-  None, bot: bool | None, system: bool | None, banner: ImageHash | None, accent_color: int | None, flags: int | None,
+  None, bot: bool | None, system: bool | None, banner: ImageHash | None, accent_color: Color | None, flags: int | None,
   public_flags: int | None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild:
   UserPrimaryGuild | None
 

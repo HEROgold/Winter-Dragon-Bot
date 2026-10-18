@@ -5,6 +5,7 @@ lazy from typing import Annotated
 
 from pydantic import Field
 
+from wd_discord.color import Color
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.oauth import OAuthScopes
@@ -51,7 +52,7 @@ class User(DiscordModel):
     """whether the user has two factor enabled on their account"""
     banner: Annotated[ImageHash | None, OAuthScopes.IDENTIFY] = None
     """the user's banner hash"""
-    accent_color: Annotated[int | None, OAuthScopes.IDENTIFY] = None
+    accent_color: Annotated[Color | None, OAuthScopes.IDENTIFY] = None
     """the user's banner color encoded as an integer representation of hexadecimal color code"""
     locale: Annotated[str | None, OAuthScopes.IDENTIFY] = None
     """the user's chosen language option"""

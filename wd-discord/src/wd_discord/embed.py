@@ -9,6 +9,7 @@ field is optional per Discord's docs; the ones not modeled yet are: ``type``, ``
 
 from __future__ import annotations
 
+from wd_discord.color import Color
 from wd_discord.models import DiscordModel
 
 
@@ -46,7 +47,7 @@ class Embed(DiscordModel):
 
     title: str | None = None
     description: str | None = None
-    color: int | None = None
+    color: Color | None = None
     fields: list[EmbedField] | None = None
     footer: EmbedFooter | None = None
 
