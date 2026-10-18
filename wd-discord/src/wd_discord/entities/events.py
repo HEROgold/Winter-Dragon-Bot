@@ -45,10 +45,9 @@ lazy from wd_discord.resources.guild import GuildMember
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-    from typing import TypeAliasType
 
     from wd_discord.client import Client
-    from wd_discord.entities.base import ClientBound
+    from wd_discord.entities.base import ClientBound, EntityType
     from wd_discord.models import DiscordModel
 
 
@@ -152,9 +151,7 @@ def _thread_member(client: Client, model: wire.ThreadMemberUpdate) -> ThreadMemb
     return ThreadMember(client, model, model.id)
 
 
-# TODO:
-# I'd like `type | TypeAliasType` to be more specific. They seem to be some form of Entity[...]
-def event_entities() -> Mapping[EventName, type | TypeAliasType]:
+def event_entities() -> Mapping[EventName, EntityType]:
     """Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``."""
     return {
         EventName.READY: Ready,

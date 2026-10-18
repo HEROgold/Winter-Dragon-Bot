@@ -73,6 +73,7 @@ Bases of the high-level API: client-bound entities and the stores that create th
 - `parse_all[M: DiscordModel](result: RequestResult, model: type[M]) -> list[M] | NetworkError` — Return the failure in ``result``, or each item of its JSON array validated as ``model``.
 - `async every_page[T](fetch: Callable[[T | None], Awaitable[Iterable[T] | NetworkError]], page_size: int) -> list[T] | NetworkError` — Return every item of a paged list, or the failure of a page.
 - `no_content(result: RequestResult) -> NetworkError | None` — Return the failure in ``result``, or ``None`` for an endpoint that answers without a body.
+- `type EntityType = type[Entity[Any] | Partial[Any]] | TypeAliasType`
 
 ### `@dataclass class ClientBound`
 Something that acts through a client, and wraps what the client returns in entities bound to it.
@@ -385,7 +386,7 @@ Gateway dispatch events bound to the client that received them.
 
 - `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate | Member | MemberRemove | MembersChunk | Role | PartialRole | CurrentUser | Presence`
 - `bind(client: Client, model: DiscordModel, previous: DiscordModel | None=None) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
-- `event_entities() -> Mapping[EventName, type | TypeAliasType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
+- `event_entities() -> Mapping[EventName, EntityType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
 
 ## `wd_discord.entities.guild` — `wd-discord/src/wd_discord/entities/guild.py`
 Guilds (https://docs.discord.com/developers/resources/guild).

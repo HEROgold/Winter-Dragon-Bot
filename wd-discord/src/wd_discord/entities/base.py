@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING, Any, Protocol
+lazy from typing import TYPE_CHECKING, Any, Protocol, TypeAliasType
 
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import getLogger
@@ -167,6 +167,13 @@ class Partial[E](ClientBound, ABC):
     @abstractmethod
     async def fetch(self, *, cache: bool = False) -> E | NetworkError:
         """Fetch the full entity; with ``cache``, a recent answer may be reused."""
+
+
+type EntityType = type[Entity[Any] | Partial[Any]] | TypeAliasType
+"""An entity class, or a ``type`` alias naming a union of them (``AnyInteraction``).
+
+Python's typing can't say "an alias whose members are entities", so ``test_entities_events.py`` checks that part.
+"""
 
 
 class _PartialFactory[E](Protocol):

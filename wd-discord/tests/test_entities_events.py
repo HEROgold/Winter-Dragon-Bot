@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TypeAliasType
+from typing import TypeAliasType, get_args
 
 from wd_discord import (
     Channel,
@@ -34,6 +34,7 @@ from wd_discord import (
     bind,
 )
 from wd_discord.entities import event_entities
+from wd_discord.entities.base import Entity, Partial
 from wd_discord.gateway import EventName, RawEvent, Status, parse_dispatch, parse_ready
 from wd_discord.gateway.events import GuildMemberUpdate
 from wd_discord.permissions import ChannelType
@@ -208,6 +209,14 @@ def test_event_entities_match_what_bind_returns() -> None:
         entity = entities[event]
         expected = entity.__value__ if isinstance(entity, TypeAliasType) else entity
         assert isinstance(bind(RecordingClient(), model), expected), event
+
+
+def test_event_entities_are_entities_or_partials() -> None:
+    """``EntityType`` can't constrain a ``type`` alias's members, so check them here."""
+    for event, entity in event_entities().items():
+        members = get_args(entity.__value__) if isinstance(entity, TypeAliasType) else (entity,)
+        for member in members:
+            assert issubclass(member, Entity | Partial), (event, member)
 
 
 def bound(event: EventName) -> object:
