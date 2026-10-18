@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 
 
 MAX_MEMBERS_PER_PAGE = 1000
-"""The most members ``GET /guilds/{guild_id}/members`` returns at once."""
+"""The most members ``GET /guilds/{guild_id}/members`` returns at once (https://docs.discord.com/developers/resources/guild#list-guild-members)."""
 
 
 class BaseGuild(ClientBound):

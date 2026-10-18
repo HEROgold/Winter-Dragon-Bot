@@ -30,7 +30,7 @@ lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
-lazy from wd_discord.resources.channel.params import MAX_USER_LIMIT
+lazy from wd_discord.resources.channel.params import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
@@ -44,8 +44,6 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import Snowflake
 
 
-MAX_NAME_LENGTH = 100
-"""Discord's limit on a channel name's length."""
 OWNER_PERMISSIONS = (
     Permissions.VIEW_CHANNEL
     | Permissions.CONNECT
@@ -121,7 +119,7 @@ def owner_overwrite(user_id: Snowflake) -> OverwriteParams:
 
 def default_name(display_name: str) -> str:
     """Return the name of a member's channel when they didn't choose one."""
-    return f"{display_name}'s channel"[:MAX_NAME_LENGTH]
+    return f"{display_name}'s channel"[:MAX_CHANNEL_NAME_LENGTH]
 
 
 def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams:
@@ -296,8 +294,8 @@ class AutoChannels(
         if exists:
             msg = f"This server has a hub already; {self.mention(self.mark)} moves it."
             raise Refused(msg)
-        if not (0 < len(category_name) <= MAX_NAME_LENGTH and 0 < len(hub_name) <= MAX_NAME_LENGTH):
-            msg = f"Keep both names under {MAX_NAME_LENGTH} characters."
+        if not (0 < len(category_name) <= MAX_CHANNEL_NAME_LENGTH and 0 < len(hub_name) <= MAX_CHANNEL_NAME_LENGTH):
+            msg = f"Keep both names under {MAX_CHANNEL_NAME_LENGTH} characters."
             raise Refused(msg)
         hub = unwrap(
             await self._create_hub(interaction.guild, category_name, hub_name),
@@ -380,8 +378,8 @@ class AutoChannels(
     @Cog.command(name="name", description="Set the name of your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def set_name(self, interaction: GuildCommandInteraction, name: str) -> None:
         """Remember ``name`` as the invoker's channel name, and rename their channel here if they have one."""
-        if not 0 < len(name) <= MAX_NAME_LENGTH:
-            msg = f"Keep the name under {MAX_NAME_LENGTH} characters."
+        if not 0 < len(name) <= MAX_CHANNEL_NAME_LENGTH:
+            msg = f"Keep the name under {MAX_CHANNEL_NAME_LENGTH} characters."
             raise Refused(msg)
         await self._change(interaction, ChannelParams(name=name), name=name)
 

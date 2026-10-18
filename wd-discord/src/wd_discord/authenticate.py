@@ -15,7 +15,10 @@ class Token(str):
     __slots__ = ()
 
 class TokenType(StrEnum):
-    """Represents the type of token being used for authentication."""
+    """Represents the type of token being used for authentication.
+
+    https://docs.discord.com/developers/reference#authentication
+    """
 
     BOT = "Bot"
     """Discord's authentication scheme is case-sensitive; it must be ``Bot``, not ``bot``."""

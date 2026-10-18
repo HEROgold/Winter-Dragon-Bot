@@ -19,6 +19,8 @@ class ChannelType(IntEnum):
     """Represents the different types of channels in Discord.
 
     Each channel type is represented by an integer value, allowing for easy identification and categorization of channels.
+
+    https://docs.discord.com/developers/resources/channel#channel-object-channel-types
     """
 
     GUILD_TEXT = 0
@@ -61,6 +63,8 @@ class Permissions(IntFlag):
     """Represents the permissions a member has in a guild or channel.
 
     Each permission is represented by a bit in an integer, allowing for efficient storage and manipulation of permissions.
+
+    https://docs.discord.com/developers/topics/permissions#permissions-bitwise-permission-flags
     """
 
     # TODO(HEROgold):

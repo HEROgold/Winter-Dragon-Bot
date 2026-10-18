@@ -17,9 +17,12 @@ from wd_discord.snowflake import Snowflake
 
 
 MAX_USER_LIMIT = 99
-"""The most users a voice channel can be limited to; 0 means no limit."""
+"""The most users a voice channel can be limited to; 0 means no limit (https://docs.discord.com/developers/resources/channel#modify-channel-json-params-guild-channel)."""
 
-type ChannelName = Annotated[str, Field(min_length=1, max_length=100)]
+MAX_CHANNEL_NAME_LENGTH = 100
+"""A channel name holds 1 to 100 characters (https://docs.discord.com/developers/resources/channel#channel-object-channel-structure)."""
+
+type ChannelName = Annotated[str, Field(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH)]
 
 
 class OverwriteParams(BaseModel):

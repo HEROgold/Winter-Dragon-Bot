@@ -15,7 +15,10 @@ if TYPE_CHECKING:
 
 
 class ImageFormats(StrEnum):
-    """Valid image formats supported by Discord."""
+    """Valid image formats supported by Discord.
+
+    https://docs.discord.com/developers/reference#image-formatting-image-formats
+    """
 
     JPG = ".jpg"
     JPEG = ".jpeg"

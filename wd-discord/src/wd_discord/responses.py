@@ -23,7 +23,10 @@ if TYPE_CHECKING:
 
 
 class InteractionCallbackType(IntEnum):
-    """The kind of initial response sent to an interaction."""
+    """The kind of initial response sent to an interaction.
+
+    https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-response-object-interaction-callback-type
+    """
 
     PONG = 1
     """Acknowledge a PING."""
@@ -41,7 +44,10 @@ class InteractionCallbackType(IntEnum):
 
 
 class MessageFlags(IntFlag):
-    """Message flags an app can set when sending a message (subset)."""
+    """Message flags an app can set when sending a message (subset).
+
+    https://docs.discord.com/developers/resources/message#message-object-message-flags
+    """
 
     SUPPRESS_EMBEDS = 1 << 2
     EPHEMERAL = 1 << 6

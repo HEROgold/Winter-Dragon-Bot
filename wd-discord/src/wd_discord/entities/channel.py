@@ -49,13 +49,13 @@ if TYPE_CHECKING:
 
 
 DEFAULT_INVITE_MAX_AGE = 86400
-"""Seconds an invite made by :meth:`BaseChannel.create_invite` stays valid by default: 24 hours."""
+"""Seconds an invite made by :meth:`BaseChannel.create_invite` stays valid by default: 24 hours (https://docs.discord.com/developers/resources/channel#create-channel-invite)."""
 
 type PermissionTarget = BaseRole | BaseMember | BaseUser
 """What a channel permission overwrite applies to: a role, or a member (their user works too)."""
 
 MAX_MESSAGES_PER_PAGE = 100
-"""The most messages ``GET /channels/{channel_id}/messages`` returns at once."""
+"""The most messages ``GET /channels/{channel_id}/messages`` returns at once (https://docs.discord.com/developers/resources/message#get-channel-messages)."""
 
 
 class BaseChannel(ClientBound):

@@ -15,7 +15,10 @@ if TYPE_CHECKING:
 
 
 class TimestampStyle(StrEnum):
-    """How Discord renders a timestamp; the examples are for 2021-04-20 16:20:30 in an en-GB client."""
+    """How Discord renders a timestamp; the examples are for 2021-04-20 16:20:30 in an en-GB client.
+
+    https://docs.discord.com/developers/reference#message-formatting-timestamp-styles
+    """
 
     SHORT_TIME = "t"
     """16:20"""

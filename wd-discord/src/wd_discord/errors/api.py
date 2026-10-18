@@ -1,4 +1,5 @@
 """Error models for Discord API responses."""
+
 from __future__ import annotations
 
 lazy from enum import IntEnum
@@ -50,10 +51,11 @@ class ApiErrorTree(RootModel[ErrorNode | dict[str, "ApiErrorTree"]]):
                 for child in children.values():
                     yield from child
 
+
 ApiErrorTree.model_rebuild()
 
 UNKNOWN_RANGE = range(10001, 20000)
-"""Discord's codes for "Unknown <resource>": what the request named doesn't exist."""
+"""Discord's codes for "Unknown <resource>": what the request named doesn't exist (https://docs.discord.com/developers/topics/opcodes-and-status-codes#json)."""
 
 
 class ApiResponseError(BaseModel):

@@ -85,7 +85,10 @@ inline by :meth:`Gateway.connect` and never reach ``listen``)."""
 
 
 class Opcode(IntEnum):
-    """Discord gateway opcodes (the subset this client uses)."""
+    """Discord gateway opcodes (the subset this client uses).
+
+    https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-opcodes
+    """
 
     DISPATCH = 0
     HEARTBEAT = 1

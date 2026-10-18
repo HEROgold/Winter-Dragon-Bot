@@ -37,12 +37,17 @@ if TYPE_CHECKING:
 
 
 STORE_API_URL = "https://api.steampowered.com"
+"""Steam's Web API host (unofficial reference: https://steamapi.xpaw.me/)."""
 QUERY_URL = f"{STORE_API_URL}/IStoreQueryService/Query/v1/"
+"""``IStoreQueryService/Query``: store items matching a filter (unofficial reference: https://steamapi.xpaw.me/#IStoreQueryService/Query)."""
 GET_ITEMS_URL = f"{STORE_API_URL}/IStoreBrowseService/GetItems/v1/"
+"""``IStoreBrowseService/GetItems``: store items by ID (unofficial reference: https://steamapi.xpaw.me/#IStoreBrowseService/GetItems)."""
 TOP_SELLERS_SORT = 10
-"""The ``Query`` sort ordering items by global sales, best-selling first (not in SteamDB's protobufs; found by trying)."""
+"""The ``Query`` sort ordering items by global sales, best-selling first (not in SteamDB's protobufs; found by trying)
+(unofficial reference: https://steamapi.xpaw.me/#IStoreQueryService/Query)."""
 MIN_DISCOUNT_FILTER = range(1, 100)
-"""The ``min_discount_percent`` values Steam honours: it ignores 100 (matching every item), and 0 matches full price."""
+"""The ``min_discount_percent`` values Steam honours: it ignores 100 (matching every item), and 0 matches full price
+(unofficial reference: https://steamapi.xpaw.me/#IStoreQueryService/Query)."""
 RATE_LIMITED = 429
 
 

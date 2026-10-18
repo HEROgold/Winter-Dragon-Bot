@@ -37,8 +37,8 @@ if TYPE_CHECKING:
 
     lazy from .events import Ready
 
-# Seconds between IDENTIFY batches: max_concurrency IDENTIFYs are allowed per 5 seconds.
 IDENTIFY_BATCH_DELAY = 5.0
+"""Seconds between IDENTIFY batches: ``max_concurrency`` IDENTIFYs are allowed per 5 seconds (https://docs.discord.com/developers/events/gateway#sharding-max-concurrency)."""
 
 
 def shard_id_for_guild(guild_id: int, num_shards: int) -> int:

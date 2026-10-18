@@ -4,7 +4,10 @@ lazy from enum import StrEnum
 
 
 class OAuthScopes(StrEnum):
-    """OAuth2 Scopes for the User Object."""
+    """OAuth2 Scopes for the User Object.
+
+    https://docs.discord.com/developers/topics/oauth2#shared-resources-oauth2-scopes
+    """
 
     IDENTIFY = "identify"
     EMAIL = "email"

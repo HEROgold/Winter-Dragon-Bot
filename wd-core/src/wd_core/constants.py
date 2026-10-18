@@ -21,5 +21,16 @@ intents = Intents.none() | sum(
         Intents.voice_states,
     ],
 )
+"""The gateway intents the bot asks for by default (https://docs.discord.com/developers/events/gateway#list-of-intents).
+
+``members``, ``presences`` and ``message_content`` are privileged: enable them for the app in the developer portal
+too (https://docs.discord.com/developers/events/gateway#privileged-intents).
+"""
 
 BOT_PERMISSIONS = Permissions.all()
+"""The permissions the bot invite link asks for by default: every permission, ``ADMINISTRATOR`` included
+(https://docs.discord.com/developers/topics/permissions#permissions-bitwise-permission-flags).
+
+A security decision: it saves granting each cog's permissions one by one, at the cost of the bot being able to do
+anything in a server that accepts the invite. Set ``permissions`` in ``bot.ini`` to ask for less.
+"""

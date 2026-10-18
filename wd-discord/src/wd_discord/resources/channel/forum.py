@@ -10,7 +10,10 @@ lazy from wd_discord.partial_emoji import PartialEmoji
 
 
 class VideoQualityMode(IntEnum):
-    """The camera video quality mode of a voice channel."""
+    """The camera video quality mode of a voice channel.
+
+    https://docs.discord.com/developers/resources/channel#channel-object-video-quality-modes
+    """
 
     AUTO = 1
     """Discord chooses the quality for optimal performance."""
@@ -19,7 +22,10 @@ class VideoQualityMode(IntEnum):
 
 
 class SortOrderType(IntEnum):
-    """The default sort order used to order posts in a forum or media channel."""
+    """The default sort order used to order posts in a forum or media channel.
+
+    https://docs.discord.com/developers/resources/channel#channel-object-sort-order-types
+    """
 
     LATEST_ACTIVITY = 0
     """Sort forum posts by activity."""
@@ -28,7 +34,10 @@ class SortOrderType(IntEnum):
 
 
 class ForumLayoutType(IntEnum):
-    """The default layout used to display posts in a forum channel."""
+    """The default layout used to display posts in a forum channel.
+
+    https://docs.discord.com/developers/resources/channel#channel-object-forum-layout-types
+    """
 
     NOT_SET = 0
     """No default has been set for the forum channel."""

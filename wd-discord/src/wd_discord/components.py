@@ -20,16 +20,20 @@ if TYPE_CHECKING:
 
 
 MAX_ACTION_ROW_BUTTONS = 5
-"""An action row holds up to 5 buttons."""
+"""An action row holds up to 5 buttons (https://docs.discord.com/developers/components/reference#action-row)."""
 MAX_MESSAGE_COMPONENTS = 40
-"""A message holds up to 40 components in total, counting nested ones."""
+"""A message holds up to 40 components in total, counting nested ones (https://docs.discord.com/developers/components/reference)."""
 MAX_CUSTOM_ID_LENGTH = 100
+"""A component's ``custom_id`` holds up to 100 characters (https://docs.discord.com/developers/components/reference#anatomy-of-a-component-custom-id)."""
 MAX_BUTTON_LABEL_LENGTH = 80
 """A button label holds up to 80 characters (https://docs.discord.com/developers/components/reference#button)."""
 
 
 class ComponentType(IntEnum):
-    """The type of a component."""
+    """The type of a component.
+
+    https://docs.discord.com/developers/components/reference#component-object-component-types
+    """
 
     ACTION_ROW = 1
     BUTTON = 2
@@ -54,7 +58,10 @@ class ComponentType(IntEnum):
 
 
 class ButtonStyle(IntEnum):
-    """How a button looks, and what clicking it does."""
+    """How a button looks, and what clicking it does.
+
+    https://docs.discord.com/developers/components/reference#button-button-styles
+    """
 
     PRIMARY = 1
     SECONDARY = 2

@@ -221,6 +221,7 @@ class SharedRateLimiter(RateLimiter):
 
 
 MAJOR_PARAM_PREFIXES = ("guilds", "channels", "webhooks")
+"""The route parts whose ID is a major parameter, so it splits the rate limit bucket (https://docs.discord.com/developers/topics/rate-limits)."""
 
 
 class RouteKey(str):

@@ -56,6 +56,8 @@ Fixed values live in the owning package's `constants.py` with a docstring:
 - [wd_discord/constants.py](../../../wd-discord/src/wd_discord/constants.py) — `DISCORD_EPOCH`, `RATE_LIMIT_BUCKET` header name.
 - [wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) — `CASCADE`, plus **`DATABASE_URL` assembled from the `DbUrl` config descriptors in `database.ini`**. That's the source-of-truth pattern in one line: credentials/host/port are config, the URL is derived, nothing redefines either.
 
+**A constant taken from documentation links to it.** A single constant ends its docstring with the full URL to the section anchor: `"""An embed holds up to 25 fields (https://docs.discord.com/developers/resources/message#embed-object-embed-limits)."""`. An enum or flag mirroring documented values carries one link in its class docstring. A value from an undocumented API (Steam's store API) links the community reference and says so: `(unofficial reference: https://steamapi.xpaw.me/#IStoreQueryService/Query)`. A Discord limit a cog needs is imported from wd-discord (`MAX_CHANNEL_NAME_LENGTH`, `MAX_EMBED_*`), never redefined. A default that's a security decision says so in its docstring (`BOT_PERMISSIONS` in [wd_core/constants.py](../../../wd-core/src/wd_core/constants.py) asks for every permission).
+
 Discord API base + version are config (`URLS` in [wd_config/discord.py](../../../wd-config/src/wd_config/discord.py), `api_version` property renders `"v10"`) — do not hardcode `https://discord.com/api/v10` in new code.
 
 ## First-launch & unset values

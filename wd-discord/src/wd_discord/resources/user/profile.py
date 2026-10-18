@@ -19,7 +19,10 @@ class Avatar(DiscordModel):
 
 
 class NamePlateBackgroundColor(StrEnum):
-    """Background color of the nameplate."""
+    """Background color of the nameplate.
+
+    https://docs.discord.com/developers/resources/user#nameplate
+    """
 
     CRIMSON = auto()
     BERRY = auto()

@@ -11,8 +11,9 @@ lazy from urllib.parse import quote
 
 
 MAX_REASON_LENGTH = 512
-"""The longest reason Discord keeps; a longer one is cut short."""
+"""The longest reason Discord keeps; a longer one is cut short (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object)."""
 REASON_HEADER = "X-Audit-Log-Reason"
+"""The header that carries an audit log reason (https://docs.discord.com/developers/resources/audit-log)."""
 
 
 @dataclass(frozen=True, slots=True)

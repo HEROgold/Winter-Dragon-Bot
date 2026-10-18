@@ -15,7 +15,10 @@ lazy from wd_discord.models import DiscordModel
 
 
 class ApplicationCommandType(IntEnum):
-    """Represents the type of an application command."""
+    """Represents the type of an application command.
+
+    https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-types
+    """
 
     CHAT_INPUT = 1
     USER = 2
@@ -24,7 +27,10 @@ class ApplicationCommandType(IntEnum):
 
 
 class ApplicationCommandOptionType(IntEnum):
-    """Represents the type of an application command option (distinct from the command's own type)."""
+    """Represents the type of an application command option (distinct from the command's own type).
+
+    https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-type
+    """
 
     SUB_COMMAND = 1
     SUB_COMMAND_GROUP = 2
@@ -40,7 +46,10 @@ class ApplicationCommandOptionType(IntEnum):
 
 
 class InteractionContextType(IntEnum):
-    """Where an application command can be used."""
+    """Where an application command can be used.
+
+    https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object-interaction-context-types
+    """
 
     GUILD = 0
     BOT_DM = 1
@@ -48,14 +57,20 @@ class InteractionContextType(IntEnum):
 
 
 class ApplicationIntegrationType(IntEnum):
-    """Where an app can be installed, and so where its commands are available."""
+    """Where an app can be installed, and so where its commands are available.
+
+    https://docs.discord.com/developers/resources/application#application-object-application-integration-types
+    """
 
     GUILD_INSTALL = 0
     USER_INSTALL = 1
 
 
 class EntryPointCommandHandlerType(IntEnum):
-    """Who handles a PRIMARY_ENTRY_POINT command's interaction."""
+    """Who handles a PRIMARY_ENTRY_POINT command's interaction.
+
+    https://docs.discord.com/developers/interactions/application-commands#application-command-object-entry-point-command-handler-types
+    """
 
     APP_HANDLER = 1
     """The app handles the interaction using an interaction token"""
@@ -101,10 +116,13 @@ class Locale(StrEnum):
 
 
 MAX_OPTIONS = 25
+"""A command or subcommand holds up to 25 options (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 MAX_CHOICES = 25
+"""An option offers up to 25 choices (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 MAX_CHOICE_NAME_LENGTH = 100
 """A command option choice name, autocomplete results included, holds up to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-choice-structure)."""
 CHAT_INPUT_NAME_PATTERN = r"^[-_\u02BC\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$"
+"""What a slash command or option name may hold (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-naming)."""
 
 
 def _require_lowercase(name: str) -> str:

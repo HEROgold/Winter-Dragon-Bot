@@ -326,7 +326,10 @@ class PresenceUpdate(Presence):
 
 
 class InteractionType(IntEnum):
-    """The kind of interaction an INTERACTION_CREATE dispatch carries."""
+    """The kind of interaction an INTERACTION_CREATE dispatch carries.
+
+    https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object-interaction-type
+    """
 
     PING = 1
     APPLICATION_COMMAND = 2
@@ -497,6 +500,8 @@ class EventName(StrEnum):
     (``EventName.MESSAGE_CREATE.model is Message``) via a custom ``__new__``, so the name and its
     model live in exactly one place - but most members' ``model`` is still ``None``; those
     dispatch as :class:`RawEvent` until their model gets built (see the module docstring).
+
+    https://docs.discord.com/developers/events/gateway-events#receive-events
     """
 
     model: type[DiscordModel] | None

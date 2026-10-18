@@ -15,7 +15,10 @@ ITEM_URL_PATTERN = re.compile(r"(?:https?://)?store\.steampowered\.com/(app|sub|
 
 
 class StoreItemKind(StrEnum):
-    """What a Steam store ID numbers; the value is the key Steam's store APIs take such an ID under."""
+    """What a Steam store ID numbers; the value is the key Steam's store APIs take such an ID under.
+
+    Unofficial reference (Steam doesn't document its store API): https://steamapi.xpaw.me/
+    """
 
     APP = "appid"
     PACKAGE = "packageid"

@@ -15,11 +15,12 @@ from winter_dragon.cogs.steam.urls import STORE_URL, SteamURL, StoreItemID, Stor
 
 
 ITEM_KINDS = {0: StoreItemKind.APP, 1: StoreItemKind.PACKAGE, 2: StoreItemKind.BUNDLE}
-"""``EStoreItemType``: the kind of store item each ``item_type`` stands for."""
+"""``EStoreItemType``: the kind of store item each ``item_type`` stands for (unofficial reference: https://steamapi.xpaw.me/#IStoreBrowseService/GetItems)."""
 DLC_APP_TYPE = 4
-"""The ``EStoreAppType`` of a DLC."""
+"""The ``EStoreAppType`` of a DLC (unofficial reference: https://steamapi.xpaw.me/#IStoreBrowseService/GetItems)."""
 FOUND = 1
-"""The ``success`` (an ``EResult``) of an item Steam knows; other values mean it doesn't (15: no such item)."""
+"""The ``success`` (an ``EResult``) of an item Steam knows; other values mean it doesn't (15: no such item)
+(unofficial reference: https://steamapi.xpaw.me/#IStoreBrowseService/GetItems)."""
 
 
 class SteamModel(BaseModel):

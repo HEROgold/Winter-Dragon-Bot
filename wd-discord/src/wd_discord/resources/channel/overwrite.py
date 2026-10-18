@@ -10,7 +10,10 @@ from wd_discord.snowflake import Snowflake
 
 
 class OverwriteType(IntEnum):
-    """Whether a permission overwrite targets a role or a member."""
+    """Whether a permission overwrite targets a role or a member.
+
+    https://docs.discord.com/developers/resources/channel#overwrite-object
+    """
 
     ROLE = 0
     """The overwrite applies to a role."""

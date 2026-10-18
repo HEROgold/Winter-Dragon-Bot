@@ -11,7 +11,10 @@ from wd_discord.snowflake import Snowflake
 
 
 class MembershipState(IntEnum):
-    """State of a team member's invitation."""
+    """State of a team member's invitation.
+
+    https://docs.discord.com/developers/topics/teams#data-models-membership-state-enum
+    """
 
     INVITED = 1
     """The member has been invited to the team but has not yet accepted."""

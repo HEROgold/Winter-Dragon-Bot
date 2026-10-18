@@ -36,7 +36,7 @@ Remembers a leaving member's roles, and gives them back when they rejoin.
 ## `winter_dragon.cogs.autochannel` — `src/winter_dragon/cogs/autochannel.py`
 The /autochannel command group: joining a guild's hub voice channel gives a member a voice channel of their own.
 
-- module names: MAX_NAME_LENGTH, OWNER_PERMISSIONS, CREATE_REASON, AUTOCHANNEL_TABLES
+- module names: OWNER_PERMISSIONS, CREATE_REASON, AUTOCHANNEL_TABLES
 - `owner_overwrite(user_id: Snowflake) -> OverwriteParams` — Return the overwrite letting the member ``user_id`` run their own channel.
 - `default_name(display_name: str) -> str` — Return the name of a member's channel when they didn't choose one.
 - `channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams` — Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
