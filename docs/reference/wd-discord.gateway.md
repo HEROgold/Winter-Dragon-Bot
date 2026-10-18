@@ -14,6 +14,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord.gateway.connection` — `wd-discord/src/wd_discord/gateway/connection.py`
 A minimal Discord Gateway (WebSocket) connection for wd-discord.
 
+- module names: FATAL_CLOSE_CODES, NEW_SESSION_CLOSE_CODES, MAX_RESUME_ATTEMPTS
 - `type GatewayFrame = _DispatchFrame | _HeartbeatRequestFrame | _ReconnectFrame | _InvalidSessionFrame | _HeartbeatAckFrame`
 - `build_presence(activities: list[GatewayActivity], status: Status | str=Status.online, *, afk: bool=False, since: int | None=None) -> dict[str, Any]` — Build the ``d`` payload for a Presence Update (object -> API).
 - `build_identify(token: str, intents: Intents, *, shard: tuple[int, int] | None=None, presence: dict[str, Any] | None=None) -> dict[str, Any]` — Build the ``d`` payload for an IDENTIFY (object -> API).
@@ -25,6 +26,14 @@ Discord gateway opcodes (the subset this client uses).
 - attributes: DISPATCH, HEARTBEAT, IDENTIFY, PRESENCE_UPDATE, RESUME, RECONNECT, REQUEST_GUILD_MEMBERS, INVALID_SESSION,
   HELLO, HEARTBEAT_ACK
 
+### `class Disconnect(Enum)`
+Why :meth:`Gateway.listen` stopped, and so how :meth:`Gateway.run` reconnects.
+
+- attributes: RESUME, IDENTIFY
+
+### `class GatewayClosedError(RuntimeError)`
+Discord closed the gateway with a code reconnecting can't fix (see :data:`FATAL_CLOSE_CODES`).
+
 ### `@dataclass class GatewayActivity`
 An activity shown on the bot's presence (object -> API via :meth:`to_dict`).
 
@@ -35,7 +44,9 @@ An activity shown on the bot's presence (object -> API via :meth:`to_dict`).
 A minimal async Discord gateway client.
 
 - `async connect(*, presence: dict[str, Any] | None=None) -> Ready` — Open the connection, identify, and return once READY is received.
-- `async listen(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None` — Receive gateway frames forever, updating ``_seq`` and invoking ``dispatch`` on DISPATCH.
+- `async resume() -> None` — Reconnect to the session's resume URL and RESUME (op 6) it from the last sequence received.
+- `async run(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None` — Run :meth:`listen` until cancelled, reconnecting whenever the connection ends.
+- `async listen(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> Disconnect` — Receive frames, updating ``_seq`` and invoking ``dispatch`` on DISPATCH, until the connection ends.
 - `async update_presence(activities: list[GatewayActivity], status: Status | str=Status.online) -> None` — Send a Presence Update (op 3) to set the bot's activity/status.
 - `async close() -> None` — Cancel the heartbeat and close the WebSocket.
 

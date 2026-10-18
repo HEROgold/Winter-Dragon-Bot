@@ -174,7 +174,7 @@ class ShardManager:
         if not self.shards:
             msg = "ShardManager is not started."
             raise RuntimeError(msg)
-        await asyncio.gather(*(shard.listen(dispatch) for shard in self.shards))
+        await asyncio.gather(*(shard.run(dispatch) for shard in self.shards))
 
     async def _close(self) -> None:
         """Close every shard's connection."""

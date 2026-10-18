@@ -7,7 +7,9 @@ just enough of the v10 gateway (https://docs.discord.com/developers/topics/gatew
 * heartbeat (op 1),
 * IDENTIFY (op 2) with an optional initial presence,
 * receive READY (op 0 / ``t == "READY"``), and
-* send Presence Updates (op 3) - i.e. set the bot's activity/status.
+* send Presence Updates (op 3) - i.e. set the bot's activity/status, and
+* keep the session alive: :meth:`Gateway.run` RESUMEs (op 6) after a reconnect request or a dropped socket,
+  and IDENTIFYs again when Discord ends the session.
 
 The presence/READY (de)serialisation is factored into the pure helpers
 :func:`build_presence` and :func:`parse_ready` so they can be unit-tested without a socket.
@@ -19,7 +21,7 @@ lazy import asyncio
 lazy import json
 lazy import random
 lazy from dataclasses import dataclass
-lazy from enum import IntEnum
+lazy from enum import Enum, IntEnum, auto
 lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
 lazy from herogold.log import LoggerMixin
@@ -27,6 +29,7 @@ lazy from wd_config.discord import URLS
 lazy from wd_core.intents import Intents
 lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
+lazy from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
 lazy from .dispatch import parse_dispatch
 lazy from .events import EventName, Ready
@@ -100,6 +103,34 @@ class Opcode(IntEnum):
     INVALID_SESSION = 9
     HELLO = 10
     HEARTBEAT_ACK = 11
+
+
+FATAL_CLOSE_CODES = frozenset({4004, 4010, 4011, 4012, 4013, 4014})
+"""Close codes reconnecting can't fix: bad token, shard, API version or intents
+(https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes)."""
+NEW_SESSION_CLOSE_CODES = frozenset({4007, 4009})
+"""Close codes after which the session can't be resumed, only replaced: invalid sequence, session timed out
+(https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes)."""
+MAX_RESUME_ATTEMPTS = 5
+"""Failed attempts to reach the resume URL before giving up on the session and identifying a new one."""
+
+
+class Disconnect(Enum):
+    """Why :meth:`Gateway.listen` stopped, and so how :meth:`Gateway.run` reconnects."""
+
+    RESUME = auto()
+    """Discord asked for a reconnect, or the socket dropped: resume the session, missing no events."""
+    IDENTIFY = auto()
+    """Discord ended the session: identify a new one."""
+
+
+class GatewayClosedError(RuntimeError):
+    """Discord closed the gateway with a code reconnecting can't fix (see :data:`FATAL_CLOSE_CODES`)."""
+
+    def __init__(self, code: int, reason: str) -> None:
+        """Record Discord's close ``code`` and ``reason``."""
+        super().__init__(f"Discord closed the gateway with {code}: {reason}")
+        self.code = code
 
 
 @dataclass
@@ -200,7 +231,13 @@ class Gateway(LoggerMixin):
         self._ws: ClientConnection | None = None
         self._heartbeat_task: asyncio.Task[None] | None = None
         self._seq: int | None = None
+        self._presence: dict[str, Any] | None = None
+        self._ready_dispatched = False
         self.ready: Ready | None = None
+        self.reidentify_delay = (1.0, 5.0)
+        """Seconds to wait, picked at random in this range, before identifying again (Discord asks for 1-5)."""
+        self.resume_backoff = 1.0
+        """Seconds before the first retry of a failed resume; each retry doubles it."""
 
     async def _send(self, op: Opcode, data: Any) -> None:  # noqa: ANN401
         """Send a gateway payload."""
@@ -226,54 +263,127 @@ class Gateway(LoggerMixin):
         presence: dict[str, Any] | None = None,
     ) -> Ready:
         """Open the connection, identify, and return once READY is received."""
-        self._ws = await connect(self.url)
-
-        hello = json.loads(await self._ws.recv())
-        interval = hello["d"]["heartbeat_interval"] / 1000
-        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop(interval))
-
+        self._presence = presence
+        ws = await self._open(self.url)
         await self._send(
             Opcode.IDENTIFY,
             build_identify(self.token, self.intents, shard=self.shard, presence=presence),
         )
 
         while True:
-            message = json.loads(await self._ws.recv())
+            message = json.loads(await ws.recv())
             if (seq := message.get("s")) is not None:
                 self._seq = seq
             if message["op"] == Opcode.DISPATCH and message.get("t") == "READY":
                 self.ready = parse_ready(message)
+                self._ready_dispatched = False
                 return self.ready
 
-    async def listen(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None:
-        """Receive gateway frames forever, updating ``_seq`` and invoking ``dispatch`` on DISPATCH.
+    async def _open(self, url: str) -> ClientConnection:
+        """Connect to ``url``, wait for HELLO, start heartbeating at the interval it names, and return the socket."""
+        ws = self._ws = await connect(url)
+        hello = json.loads(await ws.recv())
+        interval = hello["d"]["heartbeat_interval"] / 1000
+        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop(interval))
+        return ws
 
-        Must be called after :meth:`connect` has returned (i.e. after READY). The READY that
-        :meth:`connect` consumed is dispatched first, so listeners see it once per shard. Runs until the
-        connection closes, is cancelled, or Discord sends RECONNECT/INVALID_SESSION.
+    async def resume(self) -> None:
+        """Reconnect to the session's resume URL and RESUME (op 6) it from the last sequence received.
 
-        TODO(Phase 2): implement RESUME (op 6) using ``resume_gateway_url``/``session_id``/``_seq``
-        on RECONNECT/INVALID_SESSION; for now the shard just logs and drops the connection.
+        Discord then replays the events missed since, and sends RESUMED; or INVALID_SESSION when it can't.
+        https://docs.discord.com/developers/events/gateway#resuming
+        """
+        if self.ready is None:
+            msg = "There is no session to resume."
+            raise RuntimeError(msg)
+        await self._open(f"{self.ready.resume_gateway_url}/{URLS().gateway_query}")
+        await self._send(Opcode.RESUME, {"token": self.token, "session_id": self.ready.session_id, "seq": self._seq})
+
+    async def run(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None:
+        """Run :meth:`listen` until cancelled, reconnecting whenever the connection ends.
+
+        A reconnect request or a dropped socket resumes the session (retrying with backoff, then identifying a
+        new one); an ended session waits :attr:`reidentify_delay` and identifies again, which dispatches a new
+        READY. Raises :class:`GatewayClosedError` on a close code reconnecting can't fix.
+        """
+        while True:
+            reason = await self.listen(dispatch)
+            await self.close()
+            if reason is Disconnect.RESUME and await self._resume_with_retries():
+                continue
+            await asyncio.sleep(random.uniform(*self.reidentify_delay))  # noqa: S311 - jitter, not crypto
+            await self.connect(presence=self._presence)
+
+    async def _resume_with_retries(self) -> bool:
+        """Try :meth:`resume` up to :data:`MAX_RESUME_ATTEMPTS` times; ``False`` if every attempt failed."""
+        if self.ready is None:
+            return False
+        for attempt in range(MAX_RESUME_ATTEMPTS):
+            try:
+                await self.resume()
+            except (OSError, ConnectionClosed, InvalidHandshake) as error:
+                self.logger.warning(t"Resume attempt {attempt + 1} failed: {error!r}")
+                await self.close()
+                await asyncio.sleep(self.resume_backoff * 2**attempt)
+            else:
+                return True
+        return False
+
+    async def listen(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> Disconnect:
+        """Receive frames, updating ``_seq`` and invoking ``dispatch`` on DISPATCH, until the connection ends.
+
+        Must be called after :meth:`connect` has returned (i.e. after READY). The READY that :meth:`connect`
+        consumed is dispatched first, once per session, so a resumed session doesn't repeat it. Returns how to
+        reconnect when Discord sends RECONNECT/INVALID_SESSION or the socket closes; raises
+        :class:`GatewayClosedError` on a close code reconnecting can't fix. :meth:`run` does the reconnecting.
         """
         if self._ws is None:
             msg = "Gateway is not connected."
             raise RuntimeError(msg)
-        if self.ready is not None:
+        if self.ready is not None and not self._ready_dispatched:
+            self._ready_dispatched = True
             await dispatch(EventName.READY, self.ready)
         while True:
-            message = cast("GatewayFrame", json.loads(await self._ws.recv()))
-            if (seq := message.get("s")) is not None:
-                self._seq = seq
-            match message:
-                case {"op": Opcode.DISPATCH, "t": name, "d": data}:
-                    await dispatch(name, parse_dispatch(name, data))
-                case {"op": Opcode.HEARTBEAT}:
-                    await self._send(Opcode.HEARTBEAT, self._seq)
-                case {"op": Opcode.RECONNECT} | {"op": Opcode.INVALID_SESSION}:
-                    self.logger.warning(t"Gateway requested reconnect (op {message['op']}); closing shard.")
-                    return
-                case {"op": Opcode.HEARTBEAT_ACK}:
-                    pass
+            try:
+                raw = await self._ws.recv()
+            except ConnectionClosed as closed:
+                return self._closed(closed)
+            disconnect = await self._handle(cast("GatewayFrame", json.loads(raw)), dispatch)
+            if disconnect is not None:
+                return disconnect
+
+    async def _handle(
+        self,
+        message: GatewayFrame,
+        dispatch: Callable[[str, DiscordModel], Awaitable[None]],
+    ) -> Disconnect | None:
+        """Act on one frame; return how to reconnect when it ends the connection."""
+        if (seq := message.get("s")) is not None:
+            self._seq = seq
+        match message:
+            case {"op": Opcode.DISPATCH, "t": name, "d": data}:
+                await dispatch(name, parse_dispatch(name, data))
+            case {"op": Opcode.HEARTBEAT}:
+                await self._send(Opcode.HEARTBEAT, self._seq)
+            case {"op": Opcode.RECONNECT}:
+                self.logger.info(t"Gateway requested a reconnect; resuming.")
+                return Disconnect.RESUME
+            case {"op": Opcode.INVALID_SESSION}:
+                resumable = bool(message.get("d"))
+                self.logger.warning(t"Gateway invalidated the session (resumable: {resumable}).")
+                return Disconnect.RESUME if resumable else Disconnect.IDENTIFY
+            case _:
+                pass
+        return None
+
+    def _closed(self, closed: ConnectionClosed) -> Disconnect:
+        """Decide how to reconnect after the socket closed with ``closed``'s code."""
+        code = None if closed.rcvd is None else closed.rcvd.code
+        reason = "" if closed.rcvd is None else closed.rcvd.reason
+        if code in FATAL_CLOSE_CODES:
+            raise GatewayClosedError(code, reason)
+        self.logger.warning(t"Gateway connection closed ({code}: {reason}).")
+        return Disconnect.IDENTIFY if code in NEW_SESSION_CLOSE_CODES else Disconnect.RESUME
 
     async def update_presence(
         self,
