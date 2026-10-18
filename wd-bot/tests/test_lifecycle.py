@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
@@ -189,6 +190,36 @@ def test_alive_unique_allows_a_replacement_of_a_soft_deleted_row(engine: Engine)
     with Session(engine) as session, pytest.raises(IntegrityError):
         session.add(LifecycleSeat(guild_id=1, kind="chair"))
         session.commit()
+
+
+def test_owned_by_with_deleted_rows_finds_soft_deleted_ones_through_a_soft_deleted_parent(engine: Engine) -> None:
+    board_id = _stored(engine, _board(guild_id=2))
+    list_id = _stored(engine, LifecycleList(board_id=board_id))
+    _stored(engine, LifecycleCard(list_id=list_id, text="card"))
+    with Session(engine) as session:
+        for row in (*session.exec(owned_by(LifecycleCard, guild=2)), *session.exec(owned_by(LifecycleList, guild=2))):
+            soft_delete(session, row)
+        session.commit()
+    _soft_delete(engine, board_id)
+
+    with Session(engine) as session:
+        assert session.exec(owned_by(LifecycleCard, guild=2)).all() == []
+        assert [card.text for card in session.exec(owned_by(LifecycleCard, guild=2, include_deleted=True))] == ["card"]
+
+
+def test_soft_delete_at_a_given_moment_stamps_that_moment(engine: Engine) -> None:
+    board_id = _stored(engine, _board())
+    moment = datetime(2026, 1, 2, 3, 4, tzinfo=UTC)
+
+    with Session(engine) as session:
+        board = session.get(LifecycleBoard, board_id)
+        assert board is not None
+        soft_delete(session, board, at=moment)
+        session.commit()
+
+    with Session(engine) as session:
+        (board,) = session.exec(owned_by(LifecycleBoard, guild=1, include_deleted=True))
+    assert board.deleted_at == moment
 
 
 def test_owned_by_matches_nothing_for_an_undeclared_owner(engine: Engine) -> None:

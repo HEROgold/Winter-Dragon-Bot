@@ -107,9 +107,9 @@ def alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]:
     return select(model).where(col(model.deleted_at).is_(None))
 
 
-def soft_delete(session: Session, row: LifecycleModel) -> None:
-    """Soft-delete ``row``: stamp its ``deleted_at``, hiding it from :func:`alive`. The caller commits."""
-    row.deleted_at = utc_now()
+def soft_delete(session: Session, row: LifecycleModel, *, at: datetime | None = None) -> None:
+    """Soft-delete ``row``: stamp its ``deleted_at`` with ``at`` (default now), hiding it from :func:`alive`. Caller commits."""
+    row.deleted_at = utc_now() if at is None else at
     session.add(row)
 
 
@@ -150,14 +150,20 @@ def _same_key[M: LifecycleModel](session: Session, row: M) -> M | None:
     return session.exec(select(model).where(key)).first()
 
 
-def owned_by[M: LifecycleModel](model: type[M], *, member: int | None = None, guild: int | None = None) -> SelectOfScalar[M]:
+def owned_by[M: LifecycleModel](
+    model: type[M],
+    *,
+    member: int | None = None,
+    guild: int | None = None,
+    include_deleted: bool = False,
+) -> SelectOfScalar[M]:
     """Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.
 
     Each kind of owner is the column of the nearest table in the chain that declares one, so a row can be owned by
     its own member and, through its parent, by a guild. Matches nothing when no table in the chain declares an owner
-    of the asked kind.
+    of the asked kind. ``include_deleted`` selects soft-deleted rows too; parents in the chain are never filtered.
     """
-    statement = alive(model)
+    statement = select(model) if include_deleted else alive(model)
     level: type[LifecycleModel] = model
     member_column = guild_column = None
     while True:

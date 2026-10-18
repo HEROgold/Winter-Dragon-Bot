@@ -30,7 +30,7 @@ lazy from .models import (
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Sequence
+    lazy from collections.abc import Generator, Sequence
     lazy from random import Random
 
     lazy from wd_db.extension.lifecycle import LifecycleModel
@@ -103,6 +103,20 @@ def sign_up(session: Session, tournament: Tournament, user_id: int) -> None:
         msg = "You're signed up already."
         raise Refused(msg)
     create_or_restore(session, TournamentPlayer(tournament_id=_id(tournament), user_id=user_id))
+
+
+def open_signups_of(session: Session, user_id: int) -> Generator[Tournament]:
+    """Yield the tournaments ``user_id`` is signed up for that haven't started."""
+    query = (
+        alive(Tournament)
+        .join(TournamentPlayer, col(TournamentPlayer.tournament_id) == col(Tournament.id))
+        .where(
+            TournamentPlayer.user_id == user_id,
+            col(TournamentPlayer.deleted_at).is_(None),
+            Tournament.status == TournamentStatus.SIGNUP,
+        )
+    )
+    yield from session.exec(query)
 
 
 def withdraw(session: Session, tournament: Tournament, user_id: int) -> None:

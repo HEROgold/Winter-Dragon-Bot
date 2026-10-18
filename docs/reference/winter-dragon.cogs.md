@@ -189,14 +189,49 @@ Cog for the /love command.
 ## `winter_dragon.cogs.privacy` — `src/winter_dragon/cogs/privacy.py`
 Privacy: soft-deleted records are purged for good once they've been deleted for :data:`RETENTION`.
 
-- module names: RETENTION, PURGE_INTERVAL
+- module names: RETENTION, PURGE_INTERVAL, USAGE_RETENTION, PRIVACY_TABLES
+- `utc_now() -> datetime` — Return the current time in UTC; what the listeners take for now.
+- `command_path(interaction: CommandInteraction) -> str` — Return the full name of the command ``interaction`` ran, with its group and subcommand: ``reminder add``.
 - `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
 
-### `class Privacy(Cog)`
-Purges soft-deleted records older than :data:`RETENTION` once a day, from a background task.
+### `class DepartedGuild(DiscordKeyedModel, table=True)`
+A guild that removed the bot, whose data is hidden until it's back or purged; ``id`` is the guild's.
 
-- `async load() -> None` — Start the background task purging soft-deleted records.
+- fields: departed_at: datetime
+
+### `class DeletionStep(StrEnum)`
+How far a member's deletion request got, in order.
+
+- attributes: REQUESTED, HIDDEN, PURGED
+
+### `class DeletionRequest(DiscordKeyedModel, table=True)`
+A member's request to delete all their data, and when each :class:`DeletionStep` was done; ``id`` is the member's.
+
+- fields: requested_at: datetime, hidden_at: datetime | None, purged_at: datetime | None
+- `@property steps -> Generator[tuple[DeletionStep, datetime]]` — Yield each step done so far with when it was done, in order.
+
+### `class CommandUsage(LifecycleModel, table=True)`
+How often a member ran a command in a guild on one UTC day; the member owns it, so a departing guild leaves it.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], user_id: int, command: str, guild_id:
+  int | None, day: date, uses: int
+
+### `@dataclass class UsageCount`
+How often a member ran ``command`` in the guild ``guild_id`` (``None`` for a DM) on ``day``.
+
+- fields: command: str, guild_id: int | None, day: date, count: int
+
+### `class Privacy(Cog)`
+Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked.
+
+- `async load() -> None` — Create the privacy tables, then start the background task purging soft-deleted records.
 - `async unload() -> None` — Stop the background task.
+- `@Cog.listener async on_guild_delete(event: GuildDelete) -> None` — Hide the data of a guild that removed the bot; a guild that only went offline keeps it.
+- `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Bring back the data a guild had when it removed the bot, if it's back within :data:`RETENTION`.
+- `async request_deletion(member_id: int, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now``; :meth:`purge` deletes it for good later.
+- `deletion_steps(member_id: int) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
+- `@Cog.listener async on_interaction(interaction: AnyInteraction) -> None` — Count a run of an application command; autocomplete and component interactions don't count.
+- `usage(member_id: int) -> Generator[UsageCount]` — Yield the member ``member_id``'s command usage counts, day by day.
 - `async purge(now: datetime) -> None` — Hard-delete every lifecycle row soft-deleted more than :data:`RETENTION` before ``now``, children first.
 
 ## `winter_dragon.cogs.reminder` — `src/winter_dragon/cogs/reminder.py`
@@ -670,6 +705,7 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `roster(session: Session, team_id: int) -> list[int]` — Return the user IDs of the team's players.
 - `matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
 - `sign_up(session: Session, tournament: Tournament, user_id: int) -> None` — Sign ``user_id`` up for a solo tournament.
+- `open_signups_of(session: Session, user_id: int) -> Generator[Tournament]` — Yield the tournaments ``user_id`` is signed up for that haven't started.
 - `withdraw(session: Session, tournament: Tournament, user_id: int) -> None` — Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team.
 - `create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> None` — Register the team ``name`` with ``captain_id`` as its captain and first player.
 - `add_to_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None` — Add ``user_id`` to the team ``captain_id`` captains.
