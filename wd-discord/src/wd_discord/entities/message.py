@@ -19,7 +19,7 @@ lazy from wd_discord.responses import message_data
 
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
     from string.templatelib import Template
 
     from wd_discord.audit import Reason
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from wd_discord.embed import Embed
     from wd_discord.entities.member import BaseMember
     from wd_discord.entities.user import BaseUser
+    from wd_discord.resources.message import Attachment, Reaction
     from wd_discord.snowflake import Snowflake
 
 
@@ -145,6 +146,26 @@ class Message(Entity[MessageModel], BaseMessage):
     def author(self) -> User:
         """Who sent the message."""
         return User(self.client, self.model.author)
+
+    @property
+    def mentions(self) -> Generator[User]:
+        """The users the message mentions."""
+        return (User(self.client, user) for user in self.model.mentions)
+
+    @property
+    def attachments(self) -> Generator[Attachment]:
+        """The files attached to the message."""
+        yield from self.model.attachments
+
+    @property
+    def embeds(self) -> Generator[Embed]:
+        """The message's embeds."""
+        yield from self.model.embeds
+
+    @property
+    def reactions(self) -> Generator[Reaction]:
+        """The message's reactions; empty on a dispatched MESSAGE_CREATE."""
+        yield from self.model.reactions
 
     @property
     def guild(self) -> PartialGuild | None:

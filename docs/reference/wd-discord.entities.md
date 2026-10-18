@@ -663,6 +663,10 @@ A message, as Discord returned or dispatched it.
 - `@property channel_id -> Snowflake` — The channel the message was sent in.
 - `@property content -> str` — The message's text; empty without the MESSAGE_CONTENT intent, unless the bot is mentioned.
 - `@property author -> User` — Who sent the message.
+- `@property mentions -> Generator[User]` — The users the message mentions.
+- `@property attachments -> Generator[Attachment]` — The files attached to the message.
+- `@property embeds -> Generator[Embed]` — The message's embeds.
+- `@property reactions -> Generator[Reaction]` — The message's reactions; empty on a dispatched MESSAGE_CREATE.
 - `@property guild -> PartialGuild | None` — The guild the message was sent in; ``None`` in a DM or when Discord left it out.
 - `@property timestamp -> str` — When the message was sent, as an ISO 8601 timestamp.
 - `@property edited_timestamp -> str | None` — When the message was last edited, as an ISO 8601 timestamp; ``None`` if never.

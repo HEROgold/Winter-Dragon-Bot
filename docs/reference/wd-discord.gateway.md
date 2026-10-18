@@ -242,7 +242,8 @@ An interaction type without its own subclass yet (PING, MODAL_SUBMIT); ``data`` 
 MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message).
 
 - fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None, author: User, content: str, timestamp: str,
-  edited_timestamp: str | None, tts: bool, mention_everyone: bool
+  edited_timestamp: str | None, tts: bool, mention_everyone: bool, mentions: list[MentionedUser], attachments:
+  list[Attachment], embeds: list[Embed], reactions: list[Reaction]
 
 ### `class EventName(StrEnum)`
 Every dispatch event name Discord currently defines.

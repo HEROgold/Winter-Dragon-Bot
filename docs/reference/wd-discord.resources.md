@@ -399,6 +399,32 @@ A guild invite (subset - https://docs.discord.com/developers/resources/invite).
   max_uses: int | None, max_age: int | None, temporary: bool | None, created_at: str | None
 - `@property url -> str` — The invite's shareable URL.
 
+## `wd_discord.resources.message` — `wd-discord/src/wd_discord/resources/message.py`
+The objects a message carries besides its text: attachments, reactions and mentioned users.
+
+### `class Attachment(DiscordModel)`
+A file attached to a message (https://docs.discord.com/developers/resources/message#attachment-object).
+
+- fields: id: Snowflake, filename: str, title: str | None, description: str | None, content_type: str | None, size: int,
+  url: str, proxy_url: str, height: int | None, width: int | None, placeholder: str | None, placeholder_version: int |
+  None, ephemeral: bool | None, duration_secs: float | None, waveform: str | None, flags: int | None
+
+### `class ReactionCountDetails(DiscordModel)`
+How a reaction count splits (https://docs.discord.com/developers/resources/message#reaction-count-details-object).
+
+- fields: burst: int, normal: int
+
+### `class Reaction(DiscordModel)`
+One emoji's reactions on a message (https://docs.discord.com/developers/resources/message#reaction-object).
+
+- fields: count: int, count_details: ReactionCountDetails, me: bool, me_burst: bool, emoji: PartialEmoji, burst_colors:
+  list[str]
+
+### `class MentionedUser(User)`
+A user a message mentions; in a guild Discord adds their partial member (https://docs.discord.com/developers/resources/message#message-object).
+
+- fields: member: GuildMember | None
+
 ## `wd_discord.resources.user` — `wd-discord/src/wd_discord/resources/user/__init__.py`
 https://docs.discord.com/developers/resources/user#user-object.
 

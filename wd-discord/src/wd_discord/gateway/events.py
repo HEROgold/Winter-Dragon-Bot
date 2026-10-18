@@ -39,6 +39,7 @@ lazy from typing import Self, cast
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 
 from wd_discord.components import ComponentType
+from wd_discord.embed import Embed
 from wd_discord.gateway.presence import Presence
 from wd_discord.image import ImageHash
 from wd_discord.interactions import ApplicationIntegrationType, InteractionContextType, Locale
@@ -51,6 +52,7 @@ from wd_discord.resources.guild.guild import Guild
 from wd_discord.resources.guild.member import GuildMember
 from wd_discord.resources.guild.partial_guild import PartialGuild
 from wd_discord.resources.guild.role import Role
+from wd_discord.resources.message import Attachment, MentionedUser, Reaction
 from wd_discord.resources.user import User
 from wd_discord.resources.user.collectibles import Collectibles
 from wd_discord.resources.user.profile import Avatar
@@ -486,7 +488,14 @@ class Message(DiscordModel):
     edited_timestamp: str | None = None
     tts: bool
     mention_everyone: bool
-    # TODO(Phase 2): mentions[]/attachments[]/embeds[]/reactions[] need their own models.
+    mentions: list[MentionedUser] = Field(default_factory=list)
+    """Users the message mentions."""
+    attachments: list[Attachment] = Field(default_factory=list)
+    """Files attached to the message."""
+    embeds: list[Embed] = Field(default_factory=list)
+    """Embeds in the message."""
+    reactions: list[Reaction] = Field(default_factory=list)
+    """Reactions to the message; never on MESSAGE_CREATE, only on a fetched message."""
 
 
 class EventName(StrEnum):
