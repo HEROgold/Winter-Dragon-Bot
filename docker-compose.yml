@@ -1,3 +1,25 @@
+# Shared by bot, workers and api. Each ini file must exist before `up`, or
+# Docker creates an empty directory in its place: run the bot once with
+# `uv run python -m winter_dragon`, or create an empty file confkit fills in.
+# discord.ini is left out: it's optional and only read when it exists.
+x-app-volumes: &app-volumes
+  # Development mounts for all packages
+  - ./src:/app/src
+  - ./wd-bot/src:/app/wd-bot/src
+  - ./wd-config/src:/app/wd-config/src
+  - ./wd-core/src:/app/wd-core/src
+  - ./wd-db/src:/app/wd-db/src
+  - ./wd-discord/src:/app/wd-discord/src
+  - ./wd-errors/src:/app/wd-errors/src
+  - ./wd-types/src:/app/wd-types/src
+  - ./wd-cogs/src:/app/wd-cogs/src
+  - ./logs:/app/logs
+  - ./bot.ini:/app/bot.ini
+  - ./config.ini:/app/config.ini
+  - ./cogs.ini:/app/cogs.ini
+  - ./database.ini:/app/database.ini
+  - ./sentry.ini:/app/sentry.ini
+
 services:
 
   redis:
@@ -55,19 +77,7 @@ services:
     environment:
       REDIS_HOST: redis
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
-    volumes:
-      # Development mounts for all packages
-      - ./src:/app/src
-      - ./wd-bot/src:/app/wd-bot/src
-      - ./wd-config/src:/app/wd-config/src
-      - ./wd-core/src:/app/wd-core/src
-      - ./wd-db/src:/app/wd-db/src
-      - ./wd-discord/src:/app/wd-discord/src
-      - ./wd-errors/src:/app/wd-errors/src
-      - ./wd-types/src:/app/wd-types/src
-      - ./wd-cogs/src:/app/wd-cogs/src
-      - ./config.ini:/app/config.ini
-      - ./logs:/app/logs
+    volumes: *app-volumes
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,19 +95,7 @@ services:
     environment:
       REDIS_HOST: redis
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
-    volumes:
-      # Development mounts for all packages
-      - ./src:/app/src
-      - ./wd-bot/src:/app/wd-bot/src
-      - ./wd-config/src:/app/wd-config/src
-      - ./wd-core/src:/app/wd-core/src
-      - ./wd-db/src:/app/wd-db/src
-      - ./wd-discord/src:/app/wd-discord/src
-      - ./wd-errors/src:/app/wd-errors/src
-      - ./wd-types/src:/app/wd-types/src
-      - ./wd-cogs/src:/app/wd-cogs/src
-      - ./config.ini:/app/config.ini
-      - ./logs:/app/logs
+    volumes: *app-volumes
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,19 +152,7 @@ services:
       REDIS_HOST: redis
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI:-http://localhost:3000}
-    volumes:
-      # Development mounts for all packages
-      - ./src:/app/src
-      - ./wd-bot/src:/app/wd-bot/src
-      - ./wd-config/src:/app/wd-config/src
-      - ./wd-core/src:/app/wd-core/src
-      - ./wd-db/src:/app/wd-db/src
-      - ./wd-discord/src:/app/wd-discord/src
-      - ./wd-errors/src:/app/wd-errors/src
-      - ./wd-types/src:/app/wd-types/src
-      - ./wd-cogs/src:/app/wd-cogs/src
-      - ./config.ini:/app/config.ini
-      - ./logs:/app/logs
+    volumes: *app-volumes
     ports:
       - "8001:8001"
     depends_on:

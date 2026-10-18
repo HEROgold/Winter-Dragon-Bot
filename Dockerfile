@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-workspace --no-build
 
 # Then the workspace packages themselves
-COPY config.ini README.md LICENSE.md ./
+COPY README.md LICENSE.md ./
 COPY --parents wd-*/ ./
 COPY src/ src/
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -48,8 +48,8 @@ RUN groupadd -r -g 10001 appuser \
 # Copy source packages for production (resolve .pth file warnings)
 COPY --from=builder --chown=10001:10001 --parents /app/./wd-*/src /app/
 
-# Copy other build artifacts
-COPY --from=builder --chown=10001:10001 /app/config.ini /app/
+# Copy other build artifacts. The ini files are operator config (token, database
+# password), so they're never baked in: compose bind-mounts them into /app.
 COPY --from=builder --chown=10001:10001 /app/src /app/src
 COPY --from=builder --chown=10001:10001 /app/.venv /app/.venv
 

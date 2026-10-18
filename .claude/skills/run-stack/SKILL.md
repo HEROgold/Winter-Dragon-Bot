@@ -33,7 +33,7 @@ Default credentials (compose fallbacks): pgAdmin `admin@example.com`/`admin123`,
 docker compose build bot
 ```
 
-Verified to complete (exit 0, 2026-07-07) — the multi-stage Dockerfile builds `python:3.15-rc-slim-trixie` + `uv sync --frozen --no-dev` cleanly. The build and the container runtime are separate problems: a green build says nothing about whether `CMD ["python", "-m", "winter_dragon"]` reaches READY (it needs the token in the mounted `config.ini` and a reachable postgres).
+Verified to complete (exit 0, 2026-07-07) — the multi-stage Dockerfile builds `python:3.15-rc-slim-trixie` + `uv sync --frozen --no-dev` cleanly. The build and the container runtime are separate problems: a green build says nothing about whether `CMD ["python", "-m", "winter_dragon"]` reaches READY (it needs the token in the mounted `bot.ini` and a reachable postgres; compose bind-mounts every operator ini file, so each must exist on the host first).
 
 ## Stop
 
