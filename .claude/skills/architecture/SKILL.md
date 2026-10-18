@@ -33,7 +33,6 @@ wd-types            wd-config             ← leafs: depend on nothing internal
 1. **Constructor injection** (default). Collaborators are parameters: `AuditEventHandler(event, session, bot)` ([wd_core/events.py](../../../wd-core/src/wd_core/events.py)); `SteamSaleNotifier` takes its client and store as dataclass fields. Cogs take `**kwargs: Unpack[BotArgs]` — `bot` `Required`, `db_session` `NotRequired` with a fallback in `Cog.__init__` ([wd_bot/cogs.py](../../../wd-bot/src/wd_bot/cogs.py)): `kwargs.get("db_session", Session(engine))`. Tests inject; runtime falls back to the shared default.
 
 2. **Self-registering factory registries** — an open set of handlers keyed by a value. A factory class holds a `ClassVar` dict + `register()`/`get_*()` classmethods, populated by `__init_subclass__` on a base, so defining a subclass IS the registration:
-   - `ErrorFactory` ([wd_errors/factory.py](../../../wd-errors/src/wd_errors/factory.py)), registered from `DiscordError.__init_subclass__` ([error.py](../../../wd-errors/src/wd_errors/error.py)).
    - `AuditEventFactory`, keyed by the subclass kwarg: `class X(AuditEvent, action=AuditLogAction.ban)` ([wd_core/events.py](../../../wd-core/src/wd_core/events.py)).
    - `BaseModel.__init_subclass__` auto-collects every model ([wd_db/extension/model.py](../../../wd-db/src/wd_db/extension/model.py)).
    Registration happens at import time — a package `__init__` must import the modules holding the subclasses.

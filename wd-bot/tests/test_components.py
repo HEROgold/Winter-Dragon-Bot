@@ -95,6 +95,7 @@ async def test_dispatch_ignores_unknown_prefixes(
 async def test_dispatch_sends_ephemeral_error_when_component_handler_raises(
     make_component_interaction: ComponentInteractionFactory,
     discord_client: RecordingClient,
+    error_reply: dict[str, object],
 ) -> None:
     bot = _make_bot(discord_client)
     await bot.add_cog(_BrokenPagerCog(bot=bot))
@@ -102,5 +103,5 @@ async def test_dispatch_sends_ephemeral_error_when_component_handler_raises(
     await bot._dispatch_interaction(make_component_interaction("broken:1"))
 
     assert discord_client.interaction_responses() == [
-        {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},
+        {"type": 4, "data": error_reply},
     ]

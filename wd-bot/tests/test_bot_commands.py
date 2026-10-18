@@ -301,6 +301,7 @@ class _DeferThenBoomCog(Cog, auto_load=False):
 async def test_dispatch_sends_ephemeral_error_when_handler_raises(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
+    error_reply: dict[str, object],
 ) -> None:
     bot = _make_bot(discord_client)
     await bot.add_cog(_BoomCog(bot=bot))
@@ -308,13 +309,14 @@ async def test_dispatch_sends_ephemeral_error_when_handler_raises(
     await bot._dispatch_interaction(make_interaction("boom"))
 
     assert discord_client.interaction_responses() == [
-        {"type": 4, "data": {"content": "Something went wrong running this command.", "flags": 64}},
+        {"type": 4, "data": error_reply},
     ]
 
 
 async def test_dispatch_error_reply_after_a_deferred_response_is_a_followup(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
+    error_reply: dict[str, object],
 ) -> None:
     bot = _make_bot(discord_client)
     discord_client.reply("POST", "/webhooks/2/tok", FOLLOWUP_JSON)
@@ -324,7 +326,7 @@ async def test_dispatch_error_reply_after_a_deferred_response_is_a_followup(
 
     assert [(sent.path, sent.json) for sent in discord_client.sent] == [
         ("/interactions/1/tok/callback", {"type": 5}),
-        ("/webhooks/2/tok", {"content": "Something went wrong running this command.", "flags": 64}),
+        ("/webhooks/2/tok", error_reply),
     ]
 
 

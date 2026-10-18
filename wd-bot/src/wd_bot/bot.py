@@ -23,6 +23,8 @@ lazy from wd_discord import (
     GatewayBotInfo,
     is_network_error,
 )
+lazy from wd_discord.color import Color
+lazy from wd_discord.embed import Embed, EmbedFooter
 lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 lazy from wd_errors.extension import ExtensionError
@@ -52,7 +54,22 @@ if TYPE_CHECKING:
 
 
 COMMAND_ERROR_REPLY = "Something went wrong running this command."
-"""Ephemeral reply sent when a command handler raises."""
+"""The text of the ephemeral reply sent when a command or component handler raises."""
+ERROR_COLOR = 0xFF0000
+"""The color of that reply."""
+
+
+def error_embed(interaction_id: Snowflake) -> Embed:
+    """Return the reply to the interaction ``interaction_id`` whose handler raised.
+
+    The exception's log line names the same interaction ID, so a user's report finds it.
+    """
+    return Embed(
+        title="Something went wrong",
+        description=COMMAND_ERROR_REPLY,
+        color=Color(ERROR_COLOR),
+        footer=EmbedFooter(text=f"If it keeps happening, tell the bot's owners this ID: {interaction_id}"),
+    )
 
 
 class MissingError(Exception):
@@ -155,7 +172,7 @@ class Bot(LoggerMixin):
             case _:
                 return
         if not succeeded:
-            await interaction.respond(COMMAND_ERROR_REPLY, ephemeral=True)
+            await interaction.respond(embeds=[error_embed(interaction.id)], ephemeral=True)
 
     async def _dispatch_command(self, interaction: CommandInteraction) -> bool:
         """Invoke the command ``interaction`` names; ``False`` only if its handler raised."""

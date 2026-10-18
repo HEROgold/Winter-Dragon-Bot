@@ -30,7 +30,6 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`wd_discord.resources`](wd-discord.resources.md) | Discord API resource models (https://docs.discord.com/developers/resources). |
 | [`wd_discord.utils`](wd-discord.utils.md) | Module for utility functions and classes. |
 | [`wd_errors`](wd-errors.md) | Errors for WinterDragon. |
-| [`wd_errors.handlers`](wd-errors.handlers.md) |  |
 | [`wd_types`](wd-types.md) |  |
 | [`winter_dragon`](winter-dragon.md) |  |
 | [`winter_dragon.cogs`](winter-dragon.cogs.md) | Cogs for the winter_dragon example bot (see run_test_bot.py). |

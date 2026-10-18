@@ -330,7 +330,7 @@ class Command(AppCommand):
             self.logger.debug(t"Command '{self.name}' refused: {refused.message} ({refused.cause})")
             await answer_refusal(interaction, refused)
         except Exception:
-            self.logger.exception(t"Unhandled exception in command '{self.name}'")
+            self.logger.exception(t"Unhandled exception in command '{self.name}' (interaction {interaction.id})")
             return False
         return True
 

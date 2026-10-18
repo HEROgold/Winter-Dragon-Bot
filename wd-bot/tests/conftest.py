@@ -73,6 +73,25 @@ class InteractionFactory(Protocol):
 ASKER = User.model_validate({"id": "3", "username": "asker", "discriminator": "0"})
 """The default invoking user of :func:`make_interaction`."""
 
+_ERROR_REPLY = {
+    "embeds": [
+        {
+            "title": "Something went wrong",
+            "description": "Something went wrong running this command.",
+            "color": 0xFF0000,
+            "footer": {"text": "If it keeps happening, tell the bot's owners this ID: 1"},
+        },
+    ],
+    "flags": 64,
+}
+"""The ephemeral error reply to interaction 1 (the ID ``make_interaction`` and ``make_component_interaction`` give)."""
+
+
+@pytest.fixture
+def error_reply() -> dict[str, object]:
+    """Return the ephemeral error reply wd-bot sends to interaction 1 when its handler raises."""
+    return _ERROR_REPLY
+
 DEFAULT_GUILD_ID = 1
 """The guild a :func:`make_interaction` member is in when the test names none: Discord sends members with their guild."""
 DEFAULT_CHANNEL_ID = 2

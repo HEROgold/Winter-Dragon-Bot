@@ -40,31 +40,11 @@ Node in the error tree, which can contain a list of error messages and/or child 
 
 - fields: errors_list: list[ErrorMessage]
 
-## `wd_errors.error` — `wd-errors/src/wd_errors/error.py`
-Base error helpers for Discord command handling.
-
-### `class DiscordError(ABC, LoggerMixin)`
-Base class for Error.
-
-- `async handle() -> None` — Handle the Error.
-- `create_embed() -> Embed` — Create an embed for the Error.
-- `async send_message(response: Embed | str) -> None` — Send an embed response to the interaction or context.
-
 ## `wd_errors.extension` — `wd-errors/src/wd_errors/extension.py`
 Module that contains extension related errors.
 
 ### `class ExtensionError(BaseError)`
 Raised when an extension fails to load.
-
-## `wd_errors.factory` — `wd-errors/src/wd_errors/factory.py`
-Module for creating Error errors lazy from Error log entries.
-
-### `class ErrorFactory`
-Factory for creating Error errors.
-
-- fields: registry: ClassVar[dict[type[DiscordException], list[type[DiscordError]]]], logger: ClassVar
-- `@classmethod register(error: type[DiscordException], error_type: type[DiscordError]) -> None` — Register an Error error class for a category.
-- `@classmethod get_handlers(bot: BotBase, exception: DiscordException, *, interaction: Interaction | None=None, ctx: Context[Bot] | None=None) -> Generator[DiscordError]` — Get the Error error class for a category.
 
 ## `wd_errors.refused` — `wd-errors/src/wd_errors/refused.py`
 Refusing an action: stop a command, button or listener and tell the user why.

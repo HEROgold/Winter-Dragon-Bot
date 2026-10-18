@@ -34,7 +34,8 @@ Brings Discord's commands in line with a :class:`~wd_bot.registry.CommandRegistr
 ## `wd_bot.bot` — `wd-bot/src/wd_bot/bot.py`
 Module that contains the bot.
 
-- module names: COMMAND_ERROR_REPLY
+- module names: COMMAND_ERROR_REPLY, ERROR_COLOR
+- `error_embed(interaction_id: Snowflake) -> Embed` — Return the reply to the interaction ``interaction_id`` whose handler raised.
 
 ### `class MissingError(Exception)`
 Raised when a required attribute is missing.

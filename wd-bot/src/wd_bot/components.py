@@ -75,7 +75,7 @@ class ComponentHandler(LoggerMixin):
             self.logger.debug(t"Component '{self.prefix}' refused: {refused.message} ({refused.cause})")
             await answer_refusal(interaction, refused)
         except Exception:
-            self.logger.exception(t"Unhandled exception in component handler '{self.prefix}'")
+            self.logger.exception(t"Unhandled exception in component handler '{self.prefix}' (interaction {interaction.id})")
             return False
         return True
 
