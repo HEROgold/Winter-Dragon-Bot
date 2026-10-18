@@ -380,12 +380,23 @@ https://docs.discord.com/developers/resources/guild#welcome-screen-object.
 ## `wd_discord.resources.invite` — `wd-discord/src/wd_discord/resources/invite.py`
 The Discord invite resource.
 
+### `class InviteGuild(DiscordModel)`
+The summary of a guild Discord sends inside an invite (https://docs.discord.com/developers/resources/invite#invite-object).
+
+- fields: id: Snowflake, name: str | None, splash: ImageHash | None, banner: ImageHash | None, description: str | None,
+  icon: ImageHash | None, features: list[str], verification_level: VerificationLevel | None, vanity_url_code: str |
+  None, nsfw_level: NSFWLevel | None, premium_subscription_count: int | None
+
+### `class InviteChannel(DiscordModel)`
+The summary of a channel Discord sends inside an invite (https://docs.discord.com/developers/resources/invite#invite-object).
+
+- fields: id: Snowflake, name: str | None, type: ChannelType | None
+
 ### `class Invite(DiscordModel)`
 A guild invite (subset - https://docs.discord.com/developers/resources/invite).
 
-- fields: code: str, guild: Mapping[str, object] | None, channel: Mapping[str, object] | None, inviter: Mapping[str,
-  object] | None, uses: int | None, max_uses: int | None, max_age: int | None, temporary: bool | None, created_at: str |
-  None
+- fields: code: str, guild: InviteGuild | None, channel: InviteChannel | None, inviter: User | None, uses: int | None,
+  max_uses: int | None, max_age: int | None, temporary: bool | None, created_at: str | None
 - `@property url -> str` — The invite's shareable URL.
 
 ## `wd_discord.resources.user` — `wd-discord/src/wd_discord/resources/user/__init__.py`

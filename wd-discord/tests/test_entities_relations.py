@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from wd_discord import (
     Application,
     Channel,
+    ChannelType,
     Emoji,
     GatewayGuild,
     Guild,
@@ -286,6 +287,24 @@ def test_guild_emoji_relations() -> None:
     assert emoji.mention == "<a:wave:7>"
     assert list(emoji.roles) == [PartialRole(client, Snowflake(5), Snowflake(1))]
     assert isinstance(emoji.user, User)
+
+
+def test_invite_summaries_parse_into_typed_models() -> None:
+    model = InviteModel.model_validate(
+        {
+            "code": "abc",
+            "guild": {"id": "1", "name": "My Guild", "icon": None, "features": ["COMMUNITY"], "verification_level": 1},
+            "channel": {"id": "6", "name": "general", "type": 0},
+            "inviter": USER_JSON,
+        },
+    )
+
+    assert model.guild is not None
+    assert (model.guild.id, model.guild.name, model.guild.features) == (Snowflake(1), "My Guild", ["COMMUNITY"])
+    assert model.channel is not None
+    assert (model.channel.id, model.channel.type) == (Snowflake(6), ChannelType.GUILD_TEXT)
+    assert model.inviter is not None
+    assert model.model_extra == {}
 
 
 async def test_invite_relations_and_delete() -> None:

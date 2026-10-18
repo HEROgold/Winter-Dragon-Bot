@@ -10,21 +10,12 @@ lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import User
 lazy from wd_discord.resources.invite import Invite as InviteModel
-lazy from wd_discord.resources.user import User as UserModel
-lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
 
     from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
-
-
-def _id(partial: Mapping[str, object] | None) -> Snowflake | None:
-    """Return the ``id`` of a partial object sent inside an invite, if there is one."""
-    value = None if partial is None else partial.get("id")
-    return None if value is None else Snowflake.coerce(str(value))
 
 
 class Invite(Entity[InviteModel]):
@@ -43,19 +34,19 @@ class Invite(Entity[InviteModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the invite is for; Discord sends only a summary of it."""
-        guild_id = _id(self.model.guild)
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        guild = self.model.guild
+        return None if guild is None else PartialGuild(self.client, guild.id)
 
     @property
     def channel(self) -> PartialChannel | None:
         """The channel the invite opens; Discord sends only a summary of it."""
-        channel_id = _id(self.model.channel)
-        return None if channel_id is None else PartialChannel(self.client, channel_id)
+        channel = self.model.channel
+        return None if channel is None else PartialChannel(self.client, channel.id)
 
     @property
     def inviter(self) -> User | None:
         """Who created the invite."""
-        return None if self.model.inviter is None else User(self.client, UserModel.model_validate(self.model.inviter))
+        return None if self.model.inviter is None else User(self.client, self.model.inviter)
 
     @property
     def uses(self) -> int | None:
