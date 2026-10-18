@@ -36,6 +36,7 @@ class Config[T](CKConfig[T]):
         without it the in-code defaults apply and nothing is written; once it exists (even empty) it's read and
         confkit fills in the missing defaults.
         """
+        # Pretty sure this is not required. Simply using set_file() + new subclass should be enough.
         cls.set_file(file)
         cls._parser = UNSET  # pyright: ignore[reportPrivateUsage]
         cls._has_read_config = False  # pyright: ignore[reportPrivateUsage]

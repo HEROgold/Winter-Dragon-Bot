@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
 lazy from pathlib import Path
 
 lazy from wd_config import Config
-lazy from wd_config.parser import REQUIRED, required
+lazy from wd_config.parser import required
 
 
 DASHBOARD_CONFIG_FILE = Path("dashboard.ini")
@@ -30,7 +31,7 @@ class DashboardSettings:
     redirects in the Discord developer portal."""
     client_secret = DashboardConfig(required("https://discord.com/developers/applications/<application_id>/oauth2"))
     """The application's OAuth2 client secret; the client ID is the bot's application ID, fetched at startup."""
-    session_secret = DashboardConfig(REQUIRED)
+    session_secret = DashboardConfig(uuid4().hex)
     """The key session cookies are signed with: any long random string. Changing it signs everyone out."""
     session_days = DashboardConfig(14)
     """Days a sign-in lasts."""
