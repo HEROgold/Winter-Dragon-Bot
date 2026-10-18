@@ -16,6 +16,7 @@ The full steps are in [Getting Started](guide/getting-started.md).
 ## Documentation
 
 - **[Getting Started](guide/getting-started.md)** — run your own instance and see its commands.
+- **[Specification](spec/index.md)** — what the v2 bot and its web dashboard should do, feature by feature.
 - **[Feature Inventory](features/index.md)** — everything the bot offers on `main`, and how much is ported to `v2`.
 - **[Architecture](dev/architecture.md)** — packages, layering and the runtime flow.
 - **[Setup](dev/setup.md)** — development environment, adding a cog, tests and code quality.

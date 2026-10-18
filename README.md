@@ -37,6 +37,7 @@ uv run zensical serve
 - [Development Setup](docs/dev/setup.md) — environment, adding a cog, tests, code quality
 - [Database](docs/dev/database.md) — connection, tables
 - [API Reference](docs/reference/index.md) — public API of every package
+- [Specification](docs/spec/index.md) — what the v2 bot and dashboard should do, feature by feature
 - [Planned](docs/planned.md) — web dashboard, HTTP API, workers (not built yet)
 
 ## License
