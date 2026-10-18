@@ -21,6 +21,7 @@ A `FileWatcher` that treats a missing file as unchanged instead of failing to `s
 Config descriptor for WinterDragon.
 
 - `@classmethod bind(file: Path, *, operator: bool=False, optional: bool=False) -> None` — Give this scope its own ``file``, so no other scope's parser overwrites it.
+- `on_file_change(origin: Literal['get', 'set'], old: T, new: T) -> None` — Re-read this scope's file, so a value edited on disk is used from its next read on, without a restart.
 
 ## `wd_config.constants` — `wd-config/src/wd_config/constants.py`
 The ini files of the scopes wd-config binds itself.

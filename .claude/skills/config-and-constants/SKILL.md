@@ -26,7 +26,7 @@ class Settings:
     created_color = Config(Hex(0x00FF00))          # confkit data types: Hex, List, Enum
 ```
 
-`Settings` (`bot_name`, `support_guild_id`, `log_level`, the `created`/`changed`/`deleted` colors, `bot_status_messages`) is the app-wide class in `config.ini`. Access is static (`Settings.support_guild_id`) — reads/writes go live to the ini file.
+`Settings` (`bot_name`, `support_guild_id`, `log_level`, the `created`/`changed`/`deleted` colors, `bot_status_messages`) is the app-wide class in `config.ini`. Access is static (`Settings.support_guild_id`) — reads/writes go live to the ini file. An edit to the file on disk is picked up on the next read without a restart (`Config.on_file_change` re-reads it). The colors back the confirmation embeds in [winter_dragon/ui](../../../src/winter_dragon/ui/embeds.py): a successful create/change/delete replies with `CreatedEmbed`/`ChangedEmbed`/`DeletedEmbed(description=...)`; a refusal stays plain text.
 
 **Cog settings live with their cog**, declared with `CogConfig(...)`. Every cog shares `cogs.ini`, one section per settings class (the section name is the class name, so keep it stable): `ReminderSettings`, `StatsSettings` and `UrbanSettings` sit in their cog module, `SteamSettings` in [cogs/steam/settings.py](../../../src/winter_dragon/cogs/steam/settings.py). A new cog's settings are a class in (or next to) the cog — never a module in `wd-config`, and never a second `Config` subclass on `cogs.ini`.
 

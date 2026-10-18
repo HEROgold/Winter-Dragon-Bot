@@ -22,6 +22,7 @@ from winter_dragon.cogs.stats import (
     plan_renames,
     stats_embed,
 )
+from winter_dragon.config import Settings
 
 
 if TYPE_CHECKING:
@@ -67,6 +68,10 @@ def _cog(engine: Engine, client: RecordingClient) -> Stats:
 
 def _reply(client: RecordingClient) -> str:
     return client.requests_to("POST", "/webhooks/2/tok")[-1].json["content"]
+
+
+def _embed(client: RecordingClient) -> dict[str, object]:
+    return client.requests_to("POST", "/webhooks/2/tok")[-1].json["embeds"][0]
 
 
 def test_counts_leave_bots_out_of_users() -> None:
@@ -137,7 +142,7 @@ async def test_add_creates_a_locked_category_of_named_channels(
     with Session(engine) as session:
         assert len(session.exec(select(StatChannel)).all()) == 6
         assert session.exec(select(PeakOnline)).one().peak == 4
-    assert _reply(discord_client) == "Stats channels are set up."
+    assert _embed(discord_client) == {"description": "Stats channels are set up.", "color": int(Settings.created_color)}
 
 
 async def test_update_renames_only_changed_channels_and_forgets_deleted_ones(engine: Engine) -> None:
@@ -175,7 +180,9 @@ async def test_reset_is_for_bot_owners_only(
     discord_client: RecordingClient,
 ) -> None:
     discord_client.reply(
-        "GET", "/applications/@me", {**APPLICATION, "owner": {"id": "99", "username": "o", "discriminator": "0"}}
+        "GET",
+        "/applications/@me",
+        {**APPLICATION, "owner": {"id": "99", "username": "o", "discriminator": "0"}},
     )
     await Stats.reset.invoke(_cog(engine, discord_client), make_interaction("stats", guild_id=GUILD_ID), [])
 

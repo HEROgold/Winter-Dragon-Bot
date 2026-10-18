@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, Literal, override
 
 lazy from confkit import Config as CKConfig
 lazy from confkit.sentinels import UNSET
@@ -44,3 +44,8 @@ class Config[T](CKConfig[T]):
             cls._watcher = OptionalFileWatcher(file)  # pyright: ignore[reportPrivateUsage]
         if operator:
             OperatorFiles.register(file)
+
+    @override
+    def on_file_change(self, origin: Literal["get", "set"], old: T, new: T) -> None:
+        """Re-read this scope's file, so a value edited on disk is used from its next read on, without a restart."""
+        self._parser.read(self._file)  # pyright: ignore[reportPrivateUsage]

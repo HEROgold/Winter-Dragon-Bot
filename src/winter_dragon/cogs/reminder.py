@@ -16,6 +16,7 @@ lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationComm
 lazy from wd_discord.timestamp import DiscordTime
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
 
 
 if TYPE_CHECKING:
@@ -203,10 +204,8 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
             session.add(reminder)
             session.commit()
         repeat = " and then every so often" if isinstance(reminder, TimedReminder) else ""
-        await interaction.respond(
-            f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it.",
-            ephemeral=True,
-        )
+        message = f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it."
+        await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
 
     async def _validated(self, interaction: CommandInteraction, content: str, delay: timedelta | None) -> timedelta | None:
         """Return ``delay`` if a new reminder of ``content`` may wait that long; else tell the invoking user why not."""
@@ -269,7 +268,7 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         if content is None:
             await interaction.respond("You have no reminder like that.", ephemeral=True)
             return
-        await interaction.respond(f"Removed your reminder of\n`{content}`", ephemeral=True)
+        await interaction.respond(embeds=[DeletedEmbed(description=f"Removed your reminder of\n`{content}`")], ephemeral=True)
 
     @remove.autocomplete("reminder")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def remove_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:

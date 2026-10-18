@@ -21,6 +21,7 @@ lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
 
 
 if TYPE_CHECKING:
@@ -352,7 +353,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         if (failure := await self.create_channels(self.bot.client, guild_id, reason=reason)) is not None:
             msg = f"I couldn't set up every stats channel: {failure}"
             raise Refused(msg, cause=failure)
-        await interaction.followup("Stats channels are set up.", ephemeral=True)
+        await interaction.followup(embeds=[CreatedEmbed(description="Stats channels are set up.")], ephemeral=True)
 
     @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
         name="remove",
@@ -371,7 +372,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         if not await self.remove_channels(self.bot.client, stats, reason=reason):
             msg = "I couldn't delete every stats channel; run it again to retry the rest."
             raise Refused(msg)
-        await interaction.followup("Removed the stats channels.", ephemeral=True)
+        await interaction.followup(embeds=[DeletedEmbed(description="Removed the stats channels.")], ephemeral=True)
 
     @Cog.command(name="reset", description="Recreate the stats channels of every server (bot owners only)")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def reset(self, interaction: GuildCommandInteraction) -> None:

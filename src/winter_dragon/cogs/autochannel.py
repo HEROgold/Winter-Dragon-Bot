@@ -33,6 +33,8 @@ lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams,
 lazy from wd_discord.resources.channel.params import MAX_USER_LIMIT
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
@@ -304,7 +306,10 @@ class AutoChannels(
         with Session(self.bind) as session:
             session.add(AutoChannelHub(guild_id=guild_id, channel_id=int(hub.id)))
             session.commit()
-        await interaction.respond(f"All set: joining {hub.mention} gives members their own channel.", ephemeral=True)
+        await interaction.respond(
+            embeds=[CreatedEmbed(description=f"All set: joining {hub.mention} gives members their own channel.")],
+            ephemeral=True,
+        )
 
     @staticmethod
     async def _create_hub(guild: PartialGuild, category_name: str, hub_name: str) -> Channel | NetworkError:
@@ -334,7 +339,10 @@ class AutoChannels(
             hub.channel_id = int(channel.id)
             session.add(hub)
             session.commit()
-        await interaction.respond(f"Joining {channel.mention} now gives members their own channel.", ephemeral=True)
+        await interaction.respond(
+            embeds=[ChangedEmbed(description=f"Joining {channel.mention} now gives members their own channel.")],
+            ephemeral=True,
+        )
 
     @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
         name="guild-limit",
@@ -356,7 +364,10 @@ class AutoChannels(
             msg = f"Set up a hub first, with {self.mention(self.setup)}."
             raise Refused(msg)
         shown = "no limit" if limit == 0 else f"at most {limit} at once"
-        await interaction.respond(f"This server now allows {shown} automatic channels.", ephemeral=True)
+        await interaction.respond(
+            embeds=[ChangedEmbed(description=f"This server now allows {shown} automatic channels.")],
+            ephemeral=True,
+        )
 
     @Cog.command(name="limit", description="Set how many users fit in your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def set_limit(self, interaction: GuildCommandInteraction, limit: int) -> None:
@@ -385,10 +396,10 @@ class AutoChannels(
             session.commit()
             owned = owned_channel(session, int(interaction.guild_id), user_id)
         if owned is None:
-            await interaction.respond("Saved; your next channel gets it.", ephemeral=True)
+            await interaction.respond(embeds=[ChangedEmbed(description="Saved; your next channel gets it.")], ephemeral=True)
             return
         edited = await self.bot.client.channels.partial(owned.channel_id).edit(params, reason=f"Asked by its owner {user_id}")
         if is_network_error(edited):
             msg = f"Saved, but I couldn't change your channel: {edited}"
             raise Refused(msg, cause=edited)
-        await interaction.respond(f"Saved and applied to {edited.mention}.", ephemeral=True)
+        await interaction.respond(embeds=[ChangedEmbed(description=f"Saved and applied to {edited.mention}.")], ephemeral=True)

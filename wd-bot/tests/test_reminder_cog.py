@@ -17,6 +17,7 @@ from wd_discord.testing import RecordingClient
 
 import winter_dragon.cogs.reminder as module
 from winter_dragon.cogs.reminder import Reminder, Reminders, TimedReminder, delay_from, next_occurrence
+from winter_dragon.config import Settings
 
 
 if TYPE_CHECKING:
@@ -60,6 +61,10 @@ def _options(**values: str | int) -> list[InteractionDataOption]:
 
 def _reply(discord_client: RecordingClient) -> str:
     return discord_client.interaction_responses()[-1]["data"]["content"]
+
+
+def _embed(discord_client: RecordingClient) -> dict[str, object]:
+    return discord_client.interaction_responses()[-1]["data"]["embeds"][0]
 
 
 def _seed(engine: Engine, *reminders: Reminder | TimedReminder) -> list[int]:
@@ -112,7 +117,9 @@ async def test_add_stores_a_one_off_reminder(
         (stored,) = session.exec(select(Reminder)).all()
     assert (stored.content, stored.user_id, stored.timestamp) == ("feed the cat", ASKER_ID, NOW + timedelta(hours=2))
     epoch = int((NOW + timedelta(hours=2)).timestamp())
-    assert f"<t:{epoch}:F>" in _reply(discord_client)
+    embed = _embed(discord_client)
+    assert f"<t:{epoch}:F>" in str(embed["description"])
+    assert embed["color"] == int(Settings.created_color)
 
 
 async def test_add_without_a_time_stores_nothing(
@@ -200,7 +207,7 @@ async def test_remove_by_autocomplete_value(
 
     with Session(engine) as session:
         assert session.exec(select(TimedReminder)).all() == []
-    assert _reply(discord_client) == "Removed your reminder of\n`water`"
+    assert _embed(discord_client) == {"description": "Removed your reminder of\n`water`", "color": int(Settings.deleted_color)}
 
 
 async def test_remove_by_typed_content(engine: Engine, make_interaction: InteractionFactory) -> None:

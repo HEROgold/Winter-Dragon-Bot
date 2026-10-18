@@ -180,3 +180,22 @@ def test_descriptor_on_unbound_base_config_fails(boot_config: BootConfig) -> Non
     assert boot.values["raised"] is not None
     assert "Config file is not set" in boot.values["message"]
     assert boot.files == {}
+
+
+CONFIRMATION_COLORS = """
+import os, pathlib, re
+from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
+before = (CreatedEmbed().color, ChangedEmbed().color, DeletedEmbed().color)
+config = pathlib.Path("config.ini")
+config.write_text(re.sub(r"created_color = .*", "created_color = 0x123456", config.read_text()))
+stat = config.stat()
+os.utime(config, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+result = {"before": before, "after": CreatedEmbed().color}
+"""
+
+
+def test_confirmation_embeds_read_their_color_when_created(boot_config: BootConfig) -> None:
+    """Each confirmation embed takes its color from config.ini, and a color changed there shows on the next one."""
+    boot = boot_config(CONFIRMATION_COLORS)
+
+    assert boot.values == {"before": [0x00FF00, 0xFFFF00, 0xFF0000], "after": 0x123456}

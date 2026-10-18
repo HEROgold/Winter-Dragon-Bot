@@ -16,6 +16,7 @@ lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 lazy from .bracket import parse_options, round_count
 lazy from .cards import (
@@ -255,10 +256,8 @@ class Tournaments(
         with Session(self.bind) as session:
             create_team(session, self._active(interaction, session), int(interaction.user.id), name)
             session.commit()
-        await interaction.respond(
-            f"Team **{name}** is registered; add players with {self.mention(self.team_add)}.",
-            ephemeral=True,
-        )
+        message = f"Team **{name}** is registered; add players with {self.mention(self.team_add)}."
+        await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
 
     @Cog.command(name="team-add", description="Add a player to the team you captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def team_add(self, interaction: GuildCommandInteraction, player: User) -> None:
@@ -266,7 +265,7 @@ class Tournaments(
         with Session(self.bind) as session:
             add_to_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
             session.commit()
-        await interaction.respond(f"Added {player.mention} to your team.", ephemeral=True)
+        await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your team.")], ephemeral=True)
 
     @Cog.command(name="team-remove", description="Remove a player from the team you captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def team_remove(self, interaction: GuildCommandInteraction, player: User) -> None:
@@ -274,7 +273,8 @@ class Tournaments(
         with Session(self.bind) as session:
             remove_from_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
             session.commit()
-        await interaction.respond(f"Removed {player.mention} from your team.", ephemeral=True)
+        message = f"Removed {player.mention} from your team."
+        await interaction.respond(embeds=[ChangedEmbed(description=message)], ephemeral=True)
 
     # --- Running it ------------------------------------------------------------------------------------------------
 
@@ -316,7 +316,7 @@ class Tournaments(
             cancel(session, tournament)
             session.commit()
             name = tournament.name
-        await interaction.respond(f"**{name}** is called off.")
+        await interaction.respond(embeds=[DeletedEmbed(description=f"**{name}** is called off.")])
 
     # --- Matches ---------------------------------------------------------------------------------------------------
 
