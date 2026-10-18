@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Friday 2v2 · Winter Dragon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="index.html">Winter Dragon</a>
+    <nav class="site-nav" aria-label="Dashboard">
+      <a href="data.html">Your data</a>
+      <a href="reminders.html">Reminders</a>
+      <a href="tournament.html" aria-current="page">Tournaments</a>
+    </nav>
+    <div class="account"><span class="avatar" aria-hidden="true">FB</span>frostbyte</div>
+  </header>
+
+  <main class="page">
+    <div class="tournament-head">
+      <div>
+        <p class="secondary">Glacier Gaming</p>
+        <h1 class="page-title" style="margin:0">Friday 2v2</h1>
+        <p class="status-line"><span class="live-dot" aria-hidden="true"></span>Semifinals are being played</p>
+      </div>
+      <dl class="facts">
+        <div><dt>Teams</dt><dd>8</dd></div>
+        <div><dt>Players per team</dt><dd>2</dd></div>
+        <div><dt>Format</dt><dd>Single elimination</dd></div>
+      </dl>
+    </div>
+
+    <div class="tournament-layout">
+      <!-- hx-get="/guilds/{id}/tournament/bracket" hx-trigger="every 10s" hx-swap="outerHTML" -->
+      <section class="bracket-scroll" aria-label="Bracket">
+        <div class="bracket">
+          <div class="round">
+            <h3>Quarterfinals</h3>
+            <div class="round-body">
+              <div class="pair">
+                <div class="match">
+                  <div class="match-head"><span>Match 1</span><span>Decided</span></div>
+                  <div class="team team-won"><span class="team-name">Ice Breakers</span><span class="marker" aria-label="Winner"></span></div>
+                  <div class="team team-lost"><span class="team-name">Night Owls</span></div>
+                </div>
+                <div class="match">
+                  <div class="match-head"><span>Match 2</span><span>Decided</span></div>
+                  <div class="team team-lost"><span class="team-name">Slush Puppies</span></div>
+                  <div class="team team-won"><span class="team-name">Avalanche</span><span class="marker" aria-label="Winner"></span></div>
+                </div>
+              </div>
+              <div class="pair">
+                <div class="match">
+                  <div class="match-head"><span>Match 3</span><span>Forfeit</span></div>
+                  <div class="team team-won"><span class="team-name">Frostbite</span><span class="marker" aria-label="Winner"></span></div>
+                  <div class="team team-lost"><span class="team-name">Polar Express</span></div>
+                </div>
+                <div class="match">
+                  <div class="match-head"><span>Match 4</span><span>Decided</span></div>
+                  <div class="team team-won"><span class="team-name">Snow Day</span><span class="marker" aria-label="Winner"></span></div>
+                  <div class="team team-lost"><span class="team-name">Cold Feet</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="round">
+            <h3>Semifinals</h3>
+            <div class="round-body">
+              <div class="pair">
+                <div class="match match-live">
+                  <div class="match-head"><span>Match 5</span><span>Live</span></div>
+                  <div class="team"><span class="team-name">Ice Breakers</span></div>
+                  <div class="team"><span class="team-name">Avalanche</span></div>
+                </div>
+                <div class="match">
+                  <div class="match-head"><span>Match 6</span><span>Drafting</span></div>
+                  <div class="team"><span class="team-name">Frostbite</span></div>
+                  <div class="team"><span class="team-name">Snow Day</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="round round-final">
+            <h3>Final</h3>
+            <div class="round-body">
+              <div class="pair">
+                <div class="match">
+                  <div class="match-head"><span>Match 7</span><span>Waiting</span></div>
+                  <div class="team team-tbd"><span class="team-name">Winner of match 5</span></div>
+                  <div class="team team-tbd"><span class="team-name">Winner of match 6</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="summit">
+            <h3>Champion</h3>
+            <div class="summit-body">
+              <div class="summit-flag">
+                <div class="summit-peak" aria-hidden="true"></div>
+                <span>Decided after the final</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <!-- shown only to whoever runs the tournament -->
+        <section class="panel organiser" aria-labelledby="organiser-title">
+          <h2 id="organiser-title">Match 5 is live</h2>
+          <p class="secondary">Ice Breakers against Avalanche. Report the winner when they're done.</p>
+          <div class="organiser-actions">
+            <!-- hx-post="/tournament/matches/5/winner" hx-vals='{"team": 1}' -->
+            <button class="button button-primary" type="button">Ice Breakers won</button>
+            <button class="button button-primary" type="button">Avalanche won</button>
+            <button class="button button-quiet" type="button">Record a forfeit</button>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="teams-title">
+          <h2 id="teams-title">Teams</h2>
+          <ul class="teams">
+            <li><strong>Ice Breakers</strong><span>frostbyte (captain), glacia</span></li>
+            <li><strong>Avalanche</strong><span>rimewolf (captain), tundra_tom</span></li>
+            <li><strong>Frostbite</strong><span>yeti (captain), sleet</span></li>
+            <li><strong>Snow Day</strong><span>hailey (captain), driftwood</span></li>
+            <li class="out"><strong>Night Owls</strong><span>Out in the quarterfinals</span></li>
+            <li class="out"><strong>Slush Puppies</strong><span>Out in the quarterfinals</span></li>
+            <li class="out"><strong>Polar Express</strong><span>Forfeited in the quarterfinals</span></li>
+            <li class="out"><strong>Cold Feet</strong><span>Out in the quarterfinals</span></li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
