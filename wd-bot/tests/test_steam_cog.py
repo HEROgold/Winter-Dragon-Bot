@@ -6,7 +6,8 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session
+from wd_db.extension.lifecycle import alive
 from wd_bot.registry import GLOBAL
 from wd_bot.testing import detached_cog
 from wd_discord.gateway.events import InteractionDataOption
@@ -145,7 +146,7 @@ async def test_add_subscribes_once(
     await SteamSales.add.invoke(cog, make_interaction("steam"), [])
 
     with Session(engine) as session:
-        (user,) = session.exec(select(SteamUsers)).all()
+        (user,) = session.exec(alive(SteamUsers)).all()
     assert user.id == ASKER_ID
     assert user.sale_threshold == SteamSettings.default_threshold
     first, second = _replies(discord_client)
@@ -164,8 +165,25 @@ async def test_percentage_updates_the_threshold(
     await SteamSales.percentage.invoke(cog, make_interaction("steam"), _percent(75))
 
     with Session(engine) as session:
-        assert session.exec(select(SteamUsers)).one().sale_threshold == 75
+        assert session.exec(alive(SteamUsers)).one().sale_threshold == 75
     assert _replies(discord_client)[-1]["content"] == "Changed your sale notification threshold to 75%."
+
+
+async def test_a_returning_subscriber_is_restored_with_the_new_threshold(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog, _client = _cog(engine)
+
+    await SteamSales.add.invoke(cog, make_interaction("steam"), [])
+    await SteamSales.remove.invoke(cog, make_interaction("steam"), [])
+    await SteamSales.percentage.invoke(cog, make_interaction("steam"), _percent(75))
+
+    with Session(engine) as session:
+        (user,) = session.exec(alive(SteamUsers)).all()
+    assert (user.id, user.sale_threshold) == (ASKER_ID, 75)
+    assert str(_replies(discord_client)[-1]["content"]).startswith("Changed your sale notification threshold to 75%.")
 
 
 async def test_percentage_rejects_values_outside_0_to_100(
@@ -189,7 +207,7 @@ async def test_remove_unsubscribes(
     await SteamSales.remove.invoke(cog, make_interaction("steam"), [])
 
     with Session(engine) as session:
-        assert session.exec(select(SteamUsers)).all() == []
+        assert session.exec(alive(SteamUsers)).all() == []
     assert _replies(discord_client)[-1]["content"] == "I will no longer notify you of new steam games."
 
 
@@ -272,9 +290,9 @@ async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -
     # every sale from complete_percent up, then the top sellers down to the lowest subscriber threshold
     assert FakeScraper.queries == [(SteamSettings.complete_percent, None), (30, SteamSettings.top_sellers)]
     with Session(engine) as session:
-        sale = session.exec(select(SteamSale)).one()  # listed by both queries, stored once
+        sale = session.exec(alive(SteamSale)).one()  # listed by both queries, stored once
         assert sale.sale_end == end
-        assert session.exec(select(SteamUsers)).one().last_notification == NOW
+        assert session.exec(alive(SteamUsers)).one().last_notification == NOW
     assert [sent.json for sent in client.requests_to("POST", OPEN_DM)] == [{"recipient_id": "7"}]
 
 
@@ -315,7 +333,7 @@ async def test_recheck_removes_ended_sales(engine: Engine) -> None:
     await cog.recheck_due(NOW)
 
     with Session(engine) as session:
-        assert session.exec(select(SteamSale)).all() == []
+        assert session.exec(alive(SteamSale)).all() == []
 
 
 async def test_recheck_updates_sales_that_continue(engine: Engine) -> None:
@@ -327,7 +345,7 @@ async def test_recheck_updates_sales_that_continue(engine: Engine) -> None:
     await cog.recheck_due(NOW)
 
     with Session(engine) as session:
-        sale = session.exec(select(SteamSale)).one()
+        sale = session.exec(alive(SteamSale)).one()
     assert (sale.sale_percent, sale.sale_end) == (75, new_end)
 
 
@@ -340,7 +358,7 @@ async def test_recheck_keeps_sales_when_steam_is_unavailable(engine: Engine) -> 
     await cog.recheck_due(NOW)
 
     with Session(engine) as session:
-        assert session.exec(select(SteamSale)).one().sale_end == ended
+        assert session.exec(alive(SteamSale)).one().sale_end == ended
 
 
 async def test_recheck_ignores_sales_not_yet_due(engine: Engine) -> None:
@@ -351,14 +369,14 @@ async def test_recheck_ignores_sales_not_yet_due(engine: Engine) -> None:
     await cog.recheck_due(NOW)
 
     with Session(engine) as session:
-        assert len(session.exec(select(SteamSale)).all()) == 1
+        assert len(session.exec(alive(SteamSale)).all()) == 1
 
 
 def test_dlc_property_is_kept_on_refresh(engine: Engine) -> None:
     _seed(engine, app_sale(1))
     with Session(engine) as session:
         store = SteamSaleStore(session)
-        sale = session.exec(select(SteamSale)).one()
+        sale = session.exec(alive(SteamSale)).one()
         dlc = ScrapedSale(
             id=1,
             title="Game 1",
@@ -386,7 +404,7 @@ async def test_scrape_verifies_sales_it_no_longer_lists(engine: Engine) -> None:
     await cog.scrape(NOW)
 
     with Session(engine) as session:
-        sales = {sale.id: sale for sale in session.exec(select(SteamSale))}
+        sales = {sale.id: sale for sale in session.exec(alive(SteamSale))}
     assert sorted(sales) == [1, 3]
     assert (sales[3].sale_percent, sales[3].update_datetime) == (80, NOW)
 
@@ -400,7 +418,7 @@ async def test_empty_scrape_removes_nothing(engine: Engine) -> None:
     await cog.scrape(NOW)
 
     with Session(engine) as session:
-        assert len(session.exec(select(SteamSale)).all()) == 1
+        assert len(session.exec(alive(SteamSale)).all()) == 1
 
 
 @pytest.mark.parametrize(
@@ -427,7 +445,7 @@ async def test_scrape_defers_unseen_sales_with_a_known_end(engine: Engine) -> No
     await cog.scrape(NOW)
 
     with Session(engine) as session:
-        assert session.exec(select(SteamSale).where(SteamSale.id == 2)).one().sale_end == end
+        assert session.exec(alive(SteamSale).where(SteamSale.id == 2)).one().sale_end == end
 
 
 async def test_recheck_waits_while_steam_rate_limits_us(engine: Engine) -> None:
@@ -439,4 +457,4 @@ async def test_recheck_waits_while_steam_rate_limits_us(engine: Engine) -> None:
     await cog.recheck_due(NOW)
 
     with Session(engine) as session:
-        assert len(session.exec(select(SteamSale)).all()) == 1
+        assert len(session.exec(alive(SteamSale)).all()) == 1

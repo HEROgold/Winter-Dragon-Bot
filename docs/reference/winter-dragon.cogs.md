@@ -305,7 +305,7 @@ Lists Steam sales on request and DMs subscribers new ones, re-checking sales rig
 - `async scrape(now: datetime) -> None` — Ask Steam for its sales, store them, and DM subscribers new ones.
 - `async recheck_due(now: datetime) -> None` — Check the sales whose announced end has passed: update those still running, remove those that ended.
 - `@Cog.command async add(interaction: CommandInteraction) -> None` — Subscribe the invoking user to Steam sale DMs.
-- `@Cog.command async percentage(interaction: CommandInteraction, percent: int) -> None` — Set the minimum discount the invoking user is notified about.
+- `@Cog.command async percentage(interaction: CommandInteraction, percent: int) -> None` — Set the minimum discount the invoking user is notified about, subscribing them when they aren't.
 - `@Cog.command async remove(interaction: CommandInteraction) -> None` — Unsubscribe the invoking user from Steam sale DMs.
 - `@Cog.command async show(interaction: CommandInteraction, percent: int | None=None) -> None` — Show the first page of current sales of at least ``percent``, with buttons to page through them.
 - `@Cog.component async show_page(interaction: ComponentInteraction, owner_id: str, percent: str, page: str) -> None` — Turn a /steam show listing to ``page``; only the user who ran the command may.
@@ -320,23 +320,24 @@ What kind of store item a sale is for, beyond a plain game.
 
 - attributes: DLC, BUNDLE
 
-### `class SteamSale(SQLModel, table=True)`
-A Steam store item on sale; ``id`` is its Steam app (or bundle/sub) ID.
+### `class SteamSale(LifecycleModel, table=True)`
+A Steam store item on sale; ``id`` is its Steam app (or bundle/sub) ID. Shared data, owned by no one.
 
 - fields: title: str, url: str, sale_percent: int, final_price: float, update_datetime: datetime, discovered_at:
   datetime, sale_end: datetime | None
 - `@property steam_url -> SteamURL` — The sale's store page.
 - `is_outdated(after: timedelta, now: datetime) -> bool` — Whether the sale hasn't been seen on Steam for at least ``after``.
 
-### `class SteamSaleProperties(SQLModel, table=True)`
+### `class SteamSaleProperties(LifecycleModel, table=True)`
 One :class:`SaleTypes` a sale has.
 
-- fields: steam_sale_id: int, property: SaleTypes
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], steam_sale_id: int, property:
+  SaleTypes
 
-### `class SteamUsers(DiscordID, table=True)`
-A Discord user subscribed to Steam sale DMs; ``id`` is their Discord user ID.
+### `class SteamUsers(DiscordKeyedModel, table=True)`
+A Discord user subscribed to Steam sale DMs; ``id`` is their Discord user ID, and they own it.
 
-- fields: sale_threshold: int, last_notification: datetime
+- fields: ownership: ClassVar[Ownership], sale_threshold: int, last_notification: datetime
 
 ## `winter_dragon.cogs.steam.notifier` — `src/winter_dragon/cogs/steam/notifier.py`
 DM subscribers the Steam sales they haven't been told about yet.
@@ -400,7 +401,7 @@ Reads and writes Steam sales through one database session.
 - fields: session: Session
 - `record(scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]` — Store a scraped sale, returning the stored row and whether it counts as new.
 - `refresh(sale: SteamSale, scraped: ScrapedSale, *, now: datetime) -> None` — Apply what Steam now says about ``sale``: its current discount, end and properties.
-- `remove(sale: SteamSale) -> None` — Delete ``sale`` and its properties.
+- `remove(sale: SteamSale) -> None` — Soft-delete ``sale`` and its properties.
 - `properties(sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]` — Return the properties of each of ``sales``, by sale ID.
 - `current_sales(percent: int, *, now: datetime, outdated_after: timedelta) -> list[SteamSale]` — Return the sales of at least ``percent`` still running: biggest discount first, then cheapest.
 - `unseen_without_end(moment: datetime, percent: int, *, outdated_after: timedelta) -> list[SteamSale]` — Return the shown sales of at least ``percent`` last seen before ``moment``, longest unseen first.

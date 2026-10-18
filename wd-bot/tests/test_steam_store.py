@@ -6,7 +6,8 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session, select
+from sqlmodel import Session
+from wd_db.extension.lifecycle import alive
 
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 from winter_dragon.cogs.steam.scrapers import ScrapedSale
@@ -86,7 +87,7 @@ def test_a_known_end_survives_a_scrape_without_one(store: SteamSaleStore) -> Non
 def test_properties_are_stored_once(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
     store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
-    rows = store.session.exec(select(SteamSaleProperties)).all()
+    rows = store.session.exec(alive(SteamSaleProperties)).all()
     assert [row.property for row in rows] == [SaleTypes.DLC]
     assert store.properties([sale]) == {10: {SaleTypes.DLC}}
 
@@ -132,8 +133,21 @@ def test_refresh_drops_an_end_that_already_passed(store: SteamSaleStore) -> None
 def test_remove_deletes_the_sale_and_its_properties(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
     store.remove(sale)
-    assert store.session.exec(select(SteamSale)).all() == []
-    assert store.session.exec(select(SteamSaleProperties)).all() == []
+    assert store.session.exec(alive(SteamSale)).all() == []
+    assert store.session.exec(alive(SteamSaleProperties)).all() == []
+
+
+def test_a_removed_sale_found_again_is_stored_alive_and_new(store: SteamSaleStore) -> None:
+    sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
+    store.remove(sale)
+    later = NOW + timedelta(hours=1)
+
+    sale, is_new = store.record(scraped(percent=90), now=later, outdated_after=OUTDATED)
+
+    assert is_new
+    assert (sale.sale_percent, sale.discovered_at) == (90, later)
+    assert [found.id for found in store.new_since(NOW, 0)] == [sale.id]
+    assert store.properties([sale]) == {}
 
 
 def test_new_since_filters_by_discovery_and_threshold(store: SteamSaleStore) -> None:

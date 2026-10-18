@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 lazy from enum import StrEnum, auto
+lazy from typing import ClassVar
 
-from sqlalchemy import BigInteger, UniqueConstraint
+from sqlalchemy import BigInteger
 from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
-from wd_db.extension.model import DiscordID, SQLModel
+from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership, Through
 
 from winter_dragon.cogs.steam.urls import SteamURL
 
@@ -20,8 +21,8 @@ class SaleTypes(StrEnum):
     BUNDLE = auto()
 
 
-class SteamSale(SQLModel, table=True):
-    """A Steam store item on sale; ``id`` is its Steam app (or bundle/sub) ID."""
+class SteamSale(LifecycleModel, table=True):
+    """A Steam store item on sale; ``id`` is its Steam app (or bundle/sub) ID. Shared data, owned by no one."""
 
     title: str
     url: str
@@ -44,17 +45,20 @@ class SteamSale(SQLModel, table=True):
         return self.update_datetime + after <= now
 
 
-class SteamSaleProperties(SQLModel, table=True):
+class SteamSaleProperties(LifecycleModel, table=True):
     """One :class:`SaleTypes` a sale has."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("steam_sale_id", SteamSale))
+    natural_key: ClassVar[tuple[str, ...]] = ("steam_sale_id", "property")
 
     steam_sale_id: int = Field(foreign_key="steamsale.id", sa_type=BigInteger)
     property: SaleTypes
 
-    __table_args__ = (UniqueConstraint("steam_sale_id", "property"),)
 
+class SteamUsers(DiscordKeyedModel, table=True):
+    """A Discord user subscribed to Steam sale DMs; ``id`` is their Discord user ID, and they own it."""
 
-class SteamUsers(DiscordID, table=True):
-    """A Discord user subscribed to Steam sale DMs; ``id`` is their Discord user ID."""
+    ownership: ClassVar[Ownership] = Ownership(member="id")
 
     sale_threshold: int = 100
     """The minimum discount percentage a sale needs before the user is notified."""

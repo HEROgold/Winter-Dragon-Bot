@@ -6,7 +6,8 @@ lazy from collections import defaultdict
 lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
-lazy from sqlmodel import col, delete, or_, select
+lazy from sqlmodel import col, or_, select
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 
@@ -29,21 +30,25 @@ class SteamSaleStore:
     def record(self, scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]:
         """Store a scraped sale, returning the stored row and whether it counts as new.
 
-        A sale is new when it wasn't known, or was outdated (not seen for ``outdated_after``) and so worth
-        announcing again. A known sale keeps its ``sale_end`` unless the scrape found one.
+        A sale is new when it wasn't known, was deleted (it's restored), or was outdated (not seen for
+        ``outdated_after``) and so worth announcing again. A known sale keeps its ``sale_end`` unless the scrape
+        found one.
         """
-        sale = self.session.get(SteamSale, scraped.id)
+        sale = self.session.exec(alive(SteamSale).where(SteamSale.id == scraped.id)).first()
         is_new = sale is None or sale.is_outdated(outdated_after, now)
         if sale is None:
-            sale = SteamSale(
-                id=scraped.id,
-                title=scraped.title,
-                url=scraped.url,
-                sale_percent=scraped.sale_percent,
-                final_price=scraped.final_price,
-                update_datetime=now,
-                discovered_at=now,
-                sale_end=scraped.sale_end,
+            sale = create_or_restore(
+                self.session,
+                SteamSale(
+                    id=scraped.id,
+                    title=scraped.title,
+                    url=scraped.url,
+                    sale_percent=scraped.sale_percent,
+                    final_price=scraped.final_price,
+                    update_datetime=now,
+                    discovered_at=now,
+                    sale_end=scraped.sale_end,
+                ),
             )
         else:
             sale.title = scraped.title
@@ -76,24 +81,28 @@ class SteamSaleStore:
         self.session.commit()
 
     def _add_properties(self, sale_id: int | None, properties: Iterable[SaleTypes]) -> None:
-        """Store any of ``properties`` the sale doesn't have yet."""
+        """Store any of ``properties`` the sale doesn't have yet, restoring the ones it had before."""
         if sale_id is None:
             return
-        known = set(self.session.exec(select(SteamSaleProperties.property).where(SteamSaleProperties.steam_sale_id == sale_id)))
+        known = {row.property for row in self._properties_of(sale_id)}
         for sale_type in set(properties) - known:
-            self.session.add(SteamSaleProperties(steam_sale_id=sale_id, property=sale_type))
+            create_or_restore(self.session, SteamSaleProperties(steam_sale_id=sale_id, property=sale_type))
+
+    def _properties_of(self, sale_id: int | None) -> Sequence[SteamSaleProperties]:
+        return self.session.exec(alive(SteamSaleProperties).where(SteamSaleProperties.steam_sale_id == sale_id)).all()
 
     def remove(self, sale: SteamSale) -> None:
-        """Delete ``sale`` and its properties."""
-        self.session.exec(delete(SteamSaleProperties).where(col(SteamSaleProperties.steam_sale_id) == sale.id))
-        self.session.delete(sale)
+        """Soft-delete ``sale`` and its properties."""
+        for row in self._properties_of(sale.id):
+            soft_delete(self.session, row)
+        soft_delete(self.session, sale)
         self.session.commit()
 
     def properties(self, sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]:
         """Return the properties of each of ``sales``, by sale ID."""
         ids = [sale.id for sale in sales if sale.id is not None]
         found: defaultdict[int, set[SaleTypes]] = defaultdict(set)
-        rows = self.session.exec(select(SteamSaleProperties).where(col(SteamSaleProperties.steam_sale_id).in_(ids)))
+        rows = self.session.exec(alive(SteamSaleProperties).where(col(SteamSaleProperties.steam_sale_id).in_(ids)))
         for row in rows:
             found[row.steam_sale_id].add(row.property)
         return dict(found)
@@ -103,7 +112,7 @@ class SteamSaleStore:
 
         A sale runs until its known end, or without one, until it's outdated (not seen for ``outdated_after``).
         """
-        query = select(SteamSale).where(
+        query = alive(SteamSale).where(
             SteamSale.sale_percent >= percent,
             or_(col(SteamSale.sale_end) > now, col(SteamSale.update_datetime) > now - outdated_after),
         )
@@ -114,7 +123,7 @@ class SteamSaleStore:
 
         Sales with a known end are left out: they're re-checked once they end (see :meth:`due_rechecks`).
         """
-        query = select(SteamSale).where(
+        query = alive(SteamSale).where(
             SteamSale.sale_percent >= percent,
             col(SteamSale.update_datetime) < moment,
             col(SteamSale.update_datetime) > moment - outdated_after,
@@ -124,27 +133,29 @@ class SteamSaleStore:
 
     def due_rechecks(self, *, now: datetime, delay: timedelta) -> Sequence[SteamSale]:
         """Return the sales whose announced end was at least ``delay`` ago."""
-        return self.session.exec(select(SteamSale).where(col(SteamSale.sale_end) <= now - delay)).all()
+        return self.session.exec(alive(SteamSale).where(col(SteamSale.sale_end) <= now - delay)).all()
 
     def next_recheck(self, *, delay: timedelta) -> datetime | None:
         """Return when the next sale is due for a re-check, if any sale has a known end."""
         sale_end = self.session.exec(
-            select(SteamSale.sale_end).where(col(SteamSale.sale_end).is_not(None)).order_by(col(SteamSale.sale_end)),
+            select(SteamSale.sale_end)
+            .where(col(SteamSale.sale_end).is_not(None), col(SteamSale.deleted_at).is_(None))
+            .order_by(col(SteamSale.sale_end)),
         ).first()
         return None if sale_end is None else sale_end + delay
 
     def new_since(self, moment: datetime, percent: int) -> list[SteamSale]:
         """Return the sales of at least ``percent`` discovered after ``moment``, newest first."""
-        query = select(SteamSale).where(SteamSale.sale_percent >= percent, col(SteamSale.discovered_at) > moment)
+        query = alive(SteamSale).where(SteamSale.sale_percent >= percent, col(SteamSale.discovered_at) > moment)
         return list(self.session.exec(query.order_by(col(SteamSale.discovered_at).desc())))
 
     def subscriber(self, user_id: int) -> SteamUsers | None:
         """Return the subscription of ``user_id``, if subscribed."""
-        return self.session.get(SteamUsers, user_id)
+        return self.session.exec(alive(SteamUsers).where(SteamUsers.id == user_id)).first()
 
     def subscribers(self) -> Sequence[SteamUsers]:
         """Return every subscribed user."""
-        return self.session.exec(select(SteamUsers)).all()
+        return self.session.exec(alive(SteamUsers)).all()
 
     def lowest_threshold(self) -> int | None:
         """Return the lowest ``sale_threshold`` among subscribers, or ``None`` without subscribers."""

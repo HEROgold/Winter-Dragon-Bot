@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session
+from wd_db.extension.lifecycle import soft_delete
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.testing import RecordingClient
 
@@ -85,6 +86,17 @@ async def test_subscriber_gets_new_sales_above_their_threshold(store: SteamSaleS
 
 async def test_subscriber_already_notified_gets_nothing(store: SteamSaleStore) -> None:
     _subscribe(store, 7, threshold=0, last_notification=NOW)
+    client = _client()
+
+    assert await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi") == 0
+
+    assert client.sent == []
+
+
+async def test_a_soft_deleted_subscriber_gets_nothing(store: SteamSaleStore) -> None:
+    user = _subscribe(store, 7, threshold=0)
+    soft_delete(store.session, user)
+    store.session.commit()
     client = _client()
 
     assert await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi") == 0

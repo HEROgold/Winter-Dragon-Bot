@@ -8,6 +8,7 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete
 
 lazy from winter_dragon.cogs.steam.models import STEAM_TABLES, SteamUsers
 lazy from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
@@ -193,12 +194,9 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                     ephemeral=True,
                 )
                 return
-            session.add(
-                SteamUsers(
-                    id=int(user.id),
-                    last_notification=utc_now(),
-                    sale_threshold=SteamSettings.default_threshold,
-                ),
+            create_or_restore(
+                session,
+                SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=SteamSettings.default_threshold),
             )
             session.commit()
         await interaction.respond(
@@ -211,7 +209,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         description="Get notified of steam games on sale for the given percentage or higher",
     )
     async def percentage(self, interaction: CommandInteraction, percent: int) -> None:
-        """Set the minimum discount the invoking user is notified about."""
+        """Set the minimum discount the invoking user is notified about, subscribing them when they aren't."""
         user = interaction.user
         if user is None:
             return
@@ -223,14 +221,15 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             return
         with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
-            if subscriber is not None:
+            if subscriber is None:
+                create_or_restore(session, SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent))
+            else:
                 subscriber.sale_threshold = percent
                 session.add(subscriber)
-                session.commit()
+            session.commit()
+        content = f"Changed your sale notification threshold to {percent}%."
         if subscriber is None:
-            content = f"You are not in the list of recipients. Use {self.mention(self.add)} to subscribe."
-        else:
-            content = f"Changed your sale notification threshold to {percent}%."
+            content += f"\nI will notify you of new steam games! Use {self.mention(self.remove)} to stop."
         await interaction.respond(content=content, ephemeral=True)
 
     @Cog.command(name="remove", description="No longer get notified of free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
@@ -242,7 +241,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
             if subscriber is not None:
-                session.delete(subscriber)
+                soft_delete(session, subscriber)
                 session.commit()
         content = "Not in the list of recipients" if subscriber is None else "I will no longer notify you of new steam games."
         await interaction.respond(content=content, ephemeral=True)
