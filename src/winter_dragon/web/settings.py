@@ -5,7 +5,7 @@ from __future__ import annotations
 lazy from pathlib import Path
 
 lazy from wd_config import Config
-lazy from wd_config.parser import REQUIRED
+lazy from wd_config.parser import REQUIRED, required
 
 
 DASHBOARD_CONFIG_FILE = Path("dashboard.ini")
@@ -28,7 +28,7 @@ class DashboardSettings:
     public_url = DashboardConfig("http://localhost:8001")
     """The address people open the dashboard on; its ``/auth/discord/callback`` must be one of the application's OAuth2
     redirects in the Discord developer portal."""
-    client_secret = DashboardConfig(REQUIRED)
+    client_secret = DashboardConfig(required("https://discord.com/developers/applications/<application_id>/oauth2"))
     """The application's OAuth2 client secret; the client ID is the bot's application ID, fetched at startup."""
     session_secret = DashboardConfig(REQUIRED)
     """The key session cookies are signed with: any long random string. Changing it signs everyone out."""

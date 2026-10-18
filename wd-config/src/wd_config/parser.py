@@ -17,6 +17,16 @@ REQUIRED = "!!"
 """Default of a setting the operator must fill in before the bot can start."""
 
 
+def required(hint: str) -> str:
+    """Return a :data:`REQUIRED` default followed by ``hint``, such as the URL the operator finds the value at."""
+    return f"{REQUIRED} {hint}"
+
+
+def is_required(value: str) -> bool:
+    """Whether ``value`` is still a :data:`REQUIRED` default, with or without a hint."""
+    return value.strip().startswith(REQUIRED)
+
+
 class _CaseKeepingParser(configparser.ConfigParser):
     """Reports keys with their case as written, not lowercased."""
 
@@ -44,7 +54,7 @@ class OperatorFiles:
             parser.read(file, encoding="utf-8")
             for section in parser.sections():
                 for key, value in parser[section].items():
-                    if value.strip() == REQUIRED:
+                    if is_required(value):
                         yield f"{file}:{section}:{key}"
 
     @classmethod

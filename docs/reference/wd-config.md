@@ -89,6 +89,8 @@ What one migration did; every entry names a section or ``section.key``.
 The first-launch check: operator-facing ini files must have every required value filled in.
 
 - module names: REQUIRED
+- `required(hint: str) -> str` — Return a :data:`REQUIRED` default followed by ``hint``, such as the URL the operator finds the value at.
+- `is_required(value: str) -> bool` — Whether ``value`` is still a :data:`REQUIRED` default, with or without a hint.
 
 ### `class OperatorFiles`
 The ini files an operator edits; each scope with operator settings registers its file here.

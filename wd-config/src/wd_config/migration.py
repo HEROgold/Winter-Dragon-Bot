@@ -26,7 +26,7 @@ lazy import shutil
 lazy from dataclasses import KW_ONLY, dataclass, field
 lazy from typing import TYPE_CHECKING, override
 
-lazy from .parser import REQUIRED
+lazy from .parser import is_required
 
 
 if TYPE_CHECKING:
@@ -173,7 +173,7 @@ def _fill(file: Path, writes: Iterable[_Write]) -> list[str]:
         if not parser.has_section(write.section):
             parser.add_section(write.section)
         existing = next((key for key in parser[write.section] if key.lower() == write.key.lower()), None)
-        if existing is not None and parser[write.section][existing].strip() != REQUIRED:
+        if existing is not None and not is_required(parser[write.section][existing]):
             kept.append(f"{file}:{write.section}.{write.key}")
             continue
         if existing is not None:

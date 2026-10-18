@@ -93,7 +93,10 @@ async def signed_in_user(code: str) -> User | None:
     grant = {"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri()}
     async with AsyncClient(timeout=REQUEST_TIMEOUT) as http:
         granted = await _send(http, "POST", "/oauth2/token", data=grant, auth=auth)
-        if granted is None or not granted.is_success:
+        if granted is None:
+            return None
+        if not granted.is_success:
+            logger.warning(t"Discord refused the OAuth2 code exchange ({granted.status_code}): {granted.text}")
             return None
         token = AccessToken.model_validate(granted.json())
         me = await _send(http, "GET", "/users/@me", headers={"Authorization": f"Bearer {token.access_token}"})

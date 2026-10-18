@@ -110,17 +110,17 @@ result["unset"] = list(OperatorFiles.unset())
 
 
 def test_first_launch_lists_every_unset_value_and_raises(boot_config: BootConfig) -> None:
-    """Each `!!` value in a registered file is reported as `file:section:key`, and the check raises."""
+    """Each `!!` value in a registered file, hinted or not, is reported as `file:section:key`, and the check raises."""
     boot = boot_config(
         FIRST_LAUNCH,
         files={
             "a.ini": "[Tokens]\ndiscord_token = !!\nother = set\n",
-            "b.ini": "[Db]\npassword = !!\n",
+            "b.ini": "[Db]\npassword = !!\nsecret = !! https://example.com/where\n",
         },
     )
 
     assert boot.values["raised"] is True
-    assert boot.values["unset"] == ["a.ini:Tokens:discord_token", "b.ini:Db:password"]
+    assert boot.values["unset"] == ["a.ini:Tokens:discord_token", "b.ini:Db:password", "b.ini:Db:secret"]
     assert "a.ini:Tokens:discord_token" in boot.values["message"]
     assert "b.ini:Db:password" in boot.values["message"]
 

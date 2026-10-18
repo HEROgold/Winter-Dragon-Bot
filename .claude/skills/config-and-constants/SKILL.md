@@ -62,7 +62,7 @@ Discord API base + version are config (`URLS` in [wd_config/discord.py](../../..
 
 ## First-launch & unset values
 
-[wd_config/parser.py](../../../wd-config/src/wd_config/parser.py) `OperatorFiles` owns the check and knows no settings. A scope with operator settings binds with `.bind(file, operator=True)`, which registers its file; internal-only files (`discord.ini`) don't. A required operator setting defaults to `REQUIRED` (`"!!"`), not an empty string, so confkit writes `!!` on first launch. `Bot.start` calls `OperatorFiles.check()` before connecting, which raises `FirstTimeLaunchError` listing each `file:section:key` still at `!!`; `OperatorFiles.unset()` yields the same entries.
+[wd_config/parser.py](../../../wd-config/src/wd_config/parser.py) `OperatorFiles` owns the check and knows no settings. A scope with operator settings binds with `.bind(file, operator=True)`, which registers its file; internal-only files (`discord.ini`) don't. A required operator setting defaults to `REQUIRED` (`"!!"`), not an empty string, so confkit writes `!!` on first launch; `required(hint)` writes `!! <hint>` instead, for a pointer to where the value comes from (the dashboard's `client_secret` names the developer-portal page). Any value starting with `!!` counts as unset (`is_required`). `Bot.start` calls `OperatorFiles.check()` before connecting, which raises `FirstTimeLaunchError` listing each `file:section:key` still at `!!`; `OperatorFiles.unset()` yields the same entries.
 
 ## Rules of thumb
 
