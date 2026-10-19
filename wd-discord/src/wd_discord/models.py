@@ -39,10 +39,12 @@ def _report_unknown_fields(model_name: str, extra: Mapping[str, object]) -> None
         return
     fields = sorted(extra)
     try:
-        with sentry_sdk.new_scope() as scope:
-            scope.fingerprint = ["wd-discord-unknown-fields", model_name, *fields]
-            scope.set_context("unknown_fields", {key: repr(value) for key, value in extra.items()})
-            scope.capture_message(f"wd-discord: unknown fields on {model_name}: {', '.join(fields)}", level="warning")
+        sentry_sdk.capture_message(
+            f"wd-discord: unknown fields on {model_name}: {', '.join(fields)}",
+            level="warning",
+            fingerprint=["wd-discord-unknown-fields", model_name, *fields],
+            contexts={"unknown_fields": {key: repr(value) for key, value in extra.items()}},
+        )
     except Exception:  # noqa: BLE001 - telemetry is best-effort; a broken reporter must not break parsing
         return
 
