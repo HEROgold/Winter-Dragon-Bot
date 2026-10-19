@@ -1,4 +1,4 @@
-# Shared by bot, workers and web. Each ini file must exist before `up`, or
+# Shared by bot and web. Each ini file must exist before `up`, or
 # Docker creates an empty directory in its place: run the bot once with
 # `uv run python -m winter_dragon`, or create an empty file confkit fills in.
 # discord.ini is left out: it's optional and only read when it exists.
@@ -34,7 +34,8 @@ services:
       retries: 5
     networks:
       - default
-    restart: "no"
+    # The bot and web restart unless stopped, so the stores they need must come back with them.
+    restart: unless-stopped
 
   redis-commander:
     image: ghcr.io/joeferner/redis-commander:latest
@@ -66,7 +67,8 @@ services:
       timeout: 30s
       retries: 6
       start_period: 10s
-    restart: "no"
+    # The bot and web restart unless stopped, so the database they need must come back with them.
+    restart: unless-stopped
     networks:
       - default
 
@@ -85,24 +87,6 @@ services:
         condition: service_healthy
     # Keeps the bot up after a crash or a Docker restart; `docker compose stop bot` ends it.
     restart: unless-stopped
-    networks:
-      - default
-
-  workers:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: python -m winter_dragon.workers
-    environment:
-      REDIS_HOST: redis
-      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
-    volumes: *app-volumes
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: "no"
     networks:
       - default
 

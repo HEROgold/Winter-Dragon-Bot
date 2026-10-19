@@ -2,7 +2,7 @@
 
 !!! warning "Not built yet"
     Nothing on this page exists in the `v2` code. It describes the intended design, so that the pieces
-    already in place (the `api`/`workers` services in `docker-compose.yml`, `wd_db.extras.api`) make sense.
+    already in place (`wd_db.extras.api`) make sense.
     Implemented APIs are in the [API reference](reference/index.md).
 
 ## HTTP API
@@ -31,7 +31,7 @@ event loop: scheduled jobs, heavy computation, and processing deletion requests.
 
 ## What exists toward this
 
-- `docker-compose.yml` defines the `api` and `workers` services and Redis.
+- `docker-compose.yml` runs Redis; a `workers` service returns with the job queue.
 - `wd_db.extras.api` holds an `APIModel` base for exposing SQLModel tables through the API.
 - The `main` branch's version of these features is listed under
   [Platform & Services](features/platform.md).
