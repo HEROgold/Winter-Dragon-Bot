@@ -1,6 +1,7 @@
 <!-- GENERATED FILE - do not hand-edit. Regenerate with: uv run python scripts/generate_api_reference.py -->
 
 # `winter_dragon` (winter-dragon)
+Winter Dragon: the Discord bot and its web dashboard.
 
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
