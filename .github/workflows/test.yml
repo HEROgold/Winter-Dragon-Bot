@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: uv sync --all-packages --frozen
       - run: uv run pytest -q
 
@@ -39,7 +39,7 @@ jobs:
       URL: postgresql://postgres:postgres@localhost:5432/winter_dragon
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: uv sync --all-packages --frozen
       - name: Apply every revision to an empty database
         run: uv run python -m winter_dragon.migrations --url "$URL" upgrade
