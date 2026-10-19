@@ -38,7 +38,7 @@ jobs:
         with:
           fetch-depth: 0  # auto-migrate-pr compares the migration branch with the PR head
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.3.0
 
       - uses: HEROgold/auto-migrate-pr@5962e306e3ac6e54277df056dcdcb767b7e3e476 # v1.0.0
         with:
