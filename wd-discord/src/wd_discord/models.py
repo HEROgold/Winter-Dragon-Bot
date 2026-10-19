@@ -6,6 +6,7 @@ which validates the payload through pydantic v2. Unknown/undocumented keys are c
 :attr:`~wd_config.sentry.SentrySettings.Telemetry` - so new Discord fields surface as telemetry
 instead of being silently dropped.
 """
+
 from __future__ import annotations
 
 lazy from typing import TYPE_CHECKING, Self
@@ -29,15 +30,19 @@ def _report_unknown_fields(model_name: str, extra: Mapping[str, object]) -> None
     Always logs the unknown keys locally (visible in ``logs/`` even when Sentry is disabled or
     unreachable). The Sentry ``capture_message`` is a no-op when ``sentry_sdk.init`` has not run,
     and never raises: telemetry must not turn a successful response parse into a failure.
+
+    The Sentry message and fingerprint name only the model and the field names, so one new field is one
+    Sentry issue however its values vary; the values ride along as the event's ``unknown_fields`` context.
     """
     logger.warning(t"unknown fields on {model_name}: {extra}")
     if not SentrySettings.Telemetry:
         return
+    fields = sorted(extra)
     try:
-        sentry_sdk.capture_message(
-            f"wd-discord: unknown fields on {model_name}: {extra}",
-            level="warning",
-        )
+        with sentry_sdk.new_scope() as scope:
+            scope.fingerprint = ["wd-discord-unknown-fields", model_name, *fields]
+            scope.set_context("unknown_fields", {key: repr(value) for key, value in extra.items()})
+            scope.capture_message(f"wd-discord: unknown fields on {model_name}: {', '.join(fields)}", level="warning")
     except Exception:  # noqa: BLE001 - telemetry is best-effort; a broken reporter must not break parsing
         return
 
