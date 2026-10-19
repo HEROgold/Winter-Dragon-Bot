@@ -53,8 +53,16 @@ Each table's columns are listed as `fields` in the [API reference](../reference/
 The schema's history is the Alembic revisions in `src/winter_dragon/migrations/versions/`; the models are the
 source of truth ([ADR 0004](../adr/0004-alembic-migrations-applied-on-start.md)).
 
-**Changing a table.** Edit the model, then autogenerate a revision against a scratch Postgres, never the live
-database (`revision` upgrades the database it's given first):
+**Changing a table.** Edit the model and open a PR. The **Auto-migrate** workflow
+([HEROgold/auto-migrate-pr](https://github.com/HEROgold/auto-migrate-pr)) autogenerates the revision on the PR's
+head and opens it as a migration PR stacked on yours (`migration/<branch>` into `<branch>`); each push regenerates
+it. Review it, fix it there (commits you push to it are kept, and the workflow stops regenerating), and merge it into
+your branch. In a stack of PRs, merge the lower PR's migration and rebase before the upper one is generated, so the
+revisions stay one line. The **Test** workflow's `migrations` job is required on `main`, so a PR whose models no
+revision covers can't merge.
+
+To autogenerate a revision yourself, run it against a scratch Postgres, never the live database (`revision`
+upgrades the database it's given first):
 
 ```bash
 docker run -d --rm --name wd-scratch -e POSTGRES_PASSWORD=scratch -p 55432:5432 postgres:14-alpine

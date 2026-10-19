@@ -8,7 +8,7 @@
 
 ## Database changes
 
-A model change (a `table=True` class: new table, column, type, index) needs an Alembic revision in the same commit: `uv run python -m winter_dragon.migrations --url <scratch postgres> revision -m "..."`, then read and fix the generated file. Never point `--url` at the live database. See [docs/dev/database.md](docs/dev/database.md#migrations).
+A model change (a `table=True` class: new table, column, type, index) needs an Alembic revision before its PR can merge. Don't write it with the model change: the **Auto-migrate** workflow generates it into a migration PR stacked on yours (`migration/<branch>`); read and fix the generated file there, then merge it into your branch. To generate one locally instead: `uv run python -m winter_dragon.migrations --url <scratch postgres> revision -m "..."`. Never point `--url` at the live database. See [docs/dev/database.md](docs/dev/database.md#migrations).
 
 ## Generated files
 
