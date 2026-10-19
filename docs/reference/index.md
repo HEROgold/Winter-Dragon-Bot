@@ -33,5 +33,6 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`wd_types`](wd-types.md) |  |
 | [`winter_dragon`](winter-dragon.md) |  |
 | [`winter_dragon.cogs`](winter-dragon.cogs.md) | Cogs for the winter_dragon example bot (see run_test_bot.py). |
+| [`winter_dragon.migrations`](winter-dragon.migrations.md) | The database's schema history: Alembic revisions in ``versions/``, run by ``python -m winter_dragon.migrations``. |
 | [`winter_dragon.ui`](winter-dragon.ui.md) | Reusable pieces of the app's Discord replies. |
 | [`winter_dragon.web`](winter-dragon.web.md) | The web dashboard: htmx and Jinja pages served by FastAPI, run with ``python -m winter_dragon.web``. |

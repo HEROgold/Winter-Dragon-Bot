@@ -92,9 +92,8 @@ What the landing page's signpost arms say a signed-in member will find down each
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
 - module names: HIDDEN_FIELDS
-- `import_cogs() -> None` — Import every module of :mod:`winter_dragon.cogs`, so each feature and table they define is known.
-- `create_dashboard_tables(bind: Engine) -> None` — Create the tables the dashboard writes to, if the bot hasn't yet: deletion requests and reminders.
-- `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`import_cogs` first.
+- `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do.
+- `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first.
 - `member_records(bind: Engine, member_id: int) -> Generator[DataRecord]` — Yield a record for every table holding rows the member ``member_id`` owns, by name.
 - `record_table(bind: Engine, member_id: int, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows the member ``member_id`` owns in the table ``key``, times in ``zone``; ``None`` for no such table.
 

@@ -110,7 +110,7 @@ A wd-native feature unit: a class whose methods can be tagged with @Cog.listener
 - `@classmethod audit_reason(interaction: AnyInteraction, command: Command, action: str) -> str` — Return the audit-log reason for ``action``: what was done, by whom, with which command.
 - `mention(command: Command, *, guild: SnowflakeLike | None=None) -> CommandMention` — Return a mention of ``command``, as seen from ``guild``: clickable once Discord reported it, else ``/name``.
 - `@property bind -> Engine | Connection` — The database the cog's injected session connects to; open short-lived sessions on it per operation.
-- `create_tables(*models: type[SQLModel]) -> None` — Create the tables of ``models`` that don't exist yet, in :attr:`bind`; each named after its model, lowercased.
+- `create_tables(*models: type[SQLModel]) -> None` — Make sure the tables of ``models`` exist in :attr:`bind`; see :func:`wd_db.schema.ensure_tables`.
 - `async load() -> None` — Run setup once registered with the bot; a hook for subclasses to override.
 - `async unload() -> None` — Unregister any auto-reload watcher.
 

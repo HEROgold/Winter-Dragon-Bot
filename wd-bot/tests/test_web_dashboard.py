@@ -16,10 +16,10 @@ from wd_db.extension.lifecycle import alive
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 
+from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.web import auth, pages, reminders
 from winter_dragon.web.app import create_app
-from winter_dragon.web.records import import_cogs
 from winter_dragon.web.reminders import InvalidReminderError, ReminderDraft, Repeat
 
 

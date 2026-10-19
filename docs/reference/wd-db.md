@@ -40,6 +40,16 @@ Module with helper methods for the database package.
 
 - `get_foreign_key(table: type[SQLModel], column: str='id') -> str` — Get the foreign key for a given table and column.
 
+## `wd_db.schema` — `wd-db/src/wd_db/schema.py`
+Making sure a model's tables exist: the migrations own a database they manage, anything else is created on the spot.
+
+- module names: MIGRATIONS_TABLE
+- `managed_by_migrations(bind: Engine | Connection) -> bool` — Return whether the migrations manage ``bind``'s database.
+- `ensure_tables(bind: Engine | Connection, *models: type[SQLModel]) -> None` — Make sure the tables of ``models`` exist in ``bind``; each is named after its model, lowercased.
+
+### `class UnmigratedTablesError(RuntimeError)`
+Tables a model defines are missing from a database the migrations manage.
+
 ## `wd_db.settings` — `wd-db/src/wd_db/settings.py`
 wd-db's settings, backed by their own database.ini file.
 

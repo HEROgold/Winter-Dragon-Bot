@@ -18,8 +18,8 @@ lazy from wd_db.constants import engine
 lazy from wd_discord import Client
 
 from winter_dragon.web.settings import DashboardSettings
+lazy from winter_dragon.cogs import import_cogs
 lazy from winter_dragon.web.app import create_app
-lazy from winter_dragon.web.records import import_cogs
 
 
 async def _load_application_id() -> None:

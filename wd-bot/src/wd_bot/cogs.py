@@ -8,7 +8,7 @@ lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, Ty
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session, SQLModel
 lazy from wd_db.constants import engine
-lazy from wd_db.extension.lifecycle import LifecycleModel, ensure_lifecycle_columns
+lazy from wd_db.schema import ensure_tables
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.snowflake import Snowflake
 
@@ -202,13 +202,11 @@ class Cog(LoggerMixin):
         return self.session.get_bind()
 
     def create_tables(self, *models: type[SQLModel]) -> None:
-        """Create the tables of ``models`` that don't exist yet, in :attr:`bind`; each named after its model, lowercased.
+        """Make sure the tables of ``models`` exist in :attr:`bind`; see :func:`wd_db.schema.ensure_tables`.
 
-        Existing tables of lifecycle models gain the lifecycle columns an older bot didn't create.
+        A database the migrations manage must already have them; any other gets the missing ones created.
         """
-        tables = [SQLModel.metadata.tables[model.__name__.lower()] for model in models]
-        SQLModel.metadata.create_all(self.bind, tables=tables)
-        ensure_lifecycle_columns(self.bind, *(model for model in models if issubclass(model, LifecycleModel)))
+        ensure_tables(self.bind, *models)
 
     async def load(self) -> None:
         """Run setup once registered with the bot; a hook for subclasses to override.

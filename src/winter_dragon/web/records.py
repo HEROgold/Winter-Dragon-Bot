@@ -7,14 +7,13 @@ request follows, so the data page lists exactly what deleting would remove.
 from __future__ import annotations
 
 from dataclasses import dataclass
-lazy import importlib
-lazy import pkgutil
 lazy from typing import TYPE_CHECKING
 
 lazy from sqlalchemy import func
-lazy from sqlmodel import Session, SQLModel, select
+lazy from sqlmodel import Session, select
 lazy from wd_bot.cogs import GroupCog
-lazy from wd_db.extension.lifecycle import ensure_lifecycle_columns, owned_by
+lazy from wd_db.extension.lifecycle import owned_by
+lazy from wd_db.schema import ensure_tables
 
 lazy from winter_dragon import cogs
 lazy from winter_dragon.cogs.privacy import DeletionRequest, stored_models
@@ -24,27 +23,19 @@ lazy from winter_dragon.web.formatting import humanized_name, plural, shown_valu
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from zoneinfo import ZoneInfo
 
     from sqlalchemy import Engine
     from wd_db.extension.lifecycle import LifecycleModel
+    from zoneinfo import ZoneInfo
 
 
 HIDDEN_FIELDS = frozenset(("id", "updated_at", "deleted_at"))
 """Columns of a record the data page leaves out: internal keys and bookkeeping, not the member's data."""
 
 
-def import_cogs() -> None:
-    """Import every module of :mod:`winter_dragon.cogs`, so each feature and table they define is known."""
-    for module in pkgutil.walk_packages(cogs.__path__, f"{cogs.__name__}."):
-        importlib.import_module(module.name)
-
-
 def create_dashboard_tables(bind: Engine) -> None:
-    """Create the tables the dashboard writes to, if the bot hasn't yet: deletion requests and reminders."""
-    models = (DeletionRequest, *REMINDER_TABLES)
-    SQLModel.metadata.create_all(bind, tables=[model.__table__ for model in models])  # pyright: ignore[reportArgumentType]
-    ensure_lifecycle_columns(bind, *models)
+    """Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do."""
+    ensure_tables(bind, DeletionRequest, *REMINDER_TABLES)
 
 
 @dataclass(frozen=True)
@@ -56,7 +47,7 @@ class Feature:
 
 
 def features() -> Generator[Feature]:
-    """Yield every command group the app's cogs define, by name; call :func:`import_cogs` first."""
+    """Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first."""
     pending, groups = list(GroupCog.__subclasses__()), list[type[GroupCog]]()
     while pending:
         cog = pending.pop()

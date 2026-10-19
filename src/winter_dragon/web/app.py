@@ -11,9 +11,10 @@ lazy from fastapi.staticfiles import StaticFiles
 lazy from starlette.middleware.sessions import SessionMiddleware
 lazy from starlette.responses import Response
 
+lazy from winter_dragon.cogs import import_cogs
 lazy from winter_dragon.web import auth, pages, reminders
 lazy from winter_dragon.web.accounts import SignInRequired
-lazy from winter_dragon.web.records import create_dashboard_tables, import_cogs
+lazy from winter_dragon.web.records import create_dashboard_tables
 lazy from winter_dragon.web.responses import STATIC_DIR, is_htmx
 
 
