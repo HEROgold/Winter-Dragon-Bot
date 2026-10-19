@@ -361,8 +361,8 @@ class Gateway(LoggerMixin):
         if (seq := message.get("s")) is not None:
             self._seq = seq
         match message:
-            case {"op": Opcode.DISPATCH, "t": name, "d": data}:
-                await dispatch(name, parse_dispatch(name, data))
+            case {"op": Opcode.DISPATCH}:
+                await dispatch(message["t"], parse_dispatch(message["t"], message["d"]))
             case {"op": Opcode.HEARTBEAT}:
                 await self._send(Opcode.HEARTBEAT, self._seq)
             case {"op": Opcode.RECONNECT}:
