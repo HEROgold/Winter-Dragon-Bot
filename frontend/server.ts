@@ -11,7 +11,9 @@ const apiBackendUrl = process.env.API_BACKEND_URL ?? "http://localhost:8001";
 await buildApp();
 
 const template = await Bun.file(templatePath).text();
-const stylesheetName = readdirSync(outdir).find((entry) => entry.endsWith(".css"));
+const stylesheetName = readdirSync(outdir).find((entry) =>
+  entry.endsWith(".css"),
+);
 const html = stylesheetName
   ? template.replace(
       "</head>",

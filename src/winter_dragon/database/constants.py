@@ -1,7 +1,5 @@
 """Module for containing constants and configuration for the database package."""
 
-
-
 from sqlalchemy import URL
 from sqlmodel import Session, create_engine
 

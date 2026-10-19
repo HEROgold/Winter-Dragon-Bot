@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 
 import discord
 from discord import app_commands
@@ -35,7 +35,7 @@ class Reminder(Cog, auto_load=True):
     async def send_reminder(self) -> None:
         """Task to send reminders to users."""
         results = self.session.exec(
-            select(ReminderDb).where(ReminderDb.timestamp <= datetime.datetime.now(datetime.UTC)),
+            select(ReminderDb).where(ReminderDb.timestamp <= dt.datetime.now(dt.UTC)),
         )
         if not results.all():
             return
@@ -72,7 +72,7 @@ class Reminder(Cog, auto_load=True):
 
         seconds = minutes * 60 + hours * 3600 + days * 86400
         member = interaction.user
-        time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=seconds)
+        time = dt.datetime.now(dt.UTC) + dt.timedelta(seconds=seconds)
         self.session.add(
             ReminderDb(
                 content=reminder,
@@ -100,9 +100,9 @@ class Reminder(Cog, auto_load=True):
             await interaction.response.send_message("Give me a time so i can remind you!", ephemeral=True)
             return
 
-        repeat = datetime.timedelta(minutes=minutes, hours=hours, days=days, weeks=weeks + years * WEEKS_IN_MONTH)
+        repeat = dt.timedelta(minutes=minutes, hours=hours, days=days, weeks=weeks + years * WEEKS_IN_MONTH)
         member = interaction.user
-        time = datetime.datetime.now(datetime.UTC) + repeat
+        time = dt.datetime.now(dt.UTC) + repeat
         self.session.add(
             TimedReminder(
                 content=reminder,

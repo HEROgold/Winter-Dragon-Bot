@@ -1,5 +1,3 @@
-
-
 from datetime import UTC, datetime
 
 from sqlmodel import Field
