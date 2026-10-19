@@ -18,7 +18,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      # A personal token with event:read; the release token (SENTRY_AUTH_TOKEN) can only make releases.
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_ISSUES_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
       SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
     steps:
