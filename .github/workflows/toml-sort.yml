@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -41,7 +41,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.git-check.outputs.changes == 'true'
-        uses: peter-evans/create-pull-request@4e1beaa7521e8b457b572c090b25bd3db56bf1c5 # v5.0.3
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           commit-message: 'chore: sort TOML files'
           title: 'Automated TOML Sorting'
@@ -56,7 +56,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.actor == 'github-actions[bot]' && github.event.pull_request.head.ref == 'toml-sort-action'
     steps:
       - name: Merge PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const pr = context.payload.pull_request;
