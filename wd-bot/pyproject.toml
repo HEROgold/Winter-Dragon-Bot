@@ -1,21 +1,25 @@
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
 [project]
 name = "wd-bot"
 version = "0.1.0"
 description = "Full bot implementation for Winter Dragon"
 readme = "README.md"
 authors = [
-    { name = "HEROgold", email = "martijnwieringa28@gmail.com" }
+  { name = "HEROgold", email = "martijnwieringa28@gmail.com" }
 ]
 requires-python = ">=3.15"
 dependencies = [
-    "confkit>=2.0.0",
-    "herogold[orm]>=4.0.0",
-    "wd-cogs",
-    "wd-config",
-    "wd-core",
-    "wd-discord",
-    "wd-errors",
-    "wd-types",
+  "confkit>=2.0.0",
+  "herogold[orm]>=4.0.0",
+  "wd-cogs",
+  "wd-config",
+  "wd-core",
+  "wd-discord",
+  "wd-errors",
+  "wd-types"
 ]
 
 [tool.uv.sources]
@@ -25,7 +29,3 @@ wd-core = { workspace = true }
 wd-errors = { workspace = true }
 wd-types = { workspace = true }
 wd-cogs = { workspace = true }
-
-[build-system]
-requires = ["uv_build>=0.11.7,<0.12.0"]
-build-backend = "uv_build"

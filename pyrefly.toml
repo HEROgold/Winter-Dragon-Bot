@@ -1,9 +1,9 @@
 project-excludes = [
-    "**/*",
-    "**/node_modules",
-    "**/__pycache__",
-    "**/.*",
-    ".venv",
+  "**/*",
+  "**/node_modules",
+  "**/__pycache__",
+  "**/.*",
+  ".venv"
 ]
 preset = "strict"
 infer-with-first-use = true
