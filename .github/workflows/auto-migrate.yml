@@ -34,7 +34,7 @@ jobs:
     env:
       URL: postgresql://postgres:postgres@localhost:5432/winter_dragon
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # auto-migrate-pr compares the migration branch with the PR head
 

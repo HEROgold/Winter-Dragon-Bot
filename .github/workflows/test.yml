@@ -15,7 +15,7 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-packages --frozen
       - run: uv run pytest -q
@@ -38,7 +38,7 @@ jobs:
     env:
       URL: postgresql://postgres:postgres@localhost:5432/winter_dragon
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-packages --frozen
       - name: Apply every revision to an empty database
