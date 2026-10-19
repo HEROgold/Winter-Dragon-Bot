@@ -6,6 +6,10 @@
 - **Package purpose and boundaries:** each `wd-*/README.md` (what it owns, what it may depend on, where to start).
 - **Live feature code is `src/winter_dragon/cogs/`**, built on `wd_bot` (`Cog`, `@Cog.command`, `@Cog.component`, `@Cog.listener`); its tests are in `wd-bot/tests/`. `wd-cogs` is the legacy discord.py catalog — port from it, build in `winter_dragon/cogs/`.
 
+## Database changes
+
+A model change (a `table=True` class: new table, column, type, index) needs an Alembic revision in the same commit: `uv run python -m winter_dragon.migrations --url <scratch postgres> revision -m "..."`, then read and fix the generated file. Never point `--url` at the live database. See [docs/dev/database.md](docs/dev/database.md#migrations).
+
 ## Generated files
 
 Regenerate these with their script after changing what they describe; pre-commit checks them:

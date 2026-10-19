@@ -1,4 +1,4 @@
-# Shared by bot and web. Each ini file must exist before `up`, or
+# Shared by bot, web and migrate. Each ini file must exist before `up`, or
 # Docker creates an empty directory in its place: run the bot once with
 # `uv run python -m winter_dragon`, or create an empty file confkit fills in.
 # discord.ini is left out: it's optional and only read when it exists.
@@ -72,6 +72,53 @@ services:
     networks:
       - default
 
+  # Dumps the database before the migrations run; every `docker compose up` takes one. See scripts/backup-db.sh.
+  backup:
+    image: postgres:14-alpine
+    command: ["sh", "/backup-db.sh", "pre-migrate"]
+    environment: &backup-env
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${DB_PASSWORD:-postgres}
+      PGDATABASE: winter_dragon
+      KEEP: "14"
+    volumes: &backup-volumes
+      - ./backups:/backups
+      - ./scripts/backup-db.sh:/backup-db.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - default
+
+  # Applies pending migrations (src/winter_dragon/migrations) once the backup is taken; bot and web wait for it.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m winter_dragon.migrations upgrade
+    volumes: *app-volumes
+    depends_on:
+      backup:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - default
+
+  # A dump a day, the newest 14 kept, next to the pre-migration ones.
+  backup-daily:
+    image: postgres:14-alpine
+    command: ["sh", "-c", "while true; do sh /backup-db.sh daily; sleep 86400; done"]
+    environment: *backup-env
+    volumes: *backup-volumes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - default
+
   bot:
     build:
       context: .
@@ -81,8 +128,8 @@ services:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
     volumes: *app-volumes
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     # Keeps the bot up after a crash or a Docker restart; `docker compose stop bot` ends it.
@@ -158,8 +205,8 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     # Runs alongside the bot: up after a crash or a Docker restart; `docker compose stop web` ends it.

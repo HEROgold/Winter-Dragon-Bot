@@ -16,3 +16,4 @@ logs/*
 site/
 .venv/
 .superpowers/
+backups/
