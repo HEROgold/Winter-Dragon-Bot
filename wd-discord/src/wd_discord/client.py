@@ -1,0 +1,350 @@
+"""The built-in Discord REST client for wd-discord.
+
+A thin, async wrapper around :mod:`httpxyz` that targets the Discord API v10
+(https://docs.discord.com/developers/reference). It reuses the package's existing
+building blocks: :class:`~wd_config.discord.URLS` for the base URL + version,
+the header builders in :mod:`wd_discord.authenticate`, and
+:class:`~wd_discord.errors.ApiResponseError` for parsing failures.
+
+Following herogold's ``with_known_exception`` style, request methods do **not** raise on
+API/network failure; they return the error as a type-safe value so callers can handle it
+with ``isinstance`` / ``match`` instead of ``try``/``except``::
+
+    async with Client(token) as client:
+        me = await client.users.me()
+        if is_network_error(me):
+            ...  # handle the failure
+        else:
+            await me.edit(username="Winter Dragon")
+
+The client is the transport level of wd-discord. Resource operations live in the stores it carries
+(``client.users``, ``client.channels``, ``client.guilds``, and ``client.application`` with its
+``commands``) and on the entities they return; see :mod:`wd_discord.entities`.
+"""
+
+from __future__ import annotations
+
+lazy import asyncio
+lazy import time
+lazy from dataclasses import dataclass
+lazy from functools import wraps
+lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
+
+lazy from herogold.log import LoggerMixin
+lazy from httpxyz import AsyncClient, QueryParams, RequestError
+lazy from wd_config.discord import URLS, RateLimit, RestCache, UserAgent
+
+lazy from wd_discord import ShardManager
+lazy from wd_discord.authenticate import URL as UserAgentURL  # noqa: N811
+lazy from wd_discord.authenticate import (
+    MetaData,
+    Token,
+    TokenType,
+    UserAgentVersion,
+    get_auth_header,
+    render_header,
+    user_agent,
+)
+lazy from wd_discord.cache import StateCache
+lazy from wd_discord.entities.application import CurrentApplication
+lazy from wd_discord.entities.base import EntityStore
+lazy from wd_discord.entities.channel import PartialChannel
+lazy from wd_discord.entities.events import bind
+lazy from wd_discord.entities.guild import PartialGuild
+lazy from wd_discord.entities.user import PartialUser, UserStore
+lazy from wd_discord.errors.api import ApiResponseError
+lazy from wd_discord.gateway.sharding import GatewayBotInfo
+lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler
+lazy from wd_discord.route import Route
+
+
+if TYPE_CHECKING:
+    lazy from collections.abc import Awaitable, Callable
+    lazy from string.templatelib import Template
+
+    lazy from httpxyz import Response
+    lazy from wd_core.client import RequestKwargs
+    lazy from wd_core.intents import Intents
+
+    lazy from wd_discord.entities.events import BoundEvent
+    lazy from wd_discord.models import DiscordModel
+    lazy from wd_discord.snowflake import SnowflakeLike
+
+
+type NetworkError = ApiResponseError | RequestError
+type RequestResult = Response | NetworkError
+type InflightKey = tuple[str, tuple[tuple[str, str], ...]]
+"""A GET's rendered path and sorted query parameters: what makes two reads the same read."""
+
+
+def returns_known_exception[**P, T, E: Exception](
+    *exceptions: type[E],
+) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T | E]]]:
+    """Async analog of :func:`herogold.errors.with_known_exception`.
+
+    Wraps a coroutine so that any of the named exception types are returned as a value
+    instead of raised. Anything else propagates normally.
+    """
+
+    def decorator(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T | E]]:
+        @wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T | E:
+            try:
+                return await func(*args, **kwargs)
+            except exceptions as error:
+                return error
+
+        return wrapper
+
+    return decorator
+
+
+def is_network_error(value: object) -> TypeIs[NetworkError]:
+    """Whether ``value`` is a failed request: a Discord API error or a network error."""
+    return isinstance(value, ApiResponseError | RequestError)
+
+
+def is_gone(result: object) -> bool:
+    """Whether a delete answering ``result`` left the resource gone: it worked, or the resource was gone already."""
+    return not is_network_error(result) or (isinstance(result, ApiResponseError) and result.unknown_resource)
+
+
+def _parse_error(response: Response) -> ApiResponseError:
+    """Parse a failed Discord response body into a type-safe :class:`ApiResponseError`."""
+    try:
+        error = ApiResponseError.model_validate(response.json())
+    except Exception:  # noqa: BLE001 - non-JSON or unexpected shape (e.g. a Cloudflare HTML ban page)
+        return ApiResponseError(code=response.status_code, message=response.text, status=response.status_code)
+    return error.model_copy(update={"status": response.status_code})
+
+
+def _inflight_key(method: str, path: str, kwargs: RequestKwargs) -> InflightKey | None:
+    """Return the key identical reads share, or ``None`` for a request that must go out on its own.
+
+    Only a GET whose sole extra is ``params`` qualifies: anything else may change state, or carries headers or a
+    body that could make two lookalike requests differ.
+    """
+    if method != "GET" or kwargs.keys() - {"params"}:
+        return None
+    params = QueryParams(kwargs.get("params")).multi_items()
+    return path, tuple(sorted(params))
+
+
+def _resource(path: str) -> tuple[str, ...]:
+    """Return the top-level resource ``path`` is under (``/guilds/1/roles`` is under ``("guilds", "1")``)."""
+    return tuple(path.strip("/").split("/")[:2])
+
+
+@dataclass(frozen=True)
+class Received:
+    """A gateway dispatch as :meth:`Client.receive` took it."""
+
+    event: BoundEvent | DiscordModel
+    """The event bound to the client, or its data model when it has no entity."""
+    previous: DiscordModel | None
+    """What the event replaced in the cache (a role before its GUILD_ROLE_UPDATE), when the cache knew it."""
+
+
+class Client(LoggerMixin):
+    """An async Discord REST client pinned to the configured API version (v10 by default)."""
+
+    def __init__(
+        self,
+        token: str,
+        *,
+        token_type: TokenType = TokenType.BOT,
+        version: int | None = None,
+        application_id: SnowflakeLike | None = None,
+    ) -> None:
+        """Build a client for ``token``.
+
+        ``version`` overrides the API version from :class:`~wd_config.discord.URLS`. ``application_id`` skips
+        looking up the application's ID; see :meth:`CurrentApplication.id`.
+        """
+        self.token = Token(token)
+        self.token_type = token_type
+        self.version = version if version is not None else URLS.version
+        self.base_url = f"{URLS.base}/v{self.version}"
+        self._client = AsyncClient(base_url=self.base_url, headers=self._default_headers())
+        self._inflight: dict[InflightKey, asyncio.Future[Response | ApiResponseError]] = {}
+        self._cached: dict[InflightKey, tuple[float, Response]] = {}
+        """Reads asked to be cached, with the :func:`time.monotonic` time each stops being valid."""
+        self.cache = StateCache()
+        """What the gateway told this client so far; see :meth:`receive`."""
+        self.application = CurrentApplication(self, application_id)
+        self.users = UserStore(self, PartialUser)
+        self.channels = EntityStore(self, PartialChannel)
+        self.guilds = EntityStore(self, PartialGuild)
+
+    def _default_headers(self) -> dict[str, str]:
+        """Render the auth and user-agent headers into a plain dict.
+
+        There's no default content type: httpxyz sets it per request, JSON or the multipart boundary of an upload.
+        Values are stripped because an empty user-agent metadata segment would otherwise
+        leave a trailing space, which HTTP rejects as an illegal header value.
+        """
+        headers = (
+            render_header(get_auth_header(self.token_type, self.token)),
+            render_header(
+                user_agent(
+                    UserAgentURL(UserAgent.url),
+                    UserAgentVersion(UserAgent.version),
+                    MetaData(""),
+                ),
+            ),
+        )
+        return {name: value.strip() for name, value in headers}
+
+    async def __aenter__(self) -> Self:
+        """Enter the async context, returning the client."""
+        return self
+
+    async def __aexit__(self, *_exc: object) -> None:
+        """Close the underlying transport on context exit."""
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Close the underlying httpxyz transport."""
+        await self._client.aclose()
+
+    @returns_known_exception(RequestError)
+    async def request(
+        self,
+        method: str,
+        route: Template,
+        *,
+        cache: bool = False,
+        **kwargs: Unpack[RequestKwargs],
+    ) -> Response | ApiResponseError:
+        """Send a request, returning the :class:`Response` or a parsed error value.
+
+        Network errors are returned (not raised) as :class:`httpxyz.RequestError`, and 4xx/5xx
+        responses are returned as :class:`ApiResponseError`. Before sending, waits on the global
+        and per-route :mod:`wd_discord.rate_limit` limiters so normal operation shouldn't cause a
+        429 in the first place; if one still happens, waits Discord's own ``retry_after`` plus an
+        extra exponential backoff (``2 ** attempt`` seconds) and retries transparently (up to
+        :attr:`~wd_config.discord.RateLimit.max_retries` times) rather than surfacing the 429 to the caller.
+
+        A GET that matches one already in flight (same path and query parameters) joins it instead of being sent
+        again; every caller gets that one answer, failures included. A caller that's cancelled leaves the read
+        running for the others.
+
+        With ``cache``, such a GET's success is reused for :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>`
+        seconds. Changes made elsewhere stay unseen for up to that long, but any write this client sends drops
+        the cached reads under the same guild, channel or user (``/guilds/{id}/...``) at once.
+        """
+        resolved = Route(route)
+        key = _inflight_key(method, resolved.path, kwargs)
+        if key is None:
+            result = await self._send(method, resolved, **kwargs)
+            if method != "GET":
+                self._forget_cached_under(resolved.path)
+            return result
+        if cache and (hit := self._cached_read(key)) is not None:
+            return hit
+        shared = self._inflight.get(key)
+        if shared is None:
+            shared = asyncio.ensure_future(self._send(method, resolved, **kwargs))
+            self._inflight[key] = shared
+            shared.add_done_callback(lambda done: self._forget_inflight(key, done))
+        result = await asyncio.shield(shared)
+        if cache and not is_network_error(result):
+            self._remember(key, result)
+        return result
+
+    def _cached_read(self, key: InflightKey) -> Response | None:
+        """Return the cached read of ``key`` while it's valid, else ``None``."""
+        match self._cached.get(key):
+            case (expires, response) if expires > time.monotonic():
+                return response
+            case _:
+                return None
+
+    def _remember(self, key: InflightKey, response: Response) -> None:
+        """Cache ``response`` as the read of ``key``, dropping every read that's no longer valid."""
+        now = time.monotonic()
+        self._cached = {cached: entry for cached, entry in self._cached.items() if entry[0] > now}
+        self._cached[key] = (now + RestCache.ttl, response)
+
+    def _forget_cached_under(self, path: str) -> None:
+        """Drop every cached read under the same top-level resource as ``path``, which a write just changed."""
+        resource = _resource(path)
+        self._cached = {key: entry for key, entry in self._cached.items() if _resource(key[0]) != resource}
+
+    def _forget_inflight(self, key: InflightKey, done: asyncio.Future[Response | ApiResponseError]) -> None:
+        """Drop the finished read ``done`` so the next GET of ``key`` goes out fresh."""
+        if self._inflight.get(key) is done:
+            del self._inflight[key]
+        if not done.cancelled():
+            done.exception()  # Retrieved, so a failure every caller abandoned isn't reported as unhandled.
+
+    async def _send(self, method: str, resolved: Route, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
+        """Send one request under the rate limiters; a network error is raised, an API error returned."""
+        path = resolved.path
+        handler = RateLimitHandler(resolved.key(method))
+
+        async def send_once() -> Response:
+            self.logger.debug(t"{method} {path}")
+            try:
+                return await self._client.request(method, path, **kwargs)
+            except RequestError:
+                # Re-raise so ``returns_known_exception`` converts it to a value; log it first.
+                self.logger.exception(t"Request error for {method} {path}")
+                raise
+
+        try:
+            response = await handler.send(send_once)
+        except MaxRetriesExceededError:
+            self.logger.exception(t"Giving up on {method} {path} after {RateLimit.max_retries} rate-limit retries")
+            return ApiResponseError(code=0, message="Exceeded rate-limit retries")
+
+        if response.is_success:
+            self.logger.debug(t"{response.status_code} {method} {path}")
+            return response
+        error = _parse_error(response)
+        self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
+        return error
+
+    async def get(self, route: Template, *, cache: bool = False, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`)."""
+        return await self.request("GET", route, cache=cache, **kwargs)
+
+    async def post(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a POST request."""
+        return await self.request("POST", route, **kwargs)
+
+    async def patch(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a PATCH request."""
+        return await self.request("PATCH", route, **kwargs)
+
+    async def put(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a PUT request."""
+        return await self.request("PUT", route, **kwargs)
+
+    async def delete(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a DELETE request."""
+        if "json" not in kwargs:
+            kwargs["json"] = {}
+        return await self.request("DELETE", route, **kwargs)
+
+    # --- Gateway bootstrap ----------------------------------------------------------
+
+    def receive(self, model: DiscordModel) -> Received:
+        """Take a parsed gateway dispatch: bring :attr:`cache` up to date with it, then bind it to this client.
+
+        Call it for every dispatch, in the order they arrive, before handing the event to listeners, so what a
+        listener reads from the cache already includes its event.
+        """
+        previous = self.cache.apply(model)
+        return Received(bind(self, model, previous), previous)
+
+    async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
+        """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
+        result = await self.get(t"/gateway/bot")
+        if is_network_error(result):
+            return result
+        return GatewayBotInfo.model_validate(result.json())
+
+    async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents | None = None) -> ShardManager:
+        """Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
+        return ShardManager(self.token, info, intents=intents)

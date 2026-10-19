@@ -1,0 +1,91 @@
+"""Discord CDN image hashes and formats (https://docs.discord.com/developers/reference#image-formatting)."""
+
+from __future__ import annotations
+
+lazy from enum import StrEnum
+lazy from typing import TYPE_CHECKING, Any
+
+lazy from pydantic_core import core_schema
+lazy from wd_config.discord import URLS
+
+
+if TYPE_CHECKING:
+    lazy from pydantic import GetCoreSchemaHandler
+    lazy from pydantic_core import CoreSchema
+
+
+class ImageFormats(StrEnum):
+    """Valid image formats supported by Discord.
+
+    https://docs.discord.com/developers/reference#image-formatting-image-formats
+    """
+
+    JPG = ".jpg"
+    JPEG = ".jpeg"
+    """Could be either .jpg or .jpeg."""
+    PNG = ".png"
+    WebP = ".webp"
+    GIF = ".gif"
+    Lottie = ".json"
+
+
+class ImageHash:
+    """https://docs.discord.com/developers/reference#image-formatting.
+
+    Wraps a Discord CDN image hash (avatar, banner, icon, splash, ...). Validated by pydantic
+    from the raw hash string and serialised back to it.
+    """
+
+    def __init__(self, hash_: str) -> None:
+        """Store the CDN image ``hash_``."""
+        self.hash = hash_
+
+    @property
+    def base_url(self) -> str:
+        """The configured CDN host (:attr:`~wd_config.discord.URLS.cdn`), with a trailing slash."""
+        return f"{URLS.cdn}/"
+
+    def url(self, path: str, fmt: ImageFormats = ImageFormats.PNG) -> str:
+        """Return the CDN URL of this image under ``path`` (e.g. ``avatars/{user_id}``) in format ``fmt``.
+
+        https://docs.discord.com/developers/reference#image-formatting-cdn-endpoints
+        """
+        return f"{self.base_url}{path}/{self.hash}{fmt}"
+
+    def __eq__(self, other: object) -> bool:
+        """Two hashes are equal when their hash strings match."""
+        return isinstance(other, ImageHash) and other.hash == self.hash
+
+    def __hash__(self) -> int:
+        """Hash by the underlying hash string so instances are usable in sets/dicts."""
+        return hash(self.hash)
+
+    def __str__(self) -> str:
+        """Return the raw hash string."""
+        return self.hash
+
+    def __repr__(self) -> str:
+        """Return a debug representation."""
+        return f"ImageHash({self.hash!r})"
+
+    @classmethod
+    def _validate(cls, value: Any) -> ImageHash:  # noqa: ANN401 - pydantic hands us an untyped input
+        """Coerce a raw hash ``str`` into an :class:`ImageHash`."""
+        if isinstance(value, cls):
+            return value
+        if isinstance(value, str):
+            return cls(value)
+        msg = f"Cannot build ImageHash from {type(value).__name__}."
+        raise TypeError(msg)
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source: type[Any], handler: GetCoreSchemaHandler) -> CoreSchema:
+        """Validate from a hash ``str`` and serialise back to it."""
+        return core_schema.no_info_plain_validator_function(
+            cls._validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda image_hash: image_hash.hash,
+                return_schema=core_schema.str_schema(),
+                when_used="json",
+            ),
+        )

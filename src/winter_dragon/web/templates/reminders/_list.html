@@ -1,0 +1,28 @@
+<section class="route-list" aria-label="Coming up" id="reminder-list">
+  {% for day in days %}
+    {% set first_day = loop.first %}
+    <h2 class="route-day">{{ day.label }}</h2>
+    <ol class="route">
+      {% for stop in day.stops %}
+        {% set next_up = first_day and loop.first %}
+        <li class="stop{% if next_up %} stop-next{% endif %}">
+          <span class="stop-pin" aria-hidden="true"></span>
+          <div>
+            <div class="stop-time">{{ stop.due.strftime("%H:%M") }}</div>
+            <p class="stop-text">{{ stop.reminder.content }}</p>
+            <div class="stop-meta">
+              {% if next_up %}<span>Next up</span>{% endif %}
+              {% if stop.repeat %}<span class="repeat-tag">{{ stop.repeat }}</span>{% endif %}
+              <form method="post" action="/reminders/{{ stop.key }}/delete" hx-post="/reminders/{{ stop.key }}/delete" hx-target="#reminder-list" hx-swap="outerHTML">
+                <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+                <button class="remove" type="submit">Delete</button>
+              </form>
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p class="secondary">No reminders coming up. Add one here, or with <code>/reminder add</code> in Discord.</p>
+  {% endfor %}
+</section>

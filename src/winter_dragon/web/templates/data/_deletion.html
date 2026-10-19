@@ -1,0 +1,44 @@
+{# Each step of a deletion request swaps this section for the next; the request itself re-renders #your-data. #}
+<section class="danger-zone" id="deletion" aria-labelledby="deletion-title">
+  <h2 id="deletion-title">Delete your data</h2>
+
+  {% if progress.pending %}
+    <p><strong>Deletion requested.</strong> The bot no longer sees your data, and it's deleted for good on {{ progress.purge_due | shown(zone) }}. You can't undo it.</p>
+    <ol class="audit">
+      {% for step, at in progress.steps %}
+        <li class="done">
+          <span class="dot"></span>
+          <span>{% if step == "requested" %}Request received{% else %}Hidden from the bot, in every server{% endif %}</span>
+          <span class="secondary">{{ at | shown(zone) }}</span>
+        </li>
+      {% endfor %}
+      <li><span class="dot"></span><span>Deleted for good</span><span class="secondary">{{ progress.purge_due | shown(zone) }}</span></li>
+    </ol>
+
+  {% elif confirming %}
+    <form class="confirm" method="post" action="/me/deletion" hx-post="/me/deletion" hx-target="#your-data" hx-swap="outerHTML">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+      <div class="field">
+        <label for="confirm-name">Type <strong>{{ account.username }}</strong> to confirm</label>
+        <input class="input confirm-name" id="confirm-name" name="confirm_name" autocomplete="off" autofocus required>
+        {% if error %}<span class="field-error">{{ error }}</span>{% endif %}
+      </div>
+      <div class="confirm-actions">
+        <button class="button button-danger" type="submit">Delete my data</button>
+        <a class="button button-quiet" href="/me" hx-get="/me/deletion" hx-target="#deletion" hx-swap="outerHTML">Keep my data</a>
+      </div>
+    </form>
+
+  {% else %}
+    <p>This deletes everything listed above, in every server. You can't undo it.</p>
+    <ul class="secondary">
+      <li>Your reminders stop.</li>
+      <li>Servers you left forget your roles.</li>
+      <li>You leave tournaments that haven't started; your team is disbanded if you're its captain.</li>
+      <li>It's hidden from the bot at once, and deleted for good {{ retention_days }} days later.</li>
+    </ul>
+    <p class="deletion-start">
+      <a class="button button-danger" href="/me/deletion/confirm" hx-get="/me/deletion/confirm" hx-target="#deletion" hx-swap="outerHTML">Delete my data</a>
+    </p>
+  {% endif %}
+</section>

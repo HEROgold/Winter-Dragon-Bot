@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reminders · Winter Dragon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="index.html">Winter Dragon</a>
+    <nav class="site-nav" aria-label="Dashboard">
+      <a href="data.html">Your data</a>
+      <a href="reminders.html" aria-current="page">Reminders</a>
+      <a href="tournament.html">Tournaments</a>
+    </nav>
+    <div class="account"><span class="avatar" aria-hidden="true">FB</span>frostbyte</div>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Reminders</h1>
+    <p class="page-lead">Winter Dragon sends each reminder as a DM, up to a minute after it's due.</p>
+
+    <div class="reminders">
+      <section class="route-list" aria-label="Coming up" id="reminder-list">
+        <h2 class="route-day">Today</h2>
+        <ol class="route">
+          <li class="stop stop-next">
+            <span class="stop-pin" aria-hidden="true"></span>
+            <div>
+              <div class="stop-time">18:00 <span class="secondary" style="font-weight:500">in 2 hours</span></div>
+              <p class="stop-text">Renew the server boost before it runs out</p>
+              <div class="stop-meta">
+                <span>Next up</span>
+                <a href="#">Edit</a>
+                <!-- hx-delete="/reminders/41" hx-target="closest li" hx-swap="delete" -->
+                <a class="remove" href="#">Delete</a>
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <h2 class="route-day">Tomorrow</h2>
+        <ol class="route">
+          <li class="stop">
+            <span class="stop-pin" aria-hidden="true"></span>
+            <div>
+              <div class="stop-time">09:00</div>
+              <p class="stop-text">Water the plants</p>
+              <div class="stop-meta">
+                <span class="repeat-tag">Every 3 days</span>
+                <a href="#">Edit</a>
+                <a class="remove" href="#">Delete</a>
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <h2 class="route-day">Tuesday 21 October</h2>
+        <ol class="route">
+          <li class="stop">
+            <span class="stop-pin" aria-hidden="true"></span>
+            <div>
+              <div class="stop-time">12:00</div>
+              <p class="stop-text">Book the dentist. Ask about the Thursday slot first, then the Friday one.</p>
+              <div class="stop-meta">
+                <a href="#">Edit</a>
+                <a class="remove" href="#">Delete</a>
+              </div>
+            </div>
+          </li>
+          <li class="stop">
+            <span class="stop-pin" aria-hidden="true"></span>
+            <div>
+              <div class="stop-time">20:30</div>
+              <p class="stop-text">Tournament check-in opens in #events</p>
+              <div class="stop-meta">
+                <span class="repeat-tag">Every week</span>
+                <a href="#">Edit</a>
+                <a class="remove" href="#">Delete</a>
+              </div>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <!-- hx-post="/reminders" hx-target="#reminder-list" hx-swap="outerHTML": the list comes back re-rendered -->
+      <form class="panel add-form" aria-labelledby="add-title">
+        <h2 id="add-title">Add a reminder</h2>
+
+        <div class="field">
+          <label for="text">What to remind you of</label>
+          <textarea class="input" id="text" maxlength="1000"></textarea>
+          <span class="field-hint">Up to 1000 characters.</span>
+        </div>
+
+        <div class="field">
+          <label for="date">When</label>
+          <div class="when-row">
+            <input class="input" id="date" type="date" value="2026-10-19">
+            <input class="input" id="time" type="time" value="09:00" aria-label="Time">
+          </div>
+          <span class="field-hint">Your time zone: Europe/Amsterdam.</span>
+        </div>
+
+        <fieldset class="field choices">
+          <legend>Repeat</legend>
+          <label class="choice"><input type="radio" name="repeat" checked><span>Never</span></label>
+          <label class="choice"><input type="radio" name="repeat"><span>Every day</span></label>
+          <label class="choice"><input type="radio" name="repeat"><span>Every week</span></label>
+          <label class="choice"><input type="radio" name="repeat"><span>Every … days</span></label>
+        </fieldset>
+
+        <button class="button button-primary" type="submit">Add reminder</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

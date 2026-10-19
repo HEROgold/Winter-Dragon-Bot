@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - v2
   pull_request:
     branches:
       - main
+      - v2
 
 jobs:
   run-pre-commit:
@@ -20,6 +22,10 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+
+      # The pyrefly hook resolves imports from .venv; without it every third-party and workspace import is missing.
+      - name: Install the workspace
+        run: uv sync --all-packages --frozen
 
       - name: Run pre-commit
         run: |

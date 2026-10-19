@@ -1,0 +1,12 @@
+"""Module containing a cog for showing bot uptime."""
+
+from __future__ import annotations
+
+
+class Uptime(GroupCog, auto_load=True):
+    """Cog for showing the bot's uptime."""
+
+    @app_commands.command(name="bot", description="Show bot's current uptime")
+    async def slash_uptime_bot(self, interaction: discord.Interaction) -> None:
+        """Send a message with the bot's current uptime."""
+        await interaction.response.send_message(f"Bot uptime: {discord.utils.format_dt(self.bot.launch_time, style='R')}")

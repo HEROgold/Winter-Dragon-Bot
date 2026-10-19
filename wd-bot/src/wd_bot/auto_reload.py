@@ -1,0 +1,176 @@
+"""File-watcher based hot reload utilities for Discord cogs."""
+
+from __future__ import annotations
+
+lazy import asyncio
+lazy import inspect
+lazy from dataclasses import dataclass
+lazy from enum import IntFlag, auto
+lazy from pathlib import Path
+lazy from typing import TYPE_CHECKING, ClassVar
+
+lazy from herogold.log import LoggerMixin, getLogger
+
+lazy from wd_bot.settings import BotSettings
+
+
+if TYPE_CHECKING:
+    lazy import logging
+    lazy from string.templatelib import Template
+
+    lazy from wd_bot.bot import Bot
+    lazy from wd_bot.cogs import Cog
+
+
+class WatcherFlags(IntFlag):
+    """States for the auto-reload watcher."""
+
+    Enabled = auto()
+    """Flag to indicate that the watcher is enabled."""
+    Registered = auto()
+    """Flag to indicate that the watcher is currently registered to a cog."""
+
+    @property
+    def is_enabled(self) -> bool:
+        """Check if the Enabled flag is set."""
+        return bool(self & WatcherFlags.Enabled)
+
+    @property
+    def is_registered(self) -> bool:
+        """Check if the Registered flag is set."""
+        return bool(self & WatcherFlags.Registered)
+
+
+default_flags = WatcherFlags.Enabled
+
+
+@dataclass(slots=True)
+class _WatchEntry:
+    """Runtime data required to watch and reload an extension module."""
+
+    bot: Bot
+    path: Path
+    task: asyncio.Task[None]
+    refs: int
+    mtime_ns: int
+    logger: logging.Logger
+
+
+class AutoReloadWatcher(LoggerMixin):
+    """Monitors extension files and reloads them in-place when they change."""
+
+    _entries: ClassVar[dict[str, _WatchEntry]] = {}
+
+    def __init__(self, *, bot: Bot, cog_cls: type[Cog], flags: WatcherFlags = default_flags) -> None:
+        """Initialize the auto-reload watcher for a specific cog class."""
+        self.bot = bot
+        self.cog_cls = cog_cls
+        flags = flags | (WatcherFlags.Enabled if cog_cls.flags & cog_cls.flags.AutoReload else 0)
+        self.module_name = cog_cls.__module__
+        self.flags = flags
+
+    def register(self) -> None:
+        """Start watching the cog's backing module."""
+        if self.flags.is_registered or not self._should_watch():
+            return
+        path = self._resolve_module_path()
+        if path is None:
+            return
+        entry = AutoReloadWatcher._entries.get(self.module_name)
+        if entry:
+            entry.refs += 1
+            self.flags |= WatcherFlags.Registered
+            return
+        task = self.bot.loop.create_task(self._watch_extension_file(self.module_name))
+        AutoReloadWatcher._entries[self.module_name] = _WatchEntry(
+            bot=self.bot,
+            path=path,
+            task=task,
+            refs=1,
+            mtime_ns=self._get_file_mtime(path),
+            logger=self.logger,
+        )
+        self.flags |= WatcherFlags.Registered
+        self.logger.debug(t"Enabled auto-reload watcher for {self.module_name} ({path})")
+
+    def deregister(self) -> None:
+        """Stop watching the module when no cogs reference it anymore."""
+        if not self.flags.is_registered:
+            return
+        entry = AutoReloadWatcher._entries.get(self.module_name)
+        if entry is None:
+            self.flags &= ~WatcherFlags.Registered
+            return
+        entry.refs -= 1
+        if entry.refs <= 0:
+            AutoReloadWatcher._entries.pop(self.module_name, None)
+            try:
+                current_task = asyncio.current_task()
+            except RuntimeError:
+                current_task = None
+            if entry.task is not current_task:
+                entry.task.cancel()
+        self.flags &= ~WatcherFlags.Registered
+
+    def _should_watch(self) -> bool:
+        return (
+            self.flags.is_enabled
+            and BotSettings.auto_reload_extensions
+            and self.module_name.startswith(f"{self.bot.extensions_package.__name__}.")
+        )
+
+    def _resolve_module_path(self) -> Path | None:
+        try:
+            return Path(inspect.getfile(self.cog_cls)).resolve()
+        except (OSError, TypeError) as exc:
+            self.logger.warning(
+                t"Cannot enable auto-reload for {self.module_name} because its file path could not be resolved: {exc}",
+            )
+            return None
+
+    @staticmethod
+    def _get_file_mtime(path: Path) -> int:
+        try:
+            return path.stat().st_mtime_ns
+        except OSError:
+            return 0
+
+    @classmethod
+    async def _watch_extension_file(cls, module_name: str) -> None:
+        interval = float(BotSettings.auto_reload_poll_seconds)
+        if interval <= 0:
+            interval = 1.5
+        this_task = asyncio.current_task()
+        try:
+            while True:
+                await asyncio.sleep(interval)
+                entry = cls._entries.get(module_name)
+                # A reload hands the module to the new cogs' watcher; this one stops.
+                if entry is None or entry.task is not this_task:
+                    return
+                current_mtime = cls._get_file_mtime(entry.path)
+                if current_mtime <= entry.mtime_ns:
+                    continue
+                entry.mtime_ns = current_mtime
+                await cls._reload_extension(entry.bot, module_name, entry.logger)
+        except asyncio.CancelledError:
+            cls._log_with_fallback(module_name, "debug", t"Stopped watching {module_name} for changes")
+            raise
+        except Exception:  # noqa: BLE001
+            cls._log_with_fallback(module_name, "exception", t"Auto-reload watcher for {module_name} crashed")
+
+    @classmethod
+    def _log_with_fallback(cls, module_name: str, level: str, msg: Template) -> None:
+        entry = cls._entries.get(module_name)
+        logger = entry.logger if entry else getLogger(f"{__name__}.{cls.__name__}")
+        getattr(logger, level)(msg)
+
+    @staticmethod
+    async def _reload_extension(bot: Bot, module_name: str, logger: logging.Logger) -> None:
+        logger.info(t"Detected change in {module_name}. Reloading extension.")
+        try:
+            reload_result = bot.reload_extension(module_name)
+            if inspect.isawaitable(reload_result):
+                await reload_result
+        except Exception:
+            logger.exception(t"Failed to reload extension {module_name}")

@@ -1,0 +1,26 @@
+[project]
+name = "wd-db"
+version = "0.1.0"
+description = "Database interface for Winter Dragon"
+readme = "README.md"
+authors = [
+    { name = "HEROgold", email = "martijnwieringa28@gmail.com" }
+]
+requires-python = ">=3.15"
+dependencies = [
+    "herogold>=4.0.0",
+    "httpxyz[http2]>=0.42.0",
+    "psycopg2-binary>=2.9.13",
+    "sqlalchemy>=2.0.0",
+    "sqlmodel>=0.0.22",
+    "wd-config",
+    "wd-types",
+]
+
+[tool.uv.sources]
+wd-config = { workspace = true }
+wd-types = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"

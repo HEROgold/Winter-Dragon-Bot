@@ -3,7 +3,7 @@ name: Version Bump
 on:
   pull_request:
     types: [closed]
-    branches: [master]
+    branches: [main]
 
 jobs:
   bump-version:
@@ -14,16 +14,16 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Bump Version
-        id: bump-version
-        uses: conjikidow/bump-version@8ff3d8f19abf3cbd258d14f49609ac43e9cc5634 # v2.0.0
+      - uses: actions/checkout@v7
         with:
-          label-major: 'Major'
-          label-minor: 'Minor'
-          label-patch: 'Patch'
-          create-release: 'false'
+          fetch-depth: 0  # bump-by-label rebuilds its branch from origin/main
 
-      - name: Debug outputs
-        run: |
-          echo "version-bumped=${{ steps.bump-version.outputs.version-bumped }}"
-          echo "new-version=${{ steps.bump-version.outputs.new-version }}"
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Bump Version
+        uses: HEROgold/bump-by-label@79f350450535cf4dc99429a483ff53df22acb128 # v3.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          command: 'uv version --no-sync --bump'
+          validate: 'uv version --short'
+          base_branch: 'main'

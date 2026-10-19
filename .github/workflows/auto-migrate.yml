@@ -1,0 +1,47 @@
+name: Auto-migrate
+
+# Generates each PR's Alembic revision into a migration PR stacked on it (migration/<branch> → <branch>), via
+# HEROgold/auto-migrate-pr. Review it (renames autogenerate as drop + add) and merge it into your branch; Test's
+# `migrations` job, required on main, fails until you do.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: auto-migrate-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: winter_dragon
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d winter_dragon"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      URL: postgresql://postgres:postgres@localhost:5432/winter_dragon
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # auto-migrate-pr compares the migration branch with the PR head
+
+      - uses: astral-sh/setup-uv@v7
+
+      - uses: HEROgold/auto-migrate-pr@5962e306e3ac6e54277df056dcdcb767b7e3e476 # v1.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          command: 'uv run --all-packages --frozen python -m winter_dragon.migrations --url "$URL" revision -m "$PR_TITLE"'
+          skip_if: 'uv run --all-packages --frozen python -m winter_dragon.migrations --url "$URL" upgrade && uv run --all-packages --frozen python -m winter_dragon.migrations --url "$URL" check'

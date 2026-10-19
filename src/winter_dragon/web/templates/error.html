@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Something went wrong · {% endblock %}
+
+{% block main %}
+<main class="page">
+  <h1 class="page-title">Something went wrong</h1>
+  <p class="page-lead">{{ message }}</p>
+  <p><a class="button button-primary" href="/auth/discord/login">Sign in with Discord</a></p>
+</main>
+{% endblock %}

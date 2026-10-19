@@ -1,0 +1,51 @@
+name: Test
+
+# Runs the test suite, and checks the migrations against a real Postgres: they apply to an empty database, they match
+# the models (a model change without its revision fails here), and they undo and reapply cleanly.
+# release.yml waits on this workflow by name.
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+    branches: [main, v2]
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-packages --frozen
+      - run: uv run pytest -q
+
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: winter_dragon
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d winter_dragon"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      URL: postgresql://postgres:postgres@localhost:5432/winter_dragon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --all-packages --frozen
+      - name: Apply every revision to an empty database
+        run: uv run python -m winter_dragon.migrations --url "$URL" upgrade
+      - name: Fail when the models have changes no revision covers
+        run: uv run python -m winter_dragon.migrations --url "$URL" check
+      - name: Undo every revision and apply them again
+        run: |
+          uv run python -m winter_dragon.migrations --url "$URL" downgrade base
+          uv run python -m winter_dragon.migrations --url "$URL" upgrade

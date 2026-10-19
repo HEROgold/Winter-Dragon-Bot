@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}Winter Dragon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+  <script src="{{ url_for('static', path='htmx.min.js') }}" defer></script>
+  <script>
+    // Times show in the visitor's own zone: the server reads this cookie on the next request.
+    document.cookie = "tz=" + encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone) + "; path=/; max-age=31536000; samesite=lax";
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/">Winter Dragon</a>
+    {% if account %}
+      <nav class="site-nav" aria-label="Dashboard">
+        <a href="/me" {% if active == "data" %}aria-current="page"{% endif %}>Your data</a>
+        <a href="/reminders" {% if active == "reminders" %}aria-current="page"{% endif %}>Reminders</a>
+      </nav>
+      <div class="account">
+        {% if account.avatar_url %}
+          <img class="avatar" src="{{ account.avatar_url }}" alt="">
+        {% else %}
+          <span class="avatar" aria-hidden="true">{{ account.initials }}</span>
+        {% endif %}
+        {{ account.display_name }}
+        <form method="post" action="/auth/logout" class="sign-out">
+          <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+          <button class="button button-quiet button-small" type="submit">Sign out</button>
+        </form>
+      </div>
+    {% else %}
+      <div class="account">
+        <a class="button button-primary button-small" href="/auth/discord/login">Sign in with Discord</a>
+      </div>
+    {% endif %}
+  </header>
+
+  {% block main %}{% endblock %}
+
+  <footer class="site-footer">
+    <a href="/">Winter Dragon</a>
+    {% if account %}<a href="/me">Your data</a>{% endif %}
+  </footer>
+</body>
+</html>

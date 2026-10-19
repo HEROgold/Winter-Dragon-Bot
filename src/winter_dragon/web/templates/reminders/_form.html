@@ -1,0 +1,34 @@
+<form class="panel add-form" aria-labelledby="add-title" method="post" action="/reminders" hx-post="/reminders" hx-target="#reminders" hx-swap="outerHTML">
+  <h2 id="add-title">Add a reminder</h2>
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+
+  {% if error %}<p class="field-error" role="alert">{{ error }}</p>{% endif %}
+
+  <div class="field">
+    <label for="content">What to remind you of</label>
+    <textarea class="input" id="content" name="content" maxlength="{{ max_length }}" required>{{ draft.content }}</textarea>
+    <span class="field-hint">Up to {{ max_length }} characters.</span>
+  </div>
+
+  <div class="field">
+    <label for="day">When</label>
+    <div class="when-row">
+      <input class="input" id="day" name="day" type="date" value="{{ draft.day }}" required>
+      <input class="input" id="at" name="at" type="time" value="{{ draft.at }}" aria-label="Time" required>
+    </div>
+    <span class="field-hint">Your time zone: {{ zone_name }}.</span>
+  </div>
+
+  <fieldset class="field choices">
+    <legend>Repeat</legend>
+    <label class="choice"><input type="radio" name="repeat" value="{{ repeats.NEVER }}" {% if draft.repeat == repeats.NEVER %}checked{% endif %}><span>Never</span></label>
+    <label class="choice"><input type="radio" name="repeat" value="{{ repeats.DAILY }}" {% if draft.repeat == repeats.DAILY %}checked{% endif %}><span>Every day</span></label>
+    <label class="choice"><input type="radio" name="repeat" value="{{ repeats.WEEKLY }}" {% if draft.repeat == repeats.WEEKLY %}checked{% endif %}><span>Every week</span></label>
+    <label class="choice">
+      <input type="radio" name="repeat" value="{{ repeats.EVERY_DAYS }}" {% if draft.repeat == repeats.EVERY_DAYS %}checked{% endif %}>
+      <span>Every <input class="input every-days" name="every_days" type="number" min="1" value="{{ draft.every_days }}" aria-label="Days between reminders"> days</span>
+    </label>
+  </fieldset>
+
+  <button class="button button-primary" type="submit">Add reminder</button>
+</form>

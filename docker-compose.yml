@@ -1,3 +1,25 @@
+# Shared by bot, web and migrate. Each ini file must exist before `up`, or
+# Docker creates an empty directory in its place: run the bot once with
+# `uv run python -m winter_dragon`, or create an empty file confkit fills in.
+# discord.ini is left out: it's optional and only read when it exists.
+x-app-volumes: &app-volumes
+  # Development mounts for all packages
+  - ./src:/app/src
+  - ./wd-bot/src:/app/wd-bot/src
+  - ./wd-config/src:/app/wd-config/src
+  - ./wd-core/src:/app/wd-core/src
+  - ./wd-db/src:/app/wd-db/src
+  - ./wd-discord/src:/app/wd-discord/src
+  - ./wd-errors/src:/app/wd-errors/src
+  - ./wd-types/src:/app/wd-types/src
+  - ./wd-cogs/src:/app/wd-cogs/src
+  - ./logs:/app/logs
+  - ./bot.ini:/app/bot.ini
+  - ./config.ini:/app/config.ini
+  - ./cogs.ini:/app/cogs.ini
+  - ./database.ini:/app/database.ini
+  - ./sentry.ini:/app/sentry.ini
+
 services:
 
   redis:
@@ -10,11 +32,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - default
+    # The bot and web restart unless stopped, so the stores they need must come back with them.
+    restart: unless-stopped
 
   redis-commander:
-    container_name: redis-commander
     image: ghcr.io/joeferner/redis-commander:latest
-    restart: unless-stopped
+    restart: "no"
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
@@ -22,114 +47,183 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    networks:
+      - default
 
   postgres:
     image: postgres:14-alpine
     expose:
       - "5432"
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3
-      - POSTGRES_DB=winter_dragon
-      - PGUSER=postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: winter_dragon
+      PGUSER: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready", "-U", "postgres", "-d", "winter_dragon"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d winter_dragon"]
       interval: 5s
       timeout: 30s
       retries: 6
       start_period: 10s
-
-  bot:
-    container_name: discord-bot
-    build:
-      context: .
-      dockerfile: bot-dockerfile
-    environment:
-      - REDIS_HOST=redis
-    volumes:
-      - ./src:/app/src
-      - ./config.ini:/app/config.ini
-      - ./logs:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  workers:
-    build:
-      context: .
-      dockerfile: src/winter_dragon/workers/dockerfile
-    command: uv run python -m winter_dragon.workers
-    environment:
-      - REDIS_HOST=redis
-    volumes:
-      - ./src:/app/src
-      - ./config.ini:/app/config.ini
-      - ./logs:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    # The bot and web restart unless stopped, so the database they need must come back with them.
     restart: unless-stopped
-    healthcheck:
-      test: ""
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: pgadmin
-    depends_on:
-      - postgres
-    ports:
-      - "5050:80"
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=admin123
-    volumes:
-      - ./servers.json:/pgadmin4/servers.json
     networks:
       - default
 
-  frontend:
-    container_name: winter-dragon-frontend
-    build:
-      context: ./frontend
-    environment:
-      - PORT=3000
-      - API_BACKEND_URL=http://api:8001
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
-    restart: unless-stopped
-
-  api:
-    container_name: winter-dragon-api
-    build:
-      context: .
-      dockerfile: bot-dockerfile
-    command: uv run python -m winter_dragon.bot.api.server
-    environment:
-      - DATABASE_URL=postgresql://postgres:fp9iAsd8ufy7p9UF)p98sduYfjOfd98y123!@3@postgres:5432/winter_dragon
-      - REDIS_HOST=redis
-      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID:-your-client-id}
-      - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI:-http://localhost:3000}
-    ports:
-      - "8001:8001"
+  # Dumps the database before the migrations run; every `docker compose up` takes one. See scripts/backup-db.sh.
+  backup:
+    image: postgres:14-alpine
+    command: ["sh", "/backup-db.sh", "pre-migrate"]
+    environment: &backup-env
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${DB_PASSWORD:-postgres}
+      PGDATABASE: winter_dragon
+      KEEP: "14"
+    volumes: &backup-volumes
+      - ./backups:/backups
+      - ./scripts/backup-db.sh:/backup-db.sh:ro
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+    restart: "no"
+    networks:
+      - default
+
+  # Applies pending migrations (src/winter_dragon/migrations) once the backup is taken; bot and web wait for it.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m winter_dragon.migrations upgrade
+    volumes: *app-volumes
+    depends_on:
+      backup:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - default
+
+  # A dump a day, the newest 14 kept, next to the pre-migration ones.
+  backup-daily:
+    image: postgres:14-alpine
+    command: ["sh", "-c", "while true; do sh /backup-db.sh daily; sleep 86400; done"]
+    environment: *backup-env
+    volumes: *backup-volumes
+    depends_on:
+      postgres:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - default
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
+    volumes: *app-volumes
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # Keeps the bot up after a crash or a Docker restart; `docker compose stop bot` ends it.
+    restart: unless-stopped
+    networks:
+      - default
+
+  pgadmin:
+    image: dpage/pgadmin4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "False"
+    volumes:
+      - ./servers.json:/pgadmin4/servers.json
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - default
+    restart: "no"
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3002:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    restart: "no"
+    networks:
+      - default
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # The dashboard (winter_dragon.web). dashboard.ini holds its OAuth2 client secret and session key; set
+    # host = 0.0.0.0 in it so the port mapping reaches the server. A list anchor can't be extended, so the
+    # shared mounts are repeated here with dashboard.ini added.
+    command: python -m winter_dragon.web
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
+      REDIS_HOST: redis
+    volumes:
+      - ./src:/app/src
+      - ./wd-bot/src:/app/wd-bot/src
+      - ./wd-config/src:/app/wd-config/src
+      - ./wd-core/src:/app/wd-core/src
+      - ./wd-db/src:/app/wd-db/src
+      - ./wd-discord/src:/app/wd-discord/src
+      - ./wd-errors/src:/app/wd-errors/src
+      - ./wd-types/src:/app/wd-types/src
+      - ./wd-cogs/src:/app/wd-cogs/src
+      - ./logs:/app/logs
+      - ./bot.ini:/app/bot.ini
+      - ./config.ini:/app/config.ini
+      - ./cogs.ini:/app/cogs.ini
+      - ./database.ini:/app/database.ini
+      - ./sentry.ini:/app/sentry.ini
+      - ./dashboard.ini:/app/dashboard.ini
+    ports:
+      - "8001:8001"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    # Runs alongside the bot: up after a crash or a Docker restart; `docker compose stop web` ends it.
+    restart: unless-stopped
+    networks:
+      - default
 
 volumes:
   redis_data:
     driver: local
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

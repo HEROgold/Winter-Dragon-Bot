@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your data · Winter Dragon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="index.html">Winter Dragon</a>
+    <nav class="site-nav" aria-label="Dashboard">
+      <a href="data.html" aria-current="page">Your data</a>
+      <a href="reminders.html">Reminders</a>
+      <a href="tournament.html">Tournaments</a>
+    </nav>
+    <div class="account"><span class="avatar" aria-hidden="true">FB</span>frostbyte</div>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Your data</h1>
+    <p class="page-lead">Everything Winter Dragon stores about you, grouped by the feature that stores it.</p>
+
+    <div class="profile">
+      <span class="avatar" aria-hidden="true">FB</span>
+      <div>
+        <div class="profile-name">frostbyte</div>
+        <div class="secondary">Discord ID 284 019 553 170 448 384</div>
+      </div>
+    </div>
+
+    <div class="records">
+      <!-- each body loads on first open: hx-get="/me/data/reminders" hx-trigger="toggle once" -->
+      <details class="record" open>
+        <summary>
+          <span class="record-name">Reminders</span>
+          <span class="secondary">3 reminders, 1 of them repeating</span>
+          <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+        </summary>
+        <div class="record-body">
+          <table class="table">
+            <thead><tr><th>Text</th><th>Next due</th><th>Repeats</th></tr></thead>
+            <tbody>
+              <tr><td>Renew the server boost</td><td>Today, 18:00</td><td>No</td></tr>
+              <tr><td>Water the plants</td><td>Tomorrow, 09:00</td><td>Every 3 days</td></tr>
+              <tr><td>Book the dentist</td><td>21 Oct, 12:00</td><td>No</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details class="record">
+        <summary>
+          <span class="record-name">Fuel log</span>
+          <span class="secondary">14 refuels since 3 March</span>
+          <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+        </summary>
+        <div class="record-body"><p class="secondary">Loads when opened.</p></div>
+      </details>
+
+      <details class="record">
+        <summary>
+          <span class="record-name">Your voice channel</span>
+          <span class="secondary">Named "frost's den", room for 4</span>
+          <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+        </summary>
+        <div class="record-body"><p class="secondary">Loads when opened.</p></div>
+      </details>
+
+      <details class="record">
+        <summary>
+          <span class="record-name">Roles kept for you</span>
+          <span class="secondary">5 roles in 2 servers you left</span>
+          <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+        </summary>
+        <div class="record-body"><p class="secondary">Loads when opened.</p></div>
+      </details>
+
+      <details class="record">
+        <summary>
+          <span class="record-name">Steam sale alerts</span>
+          <span class="secondary">DMs for sales of 75% or more</span>
+          <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+        </summary>
+        <div class="record-body"><p class="secondary">Loads when opened.</p></div>
+      </details>
+
+      <details class="record">
+        <summary>
+          <span class="record-name">Tournaments</span>
+          <span class="secondary">Playing in 1, captain of Ice Breakers</span>
+          <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+        </summary>
+        <div class="record-body"><p class="secondary">Loads when opened.</p></div>
+      </details>
+    </div>
+
+    <!-- hx-target="this" hx-swap="outerHTML": each step swaps this section for the next state -->
+    <section class="danger-zone" id="deletion" aria-labelledby="deletion-title">
+      <h2 id="deletion-title">Delete your data</h2>
+      <div id="deletion-ask">
+        <p>This deletes everything listed above, in every server. You can't undo it.</p>
+        <ul class="secondary">
+          <li>Your reminders stop.</li>
+          <li>Your fuel log is gone.</li>
+          <li>Servers you left forget your roles.</li>
+          <li>You leave tournaments that haven't started; your team is disbanded if you're its captain.</li>
+        </ul>
+        <p style="margin-top:1rem"><button class="button button-danger" type="button" data-step="confirm">Delete my data</button></p>
+      </div>
+
+      <form class="confirm" id="deletion-confirm" hidden>
+        <div class="field">
+          <label for="confirm-name">Type <strong>frostbyte</strong> to confirm</label>
+          <input class="input" id="confirm-name" autocomplete="off" style="max-width:20rem">
+        </div>
+        <div class="confirm-actions">
+          <button class="button button-danger" type="button" data-step="done">Delete my data</button>
+          <button class="button button-quiet" type="button" data-step="ask">Keep my data</button>
+        </div>
+      </form>
+
+      <div id="deletion-done" hidden>
+        <p><strong>Deletion requested.</strong> It finishes within 30 days. Each step shows up here as it's done.</p>
+        <ol class="audit" style="margin-top:1rem">
+          <li class="done"><span class="dot"></span><span>Request received</span><span class="secondary">Just now</span></li>
+          <li class="done"><span class="dot"></span><span>Reminders deleted</span><span class="secondary">Just now</span></li>
+          <li><span class="dot"></span><span>Fuel log, voice channel and Steam alerts</span><span class="secondary">Waiting</span></li>
+          <li><span class="dot"></span><span>Roles kept in other servers</span><span class="secondary">Waiting</span></li>
+          <li><span class="dot"></span><span>Tournament sign-ups</span><span class="secondary">Waiting</span></li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Stands in for the htmx swaps in the sketch.
+    const steps = { ask: "deletion-ask", confirm: "deletion-confirm", done: "deletion-done" };
+    document.querySelectorAll("[data-step]").forEach((button) => {
+      button.addEventListener("click", () => {
+        for (const [step, id] of Object.entries(steps)) {
+          document.getElementById(id).hidden = step !== button.dataset.step;
+        }
+        if (button.dataset.step === "confirm") document.getElementById("confirm-name").focus();
+      });
+    });
+  </script>
+</body>
+</html>
