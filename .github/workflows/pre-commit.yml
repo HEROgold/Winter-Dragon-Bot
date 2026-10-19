@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - main
+      - v2
   pull_request:
     branches:
       - main
+      - v2
+      - v2
 
 jobs:
   run-pre-commit:
