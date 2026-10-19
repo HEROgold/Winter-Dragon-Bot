@@ -49,12 +49,11 @@ def test_fresh_boot_writes_cog_settings_to_cogs_ini(boot_config: BootConfig) -> 
 
 
 def test_cog_settings_create_no_other_file(boot_config: BootConfig) -> None:
-    """Cog settings go to cogs.ini only; the app's config.ini and the cogs' database.ini get no cog section."""
+    """Cog settings go to cogs.ini only; the app's config.ini gets no cog section."""
     boot = boot_config(COG_SETTINGS)
 
-    assert set(boot.files) == {"cogs.ini", "config.ini", "database.ini"}
+    assert set(boot.files) == {"cogs.ini", "config.ini"}
     assert set(boot.files["config.ini"]) == {"Settings"}
-    assert COG_SECTIONS.isdisjoint(boot.files["database.ini"])
 
 
 def test_prewritten_cogs_ini_values_resolve(boot_config: BootConfig) -> None:

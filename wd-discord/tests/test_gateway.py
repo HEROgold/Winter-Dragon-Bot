@@ -7,7 +7,8 @@ lazy from typing import TYPE_CHECKING
 
 lazy import pytest
 lazy from wd_config.discord import URLS
-lazy from wd_discord import Activity, Gateway, GatewayActivity, Status
+lazy from wd_discord import Gateway, GatewayActivity, Status
+lazy from wd_errors import Activity
 
 
 if TYPE_CHECKING:
