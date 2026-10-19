@@ -476,3 +476,69 @@ async def test_failed_reload_keeps_the_old_cogs_registered(tmp_path: Path, monke
 
     assert _entry(bot, "old").cog is old_cog
     assert fake.calls == []
+
+
+_TABLE_EXTENSION_SOURCE = (
+    _EXTENSION_SOURCE
+    + """
+from sqlmodel import Field, SQLModel
+
+
+class ReloadRow(SQLModel, table=True):
+    __tablename__ = "{table}"
+
+    id: int = Field(primary_key=True)
+    {column}: int = 0
+"""
+)
+
+
+async def test_reload_extension_redefines_the_modules_tables(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A module defining a SQLModel table reloads, and the metadata holds the new table (#208)."""
+    from sqlmodel import SQLModel
+
+    bot = _make_bot()
+    _fake_syncer(bot)
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    path = tmp_path / "wd_reload_table.py"
+    path.write_text(_TABLE_EXTENSION_SOURCE.format(name="old", table="wd_reload_row", column="before"))
+    module = importlib.import_module("wd_reload_table")
+    monkeypatch.setitem(sys.modules, "wd_reload_table", module)
+    await bot._init_cogs(module)
+    path.write_text(_TABLE_EXTENSION_SOURCE.format(name="new", table="wd_reload_row", column="after"))
+
+    try:
+        await bot.reload_extension("wd_reload_table")
+
+        assert _entry(bot, "new").cog is not None
+        assert set(SQLModel.metadata.tables["wd_reload_row"].c.keys()) == {"id", "after"}
+    finally:
+        SQLModel.metadata.remove(SQLModel.metadata.tables["wd_reload_row"])
+
+
+async def test_failed_reload_puts_the_modules_tables_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A reload that fails after defining its tables leaves the old tables in the metadata."""
+    from sqlmodel import SQLModel
+
+    bot = _make_bot()
+    _fake_syncer(bot)
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    path = tmp_path / "wd_reload_table_broken.py"
+    path.write_text(_TABLE_EXTENSION_SOURCE.format(name="old", table="wd_reload_row_broken", column="before"))
+    module = importlib.import_module("wd_reload_table_broken")
+    monkeypatch.setitem(sys.modules, "wd_reload_table_broken", module)
+    await bot._init_cogs(module)
+    old_table = SQLModel.metadata.tables["wd_reload_row_broken"]
+    path.write_text(
+        _TABLE_EXTENSION_SOURCE.format(name="new", table="wd_reload_row_broken", column="after") + "\nraise ValueError\n",
+    )
+
+    try:
+        with pytest.raises(ExtensionError):
+            await bot.reload_extension("wd_reload_table_broken")
+
+        assert SQLModel.metadata.tables["wd_reload_row_broken"] is old_table
+    finally:
+        SQLModel.metadata.remove(SQLModel.metadata.tables["wd_reload_row_broken"])

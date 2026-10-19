@@ -202,6 +202,16 @@ Runtime `listener()` decorator: tag a Cog method as a gateway dispatch-event lis
 
 - `listener(name: str | None=None) -> Callable[[Callable[..., Awaitable[None]]], Callable[..., Awaitable[None]]]` — Tag a Cog method as a gateway dispatch-event listener.
 
+## `wd_bot.module_tables` — `wd-bot/src/wd_bot/module_tables.py`
+The SQLModel tables a module defines, set aside while the module is executed again by a hot reload.
+
+### `@dataclass class ModuleTables`
+The tables of a module's table classes, taken out of ``SQLModel.metadata`` so the module can define them again.
+
+- fields: detached: list[Table], present: set[str]
+- `@classmethod detach(module_name: str, module: ModuleType | None) -> ModuleTables` — Remove the tables of the classes ``module`` defines from ``SQLModel.metadata``; ``None`` detaches nothing.
+- `restore() -> None` — Drop the tables added since :meth:`detach` and put the detached ones back, as before the reload.
+
 ## `wd_bot.paths` — `wd-bot/src/wd_bot/paths.py`
 Centralized filesystem paths shared across the bot codebase.
 

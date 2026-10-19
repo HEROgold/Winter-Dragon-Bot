@@ -34,6 +34,7 @@ lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.auto_sync import CommandSyncer
 lazy from wd_bot.components import parse_custom_id
 lazy from wd_bot.extensions import ExtensionDiscovery
+lazy from wd_bot.module_tables import ModuleTables
 lazy from wd_bot.registry import CommandRegistry
 
 lazy from .cogs import Cog, GroupCog
@@ -317,16 +318,19 @@ class Bot(LoggerMixin):
         """Re-import the extension module ``module_name``, swap its cogs for fresh ones and sync what changed.
 
         The new code is imported before anything is unregistered, so if it fails to import, or its cogs fail to
-        build, the old cogs stay registered and the error is raised.
+        build, the old cogs stay registered and the error is raised. The SQLModel tables the module defines are
+        set aside while it runs again, so its table classes can be redefined; a failed reload puts them back.
         """
         old_module = sys.modules.get(module_name)
         spec = find_spec(module_name)
         if spec is None or spec.loader is None:
             raise ExtensionError(module_name, RuntimeError("Extension not found"))
         module = module_from_spec(spec)
+        tables = ModuleTables.detach(module_name, old_module)
         try:
             spec.loader.exec_module(module)
         except Exception as e:
+            tables.restore()
             raise ExtensionError(module_name, e) from e
 
         old_cogs = self._cogs_from(module_name)
@@ -341,6 +345,7 @@ class Bot(LoggerMixin):
                 await self.remove_cog(cog)
             if old_module is not None:
                 sys.modules[module_name] = old_module
+            tables.restore()
             for cog in old_cogs:
                 await self.add_cog(cog)
             raise ExtensionError(module_name, e) from e
