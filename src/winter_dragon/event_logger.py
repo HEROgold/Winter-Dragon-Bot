@@ -21,6 +21,7 @@ lazy from typing import TYPE_CHECKING, override
 lazy from herogold.log import LoggerMixin
 lazy from wd_bot.settings import Tokens
 lazy from wd_core.intents import Intents
+lazy from wd_discord import models
 lazy from wd_discord.gateway.connection import Disconnect, Gateway, GatewayFrame
 lazy from wd_discord.gateway.events import EventName
 
@@ -50,11 +51,23 @@ class EventLoggingGateway(Gateway):
         if name == EventName.READY:
             self.logger.info(t"{name}: {event.model_dump_json()}")
 
+    def capture_model_warnings(self) -> None:
+        """Send ``wd_discord.models``' log records (unknown-field warnings) through this gateway's handlers.
+
+        herogold's ``getLogger`` returns loggers outside ``logging``'s hierarchy, so the module's logger has no
+        handlers and its records only reach stderr; share ours so they land in this gateway's log file too.
+        """
+        # TODO(Herogold, HeroPy#55): drop once herogold's getLogger returns propagating loggers.  # noqa: FIX002
+        for handler in self.logger.handlers:
+            if handler not in models.logger.handlers:
+                models.logger.addHandler(handler)
+
 
 async def main() -> None:
     """Connect with every intent and log events until interrupted."""
     LoggerMixin.set_log_directory("logs")
     gateway = EventLoggingGateway(Tokens.discord_token, intents=Intents.all())
+    gateway.capture_model_warnings()
     await gateway.connect()
     try:
         await gateway.run(gateway.log_ready)
