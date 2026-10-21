@@ -189,7 +189,7 @@ def test_voice_state_disconnect_has_no_channel() -> None:
 
 
 def test_bind_returns_events_without_an_entity_unchanged() -> None:
-    raw = parse_dispatch(EventName.TYPING_START, {"channel_id": "2"})
+    raw = parse_dispatch(EventName.WEBHOOKS_UPDATE, {"channel_id": "2"})
     assert isinstance(raw, RawEvent)
     assert bind(RecordingClient(), raw) is raw
 

@@ -30,16 +30,16 @@ def test_event_name_covers_every_dispatch_event() -> None:
 
 
 def test_event_name_unmodeled_members_have_no_model_yet() -> None:
-    assert EventName.MESSAGE_UPDATE.model is None
-    assert EventName.TYPING_START.model is None
+    assert EventName.INVITE_CREATE.model is None
+    assert EventName.WEBHOOKS_UPDATE.model is None
 
 
 def test_parse_dispatch_falls_back_to_raw_event_for_known_but_unmodeled_name() -> None:
     """A member with no model yet still dispatches, just as RawEvent, not a crash."""
-    event = parse_dispatch(EventName.MESSAGE_UPDATE, {"id": "1", "content": "edited"})
+    event = parse_dispatch(EventName.WEBHOOKS_UPDATE, {"guild_id": "1", "channel_id": "2"})
     assert isinstance(event, RawEvent)
-    assert event.name == "MESSAGE_UPDATE"
-    assert event.data == {"id": "1", "content": "edited"}
+    assert event.name == "WEBHOOKS_UPDATE"
+    assert event.data == {"guild_id": "1", "channel_id": "2"}
 
 
 def test_parse_dispatch_message_create() -> None:

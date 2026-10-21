@@ -15,11 +15,9 @@ letting generated content live next to hand-written runtime logic in the same fi
 
 :class:`EventName` covers every dispatch event Discord currently defines. Each member carries its own
 :class:`DiscordModel` subclass as a real attribute (``EventName.MESSAGE_CREATE.model is Message``) via the
-"data-carrying enum" pattern (a custom ``__new__``), so the name and its model live in exactly one place - but
-only ``READY``/``MESSAGE_CREATE``/``GUILD_CREATE``/``INTERACTION_CREATE``/``VOICE_STATE_UPDATE`` have a real model
-wired up so far;
-every other member's ``model`` is ``None`` (dispatches as :class:`RawEvent`) until its model gets built
-(add it here, attach it to the member, then run the generator).
+"data-carrying enum" pattern (a custom ``__new__``), so the name and its model live in exactly one place. A
+member whose ``model`` is still ``None`` dispatches as :class:`RawEvent` until its model gets built (add it here,
+attach it to the member, then run the generator).
 
 These are data only; :func:`wd_discord.entities.events.bind` wraps them in the client-bound entities a
 listener receives.
@@ -44,14 +42,17 @@ from wd_discord.gateway.presence import Presence
 from wd_discord.image import ImageHash
 from wd_discord.interactions import ApplicationIntegrationType, InteractionContextType, Locale
 from wd_discord.models import DiscordModel
+from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.permissions import ChannelType, PermissionsField
 from wd_discord.resources.channel.channel import Channel
 from wd_discord.resources.channel.thread import ThreadMember
 from wd_discord.resources.entitlement import Entitlement
+from wd_discord.resources.guild.emoji import Emoji
 from wd_discord.resources.guild.guild import Guild
 from wd_discord.resources.guild.member import GuildMember
 from wd_discord.resources.guild.partial_guild import PartialGuild
 from wd_discord.resources.guild.role import Role
+from wd_discord.resources.guild.sticker import Sticker
 from wd_discord.resources.message import Attachment, MentionedUser, Reaction
 from wd_discord.resources.user import User
 from wd_discord.resources.user.collectibles import Collectibles
@@ -498,6 +499,103 @@ class Message(DiscordModel):
     """Reactions to the message; never on MESSAGE_CREATE, only on a fetched message."""
 
 
+class MessageUpdate(Message):
+    """MESSAGE_UPDATE (https://docs.discord.com/developers/events/gateway-events#message-update): the full edited message."""
+
+
+class MessageDelete(DiscordModel):
+    """MESSAGE_DELETE (https://docs.discord.com/developers/events/gateway-events#message-delete)."""
+
+    id: Snowflake
+    channel_id: Snowflake
+    guild_id: Snowflake | None = None
+
+
+class MessageDeleteBulk(DiscordModel):
+    """MESSAGE_DELETE_BULK (https://docs.discord.com/developers/events/gateway-events#message-delete-bulk)."""
+
+    ids: list[Snowflake]
+    channel_id: Snowflake
+    guild_id: Snowflake | None = None
+
+
+class MessageReactionAdd(DiscordModel):
+    """MESSAGE_REACTION_ADD (https://docs.discord.com/developers/events/gateway-events#message-reaction-add)."""
+
+    user_id: Snowflake
+    channel_id: Snowflake
+    message_id: Snowflake
+    guild_id: Snowflake | None = None
+    member: GuildMember | None = None
+    emoji: PartialEmoji
+    message_author_id: Snowflake | None = None
+    burst: bool = False
+    """Whether this is a super reaction."""
+    burst_colors: list[str] = Field(default_factory=list)
+    type: int = 0
+    """0 for a normal reaction, 1 for a super reaction."""
+
+
+class MessageReactionRemove(DiscordModel):
+    """MESSAGE_REACTION_REMOVE (https://docs.discord.com/developers/events/gateway-events#message-reaction-remove)."""
+
+    user_id: Snowflake
+    channel_id: Snowflake
+    message_id: Snowflake
+    guild_id: Snowflake | None = None
+    emoji: PartialEmoji
+    burst: bool = False
+    type: int = 0
+
+
+class MessageReactionRemoveAll(DiscordModel):
+    """MESSAGE_REACTION_REMOVE_ALL (https://docs.discord.com/developers/events/gateway-events#message-reaction-remove-all)."""
+
+    channel_id: Snowflake
+    message_id: Snowflake
+    guild_id: Snowflake | None = None
+
+
+class MessageReactionRemoveEmoji(DiscordModel):
+    """MESSAGE_REACTION_REMOVE_EMOJI (https://docs.discord.com/developers/events/gateway-events#message-reaction-remove-emoji)."""
+
+    channel_id: Snowflake
+    message_id: Snowflake
+    guild_id: Snowflake | None = None
+    emoji: PartialEmoji
+
+
+class TypingStart(DiscordModel):
+    """TYPING_START (https://docs.discord.com/developers/events/gateway-events#typing-start)."""
+
+    channel_id: Snowflake
+    guild_id: Snowflake | None = None
+    user_id: Snowflake
+    timestamp: int
+    """When the user started typing, in Unix seconds."""
+    member: GuildMember | None = None
+
+
+class GuildEmojisUpdate(DiscordModel):
+    """GUILD_EMOJIS_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-emojis-update).
+
+    Carries the guild's full emoji list.
+    """
+
+    guild_id: Snowflake
+    emojis: list[Emoji]
+
+
+class GuildStickersUpdate(DiscordModel):
+    """GUILD_STICKERS_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-stickers-update).
+
+    Carries the guild's full sticker list.
+    """
+
+    guild_id: Snowflake
+    stickers: list[Sticker]
+
+
 class EventName(StrEnum):
     """Every dispatch event name Discord currently defines.
 
@@ -557,8 +655,8 @@ class EventName(StrEnum):
     GUILD_AUDIT_LOG_ENTRY_CREATE = "GUILD_AUDIT_LOG_ENTRY_CREATE"
     GUILD_BAN_ADD = "GUILD_BAN_ADD"
     GUILD_BAN_REMOVE = "GUILD_BAN_REMOVE"
-    GUILD_EMOJIS_UPDATE = "GUILD_EMOJIS_UPDATE"
-    GUILD_STICKERS_UPDATE = "GUILD_STICKERS_UPDATE"
+    GUILD_EMOJIS_UPDATE = ("GUILD_EMOJIS_UPDATE", GuildEmojisUpdate)
+    GUILD_STICKERS_UPDATE = ("GUILD_STICKERS_UPDATE", GuildStickersUpdate)
     GUILD_INTEGRATIONS_UPDATE = "GUILD_INTEGRATIONS_UPDATE"
     GUILD_MEMBER_ADD = ("GUILD_MEMBER_ADD", GuildMemberAdd)
     GUILD_MEMBER_REMOVE = ("GUILD_MEMBER_REMOVE", GuildMemberRemove)
@@ -586,13 +684,13 @@ class EventName(StrEnum):
     INVITE_CREATE = "INVITE_CREATE"
     INVITE_DELETE = "INVITE_DELETE"
 
-    MESSAGE_UPDATE = "MESSAGE_UPDATE"
-    MESSAGE_DELETE = "MESSAGE_DELETE"
-    MESSAGE_DELETE_BULK = "MESSAGE_DELETE_BULK"
-    MESSAGE_REACTION_ADD = "MESSAGE_REACTION_ADD"
-    MESSAGE_REACTION_REMOVE = "MESSAGE_REACTION_REMOVE"
-    MESSAGE_REACTION_REMOVE_ALL = "MESSAGE_REACTION_REMOVE_ALL"
-    MESSAGE_REACTION_REMOVE_EMOJI = "MESSAGE_REACTION_REMOVE_EMOJI"
+    MESSAGE_UPDATE = ("MESSAGE_UPDATE", MessageUpdate)
+    MESSAGE_DELETE = ("MESSAGE_DELETE", MessageDelete)
+    MESSAGE_DELETE_BULK = ("MESSAGE_DELETE_BULK", MessageDeleteBulk)
+    MESSAGE_REACTION_ADD = ("MESSAGE_REACTION_ADD", MessageReactionAdd)
+    MESSAGE_REACTION_REMOVE = ("MESSAGE_REACTION_REMOVE", MessageReactionRemove)
+    MESSAGE_REACTION_REMOVE_ALL = ("MESSAGE_REACTION_REMOVE_ALL", MessageReactionRemoveAll)
+    MESSAGE_REACTION_REMOVE_EMOJI = ("MESSAGE_REACTION_REMOVE_EMOJI", MessageReactionRemoveEmoji)
     MESSAGE_POLL_VOTE_ADD = "MESSAGE_POLL_VOTE_ADD"
     MESSAGE_POLL_VOTE_REMOVE = "MESSAGE_POLL_VOTE_REMOVE"
 
@@ -606,7 +704,7 @@ class EventName(StrEnum):
     SUBSCRIPTION_UPDATE = "SUBSCRIPTION_UPDATE"
     SUBSCRIPTION_DELETE = "SUBSCRIPTION_DELETE"
 
-    TYPING_START = "TYPING_START"
+    TYPING_START = ("TYPING_START", TypingStart)
 
     USER_UPDATE = ("USER_UPDATE", UserUpdate)
 
