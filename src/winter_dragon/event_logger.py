@@ -66,7 +66,7 @@ class EventLoggingGateway(Gateway):
 async def main() -> None:
     """Connect with every intent and log events until interrupted."""
     LoggerMixin.set_log_directory("logs")
-    gateway = EventLoggingGateway(Tokens.discord_token, intents=Intents.all())
+    gateway = EventLoggingGateway(Tokens.read_only_token, intents=Intents.all())
     gateway.capture_model_warnings()
     await gateway.connect()
     try:
