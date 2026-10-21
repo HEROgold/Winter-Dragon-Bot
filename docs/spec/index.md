@@ -14,6 +14,7 @@ Winter Dragon is a **public** Discord bot: anyone may add it to their server, so
 - [Ranked tracking](ranked-tracking.md): holding Tracked Players accountable for their Climb.
 - [Data and privacy](data-and-privacy.md): how data is stored, deleted, restored and purged; command usage.
 - [Web dashboard](dashboard.md): its pages, sign-in, who may see what.
+- [Archive](archive.md): a separate read-only bot that records every gateway event into the database.
 
 ## Words
 
@@ -37,3 +38,4 @@ Developer examples (`heartbeat`, `message_logger`) and dropped `main` features a
 - [ADR 0002](../adr/0002-htmx-jinja-dashboard.md): the dashboard is htmx 4 and Jinja templates served by the FastAPI service.
 - [ADR 0003](../adr/0003-herogold-models-and-soft-delete.md): bot tables are herogold models with soft delete by default.
 - [ADR 0004](../adr/0004-alembic-migrations-applied-on-start.md): schema changes are Alembic revisions, applied by a one-shot service before the bot starts.
+- [ADR 0005](../adr/0005-archive-stores-gateway-events-naively.md): the archive stores gateway events naively, as current-state entities and append-only history without foreign keys.
