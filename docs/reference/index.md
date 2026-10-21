@@ -36,3 +36,5 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`winter_dragon.migrations`](winter-dragon.migrations.md) | The database's schema history: Alembic revisions in ``versions/``, run by ``python -m winter_dragon.migrations``. |
 | [`winter_dragon.ui`](winter-dragon.ui.md) | Reusable pieces of the app's Discord replies. |
 | [`winter_dragon.web`](winter-dragon.web.md) | The web dashboard: htmx and Jinja pages served by FastAPI, run with ``python -m winter_dragon.web``. |
+| [`archive`](archive.md) | The archive: a read-only bot that records every gateway event into the database (docs/spec/archive.md). |
+| [`archive.models`](archive.models.md) | Every archive table. Importing this module registers them all with SQLModel's metadata (the migrations do). |

@@ -7,7 +7,7 @@ a list is stored as rows of a child table, declared in the parent's :attr:`Archi
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from sqlalchemy import BigInteger, Column
 from sqlalchemy.dialects.postgresql import JSONB
@@ -15,6 +15,10 @@ from sqlalchemy.orm import declared_attr
 from sqlmodel import JSON, Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel
+
+
+if TYPE_CHECKING:
+    from sqlalchemy import Table
 
 
 def snowflake(*, index: bool = False) -> Any:  # noqa: ANN401 - a pydantic FieldInfo, typed as its column's value
@@ -34,6 +38,9 @@ def json_column() -> Any:  # noqa: ANN401 - a pydantic FieldInfo, typed as its c
 
 class ArchiveTable:
     """What :mod:`archive.mapping` reads from every archive table."""
+
+    if TYPE_CHECKING:
+        __table__: ClassVar[Table]
 
     children: ClassVar[dict[str, type[ArchiveChild]]] = {}
     """Payload lists stored as child rows, by payload key."""
