@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from herogold.orm.core.model import CustomData
 from sqlalchemy import BigInteger, create_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlmodel import Session, SQLModel, select
 
-from wd_db.extension.custom_data import get_custom_data, set_custom_data
+from wd_db.extension.custom_data import CustomData, get_custom_data, set_custom_data
 from wd_db.extension.lifecycle import DiscordKeyedModel
 
 

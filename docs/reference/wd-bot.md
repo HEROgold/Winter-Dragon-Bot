@@ -288,7 +288,7 @@ Config descriptor scoped to the bot settings file.
 ### `class Tokens`
 Secrets the operator fills in.
 
-- attributes: discord_token
+- attributes: discord_token, read_only_token
 
 ### `class BotSettings`
 How the bot connects to and presents itself on Discord.

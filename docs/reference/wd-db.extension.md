@@ -48,6 +48,7 @@ A timestamp column that always stores and reads back aware UTC datetimes, also o
 ## `wd_db.extension.custom_data` — `wd-db/src/wd_db/extension/custom_data.py`
 Read and replace a herogold model's custom data inside the caller's session.
 
+- exports: CustomData, get_custom_data, set_custom_data
 - `get_custom_data(session: Session, row: _BaseModel) -> dict[str, Any]` — Return ``row``'s custom data, or an empty dict when it has none.
 - `set_custom_data(session: Session, row: _BaseModel, data: dict[str, Any]) -> None` — Replace ``row``'s custom data with ``data``; an empty ``data`` removes it. ``row`` must be flushed; caller commits.
 

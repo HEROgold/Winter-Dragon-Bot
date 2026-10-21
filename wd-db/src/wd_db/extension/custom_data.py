@@ -14,11 +14,16 @@ lazy from typing import TYPE_CHECKING, Any
 lazy from herogold.orm.core.model import CustomData, _BaseModel
 lazy from sqlmodel import col, delete, select
 
+# Imported eagerly, before herogold's models: ``_herogold`` stops herogold writing a ``db_config.ini``.
+from wd_db.extension._herogold import BaseModel  # noqa: F401
+
 
 if TYPE_CHECKING:
     lazy from herogold.orm.core.utils import LinkInfo
     lazy from sqlmodel import Session
 
+
+__all__ = ["CustomData", "get_custom_data", "set_custom_data"]
 
 # TODO(Herogold, HeroPy#56): use ``row.custom_data`` once herogold's Relationship takes the caller's session.  # noqa: FIX002
 
