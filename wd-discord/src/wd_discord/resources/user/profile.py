@@ -35,6 +35,8 @@ class NamePlateBackgroundColor(StrEnum):
     CLOVER = auto()
     LEMON = auto()
     WHITE = auto()
+    BLACK = auto()
+    """Sent by Discord, but not documented."""
 
 
 class NamePlate(DiscordModel):
