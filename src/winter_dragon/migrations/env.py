@@ -1,10 +1,11 @@
-"""Alembic environment: compares the database with every table the app's cogs define."""
+"""Alembic environment: compares the database with every table the app's cogs and the archive define."""
 
 from __future__ import annotations
 
 from alembic import context
 from sqlmodel import SQLModel
 
+import archive.models  # noqa: F401 - registers the archive's tables
 from winter_dragon.cogs import import_cogs
 from winter_dragon.migrations import include_object, render_item
 

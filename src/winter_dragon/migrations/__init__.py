@@ -12,7 +12,7 @@ lazy from typing import TYPE_CHECKING, Literal
 
 lazy from alembic import command
 lazy from alembic.config import Config
-lazy from sqlalchemy import TypeDecorator, inspect
+lazy from sqlalchemy import TypeDecorator, UniqueConstraint, inspect
 lazy from wd_db.schema import MIGRATIONS_TABLE
 
 
@@ -50,14 +50,22 @@ def alembic_config(connection: Connection) -> Config:
 
 
 def include_object(
-    _obj: SchemaItem,
+    obj: SchemaItem,
     name: str | None,
     type_: str,
     _reflected: bool,  # noqa: FBT001 - Alembic's hook signature
     _compare_to: SchemaItem | None,
 ) -> bool:
-    """Leave herogold's custom-data side tables out: every model declares one, and the bot uses none of them."""
-    return not (type_ == "table" and name is not None and (name == "customdata" or name.endswith("_custom_data")))
+    """Leave herogold's custom-data side tables out, except the archive's: every model declares one, only it uses them.
+
+    herogold's ``CustomData`` also declares its primary key unique; PostgreSQL keeps no separate constraint for that,
+    so it is left out too, or every comparison would want to add it.
+    """
+    if type_ == "unique_constraint" and isinstance(obj, UniqueConstraint):
+        return obj.table.name != "customdata"
+    if type_ != "table" or name is None or name.startswith("archive_"):
+        return True
+    return name == "customdata" or not name.endswith("_custom_data")
 
 
 def render_item(type_: str, obj: object, _autogen_context: AutogenContext) -> str | Literal[False]:

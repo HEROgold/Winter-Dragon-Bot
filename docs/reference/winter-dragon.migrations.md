@@ -10,11 +10,11 @@ Public names only — open the file when you need a body. Index: [API reference]
 - module names: BASELINE
 - `adopt_premigration_database(config: Config, connection: Connection) -> bool` — Mark a database the bot built before migrations existed as at :data:`BASELINE`; return whether it was one.
 - `alembic_config(connection: Connection) -> Config` — Return the Alembic configuration for this package's revisions, running them on ``connection``.
-- `include_object(_obj: SchemaItem, name: str | None, type_: str, _reflected: bool, _compare_to: SchemaItem | None) -> bool` — Leave herogold's custom-data side tables out: every model declares one, and the bot uses none of them.
+- `include_object(obj: SchemaItem, name: str | None, type_: str, _reflected: bool, _compare_to: SchemaItem | None) -> bool` — Leave herogold's custom-data side tables out, except the archive's: every model declares one, only it uses them.
 - `render_item(type_: str, obj: object, _autogen_context: AutogenContext) -> str | Literal[False]` — Write a wrapper column type (``AwareDateTime``, sqlmodel's ``AutoString``) as the SQLAlchemy type it stores.
 
 ## `winter_dragon.migrations.env` — `src/winter_dragon/migrations/env.py`
-Alembic environment: compares the database with every table the app's cogs define.
+Alembic environment: compares the database with every table the app's cogs and the archive define.
 
 - module names: connection
 
@@ -32,3 +32,10 @@ Reconcile databases made before migrations with the baseline.
   LIFECYCLE_TABLES, PRIMARY_KEY_INDEXES, UNUSED_TABLES
 - `upgrade() -> None` — Make a pre-migration database match the baseline.
 - `downgrade() -> None` — Nothing to undo: the baseline is what this revision brings a database to.
+
+## `winter_dragon.migrations.versions.2026_10_22_c9b4b18ba344_add_the_archive_s_tables` — `src/winter_dragon/migrations/versions/2026_10_22_c9b4b18ba344_add_the_archive_s_tables.py`
+add the archive's tables
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
