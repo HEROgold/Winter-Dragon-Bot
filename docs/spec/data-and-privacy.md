@@ -11,7 +11,7 @@ Every table is a herogold model ([ADR 0003](../adr/0003-herogold-models-and-soft
 - A row that is one per Discord object uses that object's Discord ID as its `id`; a row keyed by several IDs gets its own `id` and a unique key.
 - Creating a record whose key exists but is deleted restores it.
 
-The bot stores only what a feature needs. It does not copy messages, presence or the rest of Discord into its database; live Discord state comes from wd-discord's cache. The [archive](archive.md) does copy them: it is a separate application under its own token, not covered by this page.
+The bot stores only what a feature needs. It does not copy messages, presence or the rest of Discord into its database; live Discord state comes from wd-discord's cache.
 
 ## Who data belongs to
 

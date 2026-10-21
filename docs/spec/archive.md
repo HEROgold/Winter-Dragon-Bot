@@ -1,6 +1,6 @@
 # Archive
 
-A separate, read-only bot that records everything Discord's gateway sends it into the database, so later features (statistics, a server Wrapped, activity and voice sessions) can be built on the data. It is not part of the public bot: it runs under its own token, and the public bot's promise in [Data and privacy](data-and-privacy.md) doesn't cover it. The technical decisions are in [ADR 0005](../adr/0005-archive-stores-gateway-events-naively.md).
+A separate, read-only bot that records everything Discord's gateway sends it into the database. It exists to stress test wd-discord's models and the database on an existing server's real traffic; the data it collects can also feed statistics later (a server Wrapped, activity and voice sessions). It is not Winter Dragon: it runs under its own token, and storing everything is its purpose. The technical decisions are in [ADR 0005](../adr/0005-archive-stores-gateway-events-naively.md).
 
 - **Who:** the bot owner runs it next to (or without) the public bot. Nobody interacts with it.
 - **Commands:** none. It never syncs commands or calls Discord's REST API; it only reads gateway events.
@@ -67,6 +67,5 @@ An event that wd-discord has no model for is kept only as a raw event (30 days).
 ## Not yet
 
 - Keeping the history of objects (versions) instead of only their current state; waits for the changing-fields report.
-- Privacy handling: opting out, deleting a member's or guild's archived data.
 - Storing activity and voice sessions instead of computing them.
 - A model and table for every gateway event.

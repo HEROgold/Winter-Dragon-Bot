@@ -20,4 +20,4 @@ Tables refer to each other by plain indexed Discord ID columns, with no foreign 
 - herogold's `CustomDataContainer.set()` saves through herogold's own session, raises FastAPI's `HTTPException` and sizes data with `getsizeof`; the archive links `CustomData` rows with its own session until HeroPy fixes it, and `include_object` stops excluding the archive models' custom-data tables.
 - A full queue drops rows (logged and reported to Sentry); the log file is the fallback.
 - The archive applies migrations on start, so it doesn't depend on the public bot having run them.
-- [Data and privacy](../spec/data-and-privacy.md) describes the public bot; the archive is a separate application, and its own privacy handling is deferred.
+- The archive is a stress-test tool, not Winter Dragon: Winter Dragon's rules on what it stores ([Data and privacy](../spec/data-and-privacy.md)) don't apply to it.

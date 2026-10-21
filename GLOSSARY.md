@@ -31,7 +31,7 @@ _Avoid_: Left guild, inactive guild
 ## Archive
 
 **Archive**:
-A separate, read-only bot run by the bot owner that records every gateway event into the database. Not part of the public bot.
+A separate, read-only bot that records every gateway event into the database, to stress test wd-discord and the database on an existing server. Not part of Winter Dragon.
 _Avoid_: Event logger (that only writes a log file), recorder, tracker
 
 **Raw event**:
