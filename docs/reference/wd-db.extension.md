@@ -45,6 +45,12 @@ A timestamp column that always stores and reads back aware UTC datetimes, also o
 - `process_bind_param(value: datetime | None, dialect: Dialect) -> datetime | None` — Store ``value`` as UTC.
 - `process_result_value(value: datetime | None, dialect: Dialect) -> datetime | None` — Read the stored value back as aware UTC.
 
+## `wd_db.extension.custom_data` — `wd-db/src/wd_db/extension/custom_data.py`
+Read and replace a herogold model's custom data inside the caller's session.
+
+- `get_custom_data(session: Session, row: _BaseModel) -> dict[str, Any]` — Return ``row``'s custom data, or an empty dict when it has none.
+- `set_custom_data(session: Session, row: _BaseModel, data: dict[str, Any]) -> None` — Replace ``row``'s custom data with ``data``; an empty ``data`` removes it. ``row`` must be flushed; caller commits.
+
 ## `wd_db.extension.lifecycle` — `wd-db/src/wd_db/extension/lifecycle.py`
 The lifecycle every bot table follows: timestamps, soft delete, create-or-restore and a declared owner.
 
