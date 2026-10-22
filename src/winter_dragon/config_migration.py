@@ -9,9 +9,9 @@ Settings added after the split never existed in the old file, so they need no en
 lazy import re
 lazy from pathlib import Path
 
-lazy from herogold.log import getLogger
 lazy from wd_config.constants import DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
 lazy from wd_config.migration import MigrationReport, Move, migrate
+lazy from wd_discord.log import get_logger
 
 
 CONFIG_INI = Path("config.ini")
@@ -111,7 +111,7 @@ def migrate_legacy_config() -> MigrationReport | None:
 
     Run it before any settings class is imported. ``None`` when ``config.ini`` was already migrated.
     """
-    logger = getLogger(__name__)
+    logger = get_logger(__name__)
     report = migrate(CONFIG_INI, MOVES)
     if report is None:
         return None

@@ -8,10 +8,10 @@ lazy from typing import TYPE_CHECKING
 lazy from urllib.parse import urlencode
 
 from wd_discord.models import DiscordModel
-lazy from herogold.log import getLogger
 lazy from httpxyz import AsyncClient, BasicAuth, RequestError
 lazy from wd_bot.application import ApplicationId
 lazy from wd_config.discord import URLS
+lazy from wd_discord.log import get_logger
 lazy from wd_discord.oauth import OAuthScopes
 lazy from wd_discord.resources.user.user import User
 
@@ -27,7 +27,7 @@ CALLBACK_PATH = "/auth/discord/callback"
 REQUEST_TIMEOUT = 10.0
 """Seconds a call to Discord's OAuth2 endpoints may take."""
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AccessToken(DiscordModel):

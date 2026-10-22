@@ -10,16 +10,17 @@ instead of being silently dropped.
 lazy from typing import TYPE_CHECKING, Self
 
 lazy import sentry_sdk
-lazy from herogold.log import getLogger
 lazy from pydantic import BaseModel, ConfigDict, model_validator
 lazy from wd_config.sentry import SentrySettings
+
+lazy from wd_discord.log import get_logger
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Mapping
 
 
-logger = getLogger("DiscordModel")
+logger = get_logger("DiscordModel")
 _logged: set[tuple[str, frozenset[str]]] = set()
 """The (model, field names) pairs already logged, so each is logged once per process."""
 

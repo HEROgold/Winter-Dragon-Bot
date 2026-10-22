@@ -41,7 +41,7 @@ def test_an_unknown_value_is_reported_once(monkeypatch: pytest.MonkeyPatch) -> N
             warnings.append(message)
 
     monkeypatch.setattr(open_enum, "_reported", set())
-    monkeypatch.setattr(open_enum, "getLogger", lambda _name: Logger())
+    monkeypatch.setattr(open_enum, "get_logger", lambda _name: Logger())
     ChannelType(97)
     ChannelType(97)
     assert len(warnings) == 1
