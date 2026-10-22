@@ -79,7 +79,15 @@ GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-cr
 
 - fields: joined_at: str | None, large: bool | None, unavailable: bool | None, member_count: int | None, channels:
   list[Channel], threads: list[Channel], members: list[GuildMember], voice_states: list[VoiceState], presences:
-  list[Presence]
+  list[Presence], stage_instances: list[dict[str, object]], guild_scheduled_events: list[dict[str, object]],
+  soundboard_sounds: list[dict[str, object]], lazy: object | None, nsfw: object | None, region: object | None, version:
+  object | None, theme: object | None, profile: object | None, hub_type: object | None, experiments: object | None,
+  home_header: object | None, channel_settings: object | None, premium_features: object | None, activity_instances:
+  object | None, inventory_settings: object | None, embedded_activities: object | None, moderator_reporting: object |
+  None, game_application_ids: object | None, guild_space_settings: object | None, verification_role_id: object | None,
+  official_message_color: object | None, linked_game_organization: object | None, application_command_counts: object |
+  None, latest_onboarding_question_id: object | None, owner_configured_content_level: object | None,
+  premium_progress_bar_enabled_user_updated_at: object | None
 
 ### `class VoiceStateUpdate(VoiceState)`
 VOICE_STATE_UPDATE (https://docs.discord.com/developers/events/gateway-events#voice-state-update).
@@ -381,12 +389,13 @@ https://docs.discord.com/developers/events/gateway-events#activity-object.
   application_id: Snowflake | None, status_display_type: int | None, details: str | None, details_url: str | None,
   state: str | None, state_url: str | None, emoji: ActivityEmoji | None, party: ActivityParty | None, assets:
   ActivityAssets | None, secrets: ActivitySecrets | None, instance: bool | None, flags: ActivityFlags | None, buttons:
-  list[str] | None
+  list[str] | None, id: str | None, session_id: str | None, sync_id: str | None, platform: str | None, official_game_id:
+  object | None, content_classification: dict[str, object] | None
 
 ### `class ClientStatus(DiscordModel)`
 A user's status per platform; a platform they're offline or invisible on is left out.
 
-- fields: desktop: Status | None, mobile: Status | None, web: Status | None, vr: Status | None
+- fields: desktop: Status | None, mobile: Status | None, web: Status | None, vr: Status | None, embedded: Status | None
 
 ### `class PresenceUser(DiscordModel)`
 The user a presence is for: only ``id`` is certain, any other user field may come along.
@@ -394,13 +403,14 @@ The user a presence is for: only ``id`` is certain, any other user field may com
 - fields: id: Snowflake, username: str | None, discriminator: str | None, global_name: str | None, avatar: ImageHash |
   None, bot: bool | None, system: bool | None, banner: ImageHash | None, accent_color: Color | None, flags: int | None,
   public_flags: int | None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild:
-  UserPrimaryGuild | None
+  UserPrimaryGuild | None, display_name: str | None, display_name_styles: DisplayNameStyles | None, clan: object | None,
+  vad_colors: object | None
 
 ### `class Presence(DiscordModel)`
 https://docs.discord.com/developers/events/gateway-events#presence-update-presence-update-event-fields.
 
 - fields: user: PresenceUser, guild_id: Snowflake | None, status: Status, activities: list[Activity], client_status:
-  ClientStatus
+  ClientStatus, processed_at_timestamp: int | None
 
 ## `wd_discord.gateway.sharding` — `wd-discord/src/wd_discord/gateway/sharding.py`
 Gateway sharding (https://docs.discord.com/developers/events/gateway#sharding).

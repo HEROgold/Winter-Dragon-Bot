@@ -68,3 +68,5 @@ class Role(DiscordModel):
     """The tags this role has."""
     flags: int
     """Role flags combined as a bitfield."""
+    version: int | None = None
+    """Sent by Discord, but not documented; grows with every change to the role."""

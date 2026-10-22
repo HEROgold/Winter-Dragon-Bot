@@ -94,7 +94,7 @@ class GuildCreate(Guild):
     """GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-create).
 
     A full :class:`~wd_discord.resources.guild.Guild` plus the fields only the gateway sends. ``stage_instances``,
-    ``guild_scheduled_events`` and ``soundboard_sounds`` are not modeled yet.
+    ``guild_scheduled_events`` and ``soundboard_sounds`` are kept as plain objects until they get models.
     """
 
     joined_at: str | None = None
@@ -108,6 +108,35 @@ class GuildCreate(Guild):
     """Who is in which voice channel when the guild arrives; these leave out ``guild_id``."""
     presences: list[Presence] = Field(default_factory=list[Presence])
     """The members' presences; only those of the members sent along."""
+    stage_instances: list[dict[str, object]] = Field(default_factory=list[dict[str, object]])
+    guild_scheduled_events: list[dict[str, object]] = Field(default_factory=list[dict[str, object]])
+    soundboard_sounds: list[dict[str, object]] = Field(default_factory=list[dict[str, object]])
+
+    # Sent by Discord, but not documented.
+    lazy: object | None = None
+    nsfw: object | None = None
+    region: object | None = None
+    version: object | None = None
+    theme: object | None = None
+    profile: object | None = None
+    hub_type: object | None = None
+    experiments: object | None = None
+    home_header: object | None = None
+    channel_settings: object | None = None
+    premium_features: object | None = None
+    activity_instances: object | None = None
+    inventory_settings: object | None = None
+    embedded_activities: object | None = None
+    moderator_reporting: object | None = None
+    game_application_ids: object | None = None
+    guild_space_settings: object | None = None
+    verification_role_id: object | None = None
+    official_message_color: object | None = None
+    linked_game_organization: object | None = None
+    application_command_counts: object | None = None
+    latest_onboarding_question_id: object | None = None
+    owner_configured_content_level: object | None = None
+    premium_progress_bar_enabled_user_updated_at: object | None = None
 
 
 class VoiceStateUpdate(VoiceState):

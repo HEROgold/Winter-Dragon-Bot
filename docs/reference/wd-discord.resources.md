@@ -89,7 +89,9 @@ https://docs.discord.com/developers/resources/channel#channel-object.
   PermissionsField | None, flags: int | None, total_message_sent: int | None, available_tags: list[ForumTag] | None,
   applied_tags: list[Snowflake] | None, default_reaction_emoji: DefaultReaction | None,
   default_thread_rate_limit_per_user: int | None, default_sort_order: SortOrderType | None, default_forum_layout:
-  ForumLayoutType | None
+  ForumLayoutType | None, status: str | None, version: int | None, icon_emoji: PartialEmoji | None, theme_color: int |
+  None, template: str | None, default_tag_setting: str | None, voice_hangout: object | None, voice_background_display:
+  object | None
 - `@property applied_forum_tags -> Generator[ForumTag]` — The ForumTag objects for ``applied_tags``, resolved against ``available_tags``.
 
 ## `wd_discord.resources.channel.forum` — `wd-discord/src/wd_discord/resources/channel/forum.py`
@@ -113,7 +115,8 @@ The default layout used to display posts in a forum channel.
 ### `class ForumTag(DiscordModel)`
 https://docs.discord.com/developers/resources/channel#forum-tag-object.
 
-- fields: id: Snowflake, name: str, moderated: bool, emoji_id: Snowflake | None, emoji_name: str | None
+- fields: id: Snowflake, name: str, moderated: bool, emoji_id: Snowflake | None, emoji_name: str | None, color: int |
+  None
 - `@property emoji -> PartialEmoji | None` — The tag's emoji, or ``None`` if none is set.
 
 ### `class DefaultReaction(DiscordModel)`
@@ -202,7 +205,7 @@ Discord emoji model.
 https://docs.discord.com/developers/resources/emoji#emoji-object.
 
 - fields: id: Snowflake | None, name: str | None, roles: list[Snowflake] | None, user: User | None, require_colons: bool
-  | None, managed: bool | None, animated: bool | None, available: bool | None
+  | None, managed: bool | None, animated: bool | None, available: bool | None, version: int | None
 
 ## `wd_discord.resources.guild.features` — `wd-discord/src/wd_discord/resources/guild/features.py`
 Discord guild enums and flags (features, levels, and system channel flags).
@@ -341,7 +344,7 @@ https://docs.discord.com/developers/topics/permissions#role-object.
 
 - fields: id: Snowflake, name: str, color: Color, colors: RoleColors | None, hoist: bool, icon: ImageHash | None,
   unicode_emoji: str | None, position: int, permissions: PermissionsField, managed: bool, mentionable: bool, tags:
-  RoleTags | None, flags: int
+  RoleTags | None, flags: int, version: int | None
 
 ## `wd_discord.resources.guild.sticker` — `wd-discord/src/wd_discord/resources/guild/sticker.py`
 Discord sticker models and enums.
@@ -444,7 +447,12 @@ User profile sub-objects: avatar decoration and nameplate collectibles.
 ### `class Avatar(DiscordModel)`
 https://docs.discord.com/developers/resources/user#avatar-decoration-data-object.
 
-- fields: asset: ImageHash, sku_id: Snowflake
+- fields: asset: ImageHash, sku_id: Snowflake, expires_at: int | None
+
+### `class DisplayNameStyles(DiscordModel)`
+How a user's display name is drawn: its font, effect and colors. Sent by Discord, but not documented.
+
+- fields: font_id: int | None, effect_id: int | None, colors: list[int] | None
 
 ### `class NamePlateBackgroundColor(OpenStrEnum)`
 Background color of the nameplate.
@@ -454,7 +462,7 @@ Background color of the nameplate.
 ### `class NamePlate(DiscordModel)`
 https://docs.discord.com/developers/resources/user#nameplate.
 
-- fields: sku_id: Snowflake, asset: ImageHash, label: str, palette: NamePlateBackgroundColor
+- fields: sku_id: Snowflake, asset: ImageHash, label: str, palette: NamePlateBackgroundColor, expires_at: int | None
 
 ## `wd_discord.resources.user.user` — `wd-discord/src/wd_discord/resources/user/user.py`
 https://docs.discord.com/developers/resources/user#user-object.
@@ -470,7 +478,9 @@ https://docs.discord.com/developers/resources/user#user-object.
 - fields: id: Snowflake, username: str, discriminator: str, global_name: str | None, avatar: ImageHash | None, bot: bool
   | None, system: bool | None, mfa_enabled: bool | None, banner: ImageHash | None, accent_color: Color | None, locale:
   str | None, verified: bool | None, email: str | None, flags: int | None, premium_type: int | None, public_flags: int |
-  None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild: UserPrimaryGuild | None
+  None, avatar_decoration_data: Avatar | None, collectibles: Collectibles | None, primary_guild: UserPrimaryGuild |
+  None, display_name: str | None, display_name_styles: DisplayNameStyles | None, clan: object | None, vad_colors: object
+  | None
 - `validate_scopes(allowed_scopes: set[OAuthScopes]) -> bool` — Check that every scope-gated field is covered by ``allowed_scopes``.
 
 ## `wd_discord.resources.voice` — `wd-discord/src/wd_discord/resources/voice.py`
