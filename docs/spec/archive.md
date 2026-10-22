@@ -45,7 +45,7 @@ Activity sessions (how long someone played a game) and voice sessions (how long 
 
 ### Events without a model
 
-An event that wd-discord has no model for is kept only as a raw event (30 days). Every event is meant to get its own model and table over time.
+An event that wd-discord has no model for is kept only as a raw event (30 days). Every event is meant to get its own model and table over time. The events and fields still missing are tracked in [#270](https://github.com/HEROgold/Winter-Dragon-Bot/issues/270).
 
 ## Rules and limits
 
