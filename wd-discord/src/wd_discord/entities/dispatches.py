@@ -11,18 +11,29 @@ lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.entities.base import Entity
 lazy from wd_discord.entities.channel import Channel, PartialChannel, ThreadMember
+lazy from wd_discord.entities.emoji import Emoji, Sticker
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.member import Member, PartialMember
+lazy from wd_discord.entities.message import PartialMessage
 lazy from wd_discord.entities.presence import Presence
 lazy from wd_discord.entities.user import PartialUser, User
 lazy from wd_discord.gateway.events import ChannelPinsUpdate as ChannelPinsUpdateModel
 lazy from wd_discord.gateway.events import GuildDelete as GuildDeleteModel
+lazy from wd_discord.gateway.events import GuildEmojisUpdate as GuildEmojisUpdateModel
 lazy from wd_discord.gateway.events import GuildMemberRemove as GuildMemberRemoveModel
 lazy from wd_discord.gateway.events import GuildMembersChunk as GuildMembersChunkModel
+lazy from wd_discord.gateway.events import GuildStickersUpdate as GuildStickersUpdateModel
+lazy from wd_discord.gateway.events import MessageDelete as MessageDeleteModel
+lazy from wd_discord.gateway.events import MessageDeleteBulk as MessageDeleteBulkModel
+lazy from wd_discord.gateway.events import MessageReactionAdd as MessageReactionAddModel
+lazy from wd_discord.gateway.events import MessageReactionRemove as MessageReactionRemoveModel
+lazy from wd_discord.gateway.events import MessageReactionRemoveAll as MessageReactionRemoveAllModel
+lazy from wd_discord.gateway.events import MessageReactionRemoveEmoji as MessageReactionRemoveEmojiModel
 lazy from wd_discord.gateway.events import ThreadCreate as ThreadCreateModel
 lazy from wd_discord.gateway.events import ThreadDelete as ThreadDeleteModel
 lazy from wd_discord.gateway.events import ThreadListSync as ThreadListSyncModel
 lazy from wd_discord.gateway.events import ThreadMembersUpdate as ThreadMembersUpdateModel
+lazy from wd_discord.gateway.events import TypingStart as TypingStartModel
 lazy from wd_discord.gateway.events import VoiceChannelStartTimeUpdate as VoiceChannelStartTimeUpdateModel
 lazy from wd_discord.gateway.events import VoiceChannelStatusUpdate as VoiceChannelStatusUpdateModel
 
@@ -30,8 +41,11 @@ lazy from wd_discord.gateway.events import VoiceChannelStatusUpdate as VoiceChan
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from wd_discord.client import Client
+    from wd_discord.partial_emoji import PartialEmoji
     from wd_discord.permissions import ChannelType
     from wd_discord.resources.guild import GuildMember
+    from wd_discord.snowflake import Snowflake
 
 
 class GuildDelete(Entity[GuildDeleteModel]):
@@ -273,3 +287,230 @@ class MembersChunk(Entity[GuildMembersChunkModel]):
     def nonce(self) -> str | None:
         """The nonce the request was sent with, to match the chunks to it."""
         return self.model.nonce
+
+
+class MessageDelete(Entity[MessageDeleteModel]):
+    """MESSAGE_DELETE: a message was deleted."""
+
+    @property
+    def message(self) -> PartialMessage:
+        """The deleted message."""
+        return PartialMessage(self.client, self.model.id, self.model.channel_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """The channel it was in."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+
+class MessageDeleteBulk(Entity[MessageDeleteBulkModel]):
+    """MESSAGE_DELETE_BULK: several messages of one channel were deleted at once."""
+
+    @property
+    def messages(self) -> Generator[PartialMessage]:
+        """The deleted messages."""
+        for message_id in self.model.ids:
+            yield PartialMessage(self.client, message_id, self.model.channel_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """The channel they were in."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+
+class ReactionAdd(Entity[MessageReactionAddModel]):
+    """MESSAGE_REACTION_ADD: someone reacted to a message."""
+
+    @property
+    def user(self) -> PartialUser:
+        """Who reacted."""
+        return PartialUser(self.client, self.model.user_id)
+
+    @property
+    def member(self) -> Member | None:
+        """Who reacted, as a member of the guild; ``None`` in a DM."""
+        member, guild_id = self.model.member, self.model.guild_id
+        return None if member is None or guild_id is None else Member(self.client, member, guild_id)
+
+    @property
+    def message(self) -> PartialMessage:
+        """The message reacted to."""
+        return PartialMessage(self.client, self.model.message_id, self.model.channel_id)
+
+    @property
+    def message_author(self) -> PartialUser | None:
+        """Who sent the message reacted to, when Discord says."""
+        author_id = self.model.message_author_id
+        return None if author_id is None else PartialUser(self.client, author_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """The message's channel."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+    @property
+    def emoji(self) -> PartialEmoji:
+        """The emoji reacted with."""
+        return self.model.emoji
+
+    @property
+    def burst(self) -> bool:
+        """Whether it is a super reaction."""
+        return self.model.burst
+
+
+class ReactionRemove(Entity[MessageReactionRemoveModel]):
+    """MESSAGE_REACTION_REMOVE: someone removed their reaction from a message."""
+
+    @property
+    def user(self) -> PartialUser:
+        """Whose reaction was removed."""
+        return PartialUser(self.client, self.model.user_id)
+
+    @property
+    def message(self) -> PartialMessage:
+        """The message the reaction was on."""
+        return PartialMessage(self.client, self.model.message_id, self.model.channel_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """The message's channel."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+    @property
+    def emoji(self) -> PartialEmoji:
+        """The emoji of the removed reaction."""
+        return self.model.emoji
+
+    @property
+    def burst(self) -> bool:
+        """Whether it was a super reaction."""
+        return self.model.burst
+
+
+class ReactionRemoveAll(Entity[MessageReactionRemoveAllModel]):
+    """MESSAGE_REACTION_REMOVE_ALL: every reaction on a message was removed."""
+
+    @property
+    def message(self) -> PartialMessage:
+        """The message cleared of reactions."""
+        return PartialMessage(self.client, self.model.message_id, self.model.channel_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """The message's channel."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+
+class ReactionRemoveEmoji(Entity[MessageReactionRemoveEmojiModel]):
+    """MESSAGE_REACTION_REMOVE_EMOJI: every reaction with one emoji was removed from a message."""
+
+    @property
+    def message(self) -> PartialMessage:
+        """The message the reactions were on."""
+        return PartialMessage(self.client, self.model.message_id, self.model.channel_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """The message's channel."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+    @property
+    def emoji(self) -> PartialEmoji:
+        """The emoji whose reactions were removed."""
+        return self.model.emoji
+
+
+class TypingStart(Entity[TypingStartModel]):
+    """TYPING_START: someone started typing in a channel."""
+
+    @property
+    def user(self) -> PartialUser:
+        """Who is typing."""
+        return PartialUser(self.client, self.model.user_id)
+
+    @property
+    def member(self) -> Member | None:
+        """Who is typing, as a member of the guild; ``None`` in a DM."""
+        member, guild_id = self.model.member, self.model.guild_id
+        return None if member is None or guild_id is None else Member(self.client, member, guild_id)
+
+    @property
+    def channel(self) -> PartialChannel:
+        """Where they are typing."""
+        return PartialChannel(self.client, self.model.channel_id)
+
+    @property
+    def guild(self) -> PartialGuild | None:
+        """The channel's guild; ``None`` for a DM."""
+        return _guild(self.client, self.model.guild_id)
+
+    @property
+    def started_at(self) -> datetime:
+        """When they started typing."""
+        return datetime.fromtimestamp(self.model.timestamp, UTC)
+
+
+class GuildEmojisUpdate(Entity[GuildEmojisUpdateModel]):
+    """GUILD_EMOJIS_UPDATE: a guild's emojis changed; this is its full new list."""
+
+    @property
+    def guild(self) -> PartialGuild:
+        """The guild."""
+        return PartialGuild(self.client, self.model.guild_id)
+
+    @property
+    def emojis(self) -> Generator[Emoji]:
+        """Every emoji the guild has now."""
+        for emoji in self.model.emojis:
+            yield Emoji(self.client, emoji, self.model.guild_id)
+
+
+class GuildStickersUpdate(Entity[GuildStickersUpdateModel]):
+    """GUILD_STICKERS_UPDATE: a guild's stickers changed; this is its full new list."""
+
+    @property
+    def guild(self) -> PartialGuild:
+        """The guild."""
+        return PartialGuild(self.client, self.model.guild_id)
+
+    @property
+    def stickers(self) -> Generator[Sticker]:
+        """Every sticker the guild has now."""
+        for sticker in self.model.stickers:
+            yield Sticker(self.client, sticker)
+
+
+def _guild(client: Client, guild_id: Snowflake | None) -> PartialGuild | None:
+    """Return the guild ``guild_id`` names, or ``None`` for a DM."""
+    return None if guild_id is None else PartialGuild(client, guild_id)

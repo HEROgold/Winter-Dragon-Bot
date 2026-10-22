@@ -9,16 +9,22 @@ from wd_discord import (
     CurrentUser,
     Guild,
     GuildDelete,
+    GuildEmojisUpdate,
     Member,
     MemberRemove,
     MembersChunk,
     Message,
+    MessageDelete,
+    MessageDeleteBulk,
     PartialChannel,
     PartialGuild,
     PartialMember,
+    PartialMessage,
     PartialRole,
     PartialUser,
     Presence,
+    ReactionAdd,
+    ReactionRemove,
     Ready,
     Role,
     ThreadCreate,
@@ -26,6 +32,7 @@ from wd_discord import (
     ThreadListSync,
     ThreadMember,
     ThreadMembersUpdate,
+    TypingStart,
     VoiceChannelStartTimeUpdate,
     VoiceChannelStatusUpdate,
     VoiceState,
@@ -67,6 +74,8 @@ PRESENCE_JSON = {
     "activities": [{"name": "Custom Status", "type": 4, "created_at": 1, "state": "afk", "emoji": {"name": "zzz"}}],
     "client_status": {"desktop": "idle"},
 }
+REACTION_IDS = {"user_id": "3", "channel_id": "5", "message_id": "9", "guild_id": "7"}
+
 GUILD_EVENT_SAMPLES = {
     EventName.GUILD_UPDATE: GUILD_JSON,
     EventName.GUILD_DELETE: {"id": "7", "unavailable": True},
@@ -104,8 +113,34 @@ GUILD_EVENT_SAMPLES = {
     EventName.GUILD_ROLE_DELETE: {"guild_id": "7", "role_id": "8"},
     EventName.USER_UPDATE: user_json(id="42", username="bot"),
     EventName.PRESENCE_UPDATE: {**PRESENCE_JSON, "guild_id": "7"},
+    EventName.MESSAGE_UPDATE: {**MESSAGE_JSON, "content": "edited"},
+    EventName.MESSAGE_DELETE: {"id": "9", "channel_id": "5", "guild_id": "7"},
+    EventName.MESSAGE_DELETE_BULK: {"ids": ["9", "10"], "channel_id": "5", "guild_id": "7"},
+    EventName.MESSAGE_REACTION_ADD: {
+        **REACTION_IDS,
+        "member": MEMBER_JSON,
+        "emoji": {"id": None, "name": "🔥"},
+        "message_author_id": "4",
+    },
+    EventName.MESSAGE_REACTION_REMOVE: {**REACTION_IDS, "emoji": {"id": None, "name": "🔥"}},
+    EventName.MESSAGE_REACTION_REMOVE_ALL: {"channel_id": "5", "message_id": "9", "guild_id": "7"},
+    EventName.MESSAGE_REACTION_REMOVE_EMOJI: {
+        "channel_id": "5",
+        "message_id": "9",
+        "guild_id": "7",
+        "emoji": {"id": None, "name": "🔥"},
+    },
+    EventName.TYPING_START: {
+        "channel_id": "5",
+        "guild_id": "7",
+        "user_id": "3",
+        "timestamp": 1792614230,
+        "member": MEMBER_JSON,
+    },
+    EventName.GUILD_EMOJIS_UPDATE: {"guild_id": "7", "emojis": [{"id": "11", "name": "wave"}]},
+    EventName.GUILD_STICKERS_UPDATE: {"guild_id": "7", "stickers": []},
 }
-"""A payload for each guild, channel and thread event, as the gateway sends it."""
+"""A payload for each event with an entity, besides the ones above, as the gateway sends it."""
 
 
 def test_bind_message_create() -> None:
@@ -336,3 +371,48 @@ def test_member_update_waits_for_the_state_cache() -> None:
     assert isinstance(update, GuildMemberUpdate)
     assert update.deaf is None
     assert bind(RecordingClient(), update) is update
+
+
+def test_message_delete_names_the_message_and_its_channel() -> None:
+    deleted = bound(EventName.MESSAGE_DELETE)
+    assert isinstance(deleted, MessageDelete)
+    assert deleted.message == PartialMessage(deleted.client, Snowflake(9), Snowflake(5))
+    assert deleted.guild == PartialGuild(deleted.client, Snowflake(7))
+
+
+def test_bulk_delete_yields_each_message() -> None:
+    deleted = bound(EventName.MESSAGE_DELETE_BULK)
+    assert isinstance(deleted, MessageDeleteBulk)
+    assert [message.id for message in deleted.messages] == [Snowflake(9), Snowflake(10)]
+
+
+def test_reaction_add_exposes_the_member_and_emoji() -> None:
+    reaction = bound(EventName.MESSAGE_REACTION_ADD)
+    assert isinstance(reaction, ReactionAdd)
+    assert reaction.member is not None
+    assert reaction.member.guild_id == Snowflake(7)
+    assert reaction.emoji.name == "🔥"
+    assert reaction.message_author == PartialUser(reaction.client, Snowflake(4))
+
+
+def test_a_dm_reaction_has_no_guild_or_member() -> None:
+    reaction = bind(
+        RecordingClient(),
+        parse_dispatch(
+            EventName.MESSAGE_REACTION_REMOVE, {**REACTION_IDS, "guild_id": None, "emoji": {"id": None, "name": "x"}}
+        ),
+    )
+    assert isinstance(reaction, ReactionRemove)
+    assert reaction.guild is None
+
+
+def test_typing_start_converts_the_timestamp() -> None:
+    typing = bound(EventName.TYPING_START)
+    assert isinstance(typing, TypingStart)
+    assert typing.started_at == datetime.fromtimestamp(1792614230, UTC)
+
+
+def test_emojis_update_binds_each_emoji_to_the_guild() -> None:
+    update = bound(EventName.GUILD_EMOJIS_UPDATE)
+    assert isinstance(update, GuildEmojisUpdate)
+    assert [(emoji.guild_id, emoji.model.name) for emoji in update.emojis] == [(Snowflake(7), "wave")]
