@@ -42,7 +42,7 @@ class EventLoggingGateway(Gateway):
         dispatch: Callable[[str, DiscordModel], Awaitable[None]],
     ) -> Disconnect | None:
         """Log ``message`` as Discord sent it, then handle it as usual."""
-        event = message.get("t", f"op {message['op']}")
+        event = message.get("t") or f"op {message['op']}"
         self.logger.info(t"{event}: {json.dumps(message, default=str)}")
         return await super()._handle(message, dispatch)
 
