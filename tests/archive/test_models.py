@@ -7,10 +7,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel
 
 from archive import models
-from archive.models import ArchiveChild
+from archive.models import ArchiveChild, ArchiveTable
 
 
-def archive_tables() -> list[type[SQLModel]]:
+def archive_tables() -> list[type[ArchiveTable]]:
     return [
         table for name in models.__all__ if isinstance(table := getattr(models, name), type) and hasattr(table, "__table__")
     ]
