@@ -4,18 +4,21 @@ Data only; :class:`~wd_discord.entities.presence.Presence` binds a presence to t
 because pydantic resolves field annotations at class-definition time.
 """
 
-from enum import IntEnum, IntFlag, StrEnum
+from __future__ import annotations
+
+from enum import IntFlag
 
 from wd_discord.color import Color
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 from wd_discord.resources.user.collectibles import Collectibles
 from wd_discord.resources.user.profile import Avatar
 from wd_discord.resources.user.user import UserPrimaryGuild
 from wd_discord.snowflake import Snowflake
 
 
-class Status(StrEnum):
+class Status(OpenStrEnum):
     """Valid presence statuses (https://docs.discord.com/developers/topics/gateway-events#update-presence-status-types)."""
 
     online = "online"
@@ -25,7 +28,7 @@ class Status(StrEnum):
     offline = "offline"
 
 
-class ActivityType(IntEnum):
+class ActivityType(OpenIntEnum):
     """https://docs.discord.com/developers/events/gateway-events#activity-object-activity-types."""
 
     PLAYING = 0

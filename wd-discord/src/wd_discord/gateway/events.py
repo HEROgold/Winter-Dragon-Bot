@@ -29,7 +29,7 @@ lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``).
 
 from collections.abc import Mapping
 from datetime import datetime
-lazy from enum import IntEnum, StrEnum
+lazy from enum import StrEnum
 lazy from typing import Self, cast
 
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
@@ -40,6 +40,7 @@ from wd_discord.gateway.presence import Presence
 from wd_discord.image import ImageHash
 from wd_discord.interactions import ApplicationIntegrationType, InteractionContextType, Locale
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.permissions import ChannelType, PermissionsField
 from wd_discord.resources.channel.channel import Channel
@@ -326,7 +327,7 @@ class PresenceUpdate(Presence):
     """
 
 
-class InteractionType(IntEnum):
+class InteractionType(OpenIntEnum):
     """The kind of interaction an INTERACTION_CREATE dispatch carries.
 
     https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object-interaction-type

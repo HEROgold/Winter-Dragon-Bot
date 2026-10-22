@@ -1,13 +1,13 @@
 """Discord entitlement model (https://docs.discord.com/developers/resources/entitlement)."""
 
 from datetime import datetime
-lazy from enum import IntEnum
 
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.snowflake import Snowflake
 
 
-class EntitlementType(IntEnum):
+class EntitlementType(OpenIntEnum):
     """https://docs.discord.com/developers/resources/entitlement#entitlement-object-entitlement-types."""
 
     PURCHASE = 1

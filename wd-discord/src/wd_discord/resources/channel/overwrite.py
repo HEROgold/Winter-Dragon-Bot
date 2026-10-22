@@ -1,13 +1,14 @@
 """Permission overwrite models for the Discord Channel object."""
 
-lazy from enum import IntEnum
+from __future__ import annotations
 
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.permissions import PermissionsField
 from wd_discord.snowflake import Snowflake
 
 
-class OverwriteType(IntEnum):
+class OverwriteType(OpenIntEnum):
     """Whether a permission overwrite targets a role or a member.
 
     https://docs.discord.com/developers/resources/channel#overwrite-object

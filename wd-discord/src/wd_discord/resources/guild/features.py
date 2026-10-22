@@ -1,9 +1,13 @@
 """Discord guild enums and flags (features, levels, and system channel flags)."""
 
-lazy from enum import IntEnum, IntFlag, StrEnum
+from __future__ import annotations
+
+lazy from enum import IntFlag
+
+from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 
 
-class GuildFeature(StrEnum):
+class GuildFeature(OpenStrEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-guild-features."""
 
     ANIMATED_BANNER = "ANIMATED_BANNER"
@@ -62,7 +66,7 @@ class GuildFeature(StrEnum):
     """Guild has enabled the welcome screen."""
 
 
-class VerificationLevel(IntEnum):
+class VerificationLevel(OpenIntEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-verification-level."""
 
     NONE = 0
@@ -77,7 +81,7 @@ class VerificationLevel(IntEnum):
     """Must have a verified phone number."""
 
 
-class DefaultMessageNotificationLevel(IntEnum):
+class DefaultMessageNotificationLevel(OpenIntEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-default-message-notification-level."""
 
     ALL_MESSAGES = 0
@@ -86,7 +90,7 @@ class DefaultMessageNotificationLevel(IntEnum):
     """Members will receive notifications only for messages that @mention them by default."""
 
 
-class ExplicitContentFilterLevel(IntEnum):
+class ExplicitContentFilterLevel(OpenIntEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-explicit-content-filter-level."""
 
     DISABLED = 0
@@ -97,7 +101,7 @@ class ExplicitContentFilterLevel(IntEnum):
     """Media content sent by all members will be scanned."""
 
 
-class MFALevel(IntEnum):
+class MFALevel(OpenIntEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-mfa-level."""
 
     NONE = 0
@@ -106,7 +110,7 @@ class MFALevel(IntEnum):
     """Guild has a 2FA requirement for moderation actions."""
 
 
-class PremiumTier(IntEnum):
+class PremiumTier(OpenIntEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-premium-tier."""
 
     NONE = 0
@@ -119,7 +123,7 @@ class PremiumTier(IntEnum):
     """Guild has unlocked Server Boost level 3 perks."""
 
 
-class NSFWLevel(IntEnum):
+class NSFWLevel(OpenIntEnum):
     """https://docs.discord.com/developers/resources/guild#guild-object-guild-nsfw-level."""
 
     DEFAULT = 0

@@ -5,11 +5,11 @@ The ``IS_COMPONENTS_V2`` flag would disable ``content`` and ``embeds`` entirely,
 """
 
 lazy from collections import Counter
-lazy from enum import IntEnum
 lazy from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.snowflake import Snowflake
 
 
@@ -27,7 +27,7 @@ MAX_BUTTON_LABEL_LENGTH = 80
 """A button label holds up to 80 characters (https://docs.discord.com/developers/components/reference#button)."""
 
 
-class ComponentType(IntEnum):
+class ComponentType(OpenIntEnum):
     """The type of a component.
 
     https://docs.discord.com/developers/components/reference#component-object-component-types
@@ -55,7 +55,7 @@ class ComponentType(IntEnum):
     CHECKBOX = 23
 
 
-class ButtonStyle(IntEnum):
+class ButtonStyle(OpenIntEnum):
     """How a button looks, and what clicking it does.
 
     https://docs.discord.com/developers/components/reference#button-button-styles

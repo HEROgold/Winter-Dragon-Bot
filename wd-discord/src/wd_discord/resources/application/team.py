@@ -1,14 +1,15 @@
 """Discord Team object and its members."""
 
-lazy from enum import IntEnum
+from __future__ import annotations
 
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 
 
-class MembershipState(IntEnum):
+class MembershipState(OpenIntEnum):
     """State of a team member's invitation.
 
     https://docs.discord.com/developers/topics/teams#data-models-membership-state-enum

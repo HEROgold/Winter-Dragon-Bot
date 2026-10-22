@@ -137,14 +137,14 @@ Legacy message components: action rows and buttons (https://docs.discord.com/dev
 - `type CustomId = str`
 - `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
-### `class ComponentType(IntEnum)`
+### `class ComponentType(OpenIntEnum)`
 The type of a component.
 
 - attributes: ACTION_ROW, BUTTON, STRING_SELECT, TEXT_INPUT, USER_SELECT, ROLE_SELECT, MENTIONABLE_SELECT,
   CHANNEL_SELECT, SECTION, TEXT_DISPLAY, THUMBNAIL, MEDIA_GALLERY, FILE, SEPARATOR, CONTAINER, LABEL, FILE_UPLOAD,
   RADIO_GROUP, CHECKBOX_GROUP, CHECKBOX
 
-### `class ButtonStyle(IntEnum)`
+### `class ButtonStyle(OpenIntEnum)`
 How a button looks, and what clicking it does.
 
 - attributes: PRIMARY, SECONDARY, SUCCESS, DANGER, LINK, PREMIUM
@@ -224,33 +224,33 @@ Discord application commands (https://docs.discord.com/developers/interactions/a
 - `type Description = str`
 - `type Localizations = dict[Locale, str]`
 
-### `class ApplicationCommandType(IntEnum)`
+### `class ApplicationCommandType(OpenIntEnum)`
 Represents the type of an application command.
 
 - attributes: CHAT_INPUT, USER, MESSAGE, PRIMARY_ENTRY_POINT
 
-### `class ApplicationCommandOptionType(IntEnum)`
+### `class ApplicationCommandOptionType(OpenIntEnum)`
 Represents the type of an application command option (distinct from the command's own type).
 
 - attributes: SUB_COMMAND, SUB_COMMAND_GROUP, STRING, INTEGER, BOOLEAN, USER, CHANNEL, ROLE, MENTIONABLE, NUMBER,
   ATTACHMENT
 
-### `class InteractionContextType(IntEnum)`
+### `class InteractionContextType(OpenIntEnum)`
 Where an application command can be used.
 
 - attributes: GUILD, BOT_DM, PRIVATE_CHANNEL
 
-### `class ApplicationIntegrationType(IntEnum)`
+### `class ApplicationIntegrationType(OpenIntEnum)`
 Where an app can be installed, and so where its commands are available.
 
 - attributes: GUILD_INSTALL, USER_INSTALL
 
-### `class EntryPointCommandHandlerType(IntEnum)`
+### `class EntryPointCommandHandlerType(OpenIntEnum)`
 Who handles a PRIMARY_ENTRY_POINT command's interaction.
 
 - attributes: APP_HANDLER, DISCORD_LAUNCH_ACTIVITY
 
-### `class Locale(StrEnum)`
+### `class Locale(OpenStrEnum)`
 A Discord locale code (https://docs.discord.com/developers/reference#locales).
 
 - attributes: INDONESIAN, DANISH, GERMAN, ENGLISH_UK, ENGLISH_US, SPANISH, SPANISH_LATAM, FRENCH, CROATIAN, ITALIAN,
@@ -308,6 +308,15 @@ OAuth2 Scopes for the User Object.
 
 - attributes: IDENTIFY, EMAIL, PREMIUM
 
+## `wd_discord.open_enum` — `wd-discord/src/wd_discord/open_enum.py`
+Enums for values Discord owns, which accept a value Discord adds later instead of refusing the payload.
+
+### `class OpenIntEnum(IntEnum)`
+An IntEnum of Discord's values: an unknown int becomes a member named ``UNKNOWN_<value>``.
+
+### `class OpenStrEnum(StrEnum)`
+A StrEnum of Discord's values: an unknown string becomes a member named after it.
+
 ## `wd_discord.pagination` — `wd-discord/src/wd_discord/pagination.py`
 Pagination utilities for the Discord API.
 
@@ -343,7 +352,7 @@ Discord Permissions.
 - module names: REQUIRES_2FA, TIMED_OUT_PERMISSIONS
 - `type PermissionsField = Permissions`
 
-### `class ChannelType(IntEnum)`
+### `class ChannelType(OpenIntEnum)`
 Represents the different types of channels in Discord.
 
 - attributes: GUILD_TEXT, DM, GUILD_VOICE, GROUP_DM, GUILD_CATEGORY, GUILD_ANNOUNCEMENT, ANNOUNCEMENT_THREAD,

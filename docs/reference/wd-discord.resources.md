@@ -51,7 +51,7 @@ https://docs.discord.com/developers/resources/application#application-object-app
 ## `wd_discord.resources.application.team` — `wd-discord/src/wd_discord/resources/application/team.py`
 Discord Team object and its members.
 
-### `class MembershipState(IntEnum)`
+### `class MembershipState(OpenIntEnum)`
 State of a team member's invitation.
 
 - attributes: INVITED, ACCEPTED
@@ -95,17 +95,17 @@ https://docs.discord.com/developers/resources/channel#channel-object.
 ## `wd_discord.resources.channel.forum` — `wd-discord/src/wd_discord/resources/channel/forum.py`
 Forum and voice related models and enums for the Discord Channel object.
 
-### `class VideoQualityMode(IntEnum)`
+### `class VideoQualityMode(OpenIntEnum)`
 The camera video quality mode of a voice channel.
 
 - attributes: AUTO, FULL
 
-### `class SortOrderType(IntEnum)`
+### `class SortOrderType(OpenIntEnum)`
 The default sort order used to order posts in a forum or media channel.
 
 - attributes: LATEST_ACTIVITY, CREATION_DATE
 
-### `class ForumLayoutType(IntEnum)`
+### `class ForumLayoutType(OpenIntEnum)`
 The default layout used to display posts in a forum channel.
 
 - attributes: NOT_SET, LIST_VIEW, GALLERY_VIEW
@@ -125,7 +125,7 @@ https://docs.discord.com/developers/resources/channel#default-reaction-object.
 ## `wd_discord.resources.channel.overwrite` — `wd-discord/src/wd_discord/resources/channel/overwrite.py`
 Permission overwrite models for the Discord Channel object.
 
-### `class OverwriteType(IntEnum)`
+### `class OverwriteType(OpenIntEnum)`
 Whether a permission overwrite targets a role or a member.
 
 - attributes: ROLE, MEMBER
@@ -175,7 +175,7 @@ https://docs.discord.com/developers/resources/channel#thread-member-object.
 ## `wd_discord.resources.entitlement` — `wd-discord/src/wd_discord/resources/entitlement.py`
 Discord entitlement model (https://docs.discord.com/developers/resources/entitlement).
 
-### `class EntitlementType(IntEnum)`
+### `class EntitlementType(OpenIntEnum)`
 https://docs.discord.com/developers/resources/entitlement#entitlement-object-entitlement-types.
 
 - attributes: PURCHASE, PREMIUM_SUBSCRIPTION, DEVELOPER_GIFT, TEST_MODE_PURCHASE, FREE_PURCHASE, USER_GIFT,
@@ -207,7 +207,7 @@ https://docs.discord.com/developers/resources/emoji#emoji-object.
 ## `wd_discord.resources.guild.features` — `wd-discord/src/wd_discord/resources/guild/features.py`
 Discord guild enums and flags (features, levels, and system channel flags).
 
-### `class GuildFeature(StrEnum)`
+### `class GuildFeature(OpenStrEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-guild-features.
 
 - attributes: ANIMATED_BANNER, ANIMATED_ICON, APPLICATION_COMMAND_PERMISSIONS_V2, AUTO_MODERATION, BANNER, COMMUNITY,
@@ -216,32 +216,32 @@ https://docs.discord.com/developers/resources/guild#guild-object-guild-features.
   RAID_ALERTS_DISABLED, ROLE_ICONS, ROLE_SUBSCRIPTIONS_AVAILABLE_FOR_PURCHASE, ROLE_SUBSCRIPTIONS_ENABLED,
   TICKETED_EVENTS_ENABLED, VANITY_URL, VERIFIED, VIP_REGIONS, WELCOME_SCREEN_ENABLED
 
-### `class VerificationLevel(IntEnum)`
+### `class VerificationLevel(OpenIntEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-verification-level.
 
 - attributes: NONE, LOW, MEDIUM, HIGH, VERY_HIGH
 
-### `class DefaultMessageNotificationLevel(IntEnum)`
+### `class DefaultMessageNotificationLevel(OpenIntEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-default-message-notification-level.
 
 - attributes: ALL_MESSAGES, ONLY_MENTIONS
 
-### `class ExplicitContentFilterLevel(IntEnum)`
+### `class ExplicitContentFilterLevel(OpenIntEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-explicit-content-filter-level.
 
 - attributes: DISABLED, MEMBERS_WITHOUT_ROLES, ALL_MEMBERS
 
-### `class MFALevel(IntEnum)`
+### `class MFALevel(OpenIntEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-mfa-level.
 
 - attributes: NONE, ELEVATED
 
-### `class PremiumTier(IntEnum)`
+### `class PremiumTier(OpenIntEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-premium-tier.
 
 - attributes: NONE, TIER_1, TIER_2, TIER_3
 
-### `class NSFWLevel(IntEnum)`
+### `class NSFWLevel(OpenIntEnum)`
 https://docs.discord.com/developers/resources/guild#guild-object-guild-nsfw-level.
 
 - attributes: DEFAULT, EXPLICIT, SAFE, AGE_RESTRICTED
@@ -346,12 +346,12 @@ https://docs.discord.com/developers/topics/permissions#role-object.
 ## `wd_discord.resources.guild.sticker` — `wd-discord/src/wd_discord/resources/guild/sticker.py`
 Discord sticker models and enums.
 
-### `class StickerType(IntEnum)`
+### `class StickerType(OpenIntEnum)`
 https://docs.discord.com/developers/resources/sticker#sticker-object-sticker-types.
 
 - attributes: STANDARD, GUILD
 
-### `class StickerFormatType(IntEnum)`
+### `class StickerFormatType(OpenIntEnum)`
 https://docs.discord.com/developers/resources/sticker#sticker-object-sticker-format-types.
 
 - attributes: PNG, APNG, LOTTIE, GIF
@@ -446,7 +446,7 @@ https://docs.discord.com/developers/resources/user#avatar-decoration-data-object
 
 - fields: asset: ImageHash, sku_id: Snowflake
 
-### `class NamePlateBackgroundColor(StrEnum)`
+### `class NamePlateBackgroundColor(OpenStrEnum)`
 Background color of the nameplate.
 
 - attributes: CRIMSON, BERRY, SKY, TEAL, FOREST, BUBBLE_GUM, VIOLET, COBALT, CLOVER, LEMON, WHITE, BLACK

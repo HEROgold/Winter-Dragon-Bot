@@ -14,7 +14,7 @@ Error models for Discord API responses.
 
 - module names: UNKNOWN_RANGE
 
-### `class JsonErrorCode(IntEnum)`
+### `class JsonErrorCode(OpenIntEnum)`
 Codes Discord puts in a failed response's ``code`` (https://docs.discord.com/developers/topics/opcodes-and-status-codes#json).
 
 - attributes: GENERAL_ERROR, UNKNOWN_CHANNEL, UNKNOWN_GUILD, UNKNOWN_MEMBER, UNKNOWN_MESSAGE, UNKNOWN_OVERWRITE,
