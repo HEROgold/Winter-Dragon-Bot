@@ -63,7 +63,7 @@ Run with `uv run python -m archive.reports changing-fields` or `uv run python -m
 
 ## Settings
 
-The archive runs with `uv run python -m archive` (add `--database-url` to use another database).
+The archive runs with `uv run python -m archive` (add `--database-url` to use another database), or as the `archive` Compose service, which only starts when asked for: `docker compose --profile archive up -d archive`. It restarts after a crash.
 
 - `bot.ini` `[Tokens]` `read_only_token`: the archive's token. When empty, it uses `discord_token`.
 - `archive.ini`: the intents, the batch size and interval, the queue limit, and how many days raw events are kept.

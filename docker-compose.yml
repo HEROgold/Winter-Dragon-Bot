@@ -214,6 +214,41 @@ services:
     networks:
       - default
 
+  # The archive (docs/spec/archive.md): a read-only bot that records every gateway event into the database. Not
+  # started by a plain `up`: `docker compose --profile archive up -d archive`. Reports run in the same image:
+  # `docker compose run --rm archive python -m archive.reports unmodelled`. archive.ini must exist first (an
+  # empty file is enough; confkit fills in the defaults). The shared mounts are repeated with archive.ini added.
+  archive:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m archive
+    profiles: ["archive"]
+    volumes:
+      - ./src:/app/src
+      - ./wd-bot/src:/app/wd-bot/src
+      - ./wd-config/src:/app/wd-config/src
+      - ./wd-core/src:/app/wd-core/src
+      - ./wd-db/src:/app/wd-db/src
+      - ./wd-discord/src:/app/wd-discord/src
+      - ./wd-errors/src:/app/wd-errors/src
+      - ./wd-types/src:/app/wd-types/src
+      - ./wd-cogs/src:/app/wd-cogs/src
+      - ./logs:/app/logs
+      - ./bot.ini:/app/bot.ini
+      - ./config.ini:/app/config.ini
+      - ./cogs.ini:/app/cogs.ini
+      - ./database.ini:/app/database.ini
+      - ./sentry.ini:/app/sentry.ini
+      - ./archive.ini:/app/archive.ini
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # Runs until stopped: up again after a crash (such as an event that fails to parse) or a Docker restart.
+    restart: unless-stopped
+    networks:
+      - default
+
 volumes:
   redis_data:
     driver: local
