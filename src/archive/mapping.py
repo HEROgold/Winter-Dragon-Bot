@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import TypeDecorator
 
-from archive.models.base import ArchiveEntity
+from archive.models.base import ArchiveChild, ArchiveEntity
 
 
 if TYPE_CHECKING:
@@ -31,8 +31,10 @@ if TYPE_CHECKING:
     from archive.models.base import ArchiveTable
 
 
-BOOKKEEPING = frozenset({"id", "created_at", "updated_at", "deleted_at", "owner_id", "parent_id", "position"})
-"""Columns the archive sets itself; a payload key of the same name is never written into them."""
+TIMESTAMPS = frozenset({"created_at", "updated_at", "deleted_at"})
+"""Every table's own timestamps; a payload key of the same name is never written into them."""
+CHILD_BOOKKEEPING = frozenset({"owner_id", "parent_id", "position"})
+"""A child row's place in its payload; on other tables these are ordinary Discord fields (a channel's position)."""
 
 
 @dataclass
@@ -65,7 +67,7 @@ def split(table: type[ArchiveTable], payload: Mapping[str, Any]) -> Split:
 def column_for(table: type[ArchiveTable], key: str) -> str | None:
     """Return the column ``table`` stores payload ``key`` in, or ``None`` when it has none."""
     columns = _columns(table)
-    writable = set(columns.keys()) - (BOOKKEEPING - {"id"} if issubclass(table, ArchiveEntity) else BOOKKEEPING)
+    writable = set(columns.keys()) - _bookkeeping(table)
     renamed = table.renames.get(key)
     if renamed is not None and renamed in writable:
         return renamed
@@ -86,6 +88,15 @@ def convert(column: Column[Any], value: object) -> Any:  # noqa: ANN401 - whatev
     if kind is str and not isinstance(value, str):
         return _text(value)
     return value
+
+
+def _bookkeeping(table: type[ArchiveTable]) -> frozenset[str]:
+    """Return the columns of ``table`` the archive sets itself: an entity's ``id`` is its Discord ID, others' isn't."""
+    if issubclass(table, ArchiveEntity):
+        return TIMESTAMPS
+    if issubclass(table, ArchiveChild):
+        return TIMESTAMPS | CHILD_BOOKKEEPING | {"id"}
+    return TIMESTAMPS | {"id"}
 
 
 def _python_type(column: Column[Any]) -> type:

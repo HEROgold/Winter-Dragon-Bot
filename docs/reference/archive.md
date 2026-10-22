@@ -63,7 +63,7 @@ What the archive writes for each gateway event.
 ## `archive.mapping` — `src/archive/mapping.py`
 Sort a Discord payload into a table's columns, its child lists and the rest (kept as custom data).
 
-- module names: BOOKKEEPING
+- module names: TIMESTAMPS, CHILD_BOOKKEEPING
 - `split(table: type[ArchiveTable], payload: Mapping[str, Any]) -> Split` — Sort ``payload`` into ``table``'s columns, child lists and custom data.
 - `column_for(table: type[ArchiveTable], key: str) -> str | None` — Return the column ``table`` stores payload ``key`` in, or ``None`` when it has none.
 - `convert(column: Column[Any], value: object) -> Any` — Convert a JSON ``value`` to what ``column`` stores.

@@ -40,6 +40,20 @@ def test_split_sorts_columns_children_and_extra() -> None:
     assert part.extra == {"author": {"username": "someone"}, "brand_new_field": True}
 
 
+def test_entity_fields_named_like_child_bookkeeping_are_columns() -> None:
+    part = split(models.Channel, {"id": "1", "position": 3, "parent_id": "2", "owner_id": "4"})
+
+    assert part.values == {"id": 1, "position": 3, "parent_id": 2, "owner_id": 4}
+    assert part.extra == {}
+
+
+def test_a_child_rows_bookkeeping_is_never_taken_from_the_payload() -> None:
+    part = split(models.MessageEmbedField, {"name": "a", "position": 9, "owner_id": "1"})
+
+    assert part.values == {"name": "a"}
+    assert part.extra == {"position": 9, "owner_id": "1"}
+
+
 def test_a_payload_id_never_overwrites_a_child_rows_own_id() -> None:
     part = split(models.MessageAttachment, {"id": "77", "filename": "a.png"})
 
