@@ -183,4 +183,4 @@ class Presence(DiscordModel):
     activities: list[Activity]
     client_status: ClientStatus
     processed_at_timestamp: int | None = None
-    """When Discord processed the update, as Unix milliseconds; ``0`` when it doesn't say. Sent by Discord, but not documented."""
+    """When Discord processed it, as Unix milliseconds; ``0`` when it doesn't say. Sent by Discord, but not documented."""
