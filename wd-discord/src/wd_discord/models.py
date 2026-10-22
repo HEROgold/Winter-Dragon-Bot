@@ -20,19 +20,24 @@ if TYPE_CHECKING:
 
 
 logger = getLogger("DiscordModel")
+_logged: set[tuple[str, frozenset[str]]] = set()
+"""The (model, field names) pairs already logged, so each is logged once per process."""
 
 
 def _report_unknown_fields(model_name: str, extra: Mapping[str, object]) -> None:
     """Report undocumented Discord fields to Sentry when telemetry is enabled.
 
-    Always logs the unknown keys locally (visible in ``logs/`` even when Sentry is disabled or
-    unreachable). The Sentry ``capture_message`` is a no-op when ``sentry_sdk.init`` has not run,
-    and never raises: telemetry must not turn a successful response parse into a failure.
+    Logs the unknown keys locally once per model and set of field names (a GUILD_CREATE alone carries
+    hundreds of the same users and channels), so the log shows each new field without drowning in it.
+    The Sentry ``capture_message`` is a no-op when ``sentry_sdk.init`` has not run, and never raises:
+    telemetry must not turn a successful response parse into a failure.
 
     The Sentry message and fingerprint name only the model and the field names, so one new field is one
     Sentry issue however its values vary; the values ride along as the event's ``unknown_fields`` context.
     """
-    logger.warning(t"unknown fields on {model_name}: {extra}")
+    if (key := (model_name, frozenset(extra))) not in _logged:
+        _logged.add(key)
+        logger.warning(t"unknown fields on {model_name}: {extra}")
     if not SentrySettings.Telemetry:
         return
     fields = sorted(extra)
