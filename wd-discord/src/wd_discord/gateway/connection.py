@@ -22,7 +22,9 @@ lazy from dataclasses import dataclass
 lazy from enum import Enum, IntEnum, auto
 lazy from typing import TYPE_CHECKING, Any, Literal, NotRequired, Self, TypedDict, cast
 
+lazy import sentry_sdk
 lazy from herogold.log import LoggerMixin
+lazy from pydantic import ValidationError
 lazy from wd_config.discord import URLS
 lazy from wd_core.intents import Intents
 lazy from wd_errors import Activity
@@ -30,7 +32,7 @@ lazy from websockets.asyncio.client import connect
 lazy from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
 lazy from .dispatch import parse_dispatch
-lazy from .events import EventName, Ready
+lazy from .events import EventName, RawEvent, Ready
 lazy from .presence import Status
 
 
@@ -360,7 +362,7 @@ class Gateway(LoggerMixin):
             self._seq = seq
         match message:
             case {"op": Opcode.DISPATCH}:
-                await dispatch(message["t"], parse_dispatch(message["t"], message["d"]))
+                await dispatch(message["t"], self._parse(message["t"], message["d"]))
             case {"op": Opcode.HEARTBEAT}:
                 await self._send(Opcode.HEARTBEAT, self._seq)
             case {"op": Opcode.RECONNECT}:
@@ -373,6 +375,19 @@ class Gateway(LoggerMixin):
             case _:
                 pass
         return None
+
+    def _parse(self, name: str, data: Mapping[str, object]) -> DiscordModel:
+        """Parse a dispatch; one that no longer fits its model is logged, reported, and passed on as a :class:`RawEvent`.
+
+        Discord changes payloads without notice (a new enum value, a field turned optional); one such event must not
+        end the connection, and with it every guild's events.
+        """
+        try:
+            return parse_dispatch(name, data)
+        except ValidationError as error:
+            self.logger.exception(t"{name} no longer fits its model; dispatching it raw.")
+            sentry_sdk.capture_exception(error)
+            return RawEvent(name=name, data=data)
 
     def _closed(self, closed: ConnectionClosed) -> Disconnect:
         """Decide how to reconnect after the socket closed with ``closed``'s code."""
