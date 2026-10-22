@@ -37,6 +37,11 @@ Base classes in `wd_db.extension.model`:
 - `BaseModel` — repository helpers (`add`, `update`, `get`, `get_all`, `delete`, `fetch`). Every subclass is
   registered automatically.
 
+Link one model to another with `herogold.orm.Relationship`, but read and set the link with
+`wd_db.extension.relationships` (`linked(session, row, "name")`, `link(session, row, "name", target)`). Assigning
+through the descriptor (`row.name = target`) writes through herogold's own session and commits at once
+([HeroPy#56](https://github.com/HEROgold/HeroPy/issues/56)), outside your transaction.
+
 ## Current tables
 
 | Table | Owner | Purpose |
