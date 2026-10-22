@@ -5,6 +5,7 @@ from typing import Any
 from wd_discord import Channel, MemberRemove, Role
 from wd_discord.cache import StateCache
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
+from wd_discord.gateway.connection import ALL_MEMBERS_NONCE
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import (
     GUILD_JSON,
@@ -57,6 +58,28 @@ def test_the_guild_keeps_no_stale_copy_of_its_lists() -> None:
 def test_a_large_guild_has_incomplete_members() -> None:
     cache = StateCache()
     cache.apply(parse_dispatch(EventName.GUILD_CREATE, guild_create_json(large=True)))
+    state = cache.guild(GUILD)
+    assert state is not None
+    assert not state.members_complete
+
+
+def test_the_last_chunk_of_the_full_member_request_completes_the_members() -> None:
+    cache = StateCache()
+    cache.apply(parse_dispatch(EventName.GUILD_CREATE, {**GUILD_CREATE, "large": True}))
+    chunk = {"guild_id": "7", "members": [MEMBER], "chunk_index": 0, "chunk_count": 2, "nonce": ALL_MEMBERS_NONCE}
+    state = cache.guild(GUILD)
+    assert state is not None
+
+    apply(cache, EventName.GUILD_MEMBERS_CHUNK, chunk)
+    assert not state.members_complete
+    apply(cache, EventName.GUILD_MEMBERS_CHUNK, {**chunk, "chunk_index": 1})
+    assert state.members_complete
+
+
+def test_chunks_of_another_request_leave_the_members_incomplete() -> None:
+    cache = StateCache()
+    cache.apply(parse_dispatch(EventName.GUILD_CREATE, {**GUILD_CREATE, "large": True}))
+    apply(cache, EventName.GUILD_MEMBERS_CHUNK, {"guild_id": "7", "members": [MEMBER], "chunk_index": 0, "chunk_count": 1})
     state = cache.guild(GUILD)
     assert state is not None
     assert not state.members_complete

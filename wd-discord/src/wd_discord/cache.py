@@ -15,6 +15,7 @@ lazy from typing import TYPE_CHECKING
 from wd_discord.resources.guild import Emoji, GuildMember, Role, Sticker
 from wd_discord.snowflake import Snowflake
 lazy from wd_discord.gateway import events as wire
+lazy from wd_discord.gateway.connection import ALL_MEMBERS_NONCE
 
 
 if TYPE_CHECKING:
@@ -319,6 +320,8 @@ class StateCache:
         state.members.update((member.user.id, member) for member in model.members if member.user is not None)
         if state.presences is not None:
             state.presences.update((presence.user.id, presence) for presence in model.presences or [])
+        if model.nonce == ALL_MEMBERS_NONCE and model.chunk_index == model.chunk_count - 1:
+            state.members_complete = True
 
     def _role_upsert(self, model: wire.GuildRoleCreate | wire.GuildRoleUpdate) -> Role | None:
         state = self.guilds.get(model.guild_id)

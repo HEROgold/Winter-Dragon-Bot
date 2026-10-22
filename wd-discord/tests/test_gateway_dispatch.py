@@ -6,6 +6,7 @@ lazy import json
 lazy from typing import Any
 
 lazy import pytest
+lazy from wd_core.intents import Intents
 lazy from wd_discord.gateway import EventName, GuildCreate, Message, RawEvent, Ready, parse_dispatch, parse_ready
 lazy from wd_discord.gateway.connection import Gateway, Opcode
 lazy from wd_discord.testing import GUILD_JSON, message_json, user_json
@@ -154,6 +155,36 @@ async def test_a_payload_that_no_longer_fits_its_model_is_dispatched_raw() -> No
     raw = received[0][1]
     assert isinstance(raw, RawEvent)
     assert raw.data == bad
+
+
+async def test_a_large_guild_gets_its_members_requested_with_the_members_intent() -> None:
+    gateway = Gateway("token", intents=Intents.GUILD_MEMBERS)
+    socket = FakeWebSocket([{"op": Opcode.DISPATCH, "s": 1, "t": "GUILD_CREATE", "d": {**GUILD_JSON, "large": True}}])
+    gateway._ws = socket
+
+    async def dispatch(_name: str, _payload: Any) -> None:  # noqa: ANN401
+        return None
+
+    with pytest.raises(_EndOfFrames):
+        await gateway.listen(dispatch)
+
+    (sent,) = [json.loads(frame) for frame in socket.sent]
+    assert sent["op"] == Opcode.REQUEST_GUILD_MEMBERS
+    assert sent["d"] == {"guild_id": "1", "query": "", "limit": 0, "presences": False, "nonce": "all-members"}
+
+
+async def test_without_the_members_intent_nothing_is_requested() -> None:
+    gateway = Gateway("token", intents=Intents.none())
+    socket = FakeWebSocket([{"op": Opcode.DISPATCH, "s": 1, "t": "GUILD_CREATE", "d": {**GUILD_JSON, "large": True}}])
+    gateway._ws = socket
+
+    async def dispatch(_name: str, _payload: Any) -> None:  # noqa: ANN401
+        return None
+
+    with pytest.raises(_EndOfFrames):
+        await gateway.listen(dispatch)
+
+    assert socket.sent == []
 
 
 async def test_listen_dispatches_ready_first() -> None:

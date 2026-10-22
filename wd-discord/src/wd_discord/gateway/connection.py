@@ -32,7 +32,7 @@ lazy from websockets.asyncio.client import connect
 lazy from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
 lazy from .dispatch import parse_dispatch
-lazy from .events import EventName, RawEvent, Ready
+lazy from .events import EventName, GuildCreate, RawEvent, Ready
 lazy from .presence import Status
 
 
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     lazy from websockets.asyncio.client import ClientConnection
 
     lazy from wd_discord.models import DiscordModel
+    lazy from wd_discord.snowflake import Snowflake
 
 
 class _DispatchFrame(TypedDict):
@@ -113,6 +114,8 @@ NEW_SESSION_CLOSE_CODES = frozenset({4007, 4009})
 (https://docs.discord.com/developers/topics/opcodes-and-status-codes#gateway-gateway-close-event-codes)."""
 MAX_RESUME_ATTEMPTS = 5
 """Failed attempts to reach the resume URL before giving up on the session and identifying a new one."""
+ALL_MEMBERS_NONCE = "all-members"
+"""The nonce of a request for a guild's every member, so the cache knows when its last chunk completes the list."""
 
 
 class Disconnect(Enum):
@@ -362,7 +365,10 @@ class Gateway(LoggerMixin):
             self._seq = seq
         match message:
             case {"op": Opcode.DISPATCH}:
-                await dispatch(message["t"], self._parse(message["t"], message["d"]))
+                event = self._parse(message["t"], message["d"])
+                await dispatch(message["t"], event)
+                if isinstance(event, GuildCreate) and event.large and self.intents & Intents.GUILD_MEMBERS:
+                    await self.request_guild_members(event.id)
             case {"op": Opcode.HEARTBEAT}:
                 await self._send(Opcode.HEARTBEAT, self._seq)
             case {"op": Opcode.RECONNECT}:
@@ -397,6 +403,17 @@ class Gateway(LoggerMixin):
             raise GatewayClosedError(code, reason)
         self.logger.warning(t"Gateway connection closed ({code}: {reason}).")
         return Disconnect.IDENTIFY if code in NEW_SESSION_CLOSE_CODES else Disconnect.RESUME
+
+    async def request_guild_members(self, guild_id: Snowflake) -> None:
+        """Ask for every member of ``guild_id`` (Request Guild Members, op 8); they arrive as GUILD_MEMBERS_CHUNKs.
+
+        A large guild's GUILD_CREATE carries only some of its members. This needs the GUILD_MEMBERS intent; their
+        presences come along with the GUILD_PRESENCES intent.
+        https://docs.discord.com/developers/events/gateway-events#request-guild-members
+        """
+        presences = bool(self.intents & Intents.GUILD_PRESENCES)
+        request = {"guild_id": str(guild_id), "query": "", "limit": 0, "presences": presences, "nonce": ALL_MEMBERS_NONCE}
+        await self._send(Opcode.REQUEST_GUILD_MEMBERS, request)
 
     async def update_presence(
         self,
