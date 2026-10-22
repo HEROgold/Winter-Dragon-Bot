@@ -38,3 +38,4 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`winter_dragon.web`](winter-dragon.web.md) | The web dashboard: htmx and Jinja pages served by FastAPI, run with ``python -m winter_dragon.web``. |
 | [`archive`](archive.md) | The archive: a read-only bot that records every gateway event into the database (docs/spec/archive.md). |
 | [`archive.models`](archive.models.md) | Every archive table. Importing this module registers them all with SQLModel's metadata (the migrations do). |
+| [`archive.reports`](archive.reports.md) | Reports on the archive's raw events: run with ``python -m archive.reports``. |
