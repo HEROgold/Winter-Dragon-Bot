@@ -16,6 +16,10 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     outputs:
       version_changed: ${{ steps.version-check.outputs.version_changed }}
+      version: ${{ steps.version-check.outputs.current_version }}
+      # The image build (#293) is the step with id `image`. Until it exists this
+      # is empty, and the deploy job below skips.
+      digest: ${{ steps.image.outputs.digest }}
 
     steps:
     - uses: actions/checkout@v7
@@ -59,6 +63,7 @@ jobs:
         generate_release_notes: true
 
     - name: Create Sentry release
+      if: steps.version-check.outputs.version_changed == 'true'
       uses: getsentry/action-release@v3
       env:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -66,3 +71,25 @@ jobs:
         SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
       with:
         environment: production
+        release: v${{ steps.version-check.outputs.current_version }}  # The version the deploy job sends
+
+  # Notifies https://deploy.herogold.nl/hooks/winter-dragon with an OIDC token.
+  # The verifier there runs deploy/deploy-wd.sh. See deploy/README.md.
+  deploy:
+    needs: new-release
+    if: ${{ needs.new-release.outputs.version_changed == 'true' && needs.new-release.outputs.digest != '' }}
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: deploy-production
+    permissions:
+      id-token: write  # Needed for deploy-notifier's OIDC token
+    steps:
+    - name: Notify the server
+      uses: HEROgold/deploy-notifier@v1
+      with:
+        url: ${{ vars.DEPLOY_URL }}
+        image: ghcr.io/herogold/winter-dragon-bot@${{ needs.new-release.outputs.digest }}
+        version: v${{ needs.new-release.outputs.version }}
+        timeout: 900  # Matches the verifier's [apps.winter-dragon] timeout
+    # TODO: once #293 decides whether Traefik routes the dashboard, add a smoke
+    # test here that retries its health URL, like nota's deploy workflow.
