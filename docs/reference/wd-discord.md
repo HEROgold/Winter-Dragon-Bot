@@ -291,6 +291,11 @@ The JSON body for creating or editing an application command.
 - attributes: model_config
 - `to_json() -> JsonPayload` — Return the request body.
 
+## `wd_discord.log` — `wd-discord/src/wd_discord/log.py`
+Module-level loggers that reach a log file.
+
+- `@cache get_logger(name: str) -> Logger` — Return the logger for ``name``, the same one on every call, writing to ``logs/<name>.log``.
+
 ## `wd_discord.models` — `wd-discord/src/wd_discord/models.py`
 Shared pydantic base for all Discord API response models.
 

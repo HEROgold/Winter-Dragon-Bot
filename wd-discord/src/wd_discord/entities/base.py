@@ -27,10 +27,10 @@ from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Any, Protocol, TypeAliasType
 
 lazy from herogold.errors import with_known_exception
-lazy from herogold.log import getLogger
 
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
+lazy from wd_discord.log import get_logger
 lazy from wd_discord.snowflake import Snowflake
 
 
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from wd_discord.snowflake import SnowflakeLike
 
 
-logger = getLogger("wd_discord.entities")
+logger = get_logger("wd_discord.entities")
 
 
 @with_known_exception(ValueError)  # an empty or non-JSON body, and pydantic's ValidationError, are ValueErrors

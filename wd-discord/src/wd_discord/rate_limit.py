@@ -16,10 +16,11 @@ lazy from enum import StrEnum, auto
 lazy from http import HTTPStatus
 lazy from typing import TYPE_CHECKING, Any, ClassVar
 
-lazy from herogold.log import LoggerMixin, getLogger
+lazy from herogold.log import LoggerMixin
 lazy from wd_config.discord import RateLimit
 lazy from wd_errors.base import BaseError
 
+lazy from wd_discord.log import get_logger
 lazy from wd_discord.utils.xor import XORError, xor
 
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
 
     lazy from httpxyz import Headers, Response
 
-logger = getLogger("RateLimit")
+logger = get_logger("RateLimit")
 
 
 class Buckets(StrEnum):

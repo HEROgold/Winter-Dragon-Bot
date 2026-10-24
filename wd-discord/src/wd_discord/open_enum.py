@@ -13,8 +13,9 @@ from enum import IntEnum, StrEnum
 lazy from typing import Self, cast, override
 
 lazy import sentry_sdk
-lazy from herogold.log import getLogger
 lazy from wd_config.sentry import SentrySettings
+
+lazy from wd_discord.log import get_logger
 
 
 _reported: set[tuple[str, object]] = set()
@@ -57,7 +58,7 @@ def _report(enum: str, value: object) -> None:
     if (enum, value) in _reported:
         return
     _reported.add((enum, value))
-    getLogger("DiscordModel").warning(t"unknown value of {enum}: {value!r}")
+    get_logger("DiscordModel").warning(t"unknown value of {enum}: {value!r}")
     if SentrySettings.Telemetry:
         sentry_sdk.capture_message(
             f"wd-discord: unknown value of {enum}: {value!r}",
