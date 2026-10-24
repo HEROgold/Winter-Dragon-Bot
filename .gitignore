@@ -11,6 +11,7 @@ bot.ini
 database.ini
 sentry.ini
 dashboard.ini
+archive.ini
 logs/*
 .env
 site/

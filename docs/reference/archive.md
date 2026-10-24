@@ -17,6 +17,14 @@ Deletes raw events older than :attr:`retention_days`, once a day.
 - `async run() -> None` — Purge now, then once a day, until cancelled.
 - `purge() -> int` — Delete the raw events older than :attr:`retention_days`; return how many.
 
+## `archive.gateway` — `src/archive/gateway.py`
+The archive's gateway: the event logger's, plus a database write for every event it receives.
+
+### `class ArchiveGateway(EventLoggingGateway)`
+Logs every frame, like the event logger, and queues each dispatch for the archive's writer.
+
+- `async archive(name: str, event: DiscordModel) -> None` — Queue ``event`` for the typed tables; READY is also stored raw, and logged.
+
 ## `archive.handlers` — `src/archive/handlers.py`
 What the archive writes for each gateway event.
 
@@ -72,6 +80,19 @@ Sort a Discord payload into a table's columns, its child lists and the rest (kep
 A payload sorted for one table.
 
 - fields: values: dict[str, Any], children: dict[str, list[Any]], extra: dict[str, Any]
+
+## `archive.settings` — `src/archive/settings.py`
+The archive's settings, in their own ``archive.ini``; its token lives with the bot's in ``bot.ini``.
+
+- module names: ARCHIVE_CONFIG_FILE
+
+### `class ArchiveConfig[T](Config[T])`
+Config descriptor scoped to the archive settings file.
+
+### `class ArchiveSettings`
+How the archive connects and writes.
+
+- attributes: intents, batch_size, batch_interval, queue_limit, raw_event_retention_days
 
 ## `archive.store` — `src/archive/store.py`
 Write sorted payloads to the archive tables: upsert an entity, append an event, soft-delete, replace child lists.
