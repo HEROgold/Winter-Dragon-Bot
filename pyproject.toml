@@ -4,7 +4,7 @@ dev = [
   "hypothesis>=6.170.9",
   "pytest>=9.1.1",
   "pytest-cov>=7.1.0",
-  "zensical>=0.0.55",
+  "zensical>=0.0.55"
 ]
 docs = [
   "zensical>=0.0.55"
