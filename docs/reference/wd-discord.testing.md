@@ -42,3 +42,19 @@ Discord JSON payloads for tests, shaped as the Discord docs describe each object
 - `voice_state_json(**fields: Any) -> dict[str, Any]` — Return user 3 connected to channel 5, nothing muted, with ``fields`` changed.
 - `message_json(**fields: Any) -> dict[str, Any]` — Return message 5 the bot sent in channel 6, without content, with ``fields`` changed.
 - `guild_create_json(**fields: Any) -> dict[str, Any]` — Return guild 7 as GUILD_CREATE sends it, with ``fields`` changed.
+
+## `wd_discord.testing.strategies` — `wd-discord/src/wd_discord/testing/strategies.py`
+Hypothesis strategies that draw Discord JSON payloads, shaped and limited as the Discord docs describe them.
+
+- `type Json = dict[str, Any]`
+- `snowflakes() -> st.SearchStrategy[str]` — Draw an ID as Discord sends it: a 64-bit unsigned integer as a decimal string.
+- `timestamps() -> st.SearchStrategy[str]` — Draw an ISO8601 timestamp in UTC, between Discord's epoch (2015) and 2100.
+- `colors() -> st.SearchStrategy[int]` — Draw a 24-bit RGB color integer, as embeds and roles carry it.
+- `permissions() -> st.SearchStrategy[str]` — Draw a permission bit set as Discord serializes it: a decimal string of known bits.
+- `image_hashes() -> st.SearchStrategy[str]` — Draw an image hash: 32 hex digits, prefixed with ``a_`` when the image is animated.
+- `users() -> st.SearchStrategy[Json]` — Draw a user object.
+- `roles(*, role_id: st.SearchStrategy[str] | None=None) -> st.SearchStrategy[Json]` — Draw a role object; ``role_id`` draws its ID (any snowflake by default).
+- `members(*, user: st.SearchStrategy[Json] | None=None, role_ids: st.SearchStrategy[list[str]] | None=None) -> st.SearchStrategy[Json]` — Draw a guild member object; ``user`` and ``role_ids`` draw its user and the roles it holds.
+- `channels(*, channel_id: st.SearchStrategy[str] | None=None) -> st.SearchStrategy[Json]` — Draw a guild channel object (text, voice, category, announcement, stage, forum or media), without its ``guild_id``.
+- `voice_states(*, user_id: st.SearchStrategy[str] | None=None, channel_id: st.SearchStrategy[str] | None=None) -> st.SearchStrategy[Json]` — Draw a voice state; ``channel_id`` draws the channel the user is in (``null`` when they left).
+- `@st.composite guild_creates(draw: st.DrawFn, *, guild: Json) -> Json` — Draw the GUILD_CREATE event for ``guild``, a guild object (``GUILD_JSON`` or one of its variants).

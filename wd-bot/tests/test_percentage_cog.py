@@ -3,6 +3,8 @@
 lazy import random
 lazy from typing import TYPE_CHECKING
 
+lazy from hypothesis import given
+lazy from hypothesis import strategies as st
 from wd_bot.testing import detached_cog
 lazy from wd_discord import User as BoundUser
 lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
@@ -25,17 +27,15 @@ def _bound(user: User) -> BoundUser:
     return BoundUser(RecordingClient(), user)
 
 
-def test_percentage_is_deterministic_for_the_same_pair() -> None:
-    assert calculate_percentage(1, 2) == calculate_percentage(1, 2)
+USER_IDS = st.integers(min_value=0, max_value=2**64 - 1)
 
 
-def test_percentage_is_order_independent() -> None:
-    assert calculate_percentage(1, 2) == calculate_percentage(2, 1)
-
-
-def test_percentage_is_within_bounds() -> None:
-    value = calculate_percentage(123, 456)
+@given(USER_IDS, USER_IDS)
+def test_percentage_is_a_fixed_percentage_for_each_pair_in_either_order(a: int, b: int) -> None:
+    value = calculate_percentage(a, b)
     assert 0 <= value <= MAX_PERCENT
+    assert calculate_percentage(a, b) == value
+    assert calculate_percentage(b, a) == value
 
 
 def test_percentage_matches_manual_seed() -> None:

@@ -1,8 +1,11 @@
 """Unit tests: Snowflake decoding (API -> object) and pagination round-trip (object -> API)."""
 
-lazy from datetime import UTC, datetime
+lazy from datetime import UTC, datetime, timedelta
 
+lazy from hypothesis import given
+lazy from hypothesis import strategies as st
 lazy from wd_discord import Snowflake
+lazy from wd_discord.constants import DISCORD_EPOCH
 lazy from wd_discord.pagination import snowflake_from_timestamp
 
 
@@ -33,11 +36,28 @@ def test_timestamp_round_trip() -> None:
     assert snowflake.timestamp == datetime(2016, 4, 30, 11, 18, 25, 796000, tzinfo=UTC)
 
 
-def test_snowflake_converts_to_int() -> None:
-    assert int(Snowflake(123)) == 123
+@given(st.integers(min_value=0, max_value=2**64 - 1))
+def test_a_snowflake_is_its_int_and_prints_as_discords_decimal_string(value: int) -> None:
+    snowflake = Snowflake(value)
+    assert int(snowflake) == value
+    assert str(snowflake) == f"{value}"
+    assert Snowflake.coerce(str(snowflake)) == snowflake
 
 
-def test_snowflake_str_is_the_wire_form() -> None:
-    snowflake = Snowflake(1226868250713784331)
-    assert str(snowflake) == "1226868250713784331"
-    assert f"/commands/{snowflake}" == "/commands/1226868250713784331"
+@given(
+    milliseconds=st.integers(min_value=0, max_value=2**42 - 1),
+    worker=st.integers(min_value=0, max_value=31),
+    process=st.integers(min_value=0, max_value=31),
+    increment=st.integers(min_value=0, max_value=4095),
+)
+def test_a_snowflake_splits_into_the_parts_it_was_built_from(milliseconds: int, worker: int, process: int, increment: int) -> None:
+    """https://docs.discord.com/developers/reference#snowflakes: 42 bits of time, 5 worker, 5 process, 12 increment."""
+    snowflake = Snowflake(milliseconds << 22 | worker << 17 | process << 12 | increment)
+    assert (snowflake.worker_id, snowflake.process_id, snowflake.increment) == (worker, process, increment)
+    assert snowflake.timestamp == datetime.fromtimestamp(DISCORD_EPOCH / 1000, tz=UTC) + timedelta(milliseconds=milliseconds)
+
+
+@given(st.integers(min_value=DISCORD_EPOCH, max_value=DISCORD_EPOCH + 2**42 - 1))
+def test_a_pagination_snowflake_carries_its_timestamp(unix_milliseconds: int) -> None:
+    snowflake = Snowflake(snowflake_from_timestamp(unix_milliseconds))
+    assert snowflake.timestamp == datetime.fromtimestamp(0, tz=UTC) + timedelta(milliseconds=unix_milliseconds)

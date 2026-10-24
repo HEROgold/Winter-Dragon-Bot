@@ -1,6 +1,8 @@
 """Unit tests: xor helper."""
 
 lazy import pytest
+lazy from hypothesis import assume, given
+lazy from hypothesis import strategies as st
 
 
 # NOTE: this module imports from herogold (with_known_exception),
@@ -12,21 +14,16 @@ except (ImportError, TypeError) as exc:  # pragma: no cover - environment-depend
     pytest.skip(f"wd_discord.utils is unimportable: {exc}", allow_module_level=True)
 
 
-def test_xor_returns_truthy_side() -> None:
-    assert xor(True, False) is True
-    assert xor(False, True) is True
+VALUES = st.booleans() | st.integers() | st.text()
 
 
-def test_xor_coerces_non_bool() -> None:
-    assert xor("value", "") is True  # type: ignore[arg-type]
-    assert xor(0, 5) is True  # type: ignore[arg-type]
+@given(VALUES, VALUES)
+def test_xor_is_true_when_exactly_one_side_is_truthy(a: object, b: object) -> None:
+    assume(bool(a) != bool(b))
+    assert xor(a, b) is True  # type: ignore[arg-type]
 
 
-def test_xor_rejects_both_truthy() -> None:
-    with pytest.raises(XORError):
-        raise xor(True, True)
-
-
-def test_xor_rejects_both_falsy() -> None:
-    with pytest.raises(XORError):
-        raise xor(False, False)
+@given(VALUES, VALUES)
+def test_xor_rejects_two_truthy_or_two_falsy_sides(a: object, b: object) -> None:
+    assume(bool(a) == bool(b))
+    assert isinstance(xor(a, b), XORError)  # type: ignore[arg-type]

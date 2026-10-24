@@ -115,7 +115,10 @@ Test code built on wd-discord with `wd_discord.testing.RecordingClient`: it reco
 answers from canned `reply(...)`/`fail(...)` values, so stores and entities run unchanged offline.
 Build the JSON for those replies and for gateway events with the builders in `wd_discord.testing`
 (`user_json()`, `role_json()`, `message_json()`, ...): each returns a docs-shaped object and takes
-keyword overrides, e.g. `role_json(id="9", name="admins")`.
+keyword overrides, e.g. `role_json(id="9", name="admins")`. For property tests, the Hypothesis strategies in
+`wd_discord.testing.strategies` (`users()`, `roles()`, `guild_creates(guild=...)`, ...) draw any payload the
+docs allow. They are written from the docs pages, not from the models, so a model field that drifts from the
+docs fails `wd-discord/tests/test_docs_payloads.py`. When you model a new object, add its strategy there too.
 
 ## Gotchas
 
