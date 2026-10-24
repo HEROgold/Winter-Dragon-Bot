@@ -11,7 +11,9 @@ from archive.models import ArchiveChild
 
 
 def archive_tables() -> list[type[SQLModel]]:
-    return [table for name in models.__all__ if isinstance(table := getattr(models, name), type) and hasattr(table, "__table__")]
+    return [
+        table for name in models.__all__ if isinstance(table := getattr(models, name), type) and hasattr(table, "__table__")
+    ]
 
 
 def test_every_table_is_prefixed_and_has_custom_data() -> None:

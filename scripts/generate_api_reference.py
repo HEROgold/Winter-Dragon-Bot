@@ -56,7 +56,7 @@ class Package:
 
 
 def discover_packages() -> list[Package]:
-    """Find every ``wd-*`` member plus the root ``winter_dragon`` package."""
+    """Find every ``wd-*`` member plus the root project's ``winter_dragon`` and ``archive`` packages."""
     packages = [
         Package(member.name, source)
         for member in sorted(ROOT.glob("wd-*"))
@@ -64,6 +64,7 @@ def discover_packages() -> list[Package]:
         if (source / "__init__.py").is_file()
     ]
     packages.append(Package("winter-dragon", ROOT / "src" / "winter_dragon"))
+    packages.append(Package("archive", ROOT / "src" / "archive"))
     return packages
 
 

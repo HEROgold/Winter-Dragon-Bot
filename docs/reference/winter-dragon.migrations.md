@@ -34,7 +34,7 @@ Reconcile databases made before migrations with the baseline.
 - `downgrade() -> None` — Nothing to undo: the baseline is what this revision brings a database to.
 
 ## `winter_dragon.migrations.versions.2026_10_22_c9b4b18ba344_add_the_archive_s_tables` — `src/winter_dragon/migrations/versions/2026_10_22_c9b4b18ba344_add_the_archive_s_tables.py`
-add the archive's tables
+add the archive's tables.
 
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
