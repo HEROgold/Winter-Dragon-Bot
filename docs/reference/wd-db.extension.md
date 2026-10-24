@@ -113,3 +113,9 @@ Model with a Discord ID as primary key.
 
 - fields: id: int
 - `@classmethod fetch(id_: int) -> Self` — Find existing or create new discord snowflake by id, and return it.
+
+## `wd_db.extension.relationships` — `wd-db/src/wd_db/extension/relationships.py`
+Read and replace a herogold ``Relationship`` link inside the caller's session, without committing.
+
+- `linked[T: _BaseModel](session: Session, owner: _BaseModel, name: str) -> T | None` — Return what ``owner``'s relationship ``name`` links to, or ``None`` when it links nothing.
+- `link(session: Session, owner: _BaseModel, name: str, target: _BaseModel | None) -> None` — Make ``owner``'s relationship ``name`` link to ``target``, replacing its link; ``None`` removes it.
