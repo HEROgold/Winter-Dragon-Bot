@@ -28,6 +28,20 @@ _Avoid_: Host, tournament admin
 A guild that has removed the bot. Its data is kept for a grace period so re-adding the bot restores its setup, then removed.
 _Avoid_: Left guild, inactive guild
 
+## Archive
+
+**Archive**:
+A separate, read-only bot that records every gateway event into the database, to stress test wd-discord and the database on an existing server. Not part of Winter Dragon.
+_Avoid_: Event logger (that only writes a log file), recorder, tracker
+
+**Raw event**:
+One gateway event exactly as Discord sent it, kept by the archive for 30 days.
+_Avoid_: Frame (outside gateway code), payload, log entry
+
+**Snapshot**:
+The presences and voice states the archive appends when it connects, so its history has a starting point after downtime.
+_Avoid_: Backfill, sync
+
 ## Moderation
 
 **Ban network**:
