@@ -21,8 +21,13 @@ export DOCKER_CONFIG=${DOCKER_CONFIG:-/home/herogold/.docker}
 
 docker pull --quiet "$DEPLOY_IMAGE"
 
+# compose.yml passes WD_VERSION to Sentry as the release. It goes into an env
+# file, so only a plain version string is kept.
+version=${DEPLOY_VERSION:-}
+[[ "$version" =~ ^v[0-9A-Za-z.+-]+$ ]] || version=
+
 [[ -f .env.deploy ]] && cp .env.deploy .env.deploy.prev
-printf 'WD_IMAGE=%s\n' "$DEPLOY_IMAGE" >.env.deploy.tmp
+printf 'WD_IMAGE=%s\nWD_VERSION=%s\n' "$DEPLOY_IMAGE" "$version" >.env.deploy.tmp
 mv .env.deploy.tmp .env.deploy
 
 compose() { docker compose -f compose.yml --env-file .env --env-file .env.deploy "$@"; }
