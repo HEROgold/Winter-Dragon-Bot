@@ -59,6 +59,8 @@ class ForumTag(DiscordModel):
     """Id of a guild's custom emoji."""
     emoji_name: str | None
     """Unicode character of the emoji."""
+    color: int | None = None
+    """Sent by Discord, but not documented."""
 
     @property
     def emoji(self) -> PartialEmoji | None:

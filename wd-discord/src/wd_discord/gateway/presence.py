@@ -13,7 +13,7 @@ from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 from wd_discord.resources.user.collectibles import Collectibles
-from wd_discord.resources.user.profile import Avatar
+from wd_discord.resources.user.profile import Avatar, DisplayNameStyles
 from wd_discord.resources.user.user import UserPrimaryGuild
 from wd_discord.snowflake import Snowflake
 
@@ -119,6 +119,18 @@ class Activity(DiscordModel):
     flags: ActivityFlags | None = None
     buttons: list[str] | None = None
     """The labels of the activity's buttons; bots can't read where they link."""
+    id: str | None = None
+    """The activity's id within the user's session (``custom`` for a custom status). Sent by Discord, but not documented."""
+    session_id: str | None = None
+    """Sent by Discord, but not documented."""
+    sync_id: str | None = None
+    """For Spotify, the track's ID. Sent by Discord, but not documented."""
+    platform: str | None = None
+    """Sent by Discord, but not documented."""
+    official_game_id: object | None = None
+    """Sent by Discord, but not documented."""
+    content_classification: dict[str, object] | None = None
+    """Sent by Discord, but not documented."""
 
 
 class ClientStatus(DiscordModel):
@@ -128,6 +140,8 @@ class ClientStatus(DiscordModel):
     mobile: Status | None = None
     web: Status | None = None
     vr: Status | None = None
+    embedded: Status | None = None
+    """The status in an embedded app (such as an Activity). Sent by Discord, but not documented."""
 
 
 class PresenceUser(DiscordModel):
@@ -147,6 +161,14 @@ class PresenceUser(DiscordModel):
     avatar_decoration_data: Avatar | None = None
     collectibles: Collectibles | None = None
     primary_guild: UserPrimaryGuild | None = None
+    display_name: str | None = None
+    """The name shown for the user. Sent by Discord, but not documented; ``global_name`` is the documented field."""
+    display_name_styles: DisplayNameStyles | None = None
+    """How the display name is drawn. Sent by Discord, but not documented."""
+    clan: object | None = None
+    """Sent by Discord, but not documented; the older name of ``primary_guild``."""
+    vad_colors: object | None = None
+    """Sent by Discord, but not documented; always null so far."""
 
 
 class Presence(DiscordModel):
@@ -160,3 +182,5 @@ class Presence(DiscordModel):
     status: Status
     activities: list[Activity]
     client_status: ClientStatus
+    processed_at_timestamp: int | None = None
+    """When Discord processed it, as Unix milliseconds; ``0`` when it doesn't say. Sent by Discord, but not documented."""

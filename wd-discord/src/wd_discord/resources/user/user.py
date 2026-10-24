@@ -1,4 +1,7 @@
 """https://docs.discord.com/developers/resources/user#user-object."""
+
+from __future__ import annotations
+
 lazy from typing import Annotated
 
 from pydantic import Field
@@ -8,7 +11,7 @@ from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.oauth import OAuthScopes
 from wd_discord.resources.user.collectibles import Collectibles
-from wd_discord.resources.user.profile import Avatar
+from wd_discord.resources.user.profile import Avatar, DisplayNameStyles
 from wd_discord.snowflake import Snowflake
 
 
@@ -70,6 +73,14 @@ class User(DiscordModel):
     """data for the user's collectibles"""
     primary_guild: Annotated[UserPrimaryGuild | None, OAuthScopes.IDENTIFY] = None
     """the user's primary guild"""
+    display_name: str | None = None
+    """The name shown for the user. Sent by Discord, but not documented; ``global_name`` is the documented field."""
+    display_name_styles: DisplayNameStyles | None = None
+    """How the display name is drawn. Sent by Discord, but not documented."""
+    clan: object | None = None
+    """Sent by Discord, but not documented; the older name of ``primary_guild``."""
+    vad_colors: object | None = None
+    """Sent by Discord, but not documented; always null so far."""
 
     def validate_scopes(self, allowed_scopes: set[OAuthScopes]) -> bool:
         """Check that every scope-gated field is covered by ``allowed_scopes``.

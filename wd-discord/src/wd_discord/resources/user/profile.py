@@ -17,6 +17,17 @@ class Avatar(DiscordModel):
     """the avatar decoration hash"""
     sku_id: Snowflake
     """id of the avatar decoration's SKU"""
+    expires_at: int | None = None
+    """When the decoration expires, as a Unix timestamp. Sent by Discord, but not documented."""
+
+
+class DisplayNameStyles(DiscordModel):
+    """How a user's display name is drawn: its font, effect and colors. Sent by Discord, but not documented."""
+
+    font_id: int | None = None
+    effect_id: int | None = None
+    colors: list[int] | None = None
+    """The colors the effect uses, as integers."""
 
 
 class NamePlateBackgroundColor(OpenStrEnum):
@@ -51,3 +62,5 @@ class NamePlate(DiscordModel):
     """the label of this nameplate. Currently unused"""
     palette: NamePlateBackgroundColor
     """background color of the nameplate"""
+    expires_at: int | None = None
+    """When the nameplate expires, as a Unix timestamp. Sent by Discord, but not documented."""

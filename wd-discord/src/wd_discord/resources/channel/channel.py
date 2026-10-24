@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
+from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.permissions import ChannelType, PermissionsField
 from wd_discord.resources.channel.forum import DefaultReaction, ForumLayoutType, ForumTag, SortOrderType, VideoQualityMode
 from wd_discord.resources.channel.overwrite import PermissionOverwrite
@@ -96,6 +97,22 @@ class Channel(DiscordModel):
     """The default sort order used to order posts in a forum or media channel."""
     default_forum_layout: ForumLayoutType | None = None
     """The default forum layout view used to display posts in a forum channel."""
+    status: str | None = None
+    """A voice channel's status text; documented only as the Set Voice Channel Status parameter."""
+    version: int | None = None
+    """Sent by Discord, but not documented; grows with every change to the channel."""
+    icon_emoji: PartialEmoji | None = None
+    """Sent by Discord, but not documented."""
+    theme_color: int | None = None
+    """Sent by Discord, but not documented."""
+    template: str | None = None
+    """A forum post template. Sent by Discord, but not documented."""
+    default_tag_setting: str | None = None
+    """How a forum matches tags (``match_some``, ``match_all``). Sent by Discord, but not documented."""
+    voice_hangout: object | None = None
+    """Sent by Discord, but not documented."""
+    voice_background_display: object | None = None
+    """Sent by Discord, but not documented."""
 
     @property
     def applied_forum_tags(self) -> Generator[ForumTag]:

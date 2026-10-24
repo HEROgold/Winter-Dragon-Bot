@@ -24,3 +24,5 @@ class Emoji(DiscordModel):
     """Whether this emoji is animated."""
     available: bool | None = None
     """Whether this emoji can be used, may be false due to loss of Server Boosts."""
+    version: int | None = None
+    """Sent by Discord, but not documented; grows with every change to the emoji."""
