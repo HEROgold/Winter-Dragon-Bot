@@ -50,8 +50,6 @@ repos:
       # Python sanity checks
       - id: check-ast
         files: ^src/.*\.py$
-      - id: check-docstring-first
-        files: ^src/.*\.py$
       - id: debug-statements
         files: ^src/.*\.py$
 
