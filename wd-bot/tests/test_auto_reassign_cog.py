@@ -1,7 +1,5 @@
 """Unit tests: a member who leaves and rejoins gets their roles back, in guilds that turned it on (no network)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 import pytest

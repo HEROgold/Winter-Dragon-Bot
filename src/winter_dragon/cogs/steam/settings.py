@@ -1,7 +1,5 @@
 """Settings for the Steam sale finder, in its ``cogs.ini`` section."""
 
-from __future__ import annotations
-
 lazy from confkit.data_types import Hex
 
 lazy from winter_dragon.config import CogConfig

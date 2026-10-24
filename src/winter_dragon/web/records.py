@@ -4,8 +4,6 @@ The records come from the lifecycle tables' :class:`~wd_db.extension.lifecycle.O
 request follows, so the data page lists exactly what deleting would remove.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 

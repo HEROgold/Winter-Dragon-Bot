@@ -1,7 +1,5 @@
 """The partial guild Discord sends inside an interaction (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object)."""
 
-from __future__ import annotations
-
 from wd_discord.interactions import Locale
 from wd_discord.models import DiscordModel
 from wd_discord.snowflake import Snowflake

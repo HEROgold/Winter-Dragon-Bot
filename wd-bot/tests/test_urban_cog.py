@@ -1,7 +1,5 @@
 """Unit tests: Urban Dictionary lookups, their embeds, and the /urban commands (no network)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import httpxyz

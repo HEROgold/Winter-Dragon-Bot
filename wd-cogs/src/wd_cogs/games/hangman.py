@@ -1,7 +1,5 @@
 """Module to contain the Hangman game."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from textwrap import dedent
 lazy from typing import Unpack, override

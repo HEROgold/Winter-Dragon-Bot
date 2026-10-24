@@ -1,7 +1,5 @@
 """Module for managing the status of a tournament match using a state machine."""
 
-from __future__ import annotations
-
 lazy from enum import Enum, auto
 
 lazy from herogold.state import StateMachine

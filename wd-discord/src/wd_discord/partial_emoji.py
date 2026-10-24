@@ -7,8 +7,6 @@ a single object so callers get one value instead of two loose primitives. It liv
 root (like :mod:`~wd_discord.snowflake` / :mod:`~wd_discord.image`) so both the ``channel`` and
 ``guild`` subpackages can use it without importing one another.
 """
-from __future__ import annotations
-
 lazy from wd_discord.models import DiscordModel
 lazy from wd_discord.snowflake import Snowflake
 

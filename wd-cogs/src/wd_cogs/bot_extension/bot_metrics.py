@@ -1,7 +1,5 @@
 """Module for bot performance metrics and monitoring."""
 
-from __future__ import annotations
-
 lazy import datetime
 lazy import time
 lazy from typing import Unpack

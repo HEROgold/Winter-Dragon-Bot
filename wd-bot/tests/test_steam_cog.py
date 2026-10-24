@@ -1,7 +1,5 @@
 """Unit tests: the /steam commands, page buttons, the scrape, and the re-check after a sale ends (no network)."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar, Self
 

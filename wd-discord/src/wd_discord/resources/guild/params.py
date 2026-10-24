@@ -1,7 +1,5 @@
 """Request bodies for modifying guild members (https://docs.discord.com/developers/resources/guild#modify-guild-member)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Annotated
 

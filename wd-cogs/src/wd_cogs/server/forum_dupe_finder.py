@@ -1,7 +1,5 @@
 """Module for helping find duplicate forum posts."""
 
-from __future__ import annotations
-
 lazy from difflib import SequenceMatcher
 
 

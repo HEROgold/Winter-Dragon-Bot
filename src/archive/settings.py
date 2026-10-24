@@ -1,7 +1,5 @@
 """The archive's settings, in their own ``archive.ini``; its token lives with the bot's in ``bot.ini``."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from wd_config import Config

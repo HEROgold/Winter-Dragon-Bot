@@ -6,8 +6,6 @@ paired ``.py`` module entirely for type checkers, so this module's own annotatio
 :func:`listener` are irrelevant to callers; only the runtime behavior matters here.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Protocol, cast
 
 

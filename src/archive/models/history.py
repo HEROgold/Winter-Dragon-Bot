@@ -1,7 +1,5 @@
 """What happened, appended and never changed; ``created_at`` is when the archive received it."""
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import Any, ClassVar
 

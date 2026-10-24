@@ -9,8 +9,6 @@ Run from the repo root: uv run python .claude/skills/run-wd-discord/verify_sentr
 
 Run this FIRST in a full pass so sentry_sdk.init is live for the other drivers in the same process.
 """
-from __future__ import annotations
-
 import sys
 
 import sentry_sdk

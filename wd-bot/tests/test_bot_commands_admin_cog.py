@@ -1,7 +1,5 @@
 """Unit tests: the admin bot-commands cog's status formatting and handlers (no network)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 lazy from unittest.mock import AsyncMock
 

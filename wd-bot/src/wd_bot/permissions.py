@@ -1,7 +1,5 @@
 """Module for handling permission related things in Discord bot interactions."""
 
-from __future__ import annotations
-
 
 class PermissionsNotifier:
     """Notify users about missing permissions, roles or overwrites."""

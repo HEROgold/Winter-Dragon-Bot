@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 lazy from abc import ABC, abstractmethod
 lazy from typing import TYPE_CHECKING, ClassVar, Self
 

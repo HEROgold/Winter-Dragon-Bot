@@ -1,7 +1,5 @@
 """Space out requests to Steam, and stop sending them for a while once Steam rate-limits us."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import time
 lazy from dataclasses import dataclass, field

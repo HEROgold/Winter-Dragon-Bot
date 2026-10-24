@@ -1,6 +1,4 @@
 """Generic utilities for the wd-discord package."""
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from herogold.errors import with_known_exception

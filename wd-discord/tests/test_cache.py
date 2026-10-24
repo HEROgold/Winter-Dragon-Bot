@@ -1,7 +1,5 @@
 """Unit tests: :class:`wd_discord.cache.StateCache` follows the gateway, and :meth:`Client.receive` feeds it."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from wd_discord import Channel, MemberRemove, Role

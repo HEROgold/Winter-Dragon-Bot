@@ -1,7 +1,5 @@
 """The application behind the client's token (https://docs.discord.com/developers/resources/application)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.client import is_network_error

@@ -4,8 +4,6 @@ Endpoints that change a guild accept an ``X-Audit-Log-Reason`` header; Discord s
 audit log next to the action.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from urllib.parse import quote
 

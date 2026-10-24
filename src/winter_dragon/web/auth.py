@@ -1,7 +1,5 @@
 """Signing in with Discord and out again; the callback sets the HttpOnly session cookie, never a token."""
 
-from __future__ import annotations
-
 lazy import secrets
 
 from fastapi import APIRouter, Depends

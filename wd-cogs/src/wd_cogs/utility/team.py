@@ -1,7 +1,5 @@
 """Module for managing teams and respective voice channels."""
 
-from __future__ import annotations
-
 lazy import math
 lazy import random
 lazy from typing import TYPE_CHECKING, TypedDict, cast

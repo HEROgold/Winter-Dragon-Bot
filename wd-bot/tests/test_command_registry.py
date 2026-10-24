@@ -1,7 +1,5 @@
 """Unit tests: the command registry, command mentions and the scope-by-scope syncer (no network)."""
 
-from __future__ import annotations
-
 import asyncio
 from typing import TYPE_CHECKING
 

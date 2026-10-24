@@ -1,7 +1,5 @@
 """The /fuel command group: log refuels, and graph fuel efficiency over time."""
 
-from __future__ import annotations
-
 from datetime import datetime
 lazy import asyncio
 lazy from datetime import UTC, date, time

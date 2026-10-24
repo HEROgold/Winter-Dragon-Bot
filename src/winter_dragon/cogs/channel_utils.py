@@ -1,7 +1,5 @@
 """The /channel-utils command group: delete a whole category, and lock or unlock a channel for a role or member."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Annotated
 
 lazy from wd_bot.cogs import Cog, GroupCog

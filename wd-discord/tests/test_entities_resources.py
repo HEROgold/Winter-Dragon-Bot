@@ -1,7 +1,5 @@
 """Unit tests: stores and entities for commands, users, channels, guilds and messages (no network)."""
 
-from __future__ import annotations
-
 from wd_discord import (
     Channel,
     CurrentUser,

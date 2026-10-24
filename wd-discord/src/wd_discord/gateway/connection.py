@@ -15,8 +15,6 @@ The presence/READY (de)serialisation is factored into the pure helpers
 :func:`build_presence` and :func:`parse_ready` so they can be unit-tested without a socket.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import json
 lazy import random

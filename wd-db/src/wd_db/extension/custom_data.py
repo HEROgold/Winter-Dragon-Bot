@@ -7,8 +7,6 @@ transaction (HeroPy#56). These helpers write the same rows with the caller's ses
 leave committing to the caller.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Any
 
 lazy from herogold.orm.core.model import CustomData, _BaseModel

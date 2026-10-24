@@ -1,7 +1,5 @@
 """Unit tests: rate-limit models, scope resolution, and the limiter classes."""
 
-from __future__ import annotations
-
 lazy from datetime import UTC, datetime, timedelta
 
 lazy import pytest

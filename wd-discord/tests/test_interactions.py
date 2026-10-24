@@ -1,7 +1,5 @@
 """Unit tests: application-command models and their documented limits."""
 
-from __future__ import annotations
-
 from wd_discord.interactions import (
     ApplicationCommand,
     ApplicationCommandOption,

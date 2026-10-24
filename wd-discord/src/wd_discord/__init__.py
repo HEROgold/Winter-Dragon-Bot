@@ -5,8 +5,6 @@ The names here are the high-level API: entities bound to a :class:`Client` (``Us
 keep the Discord docs' names in their own modules (``wd_discord.resources``, ``wd_discord.gateway.events``).
 """
 
-from __future__ import annotations
-
 lazy from wd_config.discord import URLS
 
 lazy from wd_discord.audit import AuditLogReason

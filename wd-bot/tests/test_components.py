@@ -1,7 +1,5 @@
 """Unit tests: component handlers, custom_id building, MESSAGE_COMPONENT dispatch and command mentions."""
 
-from __future__ import annotations
-
 import asyncio
 from typing import TYPE_CHECKING
 

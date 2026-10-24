@@ -5,8 +5,6 @@ https://github.com/HEROgold/HeroPy/issues/33. Drop this module in favor of herog
 once that lands.
 """
 
-from __future__ import annotations
-
 lazy import annotationlib
 lazy from inspect import signature
 lazy from typing import TYPE_CHECKING

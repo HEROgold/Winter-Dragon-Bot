@@ -1,7 +1,5 @@
 """Module for handling audit log events."""
 
-from __future__ import annotations
-
 
 class EventListener(Cog, auto_load=True):
     """Event listener for audit log entries."""

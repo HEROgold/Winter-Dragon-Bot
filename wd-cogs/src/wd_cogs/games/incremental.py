@@ -1,7 +1,5 @@
 """Incremental game cog for the Winter Dragon bot."""
 
-from __future__ import annotations
-
 lazy from datetime import UTC, datetime
 lazy from typing import Any
 

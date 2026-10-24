@@ -22,8 +22,6 @@ If you need to modify how events are transformed into embeds or how they are
 sent, look in ``winter_dragon.bot.events`` instead of re-adding listeners here.
 """
 
-from __future__ import annotations
-
 lazy from typing import Unpack, cast
 
 

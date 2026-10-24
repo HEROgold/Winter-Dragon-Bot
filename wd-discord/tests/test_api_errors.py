@@ -1,6 +1,4 @@
 """Unit tests: Discord API error-response parsing."""
-from __future__ import annotations
-
 lazy from wd_discord.errors.api import ApiErrorTree, ApiResponseError
 lazy from wd_errors import ErrorNode
 

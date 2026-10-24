@@ -1,7 +1,5 @@
 """Module for storing and managing fuel data."""
 
-from __future__ import annotations
-
 
 class Fuel(GroupCog, auto_load=True):
     """Cog for managing fuel data."""

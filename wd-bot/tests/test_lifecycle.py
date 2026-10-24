@@ -1,7 +1,5 @@
 """Unit tests: the lifecycle model's soft delete, create-or-restore, ownership chain and column migration."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar
 

@@ -1,7 +1,5 @@
 """Discord voice state model (https://docs.discord.com/developers/resources/voice#voice-state-object)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from wd_discord.models import DiscordModel

@@ -1,7 +1,5 @@
 """Live tests: read-only connectivity to each major Discord v10 REST concept."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy import pytest

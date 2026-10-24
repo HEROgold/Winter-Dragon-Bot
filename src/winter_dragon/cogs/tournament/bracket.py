@@ -1,7 +1,5 @@
 """The arithmetic of a single-elimination bracket, and of splitting players into teams; no database, no Discord."""
 
-from __future__ import annotations
-
 lazy from math import ceil, log2
 lazy from typing import TYPE_CHECKING
 

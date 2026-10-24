@@ -1,7 +1,5 @@
 """Discord emoji model."""
 
-from __future__ import annotations
-
 from wd_discord.models import DiscordModel
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake

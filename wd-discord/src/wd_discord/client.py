@@ -22,8 +22,6 @@ The client is the transport level of wd-discord. Resource operations live in the
 ``commands``) and on the entities they return; see :mod:`wd_discord.entities`.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import time
 lazy from dataclasses import dataclass

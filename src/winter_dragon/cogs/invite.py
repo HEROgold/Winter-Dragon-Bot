@@ -1,7 +1,5 @@
 """The /invite command group: invite the bot to a guild, or join the support guild."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog, GroupCog

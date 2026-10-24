@@ -1,7 +1,5 @@
 """The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``."""
 
-from __future__ import annotations
-
 lazy import logging
 lazy from pathlib import Path
 

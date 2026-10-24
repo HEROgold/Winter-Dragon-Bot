@@ -1,7 +1,5 @@
 """Module for League of Legends related Cogs."""
 
-from __future__ import annotations
-
 lazy import time
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, Any, Protocol, Unpack, cast

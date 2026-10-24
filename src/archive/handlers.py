@@ -5,8 +5,6 @@ tables by its handler in :data:`HANDLERS`; each handler gets the event's payload
 validated it. An event without a handler is only stored raw.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any
 
 from sqlmodel import col, select

@@ -1,7 +1,5 @@
 """Unit tests: the minimal Embed model."""
 
-from __future__ import annotations
-
 from wd_discord.embed import Embed, EmbedField, EmbedFooter
 
 

@@ -6,8 +6,6 @@ Validates live API responses into models, then exercises the value types (Snowfl
 PermissionsField round-trips), computed props (Snowflake.timestamp/worker_id/...), methods
 (User.validate_scopes, Team.owner), and the unknown-field telemetry path with a crafted payload.
 """
-from __future__ import annotations
-
 import asyncio
 import sys
 

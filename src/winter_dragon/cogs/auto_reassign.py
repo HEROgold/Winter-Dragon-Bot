@@ -8,8 +8,6 @@ Only the roles the bot may give come back (below its highest role, not managed, 
 request that keeps whatever roles the member got on joining, e.g. from a verification bot.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger

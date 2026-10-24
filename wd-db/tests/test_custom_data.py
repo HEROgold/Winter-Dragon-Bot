@@ -1,7 +1,5 @@
 """Custom data is read and replaced through the caller's session, and only committed by the caller."""
 
-from __future__ import annotations
-
 import pytest
 from sqlalchemy import BigInteger, create_engine
 from sqlalchemy.ext.compiler import compiles

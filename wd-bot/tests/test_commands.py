@@ -1,7 +1,5 @@
 """Unit tests: Command's option derivation and interaction-option resolution (no network)."""
 
-from __future__ import annotations
-
 lazy import os
 lazy import subprocess
 lazy import sys

@@ -1,7 +1,5 @@
 """Unit tests: PermissionSolver works out a member's guild and channel permissions like Discord does."""
 
-from __future__ import annotations
-
 from wd_discord.permission_solver import PermissionSolver
 from wd_discord.permissions import Permissions
 from wd_discord.resources.channel import Channel

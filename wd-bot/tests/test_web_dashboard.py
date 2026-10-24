@@ -1,7 +1,5 @@
 """Unit tests: the web dashboard's sign-in, data page, deletion request and reminders, on sqlite (no network)."""
 
-from __future__ import annotations
-
 import re
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING

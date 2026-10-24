@@ -1,7 +1,5 @@
 """Voice states (https://docs.discord.com/developers/resources/voice#voice-state-object)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.entities.base import Entity

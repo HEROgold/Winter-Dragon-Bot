@@ -7,8 +7,6 @@ which validates the payload through pydantic v2. Unknown/undocumented keys are c
 instead of being silently dropped.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Self
 
 lazy import sentry_sdk

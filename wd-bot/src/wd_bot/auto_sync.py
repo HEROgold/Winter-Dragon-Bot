@@ -5,8 +5,6 @@ already match what the registry wants, stop there; otherwise PUT the scope's ful
 and record Discord's answer. A restart without command changes therefore costs one GET per scope and no writes.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy from typing import TYPE_CHECKING
 

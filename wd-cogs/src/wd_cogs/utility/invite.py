@@ -1,7 +1,5 @@
 """Module containing the invite cog for the bot."""
 
-from __future__ import annotations
-
 
 class Invite(GroupCog, auto_load=True):
     """Cog for inviting the bot to a guild or getting support."""

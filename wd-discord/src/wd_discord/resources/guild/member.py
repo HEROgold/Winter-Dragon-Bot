@@ -1,7 +1,5 @@
 """Discord guild member model (https://docs.discord.com/developers/resources/guild#guild-member-object)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 lazy from enum import IntFlag
 

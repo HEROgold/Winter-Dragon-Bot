@@ -1,7 +1,5 @@
 """Live test: connect the Gateway, identify, and send a presence/activity update."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy from typing import TYPE_CHECKING
 

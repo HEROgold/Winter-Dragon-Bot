@@ -1,7 +1,5 @@
 """Unit tests: a message's mentions, attachments, embeds and reactions parse into typed models."""
 
-from __future__ import annotations
-
 lazy from wd_discord import Message
 lazy from wd_discord.entities import bind
 lazy from wd_discord.gateway.dispatch import parse_dispatch

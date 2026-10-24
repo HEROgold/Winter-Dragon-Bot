@@ -1,7 +1,5 @@
 """Gatekeeper cog for managing server roles and permissions, liming the amount of bot/spam users that can join."""
 
-from __future__ import annotations
-
 
 @app_commands.guild_only()
 class Gatekeeper(GroupCog, auto_load=True):

@@ -1,7 +1,5 @@
 """The archive tables follow the conventions the mapping relies on."""
 
-from __future__ import annotations
-
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel

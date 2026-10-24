@@ -1,7 +1,5 @@
 """The Discord invite resource."""
 
-from __future__ import annotations
-
 from pydantic import Field
 lazy from wd_config.discord import URLS
 

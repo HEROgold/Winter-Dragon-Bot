@@ -1,7 +1,5 @@
 """Discord CDN image hashes and formats (https://docs.discord.com/developers/reference#image-formatting)."""
 
-from __future__ import annotations
-
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, Any
 

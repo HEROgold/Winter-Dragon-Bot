@@ -1,7 +1,5 @@
 """Discord application commands (https://docs.discord.com/developers/interactions/application-commands)."""
 
-from __future__ import annotations
-
 lazy from enum import IntEnum, StrEnum
 lazy from typing import Annotated, Self
 

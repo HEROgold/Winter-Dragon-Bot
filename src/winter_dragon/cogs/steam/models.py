@@ -1,7 +1,5 @@
 """Database tables for Steam sales and the users subscribed to them."""
 
-from __future__ import annotations
-
 from datetime import datetime, timedelta
 lazy from enum import StrEnum, auto
 lazy from typing import ClassVar

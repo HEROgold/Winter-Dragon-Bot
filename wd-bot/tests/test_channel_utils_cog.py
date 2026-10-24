@@ -1,7 +1,5 @@
 """Unit tests: the /channel-utils commands, deleting a category and locking channels (no network)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 

@@ -1,7 +1,5 @@
 """Unit tests: Steam URLs, store item parsing, and the scrapers against canned store API answers (no network)."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, TypedDict
 

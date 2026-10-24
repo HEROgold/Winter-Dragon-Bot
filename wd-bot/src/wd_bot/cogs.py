@@ -1,7 +1,5 @@
 """Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency."""
 
-from __future__ import annotations
-
 lazy from enum import IntFlag, auto
 lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 

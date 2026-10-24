@@ -6,8 +6,6 @@ Integrates with Riot's public CLASH-V1 API to provide tournament schedules and
 Discord scheduled event management.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Protocol, Unpack, cast
 
 lazy from sqlmodel import select

@@ -13,8 +13,6 @@ This module provides:
   ``max_concurrency``-sized batches spaced 5 seconds apart, as the rate limits require.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy from typing import TYPE_CHECKING, Any, Self
 

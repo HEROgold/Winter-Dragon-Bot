@@ -1,7 +1,5 @@
 """DM subscribers the Steam sales they haven't been told about yet."""
 
-from __future__ import annotations
-
 lazy from dataclasses import KW_ONLY, dataclass
 lazy from typing import TYPE_CHECKING
 

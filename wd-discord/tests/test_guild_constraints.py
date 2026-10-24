@@ -1,7 +1,5 @@
 """Unit tests: guild and role fields reject values outside Discord's documented limits."""
 
-from __future__ import annotations
-
 lazy import pytest
 lazy from pydantic import ValidationError
 lazy from wd_discord.resources.guild.guild import Guild

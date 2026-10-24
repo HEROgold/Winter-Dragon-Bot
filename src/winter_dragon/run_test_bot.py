@@ -21,8 +21,6 @@ herogold hardcodes DEBUG for both the global and per-class loggers already; set_
 just makes sure the resulting files land somewhere predictable.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import sys
 lazy import types

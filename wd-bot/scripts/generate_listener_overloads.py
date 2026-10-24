@@ -27,8 +27,6 @@ script gets `wd_discord` importable without being part of the main project env):
 # wd-discord = { path = "../../wd-discord", editable = true }
 # ///
 
-from __future__ import annotations
-
 import argparse
 import subprocess
 import sys

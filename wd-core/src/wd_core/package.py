@@ -3,8 +3,6 @@
 This module provides helpers for importing and validation of wd-* packages
 for public extension and internal use.
 """
-from __future__ import annotations
-
 lazy from importlib import metadata
 
 

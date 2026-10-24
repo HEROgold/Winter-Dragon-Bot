@@ -4,8 +4,6 @@ Data only; :class:`~wd_discord.entities.presence.Presence` binds a presence to t
 because pydantic resolves field annotations at class-definition time.
 """
 
-from __future__ import annotations
-
 from enum import IntEnum, IntFlag, StrEnum
 
 from wd_discord.color import Color

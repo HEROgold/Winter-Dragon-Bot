@@ -1,7 +1,5 @@
 """Unit tests: Discord error parsing (API -> object) and the activity/platform enums."""
 
-from __future__ import annotations
-
 lazy from wd_discord import ApiResponseError
 lazy from wd_errors import Activity, Platform
 

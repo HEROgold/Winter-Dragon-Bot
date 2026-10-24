@@ -1,7 +1,5 @@
 """Pin the cogs' former hardcoded values: settings in cogs.ini, with today's values as defaults."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

@@ -1,7 +1,5 @@
 """Live tests: read the bot's profile, and (opt-in) exercise the profile write path."""
 
-from __future__ import annotations
-
 lazy import os
 lazy from typing import TYPE_CHECKING
 

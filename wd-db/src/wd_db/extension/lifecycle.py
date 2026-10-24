@@ -5,8 +5,6 @@ A deleted record is soft-deleted: :func:`soft_delete` stamps its ``deleted_at`` 
 exists soft-deleted restores it (:func:`create_or_restore`).
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
 lazy from typing import TYPE_CHECKING, Any, ClassVar, override

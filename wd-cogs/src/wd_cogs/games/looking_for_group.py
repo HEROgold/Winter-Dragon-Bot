@@ -1,7 +1,5 @@
 """Module containing the looking for group cog."""
 
-from __future__ import annotations
-
 lazy from typing import Unpack
 
 lazy from sqlmodel import select

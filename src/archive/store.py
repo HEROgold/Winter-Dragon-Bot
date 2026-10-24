@@ -3,8 +3,6 @@
 Everything happens in the caller's session; the caller commits.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any, cast
 
 from sqlmodel import and_, col, select

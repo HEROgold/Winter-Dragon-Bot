@@ -1,6 +1,4 @@
 """https://docs.discord.com/developers/resources/user#user-object."""
-from __future__ import annotations
-
 lazy from typing import Annotated
 
 from pydantic import Field

@@ -22,8 +22,6 @@ Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``cache=True`` to accept an a
 <wd_discord.client.Client.request>`.
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Any, Protocol, TypeAliasType

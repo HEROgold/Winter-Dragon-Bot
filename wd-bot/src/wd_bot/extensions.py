@@ -1,7 +1,5 @@
 """Finding the extension modules a bot loads its cogs from."""
 
-from __future__ import annotations
-
 lazy import pkgutil
 lazy from typing import TYPE_CHECKING
 

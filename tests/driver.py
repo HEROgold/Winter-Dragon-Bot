@@ -9,8 +9,6 @@ Reads the bot token from bot.ini [Tokens] discord_token, then:
 Exits 0 only if both surfaces worked. Never prints the token.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import configparser
 lazy import sys

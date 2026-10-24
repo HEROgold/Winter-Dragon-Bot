@@ -1,7 +1,5 @@
 """The reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, replace
 from enum import StrEnum, auto
 lazy from datetime import UTC, date, datetime, time, timedelta

@@ -1,7 +1,5 @@
 """A cog with a single command: a random compatibility percentage between two users."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from typing import TYPE_CHECKING
 

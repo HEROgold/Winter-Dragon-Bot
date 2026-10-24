@@ -1,7 +1,5 @@
 """Embeds and buttons that show Steam sales: the pages of /steam show and the sale DMs."""
 
-from __future__ import annotations
-
 lazy from textwrap import dedent
 lazy from typing import TYPE_CHECKING
 

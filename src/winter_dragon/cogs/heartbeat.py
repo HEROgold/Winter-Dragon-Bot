@@ -1,7 +1,5 @@
 """A cog demonstrating independent background work, not just reacting to dispatch events."""
 
-from __future__ import annotations
-
 lazy import asyncio
 
 lazy from wd_bot.cogs import Cog

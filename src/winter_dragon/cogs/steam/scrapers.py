@@ -7,8 +7,6 @@ A request that fails is logged and skipped, so one bad answer never stops a scra
 :class:`RequestThrottle`, so a scrape never sends requests fast enough to get rate-limited.
 """
 
-from __future__ import annotations
-
 lazy import json
 lazy from dataclasses import dataclass
 lazy from enum import Enum, auto

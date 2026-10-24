@@ -1,7 +1,5 @@
 """Pin the one-off migration of the old single config.ini into the per-scope ini files."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

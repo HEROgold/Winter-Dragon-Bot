@@ -10,8 +10,6 @@ Revises: 2a9de84f886e
 Create Date: 2026-10-19 20:14:15.909046
 """
 
-from __future__ import annotations
-
 import sqlalchemy as sa
 from alembic import op
 

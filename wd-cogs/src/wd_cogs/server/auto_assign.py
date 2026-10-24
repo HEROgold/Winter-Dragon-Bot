@@ -1,7 +1,5 @@
 """Cog for automatically assigning roles to new members."""
 
-from __future__ import annotations
-
 
 class AutoAssign(GroupCog, auto_load=True):
     """Cog for automatically assigning roles to new members."""

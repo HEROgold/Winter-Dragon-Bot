@@ -1,7 +1,5 @@
 """A cog for announcing messages."""
 
-from __future__ import annotations
-
 lazy import datetime
 
 

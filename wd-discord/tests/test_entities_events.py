@@ -1,7 +1,5 @@
 """Unit tests: :func:`wd_discord.entities.bind` wraps each parsed dispatch event in its client-bound entity."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from typing import TypeAliasType, get_args
 

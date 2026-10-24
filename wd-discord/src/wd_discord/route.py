@@ -8,8 +8,6 @@ rate-limit key both come from the same object without parsing a finished string 
   and collapses every other parameter to ``{id}``.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from string.templatelib import Interpolation
 lazy from typing import TYPE_CHECKING

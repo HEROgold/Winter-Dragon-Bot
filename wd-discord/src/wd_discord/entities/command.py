@@ -4,8 +4,6 @@ Reached through the application, like Discord's routes: ``client.application.com
 ``client.application.guild_commands(guild)`` for one guild's.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 

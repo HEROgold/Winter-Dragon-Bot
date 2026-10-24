@@ -1,7 +1,5 @@
 """Discord Application object."""
 
-from __future__ import annotations
-
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
 from wd_discord.resources.guild import Guild

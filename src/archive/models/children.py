@@ -4,8 +4,6 @@ Each row carries ``owner_id``, ``parent_id`` and ``position`` (see :class:`~arch
 A list of plain values (role IDs, labels) stores each value in the table's :attr:`~ArchiveChild.scalar` column.
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import ClassVar
 

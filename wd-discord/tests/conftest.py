@@ -5,8 +5,6 @@ discord_token``). When the token is missing or still the ``!!`` placeholder, tho
 are skipped so the unit suite stays green offline and in CI.
 """
 
-from __future__ import annotations
-
 lazy import configparser
 lazy from pathlib import Path
 lazy from typing import TYPE_CHECKING, Any

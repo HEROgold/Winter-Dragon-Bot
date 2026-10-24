@@ -1,7 +1,5 @@
 """Unit tests: spacing requests to Steam and pausing them after a rate limit (fake clock, no sleeping)."""
 
-from __future__ import annotations
-
 from winter_dragon.cogs.steam.settings import SteamSettings
 from winter_dragon.cogs.steam.throttle import RequestThrottle
 

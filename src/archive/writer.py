@@ -6,8 +6,6 @@ tables can't take) is logged and skipped without losing the rest. When the datab
 rolled back and retried with backoff; meanwhile the queue fills, and once full, new jobs are dropped and counted.
 """
 
-from __future__ import annotations
-
 import asyncio
 from dataclasses import KW_ONLY, dataclass, field
 from typing import TYPE_CHECKING

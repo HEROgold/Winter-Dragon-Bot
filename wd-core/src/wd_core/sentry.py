@@ -1,7 +1,5 @@
 """Module to handle Sentry setup."""
 
-from __future__ import annotations
-
 lazy import sentry_sdk
 lazy from wd_config.sentry import SentrySettings
 

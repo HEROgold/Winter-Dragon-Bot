@@ -1,7 +1,5 @@
 """The /urban command group: look up a term, or random terms, on Urban Dictionary."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Self
 
 from pydantic import BaseModel, Field, ValidationError

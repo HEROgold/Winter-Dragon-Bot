@@ -7,8 +7,6 @@ wd-bot answers the interaction with the message, privately. :func:`unwrap` turns
     channel = unwrap(await interaction.channel.fetch(), "I couldn't read this channel.")
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord import is_network_error

@@ -1,7 +1,5 @@
 """Unit tests: tournament sign-up, team forming, the bracket, drafts and votes, and the /tournament cog (no network)."""
 
-from __future__ import annotations
-
 import re
 from random import Random
 from typing import TYPE_CHECKING

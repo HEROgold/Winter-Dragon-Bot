@@ -1,7 +1,5 @@
 """Module to implement the Would You Rather game."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from typing import override
 

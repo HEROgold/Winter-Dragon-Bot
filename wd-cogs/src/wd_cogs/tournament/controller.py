@@ -1,7 +1,5 @@
 """Tournament Cog for announcements and match status management."""
 
-from __future__ import annotations
-
 
 STATUS_SEQUENCE: tuple[MatchStatus, ...] = (
     MatchStatus.PRE,

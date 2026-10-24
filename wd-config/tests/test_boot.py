@@ -1,7 +1,5 @@
 """Pin how wd-config boots today: which ini files appear, what they hold, and what settings resolve to."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

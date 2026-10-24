@@ -1,7 +1,5 @@
 """Discord's RGB color, an integer on the wire."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Any, Self
 
 lazy from pydantic_core import core_schema

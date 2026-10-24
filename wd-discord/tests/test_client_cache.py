@@ -1,7 +1,5 @@
 """Unit tests: a GET asked to be cached is reused until it expires or a write under its resource drops it."""
 
-from __future__ import annotations
-
 import time
 
 import pytest

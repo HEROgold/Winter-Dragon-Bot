@@ -10,8 +10,6 @@ Usage (from the repo root):
     uv run python scripts/check_doc_links.py
 """
 
-from __future__ import annotations
-
 lazy import re
 lazy import sys
 lazy from pathlib import Path

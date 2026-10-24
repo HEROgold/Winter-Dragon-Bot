@@ -10,8 +10,6 @@ top of it, so a test asserts on the HTTP calls an action made::
     assert client.sent[-1].json == {"content": "hi"}
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Any, override
 

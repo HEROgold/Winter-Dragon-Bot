@@ -11,8 +11,6 @@ or Discord closes the connection with 4014.
 Logs go to stdout and ./logs through herogold's logger.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import json
 lazy import sys

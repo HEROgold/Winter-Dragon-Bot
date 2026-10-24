@@ -1,6 +1,4 @@
 """Module with helper methods for the database package."""
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

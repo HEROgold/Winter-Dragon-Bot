@@ -1,7 +1,5 @@
 """Unit tests: legacy message components (buttons, action rows) and their message-wide limits."""
 
-from __future__ import annotations
-
 import pytest
 from pydantic import ValidationError
 from wd_discord.components import (

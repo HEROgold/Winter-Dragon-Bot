@@ -1,6 +1,4 @@
 """Unit tests: user profile models and scope validation."""
-from __future__ import annotations
-
 lazy from wd_discord.oauth import OAuthScopes
 lazy from wd_discord.resources import Collectibles, NamePlate, User
 lazy from wd_discord.resources.user.profile import NamePlateBackgroundColor

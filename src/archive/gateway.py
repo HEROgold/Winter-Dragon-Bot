@@ -1,7 +1,5 @@
 """The archive's gateway: the event logger's, plus a database write for every event it receives."""
 
-from __future__ import annotations
-
 from functools import partial
 from typing import TYPE_CHECKING, override
 

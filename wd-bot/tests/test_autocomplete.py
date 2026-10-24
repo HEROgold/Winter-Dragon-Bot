@@ -1,7 +1,5 @@
 """Unit tests: NUMBER options, and autocomplete handlers on commands and subcommands (no network)."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest

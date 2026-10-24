@@ -1,7 +1,5 @@
 """The /uptime command group: how long the bot has been running."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog, GroupCog

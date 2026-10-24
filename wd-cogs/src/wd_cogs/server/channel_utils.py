@@ -1,7 +1,5 @@
 """Module containing Channel Utility commands."""
 
-from __future__ import annotations
-
 lazy import contextlib
 
 

@@ -6,8 +6,6 @@ Order matters: verify_sentry runs first so sentry_sdk.init is live for the rest 
 which means the unknown-field events emitted while validating live responses in the later drivers
 are actually delivered to Sentry (not just the crafted probe). Exits non-zero on the first failure.
 """
-from __future__ import annotations
-
 lazy import asyncio
 lazy import sys
 

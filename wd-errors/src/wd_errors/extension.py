@@ -1,6 +1,4 @@
 """Module that contains extension related errors."""
-from __future__ import annotations
-
 lazy from wd_errors import BaseError
 
 

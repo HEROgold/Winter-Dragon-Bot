@@ -1,7 +1,5 @@
 """Shared tournament registry for Discord and API surfaces."""
 
-from __future__ import annotations
-
 lazy from dataclasses import dataclass
 
 lazy from .match_information import MatchInformation, Teams

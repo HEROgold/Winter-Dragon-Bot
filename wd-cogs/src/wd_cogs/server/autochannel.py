@@ -1,7 +1,5 @@
 """Module containing the automatic channel cog."""
 
-from __future__ import annotations
-
 lazy from textwrap import dedent
 
 

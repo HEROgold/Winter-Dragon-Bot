@@ -1,7 +1,5 @@
 """Unit tests: automatic voice channels made by joining the hub, deleted once empty, and their commands (no network)."""
 
-from __future__ import annotations
-
 import asyncio
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING

@@ -1,7 +1,5 @@
 """Each modelled gateway event lands in the right tables, through the same parse-then-dump path as live events."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from sqlmodel import Session, select

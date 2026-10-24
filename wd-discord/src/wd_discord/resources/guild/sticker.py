@@ -1,7 +1,5 @@
 """Discord sticker models and enums."""
 
-from __future__ import annotations
-
 lazy from enum import IntEnum
 
 from wd_discord.models import DiscordModel

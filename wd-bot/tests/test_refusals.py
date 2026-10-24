@@ -1,7 +1,5 @@
 """Unit tests: guild-only handlers get guild interactions, and a refused action answers the user privately."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy from typing import TYPE_CHECKING
 

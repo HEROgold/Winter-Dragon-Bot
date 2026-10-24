@@ -1,7 +1,5 @@
 """The archive's daily task: purge raw events older than the retention period."""
 
-from __future__ import annotations
-
 import asyncio
 from dataclasses import KW_ONLY, dataclass
 from datetime import timedelta

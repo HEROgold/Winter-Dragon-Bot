@@ -5,8 +5,6 @@ the entity a listener acts on, so ``message.channel.send(...)`` needs no client 
 an entity yet (anything parsed as :class:`~wd_discord.gateway.events.RawEvent`) come back unchanged.
 """
 
-from __future__ import annotations
-
 lazy from functools import cache
 lazy from typing import TYPE_CHECKING, cast
 

@@ -1,7 +1,5 @@
 """A cog that provides a command to purge messages."""
 
-from __future__ import annotations
-
 lazy import contextlib
 lazy from typing import Protocol, runtime_checkable
 

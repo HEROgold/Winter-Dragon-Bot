@@ -1,6 +1,4 @@
 """Contains type aliases for WinterDragon."""
-from __future__ import annotations
-
 lazy from collections.abc import Awaitable, Callable, Coroutine, Iterable
 lazy from typing import Any
 

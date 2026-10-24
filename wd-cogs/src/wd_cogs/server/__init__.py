@@ -1,6 +1,4 @@
 """Package for server cogs."""
-from __future__ import annotations
-
 lazy from .announcement import Announce
 lazy from .auto_assign import AutoAssign
 lazy from .purge import Purge

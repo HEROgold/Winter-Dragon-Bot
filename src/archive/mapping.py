@@ -10,8 +10,6 @@ A payload key lands in, by the first rule that matches:
 Values are converted to their column's type (Discord IDs arrive as strings, timestamps as ISO strings).
 """
 
-from __future__ import annotations
-
 import json
 from dataclasses import dataclass, field
 from datetime import datetime

@@ -1,7 +1,5 @@
 """A dispatch reaching the archive's gateway is queued raw and typed, and both end up in the database."""
 
-from __future__ import annotations
-
 import asyncio
 from typing import TYPE_CHECKING, cast
 

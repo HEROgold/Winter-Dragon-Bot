@@ -1,7 +1,5 @@
 """Alembic environment: compares the database with every table the app's cogs and the archive define."""
 
-from __future__ import annotations
-
 from alembic import context
 from sqlmodel import SQLModel
 

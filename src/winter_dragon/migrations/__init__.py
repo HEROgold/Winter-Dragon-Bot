@@ -5,8 +5,6 @@ and committed; the ``migrate`` compose service applies pending revisions (``upgr
 start, and CI fails when the models and the revisions disagree (``check``).
 """
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 lazy from typing import TYPE_CHECKING, Literal
 

@@ -11,8 +11,6 @@ Each application command run is counted per member, command, guild and UTC day, 
 are kept for :data:`USAGE_RETENTION`.
 """
 
-from __future__ import annotations
-
 from datetime import date, datetime, timedelta
 lazy import asyncio
 lazy from dataclasses import KW_ONLY, dataclass

@@ -1,6 +1,4 @@
 """Unit tests: the API base URL and version are pinned to Discord v10."""
-from __future__ import annotations
-
 lazy from wd_config.discord import URLS
 lazy from wd_discord import Client
 

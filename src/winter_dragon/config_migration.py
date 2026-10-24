@@ -6,8 +6,6 @@ its file, and migration has to run before that. ``wd-config/tests/test_migration
 Settings added after the split never existed in the old file, so they need no entry.
 """
 
-from __future__ import annotations
-
 lazy import re
 lazy from pathlib import Path
 

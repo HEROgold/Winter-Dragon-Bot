@@ -1,7 +1,5 @@
 """The WinterDragon `Config` descriptor and how each scope binds its own ini file."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Literal, override
 
 lazy from confkit import Config as CKConfig

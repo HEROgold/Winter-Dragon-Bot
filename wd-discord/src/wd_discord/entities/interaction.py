@@ -10,8 +10,6 @@ Discord expects an initial response within 3 seconds. The token stays valid for 
 editing the original response and sending follow-ups.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING, overload
 

@@ -9,8 +9,6 @@ Bot(extensions_package=...)), never from wd_cogs - that catalog carries discord.
 doesn't belong in src/.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import importlib
 lazy import sys

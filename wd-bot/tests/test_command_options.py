@@ -1,7 +1,5 @@
 """Unit tests: CHANNEL, ROLE and MENTIONABLE options, and limiting a channel option to some channel types (no network)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Annotated
 
 lazy import pytest

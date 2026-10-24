@@ -1,6 +1,4 @@
 """Package that contains extensions for WinterDragon bot."""
-from __future__ import annotations
-
 lazy from .bot_activity import BotActivity
 lazy from .bot_control import BotControl
 lazy from .bot_metrics import BotMetrics

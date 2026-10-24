@@ -1,7 +1,5 @@
 """Live test: the headline check - take a bot token and connect to the Discord API."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy import pytest

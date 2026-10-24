@@ -1,7 +1,5 @@
 """The bot's application ID: asked from Discord once at startup, never configured."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, ClassVar
 
 lazy from wd_discord import is_network_error

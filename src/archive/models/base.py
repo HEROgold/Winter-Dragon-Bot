@@ -5,8 +5,6 @@ onto a table by name. A one-off nested object is stored as ``<field>_<subfield>`
 a list is stored as rows of a child table, declared in the parent's :attr:`ArchiveTable.children`.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from sqlalchemy import BigInteger, Column

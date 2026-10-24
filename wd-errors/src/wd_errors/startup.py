@@ -1,6 +1,4 @@
 """Startup errors for the bot."""
-from __future__ import annotations
-
 lazy from wd_errors import BaseError
 
 

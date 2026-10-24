@@ -1,7 +1,5 @@
 """The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons."""
 
-from __future__ import annotations
-
 lazy from enum import StrEnum
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING

@@ -8,8 +8,6 @@ For each :class:`Scope` (global, or one guild) the :class:`CommandRegistry` hold
 Discord's answer is the only source of command IDs, so a mention never shows a stale one; nothing is persisted.
 """
 
-from __future__ import annotations
-
 lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Final, Protocol
 

@@ -5,8 +5,6 @@ on the class, so a boot can't be reset or repeated in-process. Each boot is a ne
 temp directory as its working directory, which is where wd-config resolves its relative ini paths.
 """
 
-from __future__ import annotations
-
 lazy import configparser
 lazy import json
 lazy import subprocess

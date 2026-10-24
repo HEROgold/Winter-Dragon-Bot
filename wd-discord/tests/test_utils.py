@@ -1,7 +1,5 @@
 """Unit tests: xor helper."""
 
-from __future__ import annotations
-
 lazy import pytest
 
 

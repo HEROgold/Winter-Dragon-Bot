@@ -3,8 +3,6 @@
 See :mod:`wd_discord.entities.base` for how this level relates to the transport and the data models.
 """
 
-from __future__ import annotations
-
 lazy from .application import Application, CurrentApplication, Team, TeamMember
 lazy from .base import ClientBound, Entity, EntityStore, Partial, Store
 lazy from .channel import BaseChannel, Channel, PartialChannel, PermissionOverwrite, PermissionTarget, ThreadMember

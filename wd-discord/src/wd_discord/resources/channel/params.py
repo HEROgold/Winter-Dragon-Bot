@@ -4,8 +4,6 @@ https://docs.discord.com/developers/resources/guild#create-guild-channel and
 https://docs.discord.com/developers/resources/channel#modify-channel.
 """
 
-from __future__ import annotations
-
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer

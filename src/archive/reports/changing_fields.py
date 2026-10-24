@@ -5,8 +5,6 @@ it replays the raw events in order, keeps the last copy of each object, and coun
 differs from the previous copy. A field missing from a payload is not a change (payloads can be partial).
 """
 
-from __future__ import annotations
-
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any

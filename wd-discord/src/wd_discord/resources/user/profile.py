@@ -1,7 +1,5 @@
 """User profile sub-objects: avatar decoration and nameplate collectibles."""
 
-from __future__ import annotations
-
 lazy from enum import StrEnum, auto
 
 from wd_discord.image import ImageHash

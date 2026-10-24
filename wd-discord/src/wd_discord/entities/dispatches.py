@@ -5,8 +5,6 @@ The events here carry several, or facts besides the entity (GUILD_DELETE says wh
 so each gets its own class exposing the entities as relations next to those facts.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from datetime import UTC, datetime
 lazy from typing import TYPE_CHECKING

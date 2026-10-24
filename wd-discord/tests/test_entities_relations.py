@@ -1,7 +1,5 @@
 """Unit tests: entity relations come back full when the data in hand has them, else partial; and the new actions."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 from wd_discord import (

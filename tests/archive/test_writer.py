@@ -1,7 +1,5 @@
 """The writer batches jobs, skips a failing one, drops when full; the purge removes only old raw events."""
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 from datetime import timedelta

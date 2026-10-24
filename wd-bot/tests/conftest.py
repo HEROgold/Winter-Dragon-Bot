@@ -1,7 +1,5 @@
 """Shared fixtures for the wd-bot test suite: an in-memory database, a recording client, and interaction builders."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Protocol
 
 lazy import pytest

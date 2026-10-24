@@ -2,8 +2,6 @@
 
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
-from __future__ import annotations
-
 lazy from types import NoneType
 lazy from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 

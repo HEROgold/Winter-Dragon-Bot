@@ -1,7 +1,5 @@
 """The dashboard's FastAPI app: its pages, the session cookie they share, and where a page that needs sign-in sends you."""
 
-from __future__ import annotations
-
 lazy from datetime import timedelta
 lazy from typing import TYPE_CHECKING
 

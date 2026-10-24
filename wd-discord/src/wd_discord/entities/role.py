@@ -1,7 +1,5 @@
 """Roles (https://docs.discord.com/developers/topics/permissions#role-object)."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 

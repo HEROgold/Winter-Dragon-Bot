@@ -1,7 +1,5 @@
 """Cogs for the winter_dragon example bot (see run_test_bot.py)."""
 
-from __future__ import annotations
-
 lazy import importlib
 lazy import pkgutil
 

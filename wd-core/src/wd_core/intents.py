@@ -1,6 +1,4 @@
 """Module that contains the Gateway Intents."""
-from __future__ import annotations
-
 lazy from enum import IntFlag
 lazy from functools import wraps
 lazy from typing import TYPE_CHECKING, Any

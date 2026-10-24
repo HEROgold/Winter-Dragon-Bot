@@ -1,7 +1,5 @@
 """Unit tests: template routes render encoded paths and collapse to Discord's major-param rate-limit keys."""
 
-from __future__ import annotations
-
 lazy import pytest
 lazy from wd_discord.route import Route
 

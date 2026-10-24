@@ -4,8 +4,6 @@ Discord expects an initial response within 3 seconds of the interaction. The tok
 stays valid for 15 minutes afterwards, for editing the original response or sending follow-ups.
 """
 
-from __future__ import annotations
-
 from typing import TypedDict
 lazy from enum import IntEnum, IntFlag
 lazy from typing import TYPE_CHECKING

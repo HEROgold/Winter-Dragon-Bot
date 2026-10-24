@@ -1,7 +1,5 @@
 """Discord Team object and its members."""
 
-from __future__ import annotations
-
 lazy from enum import IntEnum
 
 from wd_discord.image import ImageHash

@@ -4,8 +4,6 @@ A ``custom_id`` is ``<prefix>:<arg>:<arg>...``. The prefix picks the handler and
 component, so a handler rebuilds whatever it needs from them and keeps working across restarts and on old messages.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Self
 
 lazy from herogold.log import LoggerMixin

@@ -1,7 +1,5 @@
 """Module that contains relevant classes to display stats about the guild."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from abc import ABC, ABCMeta, abstractmethod
 lazy from typing import NoReturn, Unpack

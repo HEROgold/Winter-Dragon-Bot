@@ -1,7 +1,5 @@
 """Rendering the dashboard's templates, as a whole page or as the fragment an htmx request swaps in."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 lazy from typing import TYPE_CHECKING
 

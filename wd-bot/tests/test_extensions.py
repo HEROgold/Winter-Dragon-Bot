@@ -1,7 +1,5 @@
 """Unit tests: ExtensionDiscovery finds modules at any depth, named relative to the package."""
 
-from __future__ import annotations
-
 lazy import importlib
 lazy import sys
 lazy import types

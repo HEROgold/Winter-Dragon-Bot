@@ -1,7 +1,5 @@
 """The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes."""
 
-from __future__ import annotations
-
 lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 

@@ -1,7 +1,5 @@
 """Unit tests: the /fuel commands, and the efficiency graph sent as a file (no network)."""
 
-from __future__ import annotations
-
 import json
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING

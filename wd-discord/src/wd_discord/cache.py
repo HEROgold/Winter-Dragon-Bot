@@ -8,8 +8,6 @@ A collection that is ``None`` isn't known (a guild only fetched over REST has no
 to be empty. A guild's members are only complete when Discord sent them all, which it does below ``large_threshold``.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 lazy from functools import cache
 lazy from typing import TYPE_CHECKING

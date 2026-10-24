@@ -1,7 +1,5 @@
 """Module for tracking games."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Unpack
 
 lazy from sqlmodel import select

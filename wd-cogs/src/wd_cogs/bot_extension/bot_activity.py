@@ -1,7 +1,5 @@
 """Module for bot activity and status management."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from typing import Unpack
 

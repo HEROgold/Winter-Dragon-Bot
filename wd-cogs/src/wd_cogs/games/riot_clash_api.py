@@ -4,8 +4,6 @@ This module provides a Pythonic OOP interface to Riot's public CLASH-V1 API
 for fetching Clash tournament schedules, team information, and player details.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import contextlib
 lazy from dataclasses import dataclass, field

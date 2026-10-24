@@ -1,7 +1,5 @@
 """The first-launch check: operator-facing ini files must have every required value filled in."""
 
-from __future__ import annotations
-
 lazy import configparser
 lazy from typing import TYPE_CHECKING, ClassVar, override
 

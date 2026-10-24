@@ -27,8 +27,6 @@ resolves model field annotations to real classes at class-definition time; a sti
 lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``).
 """
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from datetime import datetime
 lazy from enum import IntEnum, StrEnum

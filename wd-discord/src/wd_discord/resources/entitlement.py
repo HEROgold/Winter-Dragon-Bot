@@ -1,7 +1,5 @@
 """Discord entitlement model (https://docs.discord.com/developers/resources/entitlement)."""
 
-from __future__ import annotations
-
 from datetime import datetime
 lazy from enum import IntEnum
 

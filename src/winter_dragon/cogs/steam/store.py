@@ -1,7 +1,5 @@
 """Storing and querying Steam sales and their subscribers."""
 
-from __future__ import annotations
-
 lazy from collections import defaultdict
 lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING

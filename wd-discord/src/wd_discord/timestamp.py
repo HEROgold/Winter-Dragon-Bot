@@ -3,8 +3,6 @@
 See https://docs.discord.com/developers/reference#message-formatting-timestamp-styles
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, override

@@ -2,8 +2,6 @@
 
 https://docs.discord.com/developers/reference#snowflake-ids-in-pagination
 """
-from __future__ import annotations
-
 lazy from wd_discord.constants import DISCORD_EPOCH
 
 

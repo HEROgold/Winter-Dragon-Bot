@@ -8,8 +8,6 @@ Which roles a member may give follows https://docs.discord.com/developers/topics
 only roles ranked below their own highest, ranked by position with the lower ID first on a tie.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 

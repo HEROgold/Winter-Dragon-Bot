@@ -4,8 +4,6 @@ Only the legacy layout is modeled: action rows holding buttons, sent next to ``c
 The ``IS_COMPONENTS_V2`` flag would disable ``content`` and ``embeds`` entirely, so it isn't supported here.
 """
 
-from __future__ import annotations
-
 lazy from collections import Counter
 lazy from enum import IntEnum
 lazy from typing import TYPE_CHECKING, Annotated, Literal, Self

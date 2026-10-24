@@ -1,7 +1,5 @@
 """The landing page, and the data page: everything the bot stores about the signed-in member, and deleting it."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, Annotated
 

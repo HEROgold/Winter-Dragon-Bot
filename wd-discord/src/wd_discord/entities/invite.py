@@ -1,7 +1,5 @@
 """Invites (https://docs.discord.com/developers/resources/invite)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.audit import reason_headers

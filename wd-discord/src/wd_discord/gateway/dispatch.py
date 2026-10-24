@@ -7,8 +7,6 @@ own annotations on :func:`parse_dispatch` are irrelevant to callers; only the be
 here.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from .events import EventName, RawEvent

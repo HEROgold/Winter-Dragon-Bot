@@ -1,7 +1,5 @@
 """Unit tests: guild entities answer from the client's cache, and their fetches fill it."""
 
-from __future__ import annotations
-
 from wd_discord import Guild, Member, Role
 from wd_discord.gateway import EventName, parse_dispatch
 from wd_discord.snowflake import Snowflake

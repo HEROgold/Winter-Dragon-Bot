@@ -1,7 +1,5 @@
 """Module for containing constants and configuration for the database package."""
 
-from __future__ import annotations
-
 lazy from sqlalchemy import URL
 lazy from sqlmodel import Session, create_engine
 

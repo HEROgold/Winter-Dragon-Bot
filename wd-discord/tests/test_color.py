@@ -1,7 +1,5 @@
 """Unit tests: Color validates 24-bit RGB and stays an int on the wire."""
 
-from __future__ import annotations
-
 lazy import pytest
 lazy from pydantic import ValidationError
 lazy from wd_discord.color import MAX_COLOR, Color

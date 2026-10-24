@@ -5,8 +5,6 @@ logging instead of accumulating results in memory - appropriate for a long-runni
 whose output is meant to be read from the log file afterward, not inspected in-process.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog

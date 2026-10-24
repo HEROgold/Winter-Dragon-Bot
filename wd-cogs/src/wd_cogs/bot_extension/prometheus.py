@@ -1,7 +1,5 @@
 """."""
 
-from __future__ import annotations
-
 lazy import logging
 
 

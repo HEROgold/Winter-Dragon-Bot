@@ -6,8 +6,6 @@ connect() -> READY (with a 30s guard so a bad token can't hang), update_presence
 Also asserts the pure helpers build_identify/build_presence/parse_ready and the sharding maths
 (shard_id_for_guild/identify_batches/GatewayBotInfo.connect_url) without opening extra sockets.
 """
-from __future__ import annotations
-
 import asyncio
 import sys
 

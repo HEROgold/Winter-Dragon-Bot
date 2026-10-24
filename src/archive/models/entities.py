@@ -4,8 +4,6 @@ Columns are a starting set, named after Discord's fields; every field without a 
 custom data, so adding a column later only moves that field out of it.
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from typing import ClassVar
 

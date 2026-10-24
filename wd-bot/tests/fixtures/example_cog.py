@@ -5,8 +5,6 @@ Deliberately outside ``wd_cogs`` - the real catalog has its own unrelated broken
 ``Cog``/``Bot.add_cog``/listener dispatch work without depending on that catalog being healthy.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Unpack
 
 lazy from wd_bot.cogs import BotArgs, Cog

@@ -1,7 +1,5 @@
 """Unit tests: CurrentApplication.id's fetch-and-cache behavior."""
 
-from __future__ import annotations
-
 import wd_discord.resources.guild.features as _guild_features
 import wd_discord.snowflake as _snowflake
 from wd_discord.entities import Application

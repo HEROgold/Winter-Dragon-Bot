@@ -1,7 +1,5 @@
 """Module to help users create a new guild."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from datetime import UTC, datetime, timedelta
 lazy from textwrap import dedent

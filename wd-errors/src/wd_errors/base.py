@@ -1,6 +1,4 @@
 """Base error classes for the wd-discord package."""
-from __future__ import annotations
-
 lazy from enum import IntEnum, StrEnum
 
 lazy from pydantic import BaseModel, Field

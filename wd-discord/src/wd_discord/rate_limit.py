@@ -7,8 +7,6 @@ For more information on rate limiting of requests, please see the Rate Limits se
 (https://docs.discord.com/developers/topics/rate-limits)
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import time
 lazy from abc import ABC, abstractmethod

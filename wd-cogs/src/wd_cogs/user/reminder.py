@@ -1,7 +1,5 @@
 """Module for reminding users of things."""
 
-from __future__ import annotations
-
 lazy import datetime
 
 

@@ -2,8 +2,6 @@
 
 NOT FINISHED.
 """
-from __future__ import annotations
-
 lazy from .collectibles import Collectibles
 lazy from .profile import Avatar, NamePlate
 lazy from .user import User

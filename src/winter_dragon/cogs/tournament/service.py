@@ -4,8 +4,6 @@ Each action takes an open session and leaves committing to the caller. An action
 :class:`~wd_errors.Refused` saying why, for the player; the caller then drops the session's changes.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 from sqlmodel import Session, col

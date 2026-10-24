@@ -1,7 +1,5 @@
 """Module to sync slash commands with the Discord API."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, Protocol
 
 lazy from herogold.log import LoggerMixin

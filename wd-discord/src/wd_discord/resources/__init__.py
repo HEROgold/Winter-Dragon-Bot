@@ -1,7 +1,5 @@
 """Discord API resource models (https://docs.discord.com/developers/resources)."""
 
-from __future__ import annotations
-
 lazy from wd_discord.resources.application import (
     Application,
     ApplicationIntegrationTypeConfig,

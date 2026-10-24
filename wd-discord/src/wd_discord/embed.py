@@ -7,8 +7,6 @@ field is optional per Discord's docs; the ones not modeled yet are: ``type``, ``
 ``flags`` - add them here as a future command actually needs them.
 """
 
-from __future__ import annotations
-
 from wd_discord.color import Color
 from wd_discord.models import DiscordModel
 

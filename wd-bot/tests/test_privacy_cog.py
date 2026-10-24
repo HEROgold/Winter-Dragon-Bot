@@ -1,7 +1,5 @@
 """Unit tests: the privacy cog purges soft-deleted records 30 days after their deletion, and nothing else (sqlite)."""
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from datetime import UTC, datetime, timedelta

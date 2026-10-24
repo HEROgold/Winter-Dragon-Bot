@@ -1,7 +1,5 @@
 """Unit tests: Bot's command registry, INTERACTION_CREATE dispatch, startup sync and hot reload (no real Discord calls)."""
 
-from __future__ import annotations
-
 import asyncio
 import importlib
 import sys

@@ -7,8 +7,6 @@ does the structured logging into ``./logs`` — see the plan.
 All drivers read the bot token from ``bot.ini`` [Tokens] discord_token and never print it.
 """
 
-from __future__ import annotations
-
 lazy import configparser
 lazy from pathlib import Path
 

@@ -1,7 +1,5 @@
 """Every archive table. Importing this module registers them all with SQLModel's metadata (the migrations do)."""
 
-from __future__ import annotations
-
 from archive.models.base import ArchiveChild, ArchiveCompositeEntity, ArchiveEntity, ArchiveEvent, ArchiveTable
 from archive.models.children import (
     Activity,

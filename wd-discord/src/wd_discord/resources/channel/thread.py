@@ -1,7 +1,5 @@
 """Thread metadata and member models for the Discord Channel object."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from wd_discord.models import DiscordModel

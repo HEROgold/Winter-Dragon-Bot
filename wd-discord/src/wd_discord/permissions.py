@@ -3,8 +3,6 @@
 https://docs.discord.com/developers/topics/permissions#permissions
 """
 
-from __future__ import annotations
-
 lazy from enum import IntEnum, IntFlag
 lazy from typing import TYPE_CHECKING, Annotated
 

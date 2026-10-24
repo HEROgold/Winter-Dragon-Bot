@@ -1,7 +1,5 @@
 """Urban Dictionary cog for Discord bot."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import urllib.parse
 

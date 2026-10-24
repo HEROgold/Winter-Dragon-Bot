@@ -6,8 +6,6 @@ gets its interaction through :func:`require_guild`. The bot's owners are the app
 the team that owns it (https://docs.discord.com/developers/topics/teams).
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING, overload
 
 lazy from wd_discord import is_network_error, narrow_to_guild

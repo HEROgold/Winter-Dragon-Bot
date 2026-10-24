@@ -1,7 +1,5 @@
 """Forum and voice related models and enums for the Discord Channel object."""
 
-from __future__ import annotations
-
 lazy from enum import IntEnum
 
 from wd_discord.models import DiscordModel

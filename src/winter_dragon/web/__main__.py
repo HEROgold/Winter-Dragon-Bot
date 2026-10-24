@@ -3,8 +3,6 @@
 Shares the bot's database and ini files; the dashboard's own settings are in ``dashboard.ini``.
 """
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import sys
 lazy from datetime import timedelta

@@ -1,7 +1,5 @@
 """Discord guild incidents data model."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from wd_discord.models import DiscordModel

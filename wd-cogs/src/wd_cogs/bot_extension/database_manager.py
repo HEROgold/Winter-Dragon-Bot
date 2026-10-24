@@ -1,7 +1,5 @@
 """Module for tracking user, guild, role and channel data in the database."""
 
-from __future__ import annotations
-
 lazy import datetime
 lazy from typing import override
 

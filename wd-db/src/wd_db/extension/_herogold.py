@@ -5,8 +5,6 @@ Importing herogold's models builds its own engine from its ``DbConfig``, which b
 session), so its file is made optional here, as ``wd_config.Config.bind(optional=True)`` does for the bot's own files.
 """
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 from herogold.orm.core.config import DbConfig

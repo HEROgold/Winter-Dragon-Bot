@@ -1,7 +1,5 @@
 """Module for an Abstract class, for questionnaire like games."""
 
-from __future__ import annotations
-
 lazy from abc import abstractmethod
 lazy from typing import TYPE_CHECKING, TypeVar, Unpack
 

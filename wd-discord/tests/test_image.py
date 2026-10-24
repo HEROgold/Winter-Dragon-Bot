@@ -1,7 +1,5 @@
 """Unit tests: image format enum and CDN base url."""
 
-from __future__ import annotations
-
 lazy from wd_discord.image import ImageFormats, ImageHash
 
 

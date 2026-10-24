@@ -1,7 +1,5 @@
 """Payloads are sorted into columns, child rows and custom data, and written naively but without erasing."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 from sqlmodel import Session, col, select

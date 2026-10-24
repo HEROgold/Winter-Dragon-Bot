@@ -1,7 +1,5 @@
 """UI components for the incremental game."""
 
-from __future__ import annotations
-
 lazy from sqlmodel import select
 
 

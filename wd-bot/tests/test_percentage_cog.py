@@ -1,7 +1,5 @@
 """Unit tests: the percentage command's calculation is deterministic and its embed matches the legacy love meter."""
 
-from __future__ import annotations
-
 lazy import random
 lazy from typing import TYPE_CHECKING
 

@@ -1,7 +1,5 @@
 """The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy import asyncio
 lazy from enum import StrEnum

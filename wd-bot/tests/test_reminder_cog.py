@@ -1,7 +1,5 @@
 """Unit tests: the /reminder commands, their autocomplete, and sending due reminders (no network)."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import TYPE_CHECKING

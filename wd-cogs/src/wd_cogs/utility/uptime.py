@@ -1,7 +1,5 @@
 """Module containing a cog for showing bot uptime."""
 
-from __future__ import annotations
-
 
 class Uptime(GroupCog, auto_load=True):
     """Cog for showing the bot's uptime."""

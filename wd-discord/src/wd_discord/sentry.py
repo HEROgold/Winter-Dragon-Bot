@@ -6,8 +6,6 @@ bot runtime, using the same :class:`~wd_config.sentry.SentrySettings` config and
 delivering events instead of being a no-op.
 """
 
-from __future__ import annotations
-
 lazy import sentry_sdk
 lazy from wd_config.sentry import SentrySettings
 

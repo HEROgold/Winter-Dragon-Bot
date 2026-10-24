@@ -1,7 +1,5 @@
 """Constants used across the bot."""
 
-from __future__ import annotations
-
 lazy from wd_discord.permissions import Permissions
 
 lazy from wd_core.intents import Intents

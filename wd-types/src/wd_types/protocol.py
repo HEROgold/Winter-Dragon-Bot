@@ -1,7 +1,5 @@
 """Contains protocols for WinterDragon."""
 
-from __future__ import annotations
-
 lazy from typing import Protocol, runtime_checkable
 
 

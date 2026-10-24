@@ -4,8 +4,6 @@ The database is the one ``database.ini`` configures, or ``--url``. ``revision`` 
 so point it at a scratch Postgres (see ``docs/migrations.md``), not the live one.
 """
 
-from __future__ import annotations
-
 lazy import argparse
 lazy import sys
 

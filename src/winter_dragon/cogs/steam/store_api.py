@@ -4,8 +4,6 @@ Field names mirror Steam's ``StoreItem`` messages, as SteamDB documents them in 
 (``webui/service_storebrowse.proto``, ``webui/service_storequery.proto``). Unknown fields are ignored.
 """
 
-from __future__ import annotations
-
 # pydantic resolves field annotations when the models are defined, so these imports can't be lazy.
 from datetime import datetime
 

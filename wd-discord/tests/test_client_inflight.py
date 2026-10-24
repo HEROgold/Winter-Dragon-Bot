@@ -1,7 +1,5 @@
 """Unit tests: identical GETs in flight at once share one request; anything else goes out on its own."""
 
-from __future__ import annotations
-
 import asyncio
 from typing import TYPE_CHECKING
 

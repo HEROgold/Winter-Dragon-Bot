@@ -1,7 +1,5 @@
 """Unit tests: DMing subscribers the Steam sales above their threshold that they haven't seen yet."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 

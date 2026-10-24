@@ -6,8 +6,6 @@ the `__all__` list of `wd_db/__init__.py`.
 Prints green for found, yellow for extra's, red for missing. Exits with code 1 if any are missing.
 """
 
-from __future__ import annotations
-
 lazy import ast
 lazy import sys
 lazy from pathlib import Path

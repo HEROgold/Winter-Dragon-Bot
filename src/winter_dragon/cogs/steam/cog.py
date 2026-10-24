@@ -1,7 +1,5 @@
 """The /steam command group, its page buttons, and the background scrape of Steam's specials."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override

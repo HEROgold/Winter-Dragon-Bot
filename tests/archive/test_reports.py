@@ -1,7 +1,5 @@
 """The reports count changed fields per object, and what wd-discord doesn't model."""
 
-from __future__ import annotations
-
 from archive.reports.changing_fields import count_changes
 from archive.reports.unmodelled import find_unmodelled
 

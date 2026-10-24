@@ -1,7 +1,5 @@
 """Unit tests: the Interaction dispatch-event model."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from wd_discord import models

@@ -1,7 +1,5 @@
 """Pin the app's own scopes: cog settings in cogs.ini (one section per cog)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

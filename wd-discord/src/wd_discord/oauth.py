@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 lazy from enum import StrEnum
 
 

@@ -4,8 +4,6 @@ The member's channel is created next to the hub, the member is moved into it, an
 Who is in which voice channel is tracked from GUILD_CREATE's voice states and every VOICE_STATE_UPDATE since.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 lazy import asyncio
 lazy from collections import defaultdict

@@ -1,7 +1,5 @@
 """Presences (https://docs.discord.com/developers/events/gateway-events#presence-update)."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.entities.base import Entity

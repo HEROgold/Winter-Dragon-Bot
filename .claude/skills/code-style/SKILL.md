@@ -11,7 +11,6 @@ Python **3.15**, ruff `select = ["ALL"]` (ignores only `D105`, `TD005`, `CPY001`
 
 ```python
 """One-line module docstring."""
-from __future__ import annotations
 
 lazy import asyncio
 lazy from typing import TYPE_CHECKING

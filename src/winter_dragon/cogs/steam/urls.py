@@ -1,7 +1,5 @@
 """Steam store URLs, and the IDs of the store items they point at."""
 
-from __future__ import annotations
-
 lazy import re
 lazy from dataclasses import dataclass
 lazy from enum import StrEnum

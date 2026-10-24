@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 
 class ConfigError(Exception):
     """Base class for all configuration-related exceptions."""

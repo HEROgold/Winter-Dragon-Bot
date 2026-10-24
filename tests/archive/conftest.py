@@ -1,7 +1,5 @@
 """Shared fixtures for the archive tests: an in-memory sqlite database with every archive table."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import pytest

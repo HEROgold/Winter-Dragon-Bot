@@ -4,8 +4,6 @@ Every modelled event is parsed again; the keys a model kept as ``model_extra`` (
 are counted per model. An event that no longer parses is counted too.
 """
 
-from __future__ import annotations
-
 import logging
 from collections import Counter
 from dataclasses import dataclass, field

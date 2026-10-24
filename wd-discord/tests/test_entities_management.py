@@ -1,7 +1,5 @@
 """Unit tests: creating, editing and deleting channels, permission overwrites, and guild members (no network)."""
 
-from __future__ import annotations
-
 from wd_discord import AuditLogReason, Channel, ChannelType, Guild, Member, Permissions, is_gone, is_network_error
 from wd_discord.audit import MAX_REASON_LENGTH, REASON_HEADER
 from wd_discord.errors import ApiResponseError, JsonErrorCode

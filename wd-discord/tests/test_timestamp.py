@@ -1,7 +1,5 @@
 """Tests for wd_discord.timestamp: Discord timestamp markup."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 import pytest

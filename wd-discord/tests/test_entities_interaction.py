@@ -1,7 +1,5 @@
 """Unit tests: bound interactions send the right callbacks and webhook requests (no network)."""
 
-from __future__ import annotations
-
 import json
 
 from wd_discord import (

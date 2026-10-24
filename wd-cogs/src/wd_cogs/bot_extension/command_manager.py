@@ -1,7 +1,5 @@
 """Cog for managing command enablement/disablement with interactive UI."""
 
-from __future__ import annotations
-
 lazy from .sync import LenFixer
 
 

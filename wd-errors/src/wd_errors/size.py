@@ -1,6 +1,4 @@
 """Size errors."""
-from __future__ import annotations
-
 
 class SizeError(ValueError):
     """Raised when a value is the wrong size."""

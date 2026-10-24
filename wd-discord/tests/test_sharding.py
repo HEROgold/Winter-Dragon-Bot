@@ -1,7 +1,5 @@
 """Unit tests: gateway sharding helpers and ShardManager batching (no sockets)."""
 
-from __future__ import annotations
-
 lazy from typing import Any
 
 lazy import pytest

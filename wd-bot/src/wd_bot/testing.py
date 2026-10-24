@@ -1,7 +1,5 @@
 """Test helpers for cogs: build one to call its handlers on, without a running bot."""
 
-from __future__ import annotations
-
 lazy from types import SimpleNamespace
 lazy from typing import TYPE_CHECKING, cast
 

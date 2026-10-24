@@ -1,7 +1,5 @@
 """wd-db's settings, backed by their own database.ini file."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 lazy from wd_config import Config

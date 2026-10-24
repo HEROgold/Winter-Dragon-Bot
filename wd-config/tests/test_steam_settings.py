@@ -1,7 +1,5 @@
 """Pin the Steam cog's tunables in cogs.ini: today's defaults on a fresh boot, operator values win."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

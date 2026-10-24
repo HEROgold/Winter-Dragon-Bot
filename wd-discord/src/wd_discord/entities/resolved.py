@@ -3,8 +3,6 @@
 https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object-resolved-data-structure
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 

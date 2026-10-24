@@ -1,7 +1,5 @@
 """Configurable Sentry settings, backed by their own sentry.ini file."""
 
-from __future__ import annotations
-
 lazy import enum
 lazy from enum import auto
 

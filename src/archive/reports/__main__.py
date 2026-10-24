@@ -3,8 +3,6 @@
 Both reports read the raw events (the last 30 days, by default), in the order they were received.
 """
 
-from __future__ import annotations
-
 import argparse
 import sys
 from typing import TYPE_CHECKING, Any

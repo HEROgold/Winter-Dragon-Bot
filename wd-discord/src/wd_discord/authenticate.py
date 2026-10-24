@@ -1,6 +1,4 @@
 """Location for all authentication related functions and classes."""
-from __future__ import annotations
-
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING
 

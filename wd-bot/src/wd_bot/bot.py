@@ -1,7 +1,5 @@
 """Module that contains the bot."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import inspect
 lazy import sys

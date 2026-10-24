@@ -1,7 +1,5 @@
 """Error models for Discord API responses."""
 
-from __future__ import annotations
-
 lazy from enum import IntEnum
 lazy from typing import TYPE_CHECKING
 

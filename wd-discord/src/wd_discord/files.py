@@ -4,8 +4,6 @@ A message with files is sent as ``multipart/form-data``: the JSON body goes in t
 ``n`` in the ``files[n]`` field, and the body's ``attachments`` array names each file by that same ``n``.
 """
 
-from __future__ import annotations
-
 from dataclasses import KW_ONLY, dataclass
 lazy import json
 lazy from typing import TYPE_CHECKING

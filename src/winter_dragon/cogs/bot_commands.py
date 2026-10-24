@@ -1,7 +1,5 @@
 """Admin command group for inspecting and forcing the application-command sync state."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_bot.checks import is_owner

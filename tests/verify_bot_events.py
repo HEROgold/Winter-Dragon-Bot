@@ -17,8 +17,6 @@ Requires the GUILDS, GUILD_MESSAGES and MESSAGE_CONTENT intents - the last one i
 must already be enabled for this bot application in the Discord developer portal, or IDENTIFY
 will be rejected (disallowed intents close code).
 """
-from __future__ import annotations
-
 lazy import asyncio
 lazy import sys
 

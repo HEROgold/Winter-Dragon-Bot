@@ -1,7 +1,5 @@
 """Guild members (https://docs.discord.com/developers/resources/guild#guild-member-object)."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 

@@ -1,7 +1,5 @@
 """File-watcher based hot reload utilities for Discord cogs."""
 
-from __future__ import annotations
-
 lazy import asyncio
 lazy import inspect
 lazy from dataclasses import dataclass

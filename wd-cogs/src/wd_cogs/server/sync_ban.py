@@ -1,7 +1,5 @@
 """Logger mixin for database classes."""
 
-from __future__ import annotations
-
 
 class SyncedBans(GroupCog, auto_load=True):
     """Sync bans across all guilds that subscribe to this feature."""

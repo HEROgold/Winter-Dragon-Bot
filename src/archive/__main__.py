@@ -5,8 +5,6 @@ file (``logs/ArchiveGateway.log``) and, through the writer, to the database. The
 ``read_only_token``, or ``discord_token`` when that is empty; the other settings are in ``archive.ini``.
 """
 
-from __future__ import annotations
-
 import argparse
 import asyncio
 import sys

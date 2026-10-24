@@ -1,7 +1,5 @@
 """The objects a message carries besides its text: attachments, reactions and mentioned users."""
 
-from __future__ import annotations
-
 from wd_discord.models import DiscordModel
 from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.resources.guild.member import GuildMember  # noqa: TC001 - pydantic resolves MentionedUser.member at runtime

@@ -1,7 +1,5 @@
 """Unit tests: Gateway.run resumes or re-identifies when the connection ends, over scripted fake sockets."""
 
-from __future__ import annotations
-
 lazy import json
 lazy from typing import Any
 

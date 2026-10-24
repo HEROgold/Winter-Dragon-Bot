@@ -1,7 +1,5 @@
 """Module to hold welcoming cogs."""
 
-from __future__ import annotations
-
 
 class WelcomeMenu(Menu, SessionMixin):
     """Menu for configuring welcome settings."""

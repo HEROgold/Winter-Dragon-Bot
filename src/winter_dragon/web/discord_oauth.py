@@ -4,8 +4,6 @@ The access token is revoked as soon as the user is known; the dashboard keeps no
 its session cookie (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant).
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 lazy from urllib.parse import urlencode
 

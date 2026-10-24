@@ -1,7 +1,5 @@
 """Unit tests: gateway presence (object -> API) and READY (API -> object) helpers."""
 
-from __future__ import annotations
-
 lazy from wd_discord.gateway import GatewayActivity, Status, build_presence, parse_ready
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Activity

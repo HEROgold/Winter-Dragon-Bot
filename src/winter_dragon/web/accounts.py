@@ -1,7 +1,5 @@
 """Who is signed in to the dashboard, kept in the signed session cookie, and the CSRF token their forms carry."""
 
-from __future__ import annotations
-
 lazy import secrets
 lazy from functools import cache
 lazy from typing import TYPE_CHECKING, Self

@@ -1,7 +1,5 @@
 """Discord role models (role, role tags, and role colors)."""
 
-from __future__ import annotations
-
 from typing import Annotated
 
 from pydantic import Field

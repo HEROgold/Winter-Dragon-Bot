@@ -1,7 +1,5 @@
 """The dashboard's config scope, in ``dashboard.ini``; only the web process defines it, so the bot never asks for it."""
 
-from __future__ import annotations
-
 from uuid import uuid4
 lazy from pathlib import Path
 

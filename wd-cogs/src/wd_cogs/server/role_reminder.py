@@ -1,7 +1,5 @@
 """Module to help remembering user roles when they leave and rejoin the server."""
 
-from __future__ import annotations
-
 
 class AutoReAssign(GroupCog, auto_load=True):
     """Cog to help re-assigning user roles when they leave and rejoin the server."""

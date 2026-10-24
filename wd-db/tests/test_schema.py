@@ -1,7 +1,5 @@
 """A database the migrations manage must already have a model's tables; any other gets them created."""
 
-from __future__ import annotations
-
 import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlmodel import Field, SQLModel

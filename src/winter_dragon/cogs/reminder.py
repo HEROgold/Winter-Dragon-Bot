@@ -1,7 +1,5 @@
 """The /reminder command group: one-off and repeating reminders, sent as DMs by a background task."""
 
-from __future__ import annotations
-
 from datetime import datetime, timedelta
 lazy import asyncio
 lazy from typing import TYPE_CHECKING, ClassVar, override

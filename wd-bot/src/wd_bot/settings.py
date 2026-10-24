@@ -1,7 +1,5 @@
 """wd-bot's settings, backed by their own bot.ini file (operator and internal settings together)."""
 
-from __future__ import annotations
-
 lazy from pathlib import Path
 
 lazy from confkit.data_types import List

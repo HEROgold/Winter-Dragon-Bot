@@ -1,7 +1,5 @@
 """Module for tracking infractions on users."""
 
-from __future__ import annotations
-
 
 _rule_severities = {
     AutoModRuleActionType.block_message: 3,

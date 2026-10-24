@@ -19,8 +19,6 @@ A target key is filled when it's missing or still :data:`~wd_config.parser.REQUI
 a target file is never overwritten.
 """
 
-from __future__ import annotations
-
 lazy import configparser
 lazy import shutil
 lazy from dataclasses import KW_ONLY, dataclass, field

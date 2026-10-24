@@ -1,7 +1,5 @@
 """Pydantic v2 models for the Discord v10 Guild object and its related structures."""
 
-from __future__ import annotations
-
 lazy from wd_discord.resources.guild.emoji import Emoji
 lazy from wd_discord.resources.guild.features import (
     DefaultMessageNotificationLevel,

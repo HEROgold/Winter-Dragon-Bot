@@ -1,7 +1,5 @@
 """The SQLModel tables a module defines, set aside while the module is executed again by a hot reload."""
 
-from __future__ import annotations
-
 lazy import inspect
 lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING

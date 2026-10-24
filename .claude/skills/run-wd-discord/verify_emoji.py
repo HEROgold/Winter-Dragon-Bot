@@ -6,8 +6,6 @@ Reads the support guild (Guild.emojis) and its welcome screen (WelcomeScreen.wel
 then exercises PartialEmoji.from_fields / is_custom / is_unicode on real values. Falls back to crafted
 custom + unicode pairs so the PartialEmoji logic is always covered even if the guild has no emojis.
 """
-from __future__ import annotations
-
 import asyncio
 import sys
 

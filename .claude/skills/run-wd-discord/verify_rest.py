@@ -6,8 +6,6 @@ Exercises the errors-as-values getters (isinstance guards, never try/except) plu
 call (modify_current_user) with a same-value username so the bot profile does not visibly change.
 Each request is also traced into logs/Client.log by the new Client logging.
 """
-from __future__ import annotations
-
 import asyncio
 import sys
 

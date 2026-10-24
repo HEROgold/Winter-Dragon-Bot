@@ -1,7 +1,5 @@
 """Unit tests: storing Steam sales, deciding which are new, and the queries the cog runs (sqlite)."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 

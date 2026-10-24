@@ -1,7 +1,5 @@
 """How the dashboard writes stored values for people: times in their zone, intervals and table names in words."""
 
-from __future__ import annotations
-
 from datetime import date, datetime, timedelta
 lazy import re
 lazy from typing import TYPE_CHECKING

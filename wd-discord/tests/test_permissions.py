@@ -1,7 +1,5 @@
 """Unit tests: permission bit values and channel-type concepts."""
 
-from __future__ import annotations
-
 lazy from wd_discord import ChannelType, Permissions
 lazy from wd_discord.permissions import REQUIRES_2FA, TIMED_OUT_PERMISSIONS
 

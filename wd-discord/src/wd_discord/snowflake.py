@@ -1,7 +1,5 @@
 """Module for representing Discord Snowflakes, which are unique identifiers used by Discord for various entities."""
 
-from __future__ import annotations
-
 lazy from dataclasses import dataclass
 lazy from datetime import UTC, datetime
 lazy from typing import TYPE_CHECKING, Any

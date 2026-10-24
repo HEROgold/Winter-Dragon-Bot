@@ -1,7 +1,5 @@
 """Discord guild enums and flags (features, levels, and system channel flags)."""
 
-from __future__ import annotations
-
 lazy from enum import IntEnum, IntFlag, StrEnum
 
 

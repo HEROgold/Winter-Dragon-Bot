@@ -5,8 +5,6 @@ its migration, so :func:`ensure_tables` refuses rather than creating it: a table
 migration that adds it fail later. Other databases (the sqlite test bot, tests) get the tables created directly.
 """
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 lazy from sqlalchemy import inspect

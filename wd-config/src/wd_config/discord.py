@@ -4,8 +4,6 @@ discord.ini is internal-only and its existence is the switch: when it is absent 
 nothing is written; once it exists (even empty) it is read and confkit fills in any missing defaults.
 """
 
-from __future__ import annotations
-
 lazy from dataclasses import dataclass
 
 lazy from .config import Config

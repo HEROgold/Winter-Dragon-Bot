@@ -1,7 +1,5 @@
 """Pin wd-bot's bot.ini scope: what a boot writes there, what resolves from it, and the first-launch check."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

@@ -1,7 +1,5 @@
 """Pin the database.ini and sentry.ini scopes: what a boot writes there, what resolves from them, and the check."""
 
-from __future__ import annotations
-
 lazy from typing import TYPE_CHECKING
 
 

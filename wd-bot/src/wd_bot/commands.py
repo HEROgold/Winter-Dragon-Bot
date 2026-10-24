@@ -1,7 +1,5 @@
 """Application commands: the shared :class:`AppCommand` base, plain :class:`Command` and :class:`CommandGroup`."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 lazy import annotationlib
 lazy import operator

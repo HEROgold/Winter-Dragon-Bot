@@ -2,8 +2,6 @@
 # Annotations are rendered with annotationlib.Format.STRING, so they always read as quoted source
 # strings ("a: 'int'") whether or not the module uses `from __future__ import annotations`.
 
-from __future__ import annotations
-
 from wd_bot.signature import command_signature
 
 

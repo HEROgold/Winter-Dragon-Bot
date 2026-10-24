@@ -1,7 +1,5 @@
 """Unknown Discord fields reach Sentry as one issue per model and field set, whatever the values."""
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 import pytest

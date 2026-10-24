@@ -29,8 +29,6 @@ gives it a shape.
 # wd-discord = { path = "../", editable = true }
 # ///
 
-from __future__ import annotations
-
 import argparse
 import subprocess
 import sys

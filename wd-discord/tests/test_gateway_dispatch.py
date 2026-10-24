@@ -2,8 +2,6 @@
 receive loop (:meth:`Gateway.listen`), no real socket involved.
 """
 
-from __future__ import annotations
-
 lazy import json
 lazy from typing import Any
 

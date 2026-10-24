@@ -16,8 +16,6 @@ Usage (from the repo root):
     uv run python scripts/generate_api_reference.py --check   # verify it's up to date (pre-commit)
 """
 
-from __future__ import annotations
-
 lazy import argparse
 lazy import ast
 lazy import copy
