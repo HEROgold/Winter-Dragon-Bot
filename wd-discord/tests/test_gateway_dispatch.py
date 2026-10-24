@@ -132,6 +132,30 @@ async def test_listen_dispatches_and_tracks_sequence() -> None:
     assert isinstance(received[1][1], RawEvent)
 
 
+async def test_a_payload_that_no_longer_fits_its_model_is_dispatched_raw() -> None:
+    """Discord sending something the model refuses must not end the connection."""
+    gateway = Gateway("token")
+    bad = {"channel_id": "2"}  # TYPING_START without its required user_id and timestamp
+    gateway._ws = FakeWebSocket(
+        [
+            {"op": Opcode.DISPATCH, "s": 1, "t": "TYPING_START", "d": bad},
+            {"op": Opcode.DISPATCH, "s": 2, "t": "SOMETHING_UNMODELED", "d": {"foo": "bar"}},
+        ],
+    )
+    received: list[tuple[str, Any]] = []
+
+    async def dispatch(name: str, payload: Any) -> None:  # noqa: ANN401
+        received.append((name, payload))
+
+    with pytest.raises(_EndOfFrames):
+        await gateway.listen(dispatch)
+
+    assert [name for name, _ in received] == ["TYPING_START", "SOMETHING_UNMODELED"]
+    raw = received[0][1]
+    assert isinstance(raw, RawEvent)
+    assert raw.data == bad
+
+
 async def test_listen_dispatches_ready_first() -> None:
     gateway = Gateway("token")
     gateway.ready = parse_ready(
