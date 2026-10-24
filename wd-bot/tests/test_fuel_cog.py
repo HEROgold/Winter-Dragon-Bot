@@ -5,11 +5,11 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import inspect, text
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import LIFECYCLE_COLUMNS, alive, soft_delete
+from wd_db.testing import seed, sqlite_engine
 from wd_discord.gateway.events import InteractionDataOption
 
 from winter_dragon.cogs.fuel import CarFuels, Fuel, render_efficiency_graph
@@ -101,9 +101,7 @@ async def test_efficiency_without_refuels_says_so(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    with Session(engine) as session:
-        session.add(_refuel(1, 600, 40, user_id=99))
-        session.commit()
+    seed(engine, _refuel(1, 600, 40, user_id=99))
 
     await Fuel.efficiency.invoke(_cog(engine), make_interaction("fuel"), [])
 
@@ -115,9 +113,7 @@ async def test_efficiency_sends_the_graph_as_a_file(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    with Session(engine) as session:
-        session.add_all([_refuel(2, 600, 40), _refuel(1, 650, 40.5)])
-        session.commit()
+    seed(engine, _refuel(2, 600, 40), _refuel(1, 650, 40.5))
 
     await Fuel.efficiency.invoke(_cog(engine), make_interaction("fuel"), [])
 
@@ -133,7 +129,7 @@ async def test_an_old_carfuels_table_gains_the_lifecycle_columns_and_keeps_worki
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    engine = sqlite_engine(tables=False)
     with engine.begin() as connection:
         connection.execute(
             text(

@@ -1,18 +1,11 @@
 """Custom data is read and replaced through the caller's session, and only committed by the caller."""
 
 import pytest
-from sqlalchemy import BigInteger, create_engine
-from sqlalchemy.ext.compiler import compiles
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 
 from wd_db.extension.custom_data import CustomData, get_custom_data, set_custom_data
 from wd_db.extension.lifecycle import DiscordKeyedModel
-
-
-@compiles(BigInteger, "sqlite")
-def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) -> str:
-    """Render BigInteger as INTEGER on sqlite, so herogold's BigInteger ids autoincrement."""
-    return "INTEGER"
+from wd_db.testing import sqlite_engine
 
 
 class CustomDataOwner(DiscordKeyedModel, table=True):
@@ -23,9 +16,7 @@ class CustomDataOwner(DiscordKeyedModel, table=True):
 
 @pytest.fixture
 def session() -> Session:
-    engine = create_engine("sqlite://")
-    SQLModel.metadata.create_all(engine)
-    session = Session(engine)
+    session = Session(sqlite_engine())
     owner = CustomDataOwner(id=1)
     session.add(owner)
     session.flush()

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
 from wd_bot.application import ApplicationId
 from wd_db.extension.lifecycle import alive
+from wd_db.testing import seed
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 
@@ -77,13 +78,6 @@ def _csrf(client: TestClient) -> str:
     return match.group(1)
 
 
-def _seed(bind: Engine, *rows: Reminder | TimedReminder) -> list[int]:
-    with Session(bind) as session:
-        session.add_all(rows)
-        session.commit()
-        return [row.id for row in rows if row.id is not None]
-
-
 def _alive_contents(bind: Engine) -> list[str]:
     with Session(bind) as session:
         once = [row.content for row in session.exec(alive(Reminder))]
@@ -102,7 +96,7 @@ def test_the_landing_page_lists_every_command_group(client: TestClient) -> None:
 
 
 def test_the_signpost_says_what_a_member_will_find(client: TestClient, bind: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
-    _seed(
+    seed(
         bind,
         Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(hours=1)),
         TimedReminder(content="daily", user_id=MEMBER_ID, timestamp=NOW, repeat_every=timedelta(days=1)),
@@ -152,7 +146,7 @@ def test_signing_in_opens_your_data_page_and_signing_out_ends_it(member: TestCli
 
 
 def test_the_data_page_lists_only_what_the_bot_stores_about_you(member: TestClient, bind: Engine) -> None:
-    _seed(
+    seed(
         bind,
         Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(hours=19)),
         Reminder(content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(hours=1)),
@@ -172,7 +166,7 @@ def test_a_record_that_does_not_exist_is_not_found(member: TestClient) -> None:
 
 
 def test_deleting_your_data_needs_your_username(member: TestClient, bind: Engine) -> None:
-    _seed(bind, Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+    seed(bind, Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
 
     response = member.post("/me/deletion", data={"csrf_token": _csrf(member), "confirm_name": "Frost"}, headers=HTMX)
 
@@ -182,7 +176,7 @@ def test_deleting_your_data_needs_your_username(member: TestClient, bind: Engine
 
 
 def test_deleting_your_data_hides_it_and_shows_how_far_it_got(member: TestClient, bind: Engine) -> None:
-    _seed(
+    seed(
         bind,
         Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
         Reminder(content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(days=1)),
@@ -265,7 +259,7 @@ def test_without_htmx_a_form_redirects_back_to_its_page(member: TestClient) -> N
 
 
 def test_you_can_only_delete_your_own_reminders(member: TestClient, bind: Engine) -> None:
-    mine, theirs = _seed(
+    mine, theirs = seed(
         bind,
         Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
         Reminder(content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(days=1)),

@@ -67,3 +67,9 @@ The database URL components; ``wd_db.constants.DATABASE_URL`` is assembled from 
 How :class:`wd_db.extension.api_table.ApiTable` talks to external APIs.
 
 - attributes: request_timeout
+
+## `wd_db.testing` — `wd-db/src/wd_db/testing.py`
+Test helpers for code built on wd-db: an in-memory sqlite database standing in for PostgreSQL.
+
+- `sqlite_engine(*, tables: bool=True, foreign_keys: bool=False) -> Engine` — Return a fresh in-memory database, shared across threads, with every registered table when ``tables``.
+- `seed(engine: Engine, *rows: SQLModel) -> list[int]` — Store ``rows`` in one transaction and return their primary keys, in order.

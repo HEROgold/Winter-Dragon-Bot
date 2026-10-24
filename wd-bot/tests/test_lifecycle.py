@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
-from sqlalchemy import BigInteger, create_engine, text
+from sqlalchemy import BigInteger, text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, Session
 from wd_db.errors import AlreadyExistsError
@@ -19,6 +19,7 @@ from wd_db.extension.lifecycle import (
     owned_by,
     soft_delete,
 )
+from wd_db.testing import sqlite_engine
 
 
 if TYPE_CHECKING:
@@ -234,7 +235,7 @@ def test_lifecycle_models_yields_every_table() -> None:
 
 
 def test_ensure_lifecycle_columns_migrates_an_old_table() -> None:
-    engine = create_engine("sqlite://")
+    engine = sqlite_engine(tables=False)
     with engine.begin() as connection:
         connection.execute(
             text(

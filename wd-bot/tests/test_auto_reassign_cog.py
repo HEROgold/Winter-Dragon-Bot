@@ -6,6 +6,7 @@ import pytest
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import create_or_restore
+from wd_db.testing import seed
 from wd_discord import Member, MemberRemove, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
 from wd_discord.testing import GUILD_JSON, RecordingClient
@@ -96,9 +97,7 @@ def _cog(engine: Engine, client: RecordingClient) -> AutoReassign:
 
 @pytest.fixture
 def enabled(engine: Engine) -> None:
-    with Session(engine) as session:
-        session.add(AutoReassignGuild(id=GUILD_ID))
-        session.commit()
+    seed(engine, AutoReassignGuild(id=GUILD_ID))
 
 
 @pytest.mark.usefixtures("enabled")
@@ -179,9 +178,7 @@ async def test_without_manage_roles_nothing_is_sent(engine: Engine) -> None:
 async def test_a_guild_the_client_does_not_know_is_fetched_first(engine: Engine) -> None:
     client = RecordingClient()
     cog = _cog(engine, client)
-    with Session(engine) as session:
-        session.add_all(RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=role_id) for role_id in (8, 12))
-        session.commit()
+    seed(engine, *(RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=role_id) for role_id in (8, 12)))
     client.reply(
         "GET",
         f"/guilds/{GUILD_ID}",
@@ -295,9 +292,7 @@ async def test_enable_and_disable_need_manage_roles(
     discord_client: RecordingClient,
     command: Any,
 ) -> None:
-    with Session(engine) as session:
-        session.add(AutoReassignGuild(id=GUILD_ID + 1))
-        session.commit()
+    seed(engine, AutoReassignGuild(id=GUILD_ID + 1))
     interaction = make_interaction("autoreassign", guild_id=GUILD_ID, permissions=Permissions.MANAGE_CHANNELS)
 
     await command.invoke(_cog(engine, discord_client), interaction, interaction.options)
@@ -311,9 +306,7 @@ async def test_when_the_bots_rights_are_unknown_each_role_is_tried_on_its_own(en
     """One refused role in a single PATCH would lose them all, so without the bot's rights each goes out alone."""
     client = RecordingClient()
     cog = _cog(engine, client)
-    with Session(engine) as session:
-        session.add_all(RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=role_id) for role_id in (8, 9))
-        session.commit()
+    seed(engine, *(RememberedRole(guild_id=GUILD_ID, user_id=MEMBER_ID, role_id=role_id) for role_id in (8, 9)))
     # No reply to GET /guilds/7: the guild can't be read, so the bot's rights can't be worked out.
 
     await cog.on_member_add(_join(client))

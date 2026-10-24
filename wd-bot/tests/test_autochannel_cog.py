@@ -8,6 +8,7 @@ import pytest
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
+from wd_db.testing import seed
 from wd_discord import Guild, Permissions, VoiceState, bind
 from wd_discord.gateway import EventName, parse_dispatch
 from wd_discord.gateway.events import InteractionDataOption, ResolvedData
@@ -80,12 +81,6 @@ def _cog(engine: Engine, client: RecordingClient) -> AutoChannels:
     return cog
 
 
-def _seed(engine: Engine, *rows: object) -> None:
-    with Session(engine) as session:
-        session.add_all(rows)  # pyright: ignore[reportArgumentType]
-        session.commit()
-
-
 def _channels(engine: Engine) -> list[AutoChannel]:
     with Session(engine) as session:
         return list(session.exec(alive(AutoChannel)))
@@ -102,7 +97,7 @@ def client() -> RecordingClient:
 
 
 async def test_joining_the_hub_creates_a_channel_and_moves_the_member_in(engine: Engine, client: RecordingClient) -> None:
-    _seed(engine, AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID), AutoChannelSettings(id=MEMBER_ID, user_limit=4))
+    seed(engine, AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID), AutoChannelSettings(id=MEMBER_ID, user_limit=4))
 
     await _cog(engine, client).on_voice_state_update(_state(client, HUB_ID))
 
@@ -120,7 +115,7 @@ async def test_joining_the_hub_creates_a_channel_and_moves_the_member_in(engine:
 
 
 async def test_an_owner_rejoining_the_hub_is_moved_to_their_channel(engine: Engine, client: RecordingClient) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID),
         AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID),
@@ -133,7 +128,7 @@ async def test_an_owner_rejoining_the_hub_is_moved_to_their_channel(engine: Engi
 
 
 async def test_the_guild_limit_stops_new_channels(engine: Engine, client: RecordingClient) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID, max_channels=1),
         AutoChannel(id=61, guild_id=GUILD_ID, owner_id=99),
@@ -148,7 +143,7 @@ async def test_the_guild_limit_stops_new_channels(engine: Engine, client: Record
 
 
 async def test_leaving_an_empty_channel_deletes_it(engine: Engine, client: RecordingClient) -> None:
-    _seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
+    seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
     cog = _cog(engine, client)
     cog.voice.move(GUILD_ID, MEMBER_ID, 60)
     cog.voice.move(GUILD_ID, 4, 60)
@@ -162,7 +157,7 @@ async def test_leaving_an_empty_channel_deletes_it(engine: Engine, client: Recor
 
 
 async def test_guild_create_cleans_up_channels_emptied_while_offline(engine: Engine, client: RecordingClient) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID),
         AutoChannel(id=61, guild_id=GUILD_ID, owner_id=4),
@@ -186,7 +181,7 @@ async def test_limit_is_saved_and_applied_to_the_owned_channel(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    _seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
+    seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
     discord_client.reply("PATCH", "/channels/60", NEW_CHANNEL)
     interaction = make_interaction(
         "autochannel",
@@ -237,7 +232,7 @@ async def test_mark_needs_manage_server(
 
 
 async def test_a_failed_move_to_their_channel_keeps_it(engine: Engine, client: RecordingClient) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID),
         AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID),
@@ -254,7 +249,7 @@ async def test_a_failed_move_to_their_channel_keeps_it(engine: Engine, client: R
 
 
 async def test_an_empty_channel_that_cant_be_deleted_is_kept_to_retry(engine: Engine, client: RecordingClient) -> None:
-    _seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
+    seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
     client.reply("DELETE", "/channels/60", {"code": 50001, "message": "Missing Access"}, status=403)
     cog = _cog(engine, client)
     cog.voice.move(GUILD_ID, MEMBER_ID, 60)
@@ -266,7 +261,7 @@ async def test_an_empty_channel_that_cant_be_deleted_is_kept_to_retry(engine: En
 
 
 async def test_an_owner_whose_channel_was_deleted_by_hand_gets_a_new_one(engine: Engine, client: RecordingClient) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID),
         AutoChannel(id=61, guild_id=GUILD_ID, owner_id=MEMBER_ID),
@@ -287,7 +282,7 @@ async def test_marking_a_channel_restores_a_soft_deleted_hub(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID, max_channels=5, deleted_at=datetime(2026, 1, 1, tzinfo=UTC)),
         AutoChannel(id=61, guild_id=GUILD_ID, owner_id=99),
@@ -326,7 +321,7 @@ async def test_naming_restores_soft_deleted_settings_with_the_limit_reset(
     client: RecordingClient,
 ) -> None:
     deleted = AutoChannelSettings(id=MEMBER_ID, name="old", user_limit=4, deleted_at=datetime(2026, 1, 1, tzinfo=UTC))
-    _seed(engine, AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID), deleted)
+    seed(engine, AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID), deleted)
     interaction = make_interaction(
         "autochannel",
         options=[InteractionDataOption(name="name", type=3, value="Den")],
@@ -341,7 +336,7 @@ async def test_naming_restores_soft_deleted_settings_with_the_limit_reset(
 
 
 async def test_a_soft_deleted_channel_does_not_count_toward_the_guild_limit(engine: Engine, client: RecordingClient) -> None:
-    _seed(
+    seed(
         engine,
         AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID, max_channels=1),
         AutoChannel(id=61, guild_id=GUILD_ID, owner_id=99, deleted_at=datetime(2026, 1, 1, tzinfo=UTC)),

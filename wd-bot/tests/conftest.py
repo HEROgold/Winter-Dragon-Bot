@@ -3,10 +3,7 @@
 lazy from typing import TYPE_CHECKING, Protocol
 
 lazy import pytest
-lazy from sqlalchemy import BigInteger
-lazy from sqlalchemy.ext.compiler import compiles
-lazy from sqlalchemy.pool import StaticPool
-lazy from sqlmodel import SQLModel, create_engine
+lazy from wd_db.testing import sqlite_engine
 lazy from wd_discord import CommandInteraction, ComponentInteraction
 lazy from wd_discord.components import ComponentType
 lazy from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
@@ -25,16 +22,6 @@ if TYPE_CHECKING:
     lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 
 
-@compiles(BigInteger, "sqlite")
-def _bigint_as_integer(_type: BigInteger, _compiler: object, **_kwargs: object) -> str:
-    """Render BigInteger as INTEGER on sqlite.
-
-    wd_db's SQLModel.id is a BigInteger primary key, which sqlite only autoincrements when the
-    column type is exactly INTEGER. Postgres (production) is unaffected.
-    """
-    return "INTEGER"
-
-
 @pytest.fixture
 def discord_client() -> RecordingClient:
     """Return a client that records requests instead of sending them; the builders' interactions use it."""
@@ -44,9 +31,7 @@ def discord_client() -> RecordingClient:
 @pytest.fixture
 def engine() -> Engine:
     """Return an in-memory sqlite engine with every table created, shared across threads."""
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    SQLModel.metadata.create_all(engine)
-    return engine
+    return sqlite_engine()
 
 
 class InteractionFactory(Protocol):
@@ -89,6 +74,7 @@ _ERROR_REPLY = {
 def error_reply() -> dict[str, object]:
     """Return the ephemeral error reply wd-bot sends to interaction 1 when its handler raises."""
     return _ERROR_REPLY
+
 
 DEFAULT_GUILD_ID = 1
 """The guild a :func:`make_interaction` member is in when the test names none: Discord sends members with their guild."""

@@ -7,11 +7,10 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
-from sqlalchemy import create_engine, event
-from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, select
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+from wd_db.testing import seed, sqlite_engine
 from wd_discord import AutocompleteInteraction, GatewayGuild, GuildDelete, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
@@ -44,8 +43,6 @@ from winter_dragon.cogs.tournament.models import (
 if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
-    from sqlalchemy.engine.interfaces import DBAPIConnection
-    from sqlalchemy.pool import ConnectionPoolEntry
     from wd_bot.auto_reload import AutoReloadWatcher
 
 
@@ -68,12 +65,6 @@ def _reminder(reminder_id: int, *, deleted_at: datetime | None = DAY_0, created_
     )
 
 
-def _seed(engine: Engine, *rows: SQLModel) -> None:
-    with Session(engine) as session:
-        session.add_all(rows)
-        session.commit()
-
-
 def _cog(engine: Engine) -> Privacy:
     return detached_cog(Privacy, engine=engine)
 
@@ -87,7 +78,7 @@ def _created_at_after_storing_again(engine: Engine, reminder_id: int) -> datetim
 
 
 async def test_a_reminder_deleted_29_days_ago_can_still_be_restored(engine: Engine) -> None:
-    _seed(engine, _reminder(1))
+    seed(engine, _reminder(1))
 
     await _cog(engine).purge(_day(29))
 
@@ -95,7 +86,7 @@ async def test_a_reminder_deleted_29_days_ago_can_still_be_restored(engine: Engi
 
 
 async def test_a_reminder_deleted_31_days_ago_is_gone_for_good(engine: Engine) -> None:
-    _seed(engine, _reminder(1))
+    seed(engine, _reminder(1))
 
     await _cog(engine).purge(_day(31))
 
@@ -103,7 +94,7 @@ async def test_a_reminder_deleted_31_days_ago_is_gone_for_good(engine: Engine) -
 
 
 async def test_alive_reminders_are_never_purged(engine: Engine) -> None:
-    _seed(engine, _reminder(1, deleted_at=None))
+    seed(engine, _reminder(1, deleted_at=None))
 
     await _cog(engine).purge(_day(10_000))
 
@@ -112,7 +103,7 @@ async def test_alive_reminders_are_never_purged(engine: Engine) -> None:
 
 
 async def test_purging_twice_at_the_same_moment_gives_the_same_result(engine: Engine) -> None:
-    _seed(engine, _reminder(1), _reminder(2, deleted_at=_day(20)), _reminder(3, deleted_at=None))
+    seed(engine, _reminder(1), _reminder(2, deleted_at=_day(20)), _reminder(3, deleted_at=None))
     cog = _cog(engine)
 
     await cog.purge(_day(31))
@@ -126,16 +117,7 @@ async def test_purging_twice_at_the_same_moment_gives_the_same_result(engine: En
 @pytest.fixture
 def foreign_keys_engine() -> Engine:
     """Return an in-memory sqlite engine enforcing foreign keys, as postgres does, with every table created."""
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-
-    @event.listens_for(engine, "connect")
-    def _enforce_foreign_keys(connection: DBAPIConnection, _: ConnectionPoolEntry) -> None:
-        cursor = connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    SQLModel.metadata.create_all(engine)
-    return engine
+    return sqlite_engine(foreign_keys=True)
 
 
 async def test_a_row_that_fails_is_logged_and_the_others_are_still_purged(
@@ -153,7 +135,7 @@ async def test_a_row_that_fails_is_logged_and_the_others_are_still_purged(
         deleted_at=DAY_0,
     )
     still_pointing = SteamSaleProperties(steam_sale_id=10, property=SaleTypes.DLC)  # alive: the sale can't go
-    _seed(foreign_keys_engine, sale, still_pointing, _reminder(1))
+    seed(foreign_keys_engine, sale, still_pointing, _reminder(1))
 
     cog = _cog(foreign_keys_engine)
     cog.logger.addHandler(caplog.handler)
@@ -285,7 +267,7 @@ def _seed_guild(engine: Engine, guild_id: int = GUILD_ID) -> int:
 
 def _seed_member(engine: Engine) -> None:
     """Store the member's reminder, refuel, Steam subscription and voice-channel preferences."""
-    _seed(
+    seed(
         engine,
         Reminder(content="feed the cat", user_id=MEMBER_ID, timestamp=DAY_0 + timedelta(days=400)),
         CarFuels(user_id=MEMBER_ID, amount=40, distance=600, price=70),
@@ -487,7 +469,7 @@ async def _send_due(engine: Engine, now: datetime) -> int:
 async def test_a_deletion_request_hides_all_of_the_member_s_data(engine: Engine) -> None:
     vote_id = _seed_guild(engine)
     _seed_member(engine)
-    _seed(engine, Reminder(content="due", user_id=MEMBER_ID, timestamp=DAY_0 - timedelta(hours=1)))
+    seed(engine, Reminder(content="due", user_id=MEMBER_ID, timestamp=DAY_0 - timedelta(hours=1)))
 
     await _cog(engine).request_deletion(MEMBER_ID, DAY_0)
 
@@ -511,7 +493,7 @@ async def test_a_deletion_request_takes_the_member_out_of_tournaments_that_have_
 async def test_a_second_request_while_one_is_pending_changes_nothing(engine: Engine) -> None:
     cog = _cog(engine)
     await cog.request_deletion(MEMBER_ID, DAY_0)
-    _seed(engine, Reminder(content="after", user_id=MEMBER_ID, timestamp=_day(2)))
+    seed(engine, Reminder(content="after", user_id=MEMBER_ID, timestamp=_day(2)))
 
     await cog.request_deletion(MEMBER_ID, _day(1))
 
@@ -521,7 +503,7 @@ async def test_a_second_request_while_one_is_pending_changes_nothing(engine: Eng
 
 
 async def test_the_steps_of_a_request_are_recorded_and_its_rows_purged_after_30_days(engine: Engine) -> None:
-    _seed(engine, _reminder(1, deleted_at=None))
+    seed(engine, _reminder(1, deleted_at=None))
     cog = _cog(engine)
 
     await cog.request_deletion(MEMBER_ID, DAY_0)
@@ -546,7 +528,7 @@ async def test_a_member_can_request_again_once_the_last_request_is_purged(engine
     cog = _cog(engine)
     await cog.request_deletion(MEMBER_ID, DAY_0)
     await cog.purge(_day(31))
-    _seed(engine, Reminder(content="new", user_id=MEMBER_ID, timestamp=_day(40)))
+    seed(engine, Reminder(content="new", user_id=MEMBER_ID, timestamp=_day(40)))
 
     await cog.request_deletion(MEMBER_ID, _day(32))
 
@@ -570,7 +552,7 @@ async def test_a_member_who_asked_for_deletion_while_their_guild_was_away_stays_
 async def test_a_reminder_added_after_the_request_works_normally(engine: Engine) -> None:
     await _cog(engine).request_deletion(MEMBER_ID, DAY_0)
 
-    _seed(engine, Reminder(content="later", user_id=MEMBER_ID, timestamp=_day(1)))
+    seed(engine, Reminder(content="later", user_id=MEMBER_ID, timestamp=_day(1)))
 
     assert _member_data(engine)["reminders"] == ["later"]
     assert await _send_due(engine, _day(1)) == 1
@@ -678,7 +660,7 @@ async def test_a_count_that_can_t_be_stored_is_logged_and_nothing_raises(
     make_interaction: InteractionFactory,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    cog = _cog(create_engine("sqlite://"))  # no tables
+    cog = _cog(sqlite_engine(tables=False))  # no tables
     cog.logger.addHandler(caplog.handler)
 
     try:
