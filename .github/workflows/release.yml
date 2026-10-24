@@ -13,17 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write  # Pushes the image to ghcr.io
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     outputs:
       version_changed: ${{ steps.version-check.outputs.version_changed }}
       version: ${{ steps.version-check.outputs.current_version }}
-      # The image build (#293) is the step with id `image`. Until it exists this
-      # is empty, and the deploy job below skips.
+      # Empty when the version didn't change, so the deploy job skips.
       digest: ${{ steps.image.outputs.digest }}
 
     steps:
     - uses: actions/checkout@v7
       with:
+        # The commit the Test run passed, not whatever main points at by now.
+        ref: ${{ github.event.workflow_run.head_sha || github.sha }}
         fetch-depth: 0  # Needed to get all tags for version comparison
 
     - name: Set up Python
@@ -52,10 +54,42 @@ jobs:
           echo "New version v$CURRENT_VERSION detected - will create release"
         fi
 
+    - name: Set up Docker Buildx
+      if: steps.version-check.outputs.version_changed == 'true'
+      uses: docker/setup-buildx-action@v4
+
+    - name: Log in to GHCR
+      if: steps.version-check.outputs.version_changed == 'true'
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    # The deploy target only accepts ghcr.io/herogold/winter-dragon-bot pinned by
+    # digest (deploy/verifier.toml), so renaming the image means changing that too.
+    - name: Build and push the image
+      id: image
+      if: steps.version-check.outputs.version_changed == 'true'
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        push: true
+        tags: |
+          ghcr.io/herogold/winter-dragon-bot:v${{ steps.version-check.outputs.current_version }}
+          ghcr.io/herogold/winter-dragon-bot:sha-${{ github.event.workflow_run.head_sha || github.sha }}
+        labels: |
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.version=v${{ steps.version-check.outputs.current_version }}
+          org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha || github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
     - name: Create GitHub Release
       if: steps.version-check.outputs.version_changed == 'true'
       uses: softprops/action-gh-release@v3
       with:
+        target_commitish: ${{ github.event.workflow_run.head_sha || github.sha }}
         tag_name: v${{ steps.version-check.outputs.current_version }}
         name: Release v${{ steps.version-check.outputs.current_version }}
         draft: false
@@ -79,7 +113,9 @@ jobs:
     needs: new-release
     if: ${{ needs.new-release.outputs.version_changed == 'true' && needs.new-release.outputs.digest != '' }}
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_URL }}
     concurrency: deploy-production
     permissions:
       id-token: write  # Needed for deploy-notifier's OIDC token
@@ -91,5 +127,15 @@ jobs:
         image: ghcr.io/herogold/winter-dragon-bot@${{ needs.new-release.outputs.digest }}
         version: v${{ needs.new-release.outputs.version }}
         timeout: 900  # Matches the verifier's [apps.winter-dragon] timeout
-    # TODO: once #293 decides whether Traefik routes the dashboard, add a smoke
-    # test here that retries its health URL, like nota's deploy workflow.
+
+    # PUBLIC_URL is the production environment's dashboard address. The landing
+    # page reads the database, so a 200 means the deployed stack serves. The
+    # first request for a new host can wait on a TLS certificate, so this
+    # retries for about two minutes; --max-time ends a request that hangs.
+    - name: Smoke test the live dashboard
+      if: ${{ vars.PUBLIC_URL != '' }}
+      env:
+        PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+      run: >-
+        curl --fail --silent --show-error --output /dev/null --max-time 10
+        --retry 12 --retry-all-errors --retry-delay 10 "$PUBLIC_URL/"
