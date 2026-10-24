@@ -1,10 +1,11 @@
 """A database the migrations manage must already have a model's tables; any other gets them created."""
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import inspect, text
 from sqlmodel import Field, SQLModel
 
 from wd_db.schema import MIGRATIONS_TABLE, UnmigratedTablesError, ensure_tables
+from wd_db.testing import sqlite_engine
 
 
 class SchemaRow(SQLModel, table=True):
@@ -14,7 +15,7 @@ class SchemaRow(SQLModel, table=True):
 
 
 def test_unmanaged_database_gets_the_tables_created() -> None:
-    engine = create_engine("sqlite://")
+    engine = sqlite_engine(tables=False)
 
     ensure_tables(engine, SchemaRow)
 
@@ -22,7 +23,7 @@ def test_unmanaged_database_gets_the_tables_created() -> None:
 
 
 def test_managed_database_refuses_a_missing_table() -> None:
-    engine = create_engine("sqlite://")
+    engine = sqlite_engine(tables=False)
     with engine.begin() as connection:
         connection.execute(text(f"CREATE TABLE {MIGRATIONS_TABLE} (version_num VARCHAR(32) NOT NULL)"))
 
@@ -34,7 +35,7 @@ def test_managed_database_refuses_a_missing_table() -> None:
 
 
 def test_managed_database_with_the_table_passes() -> None:
-    engine = create_engine("sqlite://")
+    engine = sqlite_engine(tables=False)
     ensure_tables(engine, SchemaRow)
     with engine.begin() as connection:
         connection.execute(text(f"CREATE TABLE {MIGRATIONS_TABLE} (version_num VARCHAR(32) NOT NULL)"))

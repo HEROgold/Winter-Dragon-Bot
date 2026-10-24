@@ -5,11 +5,11 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import text
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
+from wd_db.testing import seed, sqlite_engine
 from wd_discord import AutocompleteInteraction
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
@@ -69,13 +69,6 @@ def _reply(discord_client: RecordingClient) -> str:
 
 def _embed(discord_client: RecordingClient) -> dict[str, object]:
     return discord_client.interaction_responses()[-1]["data"]["embeds"][0]
-
-
-def _seed(engine: Engine, *reminders: Reminder | TimedReminder) -> list[int]:
-    with Session(engine) as session:
-        session.add_all(reminders)
-        session.commit()
-        return [reminder.id for reminder in reminders if reminder.id is not None]
 
 
 def _autocomplete(client: RecordingClient, current: str) -> AutocompleteInteraction:
@@ -162,7 +155,7 @@ async def test_repeat_stores_a_timed_reminder(engine: Engine, make_interaction: 
 
 
 async def test_send_due_dms_and_removes_one_off_reminders(engine: Engine) -> None:
-    _seed(
+    seed(
         engine,
         Reminder(content="due", user_id=ASKER_ID, timestamp=NOW - timedelta(minutes=1)),
         Reminder(content="later", user_id=ASKER_ID, timestamp=NOW + timedelta(minutes=1)),
@@ -177,7 +170,7 @@ async def test_send_due_dms_and_removes_one_off_reminders(engine: Engine) -> Non
 
 
 async def test_send_due_moves_repeating_reminders_on(engine: Engine) -> None:
-    _seed(engine, TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)))
+    seed(engine, TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)))
     cog, client = _cog(engine)
 
     assert await cog.send_due(NOW) == 1
@@ -189,7 +182,7 @@ async def test_send_due_moves_repeating_reminders_on(engine: Engine) -> None:
 
 
 async def test_undeliverable_reminder_is_still_removed(engine: Engine) -> None:
-    _seed(engine, Reminder(content="due", user_id=ASKER_ID, timestamp=NOW))
+    seed(engine, Reminder(content="due", user_id=ASKER_ID, timestamp=NOW))
     cog, client = _cog(engine)
     client.fail("POST", SEND_DM, ApiResponseError(code=50007, message="Cannot send messages to this user"))
 
@@ -204,7 +197,7 @@ async def test_remove_by_autocomplete_value(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    (timed_id,) = _seed(engine, TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)))
+    (timed_id,) = seed(engine, TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)))
     cog, _ = _cog(engine)
 
     await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"repeat:{timed_id}"))
@@ -215,7 +208,7 @@ async def test_remove_by_autocomplete_value(
 
 
 async def test_remove_by_typed_content(engine: Engine, make_interaction: InteractionFactory) -> None:
-    _seed(engine, Reminder(content="feed the cat", user_id=ASKER_ID, timestamp=NOW))
+    seed(engine, Reminder(content="feed the cat", user_id=ASKER_ID, timestamp=NOW))
     cog, _ = _cog(engine)
 
     await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder="feed the cat"))
@@ -229,7 +222,7 @@ async def test_remove_leaves_other_users_reminders_alone(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    (other_id,) = _seed(engine, Reminder(content="theirs", user_id=99, timestamp=NOW))
+    (other_id,) = seed(engine, Reminder(content="theirs", user_id=99, timestamp=NOW))
     cog, _ = _cog(engine)
 
     await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"once:{other_id}"))
@@ -241,13 +234,13 @@ async def test_remove_leaves_other_users_reminders_alone(
 
 
 async def test_autocomplete_suggests_own_matching_reminders(engine: Engine, discord_client: RecordingClient) -> None:
-    once_id, timed_id, _ = _seed(
+    once_id, timed_id, _ = seed(
         engine,
         Reminder(content="Feed the cat", user_id=ASKER_ID, timestamp=NOW),
         TimedReminder(content="clean the cat box", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)),
         Reminder(content="cat of someone else", user_id=99, timestamp=NOW),
     )
-    _seed(engine, Reminder(content="unrelated", user_id=ASKER_ID, timestamp=NOW))
+    seed(engine, Reminder(content="unrelated", user_id=ASKER_ID, timestamp=NOW))
     cog, _ = _cog(engine)
 
     choices = await cog.remove_choices(_autocomplete(discord_client, "CAT"), "CAT")
@@ -259,7 +252,7 @@ async def test_autocomplete_suggests_own_matching_reminders(engine: Engine, disc
 
 
 async def test_autocomplete_truncates_long_names(engine: Engine, discord_client: RecordingClient) -> None:
-    _seed(engine, Reminder(content="a" * 300, user_id=ASKER_ID, timestamp=NOW))
+    seed(engine, Reminder(content="a" * 300, user_id=ASKER_ID, timestamp=NOW))
     cog, _ = _cog(engine)
 
     (choice,) = await cog.remove_choices(_autocomplete(discord_client, ""), "")
@@ -287,7 +280,7 @@ async def test_removed_reminder_is_not_sent_and_cannot_be_removed_again(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    (once_id,) = _seed(engine, Reminder(content="feed the cat", user_id=ASKER_ID, timestamp=NOW))
+    (once_id,) = seed(engine, Reminder(content="feed the cat", user_id=ASKER_ID, timestamp=NOW))
     cog, client = _cog(engine)
 
     await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"once:{once_id}"))
@@ -300,7 +293,7 @@ async def test_removed_reminder_is_not_sent_and_cannot_be_removed_again(
 
 
 async def test_delivered_reminder_is_soft_deleted_and_not_sent_again(engine: Engine) -> None:
-    (once_id,) = _seed(engine, Reminder(content="due", user_id=ASKER_ID, timestamp=NOW))
+    (once_id,) = seed(engine, Reminder(content="due", user_id=ASKER_ID, timestamp=NOW))
     cog, client = _cog(engine)
 
     assert await cog.send_due(NOW) == 1
@@ -317,7 +310,7 @@ async def test_reminders_in_old_tables_still_work_after_load(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    engine = sqlite_engine(tables=False)
     with engine.begin() as connection:
         connection.execute(
             text(

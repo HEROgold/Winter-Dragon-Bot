@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 from sqlmodel import Session
 from wd_db.extension.lifecycle import alive
+from wd_db.testing import seed
 from wd_bot.checks import is_owner, member_has
 from wd_bot.testing import detached_cog
 from wd_discord.permissions import Permissions
@@ -153,16 +154,13 @@ async def test_update_renames_only_changed_channels_and_forgets_deleted_ones(eng
         [{"id": "41", "type": 2, "name": "Total Users: 8"}, {"id": "42", "type": 2, "name": "Online Users: 1"}],
     )
     client.reply("PATCH", "/channels/42", {"id": "42", "type": 2, "name": "Online Users: 4"})
-    with Session(engine) as session:
-        session.add_all(
-            [
-                StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
-                StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.ONLINE),
-                StatChannel(id=43, guild_id=GUILD_ID, kind=StatKind.BOTS),
-                PeakOnline(id=GUILD_ID, peak=9),
-            ],
-        )
-        session.commit()
+    seed(
+        engine,
+        StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
+        StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.ONLINE),
+        StatChannel(id=43, guild_id=GUILD_ID, kind=StatKind.BOTS),
+        PeakOnline(id=GUILD_ID, peak=9),
+    )
 
     await _cog(engine, client).update_guild(GUILD_ID)
 
@@ -223,15 +221,12 @@ async def test_remove_forgets_only_channels_that_are_gone_and_keeps_their_catego
     discord_client.reply("DELETE", "/channels/41", {"code": 50001, "message": "Missing Access"}, status=403)
     discord_client.reply("DELETE", "/channels/42", {"code": 10003, "message": "Unknown Channel"}, status=404)
     discord_client.reply("DELETE", "/channels/40", {"id": "40", "type": 4})
-    with Session(engine) as session:
-        session.add_all(
-            [
-                StatChannel(id=40, guild_id=GUILD_ID, kind=StatKind.CATEGORY),
-                StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
-                StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.BOTS),
-            ],
-        )
-        session.commit()
+    seed(
+        engine,
+        StatChannel(id=40, guild_id=GUILD_ID, kind=StatKind.CATEGORY),
+        StatChannel(id=41, guild_id=GUILD_ID, kind=StatKind.USERS),
+        StatChannel(id=42, guild_id=GUILD_ID, kind=StatKind.BOTS),
+    )
     interaction = make_interaction("stats", guild_id=GUILD_ID, permissions=Permissions.MANAGE_CHANNELS)
 
     await Stats.remove.invoke(_cog(engine, discord_client), interaction, [])
@@ -248,9 +243,7 @@ async def test_add_remove_add_renames_only_the_newest_channels_and_keeps_the_pea
     discord_client: RecordingClient,
 ) -> None:
     _guild_api(discord_client)
-    with Session(engine) as session:
-        session.add(PeakOnline(id=GUILD_ID, peak=9))
-        session.commit()
+    seed(engine, PeakOnline(id=GUILD_ID, peak=9))
     first = [{"id": str(40 + index), "type": 2 if index else 4, "guild_id": "1"} for index in range(6)]
     second = [{"id": str(50 + index), "type": 2 if index else 4, "guild_id": "1"} for index in range(6)]
     discord_client.reply_each("POST", f"/guilds/{GUILD_ID}/channels", *first, *second)

@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING, ClassVar, Self
 
 import pytest
 from sqlmodel import Session
-from wd_db.extension.lifecycle import alive
 from wd_bot.registry import GLOBAL
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import alive
+from wd_db.testing import seed
 from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.interactions import ApplicationCommand
 from wd_discord.testing import RecordingClient
@@ -277,9 +278,7 @@ async def test_page_button_only_works_for_the_invoker(
 async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -> None:
     end = NOW + timedelta(days=3)
     FakeScraper.sales = [app_sale(1, sale_end=end)]
-    with Session(engine) as session:
-        session.add(SteamUsers(id=7, sale_threshold=30, last_notification=NOW - timedelta(hours=1)))
-        session.commit()
+    seed(engine, SteamUsers(id=7, sale_threshold=30, last_notification=NOW - timedelta(hours=1)))
     cog, client = _cog(engine)
     _sync_steam_group(cog)
 
@@ -302,9 +301,7 @@ async def test_scrape_without_subscribers_stores_down_to_the_configured_percent(
 
 
 async def test_scrape_ignores_subscriber_thresholds_above_the_configured_percent(engine: Engine) -> None:
-    with Session(engine) as session:
-        session.add(SteamUsers(id=7, sale_threshold=100, last_notification=NOW))
-        session.commit()
+    seed(engine, SteamUsers(id=7, sale_threshold=100, last_notification=NOW))
     cog, _client = _cog(engine)
     _sync_steam_group(cog)
     await cog.scrape(NOW)
