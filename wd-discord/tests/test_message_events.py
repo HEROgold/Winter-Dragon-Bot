@@ -1,5 +1,7 @@
 """Unit tests: message, reaction, typing, emoji and sticker gateway events parse into their models."""
 
+from __future__ import annotations
+
 lazy from wd_discord.gateway import EventName, parse_dispatch
 lazy from wd_discord.gateway.events import (
     GuildEmojisUpdate,

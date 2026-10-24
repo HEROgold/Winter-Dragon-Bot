@@ -11,12 +11,14 @@ Public names only — open the file when you need a body. Index: [API reference]
   BaseGuild, BaseGuildCommand, BaseMember, BaseMessage, BaseRole, BaseUser, BoundEvent, Channel, ChannelPinsUpdate,
   ClientBound, CommandEntity, CommandInteraction, ComponentInteraction, CurrentApplication, CurrentUser, Emoji,
   Entitlement, Entity, EntityStore, GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand,
-  GuildCommandInteraction, GuildCommandStore, GuildComponentInteraction, GuildDelete, InGuild, Interaction, Invite,
-  Member, MemberRemove, MembersChunk, Message, Partial, PartialChannel, PartialGlobalCommand, PartialGuild,
-  PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget,
-  Presence, ReactionEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember, ThreadCreate, ThreadDelete,
-  ThreadListSync, ThreadMember, ThreadMembersUpdate, UnknownInteraction, User, UserStore, VoiceChannelStartTimeUpdate,
-  VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel, bind, event_entities, narrow_to_guild
+  GuildCommandInteraction, GuildCommandStore, GuildComponentInteraction, GuildDelete, GuildEmojisUpdate,
+  GuildStickersUpdate, InGuild, Interaction, Invite, Member, MemberRemove, MembersChunk, Message, MessageDelete,
+  MessageDeleteBulk, Partial, PartialChannel, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember,
+  PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget, Presence, ReactionAdd, ReactionEmoji,
+  ReactionRemove, ReactionRemoveAll, ReactionRemoveEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember,
+  ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, TypingStart, UnknownInteraction, User,
+  UserStore, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel,
+  bind, event_entities, narrow_to_guild
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -330,6 +332,78 @@ GUILD_MEMBERS_CHUNK: one part of the members a Request Guild Members (opcode 8) 
 - `@property presences -> Generator[Presence]` — The members' presences, when the request asked for them.
 - `@property nonce -> str | None` — The nonce the request was sent with, to match the chunks to it.
 
+### `class MessageDelete(Entity[MessageDeleteModel])`
+MESSAGE_DELETE: a message was deleted.
+
+- `@property message -> PartialMessage` — The deleted message.
+- `@property channel -> PartialChannel` — The channel it was in.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+
+### `class MessageDeleteBulk(Entity[MessageDeleteBulkModel])`
+MESSAGE_DELETE_BULK: several messages of one channel were deleted at once.
+
+- `@property messages -> Generator[PartialMessage]` — The deleted messages.
+- `@property channel -> PartialChannel` — The channel they were in.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+
+### `class ReactionAdd(Entity[MessageReactionAddModel])`
+MESSAGE_REACTION_ADD: someone reacted to a message.
+
+- `@property user -> PartialUser` — Who reacted.
+- `@property member -> Member | None` — Who reacted, as a member of the guild; ``None`` in a DM.
+- `@property message -> PartialMessage` — The message reacted to.
+- `@property message_author -> PartialUser | None` — Who sent the message reacted to, when Discord says.
+- `@property channel -> PartialChannel` — The message's channel.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+- `@property emoji -> PartialEmoji` — The emoji reacted with.
+- `@property burst -> bool` — Whether it is a super reaction.
+
+### `class ReactionRemove(Entity[MessageReactionRemoveModel])`
+MESSAGE_REACTION_REMOVE: someone removed their reaction from a message.
+
+- `@property user -> PartialUser` — Whose reaction was removed.
+- `@property message -> PartialMessage` — The message the reaction was on.
+- `@property channel -> PartialChannel` — The message's channel.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+- `@property emoji -> PartialEmoji` — The emoji of the removed reaction.
+- `@property burst -> bool` — Whether it was a super reaction.
+
+### `class ReactionRemoveAll(Entity[MessageReactionRemoveAllModel])`
+MESSAGE_REACTION_REMOVE_ALL: every reaction on a message was removed.
+
+- `@property message -> PartialMessage` — The message cleared of reactions.
+- `@property channel -> PartialChannel` — The message's channel.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+
+### `class ReactionRemoveEmoji(Entity[MessageReactionRemoveEmojiModel])`
+MESSAGE_REACTION_REMOVE_EMOJI: every reaction with one emoji was removed from a message.
+
+- `@property message -> PartialMessage` — The message the reactions were on.
+- `@property channel -> PartialChannel` — The message's channel.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+- `@property emoji -> PartialEmoji` — The emoji whose reactions were removed.
+
+### `class TypingStart(Entity[TypingStartModel])`
+TYPING_START: someone started typing in a channel.
+
+- `@property user -> PartialUser` — Who is typing.
+- `@property member -> Member | None` — Who is typing, as a member of the guild; ``None`` in a DM.
+- `@property channel -> PartialChannel` — Where they are typing.
+- `@property guild -> PartialGuild | None` — The channel's guild; ``None`` for a DM.
+- `@property started_at -> datetime` — When they started typing.
+
+### `class GuildEmojisUpdate(Entity[GuildEmojisUpdateModel])`
+GUILD_EMOJIS_UPDATE: a guild's emojis changed; this is its full new list.
+
+- `@property guild -> PartialGuild` — The guild.
+- `@property emojis -> Generator[Emoji]` — Every emoji the guild has now.
+
+### `class GuildStickersUpdate(Entity[GuildStickersUpdateModel])`
+GUILD_STICKERS_UPDATE: a guild's stickers changed; this is its full new list.
+
+- `@property guild -> PartialGuild` — The guild.
+- `@property stickers -> Generator[Sticker]` — Every sticker the guild has now.
+
 ## `wd_discord.entities.emoji` — `wd-discord/src/wd_discord/entities/emoji.py`
 Guild emojis and stickers (https://docs.discord.com/developers/resources/emoji, .../resources/sticker).
 
@@ -384,7 +458,7 @@ A user's or guild's access to one of the application's SKUs.
 ## `wd_discord.entities.events` — `wd-discord/src/wd_discord/entities/events.py`
 Gateway dispatch events bound to the client that received them.
 
-- `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate | Member | MemberRemove | MembersChunk | Role | PartialRole | CurrentUser | Presence`
+- `type BoundEvent = AnyInteraction | Message | GatewayGuild | Guild | Channel | ThreadMember | Ready | VoiceState | GuildDelete | ChannelPinsUpdate | ThreadCreate | ThreadDelete | ThreadListSync | ThreadMembersUpdate | VoiceChannelStatusUpdate | VoiceChannelStartTimeUpdate | Member | MemberRemove | MembersChunk | Role | PartialRole | CurrentUser | Presence | GuildEmojisUpdate | GuildStickersUpdate | MessageDelete | MessageDeleteBulk | ReactionAdd | ReactionRemove | ReactionRemoveAll | ReactionRemoveEmoji | TypingStart`
 - `bind(client: Client, model: DiscordModel, previous: DiscordModel | None=None) -> BoundEvent | DiscordModel` — Wrap a parsed dispatch ``model`` in the entity bound to ``client``, or return it as is if it has none.
 - `event_entities() -> Mapping[EventName, EntityType]` — Return the entity (or union of entities) :func:`bind` returns for each event; the source of ``listener.pyi``.
 

@@ -19,12 +19,20 @@ from wd_discord.entities import (
     GatewayGuild,
     Guild,
     GuildDelete,
+    GuildEmojisUpdate,
+    GuildStickersUpdate,
     Member,
     MemberRemove,
     MembersChunk,
     Message,
+    MessageDelete,
+    MessageDeleteBulk,
     PartialRole,
     Presence,
+    ReactionAdd,
+    ReactionRemove,
+    ReactionRemoveAll,
+    ReactionRemoveEmoji,
     Ready,
     Role,
     ThreadCreate,
@@ -32,6 +40,7 @@ from wd_discord.entities import (
     ThreadListSync,
     ThreadMember,
     ThreadMembersUpdate,
+    TypingStart,
     VoiceChannelStartTimeUpdate,
     VoiceChannelStatusUpdate,
     VoiceState,
@@ -120,5 +129,41 @@ def listener(
 def listener(name: Literal[EventName.USER_UPDATE]) -> Callable[[_BoundHandler[CurrentUser]], _BoundHandler[CurrentUser]]: ...
 @overload
 def listener(name: Literal[EventName.PRESENCE_UPDATE]) -> Callable[[_BoundHandler[Presence]], _BoundHandler[Presence]]: ...
+@overload
+def listener(name: Literal[EventName.MESSAGE_UPDATE]) -> Callable[[_BoundHandler[Message]], _BoundHandler[Message]]: ...
+@overload
+def listener(
+    name: Literal[EventName.MESSAGE_DELETE],
+) -> Callable[[_BoundHandler[MessageDelete]], _BoundHandler[MessageDelete]]: ...
+@overload
+def listener(
+    name: Literal[EventName.MESSAGE_DELETE_BULK],
+) -> Callable[[_BoundHandler[MessageDeleteBulk]], _BoundHandler[MessageDeleteBulk]]: ...
+@overload
+def listener(
+    name: Literal[EventName.MESSAGE_REACTION_ADD],
+) -> Callable[[_BoundHandler[ReactionAdd]], _BoundHandler[ReactionAdd]]: ...
+@overload
+def listener(
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE],
+) -> Callable[[_BoundHandler[ReactionRemove]], _BoundHandler[ReactionRemove]]: ...
+@overload
+def listener(
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE_ALL],
+) -> Callable[[_BoundHandler[ReactionRemoveAll]], _BoundHandler[ReactionRemoveAll]]: ...
+@overload
+def listener(
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE_EMOJI],
+) -> Callable[[_BoundHandler[ReactionRemoveEmoji]], _BoundHandler[ReactionRemoveEmoji]]: ...
+@overload
+def listener(name: Literal[EventName.TYPING_START]) -> Callable[[_BoundHandler[TypingStart]], _BoundHandler[TypingStart]]: ...
+@overload
+def listener(
+    name: Literal[EventName.GUILD_EMOJIS_UPDATE],
+) -> Callable[[_BoundHandler[GuildEmojisUpdate]], _BoundHandler[GuildEmojisUpdate]]: ...
+@overload
+def listener(
+    name: Literal[EventName.GUILD_STICKERS_UPDATE],
+) -> Callable[[_BoundHandler[GuildStickersUpdate]], _BoundHandler[GuildStickersUpdate]]: ...
 @overload
 def listener[F: Callable[..., Awaitable[None]]](name: str | None = ...) -> Callable[[F], F]: ...

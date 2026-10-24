@@ -12,12 +12,21 @@ lazy from wd_discord.entities.channel import Channel, ThreadMember
 lazy from wd_discord.entities.dispatches import (
     ChannelPinsUpdate,
     GuildDelete,
+    GuildEmojisUpdate,
+    GuildStickersUpdate,
     MemberRemove,
     MembersChunk,
+    MessageDelete,
+    MessageDeleteBulk,
+    ReactionAdd,
+    ReactionRemove,
+    ReactionRemoveAll,
+    ReactionRemoveEmoji,
     ThreadCreate,
     ThreadDelete,
     ThreadListSync,
     ThreadMembersUpdate,
+    TypingStart,
     VoiceChannelStartTimeUpdate,
     VoiceChannelStatusUpdate,
 )
@@ -73,6 +82,15 @@ type BoundEvent = (
     | PartialRole
     | CurrentUser
     | Presence
+    | GuildEmojisUpdate
+    | GuildStickersUpdate
+    | MessageDelete
+    | MessageDeleteBulk
+    | ReactionAdd
+    | ReactionRemove
+    | ReactionRemoveAll
+    | ReactionRemoveEmoji
+    | TypingStart
 )
 """Every entity :func:`bind` can return; ``match`` on it to handle each event."""
 
@@ -126,6 +144,16 @@ def _binders() -> Mapping[type[DiscordModel], Callable[..., ClientBound]]:
         wire.GuildRoleDelete: _deleted_role,
         wire.UserUpdate: CurrentUser,
         wire.PresenceUpdate: Presence,
+        wire.MessageUpdate: Message,
+        wire.MessageDelete: MessageDelete,
+        wire.MessageDeleteBulk: MessageDeleteBulk,
+        wire.MessageReactionAdd: ReactionAdd,
+        wire.MessageReactionRemove: ReactionRemove,
+        wire.MessageReactionRemoveAll: ReactionRemoveAll,
+        wire.MessageReactionRemoveEmoji: ReactionRemoveEmoji,
+        wire.TypingStart: TypingStart,
+        wire.GuildEmojisUpdate: GuildEmojisUpdate,
+        wire.GuildStickersUpdate: GuildStickersUpdate,
     }
 
 
@@ -179,4 +207,14 @@ def event_entities() -> Mapping[EventName, EntityType]:
         EventName.GUILD_ROLE_DELETE: PartialRole,
         EventName.USER_UPDATE: CurrentUser,
         EventName.PRESENCE_UPDATE: Presence,
+        EventName.MESSAGE_UPDATE: Message,
+        EventName.MESSAGE_DELETE: MessageDelete,
+        EventName.MESSAGE_DELETE_BULK: MessageDeleteBulk,
+        EventName.MESSAGE_REACTION_ADD: ReactionAdd,
+        EventName.MESSAGE_REACTION_REMOVE: ReactionRemove,
+        EventName.MESSAGE_REACTION_REMOVE_ALL: ReactionRemoveAll,
+        EventName.MESSAGE_REACTION_REMOVE_EMOJI: ReactionRemoveEmoji,
+        EventName.TYPING_START: TypingStart,
+        EventName.GUILD_EMOJIS_UPDATE: GuildEmojisUpdate,
+        EventName.GUILD_STICKERS_UPDATE: GuildStickersUpdate,
     }
