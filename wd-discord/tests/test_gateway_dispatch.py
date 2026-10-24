@@ -8,7 +8,7 @@ lazy from typing import Any
 lazy import pytest
 lazy from wd_discord.gateway import EventName, GuildCreate, Message, RawEvent, Ready, parse_dispatch, parse_ready
 lazy from wd_discord.gateway.connection import Gateway, Opcode
-lazy from wd_discord.testing import GUILD_JSON
+lazy from wd_discord.testing import GUILD_JSON, message_json, user_json
 
 
 def test_event_name_members_match_discord_wire_format() -> None:
@@ -43,15 +43,7 @@ def test_parse_dispatch_falls_back_to_raw_event_for_known_but_unmodeled_name() -
 def test_parse_dispatch_message_create() -> None:
     event = parse_dispatch(
         EventName.MESSAGE_CREATE,
-        {
-            "id": "1",
-            "channel_id": "2",
-            "author": {"id": "3", "username": "bot", "discriminator": "0"},
-            "content": "hi",
-            "timestamp": "t",
-            "tts": False,
-            "mention_everyone": False,
-        },
+        message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="t"),
     )
     assert isinstance(event, Message)
     assert event.content == "hi"
@@ -79,15 +71,7 @@ def test_parse_dispatch_accepts_plain_str_matching_an_event_name() -> None:
     """Gateway.listen() only ever has a plain ``str`` off the socket, not an EventName member."""
     event = parse_dispatch(
         "MESSAGE_CREATE",
-        {
-            "id": "1",
-            "channel_id": "2",
-            "author": {"id": "3", "username": "bot", "discriminator": "0"},
-            "content": "hi",
-            "timestamp": "t",
-            "tts": False,
-            "mention_everyone": False,
-        },
+        message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="t"),
     )
     assert isinstance(event, Message)
 
@@ -127,15 +111,7 @@ async def test_listen_dispatches_and_tracks_sequence() -> None:
                 "op": Opcode.DISPATCH,
                 "s": 1,
                 "t": "MESSAGE_CREATE",
-                "d": {
-                    "id": "1",
-                    "channel_id": "2",
-                    "author": {"id": "3", "username": "bot", "discriminator": "0"},
-                    "content": "hi",
-                    "timestamp": "t",
-                    "tts": False,
-                    "mention_everyone": False,
-                },
+                "d": message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="t"),
             },
             {"op": Opcode.DISPATCH, "s": 2, "t": "SOMETHING_UNMODELED", "d": {"foo": "bar"}},
         ],
@@ -159,7 +135,7 @@ async def test_listen_dispatches_and_tracks_sequence() -> None:
 async def test_listen_dispatches_ready_first() -> None:
     gateway = Gateway("token")
     gateway.ready = parse_ready(
-        {"session_id": "s", "resume_gateway_url": "wss://x", "user": {"id": "1", "username": "bot", "discriminator": "0"}},
+        {"session_id": "s", "resume_gateway_url": "wss://x", "user": user_json(id="1", username="bot")},
     )
     gateway._ws = FakeWebSocket([{"op": Opcode.DISPATCH, "s": 1, "t": "SOMETHING_UNMODELED", "d": {}}])  # noqa: SLF001 - test wiring
 

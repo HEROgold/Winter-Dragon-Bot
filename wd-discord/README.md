@@ -7,5 +7,5 @@ The in-house Discord API v10 client: REST transport, gateway, validated response
 - **Rules:** responses are `DiscordModel`s; every operation returns `T | NetworkError` instead of raising. See the `discord-api-models` skill.
 - **Generated:** `src/wd_discord/gateway/dispatch.pyi` — regenerate with `uv run wd-discord/scripts/generate_dispatch_overloads.py`.
 - **Entity coverage:** [entity-coverage.md](entity-coverage.md) tracks which Discord objects have entities and which still need a model.
-- **Tests:** `wd-discord/tests/`, offline via `wd_discord.testing.RecordingClient`.
-- **API reference:** [wd_discord](../docs/reference/wd-discord.md) · [entities](../docs/reference/wd-discord.entities.md) · [resources](../docs/reference/wd-discord.resources.md) · [gateway](../docs/reference/wd-discord.gateway.md)
+- **Tests:** `wd-discord/tests/`, offline via `wd_discord.testing.RecordingClient`. Build Discord JSON with the `wd_discord.testing` builders (`user_json()`, `member_json()`, `guild_create_json()`, ...) instead of writing the dicts out.
+- **API reference:** [wd_discord](../docs/reference/wd-discord.md) · [entities](../docs/reference/wd-discord.entities.md) · [resources](../docs/reference/wd-discord.resources.md) · [gateway](../docs/reference/wd-discord.gateway.md) · [testing](../docs/reference/wd-discord.testing.md)

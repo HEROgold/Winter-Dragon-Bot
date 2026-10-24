@@ -9,7 +9,7 @@ from wd_db.extension.lifecycle import create_or_restore
 from wd_db.testing import seed
 from wd_discord import Member, MemberRemove, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, role_json, user_json
 
 from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild, RememberedRole, is_enabled
 
@@ -24,25 +24,22 @@ MEMBER_ID = 3
 BOT_ID = 42
 BOT_ROLE = 50
 """The bot's own role: ranked above every role in these tests unless one says otherwise, and granting MANAGE_ROLES."""
-USER = {"id": str(MEMBER_ID), "username": "someone", "discriminator": "0"}
-BOT_USER = {"id": str(BOT_ID), "username": "bot", "discriminator": "0", "bot": True}
+USER = user_json(id=str(MEMBER_ID))
+BOT_USER = user_json(id=str(BOT_ID), username="bot", bot=True)
 MEMBER_PATH = f"/guilds/{GUILD_ID}/members/{MEMBER_ID}"
 
 
 def _role(
     role_id: int, *, managed: bool = False, position: int = 1, permissions: Permissions = Permissions.none()
 ) -> dict[str, Any]:
-    return {
-        "id": str(role_id),
-        "name": f"role {role_id}",
-        "color": 0,
-        "hoist": False,
-        "position": position,
-        "permissions": str(int(permissions)),
-        "managed": managed,
-        "mentionable": False,
-        "flags": 0,
-    }
+    return role_json(
+        id=str(role_id),
+        name=f"role {role_id}",
+        position=position,
+        permissions=str(int(permissions)),
+        managed=managed,
+        mentionable=False,
+    )
 
 
 def _bot_role(permissions: Permissions = Permissions.MANAGE_ROLES) -> dict[str, Any]:
@@ -50,7 +47,7 @@ def _bot_role(permissions: Permissions = Permissions.MANAGE_ROLES) -> dict[str, 
 
 
 def _member(*role_ids: int, user: dict[str, Any] = USER) -> dict[str, Any]:
-    return {"user": user, "roles": [str(role_id) for role_id in role_ids], "joined_at": None, "deaf": False, "mute": False}
+    return member_json(user=user, roles=[str(role_id) for role_id in role_ids])
 
 
 def _connect(

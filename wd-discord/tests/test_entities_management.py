@@ -5,19 +5,12 @@ from wd_discord.audit import MAX_REASON_LENGTH, REASON_HEADER
 from wd_discord.errors import ApiResponseError, JsonErrorCode
 from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, user_json
 
 
 VOICE_JSON = {"id": "20", "type": 2, "guild_id": "1", "name": "Lobby", "parent_id": "10", "user_limit": 0}
-MEMBER_JSON = {
-    "user": {"id": "3", "username": "someone", "discriminator": "0", "global_name": "Some One"},
-    "nick": None,
-    "roles": [],
-    "joined_at": "2026-10-08T00:00:00+00:00",
-    "deaf": False,
-    "mute": False,
-}
-BOT_MEMBER_JSON = {**MEMBER_JSON, "user": {"id": "4", "username": "robot", "discriminator": "0", "bot": True}}
+MEMBER_JSON = member_json(user=user_json(global_name="Some One"), nick=None, joined_at="2026-10-08T00:00:00+00:00")
+BOT_MEMBER_JSON = {**MEMBER_JSON, "user": user_json(id="4", username="robot", bot=True)}
 
 
 def test_reason_header_is_url_encoded_and_capped() -> None:
@@ -185,7 +178,7 @@ async def test_a_delete_left_the_resource_gone_when_it_worked_or_it_was_gone_alr
 
 async def test_all_members_reads_page_after_page_until_a_short_one() -> None:
     client = RecordingClient()
-    page = [{**MEMBER_JSON, "user": {"id": str(user_id), "username": "u", "discriminator": "0"}} for user_id in (3, 4, 5)]
+    page = [{**MEMBER_JSON, "user": user_json(id=str(user_id), username="u")} for user_id in (3, 4, 5)]
     client.reply_each("GET", "/guilds/1/members", page[:2], page[2:])
 
     members = await client.guilds.partial(1).all_members(page_size=2)

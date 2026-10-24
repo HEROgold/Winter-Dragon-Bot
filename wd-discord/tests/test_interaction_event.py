@@ -15,6 +15,7 @@ from wd_discord.gateway.events import (
 )
 from wd_discord.interactions import ApplicationCommand, InteractionContextType, Locale
 from wd_discord.resources.guild import GuildMember
+from wd_discord.testing import user_json
 
 
 if TYPE_CHECKING:
@@ -32,13 +33,13 @@ def test_parse_dispatch_parses_application_command_interaction() -> None:
         "type": 2,
         "token": "tok",
         "version": 1,
-        "user": {"id": "3", "username": "asker", "discriminator": "0"},
+        "user": user_json(username="asker"),
         "data": {
             "id": "10",
             "name": "percentage",
             "type": 1,
             "options": [{"name": "user", "type": 6, "value": "4"}],
-            "resolved": {"users": {"4": {"id": "4", "username": "target", "discriminator": "0"}}},
+            "resolved": {"users": {"4": user_json(id="4", username="target")}},
         },
     }
     interaction = parse_dispatch("INTERACTION_CREATE", payload)
@@ -66,7 +67,7 @@ def test_realistic_interaction_create_reports_no_unknown_fields(monkeypatch: pyt
         "guild_id": "5",
         "channel_id": "6",
         "member": {
-            "user": {"id": "3", "username": "asker", "discriminator": "0"},
+            "user": user_json(username="asker"),
             "roles": [],
             "joined_at": "2024-01-01T00:00:00.000000+00:00",
             "deaf": False,
@@ -129,7 +130,7 @@ def _interaction_payload(**overrides: object) -> dict[str, object]:
         "type": 2,
         "token": "tok",
         "version": 1,
-        "user": {"id": "3", "username": "asker", "discriminator": "0"},
+        "user": user_json(username="asker"),
         "data": {"id": "10", "name": "steam", "type": 1},
     }
     return payload | overrides
@@ -163,7 +164,7 @@ def test_interaction_types_without_a_subclass_parse_as_unknown() -> None:
 
 def test_invoking_user_comes_from_the_guild_member() -> None:
     member = {
-        "user": {"id": "7", "username": "member", "discriminator": "0"},
+        "user": user_json(id="7", username="member"),
         "roles": [],
         "joined_at": None,
         "deaf": False,

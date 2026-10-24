@@ -37,62 +37,30 @@ from wd_discord.gateway import EventName, RawEvent, Status, parse_dispatch, pars
 from wd_discord.gateway.events import GuildMemberUpdate
 from wd_discord.permissions import ChannelType
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import (
+    GUILD_JSON,
+    RecordingClient,
+    channel_json,
+    member_json,
+    message_json,
+    role_json,
+    thread_json,
+    user_json,
+    voice_state_json,
+)
 
 
-MESSAGE_JSON = {
-    "id": "1",
-    "channel_id": "2",
-    "author": {"id": "3", "username": "someone", "discriminator": "0"},
-    "content": "hi",
-    "timestamp": "t",
-    "tts": False,
-    "mention_everyone": False,
-}
 READY_JSON = {
     "session_id": "s",
     "resume_gateway_url": "wss://x",
-    "user": {"id": "42", "username": "bot", "discriminator": "0"},
+    "user": user_json(id="42", username="bot"),
     "guilds": [{"id": "7", "unavailable": True}, {"id": "8", "unavailable": True}],
     "shard": [0, 2],
 }
 INTERACTION_JSON = {"id": "1", "application_id": "2", "type": 1, "token": "tok", "version": 1}
-VOICE_STATE_JSON = {
-    "guild_id": "7",
-    "channel_id": "5",
-    "user_id": "3",
-    "session_id": "s",
-    "deaf": False,
-    "mute": False,
-    "self_deaf": False,
-    "self_mute": True,
-    "self_video": False,
-    "suppress": False,
-    "request_to_speak_timestamp": None,
-}
-MEMBER_JSON = {
-    "user": {"id": "3", "username": "someone", "discriminator": "0"},
-    "roles": [],
-    "joined_at": None,
-    "deaf": False,
-    "mute": False,
-}
 
 
-CHANNEL_JSON = {"id": "5", "type": 0, "guild_id": "7", "name": "general"}
-THREAD_JSON = {"id": "6", "type": 11, "guild_id": "7", "parent_id": "5", "name": "a thread"}
 THREAD_MEMBER_JSON = {"id": "6", "user_id": "3", "join_timestamp": "2026-10-10T12:00:00+00:00", "flags": 0}
-ROLE_JSON = {
-    "id": "8",
-    "name": "mods",
-    "color": 0,
-    "hoist": False,
-    "position": 1,
-    "permissions": "0",
-    "managed": False,
-    "mentionable": True,
-    "flags": 0,
-}
 PRESENCE_JSON = {
     "user": {"id": "3"},
     "status": "idle",
@@ -102,39 +70,39 @@ PRESENCE_JSON = {
 GUILD_EVENT_SAMPLES = {
     EventName.GUILD_UPDATE: GUILD_JSON,
     EventName.GUILD_DELETE: {"id": "7", "unavailable": True},
-    EventName.CHANNEL_CREATE: CHANNEL_JSON,
-    EventName.CHANNEL_UPDATE: CHANNEL_JSON,
-    EventName.CHANNEL_DELETE: CHANNEL_JSON,
+    EventName.CHANNEL_CREATE: channel_json(),
+    EventName.CHANNEL_UPDATE: channel_json(),
+    EventName.CHANNEL_DELETE: channel_json(),
     EventName.CHANNEL_PINS_UPDATE: {"guild_id": "7", "channel_id": "5", "last_pin_timestamp": "2026-10-10T12:00:00+00:00"},
-    EventName.THREAD_CREATE: {**THREAD_JSON, "newly_created": True},
-    EventName.THREAD_UPDATE: THREAD_JSON,
+    EventName.THREAD_CREATE: thread_json(newly_created=True),
+    EventName.THREAD_UPDATE: thread_json(),
     EventName.THREAD_DELETE: {"id": "6", "guild_id": "7", "parent_id": "5", "type": 11},
-    EventName.THREAD_LIST_SYNC: {"guild_id": "7", "threads": [THREAD_JSON], "members": [THREAD_MEMBER_JSON]},
+    EventName.THREAD_LIST_SYNC: {"guild_id": "7", "threads": [thread_json()], "members": [THREAD_MEMBER_JSON]},
     EventName.THREAD_MEMBER_UPDATE: {**THREAD_MEMBER_JSON, "guild_id": "7"},
     EventName.THREAD_MEMBERS_UPDATE: {
         "id": "6",
         "guild_id": "7",
         "member_count": 2,
-        "added_members": [{**THREAD_MEMBER_JSON, "member": MEMBER_JSON, "presence": None}],
+        "added_members": [{**THREAD_MEMBER_JSON, "member": member_json(), "presence": None}],
         "removed_member_ids": ["4"],
     },
     EventName.VOICE_CHANNEL_STATUS_UPDATE: {"id": "5", "guild_id": "7", "status": "chilling"},
     EventName.VOICE_CHANNEL_START_TIME_UPDATE: {"id": "5", "guild_id": "7", "voice_start_time": 1_760_097_600},
-    EventName.GUILD_MEMBER_ADD: {**MEMBER_JSON, "guild_id": "7"},
-    EventName.GUILD_MEMBER_REMOVE: {"guild_id": "7", "user": MEMBER_JSON["user"]},
+    EventName.GUILD_MEMBER_ADD: member_json(guild_id="7"),
+    EventName.GUILD_MEMBER_REMOVE: {"guild_id": "7", "user": user_json()},
     EventName.GUILD_MEMBERS_CHUNK: {
         "guild_id": "7",
-        "members": [MEMBER_JSON],
+        "members": [member_json()],
         "chunk_index": 0,
         "chunk_count": 1,
         "not_found": ["4"],
         "presences": [PRESENCE_JSON],
         "nonce": "n",
     },
-    EventName.GUILD_ROLE_CREATE: {"guild_id": "7", "role": ROLE_JSON},
-    EventName.GUILD_ROLE_UPDATE: {"guild_id": "7", "role": ROLE_JSON},
+    EventName.GUILD_ROLE_CREATE: {"guild_id": "7", "role": role_json()},
+    EventName.GUILD_ROLE_UPDATE: {"guild_id": "7", "role": role_json()},
     EventName.GUILD_ROLE_DELETE: {"guild_id": "7", "role_id": "8"},
-    EventName.USER_UPDATE: {"id": "42", "username": "bot", "discriminator": "0"},
+    EventName.USER_UPDATE: user_json(id="42", username="bot"),
     EventName.PRESENCE_UPDATE: {**PRESENCE_JSON, "guild_id": "7"},
 }
 """A payload for each guild, channel and thread event, as the gateway sends it."""
@@ -142,10 +110,10 @@ GUILD_EVENT_SAMPLES = {
 
 def test_bind_message_create() -> None:
     client = RecordingClient()
-    message = bind(client, parse_dispatch(EventName.MESSAGE_CREATE, MESSAGE_JSON))
+    message = bind(client, parse_dispatch(EventName.MESSAGE_CREATE, message_json()))
     assert isinstance(message, Message)
     assert message.client is client
-    assert message.channel.id == Snowflake(2)
+    assert message.channel.id == Snowflake(6)
 
 
 def test_bind_guild_create() -> None:
@@ -167,21 +135,23 @@ def test_bind_ready() -> None:
 
 def test_bind_voice_state_update() -> None:
     client = RecordingClient()
-    state = bind(client, parse_dispatch(EventName.VOICE_STATE_UPDATE, VOICE_STATE_JSON))
+    state = bind(client, parse_dispatch(EventName.VOICE_STATE_UPDATE, voice_state_json(guild_id="7")))
     assert isinstance(state, VoiceState)
     assert state.channel == PartialChannel(client, Snowflake(5))
     assert state.member == PartialMember(client, Snowflake(3), Snowflake(7))
 
 
 def test_voice_state_member_is_full_when_sent() -> None:
-    state = bind(RecordingClient(), parse_dispatch(EventName.VOICE_STATE_UPDATE, {**VOICE_STATE_JSON, "member": MEMBER_JSON}))
+    data = voice_state_json(guild_id="7", member=member_json())
+    state = bind(RecordingClient(), parse_dispatch(EventName.VOICE_STATE_UPDATE, data))
     assert isinstance(state, VoiceState)
     assert isinstance(state.member, Member)
     assert state.member.guild_id == Snowflake(7)
 
 
 def test_voice_state_disconnect_has_no_channel() -> None:
-    state = bind(RecordingClient(), parse_dispatch(EventName.VOICE_STATE_UPDATE, {**VOICE_STATE_JSON, "channel_id": None}))
+    data = voice_state_json(guild_id="7", channel_id=None)
+    state = bind(RecordingClient(), parse_dispatch(EventName.VOICE_STATE_UPDATE, data))
     assert isinstance(state, VoiceState)
     assert state.channel is None
 
@@ -195,10 +165,10 @@ def test_bind_returns_events_without_an_entity_unchanged() -> None:
 def test_event_entities_match_what_bind_returns() -> None:
     samples = {
         EventName.READY: parse_ready(READY_JSON),
-        EventName.MESSAGE_CREATE: parse_dispatch(EventName.MESSAGE_CREATE, MESSAGE_JSON),
+        EventName.MESSAGE_CREATE: parse_dispatch(EventName.MESSAGE_CREATE, message_json()),
         EventName.GUILD_CREATE: parse_dispatch(EventName.GUILD_CREATE, GUILD_JSON),
         EventName.INTERACTION_CREATE: parse_dispatch(EventName.INTERACTION_CREATE, INTERACTION_JSON),
-        EventName.VOICE_STATE_UPDATE: parse_dispatch(EventName.VOICE_STATE_UPDATE, VOICE_STATE_JSON),
+        EventName.VOICE_STATE_UPDATE: parse_dispatch(EventName.VOICE_STATE_UPDATE, voice_state_json(guild_id="7")),
         **{event: parse_dispatch(event, data) for event, data in GUILD_EVENT_SAMPLES.items()},
     }
     entities = event_entities()
@@ -360,7 +330,7 @@ def test_presence_update() -> None:
 
 def test_member_update_waits_for_the_state_cache() -> None:
     """A partial member can't become a Member until the state cache merges it, so it stays a model."""
-    data = {**MEMBER_JSON, "guild_id": "7", "avatar": None, "banner": None}
+    data = member_json(guild_id="7", avatar=None, banner=None)
     del data["deaf"], data["mute"]
     update = parse_dispatch(EventName.GUILD_MEMBER_UPDATE, data)
     assert isinstance(update, GuildMemberUpdate)

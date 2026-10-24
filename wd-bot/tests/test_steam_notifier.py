@@ -7,7 +7,7 @@ import pytest
 from sqlmodel import Session
 from wd_db.extension.lifecycle import soft_delete
 from wd_discord.errors.api import ApiResponseError
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import RecordingClient, message_json
 
 from winter_dragon.cogs.steam.models import SteamUsers
 from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
@@ -26,15 +26,7 @@ NOW = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
 EARLIER = NOW - timedelta(hours=3)
 OPEN_DM = "/users/@me/channels"
 SEND = "/channels/6/messages"
-SENT = {
-    "id": "5",
-    "channel_id": "6",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "",
-    "timestamp": "2026-10-08T12:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
+SENT = message_json()
 
 
 @pytest.fixture

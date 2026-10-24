@@ -491,25 +491,6 @@ Represents a Discord Snowflake, which is a unique identifier used by Discord for
 - `@property process_id -> int` — Get the process ID from the snowflake.
 - `@property increment -> int` — Get the increment from the snowflake.
 
-## `wd_discord.testing` — `wd-discord/src/wd_discord/testing.py`
-Test doubles for code built on wd-discord.
-
-- module names: TEST_TOKEN, TEST_APPLICATION_ID, GUILD_JSON: Mapping[str, object]
-
-### `@dataclass class SentRequest`
-One request a :class:`RecordingClient` received.
-
-- fields: method: str, path: str, json: Any, data: Any, files: Any, headers: Any, params: Any
-
-### `class RecordingClient(Client)`
-A client that records requests instead of sending them, and answers with canned replies.
-
-- `reply(method: str, path: str, body: Mapping[str, object] | list[Any] | None=None, *, status: int=200) -> None` — Answer every ``method`` request to ``path`` with ``body`` as JSON (no body when ``None``).
-- `reply_each(method: str, path: str, *bodies: Mapping[str, object]) -> None` — Answer the next ``method`` requests to ``path`` with ``bodies`` in turn, then fall back to :meth:`reply`'s.
-- `fail(method: str, path: str, error: ApiResponseError) -> None` — Answer every ``method`` request to ``path`` with ``error``.
-- `requests_to(method: str, path: str) -> list[SentRequest]` — Return the recorded ``method`` requests to ``path``, oldest first.
-- `interaction_responses() -> list[Any]` — Return the bodies of every initial interaction response sent, oldest first.
-
 ## `wd_discord.timestamp` — `wd-discord/src/wd_discord/timestamp.py`
 Discord timestamp markup: ``<t:EPOCH:STYLE>``, shown in each reader's own timezone and locale.
 

@@ -14,6 +14,7 @@ lazy from wd_discord.permissions import ChannelType
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Role
 lazy from wd_discord.resources.user import User
+lazy from wd_discord.testing import role_json, user_json
 
 
 if TYPE_CHECKING:
@@ -21,21 +22,9 @@ if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction
 
 
-ROLE = Role.model_validate(
-    {
-        "id": "8",
-        "name": "Members",
-        "color": 0,
-        "hoist": False,
-        "position": 1,
-        "permissions": "0",
-        "managed": False,
-        "mentionable": True,
-        "flags": 0,
-    },
-)
+ROLE = Role.model_validate(role_json(name="Members"))
 CATEGORY = ChannelModel.model_validate({"id": "9", "type": 4, "name": "Games", "permissions": "16"})
-TARGET = User.model_validate({"id": "4", "username": "target", "discriminator": "0"})
+TARGET = User.model_validate(user_json(id="4", username="target"))
 RESOLVED = ResolvedData(users={"4": TARGET}, roles={"8": ROLE}, channels={"9": CATEGORY})
 
 

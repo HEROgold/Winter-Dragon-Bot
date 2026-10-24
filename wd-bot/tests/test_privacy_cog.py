@@ -17,7 +17,7 @@ from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInt
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.interactions import ApplicationCommandOptionType
 from wd_discord.resources.user import User
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, user_json
 
 from winter_dragon.cogs import privacy
 from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild, RememberedRole, is_enabled, remembered_roles
@@ -172,7 +172,7 @@ GUILD_ID = 7
 OTHER_GUILD_ID = 8
 MEMBER_ID = 3
 RIVAL_ID = 4
-BOT_USER = {"id": "42", "username": "bot", "discriminator": "0", "bot": True}
+BOT_USER = user_json(id="42", username="bot", bot=True)
 
 
 class Clock:
@@ -629,7 +629,7 @@ async def test_autocomplete_and_button_clicks_are_not_counted(
         type=InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE,
         token="tok",  # noqa: S106
         version=1,
-        user=User.model_validate({"id": str(MEMBER_ID), "username": "asker", "discriminator": "0"}),
+        user=User.model_validate(user_json(id=str(MEMBER_ID), username="asker")),
         data=InteractionData(id="10", name="reminder", type=1, options=_subcommand("remove")),
     )
 

@@ -10,7 +10,7 @@ from wd_db.testing import seed
 from wd_bot.checks import is_owner, member_has
 from wd_bot.testing import detached_cog
 from wd_discord.permissions import Permissions
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, user_json
 
 from winter_dragon.cogs.stats import (
     GuildCounts,
@@ -33,14 +33,7 @@ if TYPE_CHECKING:
 GUILD_ID = 1
 COUNTED_GUILD = {**GUILD_JSON, "approximate_member_count": 10, "approximate_presence_count": 6, "afk_channel_id": "30"}
 MEMBERS = [
-    {
-        "user": {"id": str(user_id), "username": f"u{user_id}", "discriminator": "0", "bot": user_id > 7},
-        "roles": [],
-        "joined_at": None,
-        "deaf": False,
-        "mute": False,
-    }  # noqa: E501
-    for user_id in range(3, 10)
+    member_json(user=user_json(id=str(user_id), username=f"u{user_id}", bot=user_id > 7)) for user_id in range(3, 10)
 ]
 """Seven members, two of them (8 and 9) bots."""
 APPLICATION = {
@@ -52,7 +45,7 @@ APPLICATION = {
     "bot_require_code_grant": False,
     "verify_key": "k",
     "team": None,
-    "owner": {"id": "3", "username": "asker", "discriminator": "0"},
+    "owner": user_json(username="asker"),
 }  # noqa: E501
 COUNTS = GuildCounts(members=10, bots=2, online=6, created=datetime(2015, 1, 1, tzinfo=UTC))
 
@@ -179,7 +172,7 @@ async def test_reset_is_for_bot_owners_only(
     discord_client.reply(
         "GET",
         "/applications/@me",
-        {**APPLICATION, "owner": {"id": "99", "username": "o", "discriminator": "0"}},
+        {**APPLICATION, "owner": user_json(id="99", username="o")},
     )
     await Stats.reset.invoke(_cog(engine, discord_client), make_interaction("stats", guild_id=GUILD_ID), [])
 

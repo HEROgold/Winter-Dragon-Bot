@@ -15,7 +15,7 @@ from wd_discord.errors.api import ApiResponseError
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.resources.user import User
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import RecordingClient, message_json, user_json
 
 import winter_dragon.cogs.reminder as module
 from winter_dragon.cogs.reminder import Reminder, Reminders, TimedReminder, delay_from, next_occurrence
@@ -33,15 +33,6 @@ NOW = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
 ASKER_ID = 3
 OPEN_DM = "/users/@me/channels"
 SEND_DM = "/channels/6/messages"
-MESSAGE_JSON = {
-    "id": "5",
-    "channel_id": "6",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "",
-    "timestamp": "2026-10-08T12:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +44,7 @@ def _cog(engine: Engine, **bot: object) -> tuple[Reminders, RecordingClient]:
     """Build a Reminders cog on ``engine`` without running Cog.__init__, on a client that accepts DMs."""
     client = RecordingClient()
     client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
-    client.reply("POST", SEND_DM, MESSAGE_JSON)
+    client.reply("POST", SEND_DM, message_json())
     return detached_cog(Reminders, engine=engine, client=client, **bot), client
 
 
@@ -78,7 +69,7 @@ def _autocomplete(client: RecordingClient, current: str) -> AutocompleteInteract
         type=InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE,
         token="tok",  # noqa: S106
         version=1,
-        user=User.model_validate({"id": str(ASKER_ID), "username": "asker", "discriminator": "0"}),
+        user=User.model_validate(user_json(id=str(ASKER_ID), username="asker")),
         data=InteractionData(id="10", name="reminder", type=1),
     )
     return AutocompleteInteraction(client, model)
