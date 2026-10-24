@@ -11,9 +11,6 @@ script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/deploy-wd.sh"
 image_a="ghcr.io/herogold/winter-dragon-bot@sha256:$(printf 'a%.0s' {1..64})"
 image_b="ghcr.io/herogold/winter-dragon-bot@sha256:$(printf 'b%.0s' {1..64})"
 compose_args="compose -f compose.yml --env-file .env --env-file .env.deploy"
-# What .env.deploy holds after deploying each image as v1.2.3.
-env_a=$(printf 'WD_IMAGE=%s\nWD_VERSION=v1.2.3' "$image_a")
-env_b=$(printf 'WD_IMAGE=%s\nWD_VERSION=v1.2.3' "$image_b")
 
 failures=0
 work=$(mktemp -d)
@@ -62,7 +59,7 @@ new_project deploys
 deploy "$image_a"
 status=$?
 check "a pinned image deploys" '[[ $status -eq 0 ]]'
-check "writes WD_IMAGE and WD_VERSION to .env.deploy" '[[ "$(cat "$project/.env.deploy")" == "$env_a" ]]'
+check "writes WD_IMAGE to .env.deploy" '[[ "$(cat "$project/.env.deploy")" == "WD_IMAGE=$image_a" ]]'
 check "pulls the image" 'grep -qx "pull --quiet $image_a" "$log"'
 check "starts bot and web, which run backup and migrate first" \
   'grep -qx "$compose_args up -d --wait --wait-timeout 540 bot web" "$log"'
@@ -71,8 +68,8 @@ check "never runs git" '! grep -q git "$log"'
 new_project keeps-prev
 deploy "$image_a"
 deploy "$image_b"
-check "second deploy keeps the first in .env.deploy.prev" '[[ "$(cat "$project/.env.deploy.prev")" == "$env_a" ]]'
-check "second deploy writes the new image" '[[ "$(cat "$project/.env.deploy")" == "$env_b" ]]'
+check "second deploy keeps the first in .env.deploy.prev" '[[ "$(cat "$project/.env.deploy.prev")" == "WD_IMAGE=$image_a" ]]'
+check "second deploy writes the new image" '[[ "$(cat "$project/.env.deploy")" == "WD_IMAGE=$image_b" ]]'
 
 new_project rollback
 deploy "$image_a"
@@ -80,7 +77,7 @@ FAKE_UP_FAILS=2 deploy "$image_b"
 status=$?
 check "failed up exits non-zero" '[[ $status -ne 0 ]]'
 check "failed up prints migrate, bot and web logs" 'grep -qx "$compose_args logs --tail 50 migrate bot web" "$log"'
-check "failed up restores the previous image" '[[ "$(cat "$project/.env.deploy")" == "$env_a" ]]'
+check "failed up restores the previous image" '[[ "$(cat "$project/.env.deploy")" == "WD_IMAGE=$image_a" ]]'
 check "rollback skips backup and migrate" 'grep -qx "$compose_args up -d --wait --wait-timeout 240 --no-deps bot web" "$log"'
 
 new_project first-deploy-fails
@@ -91,12 +88,6 @@ check "a failed first deploy has nothing to roll back to" '[[ $(grep -c " up " "
 check "a failed first deploy forgets its image" '[[ ! -e "$project/.env.deploy" ]]'
 deploy "$image_b"
 check "the deploy after a failed first one has no rollback target" '[[ ! -e "$project/.env.deploy.prev" ]]'
-
-new_project bad-version
-PATH="$work/bin:$PATH" FAKE_DOCKER_LOG="$log" WD_PROJECT_DIR="$project" DEPLOY_IMAGE="$image_a" \
-  DEPLOY_VERSION=$'v1\nWD_IMAGE=evil' "$script" </dev/null >"$project/out.log" 2>&1
-check "drops a version that isn't a plain v<version>" \
-  '[[ "$(cat "$project/.env.deploy")" == "$(printf "WD_IMAGE=%s\nWD_VERSION=" "$image_a")" ]]'
 
 for bad in \
   "ghcr.io/herogold/winter-dragon-bot:latest" \

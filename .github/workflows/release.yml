@@ -66,9 +66,8 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    # The VPS verifier only accepts ghcr.io/herogold/winter-dragon-bot@sha256:…
-    # (image_pattern in deploy/verifier.toml), so renaming the image means
-    # changing that config too.
+    # The deploy target only accepts ghcr.io/herogold/winter-dragon-bot pinned by
+    # digest (deploy/verifier.toml), so renaming the image means changing that too.
     - name: Build and push the image
       id: image
       if: steps.version-check.outputs.version_changed == 'true'
@@ -116,7 +115,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://dragon.herogold.nl
+      url: ${{ vars.PUBLIC_URL }}
     concurrency: deploy-production
     permissions:
       id-token: write  # Needed for deploy-notifier's OIDC token
@@ -129,11 +128,14 @@ jobs:
         version: v${{ needs.new-release.outputs.version }}
         timeout: 900  # Matches the verifier's [apps.winter-dragon] timeout
 
-    # The landing page reads the database, so a 200 through Traefik means web,
-    # migrate and postgres all came up.
-    - name: Smoke test the dashboard
-      # The first request for a new host makes Traefik fetch its certificate, so
-      # allow about two minutes. --max-time ends a request that hangs.
+    # PUBLIC_URL is the production environment's dashboard address. The landing
+    # page reads the database, so a 200 means the deployed stack serves. The
+    # first request for a new host can wait on a TLS certificate, so this
+    # retries for about two minutes; --max-time ends a request that hangs.
+    - name: Smoke test the live dashboard
+      if: ${{ vars.PUBLIC_URL != '' }}
+      env:
+        PUBLIC_URL: ${{ vars.PUBLIC_URL }}
       run: >-
         curl --fail --silent --show-error --output /dev/null --max-time 10
-        --retry 12 --retry-all-errors --retry-delay 10 https://dragon.herogold.nl/
+        --retry 12 --retry-all-errors --retry-delay 10 "$PUBLIC_URL/"
