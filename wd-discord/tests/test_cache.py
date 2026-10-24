@@ -65,8 +65,8 @@ def test_a_large_guild_has_incomplete_members() -> None:
 
 def test_the_last_chunk_of_the_full_member_request_completes_the_members() -> None:
     cache = StateCache()
-    cache.apply(parse_dispatch(EventName.GUILD_CREATE, {**GUILD_CREATE, "large": True}))
-    chunk = {"guild_id": "7", "members": [MEMBER], "chunk_index": 0, "chunk_count": 2, "nonce": ALL_MEMBERS_NONCE}
+    cache.apply(parse_dispatch(EventName.GUILD_CREATE, guild_create_json(large=True)))
+    chunk = {"guild_id": "7", "members": [member_json()], "chunk_index": 0, "chunk_count": 2, "nonce": ALL_MEMBERS_NONCE}
     state = cache.guild(GUILD)
     assert state is not None
 
@@ -78,8 +78,8 @@ def test_the_last_chunk_of_the_full_member_request_completes_the_members() -> No
 
 def test_chunks_of_another_request_leave_the_members_incomplete() -> None:
     cache = StateCache()
-    cache.apply(parse_dispatch(EventName.GUILD_CREATE, {**GUILD_CREATE, "large": True}))
-    apply(cache, EventName.GUILD_MEMBERS_CHUNK, {"guild_id": "7", "members": [MEMBER], "chunk_index": 0, "chunk_count": 1})
+    cache.apply(parse_dispatch(EventName.GUILD_CREATE, guild_create_json(large=True)))
+    apply(cache, EventName.GUILD_MEMBERS_CHUNK, {"guild_id": "7", "members": [member_json()], "chunk_index": 0, "chunk_count": 1})
     state = cache.guild(GUILD)
     assert state is not None
     assert not state.members_complete
