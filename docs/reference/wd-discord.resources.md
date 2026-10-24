@@ -449,7 +449,7 @@ https://docs.discord.com/developers/resources/user#avatar-decoration-data-object
 ### `class NamePlateBackgroundColor(StrEnum)`
 Background color of the nameplate.
 
-- attributes: CRIMSON, BERRY, SKY, TEAL, FOREST, BUBBLE_GUM, VIOLET, COBALT, CLOVER, LEMON, WHITE
+- attributes: CRIMSON, BERRY, SKY, TEAL, FOREST, BUBBLE_GUM, VIOLET, COBALT, CLOVER, LEMON, WHITE, BLACK
 
 ### `class NamePlate(DiscordModel)`
 https://docs.discord.com/developers/resources/user#nameplate.

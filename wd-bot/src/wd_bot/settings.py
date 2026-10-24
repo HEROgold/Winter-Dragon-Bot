@@ -25,6 +25,8 @@ class Tokens:
 
     discord_token = BotConfig(REQUIRED)
     """The bot's token, from the Discord developer portal."""
+    read_only_token = BotConfig("")
+    """A token for a read-only bot, if the operator wants to use one; otherwise, the bot uses its own token."""
 
 
 class BotSettings:

@@ -10,6 +10,7 @@ def test_nameplate_background_color_values() -> None:
     assert NamePlateBackgroundColor.CRIMSON == "crimson"
     assert NamePlateBackgroundColor.BUBBLE_GUM == "bubble_gum"
     assert NamePlateBackgroundColor.WHITE == "white"
+    assert NamePlateBackgroundColor.BLACK == "black"
 
 
 def test_nameplate_and_collectibles_construct() -> None:

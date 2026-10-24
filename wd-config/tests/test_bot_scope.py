@@ -38,7 +38,7 @@ def test_fresh_boot_writes_bot_ini_defaults(boot_config: BootConfig) -> None:
     assert values["poll"] == 5
     assert values["intents"] == values["default_intents"]
     assert values["permissions"] == values["default_permissions"]
-    assert boot.files["bot.ini"]["Tokens"] == {"discord_token": "!!"}
+    assert boot.files["bot.ini"]["Tokens"] == {"discord_token": "!!", "read_only_token": ""}
     assert boot.files["bot.ini"]["BotSettings"]["intents"] == str(values["default_intents"])
 
 
