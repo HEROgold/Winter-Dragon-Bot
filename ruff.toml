@@ -32,7 +32,11 @@ runtime-evaluated-base-classes = [
   "wd_db.extension.model.SQLModel",
   "wd_db.extension.model.DiscordID",
   "wd_db.extension.lifecycle.LifecycleModel",
-  "wd_db.extension.lifecycle.DiscordKeyedModel"
+  "wd_db.extension.lifecycle.DiscordKeyedModel",
+  "archive.models.base.ArchiveEntity",
+  "archive.models.base.ArchiveCompositeEntity",
+  "archive.models.base.ArchiveEvent",
+  "archive.models.base.ArchiveChild"
 ]
 
 [lint.isort]

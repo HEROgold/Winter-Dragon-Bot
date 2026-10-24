@@ -60,7 +60,8 @@ testpaths = [
   "wd-discord/tests",
   "wd-bot/tests",
   "wd-config/tests",
-  "wd-db/tests"
+  "wd-db/tests",
+  "tests/archive"
   # ...add other wd-* packages as they get tests
 ]
 markers = [
