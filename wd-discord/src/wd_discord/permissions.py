@@ -3,17 +3,21 @@
 https://docs.discord.com/developers/topics/permissions#permissions
 """
 
-lazy from enum import IntEnum, IntFlag
+from __future__ import annotations
+
+lazy from enum import IntFlag
 lazy from typing import TYPE_CHECKING, Annotated
 
 lazy from pydantic import BeforeValidator
+
+from wd_discord.open_enum import OpenIntEnum
 
 
 if TYPE_CHECKING:
     lazy from herogold.supports import IsAnnotated
 
 
-class ChannelType(IntEnum):
+class ChannelType(OpenIntEnum):
     """Represents the different types of channels in Discord.
 
     Each channel type is represented by an integer value, allowing for easy identification and categorization of channels.
@@ -188,7 +192,6 @@ class Permissions(IntFlag):
     """Allows pinning and unpinning messages  T"""
     BYPASS_SLOWMODE: Annotated[Permissions.BYPASS_SLOWMODE, _CommonChannelTypes] = 1 << 52
     """Allows bypassing slowmode restrictions  T, V, S"""
-
 
 
 REQUIRES_2FA = (

@@ -1,13 +1,14 @@
 """Discord sticker models and enums."""
 
-lazy from enum import IntEnum
+from __future__ import annotations
 
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 
 
-class StickerType(IntEnum):
+class StickerType(OpenIntEnum):
     """https://docs.discord.com/developers/resources/sticker#sticker-object-sticker-types."""
 
     STANDARD = 1
@@ -16,7 +17,7 @@ class StickerType(IntEnum):
     """A sticker uploaded to a guild for the guild's members."""
 
 
-class StickerFormatType(IntEnum):
+class StickerFormatType(OpenIntEnum):
     """https://docs.discord.com/developers/resources/sticker#sticker-object-sticker-format-types."""
 
     PNG = 1

@@ -1,17 +1,21 @@
 """Error models for Discord API responses."""
 
-lazy from enum import IntEnum
+
+from __future__ import annotations
+
 lazy from typing import TYPE_CHECKING
 
 lazy from pydantic import BaseModel, RootModel
 lazy from wd_errors import ErrorNode
+
+from wd_discord.open_enum import OpenIntEnum
 
 
 if TYPE_CHECKING:
     lazy from wd_discord.errors import ApiErrorTree
 
 
-class JsonErrorCode(IntEnum):
+class JsonErrorCode(OpenIntEnum):
     """Codes Discord puts in a failed response's ``code`` (https://docs.discord.com/developers/topics/opcodes-and-status-codes#json)."""
 
     GENERAL_ERROR = 0

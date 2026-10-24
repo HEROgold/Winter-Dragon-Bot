@@ -1,9 +1,12 @@
 """User profile sub-objects: avatar decoration and nameplate collectibles."""
 
-lazy from enum import StrEnum, auto
+from __future__ import annotations
+
+lazy from enum import auto
 
 from wd_discord.image import ImageHash
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenStrEnum
 from wd_discord.snowflake import Snowflake
 
 
@@ -16,7 +19,7 @@ class Avatar(DiscordModel):
     """id of the avatar decoration's SKU"""
 
 
-class NamePlateBackgroundColor(StrEnum):
+class NamePlateBackgroundColor(OpenStrEnum):
     """Background color of the nameplate.
 
     https://docs.discord.com/developers/resources/user#nameplate

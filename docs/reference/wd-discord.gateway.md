@@ -193,7 +193,7 @@ USER_UPDATE (https://docs.discord.com/developers/events/gateway-events#user-upda
 ### `class PresenceUpdate(Presence)`
 PRESENCE_UPDATE (https://docs.discord.com/developers/events/gateway-events#presence-update).
 
-### `class InteractionType(IntEnum)`
+### `class InteractionType(OpenIntEnum)`
 The kind of interaction an INTERACTION_CREATE dispatch carries.
 
 - attributes: PING, APPLICATION_COMMAND, MESSAGE_COMPONENT, APPLICATION_COMMAND_AUTOCOMPLETE, MODAL_SUBMIT
@@ -332,12 +332,12 @@ Every dispatch event name Discord currently defines.
 ## `wd_discord.gateway.presence` — `wd-discord/src/wd_discord/gateway/presence.py`
 Presences and activities as the gateway sends them (https://docs.discord.com/developers/events/gateway-events#presence).
 
-### `class Status(StrEnum)`
+### `class Status(OpenStrEnum)`
 Valid presence statuses (https://docs.discord.com/developers/topics/gateway-events#update-presence-status-types).
 
 - attributes: online, dnd, idle, invisible, offline
 
-### `class ActivityType(IntEnum)`
+### `class ActivityType(OpenIntEnum)`
 https://docs.discord.com/developers/events/gateway-events#activity-object-activity-types.
 
 - attributes: PLAYING, STREAMING, LISTENING, WATCHING, CUSTOM, COMPETING

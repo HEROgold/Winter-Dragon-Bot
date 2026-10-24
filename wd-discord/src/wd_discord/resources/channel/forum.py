@@ -1,13 +1,14 @@
 """Forum and voice related models and enums for the Discord Channel object."""
 
-lazy from enum import IntEnum
+from __future__ import annotations
 
 from wd_discord.models import DiscordModel
+from wd_discord.open_enum import OpenIntEnum
 from wd_discord.snowflake import Snowflake
 lazy from wd_discord.partial_emoji import PartialEmoji
 
 
-class VideoQualityMode(IntEnum):
+class VideoQualityMode(OpenIntEnum):
     """The camera video quality mode of a voice channel.
 
     https://docs.discord.com/developers/resources/channel#channel-object-video-quality-modes
@@ -19,7 +20,7 @@ class VideoQualityMode(IntEnum):
     """720p quality."""
 
 
-class SortOrderType(IntEnum):
+class SortOrderType(OpenIntEnum):
     """The default sort order used to order posts in a forum or media channel.
 
     https://docs.discord.com/developers/resources/channel#channel-object-sort-order-types
@@ -31,7 +32,7 @@ class SortOrderType(IntEnum):
     """Sort forum posts by creation time (from most recent to oldest)."""
 
 
-class ForumLayoutType(IntEnum):
+class ForumLayoutType(OpenIntEnum):
     """The default layout used to display posts in a forum channel.
 
     https://docs.discord.com/developers/resources/channel#channel-object-forum-layout-types

@@ -1,10 +1,13 @@
 """Discord application commands (https://docs.discord.com/developers/interactions/application-commands)."""
 
-lazy from enum import IntEnum, StrEnum
+from __future__ import annotations
+
 lazy from typing import Annotated, Self
 
 lazy from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
 lazy from wd_core.client import JsonPayload
+
+from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 
 # eager: pydantic needs the real classes, not lazy proxies, for the model fields below
 from wd_discord.permissions import ChannelType, Permissions, PermissionsField
@@ -12,7 +15,7 @@ from wd_discord.snowflake import Snowflake
 lazy from wd_discord.models import DiscordModel
 
 
-class ApplicationCommandType(IntEnum):
+class ApplicationCommandType(OpenIntEnum):
     """Represents the type of an application command.
 
     https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-types
@@ -24,7 +27,7 @@ class ApplicationCommandType(IntEnum):
     PRIMARY_ENTRY_POINT = 4
 
 
-class ApplicationCommandOptionType(IntEnum):
+class ApplicationCommandOptionType(OpenIntEnum):
     """Represents the type of an application command option (distinct from the command's own type).
 
     https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-type
@@ -43,7 +46,7 @@ class ApplicationCommandOptionType(IntEnum):
     ATTACHMENT = 11
 
 
-class InteractionContextType(IntEnum):
+class InteractionContextType(OpenIntEnum):
     """Where an application command can be used.
 
     https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object-interaction-context-types
@@ -54,7 +57,7 @@ class InteractionContextType(IntEnum):
     PRIVATE_CHANNEL = 2
 
 
-class ApplicationIntegrationType(IntEnum):
+class ApplicationIntegrationType(OpenIntEnum):
     """Where an app can be installed, and so where its commands are available.
 
     https://docs.discord.com/developers/resources/application#application-object-application-integration-types
@@ -64,7 +67,7 @@ class ApplicationIntegrationType(IntEnum):
     USER_INSTALL = 1
 
 
-class EntryPointCommandHandlerType(IntEnum):
+class EntryPointCommandHandlerType(OpenIntEnum):
     """Who handles a PRIMARY_ENTRY_POINT command's interaction.
 
     https://docs.discord.com/developers/interactions/application-commands#application-command-object-entry-point-command-handler-types
@@ -76,7 +79,7 @@ class EntryPointCommandHandlerType(IntEnum):
     """Discord handles the interaction by launching an Activity and sending a follow-up message, without the app"""
 
 
-class Locale(StrEnum):
+class Locale(OpenStrEnum):
     """A Discord locale code (https://docs.discord.com/developers/reference#locales)."""
 
     INDONESIAN = "id"
