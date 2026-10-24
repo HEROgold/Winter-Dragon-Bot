@@ -233,6 +233,9 @@ class Gateway(LoggerMixin):
         self.shard = shard
         self._ws: ClientConnection | None = None
         self._heartbeat_task: asyncio.Task[None] | None = None
+        self._heartbeat_interval: float | None = None
+        self._last_ack: float | None = None
+        """When Discord last acknowledged a heartbeat, in event loop time."""
         self._seq: int | None = None
         self._presence: dict[str, Any] | None = None
         self._ready_dispatched = False
@@ -248,6 +251,17 @@ class Gateway(LoggerMixin):
             msg = "Gateway is not connected."
             raise RuntimeError(msg)
         await self._ws.send(json.dumps({"op": int(op), "d": data}))
+
+    @property
+    def alive(self) -> bool:
+        """Whether Discord acknowledged a heartbeat within the last two heartbeat intervals.
+
+        A connection that stops getting acknowledgements is a zombie, which Discord expects the client to replace.
+        https://docs.discord.com/developers/events/gateway#heartbeat-interval-example-heartbeat-ack
+        """
+        if self._last_ack is None or self._heartbeat_interval is None:
+            return False
+        return asyncio.get_running_loop().time() - self._last_ack < 2 * self._heartbeat_interval
 
     async def _heartbeat_loop(self, interval: float) -> None:
         """Send op 1 heartbeats every ``interval`` seconds with the last sequence.
@@ -286,7 +300,7 @@ class Gateway(LoggerMixin):
         """Connect to ``url``, wait for HELLO, start heartbeating at the interval it names, and return the socket."""
         ws = self._ws = await connect(url)
         hello = json.loads(await ws.recv())
-        interval = hello["d"]["heartbeat_interval"] / 1000
+        interval = self._heartbeat_interval = hello["d"]["heartbeat_interval"] / 1000
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop(interval))
         return ws
 
@@ -371,6 +385,8 @@ class Gateway(LoggerMixin):
                     await self.request_guild_members(event.id)
             case {"op": Opcode.HEARTBEAT}:
                 await self._send(Opcode.HEARTBEAT, self._seq)
+            case {"op": Opcode.HEARTBEAT_ACK}:
+                self._last_ack = asyncio.get_running_loop().time()
             case {"op": Opcode.RECONNECT}:
                 self.logger.info(t"Gateway requested a reconnect; resuming.")
                 return Disconnect.RESUME

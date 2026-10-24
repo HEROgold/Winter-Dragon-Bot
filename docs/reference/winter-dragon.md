@@ -38,6 +38,14 @@ A gateway that logs every frame it receives as raw JSON before handling it.
 - `async log_ready(name: str, event: DiscordModel) -> None` — Log READY, which :meth:`connect` consumes before :meth:`_handle` sees it; other events are logged raw.
 - `capture_model_warnings() -> None` — Send ``wd_discord.models``' log records (unknown-field warnings) through this gateway's handlers.
 
+## `winter_dragon.health` — `src/winter_dragon/health.py`
+Container health checks, run by compose: ``python -m winter_dragon.health bot`` or ``... web``.
+
+- module names: ALIVE_FILE, ALIVE_MAX_AGE, WEB_TIMEOUT, CHECKS
+- `bot_healthy() -> bool` — Return whether :data:`ALIVE_FILE` was touched within :data:`ALIVE_MAX_AGE` seconds.
+- `web_healthy() -> bool` — Return whether the dashboard's landing page answers 200 on this host.
+- `main(argv: list[str]) -> int` — Run the check named by ``argv[0]`` and return the exit code.
+
 ## `winter_dragon.run_test_bot` — `src/winter_dragon/run_test_bot.py`
 Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.
 

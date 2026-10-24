@@ -43,6 +43,7 @@ An activity shown on the bot's presence (object -> API via :meth:`to_dict`).
 ### `class Gateway(LoggerMixin)`
 A minimal async Discord gateway client.
 
+- `@property alive -> bool` — Whether Discord acknowledged a heartbeat within the last two heartbeat intervals.
 - `async connect(*, presence: dict[str, Any] | None=None) -> Ready` — Open the connection, identify, and return once READY is received.
 - `async resume() -> None` — Reconnect to the session's resume URL and RESUME (op 6) it from the last sequence received.
 - `async run(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None` — Run :meth:`listen` until cancelled, reconnecting whenever the connection ends.
@@ -437,5 +438,6 @@ The ``GET /gateway/bot`` response (API -> object via :func:`parse_gateway_bot`).
 ### `class ShardManager`
 Run one :class:`Gateway` per shard, respecting the IDENTIFY rate limits.
 
+- `@property alive -> bool` — Whether the shards are started and every one is :attr:`~Gateway.alive`.
 - `@with_known_exception shard_for_guild(guild_id: int) -> Gateway | RuntimeError` — Return the started shard handling ``guild_id``'s events, or the :class:`RuntimeError` if not started.
 - `async serve_forever(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None` — Run every shard's receive loop until cancelled.

@@ -122,6 +122,11 @@ class ShardManager:
         self.num_shards = num_shards if num_shards is not None else info.shards
         self.shards: list[Gateway] = []
 
+    @property
+    def alive(self) -> bool:
+        """Whether the shards are started and every one is :attr:`~Gateway.alive`."""
+        return bool(self.shards) and all(shard.alive for shard in self.shards)
+
     @with_known_exception(RuntimeError)
     def shard_for_guild(self, guild_id: int) -> Gateway | RuntimeError:
         """Return the started shard handling ``guild_id``'s events, or the :class:`RuntimeError` if not started."""

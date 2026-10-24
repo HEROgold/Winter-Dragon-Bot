@@ -132,6 +132,15 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+    # Healthy while every gateway shard gets its heartbeats acknowledged (winter_dragon.health). The first
+    # acknowledgement can take a heartbeat interval (about 41 s) after the shards connect.
+    healthcheck:
+      test: ["CMD", "python", "-m", "winter_dragon.health", "bot"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+      start_interval: 5s
     # Keeps the bot up after a crash or a Docker restart; `docker compose stop bot` ends it.
     restart: unless-stopped
     networks:
@@ -182,6 +191,14 @@ services:
     # host = 0.0.0.0 in it so the port mapping reaches the server. A list anchor can't be extended, so the
     # shared mounts are repeated here with dashboard.ini added.
     command: python -m winter_dragon.web
+    # Healthy while the landing page, which reads the database, answers 200 (winter_dragon.health).
+    healthcheck:
+      test: ["CMD", "python", "-m", "winter_dragon.health", "web"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+      start_interval: 5s
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/winter_dragon
       REDIS_HOST: redis
