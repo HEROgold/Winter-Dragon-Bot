@@ -15,6 +15,14 @@ x-app: &app
     SENTRY_RELEASE: ${WD_VERSION:-}
   networks:
     - default
+  # The app writes only to its bind mounts (logs/ and the ini files) and /tmp.
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
 
 x-app-volumes: &app-volumes
   - ./logs:/app/logs
@@ -27,7 +35,8 @@ x-app-volumes: &app-volumes
 services:
 
   redis:
-    image: redis:8.2.4-alpine3.22
+    # Pinned by digest like the app. Bump: docker buildx imagetools inspect redis:8.2.4-alpine3.22
+    image: redis:8.2.4-alpine3.22@sha256:a308ca111032fa8f306a2dc7be7ba5deb8b777ed5d258c733cddba48a1fd7904
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
@@ -41,7 +50,8 @@ services:
       - default
 
   postgres:
-    image: postgres:14-alpine
+    # Pinned by digest like the app. Bump: docker buildx imagetools inspect postgres:14-alpine
+    image: &postgres-image postgres:14-alpine@sha256:50fce0c9c54c43d8b02ce16cb9daff75eb94c09c4ee3d41c157852ebd9700c80
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -61,7 +71,7 @@ services:
 
   # Dumps the database before the migrations run; every `up` takes one.
   backup:
-    image: postgres:14-alpine
+    image: *postgres-image
     command: ["sh", "/backup-db.sh", "pre-migrate"]
     environment: &backup-env
       PGHOST: postgres
@@ -91,7 +101,7 @@ services:
 
   # A dump a day, the newest 14 kept, next to the pre-migration ones.
   backup-daily:
-    image: postgres:14-alpine
+    image: *postgres-image
     command: ["sh", "-c", "while true; do sh /backup-db.sh daily; sleep 86400; done"]
     environment: *backup-env
     volumes: *backup-volumes

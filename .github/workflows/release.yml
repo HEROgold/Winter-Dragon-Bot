@@ -114,7 +114,9 @@ jobs:
     needs: new-release
     if: ${{ needs.new-release.outputs.version_changed == 'true' && needs.new-release.outputs.digest != '' }}
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      url: https://dragon.herogold.nl
     concurrency: deploy-production
     permissions:
       id-token: write  # Needed for deploy-notifier's OIDC token
@@ -130,4 +132,8 @@ jobs:
     # The landing page reads the database, so a 200 through Traefik means web,
     # migrate and postgres all came up.
     - name: Smoke test the dashboard
-      run: curl --fail --silent --show-error --output /dev/null --retry 10 --retry-all-errors --retry-delay 6 https://dragon.herogold.nl/
+      # The first request for a new host makes Traefik fetch its certificate, so
+      # allow about two minutes. --max-time ends a request that hangs.
+      run: >-
+        curl --fail --silent --show-error --output /dev/null --max-time 10
+        --retry 12 --retry-all-errors --retry-delay 10 https://dragon.herogold.nl/
