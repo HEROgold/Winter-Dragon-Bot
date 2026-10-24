@@ -256,6 +256,58 @@ MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message).
   edited_timestamp: str | None, tts: bool, mention_everyone: bool, mentions: list[MentionedUser], attachments:
   list[Attachment], embeds: list[Embed], reactions: list[Reaction]
 
+### `class MessageUpdate(Message)`
+MESSAGE_UPDATE (https://docs.discord.com/developers/events/gateway-events#message-update): the full edited message.
+
+### `class MessageDelete(DiscordModel)`
+MESSAGE_DELETE (https://docs.discord.com/developers/events/gateway-events#message-delete).
+
+- fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None
+
+### `class MessageDeleteBulk(DiscordModel)`
+MESSAGE_DELETE_BULK (https://docs.discord.com/developers/events/gateway-events#message-delete-bulk).
+
+- fields: ids: list[Snowflake], channel_id: Snowflake, guild_id: Snowflake | None
+
+### `class MessageReactionAdd(DiscordModel)`
+MESSAGE_REACTION_ADD (https://docs.discord.com/developers/events/gateway-events#message-reaction-add).
+
+- fields: user_id: Snowflake, channel_id: Snowflake, message_id: Snowflake, guild_id: Snowflake | None, member:
+  GuildMember | None, emoji: PartialEmoji, message_author_id: Snowflake | None, burst: bool, burst_colors: list[str],
+  type: int
+
+### `class MessageReactionRemove(DiscordModel)`
+MESSAGE_REACTION_REMOVE (https://docs.discord.com/developers/events/gateway-events#message-reaction-remove).
+
+- fields: user_id: Snowflake, channel_id: Snowflake, message_id: Snowflake, guild_id: Snowflake | None, emoji:
+  PartialEmoji, burst: bool, type: int
+
+### `class MessageReactionRemoveAll(DiscordModel)`
+MESSAGE_REACTION_REMOVE_ALL (https://docs.discord.com/developers/events/gateway-events#message-reaction-remove-all).
+
+- fields: channel_id: Snowflake, message_id: Snowflake, guild_id: Snowflake | None
+
+### `class MessageReactionRemoveEmoji(DiscordModel)`
+MESSAGE_REACTION_REMOVE_EMOJI (https://docs.discord.com/developers/events/gateway-events#message-reaction-remove-emoji).
+
+- fields: channel_id: Snowflake, message_id: Snowflake, guild_id: Snowflake | None, emoji: PartialEmoji
+
+### `class TypingStart(DiscordModel)`
+TYPING_START (https://docs.discord.com/developers/events/gateway-events#typing-start).
+
+- fields: channel_id: Snowflake, guild_id: Snowflake | None, user_id: Snowflake, timestamp: int, member: GuildMember |
+  None
+
+### `class GuildEmojisUpdate(DiscordModel)`
+GUILD_EMOJIS_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-emojis-update).
+
+- fields: guild_id: Snowflake, emojis: list[Emoji]
+
+### `class GuildStickersUpdate(DiscordModel)`
+GUILD_STICKERS_UPDATE (https://docs.discord.com/developers/events/gateway-events#guild-stickers-update).
+
+- fields: guild_id: Snowflake, stickers: list[Sticker]
+
 ### `class EventName(StrEnum)`
 Every dispatch event name Discord currently defines.
 

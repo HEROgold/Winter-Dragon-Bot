@@ -22,6 +22,7 @@ from .events import (
     ChannelUpdate,
     GuildCreate,
     GuildDelete,
+    GuildEmojisUpdate,
     GuildMemberAdd,
     GuildMemberRemove,
     GuildMemberUpdate,
@@ -29,9 +30,17 @@ from .events import (
     GuildRoleCreate,
     GuildRoleDelete,
     GuildRoleUpdate,
+    GuildStickersUpdate,
     GuildUpdate,
     Interaction,
     Message,
+    MessageDelete,
+    MessageDeleteBulk,
+    MessageReactionAdd,
+    MessageReactionRemove,
+    MessageReactionRemoveAll,
+    MessageReactionRemoveEmoji,
+    MessageUpdate,
     PresenceUpdate,
     Ready,
     ThreadCreate,
@@ -40,6 +49,7 @@ from .events import (
     ThreadMemberUpdate,
     ThreadMembersUpdate,
     ThreadUpdate,
+    TypingStart,
     UserUpdate,
     VoiceChannelStartTimeUpdate,
     VoiceChannelStatusUpdate,
@@ -79,6 +89,10 @@ def parse_dispatch(name: Literal[EventName.GUILD_UPDATE], data: Mapping[str, obj
 @overload
 def parse_dispatch(name: Literal[EventName.GUILD_DELETE], data: Mapping[str, object]) -> GuildDelete: ...
 @overload
+def parse_dispatch(name: Literal[EventName.GUILD_EMOJIS_UPDATE], data: Mapping[str, object]) -> GuildEmojisUpdate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.GUILD_STICKERS_UPDATE], data: Mapping[str, object]) -> GuildStickersUpdate: ...
+@overload
 def parse_dispatch(name: Literal[EventName.GUILD_MEMBER_ADD], data: Mapping[str, object]) -> GuildMemberAdd: ...
 @overload
 def parse_dispatch(name: Literal[EventName.GUILD_MEMBER_REMOVE], data: Mapping[str, object]) -> GuildMemberRemove: ...
@@ -93,7 +107,27 @@ def parse_dispatch(name: Literal[EventName.GUILD_ROLE_UPDATE], data: Mapping[str
 @overload
 def parse_dispatch(name: Literal[EventName.GUILD_ROLE_DELETE], data: Mapping[str, object]) -> GuildRoleDelete: ...
 @overload
+def parse_dispatch(name: Literal[EventName.MESSAGE_UPDATE], data: Mapping[str, object]) -> MessageUpdate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.MESSAGE_DELETE], data: Mapping[str, object]) -> MessageDelete: ...
+@overload
+def parse_dispatch(name: Literal[EventName.MESSAGE_DELETE_BULK], data: Mapping[str, object]) -> MessageDeleteBulk: ...
+@overload
+def parse_dispatch(name: Literal[EventName.MESSAGE_REACTION_ADD], data: Mapping[str, object]) -> MessageReactionAdd: ...
+@overload
+def parse_dispatch(name: Literal[EventName.MESSAGE_REACTION_REMOVE], data: Mapping[str, object]) -> MessageReactionRemove: ...
+@overload
+def parse_dispatch(
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE_ALL], data: Mapping[str, object]
+) -> MessageReactionRemoveAll: ...
+@overload
+def parse_dispatch(
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE_EMOJI], data: Mapping[str, object]
+) -> MessageReactionRemoveEmoji: ...
+@overload
 def parse_dispatch(name: Literal[EventName.PRESENCE_UPDATE], data: Mapping[str, object]) -> PresenceUpdate: ...
+@overload
+def parse_dispatch(name: Literal[EventName.TYPING_START], data: Mapping[str, object]) -> TypingStart: ...
 @overload
 def parse_dispatch(name: Literal[EventName.USER_UPDATE], data: Mapping[str, object]) -> UserUpdate: ...
 @overload
