@@ -136,6 +136,17 @@ Logs a user's refuels and graphs their fuel efficiency.
 - `@Cog.command async add(interaction: CommandInteraction, price: float, distance: float, amount: float, date: str | None=None) -> None` — Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now.
 - `@Cog.command async efficiency(interaction: CommandInteraction) -> None` — Reply with a graph of the invoking user's fuel efficiency.
 
+## `winter_dragon.cogs.health` — `src/winter_dragon/cogs/health.py`
+Tells the container's healthcheck that the bot is connected to Discord; see :mod:`winter_dragon.health`.
+
+- module names: TOUCH_INTERVAL
+
+### `class Health(Cog)`
+Touches :data:`~winter_dragon.health.ALIVE_FILE` every :data:`TOUCH_INTERVAL` while every shard is alive.
+
+- `async load() -> None` — Start touching the alive file once registered with the bot.
+- `async unload() -> None` — Stop the background task.
+
 ## `winter_dragon.cogs.heartbeat` — `src/winter_dragon/cogs/heartbeat.py`
 A cog demonstrating independent background work, not just reacting to dispatch events.
 

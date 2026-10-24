@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     lazy from types import ModuleType
 
     lazy from wd_discord import AnyInteraction
+    lazy from wd_discord.gateway.sharding import ShardManager
     lazy from wd_discord.models import DiscordModel
     lazy from wd_discord.snowflake import Snowflake
 
@@ -118,6 +119,8 @@ class Bot(LoggerMixin):
         self.description = description
         self.extensions_package = extensions_package
         self.cogs = {}
+        self.shard_manager: ShardManager | None = None
+        """The gateway shards while :meth:`start` runs; ``None`` before they connect and after they close."""
         self._extensions: dict[str, ModuleType] = {}
         self._failed_extensions: set[str] = set()
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
@@ -411,8 +414,12 @@ class Bot(LoggerMixin):
             await self.load_extensions()
             await self._startup_sync(client)
             async with manager:
+                self.shard_manager = manager
                 self.logger.info(t"Bot is running with {len(manager.shards)} shards")
-                await manager.serve_forever(self._dispatch)
+                try:
+                    await manager.serve_forever(self._dispatch)
+                finally:
+                    self.shard_manager = None
 
 
 def _guild_id(interaction: AnyInteraction) -> Snowflake | None:
