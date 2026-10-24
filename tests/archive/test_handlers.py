@@ -4,27 +4,25 @@ from typing import Any
 
 from sqlmodel import Session, select
 from wd_discord.gateway import EventName, parse_dispatch
-from wd_discord.testing import GUILD_JSON
+from wd_discord.testing import GUILD_JSON, member_json, message_json, user_json
 
 from archive import models as db
 from archive.handlers import HANDLERS, handle, payload_of, store_raw
 
 
-USER = {"id": "9", "username": "owner", "discriminator": "0", "avatar": None}
-MEMBER = {"user": USER, "roles": ["5"], "joined_at": "2026-01-01T00:00:00+00:00", "deaf": False, "mute": False, "flags": 0}
+USER = user_json(id="9", username="owner", avatar=None)
+MEMBER = member_json(user=USER, roles=["5"], joined_at="2026-01-01T00:00:00+00:00", flags=0)
 GAME = {"name": "Game", "type": 0, "created_at": 1700000000000}
 PRESENCE = {"user": {"id": "9"}, "status": "online", "activities": [GAME], "client_status": {"desktop": "online"}}
-MESSAGE = {
-    "id": "100",
-    "channel_id": "2",
-    "guild_id": "1",
-    "author": USER,
-    "member": {"roles": [], "joined_at": "2026-01-01T00:00:00+00:00", "deaf": False, "mute": False, "flags": 0},
-    "content": "hi",
-    "timestamp": "2026-10-22T00:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
+MESSAGE = message_json(
+    id="100",
+    channel_id="2",
+    guild_id="1",
+    author=USER,
+    member={"roles": [], "joined_at": "2026-01-01T00:00:00+00:00", "deaf": False, "mute": False, "flags": 0},
+    content="hi",
+    timestamp="2026-10-22T00:00:00+00:00",
+)
 
 
 def dispatch(session: Session, name: str, data: dict[str, Any]) -> None:

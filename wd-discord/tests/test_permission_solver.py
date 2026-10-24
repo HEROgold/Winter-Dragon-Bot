@@ -4,7 +4,7 @@ from wd_discord.permission_solver import PermissionSolver
 from wd_discord.permissions import Permissions
 from wd_discord.resources.channel import Channel
 from wd_discord.resources.guild import Guild, GuildMember, Role
-from wd_discord.testing import GUILD_JSON
+from wd_discord.testing import GUILD_JSON, member_json, role_json, user_json
 
 
 VIEW = Permissions.VIEW_CHANNEL
@@ -14,29 +14,13 @@ MOD_ROLE = "5"
 
 
 def _role(role_id: str, permissions: Permissions) -> dict[str, object]:
-    return {
-        "id": role_id,
-        "name": role_id,
-        "color": 0,
-        "hoist": False,
-        "position": 0,
-        "permissions": str(int(permissions)),
-        "managed": False,
-        "mentionable": False,
-        "flags": 0,
-    }
+    return role_json(id=role_id, name=role_id, position=0, permissions=str(int(permissions)), mentionable=False)
 
 
 def _solver(*roles: str, user_id: str = "7", mod: Permissions = MANAGE) -> PermissionSolver:
     guild = Guild.model_validate({**GUILD_JSON, "roles": [_role("1", VIEW | SEND), _role(MOD_ROLE, mod)]})
     member = GuildMember.model_validate(
-        {
-            "user": {"id": user_id, "username": "member", "discriminator": "0"},
-            "roles": list(roles),
-            "joined_at": None,
-            "deaf": False,
-            "mute": False,
-        },
+        member_json(user=user_json(id=user_id, username="member"), roles=list(roles)),
     )
     return PermissionSolver(guild, member)
 
@@ -107,7 +91,7 @@ def _giver(*own_roles: str, user_id: str = "7") -> PermissionSolver:
     ]
     guild = Guild.model_validate({**GUILD_JSON, "id": "1", "roles": roles})
     member = GuildMember.model_validate(
-        {"user": {"id": user_id, "username": "m", "discriminator": "0"}, "roles": list(own_roles), "joined_at": None, "deaf": False, "mute": False},
+        member_json(user=user_json(id=user_id, username="m"), roles=list(own_roles)),
     )
     return PermissionSolver(guild, member)
 

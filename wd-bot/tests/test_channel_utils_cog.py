@@ -17,7 +17,7 @@ from wd_discord.resources.channel import PermissionOverwrite
 from wd_discord.resources.guild import Role
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, bot_user_json, member_json, role_json, user_json
 
 from winter_dragon.cogs.channel_utils import DELETE_PERMISSIONS, ChannelUtils, locked_permissions
 
@@ -32,20 +32,8 @@ if TYPE_CHECKING:
 GUILD_ID = 1
 CHANNEL_ID = 20
 CATEGORY = {"id": "10", "type": 4, "name": "Games", "permissions": "16"}
-ROLE = Role.model_validate(
-    {
-        "id": "8",
-        "name": "Members",
-        "color": 0,
-        "hoist": False,
-        "position": 1,
-        "permissions": "0",
-        "managed": False,
-        "mentionable": True,
-        "flags": 0,
-    },
-)
-TARGET = User.model_validate({"id": "4", "username": "target", "discriminator": "0"})
+ROLE = Role.model_validate(role_json(name="Members"))
+TARGET = User.model_validate(user_json(id="4", username="target"))
 SEND = int(Permissions.SEND_MESSAGES)
 EVERYONE = {
     **ROLE.model_dump(mode="json"),
@@ -54,13 +42,7 @@ EVERYONE = {
     "permissions": str(int(DELETE_PERMISSIONS)),
 }
 """The ``@everyone`` role, letting the bot view and manage channels."""
-BOT_MEMBER: Mapping[str, object] = {
-    "user": {"id": "2", "username": "bot", "discriminator": "0", "bot": True},
-    "roles": [],
-    "joined_at": None,
-    "deaf": False,
-    "mute": False,
-}
+BOT_MEMBER: Mapping[str, object] = member_json(user=bot_user_json())
 """The bot's own member; its user ID is the interaction's application ID."""
 
 

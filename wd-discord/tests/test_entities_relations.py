@@ -35,47 +35,18 @@ from wd_discord.resources.guild import Guild as GuildModel
 from wd_discord.resources.invite import Invite as InviteModel
 from wd_discord.resources.voice import VoiceState as VoiceStateModel
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, message_json, role_json, user_json, voice_state_json
 
 
-USER_JSON = {"id": "9", "username": "owner", "discriminator": "0"}
-MEMBER_JSON = {"user": USER_JSON, "roles": ["5"], "joined_at": None, "deaf": False, "mute": False}
-ROLE_JSON = {
-    "id": "5",
-    "name": "Mods",
-    "color": 0,
-    "hoist": False,
-    "position": 1,
-    "permissions": "8",
-    "managed": False,
-    "mentionable": True,
-    "flags": 0,
-}
-EVERYONE_JSON = {**ROLE_JSON, "id": "1", "name": "@everyone", "position": 0}
+USER_JSON = user_json(id="9", username="owner")
+MEMBER_JSON = member_json(user=USER_JSON, roles=["5"])
+ROLE_JSON = role_json(id="5", name="Mods", permissions="8")
+EVERYONE_JSON = role_json(id="1", name="@everyone", position=0, permissions="8")
 AFK_JSON = {"id": "20", "type": 2, "name": "AFK"}
 GUILD_WITH_RELATIONS = {**GUILD_JSON, "afk_channel_id": "20", "roles": [EVERYONE_JSON, ROLE_JSON]}
-MESSAGE_JSON = {
-    "id": "50",
-    "channel_id": "6",
-    "author": USER_JSON,
-    "content": "hi",
-    "timestamp": "2026-10-10T00:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
+MESSAGE_JSON = message_json(id="50", author=USER_JSON, content="hi")
 COMMAND_JSON = {"id": "77", "application_id": "2", "guild_id": "1", "name": "ping", "description": "Pong", "version": "1"}
-VOICE_JSON = {
-    "channel_id": "20",
-    "user_id": "9",
-    "session_id": "s",
-    "deaf": False,
-    "mute": False,
-    "self_deaf": False,
-    "self_mute": False,
-    "self_video": False,
-    "suppress": False,
-    "request_to_speak_timestamp": None,
-}
+VOICE_JSON = voice_state_json(channel_id="20", user_id="9")
 
 
 def _gateway_guild(client: RecordingClient) -> GatewayGuild:

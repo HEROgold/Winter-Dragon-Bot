@@ -5,25 +5,21 @@ lazy from wd_discord.entities import bind
 lazy from wd_discord.gateway.dispatch import parse_dispatch
 lazy from wd_discord.gateway.events import EventName
 lazy from wd_discord.snowflake import Snowflake
-lazy from wd_discord.testing import RecordingClient
+lazy from wd_discord.testing import RecordingClient, message_json, user_json
 
 
-USER_JSON = {"id": "9", "username": "owner", "discriminator": "0"}
-MESSAGE_JSON = {
-    "id": "50",
-    "channel_id": "6",
-    "guild_id": "1",
-    "author": USER_JSON,
-    "content": "hi <@9>",
-    "timestamp": "2026-10-10T00:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-    "mentions": [{**USER_JSON, "member": {"roles": ["5"], "joined_at": None, "deaf": False, "mute": False}}],
-    "attachments": [
+USER_JSON = user_json(id="9", username="owner")
+MESSAGE_JSON = message_json(
+    id="50",
+    guild_id="1",
+    author=USER_JSON,
+    content="hi <@9>",
+    mentions=[{**USER_JSON, "member": {"roles": ["5"], "joined_at": None, "deaf": False, "mute": False}}],
+    attachments=[
         {"id": "70", "filename": "cat.png", "size": 1024, "url": "https://cdn/cat.png", "proxy_url": "https://media/cat.png"},
     ],
-    "embeds": [{"title": "Hello", "color": 65280}],
-    "reactions": [
+    embeds=[{"title": "Hello", "color": 65280}],
+    reactions=[
         {
             "count": 2,
             "count_details": {"burst": 0, "normal": 2},
@@ -33,7 +29,7 @@ MESSAGE_JSON = {
             "burst_colors": [],
         },
     ],
-}
+)
 
 
 def _message() -> Message:

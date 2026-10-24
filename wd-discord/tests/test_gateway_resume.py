@@ -6,12 +6,13 @@ lazy from typing import Any
 lazy import pytest
 lazy import wd_discord.gateway.connection as connection_module
 lazy from wd_discord.gateway.connection import Gateway, GatewayClosedError, Opcode
+lazy from wd_discord.testing import user_json
 lazy from websockets.exceptions import ConnectionClosed
 lazy from websockets.frames import Close
 
 
 HELLO = {"op": Opcode.HELLO, "d": {"heartbeat_interval": 60_000}}
-USER = {"id": "1", "username": "bot", "discriminator": "0"}
+USER = user_json(id="1", username="bot")
 SESSION = {"session_id": "s1", "resume_gateway_url": "wss://resume", "user": USER}
 READY = {"op": Opcode.DISPATCH, "s": 1, "t": "READY", "d": SESSION}
 READY_2 = {**READY, "d": {**SESSION, "session_id": "s2"}}

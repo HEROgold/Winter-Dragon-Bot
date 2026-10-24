@@ -91,7 +91,8 @@ uv run pytest wd-bot/tests -k steam -q # one area
 ```
 
 Cog tests live in `wd-bot/tests/`; wd-discord tests in `wd-discord/tests/`. Offline tests use
-`wd_discord.testing.RecordingClient` and an in-memory sqlite session. Tests marked `integration` hit the real
+`wd_discord.testing.RecordingClient`, the Discord JSON builders next to it (`user_json()`, `member_json()`, ...)
+and an in-memory sqlite database from `wd_db.testing.sqlite_engine()`. Tests marked `integration` hit the real
 Discord API and skip unless a token is configured.
 
 ## Code quality

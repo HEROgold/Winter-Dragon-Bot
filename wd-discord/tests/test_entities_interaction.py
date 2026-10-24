@@ -21,10 +21,10 @@ from wd_discord.gateway.events import ComponentInteraction as ComponentInteracti
 from wd_discord.gateway.events import Interaction as InteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionType, MessageComponentData
 from wd_discord.interactions import ApplicationCommandOptionChoice
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import RecordingClient, message_json, user_json
 
 
-USER_JSON = {"id": "3", "username": "asker", "discriminator": "0"}
+USER_JSON = user_json(username="asker")
 COMMAND = CommandInteractionModel(
     id="1",
     application_id="2",
@@ -58,15 +58,6 @@ ORIGINAL = "/webhooks/2/tok/messages/@original"
 FOLLOWUP = "/webhooks/2/tok"
 ROW = ActionRow(components=[Button(style=ButtonStyle.SECONDARY, label="Next", custom_id="next")])
 ROW_JSON = [{"type": 1, "components": [{"type": 2, "style": 2, "label": "Next", "custom_id": "next", "disabled": False}]}]
-MESSAGE_JSON = {
-    "id": "5",
-    "channel_id": "6",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "",
-    "timestamp": "2026-10-08T00:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
 
 
 def _command(client: RecordingClient) -> CommandInteraction:
@@ -115,7 +106,7 @@ async def test_ephemeral_respond_sets_flag_64() -> None:
 
 async def test_respond_after_answering_sends_a_followup() -> None:
     client = RecordingClient()
-    client.reply("POST", FOLLOWUP, MESSAGE_JSON)
+    client.reply("POST", FOLLOWUP, message_json())
     interaction = _command(client)
     await interaction.defer()
     await interaction.respond("oops", ephemeral=True)
@@ -137,7 +128,7 @@ async def test_respond_with_files_sends_multipart() -> None:
 
 async def test_followup_with_files_sends_multipart() -> None:
     client = RecordingClient()
-    client.reply("POST", FOLLOWUP, MESSAGE_JSON)
+    client.reply("POST", FOLLOWUP, message_json())
     interaction = _command(client)
     await interaction.defer(ephemeral=True)
     await interaction.respond(files=[File("a.txt", b"a"), File("b.txt", b"b")], ephemeral=True)
@@ -173,7 +164,7 @@ async def test_ephemeral_defer_sets_flag_64() -> None:
 
 async def test_edit_original_patches_the_webhook_message() -> None:
     client = RecordingClient()
-    client.reply("PATCH", ORIGINAL, MESSAGE_JSON)
+    client.reply("PATCH", ORIGINAL, message_json())
     message = await _command(client).edit_original(embeds=[Embed(title="p1")])
     assert client.sent[0].json == {"embeds": [{"title": "p1"}]}
     assert isinstance(message, Message)
@@ -182,7 +173,7 @@ async def test_edit_original_patches_the_webhook_message() -> None:
 
 async def test_edit_original_with_empty_components_clears_them() -> None:
     client = RecordingClient()
-    client.reply("PATCH", ORIGINAL, MESSAGE_JSON)
+    client.reply("PATCH", ORIGINAL, message_json())
     await _command(client).edit_original(components=[])
     assert client.sent[0].json == {"components": []}
 
@@ -203,7 +194,7 @@ async def test_update_sends_type_7() -> None:
 
 async def test_update_after_defer_edits_the_original() -> None:
     client = RecordingClient()
-    client.reply("PATCH", ORIGINAL, MESSAGE_JSON)
+    client.reply("PATCH", ORIGINAL, message_json())
     interaction = _component(client)
     await interaction.defer_update()
     await interaction.update("done")

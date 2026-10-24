@@ -113,6 +113,9 @@ before opening source.
 
 Test code built on wd-discord with `wd_discord.testing.RecordingClient`: it records each request and
 answers from canned `reply(...)`/`fail(...)` values, so stores and entities run unchanged offline.
+Build the JSON for those replies and for gateway events with the builders in `wd_discord.testing`
+(`user_json()`, `role_json()`, `message_json()`, ...): each returns a docs-shaped object and takes
+keyword overrides, e.g. `role_json(id="9", name="admins")`.
 
 ## Gotchas
 

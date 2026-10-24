@@ -2,6 +2,7 @@
 
 lazy from wd_discord.gateway import GatewayActivity, Status, build_presence, parse_ready
 lazy from wd_discord.snowflake import Snowflake
+lazy from wd_discord.testing import user_json
 lazy from wd_errors import Activity
 
 
@@ -40,7 +41,7 @@ def test_parse_ready_with_dispatch_wrapper() -> None:
         "d": {
             "session_id": "abc123",
             "resume_gateway_url": "wss://resume.example",
-            "user": {"id": "42", "username": "bot", "discriminator": "0"},
+            "user": user_json(id="42", username="bot"),
             "application": {"id": "99"},
         },
     }
@@ -56,7 +57,7 @@ def test_parse_ready_accepts_inner_dict() -> None:
         {
             "session_id": "s",
             "resume_gateway_url": "wss://x",
-            "user": {"id": "1", "username": "bot", "discriminator": "0"},
+            "user": user_json(id="1", username="bot"),
         },
     )
     assert ready.session_id == "s"

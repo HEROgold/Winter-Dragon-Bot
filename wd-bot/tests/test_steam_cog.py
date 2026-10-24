@@ -11,7 +11,7 @@ from wd_db.extension.lifecycle import alive
 from wd_db.testing import seed
 from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.interactions import ApplicationCommand
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import RecordingClient, message_json
 
 import winter_dragon.cogs.steam.cog as module
 from winter_dragon.cogs.steam.cog import SteamSales
@@ -90,15 +90,6 @@ def fake_steam(monkeypatch: pytest.MonkeyPatch) -> None:
 
 ORIGINAL = "/webhooks/2/tok/messages/@original"
 OPEN_DM = "/users/@me/channels"
-MESSAGE_JSON = {
-    "id": "5",
-    "channel_id": "6",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "",
-    "timestamp": "2026-10-08T12:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
 
 
 def _cog(engine: Engine) -> tuple[SteamSales, RecordingClient]:
@@ -108,7 +99,7 @@ def _cog(engine: Engine) -> tuple[SteamSales, RecordingClient]:
     """
     client = RecordingClient()
     client.reply("POST", OPEN_DM, {"id": "6", "type": 1})
-    client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
+    client.reply("POST", "/channels/6/messages", message_json())
     return detached_cog(SteamSales, engine=engine, client=client), client
 
 
@@ -230,7 +221,7 @@ async def test_show_defers_then_edits_in_the_first_page(
     discord_client: RecordingClient,
 ) -> None:
     _seed(engine, *(app_sale(index) for index in range(1, 8)))
-    discord_client.reply("PATCH", ORIGINAL, MESSAGE_JSON)
+    discord_client.reply("PATCH", ORIGINAL, message_json())
     cog, _client = _cog(engine)
 
     await SteamSales.show.invoke(cog, make_interaction("steam"), _percent(90))

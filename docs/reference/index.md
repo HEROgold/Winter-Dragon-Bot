@@ -28,6 +28,7 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`wd_discord.errors`](wd-discord.errors.md) | Location of all discord and package related erros go. |
 | [`wd_discord.gateway`](wd-discord.gateway.md) | Discord gateway (WebSocket) support: connection, payload helpers, and sharding. |
 | [`wd_discord.resources`](wd-discord.resources.md) | Discord API resource models (https://docs.discord.com/developers/resources). |
+| [`wd_discord.testing`](wd-discord.testing.md) | Test helpers for code built on wd-discord: a client that records its requests, and Discord JSON payloads. |
 | [`wd_discord.utils`](wd-discord.utils.md) | Module for utility functions and classes. |
 | [`wd_errors`](wd-errors.md) | Errors for WinterDragon. |
 | [`wd_types`](wd-types.md) |  |

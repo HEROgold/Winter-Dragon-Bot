@@ -14,6 +14,7 @@ from wd_db.extension.lifecycle import alive
 from wd_db.testing import seed
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
+from wd_discord.testing import user_json
 
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
@@ -31,7 +32,7 @@ ZONE = "Europe/Amsterdam"
 """UTC+2 on :data:`NOW`."""
 MEMBER_ID = 42
 OTHER_ID = 7
-USER = User.model_validate({"id": str(MEMBER_ID), "username": "frostbyte", "discriminator": "0", "global_name": "Frost"})
+USER = User.model_validate(user_json(id=str(MEMBER_ID), username="frostbyte", global_name="Frost"))
 HTMX = {"HX-Request": "true"}
 CSRF = re.compile(r'name="csrf_token" value="([^"]+)"')
 

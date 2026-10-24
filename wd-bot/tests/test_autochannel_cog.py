@@ -13,7 +13,7 @@ from wd_discord import Guild, Permissions, VoiceState, bind
 from wd_discord.gateway import EventName, parse_dispatch
 from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 from wd_discord.resources.channel import Channel as ChannelModel
-from wd_discord.testing import GUILD_JSON, RecordingClient
+from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, message_json, user_json, voice_state_json
 
 from winter_dragon.cogs.autochannel import (
     OWNER_PERMISSIONS,
@@ -35,40 +35,17 @@ HUB_ID = 50
 CATEGORY_ID = 49
 MEMBER_ID = 3
 NEW_CHANNEL = {"id": "60", "type": 2, "guild_id": "1", "name": "asker's channel", "parent_id": str(CATEGORY_ID)}
-MESSAGE_JSON = {
-    "id": "5",
-    "channel_id": "7",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "",
-    "timestamp": "2026-10-08T12:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
-MEMBER_JSON = {
-    "user": {"id": str(MEMBER_ID), "username": "asker", "discriminator": "0"},
-    "nick": None,
-    "roles": [],
-    "joined_at": None,
-    "deaf": False,
-    "mute": False,
-}
+MESSAGE_JSON = message_json(channel_id="7")
+MEMBER_JSON = member_json(user=user_json(id=str(MEMBER_ID), username="asker"), nick=None)
 
 
 def _state(client: RecordingClient, channel_id: int | None, user_id: int = MEMBER_ID) -> VoiceState:
-    data = {
-        "guild_id": str(GUILD_ID),
-        "channel_id": None if channel_id is None else str(channel_id),
-        "user_id": str(user_id),
-        "member": {**MEMBER_JSON, "user": {"id": str(user_id), "username": "asker", "discriminator": "0"}},
-        "session_id": "s",
-        "deaf": False,
-        "mute": False,
-        "self_deaf": False,
-        "self_mute": False,
-        "self_video": False,
-        "suppress": False,
-        "request_to_speak_timestamp": None,
-    }
+    data = voice_state_json(
+        guild_id=str(GUILD_ID),
+        channel_id=None if channel_id is None else str(channel_id),
+        user_id=str(user_id),
+        member={**MEMBER_JSON, "user": user_json(id=str(user_id), username="asker")},
+    )
     state = bind(client, parse_dispatch(EventName.VOICE_STATE_UPDATE, data))
     assert isinstance(state, VoiceState)
     return state

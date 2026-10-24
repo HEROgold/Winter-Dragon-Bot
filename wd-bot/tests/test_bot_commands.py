@@ -18,7 +18,7 @@ from wd_discord.gateway import EventName
 from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.gateway.events import Message as MessageModel
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import RecordingClient, message_json, user_json
 from wd_errors.extension import ExtensionError
 
 
@@ -134,20 +134,12 @@ class _MessageCog(Cog, auto_load=False):
 async def test_dispatch_hands_listeners_the_bound_entity(discord_client: RecordingClient) -> None:
     bot = _make_bot(discord_client)
     await bot.add_cog(_MessageCog(bot=bot))
-    message_json = {
-        "id": "1",
-        "channel_id": "2",
-        "author": {"id": "3", "username": "someone", "discriminator": "0"},
-        "content": "hi",
-        "timestamp": "t",
-        "tts": False,
-        "mention_everyone": False,
-    }
-    model = MessageModel.model_validate(message_json)
+    data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="t")
+    model = MessageModel.model_validate(data)
     await bot._dispatch(EventName.MESSAGE_CREATE, model)
     await _drain_tasks()
     assert _MessageCog.received == [Message(discord_client, model)]
-    discord_client.reply("POST", "/channels/2/messages", message_json)
+    discord_client.reply("POST", "/channels/2/messages", data)
     await _MessageCog.received[0].channel.send("pong")
     assert len(discord_client.requests_to("POST", "/channels/2/messages")) == 1
 
@@ -277,15 +269,7 @@ class _BoomCog(Cog, auto_load=False):
         raise RuntimeError(msg)
 
 
-FOLLOWUP_JSON = {
-    "id": "5",
-    "channel_id": "6",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "Something went wrong running this command.",
-    "timestamp": "2026-10-08T00:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
+FOLLOWUP_JSON = message_json(content="Something went wrong running this command.")
 
 
 class _DeferThenBoomCog(Cog, auto_load=False):

@@ -16,22 +16,13 @@ from wd_discord.entities import Invite
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.interactions import ApplicationCommand, ApplicationCommandParams
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import RecordingClient
+from wd_discord.testing import RecordingClient, message_json, user_json
 
 
 COMMANDS = "/applications/2/commands"
 COMMAND_JSON = {"id": "77", "application_id": "2", "name": "ping", "description": "Pong", "version": "1"}
-USER_JSON = {"id": "7", "username": "someone", "discriminator": "0", "global_name": "Someone"}
+USER_JSON = user_json(id="7", global_name="Someone")
 DM_JSON = {"id": "6", "type": 1}
-MESSAGE_JSON = {
-    "id": "5",
-    "channel_id": "6",
-    "author": {"id": "2", "username": "bot", "discriminator": "0"},
-    "content": "hello",
-    "timestamp": "2026-10-08T00:00:00+00:00",
-    "tts": False,
-    "mention_everyone": False,
-}
 ROW = ActionRow(components=[Button(style=ButtonStyle.SECONDARY, label="Next", custom_id="next")])
 PARAMS = ApplicationCommandParams(name="ping", description="Pong")
 
@@ -133,7 +124,7 @@ async def test_users_me_returns_an_editable_current_user() -> None:
 async def test_user_send_opens_a_dm_then_sends() -> None:
     client = RecordingClient()
     client.reply("POST", "/users/@me/channels", DM_JSON)
-    client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
+    client.reply("POST", "/channels/6/messages", message_json(content="hello"))
 
     message = await client.users.partial(7).send("hello", embeds=[Embed(title="sales")], components=[ROW])
 
@@ -166,7 +157,7 @@ async def test_fetched_user_is_bound() -> None:
 
 async def test_channel_send_and_invite() -> None:
     client = RecordingClient()
-    client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
+    client.reply("POST", "/channels/6/messages", message_json(content="hello"))
     client.reply("POST", "/channels/6/invites", {"code": "abc"})
     channel = client.channels.partial("6")
 
@@ -181,8 +172,8 @@ async def test_channel_send_and_invite() -> None:
 
 async def test_message_edit_and_delete_target_its_channel() -> None:
     client = RecordingClient()
-    client.reply("POST", "/channels/6/messages", MESSAGE_JSON)
-    client.reply("PATCH", "/channels/6/messages/5", {**MESSAGE_JSON, "content": "edited"})
+    client.reply("POST", "/channels/6/messages", message_json(content="hello"))
+    client.reply("PATCH", "/channels/6/messages/5", message_json(content="edited"))
     message = await client.channels.partial(6).send("hello")
     assert isinstance(message, Message)
 

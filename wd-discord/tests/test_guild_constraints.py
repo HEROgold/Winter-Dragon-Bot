@@ -4,10 +4,9 @@ lazy import pytest
 lazy from pydantic import ValidationError
 lazy from wd_discord.resources.guild.guild import Guild
 lazy from wd_discord.resources.guild.role import Role
-lazy from wd_discord.testing import GUILD_JSON
+lazy from wd_discord.testing import GUILD_JSON, role_json
 
 
-ROLE = {"id": "8", "name": "mods", "color": 0, "hoist": False, "position": 1, "permissions": "0", "managed": False, "mentionable": True, "flags": 0}  # noqa: E501
 
 
 @pytest.mark.parametrize("name", ["a", "x" * 101])
@@ -22,5 +21,5 @@ def test_guild_name_inside_the_limits_parses() -> None:
 
 def test_role_position_rejects_negatives() -> None:
     with pytest.raises(ValidationError):
-        Role.model_validate({**ROLE, "position": -1})
-    assert Role.model_validate(ROLE).position == 1
+        Role.model_validate(role_json(position=-1))
+    assert Role.model_validate(role_json()).position == 1

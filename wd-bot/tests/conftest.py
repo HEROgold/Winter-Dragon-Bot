@@ -12,7 +12,7 @@ lazy from wd_discord.gateway.events import InteractionData, InteractionType, Mes
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.guild import GuildMember
 lazy from wd_discord.resources.user import User
-lazy from wd_discord.testing import RecordingClient
+lazy from wd_discord.testing import RecordingClient, user_json
 
 
 if TYPE_CHECKING:
@@ -53,7 +53,7 @@ class InteractionFactory(Protocol):
         ...
 
 
-ASKER = User.model_validate({"id": "3", "username": "asker", "discriminator": "0"})
+ASKER = User.model_validate(user_json(username="asker"))
 """The default invoking user of :func:`make_interaction`."""
 
 _ERROR_REPLY = {

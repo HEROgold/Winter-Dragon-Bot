@@ -9,6 +9,7 @@ lazy from wd_bot.registry import GLOBAL, CommandRegistry
 lazy from wd_bot.testing import detached_cog
 lazy from wd_discord.interactions import ApplicationCommand, InteractionContextType
 lazy from wd_discord.permissions import Permissions
+lazy from wd_discord.testing import user_json
 
 lazy from winter_dragon.cogs.bot_commands import BotCommands, describe_sync_status
 
@@ -34,7 +35,7 @@ def _owned_by(discord_client: RecordingClient, owner_id: str) -> None:
         "bot_require_code_grant": False,
         "verify_key": "k",
         "team": None,
-        "owner": {"id": owner_id, "username": "owner", "discriminator": "0"},
+        "owner": user_json(id=owner_id, username="owner"),
     }
     discord_client.reply("GET", "/applications/@me", application)
 

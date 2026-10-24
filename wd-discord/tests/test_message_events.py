@@ -13,24 +13,23 @@ lazy from wd_discord.gateway.events import (
     MessageUpdate,
     TypingStart,
 )
+lazy from wd_discord.testing import message_json, user_json
 
 
-AUTHOR = {"id": "5", "username": "someone", "discriminator": "0", "avatar": None}
+AUTHOR = user_json(id="5", avatar=None)
 
 
 def test_message_update_parses_the_full_message() -> None:
     event = parse_dispatch(
         EventName.MESSAGE_UPDATE,
-        {
-            "id": "1",
-            "channel_id": "2",
-            "author": AUTHOR,
-            "content": "edited",
-            "timestamp": "2026-10-22T00:00:00+00:00",
-            "edited_timestamp": "2026-10-22T00:01:00+00:00",
-            "tts": False,
-            "mention_everyone": False,
-        },
+        message_json(
+            id="1",
+            channel_id="2",
+            author=AUTHOR,
+            content="edited",
+            timestamp="2026-10-22T00:00:00+00:00",
+            edited_timestamp="2026-10-22T00:01:00+00:00",
+        ),
     )
     assert isinstance(event, MessageUpdate)
     assert event.content == "edited"
