@@ -26,7 +26,7 @@ The current state of each Discord object the events carry: guilds, channels and 
 - One row per object, overwritten by each newer copy. A guild sent again on every connect simply overwrites what is already there.
 - A copy only overwrites the fields it contains: an event carrying part of an object never erases the rest.
 - A delete event marks the object deleted; it is kept. An object that is created again is restored.
-- Fields Discord sends that the models don't know yet are kept with the object as extra data, replaced by each newer copy.
+- Fields without a column yet (including ones Discord added that the models don't know) are kept with the object as extra data, updated field by field like the columns.
 - Lists inside an object (a message's attachments, embeds and components, a member's roles, a channel's permission overwrites, …) are stored as rows of their own, in order, replaced whenever a newer copy includes that list. A nested object that can only appear once is stored with its parent.
 
 ### History
@@ -45,21 +45,25 @@ Activity sessions (how long someone played a game) and voice sessions (how long 
 
 ### Events without a model
 
-An event that wd-discord has no model for is kept only as a raw event (30 days). Every event is meant to get its own model and table over time.
+An event that wd-discord has no model for is kept only as a raw event (30 days). Every event is meant to get its own model and table over time. The events and fields still missing are tracked in [#270](https://github.com/HEROgold/Winter-Dragon-Bot/issues/270).
 
 ## Rules and limits
 
-- Receiving events never waits on the database: rows are queued and written in batches.
-- If the database is unreachable the queue holds up to a limit; beyond it the newest rows are dropped, the number dropped is logged and reported, and the log file still has them.
+- Receiving events never waits on the database: events are queued and written in batches. An event the tables can't take is logged and skipped; the rest of its batch is still written.
+- If the database is unreachable the batch is retried, and the queue holds up to a limit; beyond it new events are dropped, the number dropped is logged and reported, and the log file still has them.
 - Objects refer to each other by Discord ID only. A message may refer to a user or channel the archive has never seen; that is not an error.
 - The archive applies database migrations itself when it starts, so it runs with or without the public bot.
 
 ## Reports
 
+Run with `uv run python -m archive.reports changing-fields` or `uv run python -m archive.reports unmodelled`.
+
 - **Changing fields:** from the raw events, which fields of which objects change most often. This decides later which objects should keep their history instead of only their current state.
 - **Unmodelled events:** which event names arrived without a model, and which fields the models don't know yet.
 
 ## Settings
+
+The archive runs with `uv run python -m archive` (add `--database-url` to use another database).
 
 - `bot.ini` `[Tokens]` `read_only_token`: the archive's token. When empty, it uses `discord_token`.
 - `archive.ini`: the intents, the batch size and interval, the queue limit, and how many days raw events are kept.

@@ -45,6 +45,7 @@ Base classes in `wd_db.extension.model`:
 | `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder` | One-off and repeating reminders. |
 | `SteamSale`, `SteamSaleProperties`, `SteamUsers` | `winter_dragon.cogs.steam.models` | Known Steam sales and the users subscribed to them. |
 | `ApiTable`, `RiotTournaments` | `wd_db.extension.api_table` | Legacy, used only by `wd-cogs`. |
+| `archive_*` | `archive.models` | Every gateway event the [archive](../spec/archive.md) received, and the objects they carried. |
 
 Each table's columns are listed as `fields` in the [API reference](../reference/index.md).
 
