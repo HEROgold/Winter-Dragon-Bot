@@ -14,7 +14,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord.gateway.connection` — `wd-discord/src/wd_discord/gateway/connection.py`
 A minimal Discord Gateway (WebSocket) connection for wd-discord.
 
-- module names: FATAL_CLOSE_CODES, NEW_SESSION_CLOSE_CODES, MAX_RESUME_ATTEMPTS
+- module names: FATAL_CLOSE_CODES, NEW_SESSION_CLOSE_CODES, MAX_RESUME_ATTEMPTS, ALL_MEMBERS_NONCE
 - `type GatewayFrame = _DispatchFrame | _HeartbeatRequestFrame | _ReconnectFrame | _InvalidSessionFrame | _HeartbeatAckFrame`
 - `build_presence(activities: list[GatewayActivity], status: Status | str=Status.online, *, afk: bool=False, since: int | None=None) -> dict[str, Any]` — Build the ``d`` payload for a Presence Update (object -> API).
 - `build_identify(token: str, intents: Intents, *, shard: tuple[int, int] | None=None, presence: dict[str, Any] | None=None) -> dict[str, Any]` — Build the ``d`` payload for an IDENTIFY (object -> API).
@@ -47,6 +47,7 @@ A minimal async Discord gateway client.
 - `async resume() -> None` — Reconnect to the session's resume URL and RESUME (op 6) it from the last sequence received.
 - `async run(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None` — Run :meth:`listen` until cancelled, reconnecting whenever the connection ends.
 - `async listen(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> Disconnect` — Receive frames, updating ``_seq`` and invoking ``dispatch`` on DISPATCH, until the connection ends.
+- `async request_guild_members(guild_id: Snowflake) -> None` — Ask for every member of ``guild_id`` (Request Guild Members, op 8); they arrive as GUILD_MEMBERS_CHUNKs.
 - `async update_presence(activities: list[GatewayActivity], status: Status | str=Status.online) -> None` — Send a Presence Update (op 3) to set the bot's activity/status.
 - `async close() -> None` — Cancel the heartbeat and close the WebSocket.
 
