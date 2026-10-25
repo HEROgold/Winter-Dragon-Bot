@@ -3,7 +3,7 @@
 lazy from typing import TYPE_CHECKING, Annotated
 
 lazy import pytest
-lazy from wd_bot.commands import ChannelTypes, Command
+lazy from wd_bot.commands import ChannelTypes, Command, Describe
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
 lazy from wd_discord import Channel
@@ -128,3 +128,109 @@ def test_optional_mentionable_option() -> None:
 
     (option,) = Command(handler, name="cmd", description="d").options()
     assert (option.type, option.required) == (ApplicationCommandOptionType.MENTIONABLE, False)
+
+
+MAX_ITEMS = 25
+
+
+def test_described_option_shows_its_description() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        user: Annotated[BoundUser, Describe("Who to ban")],
+        days: int,
+    ) -> None:
+        """Handle."""
+
+    described, plain = Command(handler, name="cmd", description="d").options()
+    assert described.description == "Who to ban"
+    assert plain.description == "days"
+
+
+def test_describe_inside_and_outside_the_optional_union() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        inside: Annotated[str | None, Describe("Inside")] = None,
+        outside: Annotated[str, Describe("Outside")] | None = None,
+    ) -> None:
+        """Handle."""
+
+    inside, outside = Command(handler, name="cmd", description="d").options()
+    assert (inside.type, inside.required, inside.description) == (ApplicationCommandOptionType.STRING, False, "Inside")
+    assert (outside.type, outside.required, outside.description) == (ApplicationCommandOptionType.STRING, False, "Outside")
+
+
+def test_describe_combines_with_channel_types() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        target: Annotated[Channel, ChannelTypes(ChannelType.GUILD_CATEGORY), Describe("Where to move")],
+    ) -> None:
+        """Handle."""
+
+    (option,) = Command(handler, name="cmd", description="d").options()
+    assert (option.channel_types, option.description) == ([ChannelType.GUILD_CATEGORY], "Where to move")
+
+
+def test_describe_renders_a_template_string() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        count: Annotated[int, Describe(t"At most {MAX_ITEMS:03d}, like {'this'!r}")],
+    ) -> None:
+        """Handle."""
+
+    (option,) = Command(handler, name="cmd", description="d").options()
+    assert option.description == "At most 025, like 'this'"
+
+
+def test_describe_keeps_the_template() -> None:
+    describe = Describe(t"At most {MAX_ITEMS}")
+    assert describe.template is not None
+    assert describe.template.strings == ("At most ", "")
+    assert Describe("plain").template is None
+
+
+@pytest.mark.parametrize("text", ["", "x" * 101])
+def test_describe_outside_discords_length_limit_is_refused(text: str) -> None:
+    with pytest.raises(ValueError, match="1 to 100 characters"):
+        Describe(text)
+
+
+def test_two_describes_on_one_parameter_are_refused() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        reason: Annotated[str, Describe("One"), Describe("Two")],
+    ) -> None:
+        """Handle."""
+
+    with pytest.raises(TypeError, match="more than one Describe"):
+        Command(handler, name="cmd", description="d")
+
+
+def test_signature_changes_with_an_interpolated_description() -> None:
+    def make(limit: int) -> Command:
+        async def handler(
+            self: object,
+            interaction: CommandInteraction,
+            count: Annotated[int, Describe(t"At most {limit}")],
+        ) -> None:
+            """Handle."""
+
+        return Command(handler, name="cmd", description="d")
+
+    assert make(5).signature() != make(10).signature()
+
+
+def test_describe_naming_an_unknown_constant_fails_at_definition() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        count: Annotated[int, Describe(t"At most {UNDEFINED_LIMIT}")],  # noqa: F821
+    ) -> None:
+        """Handle."""
+
+    with pytest.raises(NameError, match="UNDEFINED_LIMIT"):
+        Command(handler, name="cmd", description="d")

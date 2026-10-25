@@ -218,7 +218,7 @@ https://docs.discord.com/developers/reference#image-formatting.
 ## `wd_discord.interactions` — `wd-discord/src/wd_discord/interactions.py`
 Discord application commands (https://docs.discord.com/developers/interactions/application-commands).
 
-- module names: MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, CHAT_INPUT_NAME_PATTERN
+- module names: MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, MAX_DESCRIPTION_LENGTH, CHAT_INPUT_NAME_PATTERN
 - `type Name = str`
 - `type ChatInputName = str`
 - `type Description = str`

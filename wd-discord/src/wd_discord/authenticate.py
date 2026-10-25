@@ -1,4 +1,5 @@
 """Location for all authentication related functions and classes."""
+
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING
 
@@ -12,6 +13,7 @@ class Token(str):
 
     __slots__ = ()
 
+
 class TokenType(StrEnum):
     """Represents the type of token being used for authentication.
 
@@ -21,20 +23,24 @@ class TokenType(StrEnum):
     BOT = "Bot"
     """Discord's authentication scheme is case-sensitive; it must be ``Bot``, not ``bot``."""
 
+
 class UserAgentVersion(str):
     """Represents the version of the user agent being used for authentication."""
 
     __slots__ = ()
+
 
 class URL(str):
     """Represents a URL."""
 
     __slots__ = ()
 
+
 class MetaData(str):
     """Represents metadata for the user agent."""
 
     __slots__ = ()
+
 
 class ContentType(StrEnum):
     """Represents a content type."""
@@ -48,14 +54,17 @@ def get_auth_header(type_: TokenType, token: Token) -> Template:
     """Get the authorization header for a given token."""
     return t"Authorization: {type_} {token}"
 
+
 def get_bearer(token: Token) -> Template:
     """Get the bearer token header for a given token."""
     return t"Authorization: Bearer {token}"
+
 
 def user_agent(url: URL, version: UserAgentVersion, metadata: MetaData) -> Template:
     """Get the user agent header for a given URL and version."""
     # Client requests that do not have a valid User Agent specified may be blocked and return a Cloudflare error.
     return t"User-Agent: DiscordBot ({url}, {version}) {metadata}"
+
 
 def content_type(content_type: ContentType) -> Template:
     """Get the content type header for a given content type.
@@ -64,20 +73,26 @@ def content_type(content_type: ContentType) -> Template:
     """
     return t"Content-Type: {content_type}"
 
+
 def render(template: Template) -> str:
     """Render a PEP 750 ``Template`` into a plain string.
 
     ``str(template)`` does *not* interpolate values, so we interleave the literal
-    string parts with the (formatted) interpolation values ourselves.
+    string parts with the interpolation values, converted (``!r``/``!s``/``!a``) and formatted like an f-string.
     """
     parts: list[str] = []
     for item in template:
         if isinstance(item, str):
             parts.append(item)
         else:  # Interpolation
-            value = format(item.value, item.format_spec) if item.format_spec else str(item.value)
-            parts.append(value)
+            value = item.value if item.conversion is None else _CONVERSIONS[item.conversion](item.value)
+            parts.append(format(value, item.format_spec))
     return "".join(parts)
+
+
+_CONVERSIONS = {"r": repr, "s": str, "a": ascii}
+"""What an interpolation's ``!r``, ``!s`` or ``!a`` conversion applies before formatting."""
+
 
 def render_header(template: Template) -> tuple[str, str]:
     """Render a ``"Key: Value"`` header template into a ``(name, value)`` pair for httpxyz."""

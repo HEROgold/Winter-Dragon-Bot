@@ -8,14 +8,17 @@ lazy from functools import reduce
 lazy from inspect import Parameter
 lazy from inspect import signature as inspect_signature
 lazy from itertools import islice
+lazy from string.templatelib import Template
 lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord import Channel, Role, User
+lazy from wd_discord.authenticate import render
 lazy from wd_discord.entities import Resolved
 lazy from wd_discord.interactions import (
     MAX_CHOICES,
+    MAX_DESCRIPTION_LENGTH,
     ApplicationCommandOption,
     ApplicationCommandOptionType,
     ApplicationCommandParams,
@@ -69,6 +72,27 @@ class ChannelTypes:
         self.types = list(types)
 
 
+class Describe:
+    """Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
+
+    ``text`` is a plain string or a t-string; a t-string's interpolations take their values when wd-bot reads the
+    handler's annotations, so ``Describe(t"At most {MAX_ITEMS}")`` names the constant instead of repeating it. Raises
+    ``ValueError`` unless the rendered text is 1 to 100 characters, Discord's limit.
+    """
+
+    __slots__ = ("template", "text")
+
+    def __init__(self, text: str | Template) -> None:
+        """Describe the option with ``text``."""
+        self.template = text if isinstance(text, Template) else None
+        """The t-string ``text`` was given as, kept for its literal parts; ``None`` for a plain string."""
+        self.text = text if isinstance(text, str) else render(text)
+        """The description Discord shows."""
+        if not 1 <= len(self.text) <= MAX_DESCRIPTION_LENGTH:
+            msg = f"Option description {self.text!r} must be 1 to {MAX_DESCRIPTION_LENGTH} characters"
+            raise ValueError(msg)
+
+
 @dataclass(frozen=True, slots=True)
 class OptionSpec:
     """A handler parameter as a Discord option: what Discord asks for, and what the handler gets."""
@@ -80,13 +104,15 @@ class OptionSpec:
     required: bool
     channel_types: list[ChannelType] | None = None
     """The kinds of channel a channel option may name; ``None`` allows any."""
+    description: str | None = None
+    """The text from the parameter's :class:`Describe`; ``None`` shows the parameter name instead."""
 
     def definition(self, *, autocomplete: bool) -> ApplicationCommandOption:
         """Return the option as Discord defines it."""
         return ApplicationCommandOption(
             type=self.option_type,
             name=self.name,
-            description=self.name,
+            description=self.description or self.name,
             required=self.required,
             channel_types=self.channel_types,
             autocomplete=True if autocomplete else None,
@@ -229,25 +255,25 @@ class Command(AppCommand):
         """The handler's parameters as Discord options, by name."""
 
     def _option_of(self, param: Parameter, annotation: object) -> OptionSpec:
-        """Return handler parameter ``param`` as an option: its type, channel-type filter, and whether it's required.
+        """Return handler parameter ``param`` as an option: its type, metadata, and whether it's required.
 
-        A default value or a ``T | None`` annotation makes the option optional. ``Annotated[Channel, ChannelTypes(...)]``
-        limits a channel option, and ``User | Role`` takes a MENTIONABLE. Raises ``TypeError`` if the type has no
-        Discord option type.
+        A default value or a ``T | None`` annotation makes the option optional. ``Annotated`` metadata, inside or
+        outside the ``| None``, configures it: :class:`ChannelTypes` limits a channel option and :class:`Describe`
+        sets its description. ``User | Role`` takes a MENTIONABLE. Raises ``TypeError`` if the type has no Discord
+        option type or the metadata doesn't fit it.
         """
-        param_type = self._resolve(annotation, self.func)
+        param_type, metadata = self._unwrap(self._resolve(annotation, self.func))
         required = param.default is Parameter.empty
         if isinstance(param_type, UnionType) and NoneType in get_args(param_type):
             non_none = [self._reify(arg) for arg in get_args(param_type) if arg is not NoneType]
-            param_type = non_none[0] if len(non_none) == 1 else _union(non_none)
+            param_type, inner = self._unwrap(non_none[0] if len(non_none) == 1 else _union(non_none))
+            metadata += inner
             required = False
-        channel_types: list[ChannelType] = []
-        if get_origin(param_type) is Annotated:
-            param_type, *metadata = get_args(param_type)
-            param_type = self._reify(param_type)
-            for item in metadata:
-                if isinstance(item, ChannelTypes):
-                    channel_types.extend(item.types)
+        channel_types = [kind for item in metadata if isinstance(item, ChannelTypes) for kind in item.types]
+        descriptions = [item.text for item in metadata if isinstance(item, Describe)]
+        if len(descriptions) > 1:
+            msg = f"Command {self.name!r}: parameter {param.name!r} has more than one Describe"
+            raise TypeError(msg)
         if isinstance(param_type, UnionType) and frozenset(map(self._reify, get_args(param_type))) in _MENTIONABLES:
             option_type = ApplicationCommandOptionType.MENTIONABLE
         elif isinstance(param_type, type) and param_type in _OPTION_TYPE_MAP:
@@ -258,7 +284,22 @@ class Command(AppCommand):
         if channel_types and option_type is not ApplicationCommandOptionType.CHANNEL:
             msg = f"Command {self.name!r}: ChannelTypes only applies to a channel parameter, not {param.name!r}"
             raise TypeError(msg)
-        return OptionSpec(param.name, param_type, option_type, required, channel_types or None)
+        return OptionSpec(
+            param.name,
+            param_type,
+            option_type,
+            required,
+            channel_types or None,
+            next(iter(descriptions), None),
+        )
+
+    @staticmethod
+    def _unwrap(annotation: object) -> tuple[object, list[object]]:
+        """Split ``Annotated[T, *metadata]`` into ``T`` and its metadata; any other annotation has none."""
+        if get_origin(annotation) is not Annotated:
+            return annotation, []
+        param_type, *metadata = get_args(annotation)
+        return Command._reify(param_type), metadata
 
     @staticmethod
     def _resolve(annotation: object, func: Callable[..., object]) -> object:
@@ -280,8 +321,14 @@ class Command(AppCommand):
             yield option.definition(autocomplete=name in self._autocompletes)
 
     def _own_signature(self) -> Generator[str]:
-        """Yield the handler's parameter signature, and which options autocomplete when any do."""
+        """Yield the handler's parameter signature, then its option descriptions and autocompletes when it has any.
+
+        The descriptions are rendered: the signature only holds an annotation's source, which doesn't change when a
+        constant a ``Describe`` names does.
+        """
         yield command_signature(self.func)
+        if descriptions := {name: spec.description for name, spec in self._options.items() if spec.description}:
+            yield f"descriptions: {descriptions}"
         if self._autocompletes:
             yield f"autocomplete: {sorted(self._autocompletes)}"
 

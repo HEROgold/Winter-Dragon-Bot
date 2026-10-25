@@ -82,6 +82,7 @@ class Uptime(GroupCog, name="uptime", description="Show how long the bot has bee
 - Settings go in a class next to the cog, declared with `CogConfig` so they land in `cogs.ini` (see
   `UrbanSettings` in `winter_dragon/cogs/urban.py`).
 - Buttons use `@Cog.component(prefix)`, gateway events use `@Cog.listener`.
+- A command's options come from its parameters; [Commands](commands.md) covers their types and descriptions.
 
 ## Test
 
