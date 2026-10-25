@@ -254,7 +254,9 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
 
     @Cog.command(name="remove", description="Cancel one of your reminders")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def remove(
-        self, interaction: CommandInteraction, reminder: Annotated[str, Describe("The text of the reminder to remove")],
+        self,
+        interaction: CommandInteraction,
+        reminder: Annotated[str, Describe("The text of the reminder to remove")],
     ) -> None:
         """Remove the invoking user's reminder named by ``reminder``."""
         # TODO: Update reminder Annotated to the reminder Model.
