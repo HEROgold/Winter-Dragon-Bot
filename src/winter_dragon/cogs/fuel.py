@@ -1,6 +1,7 @@
 """The /fuel command group: log refuels, and graph fuel efficiency over time."""
 
 from datetime import datetime
+from typing import Annotated
 lazy import asyncio
 lazy from datetime import UTC, date, time
 lazy from io import BytesIO
@@ -8,6 +9,7 @@ lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
+from wd_bot.commands import Describe
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 from wd_types.clock import utc_now
@@ -106,9 +108,9 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
     async def add(
         self,
         interaction: CommandInteraction,
-        price: float,
-        distance: float,
-        amount: float,
+        price: Annotated[float, Describe("The total price of the refuel")],
+        distance: Annotated[float, Describe("The distance driven since the last refuel")],
+        amount: Annotated[float, Describe("The amount of fuel added")],
         date: str | None = None,
     ) -> None:
         """Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now."""
