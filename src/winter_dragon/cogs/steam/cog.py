@@ -1,5 +1,7 @@
 """The /steam command group, its page buttons, and the background scrape of Steam's specials."""
 
+from typing import Annotated
+from wd_bot.commands import Describe
 lazy import asyncio
 lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
@@ -202,7 +204,11 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         name="percentage",
         description="Get notified of steam games on sale for the given percentage or higher",
     )
-    async def percentage(self, interaction: CommandInteraction, percent: int) -> None:
+    async def percentage(
+        self,
+        interaction: CommandInteraction,
+        percent: Annotated[int, Describe("The minimum percentage the discount has to be before getting notified")],
+    ) -> None:
         """Set the minimum discount the invoking user is notified about, subscribing them when they aren't."""
         user = interaction.user
         if user is None:
@@ -244,7 +250,11 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         name="show",
         description="Get a list of steam games that are on sale for the given percentage or higher",
     )
-    async def show(self, interaction: CommandInteraction, percent: int | None = None) -> None:
+    async def show(
+        self,
+        interaction: CommandInteraction,
+        percent: Annotated[int | None, Describe("Show discounts of at least this percentage")] = None,
+    ) -> None:
         """Show the first page of current sales of at least ``percent``, with buttons to page through them.
 
         ``percent`` defaults to :attr:`SteamSettings.default_threshold`.

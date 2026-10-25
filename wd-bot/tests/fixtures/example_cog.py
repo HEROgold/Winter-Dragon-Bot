@@ -5,8 +5,10 @@ Deliberately outside ``wd_cogs`` - the real catalog has its own unrelated broken
 ``Cog``/``Bot.add_cog``/listener dispatch work without depending on that catalog being healthy.
 """
 
+from typing import Annotated
 lazy from typing import TYPE_CHECKING, Unpack
 
+from wd_bot.commands import Describe
 lazy from wd_bot.cogs import BotArgs, Cog
 lazy from wd_discord.gateway import EventName
 
@@ -38,5 +40,5 @@ class ExampleCog(Cog):
         self.received.append(guild)
 
     @Cog.command(name="ping-user", description="Ping a user (test fixture)")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
-    async def ping_user(self, interaction: Interaction, user: User) -> None:
+    async def ping_user(self, interaction: Interaction, user: Annotated[User, Describe("The user to ping")]) -> None:
         """Ping a user."""

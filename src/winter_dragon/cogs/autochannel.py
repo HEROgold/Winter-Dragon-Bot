@@ -4,6 +4,7 @@ The member's channel is created next to the hub, the member is moved into it, an
 Who is in which voice channel is tracked from GUILD_CREATE's voice states and every VOICE_STATE_UPDATE since.
 """
 
+from wd_bot.commands import Describe
 from dataclasses import dataclass, field
 lazy import asyncio
 lazy from collections import defaultdict
@@ -286,7 +287,12 @@ class AutoChannels(
         description="Create a category with a hub channel members join to get their own",
         requires=Permissions.MANAGE_GUILD,
     )
-    async def setup(self, interaction: GuildCommandInteraction, category_name: str, hub_name: str) -> None:
+    async def setup(
+        self,
+        interaction: GuildCommandInteraction,
+        category_name: Annotated[str, Describe("The name of the category to create")],
+        hub_name: Annotated[str, Describe("The name of the hub channel to create")],
+    ) -> None:
         """Create the category ``category_name`` holding the hub voice channel ``hub_name``."""
         guild_id = int(interaction.guild_id)
         with Session(self.bind) as session:
@@ -331,6 +337,9 @@ class AutoChannels(
         channel: Annotated[Channel, ChannelTypes(ChannelType.GUILD_VOICE)],
     ) -> None:
         """Make ``channel`` the guild's hub, replacing the one it had."""
+        # TODO: Verify that autocomplete, only lists ChannelType.GUILD_VOICE channels, as annotated above.
+        # If not, add the check when readong the Annotated metadata and
+        # raise Refused if the channel is not one of the specified types.
         guild_id = int(interaction.guild_id)
         with Session(self.bind) as session:
             hub = hub_of(session, guild_id)
@@ -350,7 +359,11 @@ class AutoChannels(
         description="Set how many automatic channels this server allows at once",
         requires=Permissions.MANAGE_GUILD,
     )
-    async def guild_limit(self, interaction: GuildCommandInteraction, limit: int) -> None:
+    async def guild_limit(
+        self,
+        interaction: GuildCommandInteraction,
+        limit: Annotated[int, Describe("The maximum number of automatic channels this server allows at once, 0 for no limit")],
+    ) -> None:
         """Allow at most ``limit`` automatic channels at once, 0 for no limit."""
         if limit < 0:
             msg = "Give me 0 for no limit, or a positive number."
@@ -371,7 +384,11 @@ class AutoChannels(
         )
 
     @Cog.command(name="limit", description="Set how many users fit in your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def set_limit(self, interaction: GuildCommandInteraction, limit: int) -> None:
+    async def set_limit(
+        self,
+        interaction: GuildCommandInteraction,
+        limit: Annotated[int, Describe("The maximum number of users that can be in your channel, 0 for no limit")],
+    ) -> None:
         """Remember ``limit`` as the invoker's user limit, and apply it to their channel here if they have one."""
         if not 0 <= limit <= MAX_USER_LIMIT:
             msg = f"Give me 0 for no limit, or up to {MAX_USER_LIMIT}."
@@ -379,7 +396,11 @@ class AutoChannels(
         await self._change(interaction, ChannelParams(user_limit=limit), user_limit=limit)
 
     @Cog.command(name="name", description="Set the name of your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def set_name(self, interaction: GuildCommandInteraction, name: str) -> None:
+    async def set_name(
+        self,
+        interaction: GuildCommandInteraction,
+        name: Annotated[str, Describe("The new name for your channel")],
+    ) -> None:
         """Remember ``name`` as the invoker's channel name, and rename their channel here if they have one."""
         if not 0 < len(name) <= MAX_CHANNEL_NAME_LENGTH:
             msg = f"Keep the name under {MAX_CHANNEL_NAME_LENGTH} characters."

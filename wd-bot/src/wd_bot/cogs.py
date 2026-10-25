@@ -44,6 +44,8 @@ def command(
     the group's ``guild_ids`` apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
     before the handler runs; use it for a subcommand needing more than its group.
     """
+    # TODO: By defult, when name isn't specified, user the method name.
+    # TODO: When description isn't specified, use the first line of the docstring. (configurable in .ini)
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
         return Command(
