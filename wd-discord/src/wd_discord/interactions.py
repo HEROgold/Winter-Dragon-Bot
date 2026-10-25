@@ -122,6 +122,8 @@ MAX_CHOICES = 25
 """An option offers up to 25 choices (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 MAX_CHOICE_NAME_LENGTH = 100
 """A command option choice name, autocomplete results included, holds up to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-choice-structure)."""
+MAX_DESCRIPTION_LENGTH = 100
+"""A command or option description holds 1 to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 CHAT_INPUT_NAME_PATTERN = r"^[-_\u02BC\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$"
 """What a slash command or option name may hold (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-naming)."""
 
@@ -137,7 +139,7 @@ def _require_lowercase(name: str) -> str:
 type Name = Annotated[str, StringConstraints(min_length=1, max_length=32)]
 type ChatInputName = Annotated[str, StringConstraints(pattern=CHAT_INPUT_NAME_PATTERN), AfterValidator(_require_lowercase)]
 """A CHAT_INPUT command or option name: Discord's name regex, lowercase where a lowercase variant exists."""
-type Description = Annotated[str, StringConstraints(min_length=1, max_length=100)]
+type Description = Annotated[str, StringConstraints(min_length=1, max_length=MAX_DESCRIPTION_LENGTH)]
 type Localizations = dict[Locale, str]
 
 _chat_input_name: TypeAdapter[str] = TypeAdapter(ChatInputName)
