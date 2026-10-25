@@ -6,7 +6,6 @@ from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, channel_json, guild_create_json, member_json, role_json
 
 
-
 def connected(**changes: object) -> RecordingClient:
     """Return a client that received GUILD_CREATE for guild 7."""
     client = RecordingClient()

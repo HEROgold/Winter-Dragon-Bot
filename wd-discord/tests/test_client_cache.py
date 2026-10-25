@@ -4,7 +4,6 @@ import time
 
 import pytest
 from wd_config.discord import RestCache
-
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.testing import RecordingClient
 

@@ -1,8 +1,10 @@
 """A cog with a single command: a random compatibility percentage between two users."""
 
+from typing import Annotated
 lazy import random
 lazy from typing import TYPE_CHECKING
 
+from wd_bot.commands import Describe
 lazy from confkit.data_types import Hex
 lazy from wd_bot.cogs import Cog
 
@@ -51,7 +53,11 @@ class Love(Cog):
     """Cog for the /love command."""
 
     @Cog.command(name="love", description="Calculate compatibility with another user")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
-    async def love(self, interaction: CommandInteraction, user: User) -> None:
+    async def love(
+        self,
+        interaction: CommandInteraction,
+        user: Annotated[User, Describe("The user to calculate compatibility with")],
+    ) -> None:
         """Reply with a random compatibility love between the invoking user and ``user``."""
         asker = interaction.user
         if asker is None:

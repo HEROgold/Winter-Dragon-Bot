@@ -3,9 +3,9 @@
 lazy import random
 lazy from typing import TYPE_CHECKING
 
+from wd_bot.testing import detached_cog
 lazy from hypothesis import given
 lazy from hypothesis import strategies as st
-from wd_bot.testing import detached_cog
 lazy from wd_discord import User as BoundUser
 lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 lazy from wd_discord.resources.user import User

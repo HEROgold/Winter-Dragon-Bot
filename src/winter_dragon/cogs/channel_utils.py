@@ -2,6 +2,7 @@
 
 lazy from typing import TYPE_CHECKING, Annotated
 
+from wd_bot.commands import Describe
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
@@ -75,6 +76,9 @@ class ChannelUtils(
 
         Deletes nothing unless the bot may view and manage every one of them.
         """
+        # TODO: Verify that autocomplete, only lists ChannelType.GUILD_CATEGORY channels, as annotated above.
+        # If not, add the check when reading the Annotated metadata and
+        # raise Refused if the channel is not one of the specified types.
         app_permissions = interaction.app_permissions
         if app_permissions is not None and DELETE_PERMISSIONS not in app_permissions:
             msg = "I need the View Channels and Manage Channels permissions to do that."
@@ -118,12 +122,20 @@ class ChannelUtils(
         return doomed
 
     @Cog.command(name="lock", description="Stop a role or member from sending messages in this channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def lock(self, interaction: GuildCommandInteraction, target: User | Role) -> None:
+    async def lock(
+        self,
+        interaction: GuildCommandInteraction,
+        target: Annotated[User | Role, Describe("The role or member to lock")],
+    ) -> None:
         """Deny ``target`` SEND_MESSAGES in the channel the command was used in."""
         await self._set_lock(interaction, target, lock=True)
 
     @Cog.command(name="unlock", description="Let a role or member send messages in this channel again")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def unlock(self, interaction: GuildCommandInteraction, target: User | Role) -> None:
+    async def unlock(
+        self,
+        interaction: GuildCommandInteraction,
+        target: Annotated[User | Role, Describe("The role or member to unlock")],
+    ) -> None:
         """Stop denying ``target`` SEND_MESSAGES in the channel the command was used in."""
         await self._set_lock(interaction, target, lock=False)
 

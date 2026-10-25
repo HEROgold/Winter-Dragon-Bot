@@ -24,7 +24,7 @@ def test_guild_create_contributes_its_members_and_users() -> None:
         [
             ("GUILD_CREATE", {"id": "1", "name": "g", "members": [member]}),
             ("GUILD_CREATE", {"id": "1", "name": "g", "members": [renamed]}),
-        ]
+        ],
     )
 
     assert result.changes == {("Member", "nick"): 1, ("User", "username"): 1}
@@ -37,7 +37,7 @@ def test_unmodelled_events_unknown_fields_and_unparsable_payloads() -> None:
             ("SOMETHING_NEW", {}),
             ("TYPING_START", {"channel_id": "2", "user_id": "9", "timestamp": 1, "brand_new": True}),
             ("TYPING_START", {"channel_id": "2"}),
-        ]
+        ],
     )
 
     assert result.events == {"WEBHOOKS_UPDATE": 1, "SOMETHING_NEW": 1}

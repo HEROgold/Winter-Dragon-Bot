@@ -1,9 +1,11 @@
 """The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes."""
 
+from typing import Annotated
 lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
+from wd_bot.commands import Describe
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
 
@@ -173,7 +175,13 @@ class Tournaments(
         description="Open sign-up for a tournament in this channel",
         requires=Permissions.MANAGE_GUILD,
     )
-    async def create(self, interaction: GuildCommandInteraction, name: str, team_size: int, captains: bool = False) -> None:  # noqa: FBT001, FBT002 - a command option
+    async def create(
+        self,
+        interaction: GuildCommandInteraction,
+        name: Annotated[str, Describe("The name of the tournament")],
+        team_size: Annotated[int, Describe("The size of each team")] = 1,
+        captains: Annotated[bool, Describe("Allow team captains to register entire teams")] = False,  # noqa: FBT002
+    ) -> None:
         """Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
 
         The creator organises it.
@@ -248,7 +256,11 @@ class Tournaments(
         await interaction.update(embeds=[embed], components=buttons)
 
     @Cog.command(name="team-create", description="Register a team for this server's tournament, as its captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def team_create(self, interaction: GuildCommandInteraction, name: str) -> None:
+    async def team_create(
+        self,
+        interaction: GuildCommandInteraction,
+        name: Annotated[str, Describe("The name of the team")],
+    ) -> None:
         """Register the team ``name`` captained by the invoker."""
         if not 0 < len(name) <= TournamentSettings.max_name_length:
             msg = f"Keep the team name under {TournamentSettings.max_name_length} characters."
@@ -260,7 +272,11 @@ class Tournaments(
         await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
 
     @Cog.command(name="team-add", description="Add a player to the team you captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def team_add(self, interaction: GuildCommandInteraction, player: User) -> None:
+    async def team_add(
+        self,
+        interaction: GuildCommandInteraction,
+        player: Annotated[User, Describe("The player to add to the team")],
+    ) -> None:
         """Add ``player`` to the invoker's team."""
         with Session(self.bind) as session:
             add_to_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
@@ -268,7 +284,11 @@ class Tournaments(
         await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your team.")], ephemeral=True)
 
     @Cog.command(name="team-remove", description="Remove a player from the team you captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def team_remove(self, interaction: GuildCommandInteraction, player: User) -> None:
+    async def team_remove(
+        self,
+        interaction: GuildCommandInteraction,
+        player: Annotated[User, Describe("The player to remove from the team")],
+    ) -> None:
         """Remove ``player`` from the invoker's team."""
         with Session(self.bind) as session:
             remove_from_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
@@ -348,8 +368,14 @@ class Tournaments(
         return embed, match_buttons(self.match_control, match, names)
 
     @Cog.command(name="match", description="Show a match's card, with the organiser's controls")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def match_card(self, interaction: GuildCommandInteraction, match: int) -> None:
+    async def match_card(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[int, Describe("The ID of the match to show")],
+    ) -> None:
         """Post the card of match ``match``."""
+        # TODO: Update the Annotated to the Match Model, and use autocomplete to suggest matches.
+        # This will require a new function to get the matches of a tournament and return them as choices.
         with Session(self.bind) as session:
             embed, buttons = self._match_card(session, *self._match(interaction, session, match))
         await interaction.respond(embeds=[embed], components=buttons)
@@ -384,19 +410,35 @@ class Tournaments(
         await interaction.respond(f"Your team {verb} **{choice}** in match #{match}.", ephemeral=True)
 
     @Cog.command(name="ban", description="Ban something from your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def ban(self, interaction: GuildCommandInteraction, match: int, choice: str) -> None:
+    async def ban(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[int, Describe("The ID of the match to ban in")],
+        choice: Annotated[str, Describe("The item to ban")],
+    ) -> None:
         """Record the invoker's team banning ``choice`` in ``match``."""
         await self._draft(interaction, match, choice, DraftKind.BAN)
 
     @Cog.command(name="pick", description="Pick something for your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def pick(self, interaction: GuildCommandInteraction, match: int, choice: str) -> None:
+    async def pick(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[int, Describe("The ID of the match to pick in")],
+        choice: Annotated[str, Describe("The item to pick")],
+    ) -> None:
         """Record the invoker's team picking ``choice`` in ``match``."""
         await self._draft(interaction, match, choice, DraftKind.PICK)
 
     # --- Votes -----------------------------------------------------------------------------------------------------
 
     @Cog.command(name="vote", description="Let a match's players vote, e.g. on a map; answers separated by commas")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def vote(self, interaction: GuildCommandInteraction, match: int, question: str, answers: str) -> None:
+    async def vote(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[int, Describe("The ID of the match to vote in")],
+        question: Annotated[str, Describe("The question to vote on")],
+        answers: Annotated[str, Describe("The answers to the question, separated by commas")],
+    ) -> None:
         """Post a vote on ``question`` for the players of ``match``; organisers only."""
         with Session(self.bind) as session:
             tournament, found = self._match(interaction, session, match)
@@ -413,6 +455,8 @@ class Tournaments(
     @match_card.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the tournament's undecided matches whose line contains what was typed."""
+        # TODO: Consider/expirement if we can move autocomplete into Annotated,
+        # If we can do this, we should also consider moving the match_id Annotated to a Match Model,
         guild = interaction.guild
         with Session(self.bind) as session:
             tournament = None if guild is None else active_tournament(session, int(guild.id))

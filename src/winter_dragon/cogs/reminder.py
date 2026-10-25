@@ -1,11 +1,13 @@
 """The /reminder command group: one-off and repeating reminders, sent as DMs by a background task."""
 
 from datetime import datetime, timedelta
+from typing import Annotated
 lazy import asyncio
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, col
+from wd_bot.commands import Describe
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog
@@ -220,10 +222,10 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     async def add(
         self,
         interaction: CommandInteraction,
-        reminder: str,
-        minutes: int = 0,
-        hours: int = 0,
-        days: int = 0,
+        reminder: Annotated[str, Describe("The text to remind you of")],
+        minutes: Annotated[int, Describe("The number of minutes to wait before reminding you")] = 0,
+        hours: Annotated[int, Describe("The number of hours to wait before reminding you")] = 0,
+        days: Annotated[int, Describe("The number of days to wait before reminding you")] = 0,
     ) -> None:
         """Remind the invoking user of ``reminder`` once, after the given time."""
         user = interaction.user
@@ -236,11 +238,11 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     async def repeat(  # noqa: PLR0913 - one option per time unit
         self,
         interaction: CommandInteraction,
-        reminder: str,
-        minutes: int = 0,
-        hours: int = 0,
-        days: int = 0,
-        weeks: int = 0,
+        reminder: Annotated[str, Describe("The text to remind you of")],
+        minutes: Annotated[int, Describe("The number of minutes before reminding you again")] = 0,
+        hours: Annotated[int, Describe("The number of hours before reminding you again")] = 0,
+        days: Annotated[int, Describe("The number of days before reminding you again")] = 0,
+        weeks: Annotated[int, Describe("The number of weeks before reminding you again")] = 0,
     ) -> None:
         """Remind the invoking user of ``reminder`` every given time, starting one interval from now."""
         user = interaction.user
@@ -251,8 +253,14 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         await self._store(interaction, timed)
 
     @Cog.command(name="remove", description="Cancel one of your reminders")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def remove(self, interaction: CommandInteraction, reminder: str) -> None:
+    async def remove(
+        self,
+        interaction: CommandInteraction,
+        reminder: Annotated[str, Describe("The text of the reminder to remove")],
+    ) -> None:
         """Remove the invoking user's reminder named by ``reminder``."""
+        # TODO: Update reminder Annotated to the reminder Model.
+        # And parse the reminder Model from the autocomplete value, instead of looking it up by content.
         user = interaction.user
         if user is None:
             return

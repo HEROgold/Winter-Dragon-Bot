@@ -12,9 +12,9 @@ import sys
 from _common import load_token, support_guild_id
 from httpxyz import RequestError
 from wd_discord import ApiResponseError, Client, Permissions
+from wd_discord.oauth import OAuthScopes
 from wd_discord.resources.application import Application
 from wd_discord.resources.guild import Guild
-from wd_discord.oauth import OAuthScopes
 from wd_discord.resources.user import User
 
 
@@ -23,7 +23,7 @@ def _fail(label: str, detail: object) -> int:
     return 1
 
 
-async def main() -> int:  # noqa: PLR0911 - a linear sequence of guarded checks reads clearest flat
+async def main() -> int:
     """Drive model validators and methods against live + crafted data."""
     async with Client(load_token()) as client:
         current = await client.users.me()
