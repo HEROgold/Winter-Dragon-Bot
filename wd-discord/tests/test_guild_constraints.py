@@ -7,8 +7,6 @@ lazy from wd_discord.resources.guild.role import Role
 lazy from wd_discord.testing import GUILD_JSON, role_json
 
 
-
-
 @pytest.mark.parametrize("name", ["a", "x" * 101])
 def test_guild_name_outside_2_to_100_characters_is_rejected(name: str) -> None:
     with pytest.raises(ValidationError):

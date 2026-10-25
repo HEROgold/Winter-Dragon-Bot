@@ -33,7 +33,7 @@ def test_uptime_message_shows_absolute_and_relative_time() -> None:
 
 
 async def test_uptime_replies_with_the_launch_time(
-    make_interaction: InteractionFactory, discord_client: RecordingClient
+    make_interaction: InteractionFactory, discord_client: RecordingClient,
 ) -> None:
     launch = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
     cog = detached_cog(Uptime, launch_time=launch)
@@ -49,7 +49,7 @@ def support_guild(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _invite_cog(
-    guild: Mapping[str, object], channels: list[Mapping[str, object]] | None = None
+    guild: Mapping[str, object], channels: list[Mapping[str, object]] | None = None,
 ) -> tuple[Invite, RecordingClient]:
     client = RecordingClient()
     client.reply("GET", f"/guilds/{SUPPORT_GUILD_ID}", guild)
@@ -62,7 +62,7 @@ def _invite_cog(
 
 @pytest.mark.usefixtures("support_guild")
 async def test_support_invite_uses_the_system_channel(
-    make_interaction: InteractionFactory, discord_client: RecordingClient
+    make_interaction: InteractionFactory, discord_client: RecordingClient,
 ) -> None:
     cog, client = _invite_cog({**GUILD_JSON, "id": str(SUPPORT_GUILD_ID), "system_channel_id": "10"})
 
@@ -91,7 +91,7 @@ async def test_support_invite_falls_back_to_the_first_text_channel(
 
 @pytest.mark.usefixtures("support_guild")
 async def test_support_invite_without_a_channel_says_so(
-    make_interaction: InteractionFactory, discord_client: RecordingClient
+    make_interaction: InteractionFactory, discord_client: RecordingClient,
 ) -> None:
     cog, _ = _invite_cog({**GUILD_JSON, "id": str(SUPPORT_GUILD_ID), "system_channel_id": None})
 

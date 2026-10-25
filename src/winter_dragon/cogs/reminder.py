@@ -1,13 +1,13 @@
 """The /reminder command group: one-off and repeating reminders, sent as DMs by a background task."""
 
-from wd_bot.commands import Describe
-from typing import Annotated
 from datetime import datetime, timedelta
+from typing import Annotated
 lazy import asyncio
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, col
+from wd_bot.commands import Describe
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog

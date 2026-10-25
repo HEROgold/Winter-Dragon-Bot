@@ -30,7 +30,7 @@ MEMBER_PATH = f"/guilds/{GUILD_ID}/members/{MEMBER_ID}"
 
 
 def _role(
-    role_id: int, *, managed: bool = False, position: int = 1, permissions: Permissions = Permissions.none()
+    role_id: int, *, managed: bool = False, position: int = 1, permissions: Permissions = Permissions.none(),
 ) -> dict[str, Any]:
     return role_json(
         id=str(role_id),
@@ -51,7 +51,7 @@ def _member(*role_ids: int, user: dict[str, Any] = USER) -> dict[str, Any]:
 
 
 def _connect(
-    client: RecordingClient, roles: list[dict[str, Any]], *member_role_ids: int, bot_role: dict[str, Any] | None = None
+    client: RecordingClient, roles: list[dict[str, Any]], *member_role_ids: int, bot_role: dict[str, Any] | None = None,
 ) -> None:
     """Have ``client`` connect as the bot and receive the guild, with the member holding ``member_role_ids``."""
     client.receive(parse_ready({"v": 10, "session_id": "s", "resume_gateway_url": "wss://x", "user": BOT_USER, "guilds": []}))
@@ -379,7 +379,7 @@ async def test_roles_given_back_and_forgotten_never_come_back(engine: Engine) ->
     await cog.on_member_remove(_leave(client))
     await cog.on_member_add(_join(client))
     client.receive(
-        parse_dispatch(EventName.GUILD_MEMBER_UPDATE, {**_member(9), "avatar": None, "banner": None, "guild_id": str(GUILD_ID)})
+        parse_dispatch(EventName.GUILD_MEMBER_UPDATE, {**_member(9), "avatar": None, "banner": None, "guild_id": str(GUILD_ID)}),
     )
 
     await cog.on_member_remove(_leave(client))

@@ -4,7 +4,6 @@ The member's channel is created next to the hub, the member is moved into it, an
 Who is in which voice channel is tracked from GUILD_CREATE's voice states and every VOICE_STATE_UPDATE since.
 """
 
-from wd_bot.commands import Describe
 from dataclasses import dataclass, field
 lazy import asyncio
 lazy from collections import defaultdict
@@ -12,6 +11,7 @@ lazy from typing import TYPE_CHECKING, Annotated, ClassVar, Unpack, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
+from wd_bot.commands import Describe
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes

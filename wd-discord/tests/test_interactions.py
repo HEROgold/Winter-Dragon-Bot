@@ -101,7 +101,7 @@ def test_command_validates_discord_payload() -> None:
 
 def test_params_payload_includes_options() -> None:
     option = ApplicationCommandOption(
-        type=ApplicationCommandOptionType.USER, name="user", description="Target user", required=True
+        type=ApplicationCommandOptionType.USER, name="user", description="Target user", required=True,
     )
     params = ApplicationCommandParams(name="percentage", description="Calculate a percentage", options=[option])
     assert params.to_json() == {

@@ -1,11 +1,11 @@
 """The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes."""
 
-from wd_bot.commands import Describe
 from typing import Annotated
 lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
+from wd_bot.commands import Describe
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
 

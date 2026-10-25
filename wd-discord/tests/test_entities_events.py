@@ -399,7 +399,7 @@ def test_a_dm_reaction_has_no_guild_or_member() -> None:
     reaction = bind(
         RecordingClient(),
         parse_dispatch(
-            EventName.MESSAGE_REACTION_REMOVE, {**REACTION_IDS, "guild_id": None, "emoji": {"id": None, "name": "x"}}
+            EventName.MESSAGE_REACTION_REMOVE, {**REACTION_IDS, "guild_id": None, "emoji": {"id": None, "name": "x"}},
         ),
     )
     assert isinstance(reaction, ReactionRemove)

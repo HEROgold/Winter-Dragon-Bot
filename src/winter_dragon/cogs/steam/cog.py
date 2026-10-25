@@ -1,11 +1,11 @@
 """The /steam command group, its page buttons, and the background scrape of Steam's specials."""
 
 from typing import Annotated
-from wd_bot.commands import Describe
 lazy import asyncio
 lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
+from wd_bot.commands import Describe
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete

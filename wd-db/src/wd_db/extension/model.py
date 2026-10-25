@@ -2,6 +2,7 @@
 
 This module should make the SQLModel classes more like a `Repository` pattern.
 """
+import logging
 lazy from types import NoneType
 lazy from typing import TYPE_CHECKING, Any, ClassVar, Self, Unpack
 
@@ -17,7 +18,6 @@ lazy from wd_db.errors import AlreadyExistsError, NotFoundError
 
 
 if TYPE_CHECKING:
-    import logging
     lazy from collections.abc import Sequence
 
     lazy from pydantic import ConfigDict

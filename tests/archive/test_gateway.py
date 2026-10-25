@@ -3,7 +3,6 @@
 import asyncio
 from typing import TYPE_CHECKING, cast
 
-from sqlalchemy import Engine
 from sqlmodel import Session, select
 from wd_core.intents import Intents
 
@@ -13,6 +12,7 @@ from archive.writer import Writer
 
 
 if TYPE_CHECKING:
+    from sqlalchemy import Engine
     from wd_discord.gateway.connection import GatewayFrame
 
 

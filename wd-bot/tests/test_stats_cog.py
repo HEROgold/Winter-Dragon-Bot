@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session
-from wd_db.extension.lifecycle import alive
-from wd_db.testing import seed
 from wd_bot.checks import is_owner, member_has
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import alive
+from wd_db.testing import seed
 from wd_discord.permissions import Permissions
 from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, user_json
 
@@ -46,7 +46,7 @@ APPLICATION = {
     "verify_key": "k",
     "team": None,
     "owner": user_json(username="asker"),
-}  # noqa: E501
+}
 COUNTS = GuildCounts(members=10, bots=2, online=6, created=datetime(2015, 1, 1, tzinfo=UTC))
 
 

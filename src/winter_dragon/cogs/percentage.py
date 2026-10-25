@@ -1,10 +1,10 @@
 """A cog with a single command: a random compatibility percentage between two users."""
 
-from wd_bot.commands import Describe
 from typing import Annotated
 lazy import random
 lazy from typing import TYPE_CHECKING
 
+from wd_bot.commands import Describe
 lazy from confkit.data_types import Hex
 lazy from wd_bot.cogs import Cog
 

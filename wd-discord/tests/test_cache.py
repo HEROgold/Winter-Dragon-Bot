@@ -227,7 +227,7 @@ def test_voice_state_follows_joins_and_leaves() -> None:
 def test_ready_and_user_update_track_the_bot() -> None:
     cache = StateCache()
     cache.apply(
-        parse_ready({"v": 10, "session_id": "s", "resume_gateway_url": "wss://x", "user": user_json(id="42"), "guilds": []})
+        parse_ready({"v": 10, "session_id": "s", "resume_gateway_url": "wss://x", "user": user_json(id="42"), "guilds": []}),
     )
     assert cache.user is not None
     assert cache.user.id == Snowflake(42)
@@ -247,7 +247,7 @@ def test_receive_updates_the_cache_before_binding() -> None:
     client = RecordingClient()
     client.receive(parse_dispatch(EventName.GUILD_CREATE, guild_create_json()))
     received = client.receive(
-        parse_dispatch(EventName.GUILD_ROLE_UPDATE, {"guild_id": "7", "role": role_json(name="admins")})
+        parse_dispatch(EventName.GUILD_ROLE_UPDATE, {"guild_id": "7", "role": role_json(name="admins")}),
     )
     assert isinstance(received.event, Role)
     assert received.event.name == "admins"

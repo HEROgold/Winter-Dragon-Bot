@@ -12,9 +12,9 @@ import sys
 from _common import load_token, support_guild_id
 from httpxyz import RequestError
 from wd_discord import ApiResponseError, Client
+from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.resources.guild import Guild
 from wd_discord.resources.guild.welcome_screen import WelcomeScreen
-from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.snowflake import Snowflake
 
 
