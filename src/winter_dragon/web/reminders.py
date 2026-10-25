@@ -30,6 +30,7 @@ lazy from winter_dragon.web.responses import database, is_htmx, render, see_othe
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
     from zoneinfo import ZoneInfo
 
 
