@@ -76,13 +76,12 @@ Represents the Gateway Intents.
   GUILD_SCHEDULED_EVENT_USER_ADD, GUILD_SCHEDULED_EVENT_USER_REMOVE, guild_scheduled_events,
   AUTO_MODERATION_CONFIGURATION, AUTO_MODERATION_RULE_CREATE, AUTO_MODERATION_RULE_UPDATE, AUTO_MODERATION_RULE_DELETE,
   auto_moderation_configuration, AUTO_MODERATION_EXECUTION, AUTO_MODERATION_ACTION_EXECUTION, auto_moderation_execution,
-  auto_moderation, GUILD_MESSAGE_POLLS, dm_polls, DIRECT_MESSAGE_POLLS, guild_polls, polls, THREAD_MEMBERS_UPDATE,
+  auto_moderation, GUILD_MESSAGE_POLLS, guild_polls, DIRECT_MESSAGE_POLLS, dm_polls, polls, THREAD_MEMBERS_UPDATE,
   MESSAGE_CREATE, MESSAGE_UPDATES, MESSAGE_DELETE, CHANNEL_PINS_UPDATE, MESSAGE_POLL_VOTE_REMOVE, MESSAGE_REACTION_ADD,
   MESSAGE_REACTION_REMOVE, MESSAGE_REACTION_REMOVE_ALL, MESSAGE_REACTION_REMOVE_EMOJI, TYPING_START,
   MESSAGE_POLL_VOTE_ADD
 - `@classmethod none() -> Intents` — Return an Intents object with no intents set.
 - `@classmethod all() -> Intents` — Return an Intents object with all intents set.
-- `@classmethod all2() -> Intents` — Return an Intents object with all intents set, except for privileged intents.
 
 ## `wd_core.package` — `wd-core/src/wd_core/package.py`
 Module helping with importing modules for the Winter Dragon project.
