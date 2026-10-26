@@ -29,9 +29,8 @@ lazy from winter_dragon.web.responses import Database, after_post, page_or_fragm
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from zoneinfo import ZoneInfo
-
     from sqlalchemy import Engine
+    from zoneinfo import ZoneInfo
 
     from winter_dragon.web.accounts import Account
 

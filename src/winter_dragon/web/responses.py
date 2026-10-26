@@ -6,8 +6,8 @@ lazy from typing import TYPE_CHECKING, Annotated
 from fastapi import Depends
 from fastapi.templating import Jinja2Templates
 lazy from fastapi import Request, status
-lazy from sqlalchemy import Engine
 lazy from fastapi.responses import RedirectResponse
+lazy from sqlalchemy import Engine
 
 lazy from winter_dragon.web.accounts import CSRF_FIELD, csrf_token, current_account
 lazy from winter_dragon.web.formatting import shown_value
