@@ -74,7 +74,9 @@ def fuel(context: ProfileContext) -> dict[str, object]:
     """Return the fuel page's context: the member's refuels, newest first, and their efficiency graph."""
     with Session(context.bind) as session:
         refuels = sorted(
-            session.exec(owned_by(CarFuels, member=context.member_id)), key=lambda refuel: refuel.refuel_date, reverse=True
+            session.exec(owned_by(CarFuels, member=context.member_id)),
+            key=lambda refuel: refuel.refuel_date,
+            reverse=True,
         )
     return {
         "refuels": [(refuel, refuel.refuel_date.astimezone(context.zone)) for refuel in refuels],

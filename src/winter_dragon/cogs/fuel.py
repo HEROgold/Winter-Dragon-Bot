@@ -145,8 +145,13 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         with Session(self.bind) as session:
             session.add(
                 CarFuels(
-                    user_id=int(user.id), amount=amount, distance=distance, price=price, timestamp=now, refueled_at=refueled_at
-                )
+                    user_id=int(user.id),
+                    amount=amount,
+                    distance=distance,
+                    price=price,
+                    timestamp=now,
+                    refueled_at=refueled_at,
+                ),
             )
             session.commit()
         await interaction.respond(
