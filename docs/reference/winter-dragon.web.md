@@ -198,6 +198,7 @@ Rendering the dashboard's templates, as a whole page or as the fragment an htmx 
 - module names: TEMPLATES_DIR, STATIC_DIR, templates
 - `is_htmx(request: Request) -> bool` — Whether ``request`` came from htmx, which swaps in a fragment instead of loading a page.
 - `render(request: Request, name: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the template ``name`` with ``context``, plus the signed-in account and the CSRF token every form carries.
+- `render_mapping(request: Request, name: str, context: Mapping[str, object], *, status_code: int=status.HTTP_200_OK) -> Response` — Like :func:`render`, for a ``context`` built elsewhere, whose keys can't be passed as keyword arguments.
 - `see_other(url: str) -> RedirectResponse` — Redirect a submitted form to the page ``url``, which the browser then loads with a GET.
 - `database(request: Request) -> Engine` — Return the database the app was created on; a FastAPI dependency.
 

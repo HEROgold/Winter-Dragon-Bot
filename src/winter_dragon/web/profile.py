@@ -22,7 +22,7 @@ lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annot
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 
 lazy from winter_dragon.web.accounts import Account, signed_in, visitor_zone
-lazy from winter_dragon.web.responses import database, render
+lazy from winter_dragon.web.responses import database, render, render_mapping
 
 
 if TYPE_CHECKING:
@@ -114,4 +114,4 @@ def profile_page_view(
     if page is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "There's no such Profile page.")
     context = page.context(ProfileContext(bind=bind, member_id=account.id, zone=visitor_zone(request)))
-    return render(request, page.template, pages=pages, page=page, **context)
+    return render_mapping(request, page.template, {"pages": pages, "page": page, **context})

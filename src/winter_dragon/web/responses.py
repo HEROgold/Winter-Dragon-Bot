@@ -12,6 +12,8 @@ lazy from winter_dragon.web.formatting import shown_value
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from sqlalchemy import Engine
     from starlette.responses import Response
 
@@ -30,8 +32,19 @@ def is_htmx(request: Request) -> bool:
 
 def render(request: Request, name: str, *, status_code: int = status.HTTP_200_OK, **context: object) -> Response:
     """Render the template ``name`` with ``context``, plus the signed-in account and the CSRF token every form carries."""
+    return render_mapping(request, name, context, status_code=status_code)
+
+
+def render_mapping(
+    request: Request,
+    name: str,
+    context: Mapping[str, object],
+    *,
+    status_code: int = status.HTTP_200_OK,
+) -> Response:
+    """Like :func:`render`, for a ``context`` built elsewhere, whose keys can't be passed as keyword arguments."""
     shared = {"account": current_account(request), "csrf_field": CSRF_FIELD, "csrf_token": csrf_token(request)}
-    return templates.TemplateResponse(request, name, shared | context, status_code=status_code)
+    return templates.TemplateResponse(request, name, shared | dict(context), status_code=status_code)
 
 
 def see_other(url: str) -> RedirectResponse:
