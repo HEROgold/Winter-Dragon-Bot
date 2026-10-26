@@ -333,6 +333,18 @@ def test_the_fuel_page_shows_a_graph_and_the_refuels_newest_first(member: TestCl
     assert table.index("2026-10-07") < table.index("2026-10-06") < table.index("2026-10-05")
 
 
+def test_the_fuel_page_orders_by_refuel_date_not_entry_time(member: TestClient, bind: Engine) -> None:
+    older = _refuel(1, 600, 40)
+    older.refueled_at = NOW - timedelta(days=30)
+    newer = _refuel(20, 660, 40)
+    newer.refueled_at = NOW - timedelta(days=2)
+    seed(bind, older, newer)
+
+    page = member.get("/profile/fuel").text.split("<tbody>")[1]
+
+    assert page.index(f"{NOW - timedelta(days=2):%Y-%m-%d}") < page.index(f"{NOW - timedelta(days=30):%Y-%m-%d}")
+
+
 def test_the_fuel_page_without_refuels_is_an_empty_state(member: TestClient) -> None:
     response = member.get("/profile/fuel")
 

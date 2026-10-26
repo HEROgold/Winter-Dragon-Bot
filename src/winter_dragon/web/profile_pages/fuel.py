@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
-lazy from sqlmodel import Session, col
+lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import owned_by
 
 lazy from winter_dragon.cogs.fuel import CarFuels
@@ -48,21 +48,21 @@ class EfficiencyGraph:
 
 def efficiency_graph(refuels: Sequence[CarFuels]) -> EfficiencyGraph | None:
     """Return the graph of ``refuels``, or ``None`` when none of them added fuel."""
-    ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.timestamp)
+    ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.refuel_date)
     if not ordered:
         return None
     values = [refuel.efficiency for refuel in ordered]
     lowest, highest = min(values), max(values)
-    start, end = ordered[0].timestamp, ordered[-1].timestamp
+    start, end = ordered[0].refuel_date, ordered[-1].refuel_date
     span_x = GRAPH_WIDTH - 2 * GRAPH_PADDING
     span_y = GRAPH_HEIGHT - 2 * GRAPH_PADDING
     duration = (end - start).total_seconds()
     spread = highest - lowest
     points = tuple(
         GraphPoint(
-            x=GRAPH_PADDING + (span_x * (refuel.timestamp - start).total_seconds() / duration if duration else span_x / 2),
+            x=GRAPH_PADDING + (span_x * (refuel.refuel_date - start).total_seconds() / duration if duration else span_x / 2),
             y=GRAPH_PADDING + (span_y * (1 - (value - lowest) / spread) if spread else span_y / 2),
-            label=f"{refuel.timestamp:%Y-%m-%d}: {value:.2f}",
+            label=f"{refuel.refuel_date:%Y-%m-%d}: {value:.2f}",
         )
         for refuel, value in zip(ordered, values, strict=True)
     )
@@ -73,9 +73,11 @@ def efficiency_graph(refuels: Sequence[CarFuels]) -> EfficiencyGraph | None:
 def fuel(context: ProfileContext) -> dict[str, object]:
     """Return the fuel page's context: the member's refuels, newest first, and their efficiency graph."""
     with Session(context.bind) as session:
-        refuels = list(session.exec(owned_by(CarFuels, member=context.member_id).order_by(col(CarFuels.timestamp).desc())))
+        refuels = sorted(
+            session.exec(owned_by(CarFuels, member=context.member_id)), key=lambda refuel: refuel.refuel_date, reverse=True
+        )
     return {
-        "refuels": [(refuel, refuel.timestamp.astimezone(context.zone)) for refuel in refuels],
+        "refuels": [(refuel, refuel.refuel_date.astimezone(context.zone)) for refuel in refuels],
         "graph": efficiency_graph(refuels),
         "width": GRAPH_WIDTH,
         "height": GRAPH_HEIGHT,
