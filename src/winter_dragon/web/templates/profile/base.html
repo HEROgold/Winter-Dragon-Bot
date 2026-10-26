@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% set active = "profile" %}
+
+{% block title %}{% if page %}{{ page.title }} · {% endif %}Profile · {% endblock %}
+
+{% block main %}
+<main class="page">
+  <h1 class="page-title">Profile</h1>
+  <p class="page-lead">What you have done with Winter Dragon, across every server. Only you see this.</p>
+
+  <nav class="profile-tabs" aria-label="Profile pages">
+    {% for tab in pages %}
+      <a href="{{ tab.path }}" {% if page and tab.slug == page.slug %}aria-current="page"{% endif %}>{{ tab.title }}</a>
+    {% endfor %}
+  </nav>
+
+  {% block profile %}{% endblock %}
+</main>
+{% endblock %}

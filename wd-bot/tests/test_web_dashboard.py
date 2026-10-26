@@ -17,8 +17,9 @@ from wd_discord.snowflake import Snowflake
 from wd_discord.testing import user_json
 
 from winter_dragon.cogs import import_cogs
+from winter_dragon.cogs.fuel import CarFuels
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
-from winter_dragon.web import auth, pages, reminders
+from winter_dragon.web import auth, pages, profile, reminders
 from winter_dragon.web.app import create_app
 from winter_dragon.web.reminders import InvalidReminderError, ReminderDraft, Repeat
 
@@ -295,3 +296,67 @@ def test_you_can_only_delete_your_own_reminders(member: TestClient, bind: Engine
 def test_a_draft_that_cannot_be_a_reminder_says_why(draft: ReminderDraft, why: str) -> None:
     with pytest.raises(InvalidReminderError, match=why):
         draft.reminder(MEMBER_ID, ZoneInfo(ZONE), NOW)
+
+
+def _refuel(days_ago: int, distance: float, amount: float, user_id: int = MEMBER_ID) -> CarFuels:
+    return CarFuels(user_id=user_id, amount=amount, distance=distance, price=50.0, timestamp=NOW - timedelta(days=days_ago))
+
+
+def test_the_profile_lists_a_page_per_feature(member: TestClient) -> None:
+    page = member.get("/profile")
+
+    assert page.status_code == 200
+    assert 'href="/profile/fuel"' in page.text
+
+
+def test_the_dashboard_links_to_the_profile(member: TestClient) -> None:
+    assert 'href="/profile"' in member.get("/").text
+    assert 'href="/profile"' in member.get("/me").text
+
+
+def test_the_profile_needs_sign_in(client: TestClient) -> None:
+    for path in ("/profile", "/profile/fuel"):
+        response = client.get(path, follow_redirects=False)
+
+        assert response.status_code == 303
+        assert response.headers["location"] == auth.LOGIN_PATH
+
+
+def test_the_fuel_page_shows_a_graph_and_the_refuels_newest_first(member: TestClient, bind: Engine) -> None:
+    seed(bind, _refuel(3, 600, 40), _refuel(1, 660, 40), _refuel(2, 630, 40))
+
+    page = member.get("/profile/fuel").text
+
+    assert "<svg" in page
+    assert page.count("<circle") == 3
+    table = page[page.index("<table") :]
+    assert table.index("2026-10-07") < table.index("2026-10-06") < table.index("2026-10-05")
+
+
+def test_the_fuel_page_without_refuels_is_an_empty_state(member: TestClient) -> None:
+    response = member.get("/profile/fuel")
+
+    assert response.status_code == 200
+    assert "not logged a refuel" in response.text
+    assert "<svg" not in response.text
+
+
+def test_the_fuel_page_shows_only_your_own_refuels(member: TestClient, bind: Engine) -> None:
+    seed(bind, _refuel(1, 999, 10, user_id=OTHER_ID))
+
+    page = member.get("/profile/fuel").text
+
+    assert "not logged a refuel" in page
+    assert "999" not in page
+
+
+def test_a_profile_page_that_does_not_exist_is_not_found(member: TestClient) -> None:
+    assert member.get("/profile/nothing").status_code == 404
+
+
+def test_a_feature_adds_a_profile_page_by_registering_it(member: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(profile, "_pages", dict(profile._pages))  # noqa: SLF001
+    profile.profile_page(slug="steam", title="Steam", template="profile/index.html")(lambda _: {})
+
+    assert 'href="/profile/steam"' in member.get("/profile").text
+    assert member.get("/profile/steam").status_code == 200

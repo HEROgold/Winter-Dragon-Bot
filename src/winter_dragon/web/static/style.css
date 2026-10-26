@@ -615,3 +615,17 @@ img.avatar { object-fit: cover; }
 .input.confirm-name { max-width: 20rem; }
 .deletion-start { margin-top: 1rem; }
 .audit { margin-top: 1rem; }
+
+/* Profile */
+.profile-tabs { display: flex; gap: 1.25rem; margin: 2rem 0 1.5rem; border-bottom: 1px solid var(--line); }
+.profile-tabs a { padding: 0.4rem 0; color: var(--slate); text-decoration: none; border-bottom: 3px solid transparent; }
+.profile-tabs a[aria-current="page"] { color: var(--granite); border-bottom-color: var(--route); font-weight: 600; }
+.profile-heading { font-size: var(--step-2); margin-bottom: 1rem; }
+.profile-empty { color: var(--slate); }
+.profile-graph { margin: 0 0 2rem; max-width: 40rem; }
+.profile-graph svg { width: 100%; height: auto; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-panel); }
+.profile-graph text { font-size: 11px; fill: var(--slate); }
+.profile-graph .axis { stroke: var(--line); stroke-width: 1; }
+.profile-graph .line { fill: none; stroke: var(--route); stroke-width: 2; }
+.profile-graph .dot { fill: var(--paper); stroke: var(--route); stroke-width: 2; }
+.profile-graph figcaption { color: var(--slate); font-size: 0.9rem; margin-top: 0.4rem; }

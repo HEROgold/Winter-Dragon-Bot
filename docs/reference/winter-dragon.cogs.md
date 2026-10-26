@@ -624,7 +624,7 @@ Runs one tournament per guild: players sign up, teams form, and a single-elimina
 
 - attributes: rng
 - `async load() -> None` — Create the tournament tables if missing.
-- `@Cog.command async create(interaction: GuildCommandInteraction, name: str, team_size: int, captains: bool=False) -> None` — Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
+- `@Cog.command async create(interaction: GuildCommandInteraction, name: str, team_size: int=1, captains: bool=False) -> None` — Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
 - `@Cog.command async join(interaction: GuildCommandInteraction) -> None` — Sign the invoker up for the guild's solo tournament.
 - `@Cog.command async leave(interaction: GuildCommandInteraction) -> None` — Take the invoker out of the tournament; a captain leaving disbands their team.
 - `@Cog.component async join_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
