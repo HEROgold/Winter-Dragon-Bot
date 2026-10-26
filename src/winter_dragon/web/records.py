@@ -52,8 +52,8 @@ def features() -> Generator[Feature]:
         pending.extend(cog.__subclasses__())
         if cog.__module__.startswith(f"{cogs.__name__}."):
             groups.append(cog)
-    for cog in sorted(groups, key=lambda group: group.group_name):
-        yield Feature(name=cog.group_name, description=cog.group_description)
+    for cog in sorted(groups, key=lambda group: group.group_definition.name):
+        yield Feature(name=cog.group_definition.name, description=cog.group_definition.description)
 
 
 @dataclass(frozen=True)

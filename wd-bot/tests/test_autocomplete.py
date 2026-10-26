@@ -6,7 +6,7 @@ import pytest
 from sqlmodel import Session, select
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
-from wd_bot.commands import Command, Describe, Lookup
+from wd_bot.commands import Command, CommandDefinition, Describe, Lookup
 from wd_bot.testing import cog_command, detached_cog
 from wd_db.extension.lifecycle import soft_delete
 from wd_discord import AutocompleteInteraction
@@ -94,7 +94,7 @@ async def test_a_plain_lookup_option_gets_the_submitted_value(make_interaction: 
         received.append(name)
 
     options = [InteractionDataOption(name="name", type=3, value="cat")]
-    assert await cog_command(handler, name="pet", description="d").invoke(object(), make_interaction("pet", options=options))
+    assert await cog_command(handler, CommandDefinition("pet", "d")).invoke(object(), make_interaction("pet", options=options))
     assert received == ["cat"]
 
 
@@ -282,7 +282,7 @@ async def test_a_union_of_tables_loads_whichever_the_value_names(
     with Session(engine) as session:
         cup = _cup(session)
     options = [InteractionDataOption(name="row", type=3, value=f"tournament:{cup.id}")]
-    assert await cog_command(handler, name="row", description="d").invoke(
+    assert await cog_command(handler, CommandDefinition("row", "d")).invoke(
         _cups(engine, discord_client),
         make_interaction("row", options=options),
     )
@@ -294,7 +294,7 @@ def test_lookup_on_a_type_that_cannot_autocomplete_raises() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):
-        cog_command(handler, name="row", description="d")
+        cog_command(handler, CommandDefinition("row", "d"))
 
 
 def test_a_model_without_lookup_raises() -> None:
@@ -302,7 +302,7 @@ def test_a_model_without_lookup_raises() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):
-        cog_command(handler, name="row", description="d")
+        cog_command(handler, CommandDefinition("row", "d"))
 
 
 def test_a_lookup_naming_a_missing_cog_method_raises() -> None:
@@ -323,4 +323,4 @@ def test_a_command_outside_a_cog_has_no_options() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="isn't defined on a Cog"):
-        list(Command(handler, name="row", description="d").options())
+        list(Command(handler, CommandDefinition("row", "d")).options())

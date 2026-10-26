@@ -79,7 +79,7 @@ Checks made before a command or component acts, and answering the user when one 
 Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency.
 
 - module names: default_flags
-- `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None, guild_ids: Iterable[SnowflakeLike] | None=None, requires: Permissions | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
+- `command(name: str, description: str, *, requires: Permissions | None=None, **options: Unpack[DefinitionOptions]) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 - `component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ComponentHandler]` — Tag a Cog method as the handler for components whose ``custom_id`` starts with ``prefix``.
 - `modal(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ModalHandler]` — Tag a Cog method as the handler for modal submits whose ``custom_id`` starts with ``prefix``.
 
@@ -114,11 +114,9 @@ A wd-native feature unit: a class whose methods can be tagged with @Cog.listener
 - `async unload() -> None` — Unregister any auto-reload watcher.
 
 ### `class GroupCog(Cog)`
-A cog whose commands are registered as subcommands of one Discord command, ``/<group_name> <command>``.
+A cog whose commands are registered as subcommands of one Discord command, ``/<group> <command>``.
 
-- fields: group_name: ClassVar[str], group_description: ClassVar[str], group_default_member_permissions:
-  ClassVar[Permissions | None], group_contexts: ClassVar[list[InteractionContextType] | None], group_guild_ids:
-  ClassVar[list[SnowflakeLike] | None]
+- fields: group_definition: ClassVar[CommandDefinition]
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield this cog's single top-level Discord command: the group holding its commands.
 - `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run the subcommand ``command``: ``/<group> <command>``.
 - `@classmethod guild_only() -> bool` — Whether the group is offered in guilds only; its subcommands and components then get guild interactions.
@@ -149,6 +147,19 @@ A handler parameter as a Discord option: what Discord asks for, and what the han
   list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...]
 - `definition(*, autocomplete: bool) -> ApplicationCommandOption` — Return the option as Discord defines it.
 - `argument(interaction: CommandInteraction, value: object, cog: Cog) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
+
+### `class DefinitionOptions(TypedDict, total=False)`
+The optional parts of a :class:`CommandDefinition`, as keywords, in any iterable form.
+
+- fields: default_member_permissions: Permissions | None, contexts: Iterable[InteractionContextType] | None, guild_ids:
+  Iterable[SnowflakeLike] | None
+
+### `@dataclass class CommandDefinition`
+What Discord is told about a command: its name, description, who may use it, where, and in which guilds.
+
+- fields: name: str, description: str, default_member_permissions: Permissions | None, contexts:
+  tuple[InteractionContextType, ...] | None, guild_ids: tuple[Snowflake, ...] | None
+- `@classmethod of(name: str, description: str, **options: Unpack[DefinitionOptions]) -> Self` — Return the definition of ``name``, holding ``options``' iterables as tuples and its guild ids as snowflakes.
 
 ### `class AppCommand(LoggerMixin, ABC)`
 What every application command shares: its name, description and where Discord lets it be used.

@@ -5,7 +5,7 @@ lazy import subprocess
 lazy import sys
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_bot.commands import CommandGroup
+lazy from wd_bot.commands import Command, CommandDefinition, CommandGroup
 lazy from wd_bot.testing import cog_command
 
 # Command resolves option annotations from module globals at runtime, so BoundUser must be available here.
@@ -14,6 +14,7 @@ lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 lazy from wd_discord.interactions import ApplicationCommandOptionType, InteractionContextType
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.user import User
+lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ async def percentage(self: object, interaction: CommandInteraction, user: User) 
 
 def test_options_derived_from_annotations() -> None:
     """Options are derived from the handler's resolved annotations."""
-    command = cog_command(percentage, name="percentage", description="Calculate a percentage")
+    command = cog_command(percentage, CommandDefinition("percentage", "Calculate a percentage"))
     options = list(command.options())
     assert len(options) == 1
     assert options[0].name == "user"
@@ -45,7 +46,7 @@ def test_options_derived_from_annotations() -> None:
 
 def test_signature_reflects_the_wrapped_function() -> None:
     """The signature string mentions the handler's parameters."""
-    command = cog_command(percentage, name="percentage", description="d")
+    command = cog_command(percentage, CommandDefinition("percentage", "d"))
     assert "user" in command.signature()
 
 
@@ -57,7 +58,7 @@ async def test_invoke_resolves_user_option_from_resolved_data(make_interaction: 
         """Record the call."""
         calls.append((self, interaction, {"user": user}))
 
-    command = cog_command(handler, name="percentage", description="d")
+    command = cog_command(handler, CommandDefinition("percentage", "d"))
     target = make_user("4", "target")
     interaction = make_interaction(
         "percentage",
@@ -79,7 +80,7 @@ async def test_invoke_binds_a_user_option_annotated_with_the_bound_user(make_int
         """Record the user."""
         received.append(user)
 
-    command = cog_command(handler, name="percentage", description="d")
+    command = cog_command(handler, CommandDefinition("percentage", "d"))
     assert next(command.options()).type is ApplicationCommandOptionType.USER
     target = make_user("4", "target")
     interaction = make_interaction(
@@ -101,7 +102,7 @@ async def test_invoke_skips_unresolved_user_option(make_interaction: Interaction
         """Record the user."""
         calls.append(user)
 
-    command = cog_command(handler, name="c", description="d")
+    command = cog_command(handler, CommandDefinition("c", "d"))
     option = next(command.options())
     assert option.type is ApplicationCommandOptionType.USER
     assert option.required is False
@@ -122,7 +123,7 @@ async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str], m
         """Record the count."""
         calls.append(count)
 
-    command = cog_command(handler, name="c", description="d")
+    command = cog_command(handler, CommandDefinition("c", "d"))
     interaction = make_interaction(
         options=[InteractionDataOption(name="count", type=4, value=3), InteractionDataOption(name="stale", type=3, value="x")],
     )
@@ -137,7 +138,7 @@ def test_command_tolerates_unimportable_non_option_annotations() -> None:
     async def handler(self: object, interaction: NotImported, count: int) -> None:  # noqa: F821
         """Handle."""
 
-    command = cog_command(handler, name="c", description="d")
+    command = cog_command(handler, CommandDefinition("c", "d"))
     assert [o.name for o in command.options()] == ["count"]
 
 
@@ -153,8 +154,9 @@ def test_command_reifies_lazy_import_annotations(tmp_path: Path) -> None:
     )
     script = (
         "import lazy_handler_module\n"
+        "from wd_bot.commands import CommandDefinition\n"
         "from wd_bot.testing import cog_command\n"
-        "command = cog_command(lazy_handler_module.handler, name='c', description='d')\n"
+        "command = cog_command(lazy_handler_module.handler, CommandDefinition('c', 'd'))\n"
         "print([(o.name, o.type.name, o.required) for o in command.options()])\n"
     )
     result = subprocess.run(  # noqa: S603
@@ -171,32 +173,37 @@ def test_command_reifies_lazy_import_annotations(tmp_path: Path) -> None:
 
 
 def test_signature_changes_with_description() -> None:
-    first = cog_command(percentage, name="percentage", description="one")
-    second = cog_command(percentage, name="percentage", description="two")
+    first = cog_command(percentage, CommandDefinition("percentage", "one"))
+    second = cog_command(percentage, CommandDefinition("percentage", "two"))
     assert first.signature() != second.signature()
 
 
 def test_signature_changes_with_default_member_permissions() -> None:
-    plain = cog_command(percentage, name="percentage", description="d")
-    gated = cog_command(percentage, name="percentage", description="d", default_member_permissions=Permissions.MANAGE_GUILD)
+    plain = cog_command(percentage, CommandDefinition("percentage", "d"))
+    gated = cog_command(
+        percentage,
+        CommandDefinition("percentage", "d", default_member_permissions=Permissions.MANAGE_GUILD),
+    )
     assert plain.default_member_permissions is None
     assert gated.default_member_permissions == Permissions.MANAGE_GUILD
     assert plain.signature() != gated.signature()
 
 
 def test_signature_changes_with_contexts() -> None:
-    anywhere = cog_command(percentage, name="percentage", description="d")
-    guild_only = cog_command(percentage, name="percentage", description="d", contexts=[InteractionContextType.GUILD])
+    anywhere = cog_command(percentage, CommandDefinition("percentage", "d"))
+    guild_only = cog_command(percentage, CommandDefinition("percentage", "d", contexts=(InteractionContextType.GUILD,)))
     assert anywhere.signature() != guild_only.signature()
 
 
 def test_params_carry_the_definition() -> None:
     command = cog_command(
         percentage,
-        name="percentage",
-        description="d",
-        default_member_permissions=Permissions.MANAGE_GUILD,
-        contexts=[InteractionContextType.GUILD],
+        CommandDefinition(
+            "percentage",
+            "d",
+            default_member_permissions=Permissions.MANAGE_GUILD,
+            contexts=(InteractionContextType.GUILD,),
+        ),
     )
     params = command.params()
     assert params.name == "percentage"
@@ -217,8 +224,8 @@ async def test_invoke_reports_success_and_failure(make_interaction: InteractionF
         raise RuntimeError(msg)
 
     interaction = make_interaction()
-    assert await cog_command(ok, name="c", description="d").invoke(object(), interaction) is True
-    assert await cog_command(boom, name="c", description="d").invoke(object(), interaction) is False
+    assert await cog_command(ok, CommandDefinition("c", "d")).invoke(object(), interaction) is True
+    assert await cog_command(boom, CommandDefinition("c", "d")).invoke(object(), interaction) is False
 
 
 async def _noop(self: object, interaction: CommandInteraction) -> None:
@@ -230,13 +237,11 @@ async def _count_handler(self: object, interaction: CommandInteraction, count: i
 
 
 def _group(*subcommands: Command) -> CommandGroup:
-    return CommandGroup(name="g", description="group", subcommands=subcommands)
+    return CommandGroup(CommandDefinition("g", "group"), subcommands)
 
 
 def test_group_options_nest_subcommand_options() -> None:
-    group = _group(
-        cog_command(_count_handler, name="add", description="Add"), cog_command(_noop, name="list", description="List")
-    )
+    group = _group(cog_command(_count_handler, CommandDefinition("add", "Add")), cog_command(_noop, CommandDefinition("list", "List")))
     options = list(group.options())
     assert [(o.name, o.type) for o in options] == [
         ("add", ApplicationCommandOptionType.SUB_COMMAND),
@@ -247,8 +252,8 @@ def test_group_options_nest_subcommand_options() -> None:
 
 
 def test_group_signature_changes_with_a_subcommand() -> None:
-    before = _group(cog_command(_noop, name="list", description="one"))
-    after = _group(cog_command(_noop, name="list", description="two"))
+    before = _group(cog_command(_noop, CommandDefinition("list", "one")))
+    after = _group(cog_command(_noop, CommandDefinition("list", "two")))
     assert before.signature() != after.signature()
 
 
@@ -258,13 +263,21 @@ async def test_group_invoke_routes_nested_options_to_the_subcommand(make_interac
     async def add(self: object, interaction: CommandInteraction, count: int) -> None:  # noqa: ARG001
         calls.append(count)
 
-    group = _group(cog_command(add, name="add", description="Add"))
+    group = _group(cog_command(add, CommandDefinition("add", "Add")))
     sub = InteractionDataOption(name="add", type=1, options=[InteractionDataOption(name="count", type=4, value=5)])
     assert await group.invoke(object(), make_interaction(options=[sub])) is True
     assert calls == [5]
 
 
 async def test_group_invoke_rejects_unknown_subcommand(make_interaction: InteractionFactory) -> None:
-    group = _group(cog_command(_noop, name="list", description="List"))
+    group = _group(cog_command(_noop, CommandDefinition("list", "List")))
     sub = InteractionDataOption(name="gone", type=1)
     assert await group.invoke(object(), make_interaction(options=[sub])) is False
+
+
+def test_definition_is_one_frozen_value() -> None:
+    """A definition built from any iterables holds them as tuples, so it compares and hashes as a value."""
+    built = CommandDefinition.of("c", "d", contexts=[InteractionContextType.GUILD], guild_ids=["1", 2])
+    expected = CommandDefinition("c", "d", contexts=(InteractionContextType.GUILD,), guild_ids=(Snowflake(1), Snowflake(2)))
+    assert built == expected
+    assert hash(built) == hash(CommandDefinition.of("c", "d", contexts=(InteractionContextType.GUILD,), guild_ids=[1, "2"]))

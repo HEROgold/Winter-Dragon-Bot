@@ -12,7 +12,7 @@ lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
-lazy from wd_bot.commands import Command, CommandGroup
+lazy from wd_bot.commands import Command, CommandDefinition, CommandGroup
 lazy from wd_bot.components import ComponentHandler, CustomIdHandler, ModalHandler
 lazy from wd_bot.listener import listener
 lazy from wd_bot.periodic import PeriodicTask
@@ -20,7 +20,7 @@ lazy from wd_bot.registry import CommandPath
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator, Iterable
+    lazy from collections.abc import Awaitable, Callable, Generator
 
     lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord import AnyInteraction
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import SnowflakeLike
 
     lazy from wd_bot.bot import Bot
-    lazy from wd_bot.commands import AppCommand
+    lazy from wd_bot.commands import AppCommand, DefinitionOptions
     lazy from wd_bot.periodic import Seconds
     lazy from wd_bot.registry import CommandMention
 
@@ -36,30 +36,22 @@ if TYPE_CHECKING:
 def command(
     name: str,
     description: str,
-    default_member_permissions: Permissions | None = None,
-    contexts: Iterable[InteractionContextType] | None = None,
-    guild_ids: Iterable[SnowflakeLike] | None = None,
+    *,
     requires: Permissions | None = None,
+    **options: Unpack[DefinitionOptions],
 ) -> Callable[[Callable[..., Awaitable[None]]], Command]:
     """Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 
-    ``guild_ids`` registers the command in just those guilds instead of globally; on a :class:`GroupCog`
-    the group's ``guild_ids`` apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
+    ``name``, ``description`` and ``options`` make its :class:`~wd_bot.commands.CommandDefinition`. ``guild_ids``
+    registers the command in just those guilds instead of globally; on a :class:`GroupCog` the group's ``guild_ids``
+    apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
     before the handler runs; use it for a subcommand needing more than its group.
     """
     # TODO: By defult, when name isn't specified, user the method name.
     # TODO: When description isn't specified, use the first line of the docstring. (configurable in .ini)
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
-        return Command(
-            func,
-            name=name,
-            description=description,
-            default_member_permissions=default_member_permissions,
-            contexts=contexts,
-            guild_ids=guild_ids,
-            requires=requires,
-        )
+        return Command(func, CommandDefinition.of(name, description, **options), requires=requires)
 
     return decorator
 
@@ -276,7 +268,7 @@ class Cog(LoggerMixin):
 
 
 class GroupCog(Cog):
-    """A cog whose commands are registered as subcommands of one Discord command, ``/<group_name> <command>``.
+    """A cog whose commands are registered as subcommands of one Discord command, ``/<group> <command>``.
 
     Configure the group with class keywords::
 
@@ -287,54 +279,42 @@ class GroupCog(Cog):
     has none of them per subcommand).
     """
 
-    group_name: ClassVar[str]
-    group_description: ClassVar[str]
-    group_default_member_permissions: ClassVar[Permissions | None] = None
-    group_contexts: ClassVar[list[InteractionContextType] | None] = None
-    group_guild_ids: ClassVar[list[SnowflakeLike] | None] = None
+    group_definition: ClassVar[CommandDefinition]
+    """The group's definition, from the class keywords."""
 
-    def __init_subclass__(  # noqa: PLR0913 - each keyword is a class-level group setting
+    def __init_subclass__(
         cls: type[Self],
         *,
         name: str | None = None,
         description: str | None = None,
-        default_member_permissions: Permissions | None = None,
-        contexts: Iterable[InteractionContextType] | None = None,
-        guild_ids: Iterable[SnowflakeLike] | None = None,
         auto_load: bool = True,
         flags: CogFlags | None = None,
+        **options: Unpack[DefinitionOptions],
     ) -> None:
         """Configure the subcommand group, plus the usual loader and hot-reload behavior."""
         super().__init_subclass__(auto_load=auto_load, flags=flags)
-        cls.group_name = name or _kebab_case(cls.__name__)
-        cls.group_description = description or (cls.__doc__ or cls.__name__).strip().splitlines()[0]
-        cls.group_default_member_permissions = default_member_permissions
-        cls.group_contexts = None if contexts is None else list(contexts)
-        cls.group_guild_ids = None if guild_ids is None else list(guild_ids)
+        cls.group_definition = CommandDefinition.of(
+            name or _kebab_case(cls.__name__),
+            description or (cls.__doc__ or cls.__name__).strip().splitlines()[0],
+            **options,
+        )
 
     @classmethod
     def app_commands(cls) -> Generator[AppCommand]:
         """Yield this cog's single top-level Discord command: the group holding its commands."""
-        yield CommandGroup(
-            name=cls.group_name,
-            description=cls.group_description,
-            subcommands=cls.commands(),
-            default_member_permissions=cls.group_default_member_permissions,
-            contexts=cls.group_contexts,
-            guild_ids=cls.group_guild_ids,
-        )
+        yield CommandGroup(cls.group_definition, cls.commands())
 
     @classmethod
     @override
     def path_of(cls, command: Command) -> CommandPath:
         """Return the path a user types to run the subcommand ``command``: ``/<group> <command>``."""
-        return CommandPath(cls.group_name, command.name)
+        return CommandPath(cls.group_definition.name, command.name)
 
     @classmethod
     @override
     def guild_only(cls) -> bool:
         """Whether the group is offered in guilds only; its subcommands and components then get guild interactions."""
-        return cls.group_contexts == [InteractionContextType.GUILD]
+        return cls.group_definition.contexts == (InteractionContextType.GUILD,)
 
 
 def _kebab_case(name: str) -> str:

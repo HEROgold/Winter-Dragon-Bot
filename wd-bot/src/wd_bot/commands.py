@@ -10,7 +10,7 @@ lazy from inspect import signature as inspect_signature
 lazy from itertools import islice
 lazy from string.templatelib import Template
 lazy from types import LazyImportType, NoneType, UnionType
-lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
+lazy from typing import TYPE_CHECKING, Annotated, Self, TypedDict, Unpack, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session
@@ -32,6 +32,7 @@ lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.user import User as UserModel
 lazy from wd_discord.snowflake import Snowflake
+lazy from wd_errors import Refused
 
 lazy from wd_bot.checks import require_guild, require_permissions
 lazy from wd_bot.cogs import Cog
@@ -195,36 +196,60 @@ type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOp
 """A cog method suggesting values for an option: ``(self, interaction, current) -> choices``."""
 
 
+class DefinitionOptions(TypedDict, total=False):
+    """The optional parts of a :class:`CommandDefinition`, as keywords, in any iterable form."""
+
+    default_member_permissions: Permissions | None
+    contexts: Iterable[InteractionContextType] | None
+    guild_ids: Iterable[SnowflakeLike] | None
+
+
+@dataclass(frozen=True, slots=True)
+class CommandDefinition:
+    """What Discord is told about a command: its name, description, who may use it, where, and in which guilds.
+
+    ``default_member_permissions`` is the permission bitfield Discord requires by default to use the command;
+    ``contexts`` limits where it shows up (``None`` keeps Discord's default). ``guild_ids`` registers the command in
+    just those guilds instead of globally (``None``). Build one from any iterables with :meth:`of`.
+    """
+
+    name: str
+    description: str
+    default_member_permissions: Permissions | None = None
+    contexts: tuple[InteractionContextType, ...] | None = None
+    guild_ids: tuple[Snowflake, ...] | None = None
+
+    @classmethod
+    def of(cls, name: str, description: str, **options: Unpack[DefinitionOptions]) -> Self:
+        """Return the definition of ``name``, holding ``options``' iterables as tuples and its guild ids as snowflakes."""
+        contexts = options.get("contexts")
+        guild_ids = options.get("guild_ids")
+        return cls(
+            name,
+            description,
+            options.get("default_member_permissions"),
+            None if contexts is None else tuple(contexts),
+            None if guild_ids is None else tuple(map(Snowflake.coerce, guild_ids)),
+        )
+
+
 class AppCommand(LoggerMixin, ABC):
     """What every application command shares: its name, description and where Discord lets it be used.
 
     Subclasses supply the options, the rest of the signature and the dispatch.
     """
 
-    def __init__(
-        self,
-        *,
-        name: str,
-        description: str,
-        default_member_permissions: Permissions | None = None,
-        contexts: Iterable[InteractionContextType] | None = None,
-        guild_ids: Iterable[SnowflakeLike] | None = None,
-    ) -> None:
-        """Set the definition Discord sees.
-
-        ``default_member_permissions`` is the permission bitfield Discord requires by default to use the
-        command; ``contexts`` limits where it shows up (``None`` keeps Discord's default). ``guild_ids``
-        registers the command in just those guilds instead of globally.
-        """
-        self.name = name
-        self.description = description
-        self.default_member_permissions = default_member_permissions
-        self.contexts = None if contexts is None else list(contexts)
+    def __init__(self, definition: CommandDefinition) -> None:
+        """Set the definition Discord sees."""
+        self.definition = definition
+        self.name = definition.name
+        self.description = definition.description
+        self.default_member_permissions = definition.default_member_permissions
+        self.contexts = None if definition.contexts is None else list(definition.contexts)
         self.guild_only = self.contexts == [InteractionContextType.GUILD]
         """Whether Discord offers the command in guilds only, so its handler gets a guild interaction."""
-        self.scopes: frozenset[Scope] = (
-            frozenset({GLOBAL}) if guild_ids is None else frozenset(Scope(Snowflake.coerce(guild)) for guild in guild_ids)
-        )
+        guild_ids = definition.guild_ids
+        self.scopes: frozenset[Scope] = frozenset({GLOBAL}) if guild_ids is None else frozenset(map(Scope, guild_ids))
         """The scopes this command declares it is registered in; a :class:`~wd_bot.registry.Placement` may differ."""
 
     @abstractmethod
@@ -271,29 +296,19 @@ class Command(AppCommand):
     always a cog method, so its annotations may name anything in the class body.
     """
 
-    def __init__(  # noqa: PLR0913 - each keyword is part of the command's Discord definition
+    def __init__(
         self,
         func: Callable[..., Awaitable[None]],
+        definition: CommandDefinition,
         *,
-        name: str,
-        description: str,
-        default_member_permissions: Permissions | None = None,
-        contexts: Iterable[InteractionContextType] | None = None,
-        guild_ids: Iterable[SnowflakeLike] | None = None,
         requires: Permissions | None = None,
     ) -> None:
-        """Wrap ``func`` as a command named ``name`` with the given ``description``.
+        """Wrap ``func`` as the command ``definition`` describes.
 
         ``requires`` is checked by wd-bot before ``func`` runs; unlike ``default_member_permissions`` it works on a
         subcommand too.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            default_member_permissions=default_member_permissions,
-            contexts=contexts,
-            guild_ids=guild_ids,
-        )
+        super().__init__(definition)
         self.func = func
         self.requires = requires
         self.wants_guild = wants_guild_interaction(func)
@@ -543,24 +558,10 @@ class CommandGroup(AppCommand):
     neither per subcommand.
     """
 
-    def __init__(  # noqa: PLR0913 - each keyword is part of the group's Discord definition
-        self,
-        *,
-        name: str,
-        description: str,
-        subcommands: Iterable[Command],
-        default_member_permissions: Permissions | None = None,
-        contexts: Iterable[InteractionContextType] | None = None,
-        guild_ids: Iterable[SnowflakeLike] | None = None,
-    ) -> None:
-        """Group ``subcommands`` under the command ``name``."""
-        super().__init__(
-            name=name,
-            description=description,
-            default_member_permissions=default_member_permissions,
-            contexts=contexts,
-            guild_ids=guild_ids,
-        )
+    def __init__(self, definition: CommandDefinition, subcommands: Iterable[Command]) -> None:
+        """Group ``subcommands`` under the command ``definition`` describes."""
+        super().__init__(definition)
+        name = definition.name
         self.subcommands = {subcommand.name: subcommand for subcommand in subcommands}
         for subcommand in self.subcommands.values():
             if subcommand.default_member_permissions is not None or subcommand.contexts is not None:
