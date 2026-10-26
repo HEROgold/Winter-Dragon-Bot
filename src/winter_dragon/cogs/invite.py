@@ -2,6 +2,7 @@
 
 lazy from typing import TYPE_CHECKING
 
+lazy from wd_bot.bot import invite_url
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import is_network_error
 lazy from wd_discord.permissions import ChannelType
@@ -48,7 +49,7 @@ class Invite(GroupCog, name="invite", description="Invite the bot to your guild,
     @Cog.command(name="bot", description="Invite this bot to your own guild!")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def bot_invite(self, interaction: CommandInteraction) -> None:
         """Reply with the link that adds the bot to a guild."""
-        await interaction.respond(self.bot.get_bot_invite(), ephemeral=True)
+        await interaction.respond(invite_url(), ephemeral=True)
 
     @Cog.command(name="guild", description="Get invited to the official support guild")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def support_invite(self, interaction: CommandInteraction) -> None:

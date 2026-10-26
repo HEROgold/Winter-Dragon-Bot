@@ -2,7 +2,7 @@
 
 lazy import asyncio
 lazy from enum import IntFlag, auto
-lazy from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
+lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session, SQLModel
@@ -13,7 +13,7 @@ lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
 lazy from wd_bot.commands import Command, CommandDefinition, CommandGroup
-lazy from wd_bot.components import ComponentHandler, CustomIdHandler, ModalHandler
+lazy from wd_bot.components import ComponentHandler, ModalHandler
 lazy from wd_bot.listener import listener
 lazy from wd_bot.periodic import PeriodicTask
 lazy from wd_bot.registry import CommandPath
@@ -155,12 +155,17 @@ class Cog(LoggerMixin):
             await self.bot.add_cog(self)
 
     @classmethod
-    def commands(cls) -> Generator[Command]:
-        """Yield the :class:`Command` attributes defined on this cog class or inherited from its bases."""
+    def attributes_of[T](cls, kind: type[T]) -> Generator[T]:
+        """Yield the ``kind`` attributes defined on this cog class or inherited from its bases, by attribute name."""
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
-            if isinstance(attr, Command):
+            if isinstance(attr, kind):
                 yield attr
+
+    @classmethod
+    def commands(cls) -> Generator[Command]:
+        """Yield the :class:`Command` attributes defined on this cog class or inherited from its bases."""
+        yield from cls.attributes_of(Command)
 
     @classmethod
     def app_commands(cls) -> Generator[AppCommand]:
@@ -170,28 +175,17 @@ class Cog(LoggerMixin):
     @classmethod
     def components(cls) -> Generator[ComponentHandler]:
         """Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases."""
-        yield from cls._handlers(ComponentHandler)
+        yield from cls.attributes_of(ComponentHandler)
 
     @classmethod
     def modals(cls) -> Generator[ModalHandler]:
         """Yield the :class:`ModalHandler` attributes defined on this cog class or inherited from its bases."""
-        yield from cls._handlers(ModalHandler)
-
-    @classmethod
-    def _handlers[H: CustomIdHandler[Any]](cls, handler_type: type[H]) -> Generator[H]:
-        """Yield the ``handler_type`` attributes defined on this cog class or inherited from its bases."""
-        for attr_name in dir(cls):
-            attr = getattr(cls, attr_name)
-            if isinstance(attr, handler_type):
-                yield attr
+        yield from cls.attributes_of(ModalHandler)
 
     @classmethod
     def periodic_tasks(cls) -> Generator[PeriodicTask]:
         """Yield the :class:`PeriodicTask` attributes defined on this cog class or inherited from its bases."""
-        for attr_name in dir(cls):
-            attr = getattr(cls, attr_name)
-            if isinstance(attr, PeriodicTask):
-                yield attr
+        yield from cls.attributes_of(PeriodicTask)
 
     def start_periodic_tasks(self) -> None:
         """Start every periodic task of this cog; :meth:`wd_bot.bot.Bot.add_cog` calls it after :meth:`load`."""

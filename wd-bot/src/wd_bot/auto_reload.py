@@ -114,7 +114,7 @@ class AutoReloadWatcher(LoggerMixin):
         return (
             self.flags.is_enabled
             and BotSettings.auto_reload_extensions
-            and self.module_name.startswith(f"{self.bot.extensions_package.__name__}.")
+            and self.module_name.startswith(f"{self.bot.extensions.package.__name__}.")
         )
 
     def _resolve_module_path(self) -> Path | None:

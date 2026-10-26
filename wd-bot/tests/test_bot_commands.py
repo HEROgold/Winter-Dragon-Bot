@@ -5,7 +5,6 @@ import importlib
 import sys
 import types
 from typing import TYPE_CHECKING, ClassVar
-from unittest.mock import AsyncMock
 
 import pytest
 from wd_bot.auto_sync import CommandSyncer
@@ -23,7 +22,7 @@ from wd_errors.extension import ExtensionError
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterable
+    from collections.abc import Iterable
     from pathlib import Path
 
     from conftest import InteractionFactory
@@ -144,6 +143,18 @@ async def test_dispatch_hands_listeners_the_bound_entity(discord_client: Recordi
     assert len(discord_client.requests_to("POST", "/channels/2/messages")) == 1
 
 
+async def test_a_removed_cogs_listeners_are_no_longer_called(discord_client: RecordingClient) -> None:
+    _MessageCog.received.clear()
+    bot = _make_bot(discord_client)
+    cog = _MessageCog(bot=bot)
+    await bot.add_cog(cog)
+    await bot.remove_cog(cog)
+    model = MessageModel.model_validate(message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="t"))
+    await bot._dispatch(EventName.MESSAGE_CREATE, model)
+    await _drain_tasks()
+    assert _MessageCog.received == []
+
+
 async def test_dispatch_unknown_command_is_ignored(make_interaction: InteractionFactory) -> None:
     CALLS.clear()
     bot = _make_bot()
@@ -151,13 +162,13 @@ async def test_dispatch_unknown_command_is_ignored(make_interaction: Interaction
     assert CALLS == []
 
 
-async def test_init_cogs_registers_commands_before_any_other_await() -> None:
+async def test_add_cogs_registers_commands_before_any_other_await() -> None:
     bot = _make_bot()
     module = types.ModuleType("fake_ext")
     module._AutoPingCog = _AutoPingCog  # noqa: SLF001
     module.Cog = Cog
-    # _init_cogs must not rely on the scheduled auto_load task: the registry is filled on return.
-    await bot._init_cogs(module)
+    # add_cogs must not rely on the scheduled auto_load task: the registry is filled on return.
+    await bot.extensions.add_cogs(module)
     assert bot.registry.entry("auto-ping") is not None
 
 
@@ -211,29 +222,43 @@ async def test_sync_commands_refuses_writes_with_no_commands_registered() -> Non
     assert fake.allow_writes is False
 
 
-async def test_failed_extension_disables_writes() -> None:
+def _extensions_package(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    modules: dict[str, str],
+) -> types.ModuleType:
+    """Write a package ``name`` holding ``modules`` (module name -> source) and import it."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    monkeypatch.setattr(sys, "modules", dict(sys.modules))
+    monkeypatch.syspath_prepend(str(tmp_path))
+    package = tmp_path / name
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    for module, source in modules.items():
+        (package / f"{module}.py").write_text(source)
+    return importlib.import_module(name)
+
+
+async def test_failed_extension_disables_writes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     bot = _make_bot()
     fake = _fake_syncer(bot)
     await bot.add_cog(_PingCog(bot=bot))
-    bot.load_extension = AsyncMock(side_effect=RuntimeError("boom"))  # type: ignore[method-assign]
-
-    async def one_extension() -> AsyncGenerator[str]:
-        yield "broken"
-
-    bot.get_extensions = one_extension  # type: ignore[method-assign]
-    await bot.load_extensions()
+    bot.extensions.package = _extensions_package(tmp_path, monkeypatch, "wd_ext_broken", {"broken": "raise ValueError"})
+    await bot.extensions.load_all()
     await bot.sync_commands(object())  # type: ignore[arg-type]
     assert fake.allow_writes is False
-    assert bot._failed_extensions == {"broken"}
+    assert bot.extensions.failed == {"broken"}
 
 
-async def test_successful_load_clears_failed_extension() -> None:
+async def test_successful_load_clears_failed_extension(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     bot = _make_bot()
-    bot._failed_extensions.add("commands")
-    bot.extensions_package = types.ModuleType("wd_bot")
-    bot._load_from_module_spec = AsyncMock()  # type: ignore[method-assign]
-    await bot.load_extension("commands")
-    assert "commands" not in bot._failed_extensions
+    bot.extensions.package = _extensions_package(tmp_path, monkeypatch, "wd_ext_fixed", {"fixed": "raise ValueError"})
+    await bot.extensions.load_all()
+    (tmp_path / "wd_ext_fixed" / "fixed.py").write_text("")
+    importlib.invalidate_caches()
+    await bot.extensions.load("fixed")
+    assert bot.extensions.failed == set()
 
 
 class _BrokenSyncer:
@@ -255,11 +280,11 @@ async def test_discovery_failure_disables_writes() -> None:
     bot = _make_bot()
     fake = _fake_syncer(bot)
     await bot.add_cog(_PingCog(bot=bot))
-    bot.extensions_package = types.ModuleType("no_path_package")  # no __path__: discovery raises
-    await bot.load_extensions()
+    bot.extensions.package = types.ModuleType("no_path_package")  # no __path__: discovery raises
+    await bot.extensions.load_all()
     await bot.sync_commands(object())  # type: ignore[arg-type]
     assert fake.allow_writes is False
-    assert bot._failed_extensions == {"no_path_package"}
+    assert bot.extensions.failed == {"no_path_package"}
 
 
 class _BoomCog(Cog, auto_load=False):
@@ -355,12 +380,12 @@ async def test_group_cog_registers_one_group_and_dispatches_subcommands(
 async def test_load_extension_reuses_an_already_imported_module() -> None:
     """A module another extension imported isn't executed again; a second copy would redefine its SQLModel tables."""
     bot = _make_bot()
-    bot.extensions_package = importlib.import_module("winter_dragon.cogs")
+    bot.extensions.package = importlib.import_module("winter_dragon.cogs")
     imported = importlib.import_module("winter_dragon.cogs.steam.models")
 
-    await bot.load_extension("steam.models")
+    await bot.extensions.load("steam.models")
 
-    assert bot._extensions["steam.models"] is imported
+    assert bot.extensions.failed == set()
     assert sys.modules["winter_dragon.cogs.steam.models"] is imported
 
 
@@ -425,7 +450,7 @@ async def _load_reloadable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, bot:
     path.write_text(_EXTENSION_SOURCE.format(name="old"))
     module = importlib.import_module(module_name)
     monkeypatch.setitem(sys.modules, module_name, module)
-    await bot._init_cogs(module)
+    await bot.extensions.add_cogs(module)
     return path
 
 
@@ -487,7 +512,7 @@ async def test_reload_extension_redefines_the_modules_tables(tmp_path: Path, mon
     path.write_text(_TABLE_EXTENSION_SOURCE.format(name="old", table="wd_reload_row", column="before"))
     module = importlib.import_module("wd_reload_table")
     monkeypatch.setitem(sys.modules, "wd_reload_table", module)
-    await bot._init_cogs(module)
+    await bot.extensions.add_cogs(module)
     path.write_text(_TABLE_EXTENSION_SOURCE.format(name="new", table="wd_reload_row", column="after"))
 
     try:
@@ -511,7 +536,7 @@ async def test_failed_reload_puts_the_modules_tables_back(tmp_path: Path, monkey
     path.write_text(_TABLE_EXTENSION_SOURCE.format(name="old", table="wd_reload_row_broken", column="before"))
     module = importlib.import_module("wd_reload_table_broken")
     monkeypatch.setitem(sys.modules, "wd_reload_table_broken", module)
-    await bot._init_cogs(module)
+    await bot.extensions.add_cogs(module)
     old_table = SQLModel.metadata.tables["wd_reload_row_broken"]
     path.write_text(
         _TABLE_EXTENSION_SOURCE.format(name="new", table="wd_reload_row_broken", column="after") + "\nraise ValueError\n",
