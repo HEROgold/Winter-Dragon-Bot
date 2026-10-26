@@ -1,8 +1,15 @@
 """The /urban command group: look up a term, or random terms, on Urban Dictionary."""
 
-lazy from typing import TYPE_CHECKING, Self
+from datetime import datetime
+lazy from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from pydantic import BaseModel, Field, ValidationError
+from sqlalchemy import BigInteger
+from sqlmodel import Field as ColumnField
+from sqlmodel import Session
+from wd_db.extension.columns import AwareDateTime
+from wd_db.extension.lifecycle import LifecycleModel, Ownership
+from wd_types.clock import utc_now
 lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
@@ -30,6 +37,17 @@ if TYPE_CHECKING:
 DEFINE_URL = "https://api.urbandictionary.com/v0/define"
 RANDOM_URL = "https://api.urbandictionary.com/v0/random"
 ELLIPSIS = "…"
+
+
+class Lookup(LifecycleModel, table=True):
+    """One /urban search that returned a definition; ``user_id`` is the Discord user ID of who searched, and they own it."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id")
+
+    user_id: int = ColumnField(sa_type=BigInteger, index=True)
+    term: str
+    """What was searched for."""
+    looked_up_at: datetime = ColumnField(default_factory=utc_now, sa_type=AwareDateTime)
 
 
 class UrbanSettings:
@@ -145,6 +163,11 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
     http: AsyncClient | None = None
     """The HTTP client lookups go through; ``None`` gives each lookup a client of its own."""
 
+    @override
+    async def load(self) -> None:
+        """Create the lookup table if missing."""
+        self.create_tables(Lookup)
+
     @Cog.command(name="search", description="Look up the meaning of a word on Urban Dictionary")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def search(self, interaction: CommandInteraction, query: str) -> None:
         """Reply with the definitions of ``query``."""
@@ -157,6 +180,11 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         if not definitions:
             await interaction.respond(f"No definitions found for `{truncate(query, 100)}`.")
             return
+        user = interaction.user
+        if user is not None:
+            with Session(self.bind) as session:
+                session.add(Lookup(user_id=int(user.id), term=query))
+                session.commit()
         title = truncate(f"Urban Dictionary: {query}", 256)
         await interaction.respond(embeds=[build_embed(title, definitions, UrbanSettings.max_definitions)])
 

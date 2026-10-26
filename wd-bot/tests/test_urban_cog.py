@@ -4,15 +4,18 @@ from typing import TYPE_CHECKING
 
 import httpxyz
 import pytest
+from sqlmodel import Session
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import alive
 from wd_discord.embed import MAX_EMBED_CHARACTERS
 from wd_discord.gateway.events import InteractionDataOption
 
-from winter_dragon.cogs.urban import Definition, LookupFailed, Urban, UrbanDictionary, UrbanSettings, build_embed
+from winter_dragon.cogs.urban import Definition, Lookup, LookupFailed, Urban, UrbanDictionary, UrbanSettings, build_embed
 
 
 if TYPE_CHECKING:
     from conftest import InteractionFactory
+    from sqlalchemy import Engine
     from wd_discord.testing import RecordingClient
 
 
@@ -39,8 +42,8 @@ def _http(handler: httpxyz.Response | Exception) -> httpxyz.AsyncClient:
     return httpxyz.AsyncClient(transport=httpxyz.MockTransport(respond))
 
 
-def _cog(http: httpxyz.AsyncClient) -> Urban:
-    cog = detached_cog(Urban)
+def _cog(http: httpxyz.AsyncClient, engine: Engine | None = None) -> Urban:
+    cog = detached_cog(Urban, engine=engine)
     cog.http = http
     return cog
 
@@ -85,8 +88,13 @@ def test_embed_shows_at_most_the_limit() -> None:
     assert len(build_embed("t", definitions, limit=3).fields or []) == 3
 
 
-async def test_search_replies_with_an_embed(make_interaction: InteractionFactory, discord_client: RecordingClient) -> None:
-    cog = _cog(_http(httpxyz.Response(200, json={"list": [_definition(1)]})))
+async def test_search_replies_with_an_embed(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog = _cog(_http(httpxyz.Response(200, json={"list": [_definition(1)]})), engine)
+    await cog.load()
     options = [InteractionDataOption(name="query", type=3, value="yeet")]
 
     await Urban.search.invoke(cog, make_interaction("urban"), options)
@@ -120,3 +128,34 @@ async def test_random_can_be_turned_off(
     assert discord_client.interaction_responses() == [
         {"type": 4, "data": {"content": "Random definitions are turned off.", "flags": 64}},
     ]
+
+
+async def test_search_with_a_definition_stores_a_lookup(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog = _cog(_http(httpxyz.Response(200, json={"list": [_definition(1)]})), engine)
+    await cog.load()
+    options = [InteractionDataOption(name="query", type=3, value="yeet")]
+
+    await Urban.search.invoke(cog, make_interaction("urban"), options)
+
+    with Session(engine) as session:
+        (lookup,) = session.exec(alive(Lookup)).all()
+    assert (lookup.user_id, lookup.term) == (3, "yeet")
+
+
+async def test_search_without_a_definition_stores_nothing(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog = _cog(_http(httpxyz.Response(200, json={"list": []})), engine)
+    await cog.load()
+    options = [InteractionDataOption(name="query", type=3, value="qwzx")]
+
+    await Urban.search.invoke(cog, make_interaction("urban"), options)
+
+    with Session(engine) as session:
+        assert session.exec(alive(Lookup)).all() == []

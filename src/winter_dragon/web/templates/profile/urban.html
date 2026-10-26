@@ -1,0 +1,21 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Urban Dictionary</h2>
+  {% if not lookups %}
+    <p class="profile-empty">You have not looked anything up yet. Use <code>/urban search</code> in Discord to look up a word.</p>
+  {% else %}
+    <p>{{ total }} {{ 'lookup' if total == 1 else 'lookups' }} in total.</p>
+    <table class="table">
+      <thead><tr><th>Date</th><th>Term</th></tr></thead>
+      <tbody>
+        {% for lookup, when in lookups %}
+          <tr>
+            <td>{{ when.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ lookup.term }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

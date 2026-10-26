@@ -138,6 +138,11 @@ The Profile's Steam page: the sales Steam DMs told the member about, newest firs
 
 - `@profile_page steam(context: ProfileContext) -> dict[str, object]` — Return the Steam page's context: the member's sale notifications, newest first.
 
+## `winter_dragon.web.profile_pages.urban` — `src/winter_dragon/web/profile_pages/urban.py`
+The Profile's Urban Dictionary page: the member's lookups, newest first, with a total.
+
+- `@profile_page urban(context: ProfileContext) -> dict[str, object]` — Return the Urban page's context: the member's lookups, newest first, in their time zone.
+
 ## `winter_dragon.web.records` — `src/winter_dragon/web/records.py`
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
