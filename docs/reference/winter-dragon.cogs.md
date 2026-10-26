@@ -160,6 +160,114 @@ Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long 
 
 - `async load() -> None` — Start the heartbeat background task once registered with the bot.
 
+## `winter_dragon.cogs.incremental.catalogue` — `src/winter_dragon/cogs/incremental/catalogue.py`
+The Incremental game catalogue: the currencies and generators the bot's developers define in ``catalogue.toml``.
+
+- module names: CATALOGUE_PATH, MAX_GENERATORS
+- `load_catalogue(path: Path=CATALOGUE_PATH) -> Catalogue` — Parse the catalogue at ``path``.
+- `@cache catalogue() -> Catalogue` — Return the catalogue of the repo, loaded on first use.
+
+### `class CatalogueError(Exception)`
+The catalogue file is missing, isn't TOML, or doesn't match the schema; the message says what is wrong.
+
+### `class CurrencyKey(_Key)`
+The stable key of a :class:`Currency`.
+
+### `class GeneratorKey(_Key)`
+The stable key of a :class:`Generator`.
+
+### `class Currency(_Frozen)`
+Something a member collects and spends.
+
+- fields: key: CurrencyKey, name: str, emoji: str, starting_amount: float
+- `@property label -> str` — The name with its emoji, when it has one.
+
+### `class Quantity(_Frozen)`
+An amount of one currency.
+
+- fields: currency: CurrencyKey, amount: PositiveFloat
+
+### `class Generator(_Frozen)`
+Something a member buys that makes currencies every second.
+
+- fields: key: GeneratorKey, name: str, description: str, price: tuple[Quantity, ...], price_growth: float, produces:
+  tuple[Quantity, ...]
+- `price_for(owned: int) -> collections.abc.Generator[Quantity]` — Yield what the next purchase costs when ``owned`` are already owned.
+
+### `class Catalogue(_Frozen)`
+Every currency and generator of the game.
+
+- fields: currencies: tuple[Currency, ...], generators: tuple[Generator, ...]
+- `currency(key: str) -> Currency | None` — Return the currency with ``key``, or ``None`` when the catalogue has none.
+- `generator(key: str) -> Generator | None` — Return the generator with ``key``, or ``None`` when the catalogue has none.
+
+## `winter_dragon.cogs.incremental.cog` — `src/winter_dragon/cogs/incremental/cog.py`
+The /incremental command: show your save, refresh it, and buy generators, all on one message.
+
+### `class Incremental(Cog)`
+Plays the Incremental game: one save per member, whatever guild they are in.
+
+- `async load() -> None` — Parse the catalogue, so an invalid file stops startup, then create the tables if missing.
+- `@Cog.command async incremental(interaction: CommandInteraction) -> None` — Show the invoking user's save, creating it on first use.
+- `@Cog.component async refresh(interaction: ComponentInteraction, owner_id: str) -> None` — Bring the save up to date in the same message; only its owner may.
+- `@Cog.component async buy(interaction: ComponentInteraction, owner_id: str, generator: str) -> None` — Buy one ``generator`` and update the same message; only the save's owner may, and they must afford it.
+
+## `winter_dragon.cogs.incremental.game` — `src/winter_dragon/cogs/incremental/game.py`
+The Incremental game's rules, with no Discord in it, so the Discord cog and the dashboard play the same game.
+
+- `open_save(session: Session, member_id: int, *, now: datetime | None=None) -> SaveView` — Return the member's save as of ``now`` (default: the current time), creating it on first use.
+- `buy(session: Session, member_id: int, generator_key: str, *, now: datetime | None=None) -> SaveView` — Buy one generator for the member and return the save afterwards.
+
+### `@dataclass class Holding`
+How much of a currency a save holds right now, and how fast it grows.
+
+- fields: currency: Currency, amount: float, per_second: float
+
+### `@dataclass class Offer`
+A generator a save can buy: how many it owns, what the next one costs, and whether it can pay.
+
+- fields: generator: Generator, owned: int, price: tuple[Quantity, ...], affordable: bool
+
+### `@dataclass class SaveView`
+A save at one moment: what it holds, and what it can buy.
+
+- fields: member_id: int, as_of: datetime, holdings: tuple[Holding, ...], offers: tuple[Offer, ...]
+
+## `winter_dragon.cogs.incremental.models` — `src/winter_dragon/cogs/incremental/models.py`
+Database tables of the Incremental game. A save is one member's, whatever guild they play in.
+
+- module names: INCREMENTAL_TABLES
+
+### `class IncrementalSave(DiscordKeyedModel, table=True)`
+A member's save; ``id`` is their Discord user ID, and they own it.
+
+- fields: ownership: ClassVar[Ownership], settled_at: datetime
+
+### `class SaveBalance(LifecycleModel, table=True)`
+How much of one currency a save held at its ``settled_at``.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], save_id: int, currency: str, amount:
+  float
+
+### `class SaveGenerator(LifecycleModel, table=True)`
+How many of one generator a save owns.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], save_id: int, generator: str, owned:
+  int
+
+## `winter_dragon.cogs.incremental.view` — `src/winter_dragon/cogs/incremental/view.py`
+The Discord side of the Incremental game: the save embed and its buttons.
+
+- module names: BUTTONS_PER_ROW
+- `format_amount(amount: float) -> str` — Format ``amount`` with thousands separators and one decimal.
+- `build_embed(view: SaveView) -> Embed` — Build the embed showing ``view``: amounts and rates per currency, then each generator with its next price.
+- `build_buttons(view: SaveView, *, refresh: ComponentHandler, buy: ComponentHandler) -> list[ActionRow]` — Build the Refresh button and one Buy button per generator, disabled when the save can't pay for it.
+
+### `class IncrementalSettings`
+Settings for /incremental, in its ``cogs.ini`` section.
+
+- attributes: embed_color
+
 ## `winter_dragon.cogs.invite` — `src/winter_dragon/cogs/invite.py`
 The /invite command group: invite the bot to a guild, or join the support guild.
 
