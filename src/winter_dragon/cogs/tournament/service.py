@@ -7,7 +7,7 @@ Each action takes an open session and leaves committing to the caller. An action
 lazy from typing import TYPE_CHECKING
 
 from sqlmodel import Session, col
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
+lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
 lazy from wd_errors import Refused
 
 lazy from .bracket import first_round, next_match, round_count, split_into_teams, valid_options
@@ -32,11 +32,6 @@ if TYPE_CHECKING:
     lazy from random import Random
 
     lazy from wd_db.extension.lifecycle import LifecycleModel
-
-
-def alive_record[M: LifecycleModel](session: Session, model: type[M], record_id: int | None) -> M | None:
-    """Return the ``model`` row ``record_id``, unless there's none or it's soft-deleted."""
-    return session.exec(alive(model).where(model.id == record_id)).first()
 
 
 def active_tournament(session: Session, guild_id: int) -> Tournament | None:
@@ -126,7 +121,7 @@ def withdraw(session: Session, tournament: Tournament, user_id: int) -> None:
     if player is None:
         msg = "You aren't signed up."
         raise Refused(msg)
-    team = alive_record(session, TournamentTeam, player.team_id)
+    team = alive_by_id(session, TournamentTeam, player.team_id)
     if team is not None and team.captain_id == user_id:
         for teammate in session.exec(alive(TournamentPlayer).where(TournamentPlayer.team_id == team.id)).all():
             soft_delete(session, teammate)
@@ -330,7 +325,7 @@ def team_in_match(session: Session, match: TournamentMatch, user_id: int) -> Tou
     """Return the team ``user_id`` plays for in ``match``, if they play in it."""
     for team_id in (match.team_a_id, match.team_b_id):
         if team_id is not None and user_id in roster(session, team_id):
-            return alive_record(session, TournamentTeam, team_id)
+            return alive_by_id(session, TournamentTeam, team_id)
     return None
 
 
@@ -375,16 +370,11 @@ def cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> None:
     if not vote.open:
         msg = "This vote is closed."
         raise Refused(msg)
-    match = alive_record(session, TournamentMatch, vote.match_id)
+    match = alive_by_id(session, TournamentMatch, vote.match_id)
     if match is None or team_in_match(session, match, user_id) is None:
         msg = "Only the players of this match can vote."
         raise Refused(msg)
-    ballot = session.exec(alive(MatchBallot).where(MatchBallot.vote_id == vote.id, MatchBallot.user_id == user_id)).first()
-    if ballot is None:
-        create_or_restore(session, MatchBallot(vote_id=_id(vote), user_id=user_id, choice=choice))
-        return
-    ballot.choice = choice
-    session.add(ballot)
+    upsert(session, MatchBallot(vote_id=_id(vote), user_id=user_id, choice=choice))
 
 
 def choices_of(session: Session, vote_id: int) -> list[int]:

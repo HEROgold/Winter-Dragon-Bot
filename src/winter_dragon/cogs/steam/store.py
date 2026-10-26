@@ -5,7 +5,7 @@ lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col, or_, select
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
+lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 
@@ -32,23 +32,10 @@ class SteamSaleStore:
         ``outdated_after``) and so worth announcing again. A known sale keeps its ``sale_end`` unless the scrape
         found one.
         """
-        sale = self.session.exec(alive(SteamSale).where(SteamSale.id == scraped.id)).first()
-        is_new = sale is None or sale.is_outdated(outdated_after, now)
-        if sale is None:
-            sale = create_or_restore(
-                self.session,
-                SteamSale(
-                    id=scraped.id,
-                    title=scraped.title,
-                    url=scraped.url,
-                    sale_percent=scraped.sale_percent,
-                    final_price=scraped.final_price,
-                    update_datetime=now,
-                    discovered_at=now,
-                    sale_end=scraped.sale_end,
-                ),
-            )
-        else:
+        known = alive_by_id(self.session, SteamSale, scraped.id)
+        is_new = known is None or known.is_outdated(outdated_after, now)
+
+        def update_known(sale: SteamSale) -> None:
             sale.title = scraped.title
             sale.url = scraped.url
             sale.sale_percent = scraped.sale_percent
@@ -58,7 +45,21 @@ class SteamSaleStore:
                 sale.discovered_at = now
             if scraped.sale_end is not None:
                 sale.sale_end = scraped.sale_end
-        self.session.add(sale)
+
+        sale = upsert(
+            self.session,
+            SteamSale(
+                id=scraped.id,
+                title=scraped.title,
+                url=scraped.url,
+                sale_percent=scraped.sale_percent,
+                final_price=scraped.final_price,
+                update_datetime=now,
+                discovered_at=now,
+                sale_end=scraped.sale_end,
+            ),
+            update_known,
+        )
         self._add_properties(scraped.id, scraped.properties)
         self.session.commit()
         self.session.refresh(sale)
@@ -149,7 +150,7 @@ class SteamSaleStore:
 
     def subscriber(self, user_id: int) -> SteamUsers | None:
         """Return the subscription of ``user_id``, if subscribed."""
-        return self.session.exec(alive(SteamUsers).where(SteamUsers.id == user_id)).first()
+        return alive_by_id(self.session, SteamUsers, user_id)
 
     def subscribers(self) -> Sequence[SteamUsers]:
         """Return every subscribed user."""

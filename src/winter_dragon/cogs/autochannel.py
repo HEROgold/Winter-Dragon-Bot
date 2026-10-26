@@ -15,7 +15,7 @@ from wd_bot.commands import Describe
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import alive_by_id, create_or_restore, owned_by, soft_delete, upsert
 
 # Command resolves option annotations from module globals at runtime, so Channel must be available here.
 lazy from wd_discord import (
@@ -137,7 +137,7 @@ def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoCh
 
 def hub_of(session: Session, guild_id: int) -> AutoChannelHub | None:
     """Return the guild ``guild_id``'s hub, if it has one."""
-    return session.exec(alive(AutoChannelHub).where(AutoChannelHub.id == guild_id)).first()
+    return alive_by_id(session, AutoChannelHub, guild_id)
 
 
 def owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel | None:
@@ -147,8 +147,7 @@ def owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel
 
 def settings_of(session: Session, user_id: int) -> AutoChannelSettings:
     """Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none."""
-    found = session.exec(alive(AutoChannelSettings).where(AutoChannelSettings.id == user_id)).first()
-    return found or AutoChannelSettings(id=user_id)
+    return alive_by_id(session, AutoChannelSettings, user_id) or AutoChannelSettings(id=user_id)
 
 
 class AutoChannels(
@@ -200,7 +199,7 @@ class AutoChannels(
 
     @staticmethod
     def _auto_channel(session: Session, channel_id: int) -> AutoChannel | None:
-        return session.exec(alive(AutoChannel).where(AutoChannel.id == channel_id)).first()
+        return alive_by_id(session, AutoChannel, channel_id)
 
     async def give_channel(self, member: Member | PartialMember, hub: AutoChannelHub) -> None:
         """Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
@@ -271,7 +270,7 @@ class AutoChannels(
     def _forget(self, channel: AutoChannel) -> None:
         """Forget the automatic ``channel``, which is gone: soft-delete its record."""
         with Session(self.bind) as session:
-            found = session.exec(alive(AutoChannel).where(AutoChannel.id == channel.id)).first()
+            found = alive_by_id(session, AutoChannel, channel.id)
             if found is not None:
                 soft_delete(session, found)
                 session.commit()
@@ -339,12 +338,7 @@ class AutoChannels(
         """Make ``channel`` the guild's hub, replacing the one it had."""
         guild_id = int(interaction.guild_id)
         with Session(self.bind) as session:
-            hub = hub_of(session, guild_id)
-            if hub is None:
-                create_or_restore(session, AutoChannelHub(id=guild_id, channel_id=int(channel.id)))
-            else:
-                hub.channel_id = int(channel.id)
-                session.add(hub)
+            upsert(session, AutoChannelHub(id=guild_id, channel_id=int(channel.id)))
             session.commit()
         await interaction.respond(
             embeds=[ChangedEmbed(description=f"Joining {channel.mention} now gives members their own channel.")],
@@ -411,10 +405,7 @@ class AutoChannels(
             settings = settings_of(session, user_id)
             for key, value in setting.items():
                 setattr(settings, key, value)
-            if settings in session:
-                session.add(settings)
-            else:
-                create_or_restore(session, settings)
+            upsert(session, settings)
             session.commit()
             owned = owned_channel(session, int(interaction.guild_id), user_id)
         if owned is None:

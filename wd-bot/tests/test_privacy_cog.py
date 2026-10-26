@@ -617,6 +617,28 @@ async def test_a_command_used_in_a_dm_is_counted_without_a_guild(engine: Engine,
 
 
 @pytest.mark.usefixtures("clock")
+async def test_a_command_used_twice_in_a_dm_is_counted_twice(engine: Engine, make_interaction: InteractionFactory) -> None:
+    cog = _cog(engine)
+
+    await _run(cog, make_interaction, "ping", guild_id=None)
+    await _run(cog, make_interaction, "ping", guild_id=None)
+
+    assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="ping", guild_id=None, day=DAY_0.date(), count=2)]
+
+
+@pytest.mark.usefixtures("clock")
+async def test_a_hidden_count_starts_again_from_one(engine: Engine, make_interaction: InteractionFactory) -> None:
+    cog = _cog(engine)
+    await _run(cog, make_interaction, "ping")
+    await _run(cog, make_interaction, "ping")
+    privacy.hide_member_data(engine, MEMBER_ID, DAY_0)
+
+    await _run(cog, make_interaction, "ping")
+
+    assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="ping", guild_id=GUILD_ID, day=DAY_0.date(), count=1)]
+
+
+@pytest.mark.usefixtures("clock")
 async def test_autocomplete_and_button_clicks_are_not_counted(
     engine: Engine,
     make_component_interaction: ComponentInteractionFactory,

@@ -25,7 +25,15 @@ lazy from sqlalchemy import delete, inspect
 lazy from sqlalchemy.exc import SQLAlchemyError
 lazy from sqlmodel import Session, SQLModel, col, select
 lazy from wd_bot.cogs import Cog
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, lifecycle_models, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import (
+    alive,
+    alive_by_id,
+    create_or_restore,
+    lifecycle_models,
+    owned_by,
+    soft_delete,
+    upsert,
+)
 lazy from wd_discord import CommandInteraction
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import ApplicationCommandOptionType
@@ -114,6 +122,10 @@ class UsageCount:
     guild_id: int | None
     day: date
     count: int
+
+
+def _count_once_more(usage: CommandUsage) -> None:
+    usage.uses += 1
 
 
 def command_path(interaction: CommandInteraction) -> str:
@@ -229,7 +241,7 @@ class Privacy(Cog):
     @staticmethod
     def _departure(session: Session, guild_id: int) -> DepartedGuild | None:
         """Return the guild's departure that isn't over yet, if any."""
-        return session.exec(alive(DepartedGuild).where(DepartedGuild.id == guild_id)).first()
+        return alive_by_id(session, DepartedGuild, guild_id)
 
     # --- Departed guilds ---------------------------------------------------------------------------------------------
 
@@ -313,18 +325,8 @@ class Privacy(Cog):
     def _count(self, user_id: int, command: str, guild_id: int | None, day: date) -> None:
         """Add one to the member's count of ``command`` in the guild on ``day``."""
         with Session(self.bind) as session:
-            same_key = (
-                CommandUsage.user_id == user_id,
-                CommandUsage.command == command,
-                CommandUsage.guild_id == guild_id,
-                CommandUsage.day == day,
-            )
-            usage = session.exec(alive(CommandUsage).where(*same_key)).first()
-            if usage is None:
-                create_or_restore(session, CommandUsage(user_id=user_id, command=command, guild_id=guild_id, day=day, uses=1))
-            else:
-                usage.uses += 1
-                session.add(usage)
+            first = CommandUsage(user_id=user_id, command=command, guild_id=guild_id, day=day, uses=1)
+            upsert(session, first, _count_once_more)
             session.commit()
 
     def usage(self, member_id: int) -> Generator[UsageCount]:

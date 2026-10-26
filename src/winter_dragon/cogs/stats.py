@@ -10,7 +10,7 @@ from sqlmodel import Field, Session, col, select
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import owned_by, soft_delete, upsert
 lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.interactions import InteractionContextType
@@ -266,12 +266,11 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
     @staticmethod
     def _raise_peak(session: Session, guild_id: int, online: int) -> int:
         """Record ``online`` as ``guild_id``'s peak if it's higher than the one recorded; return the peak."""
-        record = session.exec(alive(PeakOnline).where(PeakOnline.id == guild_id)).first()
-        if record is None:
-            return create_or_restore(session, PeakOnline(id=guild_id, peak=online)).peak
-        record.peak = max(record.peak, online)
-        session.add(record)
-        return record.peak
+
+        def raise_to_online(record: PeakOnline) -> None:
+            record.peak = max(record.peak, online)
+
+        return upsert(session, PeakOnline(id=guild_id, peak=online), raise_to_online).peak
 
     async def create_channels(self, client: Client, guild_id: int, *, reason: str) -> NetworkError | None:
         """Create ``guild_id``'s locked stats category and its channels, named after the current counts."""

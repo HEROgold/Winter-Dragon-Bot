@@ -15,7 +15,7 @@ from sqlmodel import Field, Session
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import alive_by_id, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import Permissions, is_network_error
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
@@ -62,7 +62,7 @@ def is_enabled(session: Session, guild_id: int) -> bool:
 
 def guild_setting(session: Session, guild_id: int) -> AutoReassignGuild | None:
     """Return the alive row turning giving roles back on in the guild ``guild_id``, if any."""
-    return session.exec(alive(AutoReassignGuild).where(AutoReassignGuild.id == guild_id)).first()
+    return alive_by_id(session, AutoReassignGuild, guild_id)
 
 
 def remembered_roles(session: Session, guild_id: int, user_id: int | None = None) -> Generator[RememberedRole]:

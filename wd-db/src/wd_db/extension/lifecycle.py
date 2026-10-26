@@ -2,7 +2,7 @@
 
 A deleted record is soft-deleted: :func:`soft_delete` stamps its ``deleted_at`` and every read goes through
 :func:`alive` (or the model's default ``query``), so the record isn't present anywhere. Creating a record whose key
-exists soft-deleted restores it (:func:`create_or_restore`).
+exists soft-deleted restores it (:func:`create_or_restore`); :func:`upsert` changes the alive one instead, if any.
 """
 
 from dataclasses import dataclass
@@ -22,7 +22,7 @@ lazy from wd_db.errors import AlreadyExistsError
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Iterable
+    lazy from collections.abc import Callable, Generator, Iterable
 
     lazy from sqlalchemy import Connection
     lazy from sqlmodel import Session
@@ -101,6 +101,11 @@ def alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]:
     return select(model).where(col(model.deleted_at).is_(None))
 
 
+def alive_by_id[M: LifecycleModel](session: Session, model: type[M], record_id: int | None) -> M | None:
+    """Return the ``model`` row ``record_id``, unless there's none or it's soft-deleted."""
+    return session.exec(alive(model).where(model.id == record_id)).first()
+
+
 def row_key(row: LifecycleModel) -> str:
     """Return the string naming ``row``: its table and ID, like ``reminder:12``; :func:`find_by_key` reads it back."""
     return f"{type(row).__tablename__}:{row.id}"
@@ -112,7 +117,7 @@ def find_by_key[M: LifecycleModel](session: Session, models: Iterable[type[M]], 
     model = next((model for model in models if model.__tablename__ == table), None)
     if model is None or not row_id.isdecimal():
         return None
-    return session.exec(alive(model).where(model.id == int(row_id))).first()
+    return alive_by_id(session, model, int(row_id))
 
 
 def soft_delete(session: Session, row: LifecycleModel, *, at: datetime | None = None) -> None:
@@ -138,12 +143,17 @@ def create_or_restore[M: LifecycleModel](session: Session, row: M) -> M:
     return _store(session, row, existing)
 
 
-def upsert[M: LifecycleModel](session: Session, row: M) -> M:
+def upsert[M: LifecycleModel](session: Session, row: M, update: Callable[[M], object] | None = None) -> M:
     """Insert ``row``, or overwrite the stored row (alive or soft-deleted) with the same ``id`` or natural key; return it.
 
-    Overwriting clears ``deleted_at``. The caller commits.
+    An alive row is changed by ``update`` when one is given, instead of getting ``row``'s fields. Overwriting clears
+    ``deleted_at``. The caller commits.
     """
     existing: M | None = _same_key(session, row)
+    if update is not None and existing is not None and existing.deleted_at is None:
+        update(existing)
+        session.add(existing)
+        return existing
     return _store(session, row, existing)
 
 

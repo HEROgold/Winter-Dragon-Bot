@@ -8,7 +8,7 @@ lazy from typing import TYPE_CHECKING, override
 from wd_bot.commands import Describe
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete
+lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete, upsert
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.steam.models import STEAM_TABLES, SteamUsers
@@ -221,11 +221,11 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             return
         with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
-            if subscriber is None:
-                create_or_restore(session, SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent))
-            else:
-                subscriber.sale_threshold = percent
-                session.add(subscriber)
+
+            def set_threshold(subscription: SteamUsers) -> None:
+                subscription.sale_threshold = percent
+
+            upsert(session, SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent), set_threshold)
             session.commit()
         content = f"Changed your sale notification threshold to {percent}%."
         if subscriber is None:

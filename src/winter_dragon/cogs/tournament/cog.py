@@ -8,6 +8,7 @@ from sqlmodel import Session
 from wd_bot.commands import Describe, Lookup
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
+lazy from wd_db.extension.lifecycle import alive_by_id
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
 lazy from wd_discord import User  # noqa: TC002
@@ -36,7 +37,6 @@ lazy from .service import (
     active_tournament,
     add_to_team,
     advance,
-    alive_record,
     cancel,
     cast,
     choices_of,
@@ -91,7 +91,7 @@ def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) 
 
 def stored[M: LifecycleModel](session: Session, model: type[M], record_id: int, gone: str) -> M:
     """Return the alive ``model`` stored as ``record_id``; refuse with ``gone`` when there's none."""
-    record = alive_record(session, model, record_id)
+    record = alive_by_id(session, model, record_id)
     if record is None:
         raise Refused(gone)
     return record
@@ -343,7 +343,7 @@ class Tournaments(
     def _match(self, interaction: AnyGuildInteraction, session: Session, match_id: int) -> tuple[Tournament, TournamentMatch]:
         """Return the guild's running tournament and its match ``match_id``; refuse when there's no such match."""
         tournament = self._active(interaction, session)
-        match = alive_record(session, TournamentMatch, match_id)
+        match = alive_by_id(session, TournamentMatch, match_id)
         if match is None or match.tournament_id != tournament.id:
             msg = f"This tournament has no match #{match_id}; {self.mention(self.bracket)} lists them."
             raise Refused(msg)
@@ -352,8 +352,8 @@ class Tournaments(
     @staticmethod
     def _running_match(session: Session, match_id: int) -> tuple[Tournament, TournamentMatch]:
         """Return the match ``match_id`` and its tournament; refuse unless that tournament is running."""
-        match = alive_record(session, TournamentMatch, match_id)
-        tournament = None if match is None else alive_record(session, Tournament, match.tournament_id)
+        match = alive_by_id(session, TournamentMatch, match_id)
+        tournament = None if match is None else alive_by_id(session, Tournament, match.tournament_id)
         if match is None or tournament is None or tournament.status is not TournamentStatus.RUNNING:
             msg = "This match's tournament isn't running any more."
             raise Refused(msg)
