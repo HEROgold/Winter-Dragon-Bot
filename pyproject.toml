@@ -12,7 +12,7 @@ docs = [
 
 [project]
 name = "winter-dragon"
-version = "0.6.0"
+version = "0.6.1"
 description = "A versatile Discord bot with moderation, utility, and entertainment features"
 readme = "README.md"
 requires-python = ">=3.15"
