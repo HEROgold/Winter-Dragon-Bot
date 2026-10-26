@@ -12,78 +12,22 @@ lazy import time
 lazy from abc import ABC, abstractmethod
 lazy from collections import deque
 lazy from dataclasses import dataclass, field
-lazy from enum import StrEnum, auto
 lazy from http import HTTPStatus
 lazy from typing import TYPE_CHECKING, Any, ClassVar
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_config.discord import RateLimit
-lazy from wd_errors.base import BaseError
 
 lazy from wd_discord.log import get_logger
-lazy from wd_discord.utils.xor import XORError, xor
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Callable, Mapping
-    lazy from datetime import datetime, timedelta
     lazy from types import CoroutineType
 
     lazy from httpxyz import Headers, Response
 
 logger = get_logger("RateLimit")
-
-
-class Buckets(StrEnum):
-    """Represents the different buckets for rate limits."""
-
-    global_ = auto()
-    per_endpoint = auto()
-    per_user = auto()
-    shared = auto()
-
-
-class ScopeError(BaseError):
-    """Raised when both _global and _scope are set or when neither are set in a HeaderFormat."""
-
-    def __init__(self, global_: bool | None, scope: str | None) -> None:  # noqa: FBT001
-        """Initialize the error."""
-        super().__init__(f"Invalid scope: global={global_}, scope={scope}. Exactly one of these must be set.")
-
-
-@dataclass
-class HeaderFormat:
-    """Example header format for rate limits.
-
-    X-RateLimit-Limit: 5
-    X-RateLimit-Remaining: 0
-    X-RateLimit-Reset: 1470173023
-    X-RateLimit-Reset-After: 1
-    X-RateLimit-Bucket: abcd1234
-
-    X-RateLimit-Global - Returned only on HTTP 429 responses if the rate limit encountered is the global rate limit
-        (not per-route)
-    X-RateLimit-Scope - Returned only on HTTP 429 responses. Value can be user (per bot or user limit),
-        global(per bot or user global limit), or shared (per resource limit)
-    """
-
-    limit: int
-    remaining: int
-    reset: datetime  # in epoch seconds
-    reset_after: timedelta  # in seconds
-    bucket: Buckets
-    _global: bool | None = None
-    _scope: str | None = None
-
-    @property
-    def scope(self) -> str:
-        """Get the scope of the rate limit."""
-        scope = xor(self._global, bool(self._scope))
-        if isinstance(scope, XORError):
-            raise ScopeError(self._global, self._scope)
-        if not self._scope:
-            return "global"
-        return self._scope
 
 
 class RateLimiter(ABC):

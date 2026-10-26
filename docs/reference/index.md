@@ -17,8 +17,6 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`wd_cogs.utility`](wd-cogs.utility.md) | Package for utility cogs. |
 | [`wd_config`](wd-config.md) | Module for a config descriptor. |
 | [`wd_core`](wd-core.md) |  |
-| [`wd_core.command`](wd-core.command.md) |  |
-| [`wd_core.ui`](wd-core.ui.md) |  |
 | [`wd_db`](wd-db.md) | The database package for the Winter Dragon project. |
 | [`wd_db.errors`](wd-db.errors.md) |  |
 | [`wd_db.extension`](wd-db.extension.md) |  |
@@ -29,7 +27,6 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`wd_discord.gateway`](wd-discord.gateway.md) | Discord gateway (WebSocket) support: connection, payload helpers, and sharding. |
 | [`wd_discord.resources`](wd-discord.resources.md) | Discord API resource models (https://docs.discord.com/developers/resources). |
 | [`wd_discord.testing`](wd-discord.testing.md) | Test helpers for code built on wd-discord: a client that records its requests, and Discord JSON payloads. |
-| [`wd_discord.utils`](wd-discord.utils.md) | Module for utility functions and classes. |
 | [`wd_errors`](wd-errors.md) | Errors for WinterDragon. |
 | [`wd_types`](wd-types.md) |  |
 | [`winter_dragon`](winter-dragon.md) | Winter Dragon: the Discord bot and its web dashboard. |

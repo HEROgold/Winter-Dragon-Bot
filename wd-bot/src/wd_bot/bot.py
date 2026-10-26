@@ -87,10 +87,6 @@ def invite_url() -> str:
     return f"{URLS().oauth2_authorize}?client_id={ApplicationId.get()}&permissions={int(permissions)}&scope={scope}"
 
 
-class MissingError(Exception):
-    """Raised when a required attribute is missing."""
-
-
 class Bot(LoggerMixin):
     """A forever-running Discord bot: connects to the gateway, loads extensions, dispatches events.
 

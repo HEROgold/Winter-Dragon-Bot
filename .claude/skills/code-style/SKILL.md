@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 | `@override` on every overriding method | silent overrides |
 | `TypeIs[T]` for narrowing predicates (`is_network_error`) | `bool` returns the caller must `cast` after |
 
-Examples: [wd_types/alias.py](../../../wd-types/src/wd_types/alias.py) (bounded generics, ParamSpec, defaulted type params); `returns_known_exception[**P, T, E: Exception]` in [wd_discord/client.py](../../../wd-discord/src/wd_discord/client.py).
+Example: `returns_known_exception[**P, T, E: Exception]` (bounded generic, ParamSpec) in [wd_discord/client.py](../../../wd-discord/src/wd_discord/client.py).
 
 Kwargs are a `TypedDict` + `Unpack`, not `**kwargs: Any` — `BotArgs` in [wd_bot/cogs.py](../../../wd-bot/src/wd_bot/cogs.py) (`Required`/`NotRequired` per key).
 

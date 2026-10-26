@@ -4,14 +4,6 @@
 
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
-## `wd_types.alias` — `wd-types/src/wd_types/alias.py`
-Contains type aliases for WinterDragon.
-
-- `type Store[T] = dict[str, T]`
-- `type CoroutineFunction[Args = Any, Yield = Any, Send = Any, Return = Any] = Callable[[Args], Coroutine[Yield, Send, Return]]`
-- `type MaybeAwaitable[T] = T | Awaitable[T]`
-- `type MaybeAwaitableFunc[**P, T] = Callable[P, MaybeAwaitable[T]]`
-
 ## `wd_types.clock` — `wd-types/src/wd_types/clock.py`
 The one clock: every "now" in the workspace comes from :func:`utc_now`.
 

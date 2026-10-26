@@ -190,7 +190,7 @@ A pop-up form, shown as the response to an interaction.
 ## `wd_discord.constants` — `wd-discord/src/wd_discord/constants.py`
 Constants used throughout the library.
 
-- module names: DISCORD_EPOCH, RATE_LIMIT_BUCKET
+- module names: DISCORD_EPOCH
 
 ## `wd_discord.embed` — `wd-discord/src/wd_discord/embed.py`
 A minimal Discord embed model.
@@ -421,20 +421,6 @@ Represents the permissions a member has in a guild or channel.
 Utilities for handling rate limits.
 
 - module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAJOR_PARAM_PREFIXES
-
-### `class Buckets(StrEnum)`
-Represents the different buckets for rate limits.
-
-- attributes: global_, per_endpoint, per_user, shared
-
-### `class ScopeError(BaseError)`
-Raised when both _global and _scope are set or when neither are set in a HeaderFormat.
-
-### `@dataclass class HeaderFormat`
-Example header format for rate limits.
-
-- fields: limit: int, remaining: int, reset: datetime, reset_after: timedelta, bucket: Buckets
-- `@property scope -> str` — Get the scope of the rate limit.
 
 ### `class RateLimiter(ABC)`
 A rate-limit strategy :class:`~wd_discord.client.Client` consults around each request.

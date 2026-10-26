@@ -48,41 +48,6 @@ Constants used across the bot.
 
 - module names: intents, BOT_PERMISSIONS
 
-## `wd_core.events` — `wd-core/src/wd_core/events.py`
-
-### `class AuditLog(BaseModel)`
-Database model for audit logs.
-
-- fields: action: int, reason: str | None, target_id: str, category: int
-- `@classmethod from_audit_log(entry: AuditLogEntry) -> Self` — Create an AuditLog instance from a Discord AuditLogEntry.
-
-### `class AuditEvent(ABC)`
-Base class for audit events.
-
-- `@property category -> AuditLogAction` — Get the log category. lazily evaluated.
-- `@property db_entry -> AuditLog` — Get the database entry. lazily evaluated.
-- `async handle() -> None` — Handle the audit event.
-- `async get_log_channels() -> Generator[LogChannel]` — Get the log channels for the guild.
-- `async create_embed() -> Embed` — Create an embed for the audit event.
-
-### `class LogChannel(GuildChannel, Messageable, ABC)`
-A wrapper around GuildChannel to allow for easier logging.
-
-- `async filter(action: AuditLogAction) -> bool` — Determine if a log should be sent to this channel based on the category.
-
-### `class AuditEventHandler(LoggerMixin)`
-Class for handling audit events.
-
-- `async handle() -> None` — Handle the audit event.
-- `async log(audit_action: AuditLogAction, embed: Embed, channels: Iterable[LogChannel]) -> None` — Dispatch a log to the appropriate channels/aggregators.
-
-### `class AuditEventFactory`
-Factory for creating audit events.
-
-- fields: events: ClassVar[dict[AuditLogAction, list[type[AuditEvent]]]]
-- `@classmethod register(action: AuditLogAction, event_type: type[AuditEvent]) -> None` — Register an audit event class for a category.
-- `@classmethod get_events(entry: AuditLogEntry) -> Generator[AuditEvent]` — Get the audit event class for a category.
-
 ## `wd_core.intents` — `wd-core/src/wd_core/intents.py`
 Module that contains the Gateway Intents.
 

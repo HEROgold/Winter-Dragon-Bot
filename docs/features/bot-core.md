@@ -10,7 +10,7 @@ Audience: maintainers and the bot developer. Most of this is invisible to ordina
 
 Extensions are found by walking the extensions package rather than being listed by hand. Each cog declares whether it should load automatically (`auto_load=True`); anything prefixed with `_` is skipped. Cogs that need setup work expose a load hook the bot calls after construction, so an extension can be a plain class with no boilerplate `setup()` function.
 
-**Status:** ✅ Ported — `wd-bot/src/wd_bot/bot.py`, `cogs.py`, `extension_manager.py`.
+**Status:** ✅ Ported — `wd-bot/src/wd_bot/bot.py`, `cogs.py`, `extensions.py`.
 **Source on `main`:** `src/winter_dragon/bot/core/bot.py`, `core/cogs.py`, `core/extension_manager.py`, `extensions/__init__.py`
 
 ## Hot reload

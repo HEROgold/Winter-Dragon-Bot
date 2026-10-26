@@ -17,14 +17,6 @@ Enum containing available tags for the database.
 
 - attributes: UNKNOWN, STATS, LOGS, TICKETS, TEAM_VOICE, TEAM_CATEGORY, TEAM_LOBBY
 
-## `wd_db.check_tables` — `wd-db/src/wd_db/check_tables.py`
-Check that every table Class is present.
-
-- module names: GREEN, YELLOW, RED, RESET
-- `find_table_classes(py_path: Path) -> list[str]` — Find all class names in the given Python file that define SQLModel tables.
-- `load_all_list(init_path: Path) -> list[str]` — Load the __all__ list from the given __init__.py file.
-- `main() -> int` — Entry point.
-
 ## `wd_db.constants` — `wd-db/src/wd_db/constants.py`
 Module for containing constants and configuration for the database package.
 

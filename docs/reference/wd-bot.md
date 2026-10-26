@@ -48,9 +48,6 @@ Module that contains the bot.
 - `error_embed(interaction_id: Snowflake) -> Embed` — Return the reply to the interaction ``interaction_id`` whose handler raised.
 - `invite_url() -> str` — Return the link to invite the bot to a server, with the scopes and permissions in ``bot.ini``.
 
-### `class MissingError(Exception)`
-Raised when a required attribute is missing.
-
 ### `class Bot(LoggerMixin)`
 A forever-running Discord bot: connects to the gateway, loads extensions, dispatches events.
 
@@ -207,17 +204,6 @@ Lists the modules inside an extensions package, at any depth.
 
 - `modules() -> Generator[str]` — Yield every module (not package) under :attr:`package`, named relative to it.
 
-## `wd_bot.help` — `wd-bot/src/wd_bot/help.py`
-Module for defining the help command.
-
-- module names: default_help
-
-### `class HelpCommand(View, Command)`
-The help command.
-
-### `class DefaultHelpCommand(HelpCommand)`
-Default implementation for a simple help command.
-
 ## `wd_bot.listener` — `wd-bot/src/wd_bot/listener.py`
 Runtime `listener()` decorator: tag a Cog method as a gateway dispatch-event listener.
 
@@ -232,19 +218,6 @@ The tables of a module's table classes, taken out of ``SQLModel.metadata`` so th
 - fields: detached: list[Table], present: set[str]
 - `@classmethod detach(module_name: str, module: ModuleType | None) -> ModuleTables` — Remove the tables of the classes ``module`` defines from ``SQLModel.metadata``; ``None`` detaches nothing.
 - `restore() -> None` — Drop the tables added since :meth:`detach` and put the detached ones back, as before the reload.
-
-## `wd_bot.paths` — `wd-bot/src/wd_bot/paths.py`
-Centralized filesystem paths shared across the bot codebase.
-
-- module names: CORE_DIR, PACKAGE_DIR, ROOT_DIR, EXTENSIONS, DYNAMIC_DIR, IMG_DIR, METRICS_FILE
-
-## `wd_bot.permissions` — `wd-bot/src/wd_bot/permissions.py`
-Module for handling permission related things in Discord bot interactions.
-
-### `class PermissionsNotifier`
-Notify users about missing permissions, roles or overwrites.
-
-- `async notify() -> None` — Notify the user about missing permissions, roles or overwrites.
 
 ## `wd_bot.registry` — `wd-bot/src/wd_bot/registry.py`
 Which application commands the bot registers where, and the IDs Discord gave them.
