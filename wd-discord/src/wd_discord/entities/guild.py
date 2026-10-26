@@ -4,6 +4,7 @@ from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 
 lazy from wd_discord.audit import reason_headers
+lazy from wd_discord.cache import StateCache
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import ClientBound, Entity, Partial, every_page, no_content, parse, parse_all
 lazy from wd_discord.entities.channel import Channel, PartialChannel
@@ -27,15 +28,17 @@ lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
+    from string.templatelib import Template
 
     from wd_discord.audit import Reason
     from wd_discord.cache import GuildState
-    from wd_discord.client import NetworkError, RequestResult
+    from wd_discord.client import Client, NetworkError, RequestResult
     from wd_discord.entities.member import BaseMember
     from wd_discord.entities.user import BaseUser
     from wd_discord.gateway.events import GuildCreate
     from wd_discord.image import ImageHash
+    from wd_discord.models import DiscordModel
     from wd_discord.partial_emoji import PartialEmoji
     from wd_discord.resources.channel import GuildChannelParams
     from wd_discord.resources.guild import (
@@ -177,6 +180,27 @@ class BaseGuild(ClientBound):
 
     # --- From Discord: a request each, whose answer also updates the cache ------------------------
 
+    async def _stored[M: DiscordModel, E, *Ts](  # noqa: PLR0913 - route, model, store and entity are each one step
+        self,
+        route: Template,
+        model: type[M],
+        store: Callable[[StateCache, Snowflake, list[M]], object],
+        entity: Callable[[Client, M, *Ts], E],
+        *args: *Ts,
+        params: dict[str, str] | None = None,
+        cache: bool = False,
+    ) -> Generator[E] | NetworkError:
+        """GET ``route`` as a list of ``model``; ``store`` it in the state cache, then wrap each item as ``entity``.
+
+        ``store`` is a :class:`~wd_discord.cache.StateCache` method taking this guild's ID, and ``args`` follow
+        the client and the item in ``entity``'s call. A failure leaves the cache as it was.
+        """
+        parsed = parse_all(await self.client.get(route, params=params or {}, cache=cache), model)
+        if is_network_error(parsed):
+            return parsed
+        store(self.client.cache, self.id, parsed)
+        return (entity(self.client, item, *args) for item in parsed)
+
     async def fetch(self, *, with_counts: bool = False, cache: bool = False) -> Guild | NetworkError:
         """GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts."""
         params = {"with_counts": "true"} if with_counts else {}
@@ -192,11 +216,7 @@ class BaseGuild(ClientBound):
 
     async def fetch_channels(self, *, cache: bool = False) -> Generator[Channel] | NetworkError:
         """GET /guilds/{guild_id}/channels - the guild's channels, threads excluded."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/channels", cache=cache), ChannelModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_channels(self.id, parsed)
-        return (Channel(self.client, channel) for channel in parsed)
+        return await self._stored(t"/guilds/{self.id}/channels", ChannelModel, StateCache.store_channels, Channel, cache=cache)
 
     async def create_channel(
         self,
@@ -225,11 +245,8 @@ class BaseGuild(ClientBound):
         Needs the GUILD_MEMBERS intent.
         """
         params = {"limit": str(limit), "after": "0" if after is None else str(after.id)}
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/members", params=params, cache=cache), GuildMember)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_members(self.id, parsed)
-        return (Member(self.client, member, self.id) for member in parsed)
+        route = t"/guilds/{self.id}/members"
+        return await self._stored(route, GuildMember, StateCache.store_members, Member, self.id, params=params, cache=cache)
 
     async def all_members(
         self,
@@ -261,19 +278,11 @@ class BaseGuild(ClientBound):
 
     async def fetch_roles(self, *, cache: bool = False) -> Generator[Role] | NetworkError:
         """GET /guilds/{guild_id}/roles - every role of the guild."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/roles", cache=cache), RoleModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_roles(self.id, parsed)
-        return (Role(self.client, role, self.id) for role in parsed)
+        return await self._stored(t"/guilds/{self.id}/roles", RoleModel, StateCache.store_roles, Role, self.id, cache=cache)
 
     async def fetch_emojis(self, *, cache: bool = False) -> Generator[Emoji] | NetworkError:
         """GET /guilds/{guild_id}/emojis - the guild's custom emojis."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/emojis", cache=cache), EmojiModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_emojis(self.id, parsed)
-        return (Emoji(self.client, emoji, self.id) for emoji in parsed)
+        return await self._stored(t"/guilds/{self.id}/emojis", EmojiModel, StateCache.store_emojis, Emoji, self.id, cache=cache)
 
     async def fetch_emoji(self, emoji_id: SnowflakeLike, *, cache: bool = False) -> Emoji | NetworkError:
         """GET /guilds/{guild_id}/emojis/{emoji_id}."""
@@ -282,11 +291,7 @@ class BaseGuild(ClientBound):
 
     async def fetch_stickers(self, *, cache: bool = False) -> Generator[Sticker] | NetworkError:
         """GET /guilds/{guild_id}/stickers - the guild's own stickers."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/stickers", cache=cache), StickerModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_stickers(self.id, parsed)
-        return (Sticker(self.client, sticker) for sticker in parsed)
+        return await self._stored(t"/guilds/{self.id}/stickers", StickerModel, StateCache.store_stickers, Sticker, cache=cache)
 
     async def fetch_invites(self, *, cache: bool = False) -> Generator[Invite] | NetworkError:
         """GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD."""

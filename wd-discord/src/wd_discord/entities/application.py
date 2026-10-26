@@ -70,8 +70,7 @@ class Application(Entity[ApplicationModel]):
         """The guild linked to the application, such as its support server."""
         if self.model.guild is not None:
             return Guild(self.client, self.model.guild)
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def bot_public(self) -> bool:

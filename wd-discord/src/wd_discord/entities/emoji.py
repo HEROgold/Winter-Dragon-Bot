@@ -122,8 +122,7 @@ class Sticker(Entity[StickerModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild that owns the sticker; ``None`` for a standard sticker."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def user(self) -> User | None:

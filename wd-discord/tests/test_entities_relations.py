@@ -188,6 +188,15 @@ def test_channel_relations() -> None:
     ]
 
 
+def test_channel_relations_are_none_when_discord_leaves_the_ids_out() -> None:
+    channel = Channel(RecordingClient(), ChannelModel.model_validate({"id": "6", "type": 1}))
+
+    assert channel.guild is None
+    assert channel.parent is None
+    assert channel.last_message is None
+    assert channel.owner is None
+
+
 async def test_channel_message_history_and_bulk_delete() -> None:
     client = RecordingClient()
     client.reply("GET", "/channels/6/messages", [MESSAGE_JSON])

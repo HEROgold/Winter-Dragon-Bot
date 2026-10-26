@@ -108,16 +108,14 @@ class Interaction[M: InteractionModel](Entity[M]):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the interaction was sent from, if any."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def channel(self) -> Channel | PartialChannel | None:
         """The channel the interaction was sent from, in full when Discord sent it along (it usually does)."""
         if self.model.channel is not None:
             return _full_channel(self.client, self.model.channel, self.model.guild_id)
-        channel_id = self.model.channel_id
-        return None if channel_id is None else PartialChannel(self.client, channel_id)
+        return self._partial(PartialChannel, self.model.channel_id)
 
     @property
     def entitlements(self) -> Generator[Entitlement]:

@@ -243,14 +243,12 @@ class Channel(Entity[ChannelModel], BaseChannel):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the channel belongs to; ``None`` for DM channels."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def parent(self) -> PartialChannel | None:
         """The category a guild channel sits in, or the channel a thread was started in."""
-        parent_id = self.model.parent_id
-        return None if parent_id is None else PartialChannel(self.client, parent_id)
+        return self._partial(PartialChannel, self.model.parent_id)
 
     @property
     def position(self) -> int | None:
@@ -270,8 +268,7 @@ class Channel(Entity[ChannelModel], BaseChannel):
     @property
     def last_message(self) -> PartialMessage | None:
         """The latest message sent in the channel (or thread started, in a forum); it may have been deleted since."""
-        message_id = self.model.last_message_id
-        return None if message_id is None else PartialMessage(self.client, message_id, self.id)
+        return self._partial(PartialMessage, self.model.last_message_id, self.id)
 
     @property
     def bitrate(self) -> int | None:
@@ -312,8 +309,7 @@ class Channel(Entity[ChannelModel], BaseChannel):
     @property
     def owner(self) -> PartialUser | None:
         """Who created a group DM or thread."""
-        owner_id = self.model.owner_id
-        return None if owner_id is None else PartialUser(self.client, owner_id)
+        return self._partial(PartialUser, self.model.owner_id)
 
     @property
     def overwrites(self) -> Generator[PermissionOverwrite]:
@@ -443,8 +439,7 @@ class ThreadMember(Entity[ThreadMemberModel]):
     @property
     def user(self) -> PartialUser | None:
         """The member of the thread; Discord leaves it out of some payloads."""
-        user_id = self.model.user_id
-        return None if user_id is None else PartialUser(self.client, user_id)
+        return self._partial(PartialUser, self.model.user_id)
 
     @property
     def joined_at(self) -> datetime:

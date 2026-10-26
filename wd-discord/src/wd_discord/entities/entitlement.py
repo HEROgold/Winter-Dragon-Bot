@@ -38,14 +38,12 @@ class Entitlement(Entity[EntitlementModel]):
     @property
     def user(self) -> PartialUser | None:
         """The user granted access; ``None`` for a guild's entitlement."""
-        user_id = self.model.user_id
-        return None if user_id is None else PartialUser(self.client, user_id)
+        return self._partial(PartialUser, self.model.user_id)
 
     @property
     def guild(self) -> PartialGuild | None:
         """The guild granted access; ``None`` for a user's entitlement."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def deleted(self) -> bool:
