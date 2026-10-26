@@ -165,3 +165,19 @@ def test_different_askers_each_get_their_own_check(engine: Engine) -> None:
         record_check(session, 3, 2, "Bobby")
         session.commit()
         assert len(session.exec(select(CompatibilityCheck)).all()) == 2  # noqa: PLR2004
+
+
+def test_a_check_is_member_data_the_member_can_delete(engine: Engine) -> None:
+    from wd_db.extension.lifecycle import lifecycle_models, owned_by  # noqa: PLC0415
+
+    assert CompatibilityCheck in set(lifecycle_models())
+    assert CompatibilityCheck.ownership.member == "user_id"
+    with Session(engine) as session:
+        check = record_check(session, 1, 2, "Bobby")
+        session.commit()
+        (owned,) = session.exec(owned_by(CompatibilityCheck, member=1)).all()
+        assert owned.id == check.id
+        assert session.exec(owned_by(CompatibilityCheck, member=2)).all() == []
+        soft_delete(session, owned)
+        session.commit()
+        assert session.exec(alive(CompatibilityCheck)).all() == []
