@@ -757,6 +757,11 @@ The /urban command group: look up a term, or random terms, on Urban Dictionary.
 - `definition_fields(definitions: Sequence[Definition], limit: int, budget: int) -> Generator[EmbedField]` — Yield a field for each of the first ``limit`` definitions, stopping before their text exceeds ``budget``.
 - `build_embed(title: str, definitions: Sequence[Definition], limit: int) -> Embed` — Return an embed titled ``title`` showing up to ``limit`` of ``definitions``, within Discord's embed limits.
 
+### `class Lookup(LifecycleModel, table=True)`
+One /urban search that returned a definition; ``user_id`` is the Discord user ID of who searched, and they own it.
+
+- fields: ownership: ClassVar[Ownership], user_id: int, term: str, looked_up_at: datetime
+
 ### `class UrbanSettings`
 Settings for /urban, in its ``cogs.ini`` section.
 
@@ -785,5 +790,6 @@ Asks Urban Dictionary's API for definitions; use as ``async with UrbanDictionary
 Looks up terms on Urban Dictionary.
 
 - fields: http: AsyncClient | None
+- `async load() -> None` — Create the lookup table if missing.
 - `@Cog.command async search(interaction: CommandInteraction, query: str) -> None` — Reply with the definitions of ``query``.
 - `@Cog.command async random(interaction: CommandInteraction) -> None` — Reply with definitions of random terms, unless that's turned off.
