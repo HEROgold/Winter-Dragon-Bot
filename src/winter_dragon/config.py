@@ -1,10 +1,10 @@
 """The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``."""
 
-lazy import logging
-lazy from pathlib import Path
+import logging
+from pathlib import Path
 
+from wd_config import Config as BaseConfig
 lazy from confkit.data_types import Hex, List
-lazy from wd_config import Config as BaseConfig
 
 
 CONFIG_FILE = Path("config.ini")

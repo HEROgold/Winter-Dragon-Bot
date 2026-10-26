@@ -2,9 +2,10 @@
 
 lazy from typing import TYPE_CHECKING, Self
 
+from herogold.errors import with_known_exception
+from herogold.log import LoggerMixin
 from pydantic import BaseModel, Field, ValidationError
-lazy from herogold.errors import with_known_exception
-lazy from herogold.log import LoggerMixin
+from wd_errors import BaseError
 lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord.embed import (
@@ -16,9 +17,8 @@ lazy from wd_discord.embed import (
     EmbedField,
     EmbedFooter,
 )
-lazy from wd_errors import BaseError
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

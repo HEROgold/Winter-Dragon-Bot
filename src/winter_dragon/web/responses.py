@@ -1,14 +1,14 @@
 """Rendering the dashboard's templates, as a whole page or as the fragment an htmx request swaps in."""
 
-lazy from pathlib import Path
-lazy from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi.templating import Jinja2Templates
 lazy from fastapi import Request, status
 lazy from fastapi.responses import RedirectResponse
 
+from winter_dragon.web.formatting import shown_value
 lazy from winter_dragon.web.accounts import CSRF_FIELD, csrf_token, current_account
-lazy from winter_dragon.web.formatting import shown_value
 
 
 if TYPE_CHECKING:

@@ -1,7 +1,7 @@
 """The arithmetic of a single-elimination bracket, and of splitting players into teams; no database, no Discord."""
 
+from typing import TYPE_CHECKING
 lazy from math import ceil, log2
-lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import MAX_BUTTON_LABEL_LENGTH
 

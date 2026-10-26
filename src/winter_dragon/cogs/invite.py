@@ -1,6 +1,6 @@
 """The /invite command group: invite the bot to a guild, or join the support guild."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import is_network_error

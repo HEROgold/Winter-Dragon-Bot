@@ -1,8 +1,8 @@
 """Storing and querying Steam sales and their subscribers."""
 
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 lazy from collections import defaultdict
-lazy from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col, or_, select
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete

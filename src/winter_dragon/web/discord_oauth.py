@@ -4,14 +4,14 @@ The access token is revoked as soon as the user is known; the dashboard keeps no
 its session cookie (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant).
 """
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 lazy from urllib.parse import urlencode
 
+from wd_discord.log import get_logger
 from wd_discord.models import DiscordModel
 lazy from httpxyz import AsyncClient, BasicAuth, RequestError
 lazy from wd_bot.application import ApplicationId
 lazy from wd_config.discord import URLS
-lazy from wd_discord.log import get_logger
 lazy from wd_discord.oauth import OAuthScopes
 lazy from wd_discord.resources.user.user import User
 

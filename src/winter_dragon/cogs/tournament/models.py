@@ -1,6 +1,6 @@
 """The tournament tables: a tournament, its teams and players, its bracket's matches, their drafts and votes."""
 
-lazy from enum import StrEnum
+from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger

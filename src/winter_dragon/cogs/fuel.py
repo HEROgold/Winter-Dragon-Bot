@@ -19,7 +19,7 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_discord.files import File
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

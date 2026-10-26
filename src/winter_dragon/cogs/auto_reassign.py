@@ -13,12 +13,12 @@ lazy from typing import TYPE_CHECKING, ClassVar, override
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
+from wd_discord.gateway import EventName
+from wd_discord.interactions import InteractionContextType
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import Permissions, is_network_error
-lazy from wd_discord.gateway import EventName
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.guild import MemberParams
 lazy from wd_discord.snowflake import Snowflake
 

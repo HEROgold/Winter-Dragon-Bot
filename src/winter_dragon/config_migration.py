@@ -6,8 +6,8 @@ its file, and migration has to run before that. ``wd-config/tests/test_migration
 Settings added after the split never existed in the old file, so they need no entry.
 """
 
-lazy import re
-lazy from pathlib import Path
+import re
+from pathlib import Path
 
 lazy from wd_config.constants import DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
 lazy from wd_config.migration import MigrationReport, Move, migrate

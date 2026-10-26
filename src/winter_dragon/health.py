@@ -5,11 +5,11 @@ Each exits 0 when healthy and 1 otherwise. ``bot`` is healthy while :class:`~win
 healthy when the landing page, which reads the database, answers 200.
 """
 
+import tempfile
+from pathlib import Path
 lazy import sys
-lazy import tempfile
 lazy import time
 lazy import urllib.request
-lazy from pathlib import Path
 
 
 ALIVE_FILE = Path(tempfile.gettempdir()) / "winter-dragon-alive"
@@ -35,7 +35,7 @@ def web_healthy() -> bool:
 
     url = f"http://127.0.0.1:{DashboardSettings.port}/"
     try:
-        with urllib.request.urlopen(url, timeout=WEB_TIMEOUT) as response:  # noqa: S310 - fixed http URL on localhost
+        with urllib.request.urlopen(url, timeout=WEB_TIMEOUT) as response:
             return response.status == 200  # noqa: PLR2004 - HTTP OK
     except OSError:
         return False

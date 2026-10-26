@@ -1,9 +1,9 @@
 """Tells the container's healthcheck that the bot is connected to Discord; see :mod:`winter_dragon.health`."""
 
+from typing import override
 lazy import asyncio
-lazy from typing import override
 
-lazy from wd_bot.cogs import Cog
+from wd_bot.cogs import Cog
 
 lazy from winter_dragon.health import ALIVE_FILE
 

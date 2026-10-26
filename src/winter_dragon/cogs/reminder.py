@@ -17,7 +17,7 @@ lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationComm
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
 
 

@@ -13,6 +13,8 @@ from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
 from wd_bot.commands import Describe
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
+from wd_discord.gateway import EventName
+from wd_discord.interactions import InteractionContextType
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
@@ -27,8 +29,6 @@ lazy from wd_discord import (
     is_network_error,
 )
 lazy from wd_discord.errors import ApiResponseError
-lazy from wd_discord.gateway import EventName
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 lazy from wd_discord.resources.channel.params import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT
 lazy from wd_errors import Refused, unwrap

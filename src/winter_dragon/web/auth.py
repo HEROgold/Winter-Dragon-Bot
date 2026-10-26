@@ -5,7 +5,7 @@ lazy import secrets
 from fastapi import APIRouter, Depends
 lazy from fastapi import Request, status
 lazy from fastapi.responses import RedirectResponse
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 
 lazy from winter_dragon.web.accounts import STATE_KEY, Account, checked_csrf, sign_in, sign_out
 lazy from winter_dragon.web.discord_oauth import CALLBACK_PATH, authorization_url, signed_in_user

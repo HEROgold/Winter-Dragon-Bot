@@ -4,7 +4,7 @@ Each action takes an open session and leaves committing to the caller. An action
 :class:`~wd_errors.Refused` saying why, for the player; the caller then drops the session's changes.
 """
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete

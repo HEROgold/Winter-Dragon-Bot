@@ -1,12 +1,12 @@
 """Admin command group for inspecting and forcing the application-command sync state."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
+from wd_discord.interactions import InteractionContextType
+from wd_discord.permissions import Permissions
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord.embed import Embed
-lazy from wd_discord.interactions import InteractionContextType
-lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 
 

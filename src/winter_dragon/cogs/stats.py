@@ -1,25 +1,25 @@
 """The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 lazy import asyncio
-lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, col, select
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
+from wd_discord.interactions import InteractionContextType
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
 lazy from wd_discord.embed import Embed, EmbedField
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused, unwrap
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
 
 

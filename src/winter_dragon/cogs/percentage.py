@@ -1,18 +1,17 @@
 """A cog with a single command: a random compatibility percentage between two users."""
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 lazy import random
-lazy from typing import TYPE_CHECKING
 
+from confkit.data_types import Hex
+from wd_bot.cogs import Cog
 from wd_bot.commands import Describe
-lazy from confkit.data_types import Hex
-lazy from wd_bot.cogs import Cog
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
-lazy from wd_discord import User  # noqa: TC002
+lazy from wd_discord import User
 lazy from wd_discord.embed import Embed, EmbedField
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

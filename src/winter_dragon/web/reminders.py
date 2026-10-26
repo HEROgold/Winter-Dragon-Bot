@@ -8,9 +8,9 @@ lazy from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, Form
 lazy from fastapi import Request, status
-lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from sqlalchemy import Engine
 lazy from sqlmodel import Session
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete
 lazy from wd_types.clock import utc_now
 
@@ -30,7 +30,6 @@ lazy from winter_dragon.web.responses import database, is_htmx, render, see_othe
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
     from zoneinfo import ZoneInfo
 
 

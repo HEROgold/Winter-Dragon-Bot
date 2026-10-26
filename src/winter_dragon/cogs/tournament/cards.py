@@ -1,8 +1,8 @@
 """The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons."""
 
-lazy from enum import StrEnum
+from enum import StrEnum
+from typing import TYPE_CHECKING
 lazy from itertools import batched
-lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import MAX_ACTION_ROW_BUTTONS, ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import MAX_EMBED_DESCRIPTION_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH, Embed, EmbedField

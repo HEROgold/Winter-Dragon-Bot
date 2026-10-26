@@ -3,12 +3,12 @@
 lazy from typing import TYPE_CHECKING, Annotated
 
 from wd_bot.commands import Describe
+from wd_discord.interactions import InteractionContextType
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
 lazy from wd_discord import Channel, Role, User, is_gone
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
 lazy from wd_errors import Refused, unwrap

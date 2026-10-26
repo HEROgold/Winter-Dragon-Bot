@@ -5,7 +5,7 @@ request follows, so the data page lists exactly what deleting would remove.
 """
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from sqlalchemy import func
 lazy from sqlmodel import Session, select
@@ -21,10 +21,10 @@ lazy from winter_dragon.web.formatting import humanized_name, plural, shown_valu
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from zoneinfo import ZoneInfo
 
     from sqlalchemy import Engine
     from wd_db.extension.lifecycle import LifecycleModel
-    from zoneinfo import ZoneInfo
 
 
 HIDDEN_FIELDS = frozenset(("id", "updated_at", "deleted_at"))
