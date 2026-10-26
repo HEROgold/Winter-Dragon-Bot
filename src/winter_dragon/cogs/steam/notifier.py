@@ -6,6 +6,7 @@ lazy from typing import TYPE_CHECKING
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord import is_network_error
 
+lazy from winter_dragon.cogs.steam.models import SaleNotification
 lazy from winter_dragon.cogs.steam.pages import build_notification
 
 
@@ -31,6 +32,8 @@ class SteamSaleNotifier(LoggerMixin):
     async def notify(self, *, now: datetime, content: str) -> int:
         """DM every subscriber with new sales, with ``content`` above the embed; return how many were notified.
 
+        Each delivered DM logs one :class:`SaleNotification` per sale.
+
         A subscriber whose DM fails (e.g. DMs closed) keeps their ``last_notification``, so they get the sales on
         a later run instead of losing them.
         """
@@ -41,6 +44,18 @@ class SteamSaleNotifier(LoggerMixin):
                 continue
             embed = build_notification(sales, self.store.properties(sales), color=self.color)
             if await self._send(user, content, embed):
+                self.store.session.add_all(
+                    SaleNotification(
+                        user_id=user.id,
+                        sale_id=sale.id,
+                        title=sale.title,
+                        sale_percent=sale.sale_percent,
+                        sale_threshold=user.sale_threshold,
+                        sent_at=now,
+                    )
+                    for sale in sales
+                    if sale.id is not None
+                )
                 user.last_notification = now
                 self.store.session.add(user)
                 self.store.session.commit()

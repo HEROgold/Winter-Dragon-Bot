@@ -19,6 +19,7 @@ from wd_discord.testing import user_json
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
+from winter_dragon.cogs.steam.models import SaleNotification
 from winter_dragon.web import auth, pages, profile, reminders
 from winter_dragon.web.app import create_app
 from winter_dragon.web.reminders import InvalidReminderError, ReminderDraft, Repeat
@@ -402,3 +403,40 @@ def test_the_fuel_setting_is_on_the_data_page_and_goes_with_your_data(member: Te
 
     with Session(bind) as session:
         assert member_units(session, MEMBER_ID) is FuelUnits.KM_PER_L
+
+
+def _sale_notification(days_ago: int, title: str, user_id: int = MEMBER_ID) -> SaleNotification:
+    return SaleNotification(
+        user_id=user_id,
+        sale_id=1,
+        title=title,
+        sale_percent=75,
+        sale_threshold=50,
+        sent_at=NOW - timedelta(days=days_ago),
+    )
+
+
+def test_the_steam_page_lists_sale_notifications_newest_first_with_a_total(member: TestClient, bind: Engine) -> None:
+    seed(bind, _sale_notification(3, "Oldest"), _sale_notification(1, "Newest"), _sale_notification(2, "Middle"))
+
+    page = member.get("/profile/steam").text
+
+    assert "3 sale notifications" in page
+    assert page.index("Newest") < page.index("Middle") < page.index("Oldest")
+    assert "75%" in page
+    assert "50%" in page
+
+
+def test_the_steam_page_without_notifications_is_an_empty_state(member: TestClient) -> None:
+    response = member.get("/profile/steam")
+
+    assert response.status_code == 200
+    assert "No Steam sale has been sent" in response.text
+
+
+def test_the_steam_page_shows_only_your_own_notifications(member: TestClient, bind: Engine) -> None:
+    seed(bind, _sale_notification(1, "Secret", user_id=OTHER_ID))
+
+    page = member.get("/profile/steam").text
+
+    assert "Secret" not in page

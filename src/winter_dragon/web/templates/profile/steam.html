@@ -1,0 +1,23 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Steam</h2>
+  {% if not notifications %}
+    <p class="profile-empty">No Steam sale has been sent to you yet. Subscribe in Discord to get sales by DM.</p>
+  {% else %}
+    <p>{{ total }} sale notification{{ '' if total == 1 else 's' }} sent.</p>
+    <table class="table">
+      <thead><tr><th>Date</th><th>Game</th><th>Discount</th><th>Your threshold</th></tr></thead>
+      <tbody>
+        {% for entry, when in notifications %}
+          <tr>
+            <td>{{ when.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td>{{ entry.title }}</td>
+            <td>{{ entry.sale_percent }}%</td>
+            <td>{{ entry.sale_threshold }}%</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

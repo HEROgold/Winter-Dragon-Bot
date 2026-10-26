@@ -8,6 +8,7 @@ from sqlalchemy import BigInteger
 from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership, Through
+from wd_types.clock import utc_now
 
 from winter_dragon.cogs.steam.urls import SteamURL
 
@@ -64,5 +65,24 @@ class SteamUsers(DiscordKeyedModel, table=True):
     """When the user was last notified; only sales discovered after it are sent."""
 
 
-STEAM_TABLES = (SteamSale, SteamSaleProperties, SteamUsers)
+class SaleNotification(LifecycleModel, table=True):
+    """One sale a DM told a member about; ``user_id`` is their Discord user ID, and they own it.
+
+    The title, discount and threshold are copied from when the DM was sent, so later changes don't rewrite history.
+    """
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id")
+
+    user_id: int = Field(sa_type=BigInteger, index=True)
+    sale_id: int = Field(sa_type=BigInteger)
+    """The Steam ID of the sale, as in :attr:`SteamSale.id`."""
+    title: str
+    sale_percent: int
+    """The sale's discount when it was sent."""
+    sale_threshold: int
+    """The member's sale threshold when it was sent."""
+    sent_at: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime)
+
+
+STEAM_TABLES = (SteamSale, SteamSaleProperties, SteamUsers, SaleNotification)
 """Every table the Steam cog creates on load."""

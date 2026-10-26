@@ -4,12 +4,12 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, select
 from wd_db.extension.lifecycle import soft_delete
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.testing import RecordingClient, message_json
 
-from winter_dragon.cogs.steam.models import SteamUsers
+from winter_dragon.cogs.steam.models import SaleNotification, SteamUsers
 from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
 from winter_dragon.cogs.steam.scrapers import ScrapedSale
 from winter_dragon.cogs.steam.store import SteamSaleStore
@@ -102,3 +102,38 @@ async def test_failed_dm_keeps_the_sales_for_a_later_run(store: SteamSaleStore) 
     assert await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi") == 0
 
     assert user.last_notification == EARLIER
+
+
+def _logged(store: SteamSaleStore) -> list[SaleNotification]:
+    return list(store.session.exec(select(SaleNotification).order_by(SaleNotification.sale_id)))
+
+
+async def test_a_delivered_dm_logs_each_sale_with_its_discount_and_threshold(store: SteamSaleStore) -> None:
+    _subscribe(store, 7, threshold=50)
+
+    await SteamSaleNotifier(_client(), store, color=0).notify(now=NOW, content="hi")
+
+    logged = [(n.user_id, n.sale_id, n.title, n.sale_percent, n.sale_threshold, n.sent_at) for n in _logged(store)]
+    assert logged == [(7, 1, "Game 1", 100, 50, NOW), (7, 2, "Game 2", 60, 50, NOW)]
+
+
+async def test_a_failed_dm_logs_nothing(store: SteamSaleStore) -> None:
+    _subscribe(store, 7, threshold=0)
+    client = _client()
+    client.fail("POST", SEND, ApiResponseError(code=50007, message="Cannot send messages to this user"))
+
+    await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi")
+
+    assert _logged(store) == []
+
+
+async def test_changing_the_threshold_later_keeps_the_logged_threshold(store: SteamSaleStore) -> None:
+    user = _subscribe(store, 7, threshold=90)
+    await SteamSaleNotifier(_client(), store, color=0).notify(now=NOW, content="hi")
+
+    user.sale_threshold = 10
+    store.session.add(user)
+    store.session.commit()
+
+    (entry,) = _logged(store)
+    assert entry.sale_threshold == 90
