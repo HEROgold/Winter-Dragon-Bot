@@ -1,7 +1,6 @@
 """Unit tests: the /reminder commands, their autocomplete, and sending due reminders (no network)."""
 
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -23,8 +22,6 @@ from winter_dragon.config import Settings
 
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
-
     from conftest import InteractionFactory
     from sqlalchemy import Engine
 
@@ -255,13 +252,9 @@ async def test_autocomplete_truncates_long_names(engine: Engine, discord_client:
     assert len(choice.name) == 100
 
 
-def _no_background_task(coroutine: Coroutine[object, object, None]) -> None:
-    coroutine.close()
-
-
 async def _loaded_cog(engine: Engine) -> tuple[Reminders, RecordingClient]:
-    """Build a Reminders cog on ``engine`` and load it, without starting its background task."""
-    cog, client = _cog(engine, loop=SimpleNamespace(create_task=_no_background_task))
+    """Build a Reminders cog on ``engine`` and load it; detached from a bot, its background task doesn't start."""
+    cog, client = _cog(engine)
     await cog.load()
     return cog, client
 

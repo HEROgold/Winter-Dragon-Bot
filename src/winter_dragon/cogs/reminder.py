@@ -2,7 +2,6 @@
 
 from datetime import datetime, timedelta
 from typing import Annotated
-lazy import asyncio
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
@@ -123,30 +122,15 @@ async def send_reminder(client: Client, reminder: AnyReminder) -> bool:
 class Reminders(GroupCog, name="reminder", description="Set reminders for yourself"):
     """Stores reminders and DMs them to their users when due, from a background task."""
 
-    _task: asyncio.Task[None] | None = None
-
     @override
     async def load(self) -> None:
-        """Create the reminder tables if missing, then start the background task sending due reminders."""
+        """Create the reminder tables if missing; the bot then starts :meth:`deliver_due`."""
         self.create_tables(*REMINDER_TABLES)
-        self._task = self.bot.loop.create_task(self._run())
 
-    @override
-    async def unload(self) -> None:
-        """Stop the background task."""
-        if self._task is not None:
-            self._task.cancel()
-            self._task = None
-        await super().unload()
-
-    async def _run(self) -> None:
-        """Send due reminders every :attr:`ReminderSettings.check_interval` seconds, forever."""
-        while True:
-            try:
-                await self.send_due(utc_now())
-            except Exception:
-                self.logger.exception(t"Sending due reminders failed")
-            await asyncio.sleep(ReminderSettings.check_interval)
+    @Cog.periodic(seconds=lambda: ReminderSettings.check_interval)
+    async def deliver_due(self) -> None:
+        """Send the reminders due now; the bot repeats it every :attr:`ReminderSettings.check_interval` seconds."""
+        await self.send_due(utc_now())
 
     async def send_due(self, now: datetime) -> int:
         """DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.

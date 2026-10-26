@@ -112,7 +112,7 @@ class Bot(LoggerMixin):
         return invite_url()
 
     async def add_cog(self, cog: Cog) -> None:
-        """Register a cog and any of its @Cog.listener()-tagged methods.
+        """Register a cog and any of its @Cog.listener()-tagged methods, load it, then start its periodic tasks.
 
         Raises :class:`TypeError` when a handler expects a guild interaction its command or cog wouldn't give it.
         """
@@ -126,6 +126,7 @@ class Bot(LoggerMixin):
         self._register_custom_ids(cog, cog.components(), self._components)
         self._register_custom_ids(cog, cog.modals(), self._modals)
         await cog.load()
+        cog.start_periodic_tasks()
 
     def _register_custom_ids[I: ComponentInteraction | ModalSubmitInteraction](
         self,
@@ -143,7 +144,7 @@ class Bot(LoggerMixin):
             registry[handler.prefix] = (cog, handler)
 
     async def remove_cog(self, cog: Cog) -> set[Scope]:
-        """Unregister ``cog``'s listeners, commands and components and unload it; return the command scopes that changed."""
+        """Unregister ``cog``'s handlers, stop its periodic tasks and unload it; return the command scopes that changed."""
         self.cogs.pop(cog.__cog_name__, None)
         for handlers in self._listeners.values():
             handlers[:] = [handler for handler in handlers if getattr(handler, "__self__", None) is not cog]
@@ -151,6 +152,7 @@ class Bot(LoggerMixin):
             for prefix in [prefix for prefix, (owner, _) in registry.items() if owner is cog]:
                 del registry[prefix]
         scopes = self.registry.unregister(cog)
+        await cog.stop_periodic_tasks()
         await cog.unload()
         return scopes
 

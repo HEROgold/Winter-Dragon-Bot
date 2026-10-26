@@ -15,13 +15,6 @@
       "severity": "error"
     },
     {
-      "column": 15,
-      "path": "src/winter_dragon/cogs/heartbeat.py",
-      "name": "missing-override-decorator",
-      "concise_description": "Class member `Heartbeat.load` overrides a member in a parent class but is missing an `@override` decorator",
-      "severity": "error"
-    },
-    {
       "column": 21,
       "path": "src/winter_dragon/cogs/steam/scrapers.py",
       "name": "implicit-any-empty-container",

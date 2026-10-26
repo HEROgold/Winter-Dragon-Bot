@@ -1,7 +1,6 @@
 """The /steam command group, its page buttons, and the background scrape of Steam's specials."""
 
 from typing import Annotated
-lazy import asyncio
 lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
@@ -58,7 +57,8 @@ def sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Gener
 class SteamSales(GroupCog, name="steam", description="Get notified about free and discounted Steam games"):
     """Lists Steam sales on request and DMs subscribers new ones, re-checking sales right after they end."""
 
-    _task: asyncio.Task[None] | None = None
+    _next_scrape: datetime | None = None
+    """When to scrape next; ``None`` until the first scrape, which runs as soon as the cog loads."""
     _throttle: RequestThrottle | None = None
 
     @property
@@ -78,35 +78,27 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
 
     @override
     async def load(self) -> None:
-        """Create the Steam tables if missing, then start the background scrape loop."""
+        """Create the Steam tables if missing; the bot then starts :meth:`scrape_and_recheck`."""
         self.create_tables(*STEAM_TABLES)
-        self._task = self.bot.loop.create_task(self._run())
 
-    @override
-    async def unload(self) -> None:
-        """Stop the background scrape loop."""
-        if self._task is not None:
-            self._task.cancel()
-            self._task = None
-        await super().unload()
+    @Cog.periodic(seconds=lambda: SteamSettings.min_sleep)
+    async def scrape_and_recheck(self) -> float:
+        """Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
 
-    async def _run(self) -> None:
-        """Scrape on load, then on :func:`next_scrape_time`, and re-check sales just after they end, forever."""
-        next_scrape = utc_now()
-        while True:
-            now = utc_now()
-            if now >= next_scrape:
-                await self._guarded(self.scrape(now))
-                next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
-                self.logger.info(t"Next Steam scrape at {next_scrape:%Y-%m-%d %H:%M} UTC")
-            await self._guarded(self.recheck_due(utc_now()))
-            with Session(self.bind) as session:
-                next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
-            wake = min(next_scrape, next_recheck) if next_recheck is not None else next_scrape
-            await asyncio.sleep(max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds()))
+        Scrapes on load, then on :func:`next_scrape_time`.
+        """
+        if self._next_scrape is None or utc_now() >= self._next_scrape:
+            await self._guarded(self.scrape(utc_now()))
+            self._next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
+            self.logger.info(t"Next Steam scrape at {self._next_scrape:%Y-%m-%d %H:%M} UTC")
+        await self._guarded(self.recheck_due(utc_now()))
+        with Session(self.bind) as session:
+            next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
+        wake = self._next_scrape if next_recheck is None else min(self._next_scrape, next_recheck)
+        return max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds())
 
     async def _guarded(self, work: Coroutine[object, object, None]) -> None:
-        """Run ``work``, logging instead of raising, so one failed run never stops the loop."""
+        """Run ``work``, logging instead of raising, so a failed scrape doesn't skip the re-check after it."""
         try:
             await work
         except Exception:

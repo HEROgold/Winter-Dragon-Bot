@@ -1,5 +1,6 @@
 """Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency."""
 
+lazy import asyncio
 lazy from enum import IntFlag, auto
 lazy from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 
@@ -14,6 +15,7 @@ lazy from wd_bot.auto_reload import AutoReloadWatcher
 lazy from wd_bot.commands import Command, CommandGroup
 lazy from wd_bot.components import ComponentHandler, CustomIdHandler, ModalHandler
 lazy from wd_bot.listener import listener
+lazy from wd_bot.periodic import PeriodicTask
 lazy from wd_bot.registry import CommandPath
 
 
@@ -27,6 +29,7 @@ if TYPE_CHECKING:
 
     lazy from wd_bot.bot import Bot
     lazy from wd_bot.commands import AppCommand
+    lazy from wd_bot.periodic import Seconds
     lazy from wd_bot.registry import CommandMention
 
 
@@ -79,6 +82,18 @@ def modal(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ModalHandle
     return decorator
 
 
+def periodic(seconds: Seconds) -> Callable[[Callable[..., Awaitable[float | None]]], PeriodicTask]:
+    """Tag a Cog method as a tick the bot runs every ``seconds`` while the cog is loaded; see :class:`PeriodicTask`.
+
+    ``seconds`` may be a function returning them, read before every wait, such as ``lambda: Settings.interval``.
+    """
+
+    def decorator(func: Callable[..., Awaitable[float | None]]) -> PeriodicTask:
+        return PeriodicTask(func, seconds=seconds)
+
+    return decorator
+
+
 class BotArgs(TypedDict):
     """TypedDict for bot arguments."""
 
@@ -113,6 +128,8 @@ class Cog(LoggerMixin):
     command = command
     component = component
     modal = modal
+    periodic = periodic
+    _running: tuple[asyncio.Task[None], ...] = ()
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""
@@ -175,6 +192,25 @@ class Cog(LoggerMixin):
             attr = getattr(cls, attr_name)
             if isinstance(attr, handler_type):
                 yield attr
+
+    @classmethod
+    def periodic_tasks(cls) -> Generator[PeriodicTask]:
+        """Yield the :class:`PeriodicTask` attributes defined on this cog class or inherited from its bases."""
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            if isinstance(attr, PeriodicTask):
+                yield attr
+
+    def start_periodic_tasks(self) -> None:
+        """Start every periodic task of this cog; :meth:`wd_bot.bot.Bot.add_cog` calls it after :meth:`load`."""
+        self._running = tuple(task.start(self) for task in type(self).periodic_tasks())
+
+    async def stop_periodic_tasks(self) -> None:
+        """Cancel this cog's periodic tasks and wait until they've stopped; :meth:`wd_bot.bot.Bot.remove_cog` calls it."""
+        running, self._running = self._running, ()
+        for task in running:
+            task.cancel()
+        await asyncio.gather(*running, return_exceptions=True)
 
     @classmethod
     def path_of(cls, command: Command) -> CommandPath:

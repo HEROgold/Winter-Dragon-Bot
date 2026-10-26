@@ -224,8 +224,7 @@ Tells the container's healthcheck that the bot is connected to Discord; see :mod
 ### `class Health(Cog)`
 Touches :data:`~winter_dragon.health.ALIVE_FILE` every :data:`TOUCH_INTERVAL` while every shard is alive.
 
-- `async load() -> None` — Start touching the alive file once registered with the bot.
-- `async unload() -> None` — Stop the background task.
+- `@Cog.periodic async touch_alive_file() -> None` — Touch the alive file, but only while :attr:`~wd_discord.gateway.sharding.ShardManager.alive`.
 
 ## `winter_dragon.cogs.heartbeat` — `src/winter_dragon/cogs/heartbeat.py`
 A cog demonstrating independent background work, not just reacting to dispatch events.
@@ -236,9 +235,9 @@ Settings for the heartbeat, in its ``cogs.ini`` section.
 - attributes: interval
 
 ### `class Heartbeat(Cog)`
-Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long as the bot keeps running.
+Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long as the cog is loaded.
 
-- `async load() -> None` — Start the heartbeat background task once registered with the bot.
+- `@Cog.periodic async beat() -> None` — Log a heartbeat; the bot repeats it at the configured interval and stops when the cog unloads.
 
 ## `winter_dragon.cogs.incremental.catalogue` — `src/winter_dragon/cogs/incremental/catalogue.py`
 The Incremental game catalogue: the currencies and generators the bot's developers define in ``catalogue.toml``.
@@ -441,8 +440,8 @@ How often a member ran ``command`` in the guild ``guild_id`` (``None`` for a DM)
 ### `class Privacy(Cog)`
 Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked.
 
-- `async load() -> None` — Create the privacy tables, then start the background task purging soft-deleted records.
-- `async unload() -> None` — Stop the background task.
+- `async load() -> None` — Create the privacy tables; the bot then starts :meth:`purge_daily`.
+- `@Cog.periodic async purge_daily() -> None` — Purge what's due now; the bot repeats it every :data:`PURGE_INTERVAL` while the cog is loaded.
 - `@Cog.listener async on_guild_delete(event: GuildDelete) -> None` — Hide the data of a guild that removed the bot; a guild that only went offline keeps it.
 - `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Bring back the data a guild had when it removed the bot, if it's back within :data:`RETENTION`.
 - `async request_deletion(member_id: int, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later.
@@ -484,8 +483,8 @@ A reminder sent again every :attr:`repeat_every`, until removed.
 ### `class Reminders(GroupCog, name='reminder', description='Set reminders for yourself')`
 Stores reminders and DMs them to their users when due, from a background task.
 
-- `async load() -> None` — Create the reminder tables if missing, then start the background task sending due reminders.
-- `async unload() -> None` — Stop the background task.
+- `async load() -> None` — Create the reminder tables if missing; the bot then starts :meth:`deliver_due`.
+- `@Cog.periodic async deliver_due() -> None` — Send the reminders due now; the bot repeats it every :attr:`ReminderSettings.check_interval` seconds.
 - `async send_due(now: datetime) -> int` — DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
 - `@Cog.command async add(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0) -> None` — Remind the invoking user of ``reminder`` once, after the given time.
 - `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
@@ -540,8 +539,8 @@ What an update does to a guild's stats channels: rename those showing stale coun
 ### `class Stats(GroupCog, name='stats', description="Show this server's member counts", contexts=[InteractionContextType.GUILD])`
 Shows a guild's member counts, and keeps a locked category of voice channels named after them up to date.
 
-- `async load() -> None` — Create the stats tables if missing, then start the background task renaming the stats channels.
-- `async unload() -> None` — Stop the background task.
+- `async load() -> None` — Create the stats tables if missing; the bot then starts :meth:`rename_channels`.
+- `@Cog.periodic async rename_channels() -> None` — Update every guild's stats channels; the bot repeats it every :attr:`StatsSettings.update_interval` seconds.
 - `async update_all() -> None` — Update the stats channels of every guild that has them.
 - `async update_guild(guild_id: int) -> None` — Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones.
 - `async create_channels(client: Client, guild_id: int, *, reason: str) -> NetworkError | None` — Create ``guild_id``'s locked stats category and its channels, named after the current counts.
@@ -562,8 +561,8 @@ The /steam command group, its page buttons, and the background scrape of Steam's
 Lists Steam sales on request and DMs subscribers new ones, re-checking sales right after they end.
 
 - `@property throttle -> RequestThrottle` — The request throttle every scraper of this cog shares, so spacing and rate-limit pauses span them all.
-- `async load() -> None` — Create the Steam tables if missing, then start the background scrape loop.
-- `async unload() -> None` — Stop the background scrape loop.
+- `async load() -> None` — Create the Steam tables if missing; the bot then starts :meth:`scrape_and_recheck`.
+- `@Cog.periodic async scrape_and_recheck() -> float` — Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
 - `async scrape(now: datetime) -> None` — Ask Steam for its sales, store them, and DM subscribers new ones.
 - `async recheck_due(now: datetime) -> None` — Check the sales whose announced end has passed: update those still running, remove those that ended.
 - `@Cog.command async add(interaction: CommandInteraction) -> None` — Subscribe the invoking user to Steam sale DMs.

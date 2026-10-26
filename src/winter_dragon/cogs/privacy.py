@@ -12,7 +12,6 @@ are kept for :data:`USAGE_RETENTION`.
 """
 
 from datetime import date, datetime, timedelta
-lazy import asyncio
 lazy from dataclasses import KW_ONLY, dataclass
 lazy from enum import StrEnum, auto
 lazy from typing import TYPE_CHECKING, ClassVar, override
@@ -213,30 +212,15 @@ def deletion_steps(bind: Engine | Connection, member_id: int) -> Generator[tuple
 class Privacy(Cog):
     """Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked."""
 
-    _task: asyncio.Task[None] | None = None
-
     @override
     async def load(self) -> None:
-        """Create the privacy tables, then start the background task purging soft-deleted records."""
+        """Create the privacy tables; the bot then starts :meth:`purge_daily`."""
         self.create_tables(*PRIVACY_TABLES)
-        self._task = self.bot.loop.create_task(self._run())
 
-    @override
-    async def unload(self) -> None:
-        """Stop the background task."""
-        if self._task is not None:
-            self._task.cancel()
-            self._task = None
-        await super().unload()
-
-    async def _run(self) -> None:
-        """Purge every :data:`PURGE_INTERVAL`, forever; a failing pass is logged and the next one runs as usual."""
-        while True:
-            try:
-                await self.purge(utc_now())
-            except Exception:
-                self.logger.exception(t"Purging soft-deleted records failed")
-            await asyncio.sleep(PURGE_INTERVAL.total_seconds())
+    @Cog.periodic(seconds=PURGE_INTERVAL.total_seconds())
+    async def purge_daily(self) -> None:
+        """Purge what's due now; the bot repeats it every :data:`PURGE_INTERVAL` while the cog is loaded."""
+        await self.purge(utc_now())
 
     @staticmethod
     def _departure(session: Session, guild_id: int) -> DepartedGuild | None:

@@ -1,10 +1,8 @@
 """Unit tests: the privacy cog purges soft-deleted records 30 days after their deletion, and nothing else (sqlite)."""
 
-import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
@@ -43,7 +41,6 @@ from winter_dragon.cogs.tournament.models import (
 if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
-    from wd_bot.auto_reload import AutoReloadWatcher
 
 
 DAY_0 = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
@@ -148,22 +145,6 @@ async def test_a_row_that_fails_is_logged_and_the_others_are_still_purged(
 
     assert "Could not purge SteamSale 10" in caplog.text
     assert _created_at_after_storing_again(foreign_keys_engine, 1) == DAY_0  # the reminder went anyway
-
-
-async def test_load_starts_the_daily_task_and_unload_cancels_it(engine: Engine) -> None:
-    cog = detached_cog(Privacy, engine=engine, loop=asyncio.get_running_loop())
-    cog._auto_reloader = cast("AutoReloadWatcher", SimpleNamespace(deregister=lambda: None))  # noqa: SLF001 - what __init__ sets up
-
-    await cog.load()
-    task = cog._task  # noqa: SLF001 - the task the cog owns
-    assert task is not None
-    await asyncio.sleep(0)
-    assert not task.done()
-
-    await cog.unload()
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert cog._task is None  # noqa: SLF001
 
 
 # --- Departed guilds -------------------------------------------------------------------------------------------------

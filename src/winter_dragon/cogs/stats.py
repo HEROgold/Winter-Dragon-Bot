@@ -1,7 +1,6 @@
 """The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels."""
 
 from dataclasses import dataclass
-lazy import asyncio
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
@@ -211,30 +210,15 @@ def stats_guild_ids(session: Session) -> Generator[int]:
 class Stats(GroupCog, name="stats", description="Show this server's member counts", contexts=[InteractionContextType.GUILD]):
     """Shows a guild's member counts, and keeps a locked category of voice channels named after them up to date."""
 
-    _task: asyncio.Task[None] | None = None
-
     @override
     async def load(self) -> None:
-        """Create the stats tables if missing, then start the background task renaming the stats channels."""
+        """Create the stats tables if missing; the bot then starts :meth:`rename_channels`."""
         self.create_tables(*STATS_TABLES)
-        self._task = self.bot.loop.create_task(self._run())
 
-    @override
-    async def unload(self) -> None:
-        """Stop the background task."""
-        if self._task is not None:
-            self._task.cancel()
-            self._task = None
-        await super().unload()
-
-    async def _run(self) -> None:
-        """Update every guild's stats channels every :attr:`StatsSettings.update_interval` seconds, forever."""
-        while True:
-            try:
-                await self.update_all()
-            except Exception:
-                self.logger.exception(t"Updating stats channels failed")
-            await asyncio.sleep(StatsSettings.update_interval)
+    @Cog.periodic(seconds=lambda: StatsSettings.update_interval)
+    async def rename_channels(self) -> None:
+        """Update every guild's stats channels; the bot repeats it every :attr:`StatsSettings.update_interval` seconds."""
+        await self.update_all()
 
     async def update_all(self) -> None:
         """Update the stats channels of every guild that has them."""
