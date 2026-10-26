@@ -128,6 +128,11 @@ The efficiency of a member's refuels over time, ready to draw as an SVG line.
 - fields: points: tuple[GraphPoint, ...], lowest: float, highest: float, first_day: datetime, last_day: datetime
 - `@property line -> str` — The ``points`` attribute of the SVG polyline.
 
+## `winter_dragon.web.profile_pages.love` — `src/winter_dragon/web/profile_pages/love.py`
+The Profile's love page: everyone the member has checked their compatibility with, highest percentage first.
+
+- `@profile_page love(context: ProfileContext) -> dict[str, object]` — Return the love page's context: the member's checks with their percentage, highest first, then newest.
+
 ## `winter_dragon.web.records` — `src/winter_dragon/web/records.py`
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
