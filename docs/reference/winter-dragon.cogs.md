@@ -126,7 +126,8 @@ Settings for /fuel, in its ``cogs.ini`` section.
 One refuel a user logged; ``user_id`` is their Discord user ID, and they own it.
 
 - fields: ownership: ClassVar[Ownership], user_id: int, amount: float, distance: float, price: float, timestamp:
-  datetime
+  datetime, refueled_at: datetime | None
+- `@property refuel_date -> datetime` — When the refuel happened: ``refueled_at``, or the entry time when that is empty.
 - `@property efficiency -> float` — Distance driven per unit of fuel.
 
 ### `class Fuel(GroupCog, name='fuel', description="Track your car's refuels and fuel efficiency")`
