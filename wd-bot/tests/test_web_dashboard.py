@@ -96,6 +96,14 @@ def test_the_landing_page_lists_every_command_group(client: TestClient) -> None:
     assert 'href="/auth/discord/login"' in page
 
 
+def test_assets_load_over_the_scheme_the_page_was_opened_on(client: TestClient) -> None:
+    # Behind a TLS-terminating proxy the server sees plain http; an absolute http:// link is blocked as mixed content.
+    page = client.get("/").text
+
+    assert 'href="/static/style.css"' in page
+    assert 'src="/static/htmx.min.js"' in page
+
+
 def test_the_signpost_says_what_a_member_will_find(client: TestClient, bind: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
     seed(
         bind,
