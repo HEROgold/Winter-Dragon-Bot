@@ -66,6 +66,14 @@ class MessageData(TypedDict, total=False):
     """Autocomplete suggestions (APPLICATION_COMMAND_AUTOCOMPLETE_RESULT only), as dumped choices."""
 
 
+class ModalData(TypedDict):
+    """The body of a MODAL response to an interaction (object -> API)."""
+
+    custom_id: str
+    title: str
+    components: list[dict[str, object]]
+
+
 def message_data(
     *,
     content: str | None = None,

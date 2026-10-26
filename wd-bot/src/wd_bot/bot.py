@@ -18,6 +18,7 @@ lazy from wd_discord import (
     CommandInteraction,
     ComponentInteraction,
     GatewayBotInfo,
+    ModalSubmitInteraction,
     is_network_error,
 )
 lazy from wd_discord.color import Color
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import Snowflake
 
     lazy from wd_bot.commands import AppCommand
-    lazy from wd_bot.components import ComponentHandler
+    lazy from wd_bot.components import ComponentHandler, ModalHandler
     lazy from wd_bot.registry import Scope
 
 
@@ -125,6 +126,7 @@ class Bot(LoggerMixin):
         self._failed_extensions: set[str] = set()
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
         self._components: dict[str, tuple[Cog, ComponentHandler]] = {}
+        self._modals: dict[str, tuple[Cog, ModalHandler]] = {}
         self.registry = CommandRegistry()
         """The registered commands per scope, and the IDs Discord gave them."""
         self.syncer = CommandSyncer(self.registry)
@@ -153,6 +155,13 @@ class Bot(LoggerMixin):
                     t"Duplicate component prefix '{handler.prefix}': cog '{cog.__cog_name__}' replaces '{previous}'",
                 )
             self._components[handler.prefix] = (cog, handler)
+        for modal_handler in cog.modals():
+            if (existing_modal := self._modals.get(modal_handler.prefix)) is not None and existing_modal[0] is not cog:
+                previous = existing_modal[0].__cog_name__
+                self.logger.warning(
+                    t"Duplicate modal prefix '{modal_handler.prefix}': cog '{cog.__cog_name__}' replaces '{previous}'",
+                )
+            self._modals[modal_handler.prefix] = (cog, modal_handler)
         await cog.load()
 
     async def remove_cog(self, cog: Cog) -> set[Scope]:
@@ -162,6 +171,8 @@ class Bot(LoggerMixin):
             handlers[:] = [handler for handler in handlers if getattr(handler, "__self__", None) is not cog]
         for prefix in [prefix for prefix, (owner, _) in self._components.items() if owner is cog]:
             del self._components[prefix]
+        for prefix in [prefix for prefix, (owner, _) in self._modals.items() if owner is cog]:
+            del self._modals[prefix]
         scopes = self.registry.unregister(cog)
         await cog.unload()
         return scopes
@@ -177,6 +188,8 @@ class Bot(LoggerMixin):
                 succeeded = await self._dispatch_command(interaction)
             case ComponentInteraction():
                 succeeded = await self._dispatch_component(interaction)
+            case ModalSubmitInteraction():
+                succeeded = await self._dispatch_modal(interaction)
             case AutocompleteInteraction():
                 await self._dispatch_autocomplete(interaction)
                 return
@@ -207,6 +220,16 @@ class Bot(LoggerMixin):
         entry = self._components.get(prefix)
         if entry is None:
             self.logger.warning(t"No registered component handler for custom_id {interaction.custom_id!r}")
+            return True
+        cog, handler = entry
+        return await handler.invoke(cog, interaction, args)
+
+    async def _dispatch_modal(self, interaction: ModalSubmitInteraction) -> bool:
+        """Invoke the handler owning the submitted modal's ``custom_id`` prefix; ``False`` only if it raised."""
+        prefix, args = parse_custom_id(interaction.custom_id)
+        entry = self._modals.get(prefix)
+        if entry is None:
+            self.logger.warning(t"No registered modal handler for custom_id {interaction.custom_id!r}")
             return True
         cog, handler = entry
         return await handler.invoke(cog, interaction, args)
@@ -242,7 +265,7 @@ class Bot(LoggerMixin):
         An interaction is also routed to its command or component handler.
         """
         event = self.client.receive(payload).event
-        if isinstance(event, CommandInteraction | ComponentInteraction):
+        if isinstance(event, CommandInteraction | ComponentInteraction | ModalSubmitInteraction):
             self.loop.create_task(self._dispatch_interaction(event))
         for handler in self._listeners.get(event_name, []):
             self.loop.create_task(self._invoke_listener(handler, event))

@@ -229,6 +229,11 @@ The ``data`` block of a MESSAGE_COMPONENT INTERACTION_CREATE (a button click or 
 
 - fields: custom_id: str, component_type: ComponentType, id: int | None, values: list[str] | None
 
+### `class ModalSubmitData(DiscordModel)`
+The ``data`` block of a MODAL_SUBMIT INTERACTION_CREATE.
+
+- fields: custom_id: str, components: list[dict[str, object]]
+
 ### `class Interaction(DiscordModel)`
 INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object).
 
@@ -254,8 +259,13 @@ A MESSAGE_COMPONENT interaction: someone clicked a button or chose from a select
 
 - fields: data: MessageComponentData, message: dict[str, object]
 
+### `class ModalSubmitInteraction(Interaction)`
+A MODAL_SUBMIT interaction: someone submitted a modal.
+
+- fields: data: ModalSubmitData, message: dict[str, object] | None
+
 ### `class UnknownInteraction(Interaction)`
-An interaction type without its own subclass yet (PING, MODAL_SUBMIT); ``data`` stays untyped.
+An interaction type without its own subclass yet (PING); ``data`` stays untyped.
 
 - fields: data: Mapping[str, object] | None
 

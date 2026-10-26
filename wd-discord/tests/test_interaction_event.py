@@ -11,6 +11,7 @@ from wd_discord.gateway.events import (
     ComponentInteraction,
     Interaction,
     InteractionType,
+    ModalSubmitInteraction,
     UnknownInteraction,
 )
 from wd_discord.interactions import ApplicationCommand, InteractionContextType, Locale
@@ -157,9 +158,14 @@ def test_command_interaction_parses_into_its_subclass() -> None:
 
 
 def test_interaction_types_without_a_subclass_parse_as_unknown() -> None:
-    interaction = Interaction.model_validate(_interaction_payload(type=5, data={"custom_id": "modal", "components": []}))
+    interaction = Interaction.model_validate(_interaction_payload(type=1, data=None))
     assert isinstance(interaction, UnknownInteraction)
-    assert interaction.data == {"custom_id": "modal", "components": []}
+
+
+def test_modal_submit_parses_with_its_custom_id_and_components() -> None:
+    interaction = Interaction.model_validate(_interaction_payload(type=5, data={"custom_id": "modal", "components": []}))
+    assert isinstance(interaction, ModalSubmitInteraction)
+    assert interaction.data.custom_id == "modal"
 
 
 def test_invoking_user_comes_from_the_guild_member() -> None:

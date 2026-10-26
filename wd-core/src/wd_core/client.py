@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         RequestFiles,
         TimeoutTypes,
     )
-    from wd_discord.responses import InteractionCallbackType, MessageData
+    from wd_discord.responses import InteractionCallbackType, MessageData, ModalData
 
 
 class JsonPayload(TypedDict, total=False):
@@ -32,7 +32,7 @@ class JsonPayload(TypedDict, total=False):
     username: str
     avatar: str
     banner: str
-    data: MessageData
+    data: MessageData | ModalData
     type: InteractionCallbackType
     default_member_permissions: str
     channel_id: str | None

@@ -11,8 +11,9 @@ Domain specific web-client for WD.
 A JSON payload for a request.
 
 - fields: recipient_id: str, max_age: int, max_uses: int, temporary: bool, unique: bool, username: str, avatar: str,
-  banner: str, data: MessageData, type: InteractionCallbackType, default_member_permissions: str, channel_id: str |
-  None, nick: str | None, communication_disabled_until: str | None, delete_message_seconds: int, messages: list[str]
+  banner: str, data: MessageData | ModalData, type: InteractionCallbackType, default_member_permissions: str,
+  channel_id: str | None, nick: str | None, communication_disabled_until: str | None, delete_message_seconds: int,
+  messages: list[str]
 
 ### `class OverwritePayload(TypedDict)`
 A permission overwrite on a channel: what a role (``type`` 0) or member (``type`` 1) is allowed and denied.

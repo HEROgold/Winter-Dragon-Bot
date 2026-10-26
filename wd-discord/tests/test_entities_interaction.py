@@ -7,11 +7,12 @@ from wd_discord import (
     CommandInteraction,
     ComponentInteraction,
     Message,
+    ModalSubmitInteraction,
     UnknownInteraction,
     User,
     bind,
 )
-from wd_discord.components import ActionRow, Button, ButtonStyle, ComponentType
+from wd_discord.components import ActionRow, Button, ButtonStyle, ComponentType, Label, Modal, TextInput
 from wd_discord.embed import Embed
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.files import File
@@ -19,7 +20,8 @@ from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInt
 from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
 from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
 from wd_discord.gateway.events import Interaction as InteractionModel
-from wd_discord.gateway.events import InteractionData, InteractionType, MessageComponentData
+from wd_discord.gateway.events import InteractionData, InteractionType, MessageComponentData, ModalSubmitData
+from wd_discord.gateway.events import ModalSubmitInteraction as ModalSubmitInteractionModel
 from wd_discord.interactions import ApplicationCommandOptionChoice
 from wd_discord.testing import RecordingClient, message_json, user_json
 
@@ -206,3 +208,59 @@ async def test_suggest_sends_autocomplete_choices() -> None:
     client = RecordingClient()
     await AutocompleteInteraction(client, AUTOCOMPLETE).suggest([ApplicationCommandOptionChoice(name="Fifty", value=50)])
     assert client.sent[0].json == {"type": 8, "data": {"choices": [{"name": "Fifty", "value": 50}]}}
+
+
+MODAL_SUBMIT = ModalSubmitInteractionModel(
+    id="1",
+    application_id="2",
+    type=InteractionType.MODAL_SUBMIT,
+    token="tok",  # noqa: S106
+    version=1,
+    data=ModalSubmitData(
+        custom_id="guess:5",
+        components=[
+            {"type": 18, "id": 1, "component": {"type": 4, "id": 2, "custom_id": "letter", "value": "e"}},
+            {"type": 1, "components": [{"type": 4, "custom_id": "other", "value": "x"}]},
+        ],
+    ),
+    message=message_json(id="11"),
+)
+
+
+async def test_show_modal_sends_type_9_with_the_modal() -> None:
+    client = RecordingClient()
+    modal = Modal(
+        custom_id="guess:5",
+        title="Guess",
+        components=[Label(label="Letter or word", component=TextInput(custom_id="guess", min_length=1, max_length=20))],
+    )
+    assert await _component(client).show_modal(modal) is None
+    assert client.sent[0].json == {
+        "type": 9,
+        "data": {
+            "custom_id": "guess:5",
+            "title": "Guess",
+            "components": [
+                {
+                    "type": 18,
+                    "label": "Letter or word",
+                    "component": {"type": 4, "custom_id": "guess", "style": 1, "min_length": 1, "max_length": 20},
+                },
+            ],
+        },
+    }
+
+
+def test_modal_submit_parses_and_binds_with_its_values() -> None:
+    interaction = bind(RecordingClient(), InteractionModel.model_validate(MODAL_SUBMIT.model_dump(mode="json")))
+    assert isinstance(interaction, ModalSubmitInteraction)
+    assert interaction.custom_id == "guess:5"
+    assert interaction.values == {"letter": "e", "other": "x"}
+    assert interaction.message is not None
+
+
+async def test_modal_submit_update_edits_the_source_message() -> None:
+    client = RecordingClient()
+    interaction = ModalSubmitInteraction(client, MODAL_SUBMIT)
+    await interaction.update("done")
+    assert client.sent[0].json == {"type": 7, "data": {"content": "done"}}

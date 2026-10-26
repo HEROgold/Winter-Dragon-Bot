@@ -84,6 +84,7 @@ Module that contains Cogs: wd-native feature units with no discord.ext.commands 
 - module names: default_flags
 - `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None, guild_ids: Iterable[SnowflakeLike] | None=None, requires: Permissions | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 - `component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ComponentHandler]` — Tag a Cog method as the handler for components whose ``custom_id`` starts with ``prefix``.
+- `modal(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ModalHandler]` — Tag a Cog method as the handler for modal submits whose ``custom_id`` starts with ``prefix``.
 
 ### `class BotArgs(TypedDict)`
 TypedDict for bot arguments.
@@ -99,11 +100,12 @@ Flags for Cog behavior.
 A wd-native feature unit: a class whose methods can be tagged with @Cog.listener().
 
 - fields: bot: Bot, flags: CogFlags
-- attributes: listener, command, component
+- attributes: listener, command, component, modal
 - `async auto_load() -> None` — Load the cog if auto_load is True.
 - `@classmethod commands() -> Generator[Command]` — Yield the :class:`Command` attributes defined on this cog class or inherited from its bases.
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield what this cog registers as top-level Discord commands: each of its commands.
 - `@classmethod components() -> Generator[ComponentHandler]` — Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases.
+- `@classmethod modals() -> Generator[ModalHandler]` — Yield the :class:`ModalHandler` attributes defined on this cog class or inherited from its bases.
 - `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run ``command`` from this cog: ``/name``.
 - `@classmethod guild_only() -> bool` — Whether the cog is used in guilds only: every one of its commands is; its components inherit this.
 - `@classmethod check_guild_handlers() -> None` — Raise :class:`TypeError` if a handler expects a guild interaction it wouldn't get.
@@ -175,11 +177,20 @@ Message-component handlers: route a clicked component to the Cog method owning i
 - module names: CUSTOM_ID_SEPARATOR
 - `parse_custom_id(custom_id: str) -> tuple[str, list[str]]` — Split ``custom_id`` into its handler prefix and the args after it.
 
-### `class ComponentHandler(LoggerMixin)`
-A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
+### `class CustomIdHandler(LoggerMixin)`
+A Cog method reached through the prefix of a ``custom_id``: what component and modal handlers share.
 
 - `custom_id(*args: str | int) -> str` — Build a ``custom_id`` routed to this handler, carrying ``args``.
+
+### `class ComponentHandler(CustomIdHandler)`
+A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
+
 - `async invoke(cog: Cog, interaction: ComponentInteraction, args: Sequence[str]) -> bool` — Call the handler; return ``False`` if it raised (the exception is logged).
+
+### `class ModalHandler(CustomIdHandler)`
+A Cog method handling every modal whose ``custom_id`` starts with :attr:`prefix`.
+
+- `async invoke(cog: Cog, interaction: ModalSubmitInteraction, args: Sequence[str]) -> bool` — Call the handler; return ``False`` if it raised (the exception is logged).
 
 ## `wd_bot.extensions` — `wd-bot/src/wd_bot/extensions.py`
 Finding the extension modules a bot loads its cogs from.

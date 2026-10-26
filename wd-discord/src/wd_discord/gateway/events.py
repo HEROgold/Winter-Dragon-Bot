@@ -414,6 +414,18 @@ class MessageComponentData(DiscordModel):
     """The chosen values; only sent for select menus."""
 
 
+class ModalSubmitData(DiscordModel):
+    """The ``data`` block of a MODAL_SUBMIT INTERACTION_CREATE.
+
+    https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object-modal-submit-data
+    """
+
+    custom_id: str
+    """The ``custom_id`` of the modal."""
+    components: list[dict[str, object]] = Field(default_factory=list[dict[str, object]])
+    """The submitted components: labels or action rows holding the inputs, each with its ``custom_id`` and ``value``."""
+
+
 class Interaction(DiscordModel):
     """INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object).
 
@@ -491,8 +503,16 @@ class ComponentInteraction(Interaction):
     """The message the component is attached to."""
 
 
+class ModalSubmitInteraction(Interaction):
+    """A MODAL_SUBMIT interaction: someone submitted a modal."""
+
+    data: ModalSubmitData
+    message: dict[str, object] | None = None
+    """The message the modal was opened from, when it was opened from a component on a message."""
+
+
 class UnknownInteraction(Interaction):
-    """An interaction type without its own subclass yet (PING, MODAL_SUBMIT); ``data`` stays untyped."""
+    """An interaction type without its own subclass yet (PING); ``data`` stays untyped."""
 
     data: Mapping[str, object] | None = None
 
@@ -501,6 +521,7 @@ _INTERACTION_SUBCLASSES: dict[object, type[Interaction]] = {
     InteractionType.APPLICATION_COMMAND: CommandInteraction,
     InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE: AutocompleteInteraction,
     InteractionType.MESSAGE_COMPONENT: ComponentInteraction,
+    InteractionType.MODAL_SUBMIT: ModalSubmitInteraction,
 }
 """The subclass each interaction type parses into; IntEnum members hash like the wire ints."""
 
