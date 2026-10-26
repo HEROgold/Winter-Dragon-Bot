@@ -19,19 +19,19 @@
             <circle class="dot" cx="{{ '%.1f' % point.x }}" cy="{{ '%.1f' % point.y }}" r="4"><title>{{ point.label }}</title></circle>
           {% endfor %}
         </svg>
-        <figcaption>Distance per unit of fuel, per refuel.</figcaption>
+        <figcaption>Fuel efficiency in {{ units }}, per refuel. Change it with <code>/fuel units</code> in Discord.</figcaption>
       </figure>
     {% endif %}
     <table class="table">
-      <thead><tr><th>Date</th><th>Fuel added</th><th>Distance</th><th>Price</th><th>Efficiency</th></tr></thead>
+      <thead><tr><th>Date</th><th>Fuel added</th><th>Distance</th><th>Price</th><th>Efficiency ({{ units }})</th></tr></thead>
       <tbody>
-        {% for refuel, when in refuels %}
+        {% for refuel, when, efficiency in refuels %}
           <tr>
             <td>{{ when.strftime('%Y-%m-%d') }}</td>
             <td>{{ refuel.amount }}</td>
             <td>{{ refuel.distance }}</td>
             <td>{{ '%.2f' % refuel.price }}</td>
-            <td>{% if refuel.amount > 0 %}{{ '%.2f' % refuel.efficiency }}{% else %}-{% endif %}</td>
+            <td>{% if refuel.amount > 0 %}{{ '%.2f' % efficiency }}{% else %}-{% endif %}</td>
           </tr>
         {% endfor %}
       </tbody>

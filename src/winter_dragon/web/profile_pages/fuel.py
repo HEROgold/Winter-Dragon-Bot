@@ -6,7 +6,7 @@ lazy from typing import TYPE_CHECKING
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import owned_by
 
-lazy from winter_dragon.cogs.fuel import CarFuels
+lazy from winter_dragon.cogs.fuel import CarFuels, FuelUnits, member_units
 lazy from winter_dragon.web.profile import ProfileContext, profile_page
 
 
@@ -46,12 +46,12 @@ class EfficiencyGraph:
         return " ".join(f"{point.x:.1f},{point.y:.1f}" for point in self.points)
 
 
-def efficiency_graph(refuels: Sequence[CarFuels]) -> EfficiencyGraph | None:
-    """Return the graph of ``refuels``, or ``None`` when none of them added fuel."""
+def efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits) -> EfficiencyGraph | None:
+    """Return the graph of ``refuels`` in ``units``, or ``None`` when none of them added fuel."""
     ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.timestamp)
     if not ordered:
         return None
-    values = [refuel.efficiency for refuel in ordered]
+    values = [refuel.efficiency_in(units) for refuel in ordered]
     lowest, highest = min(values), max(values)
     start, end = ordered[0].timestamp, ordered[-1].timestamp
     span_x = GRAPH_WIDTH - 2 * GRAPH_PADDING
@@ -74,9 +74,11 @@ def fuel(context: ProfileContext) -> dict[str, object]:
     """Return the fuel page's context: the member's refuels, newest first, and their efficiency graph."""
     with Session(context.bind) as session:
         refuels = list(session.exec(owned_by(CarFuels, member=context.member_id).order_by(col(CarFuels.timestamp).desc())))
+        units = member_units(session, context.member_id)
     return {
-        "refuels": [(refuel, refuel.timestamp.astimezone(context.zone)) for refuel in refuels],
-        "graph": efficiency_graph(refuels),
+        "refuels": [(refuel, refuel.timestamp.astimezone(context.zone), refuel.efficiency_in(units)) for refuel in refuels],
+        "graph": efficiency_graph(refuels, units),
+        "units": units,
         "width": GRAPH_WIDTH,
         "height": GRAPH_HEIGHT,
         "padding": GRAPH_PADDING,

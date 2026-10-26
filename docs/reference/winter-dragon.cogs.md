@@ -114,20 +114,33 @@ Moderation helpers for channels: removing a category with its channels, and lock
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.
 
+- `member_units(session: Session, user_id: int) -> FuelUnits` — Return the units ``user_id`` picked, or km/L when they never did.
 - `parse_refuel_date(value: str) -> datetime | None` — Return midnight UTC of the ``YYYY-MM-DD`` day in ``value``, or ``None`` when it isn't one.
-- `render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes` — Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out.
+- `render_efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits=FuelUnits.KM_PER_L) -> bytes` — Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out.
 
 ### `class FuelSettings`
 Settings for /fuel, in its ``cogs.ini`` section.
 
 - attributes: graph_width_inches, graph_height_inches, graph_filename
 
+### `class FuelUnits(StrEnum)`
+How a member wants fuel efficiency shown; refuels are stored as distance and amount either way.
+
+- attributes: KM_PER_L, L_PER_100_KM
+- `convert(km_per_l: float) -> float` — Return ``km_per_l`` (distance per unit of fuel) in these units; a value of 0 or less has no L/100km, so it gives 0.
+
+### `class FuelPreferences(DiscordKeyedModel, table=True)`
+A member's fuel settings; ``id`` is their Discord user ID, and they own it.
+
+- fields: ownership: ClassVar[Ownership], units: FuelUnits
+
 ### `class CarFuels(LifecycleModel, table=True)`
 One refuel a user logged; ``user_id`` is their Discord user ID, and they own it.
 
 - fields: ownership: ClassVar[Ownership], user_id: int, amount: float, distance: float, price: float, timestamp:
   datetime
-- `@property efficiency -> float` — Distance driven per unit of fuel.
+- `@property efficiency -> float` — Distance driven per unit of fuel (km/L).
+- `efficiency_in(units: FuelUnits) -> float` — Return the efficiency of this refuel in ``units``.
 
 ### `class Fuel(GroupCog, name='fuel', description="Track your car's refuels and fuel efficiency")`
 Logs a user's refuels and graphs their fuel efficiency.
@@ -135,6 +148,8 @@ Logs a user's refuels and graphs their fuel efficiency.
 - `async load() -> None` — Create the refuel table if missing.
 - `@Cog.command async add(interaction: CommandInteraction, price: float, distance: float, amount: float, date: str | None=None) -> None` — Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now.
 - `@Cog.command async efficiency(interaction: CommandInteraction) -> None` — Reply with a graph of the invoking user's fuel efficiency.
+- `@Cog.command async units(interaction: CommandInteraction, units: str) -> None` — Store the invoking user's fuel efficiency units.
+- `@units.autocomplete async units_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the units that contain what was typed.
 
 ## `winter_dragon.cogs.health` — `src/winter_dragon/cogs/health.py`
 Tells the container's healthcheck that the bot is connected to Discord; see :mod:`winter_dragon.health`.
