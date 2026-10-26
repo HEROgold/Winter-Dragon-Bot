@@ -2,8 +2,9 @@
 
 lazy import secrets
 lazy from functools import cache
-lazy from typing import TYPE_CHECKING, Self
+lazy from typing import TYPE_CHECKING, Annotated, Self
 
+from fastapi import Depends
 from pydantic import BaseModel, ConfigDict
 lazy from fastapi import HTTPException, Request, status
 lazy from zoneinfo import ZoneInfo, available_timezones
@@ -68,6 +69,10 @@ def signed_in(request: Request) -> Account:
     if account is None:
         raise SignInRequired
     return account
+
+
+SignedIn = Annotated[Account, Depends(signed_in)]
+"""The signed-in account, as a route parameter's annotation; a visitor who isn't signed in is sent to sign in."""
 
 
 def sign_in(request: Request, account: Account) -> None:

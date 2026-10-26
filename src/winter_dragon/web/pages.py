@@ -5,7 +5,6 @@ lazy from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, Form
 lazy from fastapi import HTTPException, Request, status
-lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from sqlmodel import Session
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from wd_bot.application import ApplicationId
@@ -15,14 +14,18 @@ lazy from wd_types.clock import utc_now
 lazy from winter_dragon.cogs.privacy import RETENTION, DeletionStep, deletion_steps, hide_member_data
 lazy from winter_dragon.cogs.reminder import owned_reminders
 lazy from winter_dragon.config import Settings
-lazy from winter_dragon.web.accounts import Account, checked_csrf, current_account, signed_in, visitor_zone
+lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, current_account, visitor_zone
 lazy from winter_dragon.web.formatting import plural
 lazy from winter_dragon.web.records import features, member_records, record_table
-lazy from winter_dragon.web.responses import database, is_htmx, render, see_other
+lazy from winter_dragon.web.responses import Database, after_post, page_or_fragment, render
 
 
 if TYPE_CHECKING:
     from datetime import datetime
+
+    from sqlalchemy import Engine
+
+    from winter_dragon.web.accounts import Account
 
 
 router = APIRouter()
@@ -61,9 +64,10 @@ def _your_data(  # noqa: PLR0913 - the deletion section's state is part of what'
 
     An htmx request gets only the part of it the template ``fragment`` holds.
     """
-    return render(
+    return page_or_fragment(
         request,
-        fragment if is_htmx(request) else "data/page.html",
+        "data/page.html",
+        fragment,
         status_code=status_code,
         retention_days=RETENTION.days,
         records=list(member_records(bind, account.id)),
@@ -93,7 +97,7 @@ def signposts(bind: Engine, member_id: int) -> Signposts:
 
 
 @router.get("/")
-def landing(request: Request, bind: Annotated[Engine, Depends(database)]) -> Response:
+def landing(request: Request, bind: Database) -> Response:
     """Show what the bot does, with the way in: signing in, or adding it to a server.
 
     A signed-in member's signpost arms say what they'll find: their reminders, and what's stored about them.
@@ -113,8 +117,8 @@ def landing(request: Request, bind: Annotated[Engine, Depends(database)]) -> Res
 @router.get("/me")
 def data_page(
     request: Request,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
 ) -> Response:
     """Show everything the bot stores about the signed-in member, and the way to delete it."""
     return _your_data(request, account, bind, "data/page.html")
@@ -124,8 +128,8 @@ def data_page(
 def record_rows(
     request: Request,
     key: str,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
 ) -> Response:
     """Show the signed-in member's rows of the table ``key``, when its record is opened."""
     table = record_table(bind, account.id, key, visitor_zone(request))
@@ -137,8 +141,8 @@ def record_rows(
 @router.get("/me/deletion")
 def deletion_ask(
     request: Request,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
 ) -> Response:
     """Show the deletion section as it first is: what deleting does, and the button to start."""
     return _your_data(request, account, bind, "data/_deletion.html")
@@ -147,8 +151,8 @@ def deletion_ask(
 @router.get("/me/deletion/confirm")
 def deletion_confirm(
     request: Request,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
 ) -> Response:
     """Ask the member to type their username, to confirm they mean to delete their data."""
     return _your_data(request, account, bind, "data/_deletion.html", confirming=True)
@@ -157,8 +161,8 @@ def deletion_confirm(
 @router.post("/me/deletion", dependencies=[Depends(checked_csrf)])
 def request_deletion(
     request: Request,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
     confirm_name: Annotated[str, Form()] = "",
 ) -> Response:
     """Hide all of the member's data for their deletion request, once they typed their username to confirm it."""
@@ -175,6 +179,4 @@ def request_deletion(
             status_code=unprocessable,
         )
     hide_member_data(bind, account.id, utc_now())
-    if not is_htmx(request):
-        return see_other("/me")
-    return _your_data(request, account, bind, "data/_your_data.html")
+    return after_post(request, "/me", lambda: _your_data(request, account, bind, "data/_your_data.html"))
