@@ -17,7 +17,7 @@ lazy from wd_bot.commands import wants_guild_interaction
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Sequence
 
-    lazy from wd_discord import ComponentInteraction
+    lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
 
     lazy from wd_bot.cogs import Cog
 
@@ -31,12 +31,8 @@ def parse_custom_id(custom_id: str) -> tuple[str, list[str]]:
     return prefix, args
 
 
-class ComponentHandler(LoggerMixin):
-    """A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
-
-    Built by :meth:`wd_bot.cogs.Cog.component`. The handler is called as ``func(cog, interaction, *args)`` with
-    the ``custom_id``'s args as strings, and must answer the interaction within Discord's 3-second window.
-    """
+class CustomIdHandler(LoggerMixin):
+    """A Cog method reached through the prefix of a ``custom_id``: what component and modal handlers share."""
 
     def __init__(self, func: Callable[..., Awaitable[None]], *, prefix: str) -> None:
         """Wrap ``func`` as the handler for ``prefix``."""
@@ -63,6 +59,18 @@ class ComponentHandler(LoggerMixin):
             raise ValueError(msg)
         return custom_id
 
+    def __get__(self, instance: object, owner: type) -> Self:
+        """Allow access as a plain attribute on a Cog instance without binding it like a method."""
+        return self
+
+
+class ComponentHandler(CustomIdHandler):
+    """A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
+
+    Built by :meth:`wd_bot.cogs.Cog.component`. The handler is called as ``func(cog, interaction, *args)`` with
+    the ``custom_id``'s args as strings, and must answer the interaction within Discord's 3-second window.
+    """
+
     async def invoke(self, cog: Cog, interaction: ComponentInteraction, args: Sequence[str]) -> bool:
         """Call the handler; return ``False`` if it raised (the exception is logged)."""
         try:
@@ -77,6 +85,23 @@ class ComponentHandler(LoggerMixin):
             return False
         return True
 
-    def __get__(self, instance: object, owner: type) -> Self:
-        """Allow access as a plain attribute on a Cog instance without binding it like a method."""
-        return self
+
+class ModalHandler(CustomIdHandler):
+    """A Cog method handling every modal whose ``custom_id`` starts with :attr:`prefix`.
+
+    Built by :meth:`wd_bot.cogs.Cog.modal`. The handler is called as ``func(cog, interaction, *args)`` with the
+    ``custom_id``'s args as strings (build one with :meth:`custom_id`, to pass to ``show_modal``), and must answer
+    the interaction within Discord's 3-second window. The typed values are in ``interaction.values``.
+    """
+
+    async def invoke(self, cog: Cog, interaction: ModalSubmitInteraction, args: Sequence[str]) -> bool:
+        """Call the handler; return ``False`` if it raised (the exception is logged)."""
+        try:
+            await self.func(cog, interaction, *args)
+        except Refused as refused:
+            self.logger.debug(t"Modal '{self.prefix}' refused: {refused.message} ({refused.cause})")
+            await answer_refusal(interaction, refused)
+        except Exception:
+            self.logger.exception(t"Unhandled exception in modal handler '{self.prefix}' (interaction {interaction.id})")
+            return False
+        return True

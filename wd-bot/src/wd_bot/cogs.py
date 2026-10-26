@@ -12,7 +12,7 @@ lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
 lazy from wd_bot.commands import Command, CommandGroup
-lazy from wd_bot.components import ComponentHandler
+lazy from wd_bot.components import ComponentHandler, ModalHandler
 lazy from wd_bot.listener import listener
 lazy from wd_bot.registry import CommandPath
 
@@ -70,6 +70,15 @@ def component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], Compone
     return decorator
 
 
+def modal(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ModalHandler]:
+    """Tag a Cog method as the handler for modal submits whose ``custom_id`` starts with ``prefix``."""
+
+    def decorator(func: Callable[..., Awaitable[None]]) -> ModalHandler:
+        return ModalHandler(func, prefix=prefix)
+
+    return decorator
+
+
 class BotArgs(TypedDict):
     """TypedDict for bot arguments."""
 
@@ -103,6 +112,7 @@ class Cog(LoggerMixin):
     listener = listener
     command = command
     component = component
+    modal = modal
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""
@@ -154,6 +164,14 @@ class Cog(LoggerMixin):
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
             if isinstance(attr, ComponentHandler):
+                yield attr
+
+    @classmethod
+    def modals(cls) -> Generator[ModalHandler]:
+        """Yield the :class:`ModalHandler` attributes defined on this cog class or inherited from its bases."""
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            if isinstance(attr, ModalHandler):
                 yield attr
 
     @classmethod
