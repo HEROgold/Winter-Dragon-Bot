@@ -1,10 +1,16 @@
 """A cog with a single command: a random compatibility percentage between two users."""
 
+from datetime import datetime
 from typing import Annotated
 lazy import random
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, ClassVar, override
 
+from sqlalchemy import BigInteger
+from sqlmodel import Field, Session, select
 from wd_bot.commands import Describe
+from wd_db.extension.columns import AwareDateTime
+from wd_db.extension.lifecycle import LifecycleModel, Ownership
+from wd_types.clock import utc_now
 lazy from confkit.data_types import Hex
 lazy from wd_bot.cogs import Cog
 
@@ -24,6 +30,40 @@ class PercentageSettings:
 
     love_color = CogConfig(Hex(0xFF0000))
     """The color of the Love Meter embed."""
+
+
+class CompatibilityCheck(LifecycleModel, table=True):
+    """A member's check of their compatibility with another user; ``user_id`` is the member who asked, and they own it.
+
+    The percentage is fixed for each pair, so it is not stored. The checked user has no record of it.
+    """
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id")
+    natural_key: ClassVar[tuple[str, ...]] = ("user_id", "target_id")
+
+    user_id: int = Field(sa_type=BigInteger, index=True)
+    target_id: int = Field(sa_type=BigInteger)
+    target_name: str
+    """The checked user's display name when the check was made."""
+    checked_at: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime)
+    """When the member last checked this user."""
+
+
+def record_check(session: Session, user_id: int, target_id: int, target_name: str) -> CompatibilityCheck:
+    """Store that ``user_id`` checked ``target_id``, or refresh the earlier check of the same pair; the caller commits."""
+    existing = session.exec(
+        select(CompatibilityCheck).where(
+            CompatibilityCheck.user_id == user_id,
+            CompatibilityCheck.target_id == target_id,
+        ),
+    ).first()
+    if existing is None:
+        existing = CompatibilityCheck(user_id=user_id, target_id=target_id, target_name=target_name)
+    existing.target_name = target_name
+    existing.checked_at = utc_now()
+    existing.deleted_at = None
+    session.add(existing)
+    return existing
 
 
 def calculate_percentage(user_id_a: int, user_id_b: int) -> int:
@@ -52,6 +92,11 @@ def build_love_embed(target: User, percent: int) -> Embed:
 class Love(Cog):
     """Cog for the /love command."""
 
+    @override
+    async def load(self) -> None:
+        """Create the compatibility check table if missing."""
+        self.create_tables(CompatibilityCheck)
+
     @Cog.command(name="love", description="Calculate compatibility with another user")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
     async def love(
         self,
@@ -64,4 +109,7 @@ class Love(Cog):
             await interaction.respond("I couldn't work out who invoked this command.")
             return
         percent = calculate_percentage(int(asker.id), int(user.id))
+        with Session(self.bind) as session:
+            record_check(session, int(asker.id), int(user.id), user.display_name)
+            session.commit()
         await interaction.respond(embeds=[build_love_embed(user, percent)])

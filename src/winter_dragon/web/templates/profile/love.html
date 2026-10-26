@@ -1,0 +1,21 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Love</h2>
+  {% if not checks %}
+    <p class="profile-empty">You have not checked your compatibility with anyone yet. Use <code>/love</code> in Discord to check one.</p>
+  {% else %}
+    <table class="table">
+      <thead><tr><th>User</th><th>Compatibility</th><th>Last checked</th></tr></thead>
+      <tbody>
+        {% for check, percent, when in checks %}
+          <tr>
+            <td>{{ check.target_name }}</td>
+            <td>{{ percent }}%</td>
+            <td>{{ when.strftime('%Y-%m-%d') }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
