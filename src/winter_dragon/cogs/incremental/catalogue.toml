@@ -1,0 +1,51 @@
+# The Incremental game catalogue. Only the bot's developers edit this file; no command does.
+# Saves refer to currencies and generators by `key`, so rename or retune freely, but never change a key.
+# An invalid file stops the bot at startup with an error naming the problem.
+#
+# [[currencies]]
+#   key             stable id
+#   name            shown to members
+#   emoji           optional, shown before the name
+#   starting_amount what a new save starts with (default 0)
+#
+# [[generators]]
+#   key, name, description
+#   price           what one purchase costs while the member owns none
+#   price_growth    price is multiplied by this for each generator already owned (default 1.0, never below 1.0)
+#   produces        what each owned generator makes per second
+#   Both price and produces are lists of { currency = "<currency key>", amount = <number above 0> }.
+
+[[currencies]]
+key = "coins"
+name = "Coins"
+emoji = "🪙"
+starting_amount = 10
+
+[[currencies]]
+key = "gems"
+name = "Gems"
+emoji = "💎"
+
+[[generators]]
+key = "digger"
+name = "Digger"
+description = "Digs up coins."
+price = [{ currency = "coins", amount = 10 }]
+price_growth = 1.15
+produces = [{ currency = "coins", amount = 0.5 }]
+
+[[generators]]
+key = "mine"
+name = "Mine"
+description = "A deep mine that yields coins faster."
+price = [{ currency = "coins", amount = 120 }]
+price_growth = 1.2
+produces = [{ currency = "coins", amount = 6 }]
+
+[[generators]]
+key = "gem_cutter"
+name = "Gem cutter"
+description = "Turns coins into a trickle of gems."
+price = [{ currency = "coins", amount = 500 }]
+price_growth = 1.25
+produces = [{ currency = "gems", amount = 0.1 }]
