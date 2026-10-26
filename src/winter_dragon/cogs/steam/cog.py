@@ -8,6 +8,7 @@ from wd_bot.commands import Describe
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete, upsert
+lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.steam.models import STEAM_TABLES, SteamUsers
@@ -17,6 +18,7 @@ lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure, S
 lazy from winter_dragon.cogs.steam.settings import SteamSettings
 lazy from winter_dragon.cogs.steam.store import SteamSaleStore
 lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
+lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 
 if TYPE_CHECKING:
@@ -177,20 +179,15 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             return
         with Session(self.bind) as session:
             if SteamSaleStore(session).subscriber(int(user.id)) is not None:
-                await interaction.respond(
-                    content="Already in the list of recipients",
-                    ephemeral=True,
-                )
-                return
+                msg = "Already in the list of recipients"
+                raise Refused(msg)
             create_or_restore(
                 session,
                 SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=SteamSettings.default_threshold),
             )
             session.commit()
-        await interaction.respond(
-            content=f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales.",
-            ephemeral=True,
-        )
+        subscribed = f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales."
+        await interaction.respond(embeds=[CreatedEmbed(description=subscribed)], ephemeral=True)
 
     @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
         name="percentage",
@@ -206,11 +203,8 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         if user is None:
             return
         if not 0 <= percent <= MAX_PERCENT:
-            await interaction.respond(
-                content=f"The percentage must be between 0 and {MAX_PERCENT}.",
-                ephemeral=True,
-            )
-            return
+            msg = f"The percentage must be between 0 and {MAX_PERCENT}."
+            raise Refused(msg)
         with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
 
@@ -222,7 +216,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         content = f"Changed your sale notification threshold to {percent}%."
         if subscriber is None:
             content += f"\nI will notify you of new steam games! Use {self.mention(self.remove)} to stop."
-        await interaction.respond(content=content, ephemeral=True)
+        await interaction.respond(embeds=[ChangedEmbed(description=content)], ephemeral=True)
 
     @Cog.command(name="remove", description="No longer get notified of free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def remove(self, interaction: CommandInteraction) -> None:
@@ -232,11 +226,13 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             return
         with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
-            if subscriber is not None:
-                soft_delete(session, subscriber)
-                session.commit()
-        content = "Not in the list of recipients" if subscriber is None else "I will no longer notify you of new steam games."
-        await interaction.respond(content=content, ephemeral=True)
+            if subscriber is None:
+                msg = "Not in the list of recipients"
+                raise Refused(msg)
+            soft_delete(session, subscriber)
+            session.commit()
+        unsubscribed = "I will no longer notify you of new steam games."
+        await interaction.respond(embeds=[DeletedEmbed(description=unsubscribed)], ephemeral=True)
 
     @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
         name="show",
@@ -275,14 +271,8 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         """Turn a /steam show listing to ``page``; only the user who ran the command may."""
         user = interaction.user
         if user is None or str(user.id) != owner_id:
-            await interaction.respond(
-                content=(
-                    "Only the person who ran this command can page through it. "
-                    f"Use {self.mention(self.show)} for your own list."
-                ),
-                ephemeral=True,
-            )
-            return
+            msg = f"Only the person who ran this command can page through it. Use {self.mention(self.show)} for your own list."
+            raise Refused(msg)
         with Session(self.bind) as session:
             store = SteamSaleStore(session)
             sales = store.current_sales(int(percent), now=utc_now(), outdated_after=self._outdated_after)

@@ -54,6 +54,12 @@ def _reply(discord_client: RecordingClient) -> str:
     return discord_client.interaction_responses()[-1]["data"]["content"]
 
 
+def _confirmed(discord_client: RecordingClient) -> str:
+    """Return the description of the confirmation embed in the last initial response."""
+    (embed,) = discord_client.interaction_responses()[-1]["data"]["embeds"]
+    return embed["description"]
+
+
 def _text_channel(*overwrites: dict[str, object], kind: int = 0) -> dict[str, object]:
     return {
         "id": str(CHANNEL_ID),
@@ -126,7 +132,8 @@ async def test_delete_category_deletes_its_channels_then_itself(
     assert (
         unquote(deletes[0].headers[REASON_HEADER]) == "Deleted category Games by asker (3) using /channel-utils delete-category"
     )
-    assert _followup(discord_client) == "Deleted the category Games and its channels."
+    (deleted,) = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json["embeds"]
+    assert deleted["description"] == "Deleted the category Games and its channels."
 
 
 async def test_delete_category_deletes_nothing_when_a_channel_is_hidden_from_the_bot(
@@ -185,7 +192,7 @@ async def test_lock_denies_send_messages(  # noqa: PLR0913 - parametrized
 
     (put,) = discord_client.requests_to("PUT", f"/channels/{CHANNEL_ID}/permissions/{target}")
     assert put.json == {"id": target, "type": overwrite_type, "allow": "0", "deny": str(SEND)}
-    assert _reply(discord_client).startswith("Locked this channel for")
+    assert _confirmed(discord_client).startswith("Locked this channel for")
 
 
 async def test_unlock_removes_an_overwrite_left_empty(
@@ -208,7 +215,7 @@ async def test_unlock_removes_an_overwrite_left_empty(
     await ChannelUtils.unlock.invoke(_cog(), interaction, interaction.options)
 
     assert len(discord_client.requests_to("DELETE", f"/channels/{CHANNEL_ID}/permissions/4")) == 1
-    assert _reply(discord_client) == "Unlocked this channel for <@4>."
+    assert _confirmed(discord_client) == "Unlocked this channel for <@4>."
 
 
 async def test_unlock_without_an_overwrite_changes_nothing(

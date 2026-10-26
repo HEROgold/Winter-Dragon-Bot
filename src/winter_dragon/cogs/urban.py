@@ -23,7 +23,7 @@ lazy from wd_discord.embed import (
     EmbedField,
     EmbedFooter,
 )
-lazy from wd_errors import BaseError
+lazy from wd_errors import BaseError, Refused
 
 lazy from winter_dragon.config import CogConfig
 
@@ -175,8 +175,7 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.define(query)
         if isinstance(definitions, LookupFailed):
-            await interaction.respond(str(definitions))
-            return
+            raise Refused(str(definitions), cause=definitions)
         if not definitions:
             await interaction.respond(f"No definitions found for `{truncate(query, 100)}`.")
             return
@@ -192,12 +191,11 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
     async def random(self, interaction: CommandInteraction) -> None:
         """Reply with definitions of random terms, unless that's turned off."""
         if not UrbanSettings.allow_random:
-            await interaction.respond("Random definitions are turned off.", ephemeral=True)
-            return
+            msg = "Random definitions are turned off."
+            raise Refused(msg)
         await interaction.defer()
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.random()
         if isinstance(definitions, LookupFailed):
-            await interaction.respond(str(definitions))
-            return
+            raise Refused(str(definitions), cause=definitions)
         await interaction.respond(embeds=[build_embed("Urban Dictionary: random", definitions, UrbanSettings.max_definitions)])

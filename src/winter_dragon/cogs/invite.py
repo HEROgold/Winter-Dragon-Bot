@@ -5,6 +5,7 @@ lazy from typing import TYPE_CHECKING
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import is_network_error
 lazy from wd_discord.permissions import ChannelType
+lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig, Settings
 
@@ -19,6 +20,10 @@ class InviteSettings:
 
     support_invite_max_age = CogConfig(60)
     """Seconds a support guild invite stays valid: it's single-use and meant to be clicked right away."""
+
+
+NO_SUPPORT_INVITE = "I couldn't create an invite to the support guild."
+"""The refusal when the support guild has no channel to invite to, or Discord wouldn't make the invite."""
 
 
 async def invite_channel(client: Client, guild_id: int) -> BaseChannel | NetworkError | None:
@@ -49,16 +54,14 @@ class Invite(GroupCog, name="invite", description="Invite the bot to your guild,
     async def support_invite(self, interaction: CommandInteraction) -> None:
         """Reply with a single-use, short-lived invite to the support guild."""
         if not Settings.support_guild_id:
-            await interaction.respond("There is no support guild set up.", ephemeral=True)
-            return
+            msg = "There is no support guild set up."
+            raise Refused(msg)
         channel = await invite_channel(self.bot.client, Settings.support_guild_id)
         if channel is None or is_network_error(channel):
             self.logger.warning(t"No channel to invite to in support guild {Settings.support_guild_id}: {channel}")
-            await interaction.respond("I couldn't create an invite to the support guild.", ephemeral=True)
-            return
+            raise Refused(NO_SUPPORT_INVITE)
         invite = await channel.create_invite(max_age=InviteSettings.support_invite_max_age)
         if is_network_error(invite):
             self.logger.warning(t"Could not invite to support guild {Settings.support_guild_id}: {invite}")
-            await interaction.respond("I couldn't create an invite to the support guild.", ephemeral=True)
-            return
+            raise Refused(NO_SUPPORT_INVITE, cause=invite)
         await interaction.respond(invite.url, ephemeral=True)

@@ -214,7 +214,7 @@ class Tournaments(
         with Session(self.bind) as session:
             sign_up(session, self._active(interaction, session), int(interaction.user.id))
             session.commit()
-        await interaction.respond("You're signed up!", ephemeral=True)
+        await interaction.respond(embeds=[CreatedEmbed(description="You're signed up!")], ephemeral=True)
 
     @Cog.command(name="leave", description="Withdraw from this server's tournament before it starts")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def leave(self, interaction: GuildCommandInteraction) -> None:
@@ -222,7 +222,7 @@ class Tournaments(
         with Session(self.bind) as session:
             withdraw(session, self._active(interaction, session), int(interaction.user.id))
             session.commit()
-        await interaction.respond("You've left the tournament.", ephemeral=True)
+        await interaction.respond(embeds=[DeletedEmbed(description="You've left the tournament.")], ephemeral=True)
 
     @Cog.component("tourney-join")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def join_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
@@ -419,7 +419,8 @@ class Tournaments(
             draft(session, found, int(interaction.user.id), kind, choice)
             session.commit()
         verb = "banned" if kind is DraftKind.BAN else "picked"
-        await interaction.respond(f"Your team {verb} **{choice}** in match #{match}.", ephemeral=True)
+        drafted = CreatedEmbed(description=f"Your team {verb} **{choice}** in match #{match}.")
+        await interaction.respond(embeds=[drafted], ephemeral=True)
 
     @Cog.command(name="ban", description="Ban something from your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def ban(

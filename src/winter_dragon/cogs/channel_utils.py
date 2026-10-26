@@ -13,6 +13,8 @@ lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.ui import ChangedEmbed, DeletedEmbed
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
@@ -90,7 +92,8 @@ class ChannelUtils(
         if not is_gone(await whole.delete(reason=reason)):
             msg = "I deleted the channels, but couldn't delete the category."
             raise Refused(msg)
-        await interaction.followup(f"Deleted the category {category.name} and its channels.", ephemeral=True)
+        deleted = DeletedEmbed(description=f"Deleted the category {category.name} and its channels.")
+        await interaction.followup(embeds=[deleted], ephemeral=True)
 
     @staticmethod
     async def _deletable(interaction: GuildCommandInteraction, category: Channel) -> list[Channel]:
@@ -155,4 +158,5 @@ class ChannelUtils(
         if failure is not None:
             msg = f"I couldn't change the permissions here: {failure}"
             raise Refused(msg, cause=failure)
-        await interaction.respond(f"{action} this channel for {target.mention}.", ephemeral=True)
+        changed = ChangedEmbed(description=f"{action} this channel for {target.mention}.")
+        await interaction.respond(embeds=[changed], ephemeral=True)

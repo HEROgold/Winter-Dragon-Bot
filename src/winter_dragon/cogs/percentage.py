@@ -17,6 +17,7 @@ lazy from wd_bot.cogs import Cog
 # Command resolves option annotations from module globals at runtime, so User must be available here.
 lazy from wd_discord import User  # noqa: TC002
 lazy from wd_discord.embed import Embed, EmbedField
+lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
 
@@ -94,8 +95,8 @@ class Love(Cog):
         """Reply with a random compatibility love between the invoking user and ``user``."""
         asker = interaction.user
         if asker is None:
-            await interaction.respond("I couldn't work out who invoked this command.")
-            return
+            msg = "I couldn't work out who invoked this command."
+            raise Refused(msg)
         percent = calculate_percentage(int(asker.id), int(user.id))
         with Session(self.bind) as session:
             record_check(session, int(asker.id), int(user.id), user.display_name)

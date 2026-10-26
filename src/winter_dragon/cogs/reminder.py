@@ -170,17 +170,17 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         message = f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it."
         await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
 
-    async def _validated(self, interaction: CommandInteraction, content: str, delay: timedelta | None) -> timedelta | None:
-        """Return ``delay`` if a new reminder of ``content`` may wait that long; else tell the invoking user why not."""
+    @staticmethod
+    def _validated(content: str, delay: timedelta | None) -> timedelta:
+        """Return ``delay`` if a new reminder of ``content`` may wait that long; refuse saying why not otherwise."""
         if delay is None:
             days = ReminderSettings.max_delay_days
-            message = f"Give me a time between 1 minute and {days} days from now, so I can remind you!"
-        elif len(content) > ReminderSettings.max_content_length:
-            message = f"Keep your reminder under {ReminderSettings.max_content_length} characters."
-        else:
-            return delay
-        await interaction.respond(message, ephemeral=True)
-        return None
+            msg = f"Give me a time between 1 minute and {days} days from now, so I can remind you!"
+            raise Refused(msg)
+        if len(content) > ReminderSettings.max_content_length:
+            msg = f"Keep your reminder under {ReminderSettings.max_content_length} characters."
+            raise Refused(msg)
+        return delay
 
     @Cog.command(name="add", description="Get reminded of something once, after the given time")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def add(
@@ -193,9 +193,9 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     ) -> None:
         """Remind the invoking user of ``reminder`` once, after the given time."""
         user = interaction.user
-        delay = delay_from(minutes=minutes, hours=hours, days=days)
-        if user is None or (delay := await self._validated(interaction, reminder, delay)) is None:
+        if user is None:
             return
+        delay = self._validated(reminder, delay_from(minutes=minutes, hours=hours, days=days))
         await self._store(interaction, Reminder(content=reminder, user_id=int(user.id), timestamp=utc_now() + delay))
 
     @Cog.command(name="repeat", description="Get reminded of something over and over, every given time")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
@@ -210,9 +210,9 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     ) -> None:
         """Remind the invoking user of ``reminder`` every given time, starting one interval from now."""
         user = interaction.user
-        every = delay_from(minutes=minutes, hours=hours, days=days, weeks=weeks)
-        if user is None or (every := await self._validated(interaction, reminder, every)) is None:
+        if user is None:
             return
+        every = self._validated(reminder, delay_from(minutes=minutes, hours=hours, days=days, weeks=weeks))
         timed = TimedReminder(content=reminder, user_id=int(user.id), timestamp=utc_now() + every, repeat_every=every)
         await self._store(interaction, timed)
 

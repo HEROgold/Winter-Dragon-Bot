@@ -30,14 +30,14 @@ A role a member had when they left a guild that gives roles back.
 - fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], guild_id: int, user_id: int, role_id:
   int
 
-### `class AutoReassign(GroupCog, name='autoreassign', description='Give members who leave and rejoin the roles they had', contexts=[InteractionContextType.GUILD])`
+### `class AutoReassign(GroupCog, name='autoreassign', description='Give members who leave and rejoin the roles they had', default_member_permissions=Permissions.MANAGE_ROLES, contexts=[InteractionContextType.GUILD])`
 Remembers a leaving member's roles, and gives them back when they rejoin.
 
 - `async load() -> None` — Create the auto-reassign tables if missing.
 - `@Cog.listener async on_member_remove(event: MemberRemove) -> None` — Remember the roles of a member leaving a guild that gives roles back, replacing what was remembered.
 - `@Cog.listener async on_member_add(member: Member) -> None` — Give a rejoining member the roles remembered from when they left, then forget them.
-- `@Cog.command async enable(interaction: CommandInteraction) -> None` — Start remembering leaving members' roles in this guild; needs MANAGE_ROLES.
-- `@Cog.command async disable(interaction: CommandInteraction) -> None` — Stop remembering roles in this guild, and forget those remembered; needs MANAGE_ROLES.
+- `@Cog.command async enable(interaction: GuildCommandInteraction) -> None` — Start remembering leaving members' roles in this guild; needs MANAGE_ROLES.
+- `@Cog.command async disable(interaction: GuildCommandInteraction) -> None` — Stop remembering roles in this guild, and forget those remembered; needs MANAGE_ROLES.
 
 ## `winter_dragon.cogs.autochannel` — `src/winter_dragon/cogs/autochannel.py`
 The /autochannel command group: joining a guild's hub voice channel gives a member a voice channel of their own.
@@ -352,6 +352,7 @@ Settings for /incremental, in its ``cogs.ini`` section.
 ## `winter_dragon.cogs.invite` — `src/winter_dragon/cogs/invite.py`
 The /invite command group: invite the bot to a guild, or join the support guild.
 
+- module names: NO_SUPPORT_INVITE
 - `async invite_channel(client: Client, guild_id: int) -> BaseChannel | NetworkError | None` — Return the channel to invite people to in the guild ``guild_id``: its system channel, else its first text channel.
 
 ### `class InviteSettings`

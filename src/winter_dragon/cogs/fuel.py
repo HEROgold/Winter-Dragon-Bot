@@ -23,6 +23,7 @@ lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.ui import CreatedEmbed
 
 
 if TYPE_CHECKING:
@@ -172,8 +173,8 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         if user is None:
             return
         if min(price, distance, amount) <= 0:
-            await interaction.respond("The price, distance and amount must all be more than 0.", ephemeral=True)
-            return
+            msg = "The price, distance and amount must all be more than 0."
+            raise Refused(msg)
         now = utc_now()
         refueled_at = now if date is None else parse_refuel_date(date)
         if refueled_at is None:
@@ -195,11 +196,11 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             )
             session.commit()
             units = member_units(session, int(user.id))
-        await interaction.respond(
+        logged = (
             f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {units.convert(distance / amount):.2f} {units}.\n"
-            f"Use {self.mention(self.efficiency)} to see how that changes over time.",
-            ephemeral=True,
+            f"Use {self.mention(self.efficiency)} to see how that changes over time."
         )
+        await interaction.respond(embeds=[CreatedEmbed(description=logged)], ephemeral=True)
 
     @Cog.command(name="efficiency", description="Show a graph of your fuel efficiency over time, in your units")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def efficiency(self, interaction: CommandInteraction) -> None:
@@ -211,8 +212,8 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             refuels = session.exec(owned_by(CarFuels, member=int(user.id))).all()
             units = member_units(session, int(user.id))
         if not refuels:
-            await interaction.respond(f"You haven't logged a refuel yet. Use {self.mention(self.add)} first.", ephemeral=True)
-            return
+            msg = f"You haven't logged a refuel yet. Use {self.mention(self.add)} first."
+            raise Refused(msg)
         await interaction.defer(ephemeral=True)
         graph = await asyncio.to_thread(render_efficiency_graph, refuels, units)
         await interaction.respond(

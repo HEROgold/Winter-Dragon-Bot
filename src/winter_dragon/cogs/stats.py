@@ -19,7 +19,7 @@ lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.config import CogConfig
-lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
+lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 
 if TYPE_CHECKING:
@@ -379,7 +379,6 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
                 failed.append(guild_id)
         self.logger.info(t"Reset the stats channels of {len(by_guild)} guilds, failing for {failed}")
         message = f"Reset the stats channels of {len(by_guild)} servers."
-        await interaction.followup(
-            message if not failed else f"{message} Failed for: {', '.join(map(str, failed))}",
-            ephemeral=True,
-        )
+        if failed:
+            message = f"{message} Failed for: {', '.join(map(str, failed))}"
+        await interaction.followup(embeds=[ChangedEmbed(description=message)], ephemeral=True)
