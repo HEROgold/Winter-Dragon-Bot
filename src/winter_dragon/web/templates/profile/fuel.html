@@ -1,0 +1,40 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Fuel</h2>
+  {% if not refuels %}
+    <p class="profile-empty">You have not logged a refuel yet. Use <code>/fuel add</code> in Discord to log one.</p>
+  {% else %}
+    {% if graph %}
+      <figure class="profile-graph">
+        <svg viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="Fuel efficiency over time, from {{ '%.2f' % graph.lowest }} to {{ '%.2f' % graph.highest }}">
+          <line class="axis" x1="{{ padding }}" y1="{{ height - padding }}" x2="{{ width - padding }}" y2="{{ height - padding }}"/>
+          <line class="axis" x1="{{ padding }}" y1="{{ padding }}" x2="{{ padding }}" y2="{{ height - padding }}"/>
+          <text x="{{ padding - 6 }}" y="{{ padding + 4 }}" text-anchor="end">{{ '%.1f' % graph.highest }}</text>
+          <text x="{{ padding - 6 }}" y="{{ height - padding + 4 }}" text-anchor="end">{{ '%.1f' % graph.lowest }}</text>
+          <text x="{{ padding }}" y="{{ height - 12 }}">{{ graph.first_day.strftime('%Y-%m-%d') }}</text>
+          <text x="{{ width - padding }}" y="{{ height - 12 }}" text-anchor="end">{{ graph.last_day.strftime('%Y-%m-%d') }}</text>
+          <polyline class="line" points="{{ graph.line }}"/>
+          {% for point in graph.points %}
+            <circle class="dot" cx="{{ '%.1f' % point.x }}" cy="{{ '%.1f' % point.y }}" r="4"><title>{{ point.label }}</title></circle>
+          {% endfor %}
+        </svg>
+        <figcaption>Distance per unit of fuel, per refuel.</figcaption>
+      </figure>
+    {% endif %}
+    <table class="table">
+      <thead><tr><th>Date</th><th>Fuel added</th><th>Distance</th><th>Price</th><th>Efficiency</th></tr></thead>
+      <tbody>
+        {% for refuel, when in refuels %}
+          <tr>
+            <td>{{ when.strftime('%Y-%m-%d') }}</td>
+            <td>{{ refuel.amount }}</td>
+            <td>{{ refuel.distance }}</td>
+            <td>{{ '%.2f' % refuel.price }}</td>
+            <td>{% if refuel.amount > 0 %}{{ '%.2f' % refuel.efficiency }}{% else %}-{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

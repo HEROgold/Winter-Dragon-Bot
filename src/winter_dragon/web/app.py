@@ -10,7 +10,7 @@ lazy from starlette.middleware.sessions import SessionMiddleware
 lazy from starlette.responses import Response
 
 lazy from winter_dragon.cogs import import_cogs
-lazy from winter_dragon.web import auth, pages, reminders
+lazy from winter_dragon.web import auth, pages, profile, reminders
 lazy from winter_dragon.web.accounts import SignInRequired
 lazy from winter_dragon.web.records import create_dashboard_tables
 lazy from winter_dragon.web.responses import STATIC_DIR, is_htmx
@@ -48,7 +48,7 @@ def create_app(
         https_only=https_only,
     )
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    for router in (pages.router, auth.router, reminders.router):
+    for router in (pages.router, auth.router, reminders.router, profile.router):
         app.include_router(router)
     app.add_exception_handler(SignInRequired, _to_sign_in)
     return app

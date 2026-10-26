@@ -88,6 +88,46 @@ What the landing page's signpost arms say a signed-in member will find down each
 
 - fields: reminders: str, records: str
 
+## `winter_dragon.web.profile` — `src/winter_dragon/web/profile.py`
+The Profile: a member's own pages, one per feature, across every guild.
+
+- module names: router
+- `type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]`
+- `profile_page(*, slug: str, title: str, template: str) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
+- `profile_pages() -> list[ProfilePage]` — Return every registered page, by title.
+- `load_profile_pages() -> None` — Import every module in ``web/profile_pages/``, so each registers its page.
+- `@router.get profile(request: Request) -> Response` — Show the signed-in member's Profile: a link to each feature's page.
+- `@router.get profile_page_view(request: Request, slug: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's page ``slug`` of the Profile.
+
+### `@dataclass class ProfileContext`
+What a Profile page reads to build itself: the database, the member whose Profile it is, and their time zone.
+
+- fields: bind: Engine, member_id: int, zone: ZoneInfo
+
+### `@dataclass class ProfilePage`
+One feature's page in the Profile.
+
+- fields: slug: str, title: str, template: str, context: ContextBuilder
+- `@property path -> str` — The URL the page is served at.
+
+## `winter_dragon.web.profile_pages.fuel` — `src/winter_dragon/web/profile_pages/fuel.py`
+The Profile's fuel page: an efficiency graph over time and a table of the member's refuels, newest first.
+
+- module names: GRAPH_WIDTH, GRAPH_HEIGHT, GRAPH_PADDING
+- `efficiency_graph(refuels: Sequence[CarFuels]) -> EfficiencyGraph | None` — Return the graph of ``refuels``, or ``None`` when none of them added fuel.
+- `@profile_page fuel(context: ProfileContext) -> dict[str, object]` — Return the fuel page's context: the member's refuels, newest first, and their efficiency graph.
+
+### `@dataclass class GraphPoint`
+One refuel on the graph, in SVG coordinates.
+
+- fields: x: float, y: float, label: str
+
+### `@dataclass class EfficiencyGraph`
+The efficiency of a member's refuels over time, ready to draw as an SVG line.
+
+- fields: points: tuple[GraphPoint, ...], lowest: float, highest: float, first_day: datetime, last_day: datetime
+- `@property line -> str` — The ``points`` attribute of the SVG polyline.
+
 ## `winter_dragon.web.records` — `src/winter_dragon/web/records.py`
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
@@ -158,6 +198,7 @@ Rendering the dashboard's templates, as a whole page or as the fragment an htmx 
 - module names: TEMPLATES_DIR, STATIC_DIR, templates
 - `is_htmx(request: Request) -> bool` — Whether ``request`` came from htmx, which swaps in a fragment instead of loading a page.
 - `render(request: Request, name: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the template ``name`` with ``context``, plus the signed-in account and the CSRF token every form carries.
+- `render_mapping(request: Request, name: str, context: Mapping[str, object], *, status_code: int=status.HTTP_200_OK) -> Response` — Like :func:`render`, for a ``context`` built elsewhere, whose keys can't be passed as keyword arguments.
 - `see_other(url: str) -> RedirectResponse` — Redirect a submitted form to the page ``url``, which the browser then loads with a GET.
 - `database(request: Request) -> Engine` — Return the database the app was created on; a FastAPI dependency.
 

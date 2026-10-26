@@ -83,3 +83,65 @@ _Avoid_: Peer average, standard
 **Note**:
 A written comment attached to one tracked game.
 _Avoid_: Comment, reflection, annotation
+
+## Tournaments
+
+**Team**:
+A group of members, which may span guilds, that exists apart from any tournament and can enter many. It may have a captain. Its roster can change and it stays the same team.
+_Avoid_: Squad, roster, clan
+
+**Tournament entry**:
+A team's place in one tournament, with the players who play for it there.
+_Avoid_: Tournament team, registration
+
+## Member stats
+
+**Profile**:
+A member's own pages on the dashboard, showing what they have done with each feature across every guild. Only that member sees it.
+_Avoid_: Stats, dashboard (for the member pages), your data (that is the GDPR view)
+
+**Stats channel**:
+A locked voice channel whose name shows one of a guild's member counts.
+_Avoid_: Stat, counter
+
+**Compatibility check**:
+A member asking for their compatibility with another user. The percentage is fixed for each pair, so the check is the event worth keeping, and it belongs to the member who asked.
+_Avoid_: Love score, match
+
+**Sale threshold**:
+The lowest Steam discount a member wants to be told about.
+_Avoid_: Minimum, filter
+
+**Sale notification**:
+A Steam sale sent to a member because it met their sale threshold at the time it was sent.
+_Avoid_: Alert, deal, ping
+
+**Refuel**:
+One fill-up a member logs: fuel added, distance driven since the last one, price, and the date it happened.
+_Avoid_: Fuel entry, log, tank
+
+**Lookup**:
+An Urban Dictionary search by a member that returned a definition. Searches that found nothing are not lookups.
+_Avoid_: Query, search
+
+## Games
+
+**Hangman game**:
+One round of hangman, shown as a single message and started by one member, where anyone may guess. A channel can have several running at once.
+_Avoid_: Match, session
+
+**Participant**:
+A member who guessed at least one correct letter in a hangman game. When the game is won, every participant is credited with the win.
+_Avoid_: Player, guesser
+
+**Incremental game**:
+An idle game each member plays once, across every guild, in which generators produce currencies over time. A member can play it in Discord or on the dashboard, and both can do the same things.
+_Avoid_: Clicker, idle game, economy
+
+**Generator**:
+Something a member buys in the incremental game that produces currencies at fixed rates. Only the bot's developers define which generators exist, as part of the game.
+_Avoid_: Building, producer, upgrade
+
+**Currency**:
+A resource in the incremental game that generators produce and members spend. Only the bot's developers define which currencies exist, as part of the game.
+_Avoid_: Money, coins, points
