@@ -6,9 +6,9 @@ lazy import json
 lazy from typing import Any
 
 lazy import pytest
-lazy from wd_core.intents import Intents
 lazy from wd_discord.gateway import EventName, GuildCreate, Message, RawEvent, Ready, parse_dispatch, parse_ready
 lazy from wd_discord.gateway.connection import Gateway, Opcode
+lazy from wd_discord.intents import Intents
 lazy from wd_discord.testing import GUILD_JSON, message_json, user_json
 
 

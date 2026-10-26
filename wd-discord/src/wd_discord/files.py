@@ -12,8 +12,7 @@ lazy from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
 
-    from wd_core.client import JsonPayload, RequestKwargs
-
+    from wd_discord.payloads import JsonPayload, RequestKwargs
     from wd_discord.responses import MessageData
 
 

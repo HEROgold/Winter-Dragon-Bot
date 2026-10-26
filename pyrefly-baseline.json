@@ -8696,14 +8696,14 @@
     },
     {
       "column": 65,
-      "path": "wd-core/src/wd_core/intents.py",
+      "path": "wd-discord/src/wd_discord/intents.py",
       "name": "no-matching-overload",
       "concise_description": "No matching overload found for function `str.join` called with arguments: (Generator[str | None])",
       "severity": "error"
     },
     {
       "column": 16,
-      "path": "wd-core/src/wd_core/intents.py",
+      "path": "wd-discord/src/wd_discord/intents.py",
       "name": "bad-return",
       "concise_description": "Returned type `(*args: Any, **kwargs: Any) -> Any` is not assignable to declared return type `(ParamSpec(P)) -> R`",
       "severity": "error"

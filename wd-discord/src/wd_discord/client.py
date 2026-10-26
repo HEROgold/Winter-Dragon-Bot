@@ -61,11 +61,11 @@ if TYPE_CHECKING:
     lazy from string.templatelib import Template
 
     lazy from httpxyz import Response
-    lazy from wd_core.client import RequestKwargs
-    lazy from wd_core.intents import Intents
 
     lazy from wd_discord.entities.events import BoundEvent
+    lazy from wd_discord.intents import Intents
     lazy from wd_discord.models import DiscordModel
+    lazy from wd_discord.payloads import RequestKwargs
     lazy from wd_discord.snowflake import SnowflakeLike
 
 

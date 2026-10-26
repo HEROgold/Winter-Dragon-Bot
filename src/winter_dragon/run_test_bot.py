@@ -29,8 +29,8 @@ lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import create_engine
 lazy from wd_bot.bot import Bot
 lazy from wd_config.sentry import Environments, SentrySettings
-lazy from wd_core.intents import Intents
 lazy from wd_discord import Sentry
+lazy from wd_discord.intents import Intents
 
 lazy from . import cogs
 

@@ -25,7 +25,7 @@ wd-types            wd-config             ← no internal dependencies
 | `wd-config` | The unbound confkit `Config[T]` base each scope binds to its own ini file, the first-launch check, and the `discord.ini` / `sentry.ini` scopes. |
 | `wd-discord` | The Discord API v10 client: REST transport, gateway, pydantic response models, client-bound entities. |
 | `wd-db` | SQLModel/SQLAlchemy engine and session, model base classes. |
-| `wd-core` | Audit-log events, gateway intents, Sentry setup, an HTTP client for third-party APIs. |
+| `wd-core` | Audit-log events, the bot's default intents and permissions, Sentry setup. |
 | `wd-errors` | Error base classes and the self-registering error-handler factory. |
 | `wd-types` | Cross-package protocols and type aliases. |
 | `wd-bot` | `Bot`, `Cog`/`GroupCog`, slash commands, components, autocomplete, help, command sync. |

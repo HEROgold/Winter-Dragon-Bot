@@ -13,13 +13,12 @@ lazy from wd_discord.resources.user import User as UserModel
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from wd_core.client import JsonPayload
-
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
     from wd_discord.embed import Embed
     from wd_discord.entities.message import Message
     from wd_discord.image import ImageHash
+    from wd_discord.payloads import JsonPayload
     from wd_discord.snowflake import Snowflake
 
 

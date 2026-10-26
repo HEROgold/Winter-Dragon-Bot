@@ -11,7 +11,6 @@ lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from wd_config import OperatorFiles
 lazy from wd_config.discord import URLS
-lazy from wd_core.intents import Intents
 lazy from wd_discord import (
     AutocompleteInteraction,
     Client,
@@ -21,6 +20,7 @@ lazy from wd_discord import (
     ModalSubmitInteraction,
     is_network_error,
 )
+lazy from wd_discord.intents import Intents
 lazy from wd_discord.permissions import Permissions
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError

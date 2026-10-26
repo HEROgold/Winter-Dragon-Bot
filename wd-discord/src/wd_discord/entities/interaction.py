@@ -37,14 +37,13 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
     from string.templatelib import Template
 
-    from wd_core.client import JsonPayload
-
     from wd_discord.client import Client, NetworkError
     from wd_discord.components import ActionRow, ComponentType, Modal
     from wd_discord.embed import Embed
     from wd_discord.files import File
     from wd_discord.gateway.events import InteractionDataOption, InteractionType, SubmittedComponent
     from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType, Locale
+    from wd_discord.payloads import JsonPayload
     from wd_discord.permissions import Permissions
     from wd_discord.resources.channel import Channel as ChannelModel
     from wd_discord.responses import MessageData, ModalData

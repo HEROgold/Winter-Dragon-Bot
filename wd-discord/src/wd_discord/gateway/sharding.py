@@ -18,8 +18,8 @@ lazy from typing import TYPE_CHECKING, Any, Self
 
 lazy from herogold.errors import with_known_exception
 lazy from wd_config.discord import URLS
-lazy from wd_core.intents import Intents
 
+lazy from wd_discord.intents import Intents
 lazy from wd_discord.models import DiscordModel
 
 lazy from .connection import Gateway

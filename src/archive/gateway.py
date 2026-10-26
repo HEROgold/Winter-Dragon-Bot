@@ -13,8 +13,8 @@ from winter_dragon.event_logger import EventLoggingGateway
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from wd_core.intents import Intents
     from wd_discord.gateway.connection import Disconnect, GatewayFrame
+    from wd_discord.intents import Intents
     from wd_discord.models import DiscordModel
 
     from archive.writer import Writer

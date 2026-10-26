@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-lazy from typing import Annotated, Self
+lazy from typing import TYPE_CHECKING, Annotated, Self
 
 lazy from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
-lazy from wd_core.client import JsonPayload
 
 from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 
@@ -13,6 +12,10 @@ from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 from wd_discord.permissions import ChannelType, Permissions, PermissionsField
 from wd_discord.snowflake import Snowflake
 lazy from wd_discord.models import DiscordModel
+
+
+if TYPE_CHECKING:
+    from wd_discord.payloads import JsonPayload
 
 
 class ApplicationCommandType(OpenIntEnum):

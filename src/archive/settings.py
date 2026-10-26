@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from wd_config import Config
-from wd_core.intents import Intents
+from wd_discord.intents import Intents
 
 
 ARCHIVE_CONFIG_FILE = Path("archive.ini")

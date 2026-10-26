@@ -26,8 +26,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Sequence
     from datetime import datetime
 
-    from wd_core.client import JsonPayload
-
     from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
@@ -36,6 +34,7 @@ if TYPE_CHECKING:
     from wd_discord.entities.message import BaseMessage
     from wd_discord.entities.user import BaseUser
     from wd_discord.image import ImageHash
+    from wd_discord.payloads import JsonPayload
     from wd_discord.permissions import ChannelType
     from wd_discord.resources.channel import (
         ChannelParams,

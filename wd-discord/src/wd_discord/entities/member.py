@@ -17,13 +17,12 @@ if TYPE_CHECKING:
     from datetime import datetime
     from string.templatelib import Template
 
-    from wd_core.client import JsonPayload
-
     from wd_discord.audit import Reason
     from wd_discord.client import NetworkError, RequestResult
     from wd_discord.entities.channel import BaseChannel
     from wd_discord.entities.role import BaseRole, Role
     from wd_discord.image import ImageHash
+    from wd_discord.payloads import JsonPayload
     from wd_discord.permissions import Permissions
     from wd_discord.resources.guild.member import GuildMemberFlags
     from wd_discord.snowflake import Snowflake

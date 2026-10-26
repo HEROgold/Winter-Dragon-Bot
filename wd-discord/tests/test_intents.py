@@ -1,7 +1,7 @@
 """Gateway Intents values: combined intents and aliases map to the documented bits."""
-lazy import pytest
 
-lazy from wd_core.intents import Intents
+lazy import pytest
+lazy from wd_discord.intents import Intents
 
 
 # Bits from https://docs.discord.com/developers/events/gateway#list-of-intents

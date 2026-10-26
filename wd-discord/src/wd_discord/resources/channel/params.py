@@ -7,11 +7,11 @@ https://docs.discord.com/developers/resources/channel#modify-channel.
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
-lazy from wd_core.client import ChannelPayload, OverwritePayload
 
 from wd_discord.permissions import ChannelType, Permissions
 from wd_discord.resources.channel.overwrite import OverwriteType
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.payloads import ChannelPayload, OverwritePayload
 
 
 MAX_USER_LIMIT = 99

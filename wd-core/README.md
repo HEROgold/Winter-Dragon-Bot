@@ -1,7 +1,7 @@
 # wd-core
 
-Shared domain helpers above the transport: gateway `Intents`, the Sentry setup, an httpxyz `AsyncClient` for third-party APIs, and `PackageVersion`.
+Shared domain helpers above the transport: the bot's default intents and permissions, the Sentry setup, and `PackageVersion`. Transport types (`Intents`, request payloads) live in wd-discord.
 
 - **Depends on:** wd-config, wd-discord, wd-types (plus sentry-sdk).
-- **Start here:** `wd_core.intents.Intents`, `wd_core.sentry.Sentry`.
+- **Start here:** `wd_core.sentry.Sentry`, `wd_core.constants`.
 - **API reference:** [wd_core](../docs/reference/wd-core.md)

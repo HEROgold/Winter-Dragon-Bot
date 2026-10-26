@@ -21,9 +21,9 @@ lazy import asyncio
 lazy import sys
 
 lazy from _common import load_token, support_guild_id
-lazy from wd_core.intents import Intents
 lazy from wd_discord.gateway import Gateway
 lazy from wd_discord.gateway.events import GuildCreate, Message, RawEvent
+lazy from wd_discord.intents import Intents
 
 
 DEFAULT_LISTEN_SECONDS = 180
