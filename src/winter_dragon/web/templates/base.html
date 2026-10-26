@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
-  <script src="{{ url_for('static', path='htmx.min.js') }}" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css').path }}">
+  <script src="{{ url_for('static', path='htmx.min.js').path }}" defer></script>
   <script>
     // Times show in the visitor's own zone: the server reads this cookie on the next request.
     document.cookie = "tz=" + encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone) + "; path=/; max-age=31536000; samesite=lax";
