@@ -21,10 +21,7 @@ lazy from wd_discord import (
     ModalSubmitInteraction,
     is_network_error,
 )
-lazy from wd_discord.color import Color
-lazy from wd_discord.embed import Embed, EmbedFooter
 lazy from wd_discord.permissions import Permissions
-lazy from wd_errors import Refused
 lazy from wd_errors.extension import ExtensionError
 lazy from wd_errors.startup import StartupError
 lazy from wd_types.clock import utc_now
@@ -33,6 +30,7 @@ lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.auto_sync import CommandSyncer
 lazy from wd_bot.components import parse_custom_id
 lazy from wd_bot.extensions import ExtensionDiscovery
+lazy from wd_bot.guard import dispatch_guard
 lazy from wd_bot.module_tables import ModuleTables
 lazy from wd_bot.registry import CommandRegistry
 
@@ -54,25 +52,6 @@ if TYPE_CHECKING:
     lazy from wd_bot.commands import AppCommand
     lazy from wd_bot.components import CustomIdHandler
     lazy from wd_bot.registry import Scope
-
-
-COMMAND_ERROR_REPLY = "Something went wrong running this command."
-"""The text of the ephemeral reply sent when a command or component handler raises."""
-ERROR_COLOR = 0xFF0000
-"""The color of that reply."""
-
-
-def error_embed(interaction_id: Snowflake) -> Embed:
-    """Return the reply to the interaction ``interaction_id`` whose handler raised.
-
-    The exception's log line names the same interaction ID, so a user's report finds it.
-    """
-    return Embed(
-        title="Something went wrong",
-        description=COMMAND_ERROR_REPLY,
-        color=Color(ERROR_COLOR),
-        footer=EmbedFooter(text=f"If it keeps happening, tell the bot's owners this ID: {interaction_id}"),
-    )
 
 
 def invite_url() -> str:
@@ -178,23 +157,21 @@ class Bot(LoggerMixin):
     async def _dispatch_interaction(self, interaction: AnyInteraction) -> None:
         """Route a command, component or autocomplete interaction to its registered handler.
 
-        If a command or component handler raised, the user gets an ephemeral error reply, so an interaction never goes
-        unanswered. A failed autocomplete has no message to reply with: the user just sees no suggestions.
+        A command or component handler that refused or raised is answered by :data:`~wd_bot.guard.dispatch_guard`, so an
+        interaction never goes unanswered. A failed autocomplete has no message to reply with: the user just sees no
+        suggestions.
         """
         match interaction:
             case CommandInteraction():
-                succeeded = await self._dispatch_command(interaction)
+                await self._dispatch_command(interaction)
             case ComponentInteraction():
-                succeeded = await self._dispatch_component(interaction)
+                await self._dispatch_component(interaction)
             case ModalSubmitInteraction():
-                succeeded = await self._dispatch_modal(interaction)
+                await self._dispatch_modal(interaction)
             case AutocompleteInteraction():
                 await self._dispatch_autocomplete(interaction)
-                return
             case _:
                 return
-        if not succeeded:
-            await interaction.respond(embeds=[error_embed(interaction.id)], ephemeral=True)
 
     async def _dispatch_command(self, interaction: CommandInteraction) -> bool:
         """Invoke the command ``interaction`` names; ``False`` only if its handler raised."""
@@ -214,7 +191,6 @@ class Bot(LoggerMixin):
 
     async def _dispatch_component(self, interaction: ComponentInteraction) -> bool:
         """Invoke the handler owning the clicked component's ``custom_id`` prefix; ``False`` only if it raised."""
-        _prefix, _args = parse_custom_id(interaction.custom_id)
         return await self._dispatch_custom_id(interaction, self._components, "component")
 
     async def _dispatch_modal(self, interaction: ModalSubmitInteraction) -> bool:
@@ -273,12 +249,8 @@ class Bot(LoggerMixin):
             self.loop.create_task(self._invoke_listener(handler, event))
 
     async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], payload: object) -> None:
-        try:
-            await handler(payload)
-        except Refused as refused:
-            self.logger.warning(t"Listener {handler!r} refused {payload!r}: {refused.message} ({refused.cause})")
-        except Exception:
-            self.logger.exception(t"Unhandled exception in listener {handler!r} for {payload!r}")
+        """Run the listener ``handler`` on ``payload`` through :data:`~wd_bot.guard.dispatch_guard`."""
+        await dispatch_guard.run(f"listener '{handler.__qualname__}'", lambda: handler(payload))
 
     def _discover_extension_modules(self) -> list[str]:
         """Discover all modules in :attr:`extensions_package` recursively.

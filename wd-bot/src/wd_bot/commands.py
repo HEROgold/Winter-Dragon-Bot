@@ -32,10 +32,10 @@ lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.user import User as UserModel
 lazy from wd_discord.snowflake import Snowflake
-lazy from wd_errors import Refused
 
-lazy from wd_bot.checks import answer_refusal, require_guild, require_permissions
+lazy from wd_bot.checks import require_guild, require_permissions
 lazy from wd_bot.cogs import Cog
+lazy from wd_bot.guard import dispatch_guard, error_embed
 lazy from wd_bot.registry import GLOBAL, Scope
 lazy from wd_bot.signature import command_signature
 
@@ -426,25 +426,21 @@ class Command(AppCommand):
         """Resolve option values into kwargs and call the wrapped handler.
 
         ``options`` defaults to ``interaction``'s top-level options; a :class:`CommandGroup` passes the
-        chosen subcommand's nested options instead. Returns ``True`` if the handler completed, ``False``
-        if it raised (the exception is logged).
+        chosen subcommand's nested options instead. Runs through :data:`~wd_bot.guard.dispatch_guard`, which answers
+        a refusal or an exception. Returns ``True`` if the handler completed or refused, ``False`` if it raised.
         """
         if options is None:
             options = interaction.options
-        try:
+        async def call() -> None:
             kwargs = self._build_kwargs(cog, interaction, options)
+            checked = interaction
             if self.guild_only or (self.owner is not None and self.owner.guild_only()):
-                interaction = require_guild(interaction)
+                checked = require_guild(interaction)
             if self.requires is not None:
-                require_permissions(interaction, self.requires)
-            await self.func(cog, interaction, **kwargs)
-        except Refused as refused:
-            self.logger.debug(t"Command '{self.name}' refused: {refused.message} ({refused.cause})")
-            await answer_refusal(interaction, refused)
-        except Exception:
-            self.logger.exception(t"Unhandled exception in command '{self.name}' (interaction {interaction.id})")
-            return False
-        return True
+                require_permissions(checked, self.requires)
+            await self.func(cog, checked, **kwargs)
+
+        return await dispatch_guard.run(f"command '{self.name}'", call, interaction)
 
     async def complete(
         self,
@@ -601,9 +597,11 @@ class CommandGroup(AppCommand):
     async def invoke(self, cog: Cog, interaction: CommandInteraction) -> bool:
         """Route ``interaction`` to the chosen subcommand, passing it that subcommand's option values.
 
-        Returns ``False`` (after logging) if no known subcommand was chosen.
+        Returns ``False`` (after logging, and replying with :func:`~wd_bot.guard.error_embed`) if no known
+        subcommand was chosen.
         """
         if (chosen := self._chosen(interaction.options)) is None:
+            await interaction.respond(embeds=[error_embed(interaction.id)], ephemeral=True)
             return False
         subcommand, options = chosen
         return await subcommand.invoke(cog, interaction, options)
