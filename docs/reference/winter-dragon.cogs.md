@@ -153,6 +153,69 @@ Logs a user's refuels and graphs their fuel efficiency.
 - `async units_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the units that contain what was typed.
 - `@Cog.command async units(interaction: CommandInteraction, units: str) -> None` — Store the invoking user's fuel efficiency units.
 
+## `winter_dragon.cogs.hangman.cards` — `src/winter_dragon/cogs/hangman/cards.py`
+The message a hangman game shows, and its Guess button.
+
+- module names: GALLOWS
+- `drawing(wrong: int) -> str` — Return the gallows after ``wrong`` wrong guesses.
+- `game_message(game: HangmanGame, participants: Sequence[int]=()) -> str` — Return the text of the game's message: the drawing, the word so far, the wrong guesses and, once over, the result.
+- `guess_buttons(guess_button: ComponentHandler, game: HangmanGame) -> list[ActionRow]` — Return the row holding the Guess button of ``game``; none once the game is over.
+
+## `winter_dragon.cogs.hangman.cog` — `src/winter_dragon/cogs/hangman/cog.py`
+The /hangman command: start a game, and guess at it with a button and a modal.
+
+- module names: MODAL_INPUT
+
+### `class Hangman(Cog)`
+Plays hangman in a channel: each game is one message, anyone may guess, and a channel can hold several.
+
+- attributes: rng
+- `async load() -> None` — Create the hangman tables if missing.
+- `@Cog.command async hangman(interaction: GuildCommandInteraction) -> None` — Start a game: a message with a Guess button that anyone in the channel may use.
+- `@Cog.component async guess_button(interaction: ComponentInteraction, game_id: str) -> None` — Open the modal for guessing a letter or the whole word.
+- `@Cog.modal async guess_modal(interaction: ModalSubmitInteraction, game_id: str) -> None` — Apply the submitted guess to the game and update its message.
+
+## `winter_dragon.cogs.hangman.models` — `src/winter_dragon/cogs/hangman/models.py`
+The hangman tables: a game, and the members who took part in it.
+
+- module names: MAX_WRONG_GUESSES, HANGMAN_TABLES
+
+### `class HangmanStatus(StrEnum)`
+Where a hangman game is: still being guessed, or over with a result.
+
+- attributes: ACTIVE, WON, LOST
+
+### `class HangmanGame(LifecycleModel, table=True)`
+One hangman game in a channel, owned by its guild; it keeps its state while active and its result once over.
+
+- fields: ownership: ClassVar[Ownership], guild_id: int, channel_id: int, word: str, letters: str, wrong_words: str,
+  status: HangmanStatus, finished_at: datetime | None
+- `@property wrong_letters -> str` — The guessed letters that are not in the word.
+- `@property wrong_word_list -> list[str]` — The wrong whole-word guesses.
+- `@property wrong_count -> int` — How many lives the game has cost: wrong letters plus wrong words.
+- `@property masked -> str` — The word with the letters not guessed yet hidden as ``_``.
+- `@property solved -> bool` — Whether every letter of the word was guessed.
+
+### `class HangmanParticipant(LifecycleModel, table=True)`
+A member who guessed a correct letter in a game; every Participant of a won game is credited.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], game_id: int, user_id: int
+
+## `winter_dragon.cogs.hangman.service` — `src/winter_dragon/cogs/hangman/service.py`
+The rules of hangman: starting a game, and what a guess does to it.
+
+- module names: WORDS_FILE
+- `load_words() -> list[str]` — Return the words of the bundled list.
+- `start_game(session: Session, *, guild_id: int, channel_id: int, rng: Random, words: list[str] | None=None) -> HangmanGame` — Store a new game in the channel with a word drawn from ``words`` (default: the bundled list).
+- `parse_guess(text: str) -> str` — Return ``text`` as a guess: a single letter or a whole word, lowercase; refuse anything else.
+- `guess(session: Session, game: HangmanGame, user_id: int, text: str) -> Guess` — Apply ``text`` (one letter or the whole word) from ``user_id`` to ``game``; the caller commits.
+- `participants_of(session: Session, game: HangmanGame) -> list[int]` — Return the IDs of the members who took part in ``game``, in the order they joined.
+
+### `class Guess(StrEnum)`
+What a guess did to a game.
+
+- attributes: CORRECT_LETTER, WRONG_LETTER, CORRECT_WORD, WRONG_WORD
+
 ## `winter_dragon.cogs.health` — `src/winter_dragon/cogs/health.py`
 Tells the container's healthcheck that the bot is connected to Discord; see :mod:`winter_dragon.health`.
 
