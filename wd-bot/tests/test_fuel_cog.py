@@ -78,12 +78,32 @@ async def test_add_backdates_a_refuel_to_the_given_day(
 
     with Session(engine) as session:
         (refuel,) = session.exec(alive(CarFuels)).all()
-    assert refuel.timestamp == datetime(2026, 1, 15, tzinfo=UTC)
+    assert refuel.refuel_date == datetime(2026, 1, 15, tzinfo=UTC)
+    assert refuel.timestamp > refuel.refuel_date
 
 
-@pytest.mark.parametrize("day", ["15-01-2026", "yesterday", "9999-01-01"])
+async def test_add_without_a_date_uses_now(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+) -> None:
+    await Fuel.add.invoke(_cog(engine), make_interaction("fuel"), _numbers(price=72.5, distance=600, amount=40))
+
+    with Session(engine) as session:
+        (refuel,) = session.exec(alive(CarFuels)).all()
+    assert refuel.refueled_at is not None
+    assert abs(refuel.refueled_at - refuel.timestamp) < timedelta(seconds=5)
+
+
+def test_a_refuel_without_a_date_falls_back_to_its_entry_time() -> None:
+    assert _refuel(2, 600, 40).refuel_date == NOW - timedelta(days=2)
+
+
+@pytest.mark.parametrize(
+    ("day", "message"), [("15-01-2026", "YYYY-MM-DD"), ("yesterday", "YYYY-MM-DD"), ("9999-01-01", "future")]
+)
 async def test_add_refuses_a_bad_or_future_date(
     day: str,
+    message: str,
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -93,7 +113,7 @@ async def test_add_refuses_a_bad_or_future_date(
 
     with Session(engine) as session:
         assert session.exec(alive(CarFuels)).all() == []
-    assert "YYYY-MM-DD" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert message in discord_client.interaction_responses()[0]["data"]["content"]
 
 
 async def test_efficiency_without_refuels_says_so(
@@ -134,10 +154,10 @@ async def test_an_old_carfuels_table_gains_the_lifecycle_columns_and_keeps_worki
         connection.execute(
             text(
                 "CREATE TABLE carfuels (id INTEGER PRIMARY KEY, user_id BIGINT, amount FLOAT, distance FLOAT,"
-                " price FLOAT, timestamp DATETIME)",
+                " price FLOAT, timestamp DATETIME, refueled_at DATETIME)",
             ),
         )
-        connection.execute(text(f"INSERT INTO carfuels VALUES (1, {ASKER_ID}, 40, 600, 50, '2026-10-01 12:00:00')"))
+        connection.execute(text(f"INSERT INTO carfuels VALUES (1, {ASKER_ID}, 40, 600, 50, '2026-10-01 12:00:00', NULL)"))
     cog = _cog(engine)
 
     await cog.load()

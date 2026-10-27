@@ -18,6 +18,7 @@ lazy from matplotlib.figure import Figure
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_discord.files import File
+lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
 
@@ -52,6 +53,14 @@ class CarFuels(LifecycleModel, table=True):
     price: float
     """The total price paid."""
     timestamp: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime)
+    """When the entry was made."""
+    refueled_at: datetime | None = Field(default=None, sa_type=AwareDateTime)
+    """The day the member refueled; empty on refuels logged before it existed, which fall back to ``timestamp``."""
+
+    @property
+    def refuel_date(self) -> datetime:
+        """When the refuel happened: ``refueled_at``, or the entry time when that is empty."""
+        return self.timestamp if self.refueled_at is None else self.refueled_at
 
     @property
     def efficiency(self) -> float:
@@ -68,14 +77,20 @@ def parse_refuel_date(value: str) -> datetime | None:
     return datetime.combine(day, time(), tzinfo=UTC)
 
 
+def graphable(refuels: Sequence[CarFuels]) -> list[tuple[datetime, float]]:
+    """Return the ``(date, efficiency)`` of each of ``refuels`` that added fuel, oldest first."""
+    ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.refuel_date)
+    return [(refuel.refuel_date, refuel.efficiency) for refuel in ordered]
+
+
 def render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes:
     """Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out."""
-    ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.timestamp)
+    points = graphable(refuels)
     figure = Figure(figsize=(FuelSettings.graph_width_inches, FuelSettings.graph_height_inches))
     axes = figure.subplots()
     axes.plot(
-        date2num([refuel.timestamp for refuel in ordered]),
-        [refuel.efficiency for refuel in ordered],
+        date2num([day for day, _ in points]),
+        [value for _, value in points],
         marker="o",
         linestyle="-",
         linewidth=2,
@@ -111,9 +126,14 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         price: Annotated[float, Describe("The total price of the refuel")],
         distance: Annotated[float, Describe("The distance driven since the last refuel")],
         amount: Annotated[float, Describe("The amount of fuel added")],
-        date: str | None = None,
+        date: Annotated[str | None, Describe("The day of the refuel as YYYY-MM-DD, now when left out")] = None,
     ) -> None:
-        """Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now."""
+        """Store a refuel for the invoking user, dated ``date`` (``YYYY-MM-DD``, UTC) or now.
+
+        Raises:
+            Refused: When ``date`` isn't a ``YYYY-MM-DD`` day, or is in the future.
+
+        """
         user = interaction.user
         if user is None:
             return
@@ -121,12 +141,24 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             await interaction.respond("The price, distance and amount must all be more than 0.", ephemeral=True)
             return
         now = utc_now()
-        timestamp = now if date is None else parse_refuel_date(date)
-        if timestamp is None or timestamp > now:
-            await interaction.respond("The date must be a day that has passed, written as YYYY-MM-DD.", ephemeral=True)
-            return
+        refueled_at = now if date is None else parse_refuel_date(date)
+        if refueled_at is None:
+            msg = "The date must be written as YYYY-MM-DD."
+            raise Refused(msg)
+        if refueled_at > now:
+            msg = "The date can't be in the future."
+            raise Refused(msg)
         with Session(self.bind) as session:
-            session.add(CarFuels(user_id=int(user.id), amount=amount, distance=distance, price=price, timestamp=timestamp))
+            session.add(
+                CarFuels(
+                    user_id=int(user.id),
+                    amount=amount,
+                    distance=distance,
+                    price=price,
+                    timestamp=now,
+                    refueled_at=refueled_at,
+                ),
+            )
             session.commit()
         await interaction.respond(
             f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {distance / amount:.2f} distance per unit.\n"

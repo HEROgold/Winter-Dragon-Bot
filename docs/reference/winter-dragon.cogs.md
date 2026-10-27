@@ -115,6 +115,7 @@ Moderation helpers for channels: removing a category with its channels, and lock
 The /fuel command group: log refuels, and graph fuel efficiency over time.
 
 - `parse_refuel_date(value: str) -> datetime | None` — Return midnight UTC of the ``YYYY-MM-DD`` day in ``value``, or ``None`` when it isn't one.
+- `graphable(refuels: Sequence[CarFuels]) -> list[tuple[datetime, float]]` — Return the ``(date, efficiency)`` of each of ``refuels`` that added fuel, oldest first.
 - `render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes` — Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out.
 
 ### `class FuelSettings`
@@ -126,7 +127,8 @@ Settings for /fuel, in its ``cogs.ini`` section.
 One refuel a user logged; ``user_id`` is their Discord user ID, and they own it.
 
 - fields: ownership: ClassVar[Ownership], user_id: int, amount: float, distance: float, price: float, timestamp:
-  datetime
+  datetime, refueled_at: datetime | None
+- `@property refuel_date -> datetime` — When the refuel happened: ``refueled_at``, or the entry time when that is empty.
 - `@property efficiency -> float` — Distance driven per unit of fuel.
 
 ### `class Fuel(GroupCog, name='fuel', description="Track your car's refuels and fuel efficiency")`
