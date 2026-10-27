@@ -54,6 +54,13 @@ Fuel units setting.
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
 
+## `winter_dragon.migrations.versions.2026_10_26_c599311115ab_compatibility_checks_and_love_profile_` — `src/winter_dragon/migrations/versions/2026_10_26_c599311115ab_compatibility_checks_and_love_profile_.py`
+Compatibility checks and Love profile page.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
 ## `winter_dragon.migrations.versions.2026_10_26_cfb33b25e168_refuel_date` — `src/winter_dragon/migrations/versions/2026_10_26_cfb33b25e168_refuel_date.py`
 Refuel date.
 

@@ -3,7 +3,9 @@
 lazy import random
 lazy from typing import TYPE_CHECKING
 
+from sqlmodel import Session, select
 from wd_bot.testing import detached_cog
+from wd_db.extension.lifecycle import alive, soft_delete
 lazy from hypothesis import given
 lazy from hypothesis import strategies as st
 lazy from wd_discord import User as BoundUser
@@ -11,11 +13,12 @@ lazy from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 lazy from wd_discord.resources.user import User
 lazy from wd_discord.testing import RecordingClient
 
-lazy from winter_dragon.cogs.percentage import Love, build_love_embed, calculate_percentage
+lazy from winter_dragon.cogs.percentage import CompatibilityCheck, Love, build_love_embed, calculate_percentage, record_check
 
 
 if TYPE_CHECKING:
     lazy from conftest import InteractionFactory
+    lazy from sqlalchemy import Engine
     lazy from wd_discord import CommandInteraction
 
 
@@ -76,18 +79,19 @@ def _interaction(make_interaction: InteractionFactory, asker: User | None) -> Co
     )
 
 
-def _cog() -> Love:
-    """Build a Love cog without running Cog.__init__; the handler only talks to its interaction."""
-    return detached_cog(Love)
+def _cog(engine: Engine) -> Love:
+    """Build a Love cog without running Cog.__init__; the handler talks to its interaction and the database."""
+    return detached_cog(Love, engine=engine)
 
 
 async def test_handler_replies_with_love_embed(
+    engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
     asker = User(id=1, username="alice", discriminator="0")
     interaction = _interaction(make_interaction, asker)
-    await Love.love.invoke(_cog(), interaction)
+    await Love.love.invoke(_cog(engine), interaction)
     target = _bound(User(id=2, username="bob", discriminator="0", global_name="Bobby"))
     expected = build_love_embed(target, calculate_percentage(1, 2))
     assert discord_client.interaction_responses() == [
@@ -96,11 +100,84 @@ async def test_handler_replies_with_love_embed(
 
 
 async def test_handler_without_asker_replies_content_only(
+    engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
     interaction = _interaction(make_interaction, None)
-    await Love.love.invoke(_cog(), interaction)
+    await Love.love.invoke(_cog(engine), interaction)
     (response,) = discord_client.interaction_responses()
     assert "embeds" not in response["data"]
     assert response["data"]["content"]
+
+
+async def test_handler_records_a_check_owned_by_the_asker(engine: Engine, make_interaction: InteractionFactory) -> None:
+    asker = User(id=1, username="alice", discriminator="0")
+    await Love.love.invoke(_cog(engine), _interaction(make_interaction, asker))
+    with Session(engine) as session:
+        (check,) = session.exec(alive(CompatibilityCheck)).all()
+    assert (check.user_id, check.target_id, check.target_name) == (1, 2, "Bobby")
+
+
+async def test_handler_without_asker_records_nothing(engine: Engine, make_interaction: InteractionFactory) -> None:
+    await Love.love.invoke(_cog(engine), _interaction(make_interaction, None))
+    with Session(engine) as session:
+        assert session.exec(select(CompatibilityCheck)).all() == []
+
+
+async def test_the_checked_user_has_no_record(engine: Engine, make_interaction: InteractionFactory) -> None:
+    asker = User(id=1, username="alice", discriminator="0")
+    await Love.love.invoke(_cog(engine), _interaction(make_interaction, asker))
+    with Session(engine) as session:
+        assert [check.user_id for check in session.exec(select(CompatibilityCheck)).all()] == [1]
+
+
+def test_a_repeat_check_updates_the_row_instead_of_adding_one(engine: Engine) -> None:
+    with Session(engine) as session:
+        first = record_check(session, 1, 2, "Bobby")
+        session.commit()
+        first_time, first_id = first.checked_at, first.id
+    with Session(engine) as session:
+        record_check(session, 1, 2, "Bob")
+        session.commit()
+    with Session(engine) as session:
+        (check,) = session.exec(select(CompatibilityCheck)).all()
+    assert (check.id, check.target_name) == (first_id, "Bob")
+    assert check.checked_at >= first_time
+
+
+def test_a_check_of_a_deleted_entry_brings_it_back(engine: Engine) -> None:
+    with Session(engine) as session:
+        check = record_check(session, 1, 2, "Bobby")
+        session.commit()
+        soft_delete(session, check)
+        session.commit()
+    with Session(engine) as session:
+        record_check(session, 1, 2, "Bobby")
+        session.commit()
+    with Session(engine) as session:
+        assert len(session.exec(alive(CompatibilityCheck)).all()) == 1
+
+
+def test_different_askers_each_get_their_own_check(engine: Engine) -> None:
+    with Session(engine) as session:
+        record_check(session, 1, 2, "Bobby")
+        record_check(session, 3, 2, "Bobby")
+        session.commit()
+        assert len(session.exec(select(CompatibilityCheck)).all()) == 2  # noqa: PLR2004
+
+
+def test_a_check_is_member_data_the_member_can_delete(engine: Engine) -> None:
+    from wd_db.extension.lifecycle import lifecycle_models, owned_by  # noqa: PLC0415
+
+    assert CompatibilityCheck in set(lifecycle_models())
+    assert CompatibilityCheck.ownership.member == "user_id"
+    with Session(engine) as session:
+        check = record_check(session, 1, 2, "Bobby")
+        session.commit()
+        (owned,) = session.exec(owned_by(CompatibilityCheck, member=1)).all()
+        assert owned.id == check.id
+        assert session.exec(owned_by(CompatibilityCheck, member=2)).all() == []
+        soft_delete(session, owned)
+        session.commit()
+        assert session.exec(alive(CompatibilityCheck)).all() == []

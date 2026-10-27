@@ -206,6 +206,7 @@ Logs every READY/MESSAGE_CREATE/GUILD_CREATE it's dispatched, at DEBUG level.
 ## `winter_dragon.cogs.percentage` — `src/winter_dragon/cogs/percentage.py`
 A cog with a single command: a random compatibility percentage between two users.
 
+- `record_check(session: Session, user_id: int, target_id: int, target_name: str) -> CompatibilityCheck` — Store that ``user_id`` checked ``target_id``, or refresh the earlier check of the same pair; the caller commits.
 - `calculate_percentage(user_id_a: int, user_id_b: int) -> int` — Compute a random 0-100 percentage, seeded by both user IDs (order-independent).
 - `build_love_embed(target: User, percent: int) -> Embed` — Build the "Love Meter" embed for ``target`` with the given compatibility ``percent``.
 
@@ -214,9 +215,16 @@ Settings for /love, in its ``cogs.ini`` section.
 
 - attributes: love_color
 
+### `class CompatibilityCheck(LifecycleModel, table=True)`
+A member's check of their compatibility with another user; ``user_id`` is the member who asked, and they own it.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], user_id: int, target_id: int,
+  target_name: str, checked_at: datetime
+
 ### `class Love(Cog)`
 Cog for the /love command.
 
+- `async load() -> None` — Create the compatibility check table if missing.
 - `@Cog.command async love(interaction: CommandInteraction, user: User) -> None` — Reply with a random compatibility love between the invoking user and ``user``.
 
 ## `winter_dragon.cogs.privacy` — `src/winter_dragon/cogs/privacy.py`

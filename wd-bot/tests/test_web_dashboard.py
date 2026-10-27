@@ -18,6 +18,10 @@ from wd_discord.testing import user_json
 
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
+
+
+from winter_dragon.cogs.fuel import CarFuels
+from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
 from winter_dragon.web import auth, pages, profile, reminders
@@ -361,6 +365,38 @@ def test_the_fuel_page_shows_only_your_own_refuels(member: TestClient, bind: Eng
 
     assert "not logged a refuel" in page
     assert "999" not in page
+
+
+def _check(target_id: int, name: str, user_id: int = MEMBER_ID) -> CompatibilityCheck:
+    return CompatibilityCheck(user_id=user_id, target_id=target_id, target_name=name)
+
+
+def test_the_love_page_lists_checks_by_percentage_highest_first(member: TestClient, bind: Engine) -> None:
+    targets = {100 + n: f"Person{n}" for n in range(6)}
+    seed(bind, *(_check(target, name) for target, name in targets.items()))
+
+    page = member.get("/profile/love").text
+
+    ranked = sorted(targets, key=lambda target: calculate_percentage(MEMBER_ID, target), reverse=True)
+    positions = [page.index(targets[target]) for target in ranked]
+    assert positions == sorted(positions)
+    assert f"{calculate_percentage(MEMBER_ID, ranked[0])}%" in page
+
+
+def test_the_love_page_without_checks_is_an_empty_state(member: TestClient) -> None:
+    response = member.get("/profile/love")
+
+    assert response.status_code == 200
+    assert "not checked" in response.text
+
+
+def test_the_love_page_shows_only_your_own_checks(member: TestClient, bind: Engine) -> None:
+    seed(bind, _check(7, "Stranger", user_id=OTHER_ID))
+
+    page = member.get("/profile/love").text
+
+    assert "Stranger" not in page
+    assert "not checked" in page
 
 
 def test_a_profile_page_that_does_not_exist_is_not_found(member: TestClient) -> None:
