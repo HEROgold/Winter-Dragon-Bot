@@ -126,7 +126,7 @@ class Cog(LoggerMixin):
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""
         self.bot = kwargs["bot"]
-        self.session = kwargs.get("db_session", Session(engine))
+        self.session = kwargs["db_session"] if "db_session" in kwargs else Session(engine)
         self._auto_reloader = AutoReloadWatcher(bot=self.bot, cog_cls=type(self))
 
         # Don't start the auto_load loop for the abstract/base Cog classes

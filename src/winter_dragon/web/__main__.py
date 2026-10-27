@@ -7,7 +7,7 @@ lazy import asyncio
 lazy import sys
 lazy from datetime import timedelta
 
-from wd_core.sentry import Sentry
+from wd_discord import Sentry
 lazy import uvicorn
 lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.settings import Tokens

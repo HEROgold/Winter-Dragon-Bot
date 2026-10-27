@@ -1,9 +1,7 @@
-"""Module to handle Sentry setup for wd-discord.
+"""Sentry setup for the bot, the web dashboard and the client library.
 
-Mirrors :mod:`wd_core.sentry` so the client library can initialize Sentry independently of the
-bot runtime, using the same :class:`~wd_config.sentry.SentrySettings` config and scope. Once
-:class:`Sentry` is constructed, the unknown-field telemetry in :mod:`wd_discord.models` starts
-delivering events instead of being a no-op.
+Reads :class:`~wd_config.sentry.SentrySettings`. Once :class:`Sentry` is constructed, the
+unknown-field telemetry in :mod:`wd_discord.models` starts delivering events instead of being a no-op.
 """
 
 lazy import sentry_sdk
@@ -26,3 +24,4 @@ class Sentry:
             },
             traces_sample_rate=1,  # 100% of error traces will be sent
         )
+        sentry_sdk.set_user({"ip_address": "{{auto}}"})

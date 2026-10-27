@@ -70,7 +70,7 @@ Settings are declared as typed descriptors on the classes that use them, backed 
 
 Sentry integration is environment-aware (development vs production) and captures unhandled errors from both the event loop and command execution.
 
-**Status:** ✅ Ported — `wd-core/src/wd_core/sentry.py`, `wd-config/src/wd_config/sentry.py`.
+**Status:** ✅ Ported — `wd-discord/src/wd_discord/sentry.py`, `wd-config/src/wd_config/sentry.py`.
 **Source on `main`:** `src/winter_dragon/bot/core/sentry.py`
 
 ---

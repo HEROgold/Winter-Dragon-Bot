@@ -1144,7 +1144,6 @@ name = "wd-core"
 version = "0.1.0"
 source = { editable = "wd-core" }
 dependencies = [
-    { name = "sentry-sdk" },
     { name = "wd-config" },
     { name = "wd-discord" },
     { name = "wd-types" },
@@ -1152,7 +1151,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "sentry-sdk", specifier = ">=2.61.0" },
     { name = "wd-config", editable = "wd-config" },
     { name = "wd-discord", editable = "wd-discord" },
     { name = "wd-types", editable = "wd-types" },

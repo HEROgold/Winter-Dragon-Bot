@@ -575,7 +575,7 @@ One REST route: a template whose literal parts are the route and whose interpola
 - `key(method: str) -> RouteKey` — Collapse this route to Discord's rate-limit route shape for ``method``.
 
 ## `wd_discord.sentry` — `wd-discord/src/wd_discord/sentry.py`
-Module to handle Sentry setup for wd-discord.
+Sentry setup for the bot, the web dashboard and the client library.
 
 ### `class Sentry`
 A class to handle Sentry setup.

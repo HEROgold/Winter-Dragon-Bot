@@ -13,7 +13,7 @@ lazy import asyncio
 lazy import importlib
 lazy import sys
 
-from wd_core.sentry import Sentry
+from wd_discord import Sentry
 lazy from wd_bot.bot import Bot
 
 lazy from . import cogs

@@ -12,10 +12,9 @@ authors = [
 ]
 requires-python = ">=3.15"
 dependencies = [
-  "sentry-sdk>=2.61.0",
   "wd-config",
   "wd-discord",
-  "wd-types"
+  "wd-types",
 ]
 
 [tool.uv.sources]

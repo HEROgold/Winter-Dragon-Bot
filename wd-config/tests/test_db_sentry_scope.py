@@ -84,15 +84,30 @@ def test_database_and_sentry_settings_stay_out_of_config_ini(boot_config: BootCo
 SENTRY_INIT = """
 import sentry_sdk
 from wd_config.sentry import SentrySettings
-from {module} import Sentry
+from wd_discord import Sentry
 Sentry()
-result = {{"dsn": SentrySettings.dsn, "resolved": SentrySettings.resolved_dsn(), "client_dsn": sentry_sdk.get_client().dsn}}
+result = {"dsn": SentrySettings.dsn, "resolved": SentrySettings.resolved_dsn(), "client_dsn": sentry_sdk.get_client().dsn}
 """
 
 
 def test_unset_dsn_initialises_sentry_without_a_dsn(boot_config: BootConfig) -> None:
-    """The `!!` placeholder DSN counts as no DSN, so both Sentry set-ups start without one instead of failing."""
-    for module in ("wd_core.sentry", "wd_discord.sentry"):
-        boot = boot_config(SENTRY_INIT.format(module=module))
+    """The `!!` placeholder DSN counts as no DSN, so Sentry starts without one instead of failing."""
+    boot = boot_config(SENTRY_INIT)
 
-        assert boot.values == {"dsn": "!!", "resolved": None, "client_dsn": None}
+    assert boot.values == {"dsn": "!!", "resolved": None, "client_dsn": None}
+
+
+def test_placeholder_dsn_with_a_hint_counts_as_unset(boot_config: BootConfig) -> None:
+    """A `!!` placeholder followed by a hint for the operator is still no DSN."""
+    hinted = "!! https://sentry.io/settings/projects/"
+    boot = boot_config(SENTRY_INIT, files={"sentry.ini": f"[SentrySettings]\ndsn = {hinted}\n"})
+
+    assert boot.values == {"dsn": hinted, "resolved": None, "client_dsn": None}
+
+
+def test_filled_in_dsn_reaches_the_sentry_client(boot_config: BootConfig) -> None:
+    """A real DSN in sentry.ini is the one Sentry starts with."""
+    dsn = "https://key@sentry.example/1"
+    boot = boot_config(SENTRY_INIT, files={"sentry.ini": f"[SentrySettings]\ndsn = {dsn}\n"})
+
+    assert boot.values == {"dsn": dsn, "resolved": dsn, "client_dsn": dsn}

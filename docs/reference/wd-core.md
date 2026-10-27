@@ -16,9 +16,3 @@ Module helping with importing modules for the Winter Dragon project.
 
 ### `class PackageVersion(str)`
 A string representing a package version.
-
-## `wd_core.sentry` — `wd-core/src/wd_core/sentry.py`
-Module to handle Sentry setup.
-
-### `class Sentry`
-A class to handle Sentry setup.
