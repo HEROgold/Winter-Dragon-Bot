@@ -6,7 +6,7 @@ lazy from typing import TYPE_CHECKING
 lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import owned_by
 
-lazy from winter_dragon.cogs.fuel import CarFuels, graphable
+lazy from winter_dragon.cogs.fuel import CarFuels, FuelUnits, graphable, member_units
 lazy from winter_dragon.web.profile import ProfileContext, profile_page
 
 
@@ -46,9 +46,9 @@ class EfficiencyGraph:
         return " ".join(f"{point.x:.1f},{point.y:.1f}" for point in self.points)
 
 
-def efficiency_graph(refuels: Sequence[CarFuels]) -> EfficiencyGraph | None:
-    """Return the graph of ``refuels``, or ``None`` when none of them added fuel."""
-    ordered = graphable(refuels)
+def efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits) -> EfficiencyGraph | None:
+    """Return the graph of ``refuels`` in ``units``, or ``None`` when none of them added fuel."""
+    ordered = graphable(refuels, units)
     if not ordered:
         return None
     values = [value for _, value in ordered]
@@ -78,9 +78,11 @@ def fuel(context: ProfileContext) -> dict[str, object]:
             key=lambda refuel: refuel.refuel_date,
             reverse=True,
         )
+        units = member_units(session, context.member_id)
     return {
-        "refuels": [(refuel, refuel.refuel_date.astimezone(context.zone)) for refuel in refuels],
-        "graph": efficiency_graph(refuels),
+        "refuels": [(refuel, refuel.refuel_date.astimezone(context.zone), refuel.efficiency_in(units)) for refuel in refuels],
+        "graph": efficiency_graph(refuels, units),
+        "units": units,
         "width": GRAPH_WIDTH,
         "height": GRAPH_HEIGHT,
         "padding": GRAPH_PADDING,

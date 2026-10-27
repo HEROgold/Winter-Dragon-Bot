@@ -131,14 +131,28 @@ def create_or_restore[M: LifecycleModel](session: Session, row: M) -> M:
         AlreadyExistsError: an alive row has the same ``id`` or natural key.
 
     """
-    model: type[M] = type(row)
     existing = _same_key(session, row)
+    if existing is not None and existing.deleted_at is None:
+        msg = f"{type(row).__name__} with the key of {row} already exists."
+        raise AlreadyExistsError(msg)
+    return _store(session, row, existing)
+
+
+def upsert[M: LifecycleModel](session: Session, row: M) -> M:
+    """Insert ``row``, or overwrite the stored row (alive or soft-deleted) with the same ``id`` or natural key; return it.
+
+    Overwriting clears ``deleted_at``. The caller commits.
+    """
+    existing: M | None = _same_key(session, row)
+    return _store(session, row, existing)
+
+
+def _store[M: LifecycleModel](session: Session, row: M, existing: M | None) -> M:
+    """Add ``row``, or copy its non-key, non-lifecycle fields onto ``existing`` and revive it; return the stored row."""
     if existing is None:
         session.add(row)
         return row
-    if existing.deleted_at is None:
-        msg = f"{model.__name__} with the key of {row} already exists."
-        raise AlreadyExistsError(msg)
+    model: type[M] = type(row)
     for name in model.model_fields:
         if name not in ("id", *LIFECYCLE_COLUMNS):
             setattr(existing, name, getattr(row, name))
