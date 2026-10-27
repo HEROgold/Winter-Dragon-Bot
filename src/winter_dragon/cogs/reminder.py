@@ -15,6 +15,7 @@ lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, s
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
+lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.config import CogConfig
@@ -131,7 +132,7 @@ def reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generat
             name = f"{label}{reminder.content}"
             if len(name) > MAX_CHOICE_NAME_LENGTH:
                 name = name[: MAX_CHOICE_NAME_LENGTH - 1] + "…"
-            yield ApplicationCommandOptionChoice(name=name, value=choice_value(reminder))
+            yield Lookup.choice(reminder, name)
 
 
 async def send_reminder(client: Client, reminder: AnyReminder) -> bool:
@@ -264,21 +265,17 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     async def remove(
         self,
         interaction: CommandInteraction,
-        reminder: Annotated[str, Lookup(remove_choices), Describe("The text of the reminder to remove")],
+        reminder: Annotated[Reminder | TimedReminder, Lookup(remove_choices), Describe("The reminder to remove")],
     ) -> None:
-        """Remove the invoking user's reminder named by ``reminder``."""
-        # TODO: Update reminder Annotated to the reminder Model.
-        # And parse the reminder Model from the autocomplete value, instead of looking it up by content.
+        """Remove the invoking user's ``reminder``; refuse another member's."""
         user = interaction.user
         if user is None:
             return
+        if reminder.user_id != int(user.id):
+            msg = "That isn't your reminder; pick one from the list."
+            raise Refused(msg)
+        content = reminder.content
         with Session(self.bind) as session:
-            found = find_reminder(session, int(user.id), reminder)
-            content = None if found is None else found.content
-            if found is not None:
-                soft_delete(session, found)
-                session.commit()
-        if content is None:
-            await interaction.respond("You have no reminder like that.", ephemeral=True)
-            return
+            soft_delete(session, reminder)
+            session.commit()
         await interaction.respond(embeds=[DeletedEmbed(description=f"Removed your reminder of\n`{content}`")], ephemeral=True)
