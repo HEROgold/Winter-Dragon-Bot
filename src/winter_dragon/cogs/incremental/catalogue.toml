@@ -3,17 +3,17 @@
 # An invalid file stops the bot at startup with an error naming the problem.
 #
 # [[currencies]]
-#   key             stable id
-#   name            shown to members
-#   emoji           optional, shown before the name
-#   starting_amount what a new save starts with (default 0)
+# key             stable id
+# name            shown to members
+# emoji           optional, shown before the name
+# starting_amount what a new save starts with (default 0)
 #
 # [[generators]]
-#   key, name, description
-#   price           what one purchase costs while the member owns none
-#   price_growth    price is multiplied by this for each generator already owned (default 1.0, never below 1.0)
-#   produces        what each owned generator makes per second
-#   Both price and produces are lists of { currency = "<currency key>", amount = <number above 0> }.
+# key, name, description
+# price           what one purchase costs while the member owns none
+# price_growth    price is multiplied by this for each generator already owned (default 1.0, never below 1.0)
+# produces        what each owned generator makes per second
+# Both price and produces are lists of { currency = "<currency key>", amount = <number above 0> }.
 
 [[currencies]]
 key = "coins"
