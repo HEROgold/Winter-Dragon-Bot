@@ -7,7 +7,13 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
-lazy from wd_discord import Channel, Role, User, is_gone
+lazy from wd_discord import (
+    Channel,
+    GuildCommandInteraction,
+    Role,
+    User,
+    is_gone,
+)
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
@@ -19,7 +25,6 @@ lazy from winter_dragon.ui import ChangedEmbed, DeletedEmbed
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
 
-    lazy from wd_discord import GuildCommandInteraction
     lazy from wd_discord.entities import PermissionOverwrite
 
 

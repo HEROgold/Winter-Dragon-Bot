@@ -6,6 +6,7 @@ lazy from typing import TYPE_CHECKING, override
 from sqlmodel import Session
 lazy from wd_bot.cogs import Cog
 lazy from wd_db.extension.lifecycle import alive
+lazy from wd_discord import GuildCommandInteraction  # noqa: TC002 - wd_bot reads the handler's interaction type at runtime
 lazy from wd_discord.components import Label, Modal, TextInput
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_errors import Refused
@@ -16,7 +17,7 @@ lazy from .service import guess, participants_of, start_game
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord import ComponentInteraction, GuildCommandInteraction, ModalSubmitInteraction
+    lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
 
 MODAL_INPUT = "guess"
 """The ``custom_id`` of the text input in the Guess modal."""

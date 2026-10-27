@@ -17,7 +17,7 @@ lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import LifecycleModel, find_by_key, row_key
 lazy from wd_discord import Channel, Role, User
 lazy from wd_discord.authenticate import render
-lazy from wd_discord.entities import Resolved
+lazy from wd_discord.entities import InGuild, Resolved
 lazy from wd_discord.interactions import (
     ApplicationCommandOption,
     ApplicationCommandOptionChoice,
@@ -622,17 +622,18 @@ class Command(AppCommand):
         self._specs = self._read_options()
 
 
-GUILD_INTERACTIONS = frozenset({"GuildCommandInteraction", "GuildComponentInteraction"})
-
-
 def wants_guild_interaction(func: Callable[..., object]) -> bool:
-    """Whether ``func``'s ``interaction`` parameter is annotated as a guild interaction.
+    """Whether ``func``'s ``interaction`` parameter is annotated with a guild interaction type, an :class:`InGuild`.
 
-    Reads the annotation's name: cogs import interaction types for type checking only, so it often can't be resolved.
+    Resolves the annotation to its type, so an alias of a guild interaction still counts. A type that can't be resolved
+    at runtime doesn't count, so a guild handler imports its interaction type outside ``TYPE_CHECKING``.
     """
-    parameters = inspect_signature(func, annotation_format=annotationlib.Format.STRING).parameters
-    annotation = parameters["interaction"].annotation if "interaction" in parameters else Parameter.empty
-    return isinstance(annotation, str) and annotation.rpartition(".")[2] in GUILD_INTERACTIONS
+    annotation = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF).get("interaction")
+    try:
+        kind = Command._resolve(annotation, func)  # noqa: SLF001 - the shared annotation resolver
+    except NameError:
+        return False
+    return isinstance(kind, type) and issubclass(kind, InGuild)
 
 
 def _union(types: Iterable[object]) -> object:

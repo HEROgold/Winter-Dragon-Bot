@@ -21,6 +21,7 @@ lazy from wd_db.extension.lifecycle import alive_by_id, create_or_restore, owned
 lazy from wd_discord import (
     Channel,
     ChannelType,
+    GuildCommandInteraction,
     Member,
     Permissions,
     is_gone,
@@ -40,7 +41,7 @@ lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
 
-    lazy from wd_discord import GatewayGuild, GuildCommandInteraction, NetworkError, PartialMember, VoiceState
+    lazy from wd_discord import GatewayGuild, NetworkError, PartialMember, VoiceState
     lazy from wd_discord.entities import PartialGuild
 
 

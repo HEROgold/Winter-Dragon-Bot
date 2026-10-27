@@ -10,7 +10,13 @@ from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import owned_by, soft_delete, upsert
-lazy from wd_discord import ChannelType, Permissions, is_gone, is_network_error
+lazy from wd_discord import (
+    ChannelType,
+    GuildCommandInteraction,
+    Permissions,
+    is_gone,
+    is_network_error,
+)
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
@@ -26,7 +32,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Generator, Iterable, Mapping
     lazy from datetime import datetime
 
-    lazy from wd_discord import Client, GuildCommandInteraction, NetworkError
+    lazy from wd_discord import Client, NetworkError
     lazy from wd_discord.entities import BaseChannel, BaseGuild
 
 

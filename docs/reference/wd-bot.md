@@ -123,9 +123,8 @@ A cog whose commands are registered as subcommands of one Discord command, ``/<g
 ## `wd_bot.commands` — `wd-bot/src/wd_bot/commands.py`
 Application commands: the shared :class:`AppCommand` base, plain :class:`Command` and :class:`CommandGroup`.
 
-- module names: GUILD_INTERACTIONS
 - `type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]`
-- `wants_guild_interaction(func: Callable[..., object]) -> bool` — Whether ``func``'s ``interaction`` parameter is annotated as a guild interaction.
+- `wants_guild_interaction(func: Callable[..., object]) -> bool` — Whether ``func``'s ``interaction`` parameter is annotated with a guild interaction type, an :class:`InGuild`.
 
 ### `class ChannelTypes`
 Limit a channel option to some kinds of channel: ``category: Annotated[Channel, ChannelTypes(GUILD_CATEGORY)]``.

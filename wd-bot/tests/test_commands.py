@@ -172,6 +172,39 @@ def test_command_reifies_lazy_import_annotations(tmp_path: Path) -> None:
     assert result.stdout.strip() == "[('a', 'USER', True), ('b', 'USER', False)]"
 
 
+def test_guild_interaction_is_detected_by_type_not_by_name(tmp_path: Path) -> None:
+    """An aliased guild interaction type still counts; a plain interaction named like a guild one doesn't.
+
+    Runs in a fresh interpreter so the annotations are still-unresolved lazy imports when they're read.
+    """
+    (tmp_path / "guild_handler_module.py").write_text(
+        "from __future__ import annotations\n"
+        "lazy from wd_discord import CommandInteraction as GuildCommandInteraction\n"
+        "lazy from wd_discord import GuildCommandInteraction as Server\n"
+        "lazy from wd_discord import GuildComponentInteraction\n"
+        "async def aliased(self, interaction: Server) -> None: ...\n"
+        "async def press(self, interaction: GuildComponentInteraction) -> None: ...\n"
+        "async def misnamed(self, interaction: GuildCommandInteraction) -> None: ...\n"
+        "async def bare(self, other) -> None: ...\n",
+    )
+    script = (
+        "import guild_handler_module as m\n"
+        "from wd_bot.commands import wants_guild_interaction\n"
+        "print([wants_guild_interaction(f) for f in (m.aliased, m.press, m.misnamed, m.bare)])\n"
+    )
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, (str(tmp_path), os.environ.get("PYTHONPATH"))))},
+        timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "[True, True, False, False]"
+
+
 def test_signature_changes_with_description() -> None:
     first = cog_command(percentage, CommandDefinition("percentage", "one"))
     second = cog_command(percentage, CommandDefinition("percentage", "two"))

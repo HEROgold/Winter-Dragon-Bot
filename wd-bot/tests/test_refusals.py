@@ -8,7 +8,11 @@ lazy import pytest
 lazy from wd_bot.bot import Bot
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.guard import dispatch_guard
-lazy from wd_discord import GuildCommandInteraction, narrow_to_guild
+lazy from wd_discord import (
+    GuildCommandInteraction,
+    GuildComponentInteraction,
+    narrow_to_guild,
+)
 lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.gateway.events import Message as MessageModel
@@ -20,7 +24,7 @@ lazy from wd_errors import Refused, unwrap
 
 if TYPE_CHECKING:
     lazy from conftest import ComponentInteractionFactory, InteractionFactory
-    lazy from wd_discord import CommandInteraction, ComponentInteraction, GuildComponentInteraction, Message
+    lazy from wd_discord import CommandInteraction, ComponentInteraction, Message
     lazy from wd_discord.testing import RecordingClient
 
 EPHEMERAL = 1 << 6
