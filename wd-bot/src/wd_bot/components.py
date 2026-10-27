@@ -4,9 +4,10 @@ A ``custom_id`` is ``<prefix>:<arg>:<arg>...``. The prefix picks the handler and
 component, so a handler rebuilds whatever it needs from them and keeps working across restarts and on old messages.
 """
 
-lazy from typing import TYPE_CHECKING, Self
+lazy from typing import TYPE_CHECKING, ClassVar, Self, override
 
 lazy from herogold.log import LoggerMixin
+lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
 lazy from wd_discord.components import MAX_CUSTOM_ID_LENGTH
 lazy from wd_errors import Refused
 
@@ -16,8 +17,6 @@ lazy from wd_bot.commands import wants_guild_interaction
 
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Sequence
-
-    lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
 
     lazy from wd_bot.cogs import Cog
 
@@ -31,8 +30,11 @@ def parse_custom_id(custom_id: str) -> tuple[str, list[str]]:
     return prefix, args
 
 
-class CustomIdHandler(LoggerMixin):
+class CustomIdHandler[I: ComponentInteraction | ModalSubmitInteraction](LoggerMixin):
     """A Cog method reached through the prefix of a ``custom_id``: what component and modal handlers share."""
+
+    kind: ClassVar[str]
+    """What the handler is called in logs: ``component`` or ``modal``."""
 
     def __init__(self, func: Callable[..., Awaitable[None]], *, prefix: str) -> None:
         """Wrap ``func`` as the handler for ``prefix``."""
@@ -63,30 +65,38 @@ class CustomIdHandler(LoggerMixin):
         """Allow access as a plain attribute on a Cog instance without binding it like a method."""
         return self
 
+    def _prepare(self, cog: Cog, interaction: I) -> I:  # noqa: ARG002 - subclasses use the cog
+        """Return the interaction as the handler receives it; a subclass may check or narrow it."""
+        return interaction
 
-class ComponentHandler(CustomIdHandler):
+    async def invoke(self, cog: Cog, interaction: I, args: Sequence[str]) -> bool:
+        """Call the handler; return ``False`` if it raised (the exception is logged)."""
+        try:
+            await self.func(cog, self._prepare(cog, interaction), *args)
+        except Refused as refused:
+            self.logger.debug(t"{self.kind.capitalize()} '{self.prefix}' refused: {refused.message} ({refused.cause})")
+            await answer_refusal(interaction, refused)
+        except Exception:
+            self.logger.exception(t"Unhandled exception in {self.kind} handler '{self.prefix}' (interaction {interaction.id})")
+            return False
+        return True
+
+
+class ComponentHandler(CustomIdHandler[ComponentInteraction]):
     """A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
 
     Built by :meth:`wd_bot.cogs.Cog.component`. The handler is called as ``func(cog, interaction, *args)`` with
     the ``custom_id``'s args as strings, and must answer the interaction within Discord's 3-second window.
     """
 
-    async def invoke(self, cog: Cog, interaction: ComponentInteraction, args: Sequence[str]) -> bool:
-        """Call the handler; return ``False`` if it raised (the exception is logged)."""
-        try:
-            if type(cog).guild_only():
-                interaction = require_guild(interaction)
-            await self.func(cog, interaction, *args)
-        except Refused as refused:
-            self.logger.debug(t"Component '{self.prefix}' refused: {refused.message} ({refused.cause})")
-            await answer_refusal(interaction, refused)
-        except Exception:
-            self.logger.exception(t"Unhandled exception in component handler '{self.prefix}' (interaction {interaction.id})")
-            return False
-        return True
+    kind = "component"
+
+    @override
+    def _prepare(self, cog: Cog, interaction: ComponentInteraction) -> ComponentInteraction:
+        return require_guild(interaction) if type(cog).guild_only() else interaction
 
 
-class ModalHandler(CustomIdHandler):
+class ModalHandler(CustomIdHandler[ModalSubmitInteraction]):
     """A Cog method handling every modal whose ``custom_id`` starts with :attr:`prefix`.
 
     Built by :meth:`wd_bot.cogs.Cog.modal`. The handler is called as ``func(cog, interaction, *args)`` with the
@@ -94,14 +104,4 @@ class ModalHandler(CustomIdHandler):
     the interaction within Discord's 3-second window. The typed values are in ``interaction.values``.
     """
 
-    async def invoke(self, cog: Cog, interaction: ModalSubmitInteraction, args: Sequence[str]) -> bool:
-        """Call the handler; return ``False`` if it raised (the exception is logged)."""
-        try:
-            await self.func(cog, interaction, *args)
-        except Refused as refused:
-            self.logger.debug(t"Modal '{self.prefix}' refused: {refused.message} ({refused.cause})")
-            await answer_refusal(interaction, refused)
-        except Exception:
-            self.logger.exception(t"Unhandled exception in modal handler '{self.prefix}' (interaction {interaction.id})")
-            return False
-        return True
+    kind = "modal"

@@ -182,20 +182,22 @@ Message-component handlers: route a clicked component to the Cog method owning i
 - module names: CUSTOM_ID_SEPARATOR
 - `parse_custom_id(custom_id: str) -> tuple[str, list[str]]` — Split ``custom_id`` into its handler prefix and the args after it.
 
-### `class CustomIdHandler(LoggerMixin)`
+### `class CustomIdHandler[I: ComponentInteraction | ModalSubmitInteraction](LoggerMixin)`
 A Cog method reached through the prefix of a ``custom_id``: what component and modal handlers share.
 
+- fields: kind: ClassVar[str]
 - `custom_id(*args: str | int) -> str` — Build a ``custom_id`` routed to this handler, carrying ``args``.
+- `async invoke(cog: Cog, interaction: I, args: Sequence[str]) -> bool` — Call the handler; return ``False`` if it raised (the exception is logged).
 
-### `class ComponentHandler(CustomIdHandler)`
+### `class ComponentHandler(CustomIdHandler[ComponentInteraction])`
 A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
 
-- `async invoke(cog: Cog, interaction: ComponentInteraction, args: Sequence[str]) -> bool` — Call the handler; return ``False`` if it raised (the exception is logged).
+- attributes: kind
 
-### `class ModalHandler(CustomIdHandler)`
+### `class ModalHandler(CustomIdHandler[ModalSubmitInteraction])`
 A Cog method handling every modal whose ``custom_id`` starts with :attr:`prefix`.
 
-- `async invoke(cog: Cog, interaction: ModalSubmitInteraction, args: Sequence[str]) -> bool` — Call the handler; return ``False`` if it raised (the exception is logged).
+- attributes: kind
 
 ## `wd_bot.extensions` — `wd-bot/src/wd_bot/extensions.py`
 Finding the extension modules a bot loads its cogs from.

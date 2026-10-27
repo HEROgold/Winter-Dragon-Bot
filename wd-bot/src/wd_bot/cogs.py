@@ -1,7 +1,7 @@
 """Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency."""
 
 lazy from enum import IntFlag, auto
-lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
+lazy from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session, SQLModel
@@ -12,7 +12,7 @@ lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
 lazy from wd_bot.commands import Command, CommandGroup
-lazy from wd_bot.components import ComponentHandler, ModalHandler
+lazy from wd_bot.components import ComponentHandler, CustomIdHandler, ModalHandler
 lazy from wd_bot.listener import listener
 lazy from wd_bot.registry import CommandPath
 
@@ -161,17 +161,19 @@ class Cog(LoggerMixin):
     @classmethod
     def components(cls) -> Generator[ComponentHandler]:
         """Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases."""
-        for attr_name in dir(cls):
-            attr = getattr(cls, attr_name)
-            if isinstance(attr, ComponentHandler):
-                yield attr
+        yield from cls._handlers(ComponentHandler)
 
     @classmethod
     def modals(cls) -> Generator[ModalHandler]:
         """Yield the :class:`ModalHandler` attributes defined on this cog class or inherited from its bases."""
+        yield from cls._handlers(ModalHandler)
+
+    @classmethod
+    def _handlers[H: CustomIdHandler[Any]](cls, handler_type: type[H]) -> Generator[H]:
+        """Yield the ``handler_type`` attributes defined on this cog class or inherited from its bases."""
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
-            if isinstance(attr, ModalHandler):
+            if isinstance(attr, handler_type):
                 yield attr
 
     @classmethod
