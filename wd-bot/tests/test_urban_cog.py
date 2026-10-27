@@ -7,7 +7,7 @@ import pytest
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
-from wd_discord.embed import MAX_EMBED_CHARACTERS
+from wd_discord.limits import MAX_EMBED_CHARACTERS
 from wd_discord.gateway.events import InteractionDataOption
 
 from winter_dragon.cogs.urban import Definition, Lookup, LookupFailed, Urban, UrbanDictionary, UrbanSettings, build_embed

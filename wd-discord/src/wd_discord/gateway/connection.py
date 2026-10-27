@@ -26,7 +26,6 @@ lazy import sentry_sdk
 lazy from herogold.log import LoggerMixin
 lazy from pydantic import ValidationError
 lazy from wd_config.discord import URLS
-lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 lazy from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
@@ -34,7 +33,7 @@ lazy from wd_discord.intents import Intents
 
 lazy from .dispatch import parse_dispatch
 lazy from .events import EventName, GuildCreate, RawEvent, Ready
-lazy from .presence import Status
+lazy from .presence import ActivityType, Status
 
 
 if TYPE_CHECKING:
@@ -142,7 +141,7 @@ class GatewayActivity:
     """An activity shown on the bot's presence (object -> API via :meth:`to_dict`)."""
 
     name: str
-    type: Activity = Activity.PLAYING
+    type: ActivityType = ActivityType.PLAYING
     url: str | None = None
     state: str | None = None
 

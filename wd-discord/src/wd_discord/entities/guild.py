@@ -22,6 +22,7 @@ lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.guild import Sticker as StickerModel
 lazy from wd_discord.resources.guild import WelcomeScreen as WelcomeScreenModel
 lazy from wd_discord.resources.guild import WelcomeScreenChannel as WelcomeScreenChannelModel
+lazy from wd_discord.limits import MAX_MEMBERS_PER_PAGE
 lazy from wd_discord.resources.invite import Invite as InviteModel
 lazy from wd_discord.resources.voice import VoiceState as VoiceStateModel
 lazy from wd_discord.snowflake import Snowflake
@@ -48,10 +49,6 @@ if TYPE_CHECKING:
         VerificationLevel,
     )
     from wd_discord.snowflake import SnowflakeLike
-
-
-MAX_MEMBERS_PER_PAGE = 1000
-"""The most members ``GET /guilds/{guild_id}/members`` returns at once (https://docs.discord.com/developers/resources/guild#list-guild-members)."""
 
 
 class BaseGuild(ClientBound):

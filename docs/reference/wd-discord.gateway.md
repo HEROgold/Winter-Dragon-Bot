@@ -7,8 +7,8 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord.gateway` — `wd-discord/src/wd_discord/gateway/__init__.py`
 
-- exports: EventName, Gateway, GatewayActivity, GatewayBotInfo, GuildCreate, Message, Opcode, RawEvent, Ready,
-  SessionStartLimit, ShardManager, Status, UnavailableGuild, build_identify, build_presence, fetch_gateway_bot,
+- exports: ActivityType, EventName, Gateway, GatewayActivity, GatewayBotInfo, GuildCreate, Message, Opcode, RawEvent,
+  Ready, SessionStartLimit, ShardManager, Status, UnavailableGuild, build_identify, build_presence, fetch_gateway_bot,
   identify_batches, parse_dispatch, parse_gateway_bot, parse_ready, rate_limit_key, shard_id_for_guild
 
 ## `wd_discord.gateway.connection` — `wd-discord/src/wd_discord/gateway/connection.py`
@@ -37,7 +37,7 @@ Discord closed the gateway with a code reconnecting can't fix (see :data:`FATAL_
 ### `@dataclass class GatewayActivity`
 An activity shown on the bot's presence (object -> API via :meth:`to_dict`).
 
-- fields: name: str, type: Activity, url: str | None, state: str | None
+- fields: name: str, type: ActivityType, url: str | None, state: str | None
 - `to_dict() -> dict[str, Any]` — Serialize to the Discord activity object.
 
 ### `class Gateway(LoggerMixin)`

@@ -952,8 +952,7 @@ Cog for showing the bot's uptime.
 ## `winter_dragon.cogs.urban` — `src/winter_dragon/cogs/urban.py`
 The /urban command group: look up a term, or random terms, on Urban Dictionary.
 
-- module names: DEFINE_URL, RANDOM_URL, ELLIPSIS
-- `truncate(text: str, limit: int) -> str` — Return ``text``, cut to ``limit`` characters with an ellipsis when it's longer.
+- module names: DEFINE_URL, RANDOM_URL
 - `definition_field(index: int, definition: Definition) -> EmbedField` — Return the embed field showing ``definition``, numbered ``index``, with its votes and link.
 - `definition_fields(definitions: Sequence[Definition], limit: int, budget: int) -> Generator[EmbedField]` — Yield a field for each of the first ``limit`` definitions, stopping before their text exceeds ``budget``.
 - `build_embed(title: str, definitions: Sequence[Definition], limit: int) -> Embed` — Return an embed titled ``title`` showing up to ``limit`` of ``definitions``, within Discord's embed limits.

@@ -12,8 +12,9 @@ lazy import time
 lazy from abc import ABC, abstractmethod
 lazy from collections import deque
 lazy from dataclasses import dataclass, field
+lazy from enum import StrEnum
 lazy from http import HTTPStatus
-lazy from typing import TYPE_CHECKING, Any, ClassVar
+lazy from typing import TYPE_CHECKING, Any
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_config.discord import RateLimit
@@ -28,6 +29,20 @@ if TYPE_CHECKING:
     lazy from httpxyz import Headers, Response
 
 logger = get_logger("RateLimit")
+
+
+class RateLimitScope(StrEnum):
+    """The scope a rate limit applies to, named as in Discord's ``X-RateLimit-Scope`` header.
+
+    https://docs.discord.com/developers/topics/rate-limits#header-format
+    """
+
+    USER = "user"
+    """A per-route bucket of this bot or user."""
+    GLOBAL = "global"
+    """The limit across every request of this bot or user."""
+    SHARED = "shared"
+    """A per-resource limit shared by everyone, such as an emoji's."""
 
 
 class RateLimiter(ABC):
@@ -180,8 +195,33 @@ class RouteKey(str):
     __slots__ = ()
 
 
+def _scope_of(response: Response, body: Mapping[str, Any]) -> RateLimitScope:
+    """Return the scope a 429 hit: global when the body says so, else the ``X-RateLimit-Scope`` header's.
+
+    A missing or unknown header counts as the route's own bucket.
+    """
+    if body.get("global", False):
+        return RateLimitScope.GLOBAL
+    if response.headers.get("X-RateLimit-Scope") == RateLimitScope.SHARED:
+        return RateLimitScope.SHARED
+    return RateLimitScope.USER
+
+
 class MaxRetriesExceededError(Exception):
     """Raised when a request exceeds the maximum number of rate-limit retries."""
+
+
+type RateLimiters = Mapping[RateLimitScope, RateLimiter]
+"""One limiter per scope; a client owns one set, shared by all its requests."""
+
+
+def new_rate_limiters() -> dict[RateLimitScope, RateLimiter]:
+    """Build a fresh limiter set for one client: its buckets start empty and are shared with no other client."""
+    return {
+        RateLimitScope.GLOBAL: GlobalRateLimiter(),
+        RateLimitScope.USER: BucketRateLimiter(),
+        RateLimitScope.SHARED: SharedRateLimiter(),
+    }
 
 
 class RateLimitHandler(LoggerMixin):
@@ -192,19 +232,16 @@ class RateLimitHandler(LoggerMixin):
     A previous version patched the client instead; under concurrency, multiple in-flight
     requests sharing one :class:`~httpxyz.AsyncClient` raced on that patch (each wrapping
     whatever the previous one had already wrapped), corrupting retry counts across unrelated
-    requests. A fresh, unshared :class:`RateLimitHandler` per request - only the *limiters*
-    themselves (class-level, intentionally shared so the whole client throttles together) -
-    avoids that entirely: nothing here is written to except this instance's own ``tries``.
+    requests. A fresh, unshared :class:`RateLimitHandler` per request avoids that: nothing here
+    is written to except this instance's own ``tries``. The ``limiters`` are the client's own set
+    (see :func:`new_rate_limiters`), so every request of one client throttles together while two
+    clients never share a bucket.
     """
 
-    limiters: ClassVar[dict[str, RateLimiter]] = {}
-    limiters["global"] = GlobalRateLimiter()
-    limiters["bucket"] = BucketRateLimiter()
-    limiters["shared"] = SharedRateLimiter()
-
-    def __init__(self, key: RouteKey) -> None:
-        """Initialize the rate limit handler with global, bucket, and shared limiters."""
+    def __init__(self, key: RouteKey, limiters: RateLimiters) -> None:
+        """Run requests for ``key`` under ``limiters``, the owning client's limiter set."""
         self.key = key
+        self.limiters = limiters
         self.tries = 0
 
     async def acquire(self) -> None:
@@ -229,14 +266,7 @@ class RateLimitHandler(LoggerMixin):
             body = {}
         retry_after = float(body.get("retry_after", response.headers.get("Retry-After", 1)))
 
-        global_, scope = body.get("global", False), response.headers.get("X-RateLimit-Scope")
-        match global_, scope:
-            case True, _:
-                await self.limiters["global"].on_429(self.key, retry_after)
-            case False, "shared":
-                await self.limiters["shared"].on_429(self.key, retry_after)
-            case False, _:
-                await self.limiters["bucket"].on_429(self.key, retry_after)
+        await self.limiters[_scope_of(response, body)].on_429(self.key, retry_after)
 
     async def send[R: Response](self, func: Callable[[], CoroutineType[Any, Any, R]]) -> R:
         """Call ``func()`` under the rate-limit retry loop, retrying a 429 up to ``RateLimit.max_retries`` times.

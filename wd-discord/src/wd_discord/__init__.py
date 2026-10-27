@@ -79,6 +79,7 @@ lazy from wd_discord.entities import (
 )
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import (
+    ActivityType,
     EventName,
     Gateway,
     GatewayActivity,
@@ -99,6 +100,7 @@ __all__ = [
     "URLS",
     "AnyGuildInteraction",
     "AnyInteraction",
+    "ActivityType",
     "ApiResponseError",
     "Application",
     "AuditLogReason",

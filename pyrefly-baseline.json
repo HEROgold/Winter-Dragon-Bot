@@ -9360,13 +9360,6 @@
       "severity": "error"
     },
     {
-      "column": 53,
-      "path": "wd-errors/src/wd_errors/base.py",
-      "name": "implicit-any-empty-container",
-      "concise_description": "Cannot infer type of empty container; it will be treated as containing `Any`",
-      "severity": "error"
-    },
-    {
       "column": 9,
       "path": "wd-errors/src/wd_errors/extension.py",
       "name": "missing-override-decorator",

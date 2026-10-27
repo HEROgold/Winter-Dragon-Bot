@@ -1,6 +1,6 @@
 """Unit tests: Discord API error-response parsing."""
 lazy from wd_discord.errors.api import ApiErrorTree, ApiResponseError
-lazy from wd_errors import ErrorNode
+lazy from wd_discord.errors import ErrorNode
 
 
 def test_simple_error_has_no_error_tree() -> None:

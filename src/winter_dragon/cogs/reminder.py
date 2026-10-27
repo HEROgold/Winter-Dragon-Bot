@@ -12,7 +12,6 @@ from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import AutocompleteInteraction, is_network_error
-lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Generator
 
     lazy from wd_discord import Client, CommandInteraction
+    lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 
 
 SECONDS_PER_UNIT = {"minutes": 60, "hours": 3600, "days": 86400, "weeks": 604800}
@@ -108,8 +108,6 @@ def reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generat
         if needle in reminder.content.casefold():
             label = "🔁 " if isinstance(reminder, TimedReminder) else ""
             name = f"{label}{reminder.content}"
-            if len(name) > MAX_CHOICE_NAME_LENGTH:
-                name = name[: MAX_CHOICE_NAME_LENGTH - 1] + "…"
             yield Lookup.choice(reminder, name)
 
 
