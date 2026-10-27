@@ -1,0 +1,49 @@
+<div id="incremental" class="game" hx-get="/profile/incremental/snapshot" hx-trigger="every {{ resync_seconds }}s, resync" hx-swap="outerHTML">
+  {% if message %}<p class="game-message{% if refused %} game-refused{% endif %}" role="status">{{ message }}</p>{% endif %}
+  {% if not snapshot %}
+    <p class="profile-empty">You have no save yet. Use <code>/incremental</code> in Discord, or start one here.</p>
+    <form method="post" action="/profile/incremental/start" hx-post="/profile/incremental/start" hx-target="#incremental" hx-swap="outerHTML">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+      <button class="button button-primary" type="submit">Start my save</button>
+    </form>
+  {% else %}
+    <ul class="game-holdings">
+      {% for holding in snapshot.holdings %}
+        <li>
+          <span class="game-label">{{ holding.label }}</span>
+          <span class="game-amount" data-tick data-amount="{{ holding.amount }}" data-rate="{{ holding.per_second }}">{{ holding.amount_text }}</span>
+          <span class="game-rate">+{{ holding.rate_text }}/s</span>
+        </li>
+      {% endfor %}
+    </ul>
+    <table class="table">
+      <thead><tr><th>Generator</th><th>Owned</th><th>Next costs</th><th>Makes each</th><th></th></tr></thead>
+      <tbody>
+        {% for offer in snapshot.offers %}
+          <tr>
+            <td><strong>{{ offer.name }}</strong><br>{{ offer.description }}</td>
+            <td>{{ offer.owned }}</td>
+            <td>
+              {{ offer.price_text }}
+              {% if not offer.affordable %}
+                <br><span class="game-wait">
+                  {% if offer.seconds_until_affordable is none %}Cannot afford, nothing makes the missing currency
+                  {% else %}Can afford in <span data-countdown="{{ offer.seconds_until_affordable }}"></span>{% endif %}
+                </span>
+              {% endif %}
+            </td>
+            <td>{{ offer.produces_text }} per second</td>
+            <td>
+              <form method="post" action="/profile/incremental/buy/{{ offer.key }}" hx-post="/profile/incremental/buy/{{ offer.key }}" hx-target="#incremental" hx-swap="outerHTML">
+                <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+                <button class="button button-small {% if offer.affordable %}button-primary{% else %}button-quiet{% endif %}" type="submit" {% if not offer.affordable %}disabled{% endif %}>Buy</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="game-note">Production continues while you are away. Refreshes every {{ resync_seconds }} seconds.</p>
+    <button class="button button-quiet button-small" type="button" onclick="htmx.trigger('#incremental', 'resync')">Refresh</button>
+  {% endif %}
+</div>

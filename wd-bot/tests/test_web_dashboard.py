@@ -22,6 +22,10 @@ from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member
 
 from winter_dragon.cogs.fuel import CarFuels
 from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
+
+
+from winter_dragon.cogs.incremental import game
+from winter_dragon.cogs.incremental.models import IncrementalSave, SaveGenerator
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
 
@@ -29,6 +33,7 @@ from winter_dragon.cogs.steam.models import SaleNotification
 from winter_dragon.cogs.urban import Lookup
 from winter_dragon.web import auth, pages, profile, reminders
 from winter_dragon.web.app import create_app
+from winter_dragon.web.profile_pages import incremental as incremental_page
 from winter_dragon.web.reminders import InvalidReminderError, ReminderDraft, Repeat
 
 
@@ -507,3 +512,103 @@ def test_the_steam_page_shows_only_your_own_notifications(member: TestClient, bi
     page = member.get("/profile/steam").text
 
     assert "Secret" not in page
+
+
+def _game_snapshot(bind: Engine, now: datetime = NOW) -> incremental_page.Snapshot | None:
+    return incremental_page.snapshot(bind, MEMBER_ID, now=now)
+
+
+def test_the_incremental_page_without_a_save_says_how_to_start_one(member: TestClient, bind: Engine) -> None:
+    page = member.get("/profile/incremental")
+
+    assert page.status_code == 200
+    assert "no save yet" in page.text
+    assert "/incremental" in page.text
+    assert 'href="/profile/incremental"' in page.text
+    assert _game_snapshot(bind) is None  # looking at the page did not create a save
+
+
+def test_the_snapshot_holds_amounts_rates_and_the_time_it_was_taken(bind: Engine) -> None:
+    with Session(bind) as session:
+        game.open_save(session, MEMBER_ID, now=NOW)
+        session.add(SaveGenerator(save_id=MEMBER_ID, generator="digger", owned=2))
+        session.commit()
+
+    snapshot = _game_snapshot(bind, NOW + timedelta(seconds=100))
+
+    assert snapshot is not None
+    assert snapshot.taken_at == NOW + timedelta(seconds=100)
+    coins = next(holding for holding in snapshot.holdings if holding.key == "coins")
+    assert (coins.amount, coins.per_second) == pytest.approx((10 + 100.0, 1.0))
+    digger = next(offer for offer in snapshot.offers if offer.key == "digger")
+    assert digger.owned == 2
+    assert digger.affordable
+    assert digger.seconds_until_affordable == 0
+
+
+def test_the_snapshot_counts_down_to_what_the_member_cannot_afford_yet(bind: Engine) -> None:
+    with Session(bind) as session:
+        game.open_save(session, MEMBER_ID, now=NOW)
+        session.add(SaveGenerator(save_id=MEMBER_ID, generator="digger", owned=1))
+        session.commit()
+
+    snapshot = _game_snapshot(bind)
+
+    assert snapshot is not None
+    mine = next(offer for offer in snapshot.offers if offer.key == "mine")
+    assert not mine.affordable
+    assert mine.seconds_until_affordable == pytest.approx((120 - 10) / 0.5)
+    gem_cutter = next(offer for offer in snapshot.offers if offer.key == "gem_cutter")
+    assert gem_cutter.seconds_until_affordable == pytest.approx((500 - 10) / 0.5)
+
+
+def test_the_snapshot_route_returns_only_the_game_fragment(member: TestClient, bind: Engine) -> None:
+    with Session(bind) as session:
+        game.open_save(session, MEMBER_ID)
+
+    response = member.get("/profile/incremental/snapshot", headers=HTMX)
+
+    assert response.status_code == 200
+    assert "<html" not in response.text
+    assert 'hx-trigger="every 30s, resync"' in response.text
+    assert "data-tick" in response.text
+
+
+def test_starting_a_save_from_the_page_creates_it(member: TestClient, bind: Engine) -> None:
+    response = member.post("/profile/incremental/start", data={"csrf_token": _csrf(member)}, headers=HTMX)
+
+    assert response.status_code == 200
+    assert "Buy" in response.text
+    with Session(bind) as session:
+        assert [save.id for save in session.exec(alive(IncrementalSave))] == [MEMBER_ID]
+
+
+def test_a_dashboard_buy_adds_the_generator_and_a_refused_buy_says_why(member: TestClient, bind: Engine) -> None:
+    token = _csrf(member)
+
+    bought = member.post("/profile/incremental/buy/digger", data={"csrf_token": token}, headers=HTMX)
+    refused = member.post("/profile/incremental/buy/digger", data={"csrf_token": token}, headers=HTMX)
+
+    assert bought.status_code == 200
+    assert "Bought one." in bought.text
+    assert refused.status_code == 200
+    assert "You need" in refused.text
+    assert "game-refused" in refused.text
+    with Session(bind) as session:
+        (owned,) = session.exec(alive(SaveGenerator)).all()
+    assert owned.owned == 1
+
+
+def test_a_buy_without_htmx_renders_the_whole_page(member: TestClient) -> None:
+    response = member.post("/profile/incremental/buy/digger", data={"csrf_token": _csrf(member)})
+
+    assert response.status_code == 200
+    assert "<html" in response.text
+    assert "Bought one." in response.text
+
+
+def test_the_incremental_posts_need_the_csrf_token(member: TestClient, bind: Engine) -> None:
+    for path in ("/profile/incremental/start", "/profile/incremental/buy/digger"):
+        assert member.post(path, headers=HTMX).status_code == 403
+    with Session(bind) as session:
+        assert session.exec(alive(IncrementalSave)).all() == []

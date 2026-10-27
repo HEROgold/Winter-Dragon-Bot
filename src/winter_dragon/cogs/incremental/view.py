@@ -34,7 +34,7 @@ def format_amount(amount: float) -> str:
     return f"{amount:,.1f}"
 
 
-def _quantities(quantities: Iterable[Quantity]) -> str:
+def format_quantities(quantities: Iterable[Quantity]) -> str:
     game = catalogue()
     parts: list[str] = []
     for quantity in quantities:
@@ -45,8 +45,8 @@ def _quantities(quantities: Iterable[Quantity]) -> str:
 
 def _offer_field(offer: Offer) -> EmbedField:
     status = "" if offer.affordable else " (can't afford)"
-    produces = _quantities(offer.generator.produces)
-    price = _quantities(offer.price)
+    produces = format_quantities(offer.generator.produces)
+    price = format_quantities(offer.price)
     return EmbedField(
         name=f"{offer.generator.name} x{offer.owned}",
         value=f"{offer.generator.description}\nMakes {produces} per second each.\nNext costs {price}{status}",

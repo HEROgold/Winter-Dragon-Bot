@@ -232,6 +232,7 @@ Plays the Incremental game: one save per member, whatever guild they are in.
 ## `winter_dragon.cogs.incremental.game` — `src/winter_dragon/cogs/incremental/game.py`
 The Incremental game's rules, with no Discord in it, so the Discord cog and the dashboard play the same game.
 
+- `find_save(session: Session, member_id: int, *, now: datetime | None=None) -> SaveView | None` — Return the member's save as of ``now``, or ``None`` when they have none; unlike :func:`open_save` it creates nothing.
 - `open_save(session: Session, member_id: int, *, now: datetime | None=None) -> SaveView` — Return the member's save as of ``now`` (default: the current time), creating it on first use.
 - `buy(session: Session, member_id: int, generator_key: str, *, now: datetime | None=None) -> SaveView` — Buy one generator for the member and return the save afterwards.
 
@@ -277,6 +278,7 @@ The Discord side of the Incremental game: the save embed and its buttons.
 
 - module names: BUTTONS_PER_ROW
 - `format_amount(amount: float) -> str` — Format ``amount`` with thousands separators and one decimal.
+- `format_quantities(quantities: Iterable[Quantity]) -> str`
 - `build_embed(view: SaveView) -> Embed` — Build the embed showing ``view``: amounts and rates per currency, then each generator with its next price.
 - `build_buttons(view: SaveView, *, refresh: ComponentHandler, buy: ComponentHandler) -> list[ActionRow]` — Build the Refresh button and one Buy button per generator, disabled when the save can't pay for it.
 

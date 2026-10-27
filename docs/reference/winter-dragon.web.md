@@ -128,6 +128,36 @@ The efficiency of a member's refuels over time, ready to draw as an SVG line.
 - fields: points: tuple[GraphPoint, ...], lowest: float, highest: float, first_day: datetime, last_day: datetime
 - `@property line -> str` — The ``points`` attribute of the SVG polyline.
 
+## `winter_dragon.web.profile_pages.incremental` — `src/winter_dragon/web/profile_pages/incremental.py`
+The Profile's Incremental game page: the member's save live in the browser, and buying generators.
+
+- module names: PAGE_PATH, TEMPLATE, FRAGMENT, RESYNC_SECONDS, router
+- `seconds_until_affordable(offer: game.Offer, per_second: dict[str, float], amounts: dict[str, float]) -> float | None` — Return how many seconds until the save can pay ``offer``'s price at the current rates, or ``None`` if never.
+- `snapshot_of(view: game.SaveView) -> Snapshot` — Turn the shared game module's ``view`` into what the page shows and ticks.
+- `snapshot(bind: Engine, member_id: int, *, now: datetime | None=None) -> Snapshot | None` — Return the member's save as of ``now``, or ``None`` when they haven't started one; this never creates a save.
+- `@profile_page incremental(context: ProfileContext) -> dict[str, object]` — Return the page's context: the member's snapshot, or ``None`` to show how to start a save.
+- `@router.get resync(request: Request, account: Account, bind: Engine) -> Response` — Return the game fragment with a fresh snapshot, which htmx swaps in to re-sync the page.
+- `@router.post start(request: Request, account: Account, bind: Engine) -> Response` — Create the member's save, as their first ``/incremental`` in Discord does.
+- `@router.post buy(request: Request, generator: str, account: Account, bind: Engine) -> Response` — Buy one ``generator`` for the member; a refusal is shown on the page instead of failing the request.
+
+### `@dataclass class HoldingSnapshot`
+One currency in a snapshot.
+
+- fields: key: str, label: str, amount: float, per_second: float
+- `@property amount_text -> str` — The amount as the page first shows it.
+- `@property rate_text -> str` — The production per second as the page shows it.
+
+### `@dataclass class OfferSnapshot`
+One generator in a snapshot: what the member owns, what the next one costs, and how long until they can pay.
+
+- fields: key: str, name: str, description: str, owned: int, price_text: str, produces_text: str, affordable: bool,
+  seconds_until_affordable: float | None
+
+### `@dataclass class Snapshot`
+A save at ``taken_at``; the browser ticks it forward from here.
+
+- fields: taken_at: datetime, holdings: tuple[HoldingSnapshot, ...], offers: tuple[OfferSnapshot, ...]
+
 ## `winter_dragon.web.profile_pages.love` — `src/winter_dragon/web/profile_pages/love.py`
 The Profile's love page: everyone the member has checked their compatibility with, highest percentage first.
 

@@ -128,6 +128,13 @@ def _ensure_save(session: Session, member_id: int, now: datetime, *, lock: bool 
     return save
 
 
+def find_save(session: Session, member_id: int, *, now: datetime | None = None) -> SaveView | None:
+    """Return the member's save as of ``now``, or ``None`` when they have none; unlike :func:`open_save` it creates nothing."""
+    now = utc_now() if now is None else now
+    save = _find(session, member_id)
+    return None if save is None else _view(session, save, now)
+
+
 def open_save(session: Session, member_id: int, *, now: datetime | None = None) -> SaveView:
     """Return the member's save as of ``now`` (default: the current time), creating it on first use.
 
