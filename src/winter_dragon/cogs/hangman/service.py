@@ -5,7 +5,7 @@ lazy from pathlib import Path
 lazy from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col
-lazy from wd_db.extension.lifecycle import alive, create_or_restore
+lazy from wd_db.extension.lifecycle import alive, upsert
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -98,10 +98,7 @@ def _add_participant(session: Session, game: HangmanGame, user_id: int) -> None:
     if game.id is None:
         msg = "A game must be stored before it is guessed at."
         raise ValueError(msg)
-    same = HangmanParticipant.game_id == game.id, HangmanParticipant.user_id == user_id
-    existing = session.exec(alive(HangmanParticipant).where(*same)).first()
-    if existing is None:
-        create_or_restore(session, HangmanParticipant(game_id=game.id, user_id=user_id))
+    upsert(session, HangmanParticipant(game_id=game.id, user_id=user_id))
 
 
 def _finish(game: HangmanGame, status: HangmanStatus) -> None:
