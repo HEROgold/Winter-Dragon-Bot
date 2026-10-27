@@ -47,6 +47,13 @@ Sale notification log and Steam profile page.
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
 
+## `winter_dragon.migrations.versions.2026_10_26_80ee15b45b3a_urban_lookups_and_profile_page` — `src/winter_dragon/migrations/versions/2026_10_26_80ee15b45b3a_urban_lookups_and_profile_page.py`
+Urban lookups and profile page.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
 ## `winter_dragon.migrations.versions.2026_10_26_bc19dfc865e9_fuel_units_setting` — `src/winter_dragon/migrations/versions/2026_10_26_bc19dfc865e9_fuel_units_setting.py`
 Fuel units setting.
 

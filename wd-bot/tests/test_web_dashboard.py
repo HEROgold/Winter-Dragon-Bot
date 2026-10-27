@@ -24,6 +24,9 @@ from winter_dragon.cogs.fuel import CarFuels
 from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
+
+
+from winter_dragon.cogs.urban import Lookup
 from winter_dragon.web import auth, pages, profile, reminders
 from winter_dragon.web.app import create_app
 from winter_dragon.web.reminders import InvalidReminderError, ReminderDraft, Repeat
@@ -397,6 +400,34 @@ def test_the_love_page_shows_only_your_own_checks(member: TestClient, bind: Engi
 
     assert "Stranger" not in page
     assert "not checked" in page
+
+
+def _lookup(days_ago: int, term: str, user_id: int = MEMBER_ID) -> Lookup:
+    return Lookup(user_id=user_id, term=term, looked_up_at=NOW - timedelta(days=days_ago))
+
+
+def test_the_urban_page_lists_lookups_newest_first_with_a_total(member: TestClient, bind: Engine) -> None:
+    seed(bind, _lookup(3, "alpha"), _lookup(1, "gamma"), _lookup(2, "beta"))
+
+    page = member.get("/profile/urban").text
+
+    assert "3 lookups in total" in page
+    assert page.index("gamma") < page.index("beta") < page.index("alpha")
+
+
+def test_the_urban_page_without_lookups_is_an_empty_state(member: TestClient) -> None:
+    response = member.get("/profile/urban")
+
+    assert response.status_code == 200
+    assert "not looked anything up" in response.text
+
+
+def test_the_urban_page_shows_only_your_own_lookups(member: TestClient, bind: Engine) -> None:
+    seed(bind, _lookup(1, "secretterm", user_id=OTHER_ID))
+
+    page = member.get("/profile/urban").text
+
+    assert "secretterm" not in page
 
 
 def test_a_profile_page_that_does_not_exist_is_not_found(member: TestClient) -> None:
