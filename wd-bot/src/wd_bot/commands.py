@@ -121,6 +121,8 @@ class OptionSpec:
     def argument(self, interaction: CommandInteraction, value: object) -> object:
         """Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
 
+        Raises :class:`~wd_errors.Refused` when a channel isn't one of the option's ``channel_types``.
+
         A parameter annotated with a bound entity gets one bound to the interaction's client; one annotated with the
         data model gets the model.
         """
@@ -128,6 +130,10 @@ class OptionSpec:
         if resolvers is not None:
             resolved = interaction.resolved
             found = None if resolved is None else next(filter(None, (find(resolved, str(value)) for find in resolvers)), None)
+            if self.channel_types and found is not None and found.type not in self.channel_types:
+                kinds = " or ".join(kind.name.removeprefix("GUILD_").replace("_", " ").lower() for kind in self.channel_types)
+                msg = f"Pick a {kinds} channel for {self.name!r}."
+                raise Refused(msg)
             if found is None or type(found) in (get_args(self.param_type) or (self.param_type,)):
                 return found
             return found.model
@@ -364,8 +370,8 @@ class Command(AppCommand):
         """
         if options is None:
             options = interaction.options
-        kwargs = self._build_kwargs(interaction, options)
         try:
+            kwargs = self._build_kwargs(interaction, options)
             if self.guild_only or (self.owner is not None and self.owner.guild_only()):
                 interaction = require_guild(interaction)
             if self.requires is not None:
