@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 lazy from sqlalchemy.exc import IntegrityError
 lazy from sqlmodel import Session, col
-lazy from wd_db.extension.lifecycle import alive, create_or_restore
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, upsert
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -97,16 +97,6 @@ def _view(session: Session, save: IncrementalSave, now: datetime) -> SaveView:
     return SaveView(int(save.id), now, holdings, tuple(offers))
 
 
-def _store[M: (SaveBalance, SaveGenerator)](session: Session, existing: M | None, row: M) -> None:
-    """Write ``row``'s values over the alive ``existing`` row, or create ``row`` (restoring a soft-deleted twin)."""
-    if existing is None:
-        create_or_restore(session, row)
-        return
-    for name, value in row.model_dump(exclude={"id", "created_at", "updated_at", "deleted_at"}).items():
-        setattr(existing, name, value)
-    session.add(existing)
-
-
 def _find(session: Session, member_id: int, *, lock: bool = False) -> IncrementalSave | None:
     statement = alive(IncrementalSave).where(col(IncrementalSave.id) == member_id)
     return session.exec(statement.with_for_update() if lock else statement).first()
@@ -176,8 +166,8 @@ def buy(session: Session, member_id: int, generator_key: str, *, now: datetime |
                 raise Refused(msg)  # noqa: TRY301 - the rollback below releases the lock
             amounts[cost.currency] -= cost.amount
         for key, amount in amounts.items():
-            _store(session, balances.get(key), SaveBalance(save_id=save.id, currency=key, amount=amount))
-        _store(session, owned.get(generator.key), SaveGenerator(save_id=save.id, generator=generator.key, owned=count + 1))
+            upsert(session, SaveBalance(save_id=save.id, currency=key, amount=amount))
+        upsert(session, SaveGenerator(save_id=save.id, generator=generator.key, owned=count + 1))
         save.settled_at = now
         session.add(save)
         session.commit()
