@@ -39,8 +39,7 @@ lazy from wd_discord.interactions import ApplicationCommandOptionType
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.cogs.tournament.models import Tournament
-lazy from winter_dragon.cogs.tournament.service import open_signups_of, withdraw
+lazy from winter_dragon.member_hidden import MemberHiddenHook
 
 
 if TYPE_CHECKING:
@@ -175,10 +174,10 @@ def hide_owned(
 def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> bool:
     """Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
 
-    That's every row a member owns, also those a guild owns too, and their sign-up to each tournament that hasn't
-    started, by the rule ``/tournament leave`` follows. Does nothing while an earlier request is hidden but not
-    purged yet; one that never got hidden (hiding failed) is hidden now. What the member stores afterwards is new
-    data, which this request leaves be.
+    That's every row a member owns, also those a guild owns too, after every registered
+    :class:`~winter_dragon.member_hidden.MemberHiddenHook` cleaned up its feature. Does nothing while an earlier
+    request is hidden but not purged yet; one that never got hidden (hiding failed) is hidden now. What the member
+    stores afterwards is new data, which this request leaves be.
     """
     models = stored_models(bind)
     with Session(bind) as session:
@@ -190,9 +189,7 @@ def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datet
             request.requested_at, request.hidden_at, request.purged_at = now, None, None
             session.add(request)
             session.commit()
-        if Tournament in models:
-            for tournament in list(open_signups_of(session, member_id)):
-                withdraw(session, tournament, member_id)
+        MemberHiddenHook.run_all(session, member_id, models)
         hide_owned(session, models, now, member=member_id)
         request.hidden_at = now
         session.add(request)

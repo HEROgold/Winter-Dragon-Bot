@@ -28,6 +28,7 @@ from winter_dragon.cogs.stats import PeakOnline, StatChannel, StatKind, guild_st
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 from winter_dragon.cogs.steam.store import SteamSaleStore
 from winter_dragon.cogs.tournament import service as tournaments
+from winter_dragon.member_hidden import MemberHiddenHook
 from winter_dragon.cogs.tournament.models import (
     MatchPhase,
     TeamMode,
@@ -470,6 +471,26 @@ async def test_a_deletion_request_takes_the_member_out_of_tournaments_that_have_
 
     assert _signups(engine, captained) == ([], [])  # their team is disbanded
     assert _signups(engine, solo) == ([], [RIVAL_ID])
+
+
+HIDDEN_BY_TEST_HOOK: list[int] = []
+"""The members :class:`FeatureHook` saw hidden."""
+
+
+class FeatureHook(MemberHiddenHook):
+    """A feature outside the privacy cog that cleans up after a hidden member; defining it registers it."""
+
+    @classmethod
+    def on_member_hidden(cls, session: Session, member_id: Snowflake) -> None:
+        HIDDEN_BY_TEST_HOOK.append(member_id)
+
+
+async def test_a_deletion_request_runs_every_registered_member_hidden_hook(engine: Engine) -> None:
+    HIDDEN_BY_TEST_HOOK.clear()
+
+    await _cog(engine).request_deletion(MEMBER_ID, DAY_0)
+
+    assert HIDDEN_BY_TEST_HOOK == [MEMBER_ID]
 
 
 async def test_a_second_request_while_one_is_pending_changes_nothing(engine: Engine) -> None:

@@ -4,11 +4,13 @@ Each action takes an open session and leaves committing to the caller. An action
 :class:`~wd_errors.Refused` saying why, for the player; the caller then drops the session's changes.
 """
 
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
 lazy from wd_errors import Refused
+
+lazy from winter_dragon.member_hidden import MemberHiddenHook
 
 lazy from .bracket import first_round, next_match, round_count, split_into_teams, valid_options
 lazy from .models import (
@@ -132,6 +134,19 @@ def withdraw(session: Session, tournament: Tournament, user_id: Snowflake) -> No
         soft_delete(session, team)
     else:
         soft_delete(session, player)
+
+
+class WithdrawHiddenMember(MemberHiddenHook):
+    """A member whose data is hidden leaves each tournament that hasn't started, by the rule ``/tournament leave`` follows."""
+
+    tables = (Tournament, TournamentTeam, TournamentPlayer)
+
+    @classmethod
+    @override
+    def on_member_hidden(cls, session: Session, member_id: Snowflake) -> None:
+        """Withdraw the member ``member_id`` from every tournament they're signed up for that hasn't started."""
+        for tournament in list(open_signups_of(session, member_id)):
+            withdraw(session, tournament, member_id)
 
 
 def create_team(session: Session, tournament: Tournament, captain_id: Snowflake, name: str) -> None:

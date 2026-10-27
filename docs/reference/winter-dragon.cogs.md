@@ -937,6 +937,12 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `cast(session: Session, vote: MatchVote, user_id: Snowflake, choice: int) -> None` — Record ``user_id``'s answer ``choice`` to ``vote``, replacing their earlier one.
 - `choices_of(session: Session, vote_id: int) -> list[int]` — Return every answer given to the vote.
 
+### `class WithdrawHiddenMember(MemberHiddenHook)`
+A member whose data is hidden leaves each tournament that hasn't started, by the rule ``/tournament leave`` follows.
+
+- attributes: tables
+- `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Withdraw the member ``member_id`` from every tournament they're signed up for that hasn't started.
+
 ## `winter_dragon.cogs.uptime` — `src/winter_dragon/cogs/uptime.py`
 The /uptime command group: how long the bot has been running.
 

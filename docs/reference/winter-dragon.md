@@ -46,6 +46,16 @@ Container health checks, run by compose: ``python -m winter_dragon.health bot`` 
 - `web_healthy() -> bool` — Return whether the dashboard's landing page answers 200 on this host.
 - `main(argv: list[str]) -> int` — Run the check named by ``argv[0]`` and return the exit code.
 
+## `winter_dragon.member_hidden` — `src/winter_dragon/member_hidden.py`
+Hooks a feature registers to clean up after a member whose data is hidden, so privacy needn't know the feature.
+
+### `class MemberHiddenHook`
+A feature's own cleanup when a member's data is hidden; defining a subclass registers it.
+
+- fields: tables: ClassVar[tuple[type[LifecycleModel], ...]]
+- `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Clean up the member ``member_id``'s data in ``session``, before their owned rows are hidden; don't commit.
+- `@staticmethod run_all(session: Session, member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> None` — Call every registered hook whose :attr:`tables` are all in ``stored``, for the member ``member_id``.
+
 ## `winter_dragon.run_test_bot` — `src/winter_dragon/run_test_bot.py`
 Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.
 
