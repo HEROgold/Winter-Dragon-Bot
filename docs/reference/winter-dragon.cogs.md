@@ -278,7 +278,7 @@ The Discord side of the Incremental game: the save embed and its buttons.
 
 - module names: BUTTONS_PER_ROW
 - `format_amount(amount: float) -> str` — Format ``amount`` with thousands separators and one decimal.
-- `format_quantities(quantities: Iterable[Quantity]) -> str`
+- `format_quantities(quantities: Iterable[Quantity]) -> str` — Describe ``quantities`` as amounts with their currency labels, separated by commas.
 - `build_embed(view: SaveView) -> Embed` — Build the embed showing ``view``: amounts and rates per currency, then each generator with its next price.
 - `build_buttons(view: SaveView, *, refresh: ComponentHandler, buy: ComponentHandler) -> list[ActionRow]` — Build the Refresh button and one Buy button per generator, disabled when the save can't pay for it.
 

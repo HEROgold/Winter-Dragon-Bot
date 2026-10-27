@@ -8,9 +8,9 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
-import tomllib
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, ValidationError, model_validator
 from pydantic_core import core_schema
+lazy import tomllib
 
 
 if TYPE_CHECKING:

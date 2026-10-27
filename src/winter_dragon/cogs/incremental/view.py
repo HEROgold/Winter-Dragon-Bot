@@ -35,6 +35,7 @@ def format_amount(amount: float) -> str:
 
 
 def format_quantities(quantities: Iterable[Quantity]) -> str:
+    """Describe ``quantities`` as amounts with their currency labels, separated by commas."""
     game = catalogue()
     parts: list[str] = []
     for quantity in quantities:
