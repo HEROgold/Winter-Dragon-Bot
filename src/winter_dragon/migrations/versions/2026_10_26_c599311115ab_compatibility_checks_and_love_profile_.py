@@ -1,7 +1,7 @@
 """Compatibility checks and Love profile page.
 
 Revision ID: c599311115ab
-Revises: c9b4b18ba344
+Revises: 5b7094b12d2c
 Create Date: 2026-10-26 23:53:53.578199
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision: str = "c599311115ab"
-down_revision: str | None = "c9b4b18ba344"
+down_revision: str | None = "5b7094b12d2c"
 branch_labels: str | None = None
 depends_on: str | None = None
 
