@@ -20,6 +20,7 @@ lazy from wd_discord.limits import (
     MAX_EMBED_FIELD_NAME_LENGTH,
     MAX_EMBED_FIELD_VALUE_LENGTH,
     MAX_EMBED_FIELDS,
+    MAX_EMBED_TITLE_LENGTH,
     truncate,
 )
 lazy from wd_errors import BaseError, Refused
@@ -177,7 +178,7 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
             with Session(self.bind) as session:
                 session.add(Lookup(user_id=int(user.id), term=query))
                 session.commit()
-        title = truncate(f"Urban Dictionary: {query}", 256)
+        title = truncate(f"Urban Dictionary: {query}", MAX_EMBED_TITLE_LENGTH)
         await interaction.respond(embeds=[build_embed(title, definitions, UrbanSettings.max_definitions)])
 
     @Cog.command(name="random", description="Get random definitions from Urban Dictionary")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
