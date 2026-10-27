@@ -6,10 +6,10 @@ lazy import random
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field, Session, select
+from sqlmodel import Field, Session
 from wd_bot.commands import Describe
 from wd_db.extension.columns import AwareDateTime
-from wd_db.extension.lifecycle import LifecycleModel, Ownership
+from wd_db.extension.lifecycle import LifecycleModel, Ownership, upsert
 from wd_types.clock import utc_now
 lazy from confkit.data_types import Hex
 lazy from wd_bot.cogs import Cog
@@ -51,19 +51,7 @@ class CompatibilityCheck(LifecycleModel, table=True):
 
 def record_check(session: Session, user_id: int, target_id: int, target_name: str) -> CompatibilityCheck:
     """Store that ``user_id`` checked ``target_id``, or refresh the earlier check of the same pair; the caller commits."""
-    existing = session.exec(
-        select(CompatibilityCheck).where(
-            CompatibilityCheck.user_id == user_id,
-            CompatibilityCheck.target_id == target_id,
-        ),
-    ).first()
-    if existing is None:
-        existing = CompatibilityCheck(user_id=user_id, target_id=target_id, target_name=target_name)
-    existing.target_name = target_name
-    existing.checked_at = utc_now()
-    existing.deleted_at = None
-    session.add(existing)
-    return existing
+    return upsert(session, CompatibilityCheck(user_id=user_id, target_id=target_id, target_name=target_name))
 
 
 def calculate_percentage(user_id_a: int, user_id_b: int) -> int:
