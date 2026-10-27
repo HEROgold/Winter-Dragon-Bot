@@ -114,7 +114,7 @@ One feature's page in the Profile.
 The Profile's fuel page: an efficiency graph over time and a table of the member's refuels, newest first.
 
 - module names: GRAPH_WIDTH, GRAPH_HEIGHT, GRAPH_PADDING
-- `efficiency_graph(refuels: Sequence[CarFuels]) -> EfficiencyGraph | None` — Return the graph of ``refuels``, or ``None`` when none of them added fuel.
+- `efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits) -> EfficiencyGraph | None` — Return the graph of ``refuels`` in ``units``, or ``None`` when none of them added fuel.
 - `@profile_page fuel(context: ProfileContext) -> dict[str, object]` — Return the fuel page's context: the member's refuels, newest first, and their efficiency graph.
 
 ### `@dataclass class GraphPoint`

@@ -40,6 +40,13 @@ add the archive's tables.
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
 
+## `winter_dragon.migrations.versions.2026_10_26_bc19dfc865e9_fuel_units_setting` — `src/winter_dragon/migrations/versions/2026_10_26_bc19dfc865e9_fuel_units_setting.py`
+Fuel units setting.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
 ## `winter_dragon.migrations.versions.2026_10_26_cfb33b25e168_refuel_date` — `src/winter_dragon/migrations/versions/2026_10_26_cfb33b25e168_refuel_date.py`
 Refuel date.
 

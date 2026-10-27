@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 from sqlalchemy import inspect, text
-from sqlmodel import Session
+from sqlmodel import Session, select
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import LIFECYCLE_COLUMNS, alive, soft_delete
 from wd_db.testing import seed, sqlite_engine
 from wd_discord.gateway.events import InteractionDataOption
 
-from winter_dragon.cogs.fuel import CarFuels, Fuel, render_efficiency_graph
+from winter_dragon.cogs.fuel import CarFuels, Fuel, FuelPreferences, FuelUnits, member_units, render_efficiency_graph
 
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ async def test_add_stores_the_refuel(
     with Session(engine) as session:
         (refuel,) = session.exec(alive(CarFuels)).all()
     assert (refuel.user_id, refuel.price, refuel.distance, refuel.amount) == (ASKER_ID, 72.5, 600.0, 40.0)
-    assert "15.00 distance per unit" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert "15.00 km/L" in discord_client.interaction_responses()[0]["data"]["content"]
 
 
 async def test_add_refuses_non_positive_values(
@@ -164,7 +164,7 @@ async def test_an_old_carfuels_table_gains_the_lifecycle_columns_and_keeps_worki
     await Fuel.add.invoke(cog, make_interaction("fuel"), _numbers(price=72.5, distance=650, amount=40.5))
     await Fuel.efficiency.invoke(cog, make_interaction("fuel"), [])
 
-    assert "distance per unit" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert "km/L" in discord_client.interaction_responses()[0]["data"]["content"]
     ((_, (filename, _, _)),) = discord_client.requests_to("POST", FOLLOWUP)[0].files
     assert filename == "fuel_efficiency.png"
     assert set(LIFECYCLE_COLUMNS) <= {column["name"] for column in inspect(engine).get_columns("carfuels")}
@@ -185,3 +185,51 @@ async def test_a_soft_deleted_refuel_is_not_counted(
     await Fuel.efficiency.invoke(_cog(engine), make_interaction("fuel"), [])
 
     assert "haven't logged a refuel" in discord_client.interaction_responses()[0]["data"]["content"]
+
+
+def test_l_per_100_km_is_the_inverse_of_km_per_l() -> None:
+    assert FuelUnits.KM_PER_L.convert(20) == 20
+    assert FuelUnits.L_PER_100_KM.convert(20) == 5
+    assert FuelUnits.L_PER_100_KM.convert(0) == 0
+    assert _refuel(1, 600, 40).efficiency_in(FuelUnits.L_PER_100_KM) == pytest.approx(100 / 15)
+
+
+def test_the_graph_is_labelled_in_the_chosen_units() -> None:
+    assert render_efficiency_graph([_refuel(1, 600, 40)], FuelUnits.L_PER_100_KM).startswith(PNG_SIGNATURE)
+
+
+def _text(value: str) -> list[InteractionDataOption]:
+    return [InteractionDataOption(name="units", type=3, value=value)]
+
+
+async def test_units_stores_the_choice_and_changes_it(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    await Fuel.units.invoke(_cog(engine), make_interaction("fuel"), _text("L/100km"))
+    with Session(engine) as session:
+        assert member_units(session, ASKER_ID) is FuelUnits.L_PER_100_KM
+
+    await Fuel.units.invoke(_cog(engine), make_interaction("fuel"), _text("km/L"))
+    with Session(engine) as session:
+        assert member_units(session, ASKER_ID) is FuelUnits.KM_PER_L
+        assert len(session.exec(select(FuelPreferences)).all()) == 1
+
+
+async def test_units_refuses_an_unknown_unit(engine: Engine, make_interaction: InteractionFactory) -> None:
+    await Fuel.units.invoke(_cog(engine), make_interaction("fuel"), _text("mpg"))
+    with Session(engine) as session:
+        assert session.exec(select(FuelPreferences)).all() == []
+
+
+async def test_add_reports_the_efficiency_in_the_chosen_units(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    seed(engine, FuelPreferences(id=ASKER_ID, units=FuelUnits.L_PER_100_KM))
+
+    await Fuel.add.invoke(_cog(engine), make_interaction("fuel"), _numbers(price=72.5, distance=500, amount=40))
+
+    assert "8.00 L/100km" in discord_client.interaction_responses()[0]["data"]["content"]

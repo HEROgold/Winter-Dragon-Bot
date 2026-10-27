@@ -1,6 +1,7 @@
 """The /fuel command group: log refuels, and graph fuel efficiency over time."""
 
 from datetime import datetime
+from enum import StrEnum
 from typing import Annotated
 lazy import asyncio
 lazy from datetime import UTC, date, time
@@ -9,15 +10,16 @@ lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Lookup
 from wd_db.extension.columns import AwareDateTime
-from wd_db.extension.lifecycle import LifecycleModel, Ownership
+from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
 from wd_types.clock import utc_now
 lazy from matplotlib.dates import DateFormatter, date2num
 lazy from matplotlib.figure import Figure
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import owned_by
+lazy from wd_db.extension.lifecycle import owned_by, upsert
 lazy from wd_discord.files import File
+lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
@@ -26,7 +28,7 @@ lazy from winter_dragon.config import CogConfig
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
 
-    lazy from wd_discord import CommandInteraction
+    lazy from wd_discord import AutocompleteInteraction, CommandInteraction
 
 
 class FuelSettings:
@@ -38,6 +40,34 @@ class FuelSettings:
     """The height of the efficiency graph, in inches."""
     graph_filename = CogConfig("fuel_efficiency.png")
     """The file name the efficiency graph is attached as."""
+
+
+class FuelUnits(StrEnum):
+    """How a member wants fuel efficiency shown; refuels are stored as distance and amount either way."""
+
+    KM_PER_L = "km/L"
+    L_PER_100_KM = "L/100km"
+
+    def convert(self, km_per_l: float) -> float:
+        """Return ``km_per_l`` in these units; a value of 0 or less has no L/100km, so it gives 0."""
+        if self is FuelUnits.L_PER_100_KM:
+            return 100 / km_per_l if km_per_l > 0 else 0.0
+        return km_per_l
+
+
+class FuelPreferences(DiscordKeyedModel, table=True):
+    """A member's fuel settings; ``id`` is their Discord user ID, and they own it."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="id")
+
+    units: FuelUnits = FuelUnits.KM_PER_L
+    """The units fuel efficiency is shown in."""
+
+
+def member_units(session: Session, user_id: int) -> FuelUnits:
+    """Return the units ``user_id`` picked, or km/L when they never did."""
+    preferences = session.get(FuelPreferences, user_id)
+    return FuelUnits.KM_PER_L if preferences is None or preferences.deleted_at is not None else preferences.units
 
 
 class CarFuels(LifecycleModel, table=True):
@@ -64,8 +94,12 @@ class CarFuels(LifecycleModel, table=True):
 
     @property
     def efficiency(self) -> float:
-        """Distance driven per unit of fuel."""
+        """Distance driven per unit of fuel (km/L)."""
         return self.distance / self.amount
+
+    def efficiency_in(self, units: FuelUnits) -> float:
+        """Return the efficiency of this refuel in ``units``."""
+        return units.convert(self.efficiency)
 
 
 def parse_refuel_date(value: str) -> datetime | None:
@@ -77,15 +111,15 @@ def parse_refuel_date(value: str) -> datetime | None:
     return datetime.combine(day, time(), tzinfo=UTC)
 
 
-def graphable(refuels: Sequence[CarFuels]) -> list[tuple[datetime, float]]:
-    """Return the ``(date, efficiency)`` of each of ``refuels`` that added fuel, oldest first."""
+def graphable(refuels: Sequence[CarFuels], units: FuelUnits = FuelUnits.KM_PER_L) -> list[tuple[datetime, float]]:
+    """Return the ``(date, efficiency in units)`` of each of ``refuels`` that added fuel, oldest first."""
     ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.refuel_date)
-    return [(refuel.refuel_date, refuel.efficiency) for refuel in ordered]
+    return [(refuel.refuel_date, refuel.efficiency_in(units)) for refuel in ordered]
 
 
-def render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes:
+def render_efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits = FuelUnits.KM_PER_L) -> bytes:
     """Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out."""
-    points = graphable(refuels)
+    points = graphable(refuels, units)
     figure = Figure(figsize=(FuelSettings.graph_width_inches, FuelSettings.graph_height_inches))
     axes = figure.subplots()
     axes.plot(
@@ -97,7 +131,7 @@ def render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes:
         markersize=6,
     )
     axes.set_xlabel("Date")
-    axes.set_ylabel("Efficiency (distance per unit)")
+    axes.set_ylabel(f"Efficiency ({units})")
     axes.set_title("Fuel Efficiency Over Time")
     axes.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d"))
     axes.tick_params(axis="x", labelrotation=45)
@@ -114,7 +148,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
     @override
     async def load(self) -> None:
         """Create the refuel table if missing."""
-        self.create_tables(CarFuels)
+        self.create_tables(CarFuels, FuelPreferences)
 
     @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
         name="add",
@@ -160,13 +194,14 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
                 ),
             )
             session.commit()
+            units = member_units(session, int(user.id))
         await interaction.respond(
-            f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {distance / amount:.2f} distance per unit.\n"
+            f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {units.convert(distance / amount):.2f} {units}.\n"
             f"Use {self.mention(self.efficiency)} to see how that changes over time.",
             ephemeral=True,
         )
 
-    @Cog.command(name="efficiency", description="Show a graph of your distance driven per unit of fuel over time")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="efficiency", description="Show a graph of your fuel efficiency over time, in your units")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def efficiency(self, interaction: CommandInteraction) -> None:
         """Reply with a graph of the invoking user's fuel efficiency."""
         user = interaction.user
@@ -174,12 +209,42 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             return
         with Session(self.bind) as session:
             refuels = session.exec(owned_by(CarFuels, member=int(user.id))).all()
+            units = member_units(session, int(user.id))
         if not refuels:
             await interaction.respond(f"You haven't logged a refuel yet. Use {self.mention(self.add)} first.", ephemeral=True)
             return
         await interaction.defer(ephemeral=True)
-        graph = await asyncio.to_thread(render_efficiency_graph, refuels)
+        graph = await asyncio.to_thread(render_efficiency_graph, refuels, units)
         await interaction.respond(
             files=[File(FuelSettings.graph_filename, graph, content_type="image/png", description="Fuel efficiency over time")],
             ephemeral=True,
         )
+
+    async def units_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:  # noqa: ARG002 - fixed list
+        """Suggest the units that contain what was typed."""
+        return [
+            ApplicationCommandOptionChoice(name=unit.value, value=unit.value)
+            for unit in FuelUnits
+            if current.lower() in unit.value.lower()
+        ]
+
+    @Cog.command(name="units", description="Pick how your fuel efficiency is shown: km/L or L/100km")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def units(
+        self,
+        interaction: CommandInteraction,
+        units: Annotated[str, Lookup(units_choices), Describe("km/L or L/100km")],
+    ) -> None:
+        """Store the invoking user's fuel efficiency units."""
+        user = interaction.user
+        if user is None:
+            return
+        try:
+            chosen = FuelUnits(units.strip())
+        except ValueError:
+            options = " or ".join(unit.value for unit in FuelUnits)
+            await interaction.respond(f"Pick {options}.", ephemeral=True)
+            return
+        with Session(self.bind) as session:
+            upsert(session, FuelPreferences(id=int(user.id), units=chosen))
+            session.commit()
+        await interaction.respond(f"Your fuel efficiency is now shown in {chosen}.", ephemeral=True)

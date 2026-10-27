@@ -17,7 +17,7 @@ from wd_discord.snowflake import Snowflake
 from wd_discord.testing import user_json
 
 from winter_dragon.cogs import import_cogs
-from winter_dragon.cogs.fuel import CarFuels
+from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.web import auth, pages, profile, reminders
 from winter_dragon.web.app import create_app
@@ -372,3 +372,33 @@ def test_a_feature_adds_a_profile_page_by_registering_it(member: TestClient, mon
 
     assert 'href="/profile/steam"' in member.get("/profile").text
     assert member.get("/profile/steam").status_code == 200
+
+
+def test_the_fuel_page_shows_efficiency_in_the_chosen_units(member: TestClient, bind: Engine) -> None:
+    seed(bind, _refuel(1, 600, 40), FuelPreferences(id=MEMBER_ID, units=FuelUnits.L_PER_100_KM))
+
+    page = member.get("/profile/fuel").text
+
+    assert "Efficiency (L/100km)" in page
+    assert "6.67" in page
+    assert "15.00" not in page
+
+
+def test_the_fuel_page_defaults_to_km_per_l(member: TestClient, bind: Engine) -> None:
+    seed(bind, _refuel(1, 600, 40))
+
+    page = member.get("/profile/fuel").text
+
+    assert "Efficiency (km/L)" in page
+    assert "15.00" in page
+
+
+def test_the_fuel_setting_is_on_the_data_page_and_goes_with_your_data(member: TestClient, bind: Engine) -> None:
+    seed(bind, FuelPreferences(id=MEMBER_ID, units=FuelUnits.L_PER_100_KM))
+
+    assert "1 entry" in member.get("/me").text
+
+    member.post("/me/deletion", data={"csrf_token": _csrf(member), "confirm_name": "frostbyte"}, headers=HTMX)
+
+    with Session(bind) as session:
+        assert member_units(session, MEMBER_ID) is FuelUnits.KM_PER_L
