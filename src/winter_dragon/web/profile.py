@@ -27,6 +27,7 @@ lazy from winter_dragon.web.responses import database, render, render_mapping
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+
     from zoneinfo import ZoneInfo
 
 
