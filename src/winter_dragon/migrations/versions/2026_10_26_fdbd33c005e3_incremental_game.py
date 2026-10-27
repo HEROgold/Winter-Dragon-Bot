@@ -1,7 +1,7 @@
 """Incremental game.
 
 Revision ID: fdbd33c005e3
-Revises: c9b4b18ba344
+Revises: 80ee15b45b3a
 Create Date: 2026-10-26 23:52:12.229875
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision: str = "fdbd33c005e3"
-down_revision: str | None = "c9b4b18ba344"
+down_revision: str | None = "80ee15b45b3a"
 branch_labels: str | None = None
 depends_on: str | None = None
 
