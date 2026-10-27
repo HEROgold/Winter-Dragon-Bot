@@ -36,6 +36,7 @@ lazy from wd_discord.entities.interaction import (
     AutocompleteInteraction,
     CommandInteraction,
     ComponentInteraction,
+    ModalSubmitInteraction,
     UnknownInteraction,
 )
 lazy from wd_discord.entities.member import Member
@@ -121,6 +122,7 @@ def _binders() -> Mapping[type[DiscordModel], Callable[..., ClientBound]]:
         wire.CommandInteraction: CommandInteraction,
         wire.ComponentInteraction: ComponentInteraction,
         wire.AutocompleteInteraction: AutocompleteInteraction,
+        wire.ModalSubmitInteraction: ModalSubmitInteraction,
         wire.UnknownInteraction: UnknownInteraction,
         wire.VoiceStateUpdate: VoiceState,
         wire.GuildUpdate: Guild,

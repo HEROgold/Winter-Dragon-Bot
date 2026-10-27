@@ -4,11 +4,12 @@ lazy from typing import TYPE_CHECKING, Protocol
 
 lazy import pytest
 lazy from wd_db.testing import sqlite_engine
-lazy from wd_discord import CommandInteraction, ComponentInteraction
+lazy from wd_discord import CommandInteraction, ComponentInteraction, ModalSubmitInteraction
 lazy from wd_discord.components import ComponentType
 lazy from wd_discord.gateway.events import CommandInteraction as CommandInteractionModel
 lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
-lazy from wd_discord.gateway.events import InteractionData, InteractionType, MessageComponentData
+lazy from wd_discord.gateway.events import InteractionData, InteractionType, MessageComponentData, ModalSubmitData
+lazy from wd_discord.gateway.events import ModalSubmitInteraction as ModalSubmitInteractionModel
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.guild import GuildMember
 lazy from wd_discord.resources.user import User
@@ -170,5 +171,48 @@ def make_component_interaction(discord_client: RecordingClient) -> ComponentInte
             message={"id": "11"},
         )
         return ComponentInteraction(discord_client, model)
+
+    return build
+
+
+class ModalSubmitFactory(Protocol):
+    """Builds a modal-submit interaction, as the ``make_modal_submit`` fixture returns."""
+
+    def __call__(
+        self,
+        custom_id: str,
+        values: dict[str, str],
+        *,
+        user: User | None = ...,
+        guild_id: int | None = None,
+        channel_id: int | None = None,
+    ) -> ModalSubmitInteraction:
+        """Build the interaction."""
+        ...
+
+
+@pytest.fixture
+def make_modal_submit(discord_client: RecordingClient) -> ModalSubmitFactory:
+    """Return a builder for the submit of the modal ``custom_id`` with one text input per ``values`` entry."""
+
+    def build(
+        custom_id: str,
+        values: dict[str, str],
+        *,
+        user: User | None = ASKER,
+        guild_id: int | None = None,
+        channel_id: int | None = None,
+    ) -> ModalSubmitInteraction:
+        inputs = [{"type": 18, "component": {"type": 4, "custom_id": name, "value": value}} for name, value in values.items()]
+        model = ModalSubmitInteractionModel(
+            id="1",
+            application_id="2",
+            type=InteractionType.MODAL_SUBMIT,
+            token="tok",  # noqa: S106
+            version=1,
+            **_sender(user, guild_id, channel_id, None),  # pyright: ignore[reportArgumentType]
+            data=ModalSubmitData(custom_id=custom_id, components=inputs),
+        )
+        return ModalSubmitInteraction(discord_client, model)
 
     return build

@@ -13,12 +13,12 @@ Public names only — open the file when you need a body. Index: [API reference]
   Entitlement, Entity, EntityStore, GatewayGuild, GlobalCommand, GlobalCommandStore, Guild, GuildCommand,
   GuildCommandInteraction, GuildCommandStore, GuildComponentInteraction, GuildDelete, GuildEmojisUpdate,
   GuildStickersUpdate, InGuild, Interaction, Invite, Member, MemberRemove, MembersChunk, Message, MessageDelete,
-  MessageDeleteBulk, Partial, PartialChannel, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember,
-  PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget, Presence, ReactionAdd, ReactionEmoji,
-  ReactionRemove, ReactionRemoveAll, ReactionRemoveEmoji, Ready, Resolved, Role, Sticker, Store, Team, TeamMember,
-  ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, TypingStart, UnknownInteraction, User,
-  UserStore, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, WelcomeScreen, WelcomeScreenChannel,
-  bind, event_entities, narrow_to_guild
+  MessageDeleteBulk, ModalSubmitInteraction, Partial, PartialChannel, PartialGlobalCommand, PartialGuild,
+  PartialGuildCommand, PartialMember, PartialMessage, PartialRole, PartialUser, PermissionOverwrite, PermissionTarget,
+  Presence, ReactionAdd, ReactionEmoji, ReactionRemove, ReactionRemoveAll, ReactionRemoveEmoji, Ready, Resolved, Role,
+  Sticker, Store, Team, TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate,
+  TypingStart, UnknownInteraction, User, UserStore, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState,
+  WelcomeScreen, WelcomeScreenChannel, bind, event_entities, narrow_to_guild
 
 ## `wd_discord.entities.application` — `wd-discord/src/wd_discord/entities/application.py`
 The application behind the client's token (https://docs.discord.com/developers/resources/application).
@@ -571,7 +571,7 @@ One channel a welcome screen suggests.
 ## `wd_discord.entities.interaction` — `wd-discord/src/wd_discord/entities/interaction.py`
 Interactions bound to the client that answers them.
 
-- `type AnyInteraction = CommandInteraction | ComponentInteraction | AutocompleteInteraction | UnknownInteraction`
+- `type AnyInteraction = CommandInteraction | ComponentInteraction | AutocompleteInteraction | ModalSubmitInteraction | UnknownInteraction`
 - `type AnyGuildInteraction = GuildCommandInteraction | GuildComponentInteraction`
 - `narrow_to_guild(interaction: CommandInteraction | ComponentInteraction) -> AnyGuildInteraction | None` — Return ``interaction`` as sent from a guild, sharing its response state; ``None`` if it wasn't.
 
@@ -611,15 +611,21 @@ Someone ran an application command.
 - `@property options -> list[InteractionDataOption]` — The submitted option values; a subcommand's own values are nested in its option.
 - `@property resolved -> Resolved | None` — Full objects for the users, roles and channels the option values name.
 
-### `class ComponentInteraction(Interaction[ComponentInteractionModel])`
+### `class ComponentInteraction(_UpdatesMessage[ComponentInteractionModel])`
 Someone clicked a button or chose from a select menu.
 
 - `@property custom_id -> str` — The ``custom_id`` of the component that was used.
 - `@property component_type -> ComponentType` — The kind of component that was used.
 - `@property values -> list[str]` — The chosen values of a select menu; empty for buttons.
 - `@property message -> Message` — The message the component is attached to.
-- `async update(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> NetworkError | None` — Edit the component's message as the initial response.
-- `async defer_update() -> NetworkError | None` — Acknowledge now, without a loading state, and edit the component's message later; no-op once answered.
+- `async show_modal(modal: Modal) -> NetworkError | None` — Answer with a pop-up form; its submit arrives as a :class:`ModalSubmitInteraction` carrying ``modal.custom_id``.
+
+### `class ModalSubmitInteraction(_UpdatesMessage[ModalSubmitInteractionModel])`
+Someone submitted a modal.
+
+- `@property custom_id -> str` — The ``custom_id`` of the modal that was submitted.
+- `@property values -> dict[str, str]` — What was typed, by the ``custom_id`` of each text input.
+- `@property message -> Message | None` — The message the modal was opened from, when it was opened from a component on a message.
 
 ### `class AutocompleteInteraction(Interaction[AutocompleteInteractionModel])`
 Someone is typing a value for an autocomplete option.
@@ -630,7 +636,7 @@ Someone is typing a value for an autocomplete option.
 - `async suggest(choices: Sequence[ApplicationCommandOptionChoice]) -> NetworkError | None` — Offer ``choices`` (at most 25) for the focused option.
 
 ### `class UnknownInteraction(Interaction[InteractionModel])`
-An interaction type without its own class yet (PING, MODAL_SUBMIT).
+An interaction type without its own class yet (PING).
 
 ### `class InGuild`
 What an interaction sent from a guild always has: the guild, the channel, and the member who sent it.

@@ -12,13 +12,13 @@ Public names only — open the file when you need a body. Index: [API reference]
   ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField, Emoji, Entitlement, EventName, Gateway,
   GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild, GuildCommand, GuildCommandInteraction,
   GuildComponentInteraction, GuildCreate, GuildDelete, GuildEmojisUpdate, GuildStickersUpdate, Interaction, Invite,
-  Member, MemberRemove, MembersChunk, Message, MessageDelete, MessageDeleteBulk, NetworkError, PartialChannel,
-  PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage, PartialRole,
-  PartialUser, PermissionOverwrite, Permissions, Presence, RawEvent, ReactionAdd, ReactionRemove, ReactionRemoveAll,
-  ReactionRemoveEmoji, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status, Sticker, Team, TeamMember,
-  ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, Token, TokenType, TypingStart,
-  UnknownInteraction, User, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind, is_gone,
-  is_network_error, narrow_to_guild
+  Member, MemberRemove, MembersChunk, Message, MessageDelete, MessageDeleteBulk, ModalSubmitInteraction, NetworkError,
+  PartialChannel, PartialEmoji, PartialGlobalCommand, PartialGuild, PartialGuildCommand, PartialMember, PartialMessage,
+  PartialRole, PartialUser, PermissionOverwrite, Permissions, Presence, RawEvent, ReactionAdd, ReactionRemove,
+  ReactionRemoveAll, ReactionRemoveEmoji, Ready, Resolved, Role, Sentry, ShardManager, Snowflake, Status, Sticker, Team,
+  TeamMember, ThreadCreate, ThreadDelete, ThreadListSync, ThreadMember, ThreadMembersUpdate, Token, TokenType,
+  TypingStart, UnknownInteraction, User, VoiceChannelStartTimeUpdate, VoiceChannelStatusUpdate, VoiceState, bind,
+  is_gone, is_network_error, narrow_to_guild
 
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
@@ -133,7 +133,8 @@ An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the 
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
 Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
 
-- module names: MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH
+- module names: MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH,
+  MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH
 - `type CustomId = str`
 - `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
@@ -160,6 +161,30 @@ A clickable button; must sit inside an :class:`ActionRow`.
 A row of up to 5 buttons at the bottom of a message.
 
 - fields: type: Literal[ComponentType.ACTION_ROW], components: list[Button]
+- attributes: model_config
+
+### `class TextInputStyle(OpenIntEnum)`
+How tall a text input is.
+
+- attributes: SHORT, PARAGRAPH
+
+### `class TextInput(BaseModel)`
+A text field inside a :class:`Label` of a :class:`Modal`.
+
+- fields: type: Literal[ComponentType.TEXT_INPUT], custom_id: CustomId, style: TextInputStyle, min_length: int | None,
+  max_length: int | None, required: bool | None, value: str | None, placeholder: str | None
+- attributes: model_config
+
+### `class Label(BaseModel)`
+A caption above one component of a :class:`Modal`.
+
+- fields: type: Literal[ComponentType.LABEL], label: str, description: str | None, component: TextInput
+- attributes: model_config
+
+### `class Modal(BaseModel)`
+A pop-up form, shown as the response to an interaction.
+
+- fields: custom_id: CustomId, title: str, components: list[Label]
 - attributes: model_config
 
 ## `wd_discord.constants` — `wd-discord/src/wd_discord/constants.py`
@@ -476,6 +501,11 @@ The body of a response to an interaction (object -> API).
 
 - fields: content: str, embeds: list[Embed], components: list[ActionRow], flags: MessageFlags, attachments:
   list[dict[str, object]], choices: list[dict[str, object]]
+
+### `class ModalData(TypedDict)`
+The body of a MODAL response to an interaction (object -> API).
+
+- fields: custom_id: str, title: str, components: list[dict[str, object]]
 
 ## `wd_discord.route` — `wd-discord/src/wd_discord/route.py`
 REST routes written as PEP 750 templates: ``t"/channels/{channel_id}/messages"``.

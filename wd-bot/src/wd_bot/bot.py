@@ -18,6 +18,7 @@ lazy from wd_discord import (
     CommandInteraction,
     ComponentInteraction,
     GatewayBotInfo,
+    ModalSubmitInteraction,
     is_network_error,
 )
 lazy from wd_discord.color import Color
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import Snowflake
 
     lazy from wd_bot.commands import AppCommand
-    lazy from wd_bot.components import ComponentHandler
+    lazy from wd_bot.components import CustomIdHandler
     lazy from wd_bot.registry import Scope
 
 
@@ -124,7 +125,8 @@ class Bot(LoggerMixin):
         self._extensions: dict[str, ModuleType] = {}
         self._failed_extensions: set[str] = set()
         self._listeners: dict[str, list[Callable[..., Awaitable[None]]]] = {}
-        self._components: dict[str, tuple[Cog, ComponentHandler]] = {}
+        self._components: dict[str, tuple[Cog, CustomIdHandler[ComponentInteraction]]] = {}
+        self._modals: dict[str, tuple[Cog, CustomIdHandler[ModalSubmitInteraction]]] = {}
         self.registry = CommandRegistry()
         """The registered commands per scope, and the IDs Discord gave them."""
         self.syncer = CommandSyncer(self.registry)
@@ -146,22 +148,33 @@ class Bot(LoggerMixin):
             if event:
                 self._listeners.setdefault(event, []).append(member)
         self.registry.register(cog)
-        for handler in cog.components():
-            if (existing_handler := self._components.get(handler.prefix)) is not None and existing_handler[0] is not cog:
-                previous = existing_handler[0].__cog_name__
-                self.logger.warning(
-                    t"Duplicate component prefix '{handler.prefix}': cog '{cog.__cog_name__}' replaces '{previous}'",
-                )
-            self._components[handler.prefix] = (cog, handler)
+        self._register_custom_ids(cog, cog.components(), self._components)
+        self._register_custom_ids(cog, cog.modals(), self._modals)
         await cog.load()
+
+    def _register_custom_ids[I: ComponentInteraction | ModalSubmitInteraction](
+        self,
+        cog: Cog,
+        handlers: Iterable[CustomIdHandler[I]],
+        registry: dict[str, tuple[Cog, CustomIdHandler[I]]],
+    ) -> None:
+        """Route each handler's prefix in ``registry`` to ``cog``, warning when that replaces another cog's handler."""
+        for handler in handlers:
+            if (existing := registry.get(handler.prefix)) is not None and existing[0] is not cog:
+                previous = existing[0].__cog_name__
+                self.logger.warning(
+                    t"Duplicate {handler.kind} prefix '{handler.prefix}': cog '{cog.__cog_name__}' replaces '{previous}'",
+                )
+            registry[handler.prefix] = (cog, handler)
 
     async def remove_cog(self, cog: Cog) -> set[Scope]:
         """Unregister ``cog``'s listeners, commands and components and unload it; return the command scopes that changed."""
         self.cogs.pop(cog.__cog_name__, None)
         for handlers in self._listeners.values():
             handlers[:] = [handler for handler in handlers if getattr(handler, "__self__", None) is not cog]
-        for prefix in [prefix for prefix, (owner, _) in self._components.items() if owner is cog]:
-            del self._components[prefix]
+        for registry in (self._components, self._modals):
+            for prefix in [prefix for prefix, (owner, _) in registry.items() if owner is cog]:
+                del registry[prefix]
         scopes = self.registry.unregister(cog)
         await cog.unload()
         return scopes
@@ -177,6 +190,8 @@ class Bot(LoggerMixin):
                 succeeded = await self._dispatch_command(interaction)
             case ComponentInteraction():
                 succeeded = await self._dispatch_component(interaction)
+            case ModalSubmitInteraction():
+                succeeded = await self._dispatch_modal(interaction)
             case AutocompleteInteraction():
                 await self._dispatch_autocomplete(interaction)
                 return
@@ -203,10 +218,24 @@ class Bot(LoggerMixin):
 
     async def _dispatch_component(self, interaction: ComponentInteraction) -> bool:
         """Invoke the handler owning the clicked component's ``custom_id`` prefix; ``False`` only if it raised."""
+        _prefix, _args = parse_custom_id(interaction.custom_id)
+        return await self._dispatch_custom_id(interaction, self._components, "component")
+
+    async def _dispatch_modal(self, interaction: ModalSubmitInteraction) -> bool:
+        """Invoke the handler owning the submitted modal's ``custom_id`` prefix; ``False`` only if it raised."""
+        return await self._dispatch_custom_id(interaction, self._modals, "modal")
+
+    async def _dispatch_custom_id[I: ComponentInteraction | ModalSubmitInteraction](
+        self,
+        interaction: I,
+        registry: dict[str, tuple[Cog, CustomIdHandler[I]]],
+        kind: str,
+    ) -> bool:
+        """Invoke the handler in ``registry`` owning the ``custom_id`` prefix; ``False`` only if it raised."""
         prefix, args = parse_custom_id(interaction.custom_id)
-        entry = self._components.get(prefix)
+        entry = registry.get(prefix)
         if entry is None:
-            self.logger.warning(t"No registered component handler for custom_id {interaction.custom_id!r}")
+            self.logger.warning(t"No registered {kind} handler for custom_id {interaction.custom_id!r}")
             return True
         cog, handler = entry
         return await handler.invoke(cog, interaction, args)
@@ -242,7 +271,7 @@ class Bot(LoggerMixin):
         An interaction is also routed to its command or component handler.
         """
         event = self.client.receive(payload).event
-        if isinstance(event, CommandInteraction | ComponentInteraction):
+        if isinstance(event, CommandInteraction | ComponentInteraction | ModalSubmitInteraction):
             self.loop.create_task(self._dispatch_interaction(event))
         for handler in self._listeners.get(event_name, []):
             self.loop.create_task(self._invoke_listener(handler, event))

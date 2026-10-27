@@ -52,6 +52,7 @@ lazy from .interaction import (
     GuildComponentInteraction,
     InGuild,
     Interaction,
+    ModalSubmitInteraction,
     UnknownInteraction,
     narrow_to_guild,
 )
@@ -112,6 +113,7 @@ __all__ = [
     "Message",
     "MessageDelete",
     "MessageDeleteBulk",
+    "ModalSubmitInteraction",
     "Partial",
     "PartialChannel",
     "PartialGlobalCommand",

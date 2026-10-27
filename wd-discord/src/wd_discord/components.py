@@ -131,3 +131,64 @@ def components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]:
         msg = f"custom_id must be unique within a message, duplicated: {duplicates}"
         raise ValueError(msg)
     return [row.model_dump(mode="json", exclude_none=True) for row in rows]
+
+
+MAX_MODAL_TITLE_LENGTH = 45
+"""A modal title holds up to 45 characters (https://docs.discord.com/developers/interactions/receiving-and-responding#modal)."""
+MAX_LABEL_LENGTH = 45
+"""A label holds up to 45 characters (https://docs.discord.com/developers/components/reference#label)."""
+MAX_TEXT_INPUT_LENGTH = 4000
+"""A text input accepts up to 4000 characters (https://docs.discord.com/developers/components/reference#text-input)."""
+
+
+class TextInputStyle(OpenIntEnum):
+    """How tall a text input is.
+
+    https://docs.discord.com/developers/components/reference#text-input-text-input-styles
+    """
+
+    SHORT = 1
+    """A single line."""
+    PARAGRAPH = 2
+    """Several lines."""
+
+
+class TextInput(BaseModel):
+    """A text field inside a :class:`Label` of a :class:`Modal`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal[ComponentType.TEXT_INPUT] = ComponentType.TEXT_INPUT
+    custom_id: CustomId
+    style: TextInputStyle = TextInputStyle.SHORT
+    min_length: Annotated[int, Field(ge=0, le=MAX_TEXT_INPUT_LENGTH)] | None = None
+    max_length: Annotated[int, Field(ge=1, le=MAX_TEXT_INPUT_LENGTH)] | None = None
+    required: bool | None = None
+    value: Annotated[str, StringConstraints(max_length=MAX_TEXT_INPUT_LENGTH)] | None = None
+    """Text the field starts with."""
+    placeholder: Annotated[str, StringConstraints(max_length=100)] | None = None
+
+
+class Label(BaseModel):
+    """A caption above one component of a :class:`Modal`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal[ComponentType.LABEL] = ComponentType.LABEL
+    label: Annotated[str, StringConstraints(min_length=1, max_length=MAX_LABEL_LENGTH)]
+    description: Annotated[str, StringConstraints(max_length=100)] | None = None
+    component: TextInput
+
+
+class Modal(BaseModel):
+    """A pop-up form, shown as the response to an interaction.
+
+    https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-response-object-modal
+    The submit arrives as a MODAL_SUBMIT interaction carrying ``custom_id``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    custom_id: CustomId
+    title: Annotated[str, StringConstraints(min_length=1, max_length=MAX_MODAL_TITLE_LENGTH)]
+    components: Annotated[list[Label], Field(min_length=1, max_length=5)]

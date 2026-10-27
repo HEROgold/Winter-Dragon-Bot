@@ -11,7 +11,7 @@ editing the original response and sending follow-ups.
 """
 
 from dataclasses import dataclass, field
-lazy from typing import TYPE_CHECKING, overload
+lazy from typing import TYPE_CHECKING, cast, overload
 
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import Entity, no_content
@@ -28,6 +28,8 @@ lazy from wd_discord.gateway.events import CommandInteraction as CommandInteract
 lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInteractionModel
 lazy from wd_discord.gateway.events import Interaction as InteractionModel
 lazy from wd_discord.gateway.events import Message as MessageModel
+lazy from wd_discord.gateway.events import ModalSubmitInteraction as ModalSubmitInteractionModel
+lazy from wd_discord.gateway.events import SubmittedActionRow, SubmittedLabel, SubmittedTextInput
 lazy from wd_discord.responses import InteractionCallbackType, MessageFlags, message_data
 
 
@@ -38,18 +40,20 @@ if TYPE_CHECKING:
     from wd_core.client import JsonPayload
 
     from wd_discord.client import Client, NetworkError
-    from wd_discord.components import ActionRow, ComponentType
+    from wd_discord.components import ActionRow, ComponentType, Modal
     from wd_discord.embed import Embed
     from wd_discord.files import File
-    from wd_discord.gateway.events import InteractionDataOption, InteractionType
+    from wd_discord.gateway.events import InteractionDataOption, InteractionType, SubmittedComponent
     from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType, Locale
     from wd_discord.permissions import Permissions
     from wd_discord.resources.channel import Channel as ChannelModel
-    from wd_discord.responses import MessageData
+    from wd_discord.responses import MessageData, ModalData
     from wd_discord.snowflake import Snowflake
 
 
-type AnyInteraction = CommandInteraction | ComponentInteraction | AutocompleteInteraction | UnknownInteraction
+type AnyInteraction = (
+    CommandInteraction | ComponentInteraction | AutocompleteInteraction | ModalSubmitInteraction | UnknownInteraction
+)
 """Every bound interaction :func:`~wd_discord.entities.events.bind` can return; ``match`` on it to handle each type."""
 
 
@@ -153,7 +157,7 @@ class Interaction[M: InteractionModel](Entity[M]):
     async def _callback(
         self,
         callback_type: InteractionCallbackType,
-        data: MessageData | None = None,
+        data: MessageData | ModalData | None = None,
         files: Sequence[File] = (),
     ) -> NetworkError | None:
         """POST /interactions/{id}/{token}/callback - send the initial response, remembering that it was sent."""
@@ -260,7 +264,35 @@ class CommandInteraction(Interaction[CommandInteractionModel]):
         return None if resolved is None else Resolved(self.client, resolved, self.model.guild_id)
 
 
-class ComponentInteraction(Interaction[ComponentInteractionModel]):
+class _UpdatesMessage[M: InteractionModel](Interaction[M]):
+    """An interaction that comes from a message, so it can edit that message as its initial response."""
+
+    async def update(
+        self,
+        content: str | None = None,
+        *,
+        embeds: Sequence[Embed] | None = None,
+        components: Sequence[ActionRow] | None = None,
+    ) -> NetworkError | None:
+        """Edit the message the interaction came from as the initial response.
+
+        A modal only comes from a message when it was opened from a component on one. A ``None`` argument leaves
+        that part of the message unchanged. Once the interaction was answered, edits the original response instead.
+        """
+        if self.responded:
+            message = await self.edit_original(content, embeds=embeds, components=components)
+            return message if is_network_error(message) else None
+        data = message_data(content=content, embeds=embeds, components=components)
+        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data)
+
+    async def defer_update(self) -> NetworkError | None:
+        """Acknowledge now, without a loading state, and edit the source message later; no-op once answered."""
+        if self.responded:
+            return None
+        return await self._callback(InteractionCallbackType.DEFERRED_UPDATE_MESSAGE)
+
+
+class ComponentInteraction(_UpdatesMessage[ComponentInteractionModel]):
     """Someone clicked a button or chose from a select menu."""
 
     @property
@@ -283,29 +315,48 @@ class ComponentInteraction(Interaction[ComponentInteractionModel]):
         """The message the component is attached to."""
         return Message(self.client, MessageModel.model_validate(self.model.message))
 
-    async def update(
-        self,
-        content: str | None = None,
-        *,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-    ) -> NetworkError | None:
-        """Edit the component's message as the initial response.
+    async def show_modal(self, modal: Modal) -> NetworkError | None:
+        """Answer with a pop-up form; its submit arrives as a :class:`ModalSubmitInteraction` carrying ``modal.custom_id``.
 
-        A ``None`` argument leaves that part of the message unchanged. Once the interaction was answered,
-        edits the original response instead.
+        This is the initial response, so it only works before the interaction was answered or deferred.
         """
-        if self.responded:
-            message = await self.edit_original(content, embeds=embeds, components=components)
-            return message if is_network_error(message) else None
-        data = message_data(content=content, embeds=embeds, components=components)
-        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data)
+        data = cast("ModalData", modal.model_dump(mode="json", exclude_none=True))
+        return await self._callback(InteractionCallbackType.MODAL, data)
 
-    async def defer_update(self) -> NetworkError | None:
-        """Acknowledge now, without a loading state, and edit the component's message later; no-op once answered."""
-        if self.responded:
+
+class ModalSubmitInteraction(_UpdatesMessage[ModalSubmitInteractionModel]):
+    """Someone submitted a modal."""
+
+    @property
+    def custom_id(self) -> str:
+        """The ``custom_id`` of the modal that was submitted."""
+        return self.model.data.custom_id
+
+    @property
+    def values(self) -> dict[str, str]:
+        """What was typed, by the ``custom_id`` of each text input.
+
+        Reads inputs inside labels and inside action rows; components without a text value are left out.
+        """
+        return dict(_text_values(self.model.data.components))
+
+    @property
+    def message(self) -> Message | None:
+        """The message the modal was opened from, when it was opened from a component on a message."""
+        if self.model.message is None:
             return None
-        return await self._callback(InteractionCallbackType.DEFERRED_UPDATE_MESSAGE)
+        return Message(self.client, self.model.message)
+
+
+def _text_values(components: Sequence[SubmittedComponent]) -> Generator[tuple[str, str]]:
+    """Yield ``(custom_id, value)`` of each submitted text input in ``components``, however deeply labels and rows nest them."""
+    for component in components:
+        if isinstance(component, SubmittedTextInput):
+            yield component.custom_id, component.value
+        elif isinstance(component, SubmittedActionRow):
+            yield from _text_values(component.components)
+        elif isinstance(component, SubmittedLabel):
+            yield from _text_values([component.component])
 
 
 class AutocompleteInteraction(Interaction[AutocompleteInteractionModel]):
@@ -334,7 +385,7 @@ class AutocompleteInteraction(Interaction[AutocompleteInteractionModel]):
 
 
 class UnknownInteraction(Interaction[InteractionModel]):
-    """An interaction type without its own class yet (PING, MODAL_SUBMIT)."""
+    """An interaction type without its own class yet (PING)."""
 
 
 def _full_channel(client: Client, channel: ChannelModel, guild_id: Snowflake | None) -> Channel:

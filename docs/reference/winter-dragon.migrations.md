@@ -75,6 +75,13 @@ Refuel date.
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
 
+## `winter_dragon.migrations.versions.2026_10_26_e2cb2128ed54_hangman_port_and_profile_page` — `src/winter_dragon/migrations/versions/2026_10_26_e2cb2128ed54_hangman_port_and_profile_page.py`
+Hangman port and profile page.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
 ## `winter_dragon.migrations.versions.2026_10_26_fdbd33c005e3_incremental_game` — `src/winter_dragon/migrations/versions/2026_10_26_fdbd33c005e3_incremental_game.py`
 Incremental game.
 
