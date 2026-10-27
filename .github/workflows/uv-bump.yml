@@ -21,7 +21,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
 
       - name: Bump Version
-        uses: HEROgold/bump-by-label@79f350450535cf4dc99429a483ff53df22acb128 # v3.0.0
+        uses: HEROgold/bump-by-label@0d7cfd05d8418971b55596b690742ddb37fd46ff # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           command: 'uv version --no-sync --bump'
