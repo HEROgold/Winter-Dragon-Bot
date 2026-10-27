@@ -74,3 +74,10 @@ Refuel date.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_10_26_fdbd33c005e3_incremental_game` — `src/winter_dragon/migrations/versions/2026_10_26_fdbd33c005e3_incremental_game.py`
+Incremental game.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
