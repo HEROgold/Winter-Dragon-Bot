@@ -8,7 +8,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `winter_dragon.web.accounts` — `src/winter_dragon/web/accounts.py`
 Who is signed in to the dashboard, kept in the signed session cookie, and the CSRF token their forms carry.
 
-- module names: ACCOUNT_KEY, CSRF_KEY, STATE_KEY, CSRF_FIELD, ZONE_COOKIE
+- module names: ACCOUNT_KEY, CSRF_KEY, STATE_KEY, CSRF_FIELD, ZONE_COOKIE, SignedIn
 - `current_account(request: Request) -> Account | None` — Return the account signed in on ``request``, if any.
 - `signed_in(request: Request) -> Account` — Return the signed-in account; the FastAPI dependency of every page that needs one.
 - `sign_in(request: Request, account: Account) -> None` — Start a fresh session for ``account``, dropping whatever the old one held.
@@ -69,12 +69,12 @@ The landing page, and the data page: everything the bot stores about the signed-
 
 - module names: router
 - `signposts(bind: Engine, member_id: int) -> Signposts` — Return what the signpost arms say for the member ``member_id``.
-- `@router.get landing(request: Request, bind: Engine) -> Response` — Show what the bot does, with the way in: signing in, or adding it to a server.
-- `@router.get data_page(request: Request, account: Account, bind: Engine) -> Response` — Show everything the bot stores about the signed-in member, and the way to delete it.
-- `@router.get record_rows(request: Request, key: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's rows of the table ``key``, when its record is opened.
-- `@router.get deletion_ask(request: Request, account: Account, bind: Engine) -> Response` — Show the deletion section as it first is: what deleting does, and the button to start.
-- `@router.get deletion_confirm(request: Request, account: Account, bind: Engine) -> Response` — Ask the member to type their username, to confirm they mean to delete their data.
-- `@router.post request_deletion(request: Request, account: Account, bind: Engine, confirm_name: str='') -> Response` — Hide all of the member's data for their deletion request, once they typed their username to confirm it.
+- `@router.get landing(request: Request, bind: Database) -> Response` — Show what the bot does, with the way in: signing in, or adding it to a server.
+- `@router.get data_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show everything the bot stores about the signed-in member, and the way to delete it.
+- `@router.get record_rows(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's rows of the table ``key``, when its record is opened.
+- `@router.get deletion_ask(request: Request, account: SignedIn, bind: Database) -> Response` — Show the deletion section as it first is: what deleting does, and the button to start.
+- `@router.get deletion_confirm(request: Request, account: SignedIn, bind: Database) -> Response` — Ask the member to type their username, to confirm they mean to delete their data.
+- `@router.post request_deletion(request: Request, account: SignedIn, bind: Database, confirm_name: str='') -> Response` — Hide all of the member's data for their deletion request, once they typed their username to confirm it.
 
 ### `@dataclass class DeletionProgress`
 How far the member's latest deletion request got: each step done, with when.
@@ -217,9 +217,9 @@ The reminders page: a member's reminders by day, and adding or removing one, as 
 - module names: router
 - `blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft` — Return an empty add form, due tomorrow morning in ``zone``.
 - `reminder_days(bind: Engine, user_id: int, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]` — Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first.
-- `@router.get reminders_page(request: Request, account: Account, bind: Engine) -> Response` — Show the signed-in member's reminders and the form to add one.
-- `@router.post add_reminder(request: Request, account: Account, bind: Engine, content: str='', day: str='', at: str='', repeat: str=Repeat.NEVER, every_days: str='3') -> Response` — Add the reminder the form describes, or show the form again with why it can't be set.
-- `@router.post remove_reminder(request: Request, key: str, account: Account, bind: Engine) -> Response` — Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be.
+- `@router.get reminders_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's reminders and the form to add one.
+- `@router.post add_reminder(request: Request, account: SignedIn, bind: Database, content: str='', day: str='', at: str='', repeat: str=Repeat.NEVER, every_days: str='3') -> Response` — Add the reminder the form describes, or show the form again with why it can't be set.
+- `@router.post remove_reminder(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be.
 
 ### `class Repeat(StrEnum)`
 How often a reminder added on the page comes back.
@@ -251,10 +251,12 @@ The reminders due on one day, under its heading.
 ## `winter_dragon.web.responses` — `src/winter_dragon/web/responses.py`
 Rendering the dashboard's templates, as a whole page or as the fragment an htmx request swaps in.
 
-- module names: TEMPLATES_DIR, STATIC_DIR, templates
+- module names: TEMPLATES_DIR, STATIC_DIR, templates, Database
 - `is_htmx(request: Request) -> bool` — Whether ``request`` came from htmx, which swaps in a fragment instead of loading a page.
 - `render(request: Request, name: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the template ``name`` with ``context``, plus the signed-in account and the CSRF token every form carries.
 - `render_mapping(request: Request, name: str, context: Mapping[str, object], *, status_code: int=status.HTTP_200_OK) -> Response` — Like :func:`render`, for a ``context`` built elsewhere, whose keys can't be passed as keyword arguments.
+- `page_or_fragment(request: Request, page: str, fragment: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the whole template ``page``, or only the template ``fragment`` when htmx asked, to swap it in.
+- `after_post(request: Request, url: str, fragment: Callable[[], Response]) -> Response` — Answer a form that went through: send a plain browser back to the page ``url``, or render htmx its ``fragment``.
 - `see_other(url: str) -> RedirectResponse` — Redirect a submitted form to the page ``url``, which the browser then loads with a GET.
 - `database(request: Request) -> Engine` — Return the database the app was created on; a FastAPI dependency.
 

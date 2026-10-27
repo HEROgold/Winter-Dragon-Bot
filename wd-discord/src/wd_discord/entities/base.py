@@ -138,11 +138,11 @@ class ClientBound:
         parsed = parse_all(result, model)
         return parsed if is_network_error(parsed) else (entity(self.client, item) for item in parsed)
 
-    def _partial[P, *Ts](
+    def _partial[P: Partial[Any]](
         self,
-        partial: Callable[[Client, Snowflake, *Ts], P],
+        partial: type[P],
         id: Snowflake | None,  # noqa: A002 - Discord's name for it
-        *args: *Ts,
+        *args: object,
     ) -> P | None:
         """Return a ``partial`` handle on ``id`` bound to this client (``args`` follow the ID), or ``None`` without one."""
         return None if id is None else partial(self.client, id, *args)

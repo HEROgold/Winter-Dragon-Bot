@@ -1,7 +1,7 @@
 """Guilds (https://docs.discord.com/developers/resources/guild)."""
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, Any, override
 
 lazy from wd_discord.audit import reason_headers
 lazy from wd_discord.cache import StateCache
@@ -180,13 +180,13 @@ class BaseGuild(ClientBound):
 
     # --- From Discord: a request each, whose answer also updates the cache ------------------------
 
-    async def _stored[M: DiscordModel, E, *Ts](  # noqa: PLR0913 - route, model, store and entity are each one step
+    async def _stored[M: DiscordModel, E: Entity[Any]](  # noqa: PLR0913 - route, model, store and entity are each one step
         self,
         route: Template,
         model: type[M],
         store: Callable[[StateCache, Snowflake, list[M]], object],
-        entity: Callable[[Client, M, *Ts], E],
-        *args: *Ts,
+        entity: type[E],
+        *args: object,
         params: dict[str, str] | None = None,
         cache: bool = False,
     ) -> Generator[E] | NetworkError:

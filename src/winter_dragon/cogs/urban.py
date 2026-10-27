@@ -175,7 +175,7 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.define(query)
         if isinstance(definitions, LookupFailed):
-            raise Refused(str(definitions), cause=definitions)
+            raise Refused(str(definitions))
         if not definitions:
             await interaction.respond(f"No definitions found for `{truncate(query, 100)}`.")
             return
@@ -197,5 +197,5 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.random()
         if isinstance(definitions, LookupFailed):
-            raise Refused(str(definitions), cause=definitions)
+            raise Refused(str(definitions))
         await interaction.respond(embeds=[build_embed("Urban Dictionary: random", definitions, UrbanSettings.max_definitions)])

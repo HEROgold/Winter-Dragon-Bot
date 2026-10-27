@@ -10,7 +10,7 @@ from wd_bot.commands import Describe, Lookup
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.interactions import MAX_CHOICE_NAME_LENGTH, ApplicationCommandOptionChoice
 lazy from wd_discord.timestamp import DiscordTime
