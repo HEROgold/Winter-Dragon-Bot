@@ -138,7 +138,7 @@ Limit a channel option to some kinds of channel: ``category: Annotated[Channel, 
 Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
 
 ### `class Lookup`
-Make an option pick a stored row: ``match: Annotated[Match, Lookup(match_choices), Describe("The match")]``.
+Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_names)]``.
 
 - `@staticmethod choice(row: LifecycleModel, name: str) -> ApplicationCommandOptionChoice` — Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit.
 - `load(cog: Cog, models: tuple[type[LifecycleModel], ...], option: str, value: object) -> LifecycleModel` — Return the alive row ``value`` names, one of ``models``; raise ``Refused`` when there is none.
@@ -164,7 +164,6 @@ What every application command shares: its name, description and where Discord l
 Encapsulates one chat-input application command: its Discord definition and its handler.
 
 - `options() -> Generator[ApplicationCommandOption]` — Yield this command's Discord option definitions, derived from its handler's parameters.
-- `autocomplete(option: str) -> Callable[[AutocompleteHandler], AutocompleteHandler]` — Tag a Cog method as the handler suggesting values for this command's ``option`` while it's typed.
 - `async invoke(cog: Cog, interaction: CommandInteraction, options: Sequence[InteractionDataOption] | None=None) -> bool` — Resolve option values into kwargs and call the wrapped handler.
 - `async complete(cog: Cog, interaction: AutocompleteInteraction, options: Sequence[InteractionDataOption] | None=None) -> bool` — Answer ``interaction`` with the focused option's suggestions.
 

@@ -1,4 +1,4 @@
-"""Unit tests: NUMBER options, and autocomplete handlers on commands and subcommands (no network)."""
+"""Unit tests: NUMBER options, and Lookup autocomplete on commands and subcommands (no network)."""
 
 from typing import TYPE_CHECKING, Annotated, ClassVar
 
@@ -35,26 +35,24 @@ CALLBACK = "/interactions/1/tok/callback"
 class _Pets(Cog, auto_load=False):
     received: ClassVar[list[object]] = []
 
-    @Cog.command(name="pet", description="Pick a pet")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def pet(self, interaction: CommandInteraction, name: str, weight: float = 1.0) -> None:
-        _Pets.received.append(weight)
-
-    @pet.autocomplete("name")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def pet_names(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         names = ["cat", "dog", "cow"]
         return [ApplicationCommandOptionChoice(name=name, value=name) for name in names if current in name]
+
+    @Cog.command(name="pet", description="Pick a pet")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def pet(self, interaction: CommandInteraction, name: Annotated[str, Lookup(pet_names)], weight: float = 1.0) -> None:
+        _Pets.received.append(weight)
 
 
 class _Many(GroupCog, name="many", auto_load=False):
     """Many choices."""
 
-    @Cog.command(name="pick", description="Pick one")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def pick(self, interaction: CommandInteraction, choice: str) -> None:
-        return None
-
-    @pick.autocomplete("choice")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         return [ApplicationCommandOptionChoice(name=f"{current}{index}", value=str(index)) for index in range(40)]
+
+    @Cog.command(name="pick", description="Pick one")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def pick(self, interaction: CommandInteraction, choice: Annotated[str, Lookup(choices)]) -> None:
+        return None
 
 
 def _autocomplete(client: RecordingClient, name: str, options: list[InteractionDataOption]) -> AutocompleteInteraction:
@@ -85,13 +83,19 @@ def test_autocompleted_option_is_flagged() -> None:
     assert options["weight"].autocomplete is None
 
 
-def test_autocomplete_is_part_of_the_signature() -> None:
-    assert "autocomplete: ['name']" in _Pets.pet.signature()
+def test_lookup_is_part_of_the_signature() -> None:
+    assert "Lookup(pet_names)" in _Pets.pet.signature()
 
 
-def test_autocomplete_on_an_unknown_option_raises() -> None:
-    with pytest.raises(TypeError, match="can't autocomplete"):
-        _Pets.pet.autocomplete("missing")
+async def test_a_plain_lookup_option_gets_the_submitted_value(make_interaction: InteractionFactory) -> None:
+    received: list[object] = []
+
+    async def handler(self: object, interaction: CommandInteraction, name: Annotated[str, Lookup(_no_rows)]) -> None:  # noqa: ARG001
+        received.append(name)
+
+    options = [InteractionDataOption(name="name", type=3, value="cat")]
+    assert await cog_command(handler, name="pet", description="d").invoke(object(), make_interaction("pet", options=options))
+    assert received == ["cat"]
 
 
 async def test_whole_number_reaches_a_float_parameter_as_float(make_interaction: InteractionFactory) -> None:
@@ -285,8 +289,8 @@ async def test_a_union_of_tables_loads_whichever_the_value_names(
     assert [type(row) for row in received] == [Tournament]
 
 
-def test_lookup_on_a_type_that_is_not_a_model_raises() -> None:
-    async def handler(self: object, interaction: CommandInteraction, row: Annotated[str, Lookup(_no_rows)]) -> None:
+def test_lookup_on_a_type_that_cannot_autocomplete_raises() -> None:
+    async def handler(self: object, interaction: CommandInteraction, row: Annotated[bool, Lookup(_no_rows)]) -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):

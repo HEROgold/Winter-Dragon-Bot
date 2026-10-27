@@ -367,11 +367,25 @@ class Tournaments(
         embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match.id or 0))
         return embed, match_buttons(self.match_control, match, names)
 
+    async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
+        """Suggest the tournament's undecided matches whose line contains what was typed."""
+        guild = interaction.guild
+        with Session(self.bind) as session:
+            tournament = None if guild is None else active_tournament(session, int(guild.id))
+            if tournament is None:
+                return []
+            names = team_names(session, tournament.id or 0)
+            matches = [
+                match for match in matches_of(session, tournament.id or 0) if not match.phase.decided and match.id is not None
+            ]
+        lines = ((match, match_line(match, names).replace("`", "")) for match in matches)
+        return [Lookup.choice(match, line) for match, line in lines if current.casefold() in line.casefold()]
+
     @Cog.command(name="match", description="Show a match's card, with the organiser's controls")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def match_card(
         self,
         interaction: GuildCommandInteraction,
-        match: Annotated[int, Describe("The ID of the match to show")],
+        match: Annotated[int, Lookup(match_choices), Describe("The ID of the match to show")],
     ) -> None:
         """Post the card of match ``match``."""
         # TODO: Update the Annotated to the Match Model, and use autocomplete to suggest matches.
@@ -400,21 +414,6 @@ class Tournaments(
         await interaction.update(embeds=[embed], components=buttons)
         if finished:
             await interaction.followup(f"🏆 **{tournament.name}** is over!", embeds=[final])
-
-    @match_card.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
-        """Suggest the tournament's undecided matches whose line contains what was typed."""
-        guild = interaction.guild
-        with Session(self.bind) as session:
-            tournament = None if guild is None else active_tournament(session, int(guild.id))
-            if tournament is None:
-                return []
-            names = team_names(session, tournament.id or 0)
-            matches = [
-                match for match in matches_of(session, tournament.id or 0) if not match.phase.decided and match.id is not None
-            ]
-        lines = ((match, match_line(match, names).replace("`", "")) for match in matches)
-        return [Lookup.choice(match, line) for match, line in lines if current.casefold() in line.casefold()]
 
     async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
         with Session(self.bind) as session:
