@@ -138,7 +138,7 @@ Limit a channel option to some kinds of channel: ``category: Annotated[Channel, 
 Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
 
 ### `class Lookup`
-Make an option pick a stored row: ``match: Annotated[Match, Lookup("match_choices"), Describe("The match")]``.
+Make an option pick a stored row: ``match: Annotated[Match, Lookup(match_choices), Describe("The match")]``.
 
 - `@staticmethod choice(row: LifecycleModel, name: str) -> ApplicationCommandOptionChoice` — Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit.
 - `load(cog: Cog, models: tuple[type[LifecycleModel], ...], option: str, value: object) -> LifecycleModel` — Return the alive row ``value`` names, one of ``models``; raise ``Refused`` when there is none.
@@ -313,3 +313,4 @@ Derive a stable signature string for a command's callable, used to detect defini
 Test helpers for cogs: build one to call its handlers on, without a running bot.
 
 - `detached_cog[C: Cog](cls: type[C], *, engine: Engine | None=None, **bot: object) -> C` — Return a ``cls`` built without :meth:`Cog.__init <wd_bot.cogs.Cog.__init__>`: no auto-load task, no hot reload.
+- `cog_command(func: Callable[..., Awaitable[None]], /, **definition: Any) -> Command` — Return ``func`` as a :class:`~wd_bot.commands.Command` on a throwaway cog class, built as ``@Cog.command`` builds it.

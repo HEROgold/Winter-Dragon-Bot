@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
 from wd_bot.commands import Command, Describe, Lookup
-from wd_bot.testing import detached_cog
+from wd_bot.testing import cog_command, detached_cog
 from wd_db.extension.lifecycle import soft_delete
 from wd_discord import AutocompleteInteraction
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
@@ -159,7 +159,7 @@ class _Cups(Cog, auto_load=False):
     async def cup(
         self,
         interaction: CommandInteraction,
-        cup: Annotated[Tournament, Lookup("cup_choices"), Describe("The cup to show")],
+        cup: Annotated[Tournament, Lookup(cup_choices), Describe("The cup to show")],
     ) -> None:
         _Cups.received.append(cup)
 
@@ -167,6 +167,10 @@ class _Cups(Cog, auto_load=False):
         with Session(self.bind) as session:
             cups = session.exec(select(Tournament)).all()
         return [Lookup.choice(cup, cup.name) for cup in cups if current in cup.name]
+
+
+async def _no_rows(self: object, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:  # noqa: ARG001
+    return []
 
 
 def _cup(session: Session, name: str = "Cup") -> Tournament:
@@ -267,14 +271,14 @@ async def test_a_union_of_tables_loads_whichever_the_value_names(
     async def handler(
         self: object,
         interaction: CommandInteraction,  # noqa: ARG001
-        row: Annotated[Tournament | TournamentMatch, Lookup("rows")],
+        row: Annotated[Tournament | TournamentMatch, Lookup(_no_rows)],
     ) -> None:
         received.append(row)
 
     with Session(engine) as session:
         cup = _cup(session)
     options = [InteractionDataOption(name="row", type=3, value=f"tournament:{cup.id}")]
-    assert await Command(handler, name="row", description="d").invoke(
+    assert await cog_command(handler, name="row", description="d").invoke(
         _cups(engine, discord_client),
         make_interaction("row", options=options),
     )
@@ -282,11 +286,11 @@ async def test_a_union_of_tables_loads_whichever_the_value_names(
 
 
 def test_lookup_on_a_type_that_is_not_a_model_raises() -> None:
-    async def handler(self: object, interaction: CommandInteraction, row: Annotated[str, Lookup("rows")]) -> None:
+    async def handler(self: object, interaction: CommandInteraction, row: Annotated[str, Lookup(_no_rows)]) -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):
-        Command(handler, name="row", description="d")
+        cog_command(handler, name="row", description="d")
 
 
 def test_a_model_without_lookup_raises() -> None:
@@ -294,17 +298,25 @@ def test_a_model_without_lookup_raises() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):
-        Command(handler, name="row", description="d")
+        cog_command(handler, name="row", description="d")
 
 
 def test_a_lookup_naming_a_missing_cog_method_raises() -> None:
-    with pytest.raises(TypeError, match="no method 'nowhere'"):
+    with pytest.raises(TypeError, match="nowhere"):
 
         class _Broken(Cog, auto_load=False):
             @Cog.command(name="row", description="d")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
             async def row(
                 self,
                 interaction: CommandInteraction,
-                row: Annotated[Tournament, Lookup("nowhere")],
+                row: Annotated[Tournament, Lookup(nowhere)],  # noqa: F821,
             ) -> None:
                 """Handle."""
+
+
+def test_a_command_outside_a_cog_has_no_options() -> None:
+    async def handler(self: object, interaction: CommandInteraction, count: int) -> None:
+        """Handle."""
+
+    with pytest.raises(TypeError, match="isn't defined on a Cog"):
+        list(Command(handler, name="row", description="d").options())

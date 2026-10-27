@@ -401,54 +401,6 @@ class Tournaments(
         if finished:
             await interaction.followup(f"🏆 **{tournament.name}** is over!", embeds=[final])
 
-    async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
-        with Session(self.bind) as session:
-            _, found = self._match(interaction, session, match)
-            draft(session, found, int(interaction.user.id), kind, choice)
-            session.commit()
-        verb = "banned" if kind is DraftKind.BAN else "picked"
-        await interaction.respond(f"Your team {verb} **{choice}** in match #{match}.", ephemeral=True)
-
-    @Cog.command(name="ban", description="Ban something from your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def ban(
-        self,
-        interaction: GuildCommandInteraction,
-        match: Annotated[TournamentMatch, Lookup("match_choices"), Describe("The match to ban in")],
-        choice: Annotated[str, Describe("The item to ban")],
-    ) -> None:
-        """Record the invoker's team banning ``choice`` in ``match``."""
-        await self._draft(interaction, match.id or 0, choice, DraftKind.BAN)
-
-    @Cog.command(name="pick", description="Pick something for your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def pick(
-        self,
-        interaction: GuildCommandInteraction,
-        match: Annotated[TournamentMatch, Lookup("match_choices"), Describe("The match to pick in")],
-        choice: Annotated[str, Describe("The item to pick")],
-    ) -> None:
-        """Record the invoker's team picking ``choice`` in ``match``."""
-        await self._draft(interaction, match.id or 0, choice, DraftKind.PICK)
-
-    # --- Votes -----------------------------------------------------------------------------------------------------
-
-    @Cog.command(name="vote", description="Let a match's players vote, e.g. on a map; answers separated by commas")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def vote(
-        self,
-        interaction: GuildCommandInteraction,
-        match: Annotated[TournamentMatch, Lookup("match_choices"), Describe("The match to vote in")],
-        question: Annotated[str, Describe("The question to vote on")],
-        answers: Annotated[str, Describe("The answers to the question, separated by commas")],
-    ) -> None:
-        """Post a vote on ``question`` for the players of ``match``; organisers only."""
-        with Session(self.bind) as session:
-            tournament, found = self._match(interaction, session, match.id or 0)
-            require_organiser(interaction, tournament)
-            opened = open_vote(session, found, question[:200], parse_options(answers))
-            session.commit()
-            session.refresh(opened)
-            embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
-        await interaction.respond(embeds=[embed], components=buttons)
-
     @match_card.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the tournament's undecided matches whose line contains what was typed."""
@@ -463,6 +415,54 @@ class Tournaments(
             ]
         lines = ((match, match_line(match, names).replace("`", "")) for match in matches)
         return [Lookup.choice(match, line) for match, line in lines if current.casefold() in line.casefold()]
+
+    async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
+        with Session(self.bind) as session:
+            _, found = self._match(interaction, session, match)
+            draft(session, found, int(interaction.user.id), kind, choice)
+            session.commit()
+        verb = "banned" if kind is DraftKind.BAN else "picked"
+        await interaction.respond(f"Your team {verb} **{choice}** in match #{match}.", ephemeral=True)
+
+    @Cog.command(name="ban", description="Ban something from your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def ban(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[TournamentMatch, Lookup(match_choices), Describe("The match to ban in")],
+        choice: Annotated[str, Describe("The item to ban")],
+    ) -> None:
+        """Record the invoker's team banning ``choice`` in ``match``."""
+        await self._draft(interaction, match.id or 0, choice, DraftKind.BAN)
+
+    @Cog.command(name="pick", description="Pick something for your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def pick(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[TournamentMatch, Lookup(match_choices), Describe("The match to pick in")],
+        choice: Annotated[str, Describe("The item to pick")],
+    ) -> None:
+        """Record the invoker's team picking ``choice`` in ``match``."""
+        await self._draft(interaction, match.id or 0, choice, DraftKind.PICK)
+
+    # --- Votes -----------------------------------------------------------------------------------------------------
+
+    @Cog.command(name="vote", description="Let a match's players vote, e.g. on a map; answers separated by commas")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    async def vote(
+        self,
+        interaction: GuildCommandInteraction,
+        match: Annotated[TournamentMatch, Lookup(match_choices), Describe("The match to vote in")],
+        question: Annotated[str, Describe("The question to vote on")],
+        answers: Annotated[str, Describe("The answers to the question, separated by commas")],
+    ) -> None:
+        """Post a vote on ``question`` for the players of ``match``; organisers only."""
+        with Session(self.bind) as session:
+            tournament, found = self._match(interaction, session, match.id or 0)
+            require_organiser(interaction, tournament)
+            opened = open_vote(session, found, question[:200], parse_options(answers))
+            session.commit()
+            session.refresh(opened)
+            embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
+        await interaction.respond(embeds=[embed], components=buttons)
 
     @Cog.component("tourney-vote")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def vote_button(self, interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None:
