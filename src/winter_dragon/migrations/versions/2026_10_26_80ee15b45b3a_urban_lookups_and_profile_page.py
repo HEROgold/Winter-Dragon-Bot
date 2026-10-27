@@ -1,7 +1,7 @@
 """Urban lookups and profile page.
 
 Revision ID: 80ee15b45b3a
-Revises: c9b4b18ba344
+Revises: c599311115ab
 Create Date: 2026-10-26 23:54:29.254882
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision: str = "80ee15b45b3a"
-down_revision: str | None = "c9b4b18ba344"
+down_revision: str | None = "c599311115ab"
 branch_labels: str | None = None
 depends_on: str | None = None
 
