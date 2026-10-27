@@ -385,13 +385,11 @@ class Tournaments(
     async def match_card(
         self,
         interaction: GuildCommandInteraction,
-        match: Annotated[int, Lookup(match_choices), Describe("The ID of the match to show")],
+        match: Annotated[TournamentMatch, Lookup(match_choices), Describe("The match to show")],
     ) -> None:
         """Post the card of match ``match``."""
-        # TODO: Update the Annotated to the Match Model, and use autocomplete to suggest matches.
-        # This will require a new function to get the matches of a tournament and return them as choices.
         with Session(self.bind) as session:
-            embed, buttons = self._match_card(session, *self._match(interaction, session, match))
+            embed, buttons = self._match_card(session, *self._match(interaction, session, match.id or 0))
         await interaction.respond(embeds=[embed], components=buttons)
 
     @Cog.component("tourney-match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]

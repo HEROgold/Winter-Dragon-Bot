@@ -508,3 +508,40 @@ async def test_vote_refuses_a_match_value_that_is_not_in_the_list(
     await Tournaments.vote.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     assert _response(discord_client)["data"]["content"] == "I can't find that match; pick one from the list."  # pyright: ignore[reportIndexIssue]
+
+
+async def test_match_card_takes_the_match_from_a_lookup_value(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _, final, _ = _played_final(session)
+        final_id = final.id
+    options = [InteractionDataOption(name="match", type=3, value=f"tournamentmatch:{final_id}")]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.match_card.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
+
+    (embed,) = _response(discord_client)["data"]["embeds"]  # pyright: ignore[reportIndexIssue]
+    assert "Dust" in str(embed)
+
+
+async def test_match_card_refuses_a_match_when_the_guild_has_no_tournament(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _, final, _ = _played_final(session)
+        final_id = final.id
+    options = [InteractionDataOption(name="match", type=3, value=f"tournamentmatch:{final_id}")]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.match_card.invoke(
+        cog,
+        make_interaction("tournament", options=options, guild_id=GUILD_ID + 1),
+        options,
+    )
+
+    assert _response(discord_client)["data"]["content"].startswith("There's no tournament here;")  # pyright: ignore[reportIndexIssue]
