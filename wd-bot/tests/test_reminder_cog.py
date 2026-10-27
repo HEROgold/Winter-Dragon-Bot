@@ -120,19 +120,6 @@ async def test_add_without_a_time_stores_nothing(
     assert "Give me a time" in _reply(discord_client)
 
 
-async def test_add_refuses_a_too_long_reminder(
-    engine: Engine,
-    make_interaction: InteractionFactory,
-    discord_client: RecordingClient,
-) -> None:
-    cog, _ = _cog(engine)
-    await Reminders.add.invoke(cog, make_interaction("reminder"), _options(reminder="x" * 1001, minutes=5))
-
-    with Session(engine) as session:
-        assert session.exec(alive(Reminder)).all() == []
-    assert "under 1000 characters" in _reply(discord_client)
-
-
 async def test_repeat_stores_a_timed_reminder(engine: Engine, make_interaction: InteractionFactory) -> None:
     cog, _ = _cog(engine)
     await Reminders.repeat.invoke(cog, make_interaction("reminder"), _options(reminder="stretch", weeks=1))

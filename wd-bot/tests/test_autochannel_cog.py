@@ -173,22 +173,6 @@ async def test_limit_is_saved_and_applied_to_the_owned_channel(
         assert session.exec(alive(AutoChannelSettings)).one().user_limit == 5
 
 
-async def test_limit_out_of_range_is_refused(
-    engine: Engine,
-    make_interaction: InteractionFactory,
-    discord_client: RecordingClient,
-) -> None:
-    interaction = make_interaction(
-        "autochannel",
-        options=[InteractionDataOption(name="limit", type=4, value=100)],
-        guild_id=GUILD_ID,
-    )
-
-    await AutoChannels.set_limit.invoke(_cog(engine, discord_client), interaction, interaction.options)
-
-    assert discord_client.interaction_responses()[0]["data"]["content"] == "Give me 0 for no limit, or up to 99."
-
-
 async def test_mark_needs_manage_server(
     engine: Engine,
     make_interaction: InteractionFactory,

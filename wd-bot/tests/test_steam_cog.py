@@ -110,7 +110,7 @@ def _replies(client: RecordingClient) -> list[dict[str, object]]:
 
 def _confirmed(client: RecordingClient) -> str:
     """Return the description of the confirmation embed of the last response ``client`` sent."""
-    (embed,) = _replies(client)[-1]["embeds"]  # pyright: ignore[reportGeneralTypeIssues]
+    (embed,) = _replies(client)[-1]["embeds"]
     return embed["description"]
 
 
@@ -146,7 +146,7 @@ async def test_add_subscribes_once(
     assert user.id == ASKER_ID
     assert user.sale_threshold == SteamSettings.default_threshold
     first, second = _replies(discord_client)
-    assert "</steam show:42>" in first["embeds"][0]["description"]  # pyright: ignore[reportIndexIssue]
+    assert "</steam show:42>" in first["embeds"][0]["description"]
     assert second == {"content": "Already in the list of recipients", "flags": 64}
 
 
@@ -180,16 +180,6 @@ async def test_a_returning_subscriber_is_restored_with_the_new_threshold(
         (user,) = session.exec(alive(SteamUsers)).all()
     assert (user.id, user.sale_threshold) == (ASKER_ID, 75)
     assert _confirmed(discord_client).startswith("Changed your sale notification threshold to 75%.")
-
-
-async def test_percentage_rejects_values_outside_0_to_100(
-    engine: Engine,
-    make_interaction: InteractionFactory,
-    discord_client: RecordingClient,
-) -> None:
-    cog, _client = _cog(engine)
-    await SteamSales.percentage.invoke(cog, make_interaction("steam"), _percent(150))
-    assert "between 0 and 100" in str(_replies(discord_client)[-1]["content"])
 
 
 async def test_remove_unsubscribes(

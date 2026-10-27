@@ -28,7 +28,7 @@ class Incremental(Cog):
         catalogue()
         self.create_tables(*INCREMENTAL_TABLES)
 
-    @Cog.command(name="incremental", description="Show your Incremental game save")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="incremental", description="Show your Incremental game save")
     async def incremental(self, interaction: CommandInteraction) -> None:
         """Show the invoking user's save, creating it on first use."""
         user = interaction.user
@@ -38,7 +38,7 @@ class Incremental(Cog):
             view = game.open_save(session, int(user.id))
         await interaction.respond(embeds=[build_embed(view)], components=self._buttons(view))
 
-    @Cog.component("incremental-refresh")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.component("incremental-refresh")
     async def refresh(self, interaction: ComponentInteraction, owner_id: str) -> None:
         """Bring the save up to date in the same message; only its owner may."""
         self._check_owner(interaction, owner_id)
@@ -46,7 +46,7 @@ class Incremental(Cog):
             view = game.open_save(session, int(owner_id))
         await interaction.update(embeds=[build_embed(view)], components=self._buttons(view))
 
-    @Cog.component("incremental-buy")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.component("incremental-buy")
     async def buy(self, interaction: ComponentInteraction, owner_id: str, generator: str) -> None:
         """Buy one ``generator`` and update the same message; only the save's owner may, and they must afford it."""
         self._check_owner(interaction, owner_id)

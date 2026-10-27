@@ -3,7 +3,7 @@
 lazy from math import ceil, log2
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.limits import MAX_BUTTON_LABEL_LENGTH
+lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_BUTTON_LABEL_LENGTH
 
 
 if TYPE_CHECKING:
@@ -12,8 +12,10 @@ if TYPE_CHECKING:
 
 
 MIN_TEAMS = 2
-MAX_VOTE_OPTIONS = 10
+MAX_VOTE_OPTIONS = 2 * MAX_ACTION_ROW_BUTTONS
 """The most answers a vote offers: two rows of buttons."""
+MAX_QUESTION_LENGTH = 200
+"""The longest vote question; it fits in the vote embed's title (``MAX_EMBED_TITLE_LENGTH``) with its prefix."""
 
 
 def split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]:

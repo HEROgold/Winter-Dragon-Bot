@@ -184,7 +184,7 @@ class _FakeSyncer:
 
 def _fake_syncer(bot: Bot) -> _FakeSyncer:
     fake = _FakeSyncer()
-    bot.syncer = fake  # pyright: ignore[reportAttributeAccessIssue]
+    bot.syncer = fake
     return fake
 
 
@@ -269,7 +269,7 @@ class _BrokenSyncer:
 
 async def test_startup_sync_logs_failure_instead_of_raising(capsys: pytest.CaptureFixture[str]) -> None:
     bot = _make_bot()
-    bot.syncer = _BrokenSyncer()  # pyright: ignore[reportAttributeAccessIssue]
+    bot.syncer = _BrokenSyncer()
     await bot._startup_sync(object())  # type: ignore[arg-type]
     err = capsys.readouterr().err
     assert "Startup command sync failed" in err

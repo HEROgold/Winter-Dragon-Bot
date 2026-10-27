@@ -510,7 +510,7 @@ class GatewayGuild(Guild):
     """
 
     if TYPE_CHECKING:
-        model: GuildCreate  # pyright: ignore[reportIncompatibleVariableOverride]
+        model: GuildCreate
 
     @property
     @override

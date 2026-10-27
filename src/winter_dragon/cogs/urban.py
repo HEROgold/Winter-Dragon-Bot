@@ -162,7 +162,7 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         """Create the lookup table if missing."""
         self.create_tables(Lookup)
 
-    @Cog.command(name="search", description="Look up the meaning of a word on Urban Dictionary")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="search", description="Look up the meaning of a word on Urban Dictionary")
     async def search(self, interaction: CommandInteraction, query: str) -> None:
         """Reply with the definitions of ``query``."""
         await interaction.defer()
@@ -181,7 +181,7 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         title = truncate(f"Urban Dictionary: {query}", MAX_EMBED_TITLE_LENGTH)
         await interaction.respond(embeds=[build_embed(title, definitions, UrbanSettings.max_definitions)])
 
-    @Cog.command(name="random", description="Get random definitions from Urban Dictionary")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="random", description="Get random definitions from Urban Dictionary")
     async def random(self, interaction: CommandInteraction) -> None:
         """Reply with definitions of random terms, unless that's turned off."""
         if not UrbanSettings.allow_random:

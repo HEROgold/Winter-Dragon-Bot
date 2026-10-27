@@ -8,8 +8,10 @@ lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.limits import (
     MAX_ACTION_ROW_BUTTONS,
+    MAX_BUTTON_LABEL_LENGTH,
     MAX_EMBED_DESCRIPTION_LENGTH,
     MAX_EMBED_FIELD_VALUE_LENGTH,
+    MAX_EMBED_FIELDS,
     truncate,
 )
 
@@ -74,7 +76,7 @@ def signup_embed(
             f"Captains register a team of up to {tournament.team_size} players with {team_create}, "
             f"then add their teammates with {team_add}."
         )
-        fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:25]
+        fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:MAX_EMBED_FIELDS]
     status = "open" if tournament.status is TournamentStatus.SIGNUP else tournament.status.value
     return Embed(title=f"🏆 {tournament.name}", description=f"{how}\nSign-up is {status}.", fields=fields)
 
@@ -211,7 +213,7 @@ def _team_buttons(
         components=[
             Button(
                 style=style,
-                label=f"{names.get(team, '?')} {verb}"[:80],
+                label=f"{names.get(team, '?')} {verb}"[:MAX_BUTTON_LABEL_LENGTH],
                 custom_id=handler.custom_id(match_id, action, team),
             )
             for team in teams

@@ -4,7 +4,7 @@ from typing import Annotated
 lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Range
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete, upsert
@@ -27,9 +27,6 @@ if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction, ComponentInteraction
 
     lazy from winter_dragon.cogs.steam.models import SteamSale
-
-
-MAX_PERCENT = 100
 
 
 def next_scrape_time(now: datetime, interval: timedelta) -> datetime:
@@ -171,7 +168,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             f"Use {self.mention(self.show)} to see every current sale."
         )
 
-    @Cog.command(name="add", description="Get notified automatically about free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="add", description="Get notified automatically about free steam games")
     async def add(self, interaction: CommandInteraction) -> None:
         """Subscribe the invoking user to Steam sale DMs."""
         user = interaction.user
@@ -189,22 +186,23 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         subscribed = f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales."
         await interaction.respond(embeds=[CreatedEmbed(description=subscribed)], ephemeral=True)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="percentage",
         description="Get notified of steam games on sale for the given percentage or higher",
     )
     async def percentage(
         self,
         interaction: CommandInteraction,
-        percent: Annotated[int, Describe("The minimum percentage the discount has to be before getting notified")],
+        percent: Annotated[
+            int,
+            Describe("The minimum percentage the discount has to be before getting notified"),
+            Range(min_value=0, max_value=100),
+        ],
     ) -> None:
         """Set the minimum discount the invoking user is notified about, subscribing them when they aren't."""
         user = interaction.user
         if user is None:
             return
-        if not 0 <= percent <= MAX_PERCENT:
-            msg = f"The percentage must be between 0 and {MAX_PERCENT}."
-            raise Refused(msg)
         with Session(self.bind) as session:
             subscriber = SteamSaleStore(session).subscriber(int(user.id))
 
@@ -218,7 +216,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             content += f"\nI will notify you of new steam games! Use {self.mention(self.remove)} to stop."
         await interaction.respond(embeds=[ChangedEmbed(description=content)], ephemeral=True)
 
-    @Cog.command(name="remove", description="No longer get notified of free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="remove", description="No longer get notified of free steam games")
     async def remove(self, interaction: CommandInteraction) -> None:
         """Unsubscribe the invoking user from Steam sale DMs."""
         user = interaction.user
@@ -234,7 +232,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         unsubscribed = "I will no longer notify you of new steam games."
         await interaction.respond(embeds=[DeletedEmbed(description=unsubscribed)], ephemeral=True)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="show",
         description="Get a list of steam games that are on sale for the given percentage or higher",
     )
@@ -266,7 +264,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         buttons = page_buttons(self.show_page, owner_id=int(user.id), percent=percent, page=0, pages=page_count(len(sales)))
         await interaction.edit_original(embeds=[embed], components=buttons)
 
-    @Cog.component("steam-show")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.component("steam-show")
     async def show_page(self, interaction: ComponentInteraction, owner_id: str, percent: str, page: str) -> None:
         """Turn a /steam show listing to ``page``; only the user who ran the command may."""
         user = interaction.user

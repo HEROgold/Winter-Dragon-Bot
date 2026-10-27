@@ -6,6 +6,8 @@ Import a limit from here rather than writing its number: Discord owns these valu
 ELLIPSIS = "…"
 """What :func:`truncate` ends cut text with."""
 
+MAX_ACTION_ROWS = 5
+"""A message without the components v2 flag holds up to 5 action rows (https://docs.discord.com/developers/components/reference#action-row)."""
 MAX_ACTION_ROW_BUTTONS = 5
 """An action row holds up to 5 buttons (https://docs.discord.com/developers/components/reference#action-row)."""
 MAX_MESSAGE_COMPONENTS = 40

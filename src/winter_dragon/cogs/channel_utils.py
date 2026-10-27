@@ -68,7 +68,7 @@ class ChannelUtils(
 ):
     """Moderation helpers for channels: removing a category with its channels, and locking channels."""
 
-    @Cog.command(name="delete-category", description="Delete a category and every channel inside it")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="delete-category", description="Delete a category and every channel inside it")
     async def delete_category(
         self,
         interaction: GuildCommandInteraction,
@@ -121,7 +121,7 @@ class ChannelUtils(
             raise Refused(msg)
         return doomed
 
-    @Cog.command(name="lock", description="Stop a role or member from sending messages in this channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="lock", description="Stop a role or member from sending messages in this channel")
     async def lock(
         self,
         interaction: GuildCommandInteraction,
@@ -130,7 +130,7 @@ class ChannelUtils(
         """Deny ``target`` SEND_MESSAGES in the channel the command was used in."""
         await self._set_lock(interaction, target, lock=True)
 
-    @Cog.command(name="unlock", description="Let a role or member send messages in this channel again")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="unlock", description="Let a role or member send messages in this channel again")
     async def unlock(
         self,
         interaction: GuildCommandInteraction,

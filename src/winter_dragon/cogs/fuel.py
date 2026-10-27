@@ -151,7 +151,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         """Create the refuel table if missing."""
         self.create_tables(CarFuels, FuelPreferences)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="add",
         description="Log a refuel: total price, distance driven since the last one, fuel added, optional YYYY-MM-DD date",
     )
@@ -202,7 +202,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         )
         await interaction.respond(embeds=[CreatedEmbed(description=logged)], ephemeral=True)
 
-    @Cog.command(name="efficiency", description="Show a graph of your fuel efficiency over time, in your units")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="efficiency", description="Show a graph of your fuel efficiency over time, in your units")
     async def efficiency(self, interaction: CommandInteraction) -> None:
         """Reply with a graph of the invoking user's fuel efficiency."""
         user = interaction.user
@@ -229,7 +229,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             if current.lower() in unit.value.lower()
         ]
 
-    @Cog.command(name="units", description="Pick how your fuel efficiency is shown: km/L or L/100km")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="units", description="Pick how your fuel efficiency is shown: km/L or L/100km")
     async def units(
         self,
         interaction: CommandInteraction,

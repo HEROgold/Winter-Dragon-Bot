@@ -96,7 +96,7 @@ class ApiTable(SQLModel, table=True):
         response.raise_for_status()
         return response
 
-    def validate(self) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]  # ty:ignore[invalid-method-override]
+    def validate(self) -> None:  # ty:ignore[invalid-method-override]
         """Validate that all required parameters are set."""
         missing_params = [param for param in self.required_params if not hasattr(self, param) or getattr(self, param) is None]
         if missing_params:

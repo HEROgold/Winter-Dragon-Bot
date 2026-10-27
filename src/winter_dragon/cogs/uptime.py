@@ -20,7 +20,7 @@ def uptime_message(launch_time: datetime) -> str:
 class Uptime(GroupCog, name="uptime", description="Show how long the bot has been running"):
     """Cog for showing the bot's uptime."""
 
-    @Cog.command(name="bot", description="Show the bot's current uptime")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="bot", description="Show the bot's current uptime")
     async def bot_uptime(self, interaction: CommandInteraction) -> None:
         """Reply with when the bot started."""
         await interaction.respond(uptime_message(self.bot.launch_time))

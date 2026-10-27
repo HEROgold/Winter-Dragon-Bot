@@ -38,7 +38,7 @@ class BotCommands(
     show up there.
     """
 
-    @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
+    @Cog.command(
         name="list",
         description="List registered commands and their sync status",
     )
@@ -48,7 +48,7 @@ class BotCommands(
         embed = Embed(title="Registered commands", description="\n".join(lines) or "No commands registered.")
         await interaction.respond(embeds=[embed])
 
-    @Cog.command(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
+    @Cog.command(
         name="resync",
         description="Re-read the commands from Discord and push any differences",
     )

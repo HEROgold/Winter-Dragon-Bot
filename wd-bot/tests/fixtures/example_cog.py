@@ -39,6 +39,6 @@ class ExampleCog(Cog):
         """Record a dispatched GUILD_CREATE event."""
         self.received.append(guild)
 
-    @Cog.command(name="ping-user", description="Ping a user (test fixture)")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
+    @Cog.command(name="ping-user", description="Ping a user (test fixture)")
     async def ping_user(self, interaction: Interaction, user: Annotated[User, Describe("The user to ping")]) -> None:
         """Ping a user."""

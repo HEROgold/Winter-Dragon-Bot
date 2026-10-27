@@ -43,7 +43,12 @@ ORGANISER = 3
 
 def _tournament(session: Session, mode: TeamMode = TeamMode.SOLO, team_size: int = 1) -> Tournament:
     tournament = Tournament(
-        guild_id=GUILD_ID, channel_id=20, organiser_id=ORGANISER, name="Cup", mode=mode, team_size=team_size,
+        guild_id=GUILD_ID,
+        channel_id=20,
+        organiser_id=ORGANISER,
+        name="Cup",
+        mode=mode,
+        team_size=team_size,
     )
     session.add(tournament)
     session.commit()
@@ -275,19 +280,25 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     ]
     cog = _cog(engine, discord_client)
     await Tournaments.create.invoke(
-        cog, make_interaction("tournament", options=options, guild_id=GUILD_ID, channel_id=20), options,
+        cog,
+        make_interaction("tournament", options=options, guild_id=GUILD_ID, channel_id=20),
+        options,
     )
-    assert _response(discord_client)["data"]["content"] == "You need the Manage Server permission for that."  # pyright: ignore[reportIndexIssue]
+    assert _response(discord_client)["data"]["content"] == "You need the Manage Server permission for that."
 
     interaction = make_interaction(
-        "tournament", options=options, guild_id=GUILD_ID, channel_id=20, permissions=Permissions.MANAGE_GUILD,
+        "tournament",
+        options=options,
+        guild_id=GUILD_ID,
+        channel_id=20,
+        permissions=Permissions.MANAGE_GUILD,
     )
     await Tournaments.create.invoke(cog, interaction, options)
 
     data = _response(discord_client)["data"]
-    (embed,) = data["embeds"]  # pyright: ignore[reportIndexIssue]
+    (embed,) = data["embeds"]
     assert embed["title"] == "🏆 Cup"
-    labels = [button["label"] for button in data["components"][0]["components"]]  # pyright: ignore[reportIndexIssue]
+    labels = [button["label"] for button in data["components"][0]["components"]]
     assert labels == ["Join", "Leave", "Participants"]
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().organiser_id == ORGANISER
@@ -303,12 +314,14 @@ async def test_the_join_button_signs_up_and_refreshes_the_card(
     cog = _cog(engine, discord_client)
 
     await Tournaments.join_button.invoke(
-        cog, make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID), [str(tournament_id)],
+        cog,
+        make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
     )
 
     update = _response(discord_client)
     assert update["type"] == 7  # UPDATE_MESSAGE
-    assert update["data"]["embeds"][0]["fields"][0] == {"name": "Players (1)", "value": "<@3>", "inline": False}  # pyright: ignore[reportIndexIssue]
+    assert update["data"]["embeds"][0]["fields"][0] == {"name": "Players (1)", "value": "<@3>", "inline": False}
     with Session(engine) as session:
         assert session.exec(alive(TournamentPlayer)).one().user_id == ORGANISER
 
@@ -330,10 +343,12 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
 
     args = [str(match_id), "win", str(winner)]
     await Tournaments.match_control.invoke(
-        cog, make_component_interaction("tourney-match:" + ":".join(args), guild_id=GUILD_ID), args,
+        cog,
+        make_component_interaction("tourney-match:" + ":".join(args), guild_id=GUILD_ID),
+        args,
     )
 
-    assert "wins" in _response(discord_client)["data"]["embeds"][0]["description"]  # pyright: ignore[reportIndexIssue]
+    assert "wins" in _response(discord_client)["data"]["embeds"][0]["description"]
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
     assert followup["content"] == "🏆 **Cup** is over!"
     with Session(engine) as session:
@@ -356,10 +371,12 @@ async def test_only_match_players_can_use_the_vote_buttons(
     cog = _cog(engine, discord_client)
 
     await Tournaments.vote_button.invoke(
-        cog, make_component_interaction(f"tourney-vote:{vote_id}:0", guild_id=GUILD_ID), [str(vote_id), "0"],
+        cog,
+        make_component_interaction(f"tourney-vote:{vote_id}:0", guild_id=GUILD_ID),
+        [str(vote_id), "0"],
     )
 
-    assert _response(discord_client)["data"]["content"] == "Only the players of this match can vote."  # pyright: ignore[reportIndexIssue]
+    assert _response(discord_client)["data"]["content"] == "Only the players of this match can vote."
     with Session(engine) as session:
         assert session.exec(alive(MatchBallot)).all() == []
 
@@ -392,8 +409,8 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
     )
 
     data = _response(discord_client)["data"]
-    assert data["flags"] == 64  # EPHEMERAL  # pyright: ignore[reportIndexIssue]
-    (embed,) = data["embeds"]  # pyright: ignore[reportIndexIssue]
+    assert data["flags"] == 64  # EPHEMERAL
+    (embed,) = data["embeds"]
     assert embed["title"] == "🏆 Cup: 1 participant"
     assert embed["description"] == "**Reds** (1/2): <@5>"
 
@@ -463,7 +480,11 @@ async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
         InteractionDataOption(name="team_size", type=4, value=1),
     ]
     interaction = make_interaction(
-        "tournament", options=options, guild_id=GUILD_ID, channel_id=20, permissions=Permissions.MANAGE_GUILD,
+        "tournament",
+        options=options,
+        guild_id=GUILD_ID,
+        channel_id=20,
+        permissions=Permissions.MANAGE_GUILD,
     )
     await Tournaments.create.invoke(cog, interaction, options)
     with Session(engine) as session:
@@ -507,7 +528,7 @@ async def test_vote_refuses_a_match_value_that_is_not_in_the_list(
 
     await Tournaments.vote.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
-    assert _response(discord_client)["data"]["content"] == "I can't find that match; pick one from the list."  # pyright: ignore[reportIndexIssue]
+    assert _response(discord_client)["data"]["content"] == "I can't find that match; pick one from the list."
 
 
 async def test_match_card_takes_the_match_from_a_lookup_value(
@@ -523,7 +544,7 @@ async def test_match_card_takes_the_match_from_a_lookup_value(
 
     await Tournaments.match_card.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
-    (embed,) = _response(discord_client)["data"]["embeds"]  # pyright: ignore[reportIndexIssue]
+    (embed,) = _response(discord_client)["data"]["embeds"]
     assert "Dust" in str(embed)
 
 
@@ -544,4 +565,4 @@ async def test_match_card_refuses_a_match_when_the_guild_has_no_tournament(
         options,
     )
 
-    assert _response(discord_client)["data"]["content"].startswith("There's no tournament here;")  # pyright: ignore[reportIndexIssue]
+    assert _response(discord_client)["data"]["content"].startswith("There's no tournament here;")

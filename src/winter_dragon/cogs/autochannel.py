@@ -11,7 +11,7 @@ lazy from typing import TYPE_CHECKING, Annotated, ClassVar, Unpack, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Length, Range
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
@@ -281,7 +281,7 @@ class AutoChannels(
         if is_network_error(sent):
             self.logger.debug(t"Could not DM {member.id}: {sent}")
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="setup",
         description="Create a category with a hub channel members join to get their own",
         requires=Permissions.MANAGE_GUILD,
@@ -289,8 +289,16 @@ class AutoChannels(
     async def setup(
         self,
         interaction: GuildCommandInteraction,
-        category_name: Annotated[str, Describe("The name of the category to create")],
-        hub_name: Annotated[str, Describe("The name of the hub channel to create")],
+        category_name: Annotated[
+            str,
+            Describe("The name of the category to create"),
+            Length(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH),
+        ],
+        hub_name: Annotated[
+            str,
+            Describe("The name of the hub channel to create"),
+            Length(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH),
+        ],
     ) -> None:
         """Create the category ``category_name`` holding the hub voice channel ``hub_name``."""
         guild_id = int(interaction.guild_id)
@@ -298,9 +306,6 @@ class AutoChannels(
             exists = hub_of(session, guild_id) is not None
         if exists:
             msg = f"This server has a hub already; {self.mention(self.mark)} moves it."
-            raise Refused(msg)
-        if not (0 < len(category_name) <= MAX_CHANNEL_NAME_LENGTH and 0 < len(hub_name) <= MAX_CHANNEL_NAME_LENGTH):
-            msg = f"Keep both names under {MAX_CHANNEL_NAME_LENGTH} characters."
             raise Refused(msg)
         hub = unwrap(
             await self._create_hub(interaction.guild, category_name, hub_name),
@@ -325,7 +330,7 @@ class AutoChannels(
             reason="Automatic channels hub",
         )
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="mark",
         description="Make a voice channel the hub members join to get their own",
         requires=Permissions.MANAGE_GUILD,
@@ -345,7 +350,7 @@ class AutoChannels(
             ephemeral=True,
         )
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="guild-limit",
         description="Set how many automatic channels this server allows at once",
         requires=Permissions.MANAGE_GUILD,
@@ -353,12 +358,13 @@ class AutoChannels(
     async def guild_limit(
         self,
         interaction: GuildCommandInteraction,
-        limit: Annotated[int, Describe("The maximum number of automatic channels this server allows at once, 0 for no limit")],
+        limit: Annotated[
+            int,
+            Describe("The maximum number of automatic channels this server allows at once, 0 for no limit"),
+            Range(min_value=0),
+        ],
     ) -> None:
         """Allow at most ``limit`` automatic channels at once, 0 for no limit."""
-        if limit < 0:
-            msg = "Give me 0 for no limit, or a positive number."
-            raise Refused(msg)
         with Session(self.bind) as session:
             hub = hub_of(session, int(interaction.guild_id))
             if hub is not None:
@@ -374,28 +380,30 @@ class AutoChannels(
             ephemeral=True,
         )
 
-    @Cog.command(name="limit", description="Set how many users fit in your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="limit", description="Set how many users fit in your channel")
     async def set_limit(
         self,
         interaction: GuildCommandInteraction,
-        limit: Annotated[int, Describe("The maximum number of users that can be in your channel, 0 for no limit")],
+        limit: Annotated[
+            int,
+            Describe("The maximum number of users that can be in your channel, 0 for no limit"),
+            Range(min_value=0, max_value=MAX_USER_LIMIT),
+        ],
     ) -> None:
         """Remember ``limit`` as the invoker's user limit, and apply it to their channel here if they have one."""
-        if not 0 <= limit <= MAX_USER_LIMIT:
-            msg = f"Give me 0 for no limit, or up to {MAX_USER_LIMIT}."
-            raise Refused(msg)
         await self._change(interaction, ChannelParams(user_limit=limit), user_limit=limit)
 
-    @Cog.command(name="name", description="Set the name of your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="name", description="Set the name of your channel")
     async def set_name(
         self,
         interaction: GuildCommandInteraction,
-        name: Annotated[str, Describe("The new name for your channel")],
+        name: Annotated[
+            str,
+            Describe("The new name for your channel"),
+            Length(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH),
+        ],
     ) -> None:
         """Remember ``name`` as the invoker's channel name, and rename their channel here if they have one."""
-        if not 0 < len(name) <= MAX_CHANNEL_NAME_LENGTH:
-            msg = f"Keep the name under {MAX_CHANNEL_NAME_LENGTH} characters."
-            raise Refused(msg)
         await self._change(interaction, ChannelParams(name=name), name=name)
 
     async def _change(self, interaction: GuildCommandInteraction, params: ChannelParams, **setting: str | int) -> None:

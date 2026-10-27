@@ -156,7 +156,7 @@ class AutoReassign(
         if is_network_error(edited):
             self.logger.warning(t"Could not give roles {added} back to {member.id} in {member.guild_id}: {edited}")
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="enable",
         description="Give members who leave and rejoin the roles they had",
         requires=Permissions.MANAGE_ROLES,
@@ -184,7 +184,7 @@ class AutoReassign(
             return None
         return f"These roles are above my highest role, so I can't give them back: {', '.join(above)}. Move my role above them."
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="disable",
         description="Stop giving rejoining members their roles back",
         requires=Permissions.MANAGE_ROLES,

@@ -338,7 +338,6 @@ How many of one generator a save owns.
 ## `winter_dragon.cogs.incremental.view` — `src/winter_dragon/cogs/incremental/view.py`
 The Discord side of the Incremental game: the save embed and its buttons.
 
-- module names: BUTTONS_PER_ROW
 - `format_amount(amount: float) -> str` — Format ``amount`` with thousands separators and one decimal.
 - `format_quantities(quantities: Iterable[Quantity]) -> str` — Describe ``quantities`` as amounts with their currency labels, separated by commas.
 - `build_embed(view: SaveView) -> Embed` — Build the embed showing ``view``: amounts and rates per currency, then each generator with its next price.
@@ -554,7 +553,6 @@ Shows a guild's member counts, and keeps a locked category of voice channels nam
 ## `winter_dragon.cogs.steam.cog` — `src/winter_dragon/cogs/steam/cog.py`
 The /steam command group, its page buttons, and the background scrape of Steam's specials.
 
-- module names: MAX_PERCENT
 - `next_scrape_time(now: datetime, interval: timedelta) -> datetime` — Return when to scrape next: after ``interval``, or just after Steam's daily rollover if that comes first.
 - `sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Generator[tuple[int, int | None]]` — Yield the ``(percent, limit)`` of each query a scrape makes.
 
@@ -776,7 +774,7 @@ A Steam store URL.
 ## `winter_dragon.cogs.tournament.bracket` — `src/winter_dragon/cogs/tournament/bracket.py`
 The arithmetic of a single-elimination bracket, and of splitting players into teams; no database, no Discord.
 
-- module names: MIN_TEAMS, MAX_VOTE_OPTIONS
+- module names: MIN_TEAMS, MAX_VOTE_OPTIONS, MAX_QUESTION_LENGTH
 - `split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]` — Shuffle ``user_ids`` into teams of ``team_size``; players left over join the first teams, one each.
 - `round_count(teams: int) -> int` — Return how many rounds a bracket of ``teams`` teams takes.
 - `first_round(team_ids: Sequence[int]) -> list[tuple[int, int | None]]` — Pair ``team_ids`` for the first round, in seed order; ``None`` is a bye.

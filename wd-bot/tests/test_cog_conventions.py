@@ -18,11 +18,13 @@ from wd_discord.testing import RecordingClient, message_json
 from wd_types.clock import utc_now
 
 from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild
+from winter_dragon.cogs.autochannel import AutoChannels
 from winter_dragon.cogs.fuel import Fuel
 from winter_dragon.cogs.invite import Invite
 from winter_dragon.cogs.reminder import Reminders
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SteamUsers
+from winter_dragon.cogs.tournament.cog import Tournaments
 from winter_dragon.cogs.urban import Urban, UrbanSettings
 from winter_dragon.config import Settings
 
@@ -30,6 +32,7 @@ from winter_dragon.config import Settings
 if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
+    from wd_bot.cogs import GroupCog
 
 
 EPHEMERAL = 1 << 6
@@ -51,7 +54,7 @@ class World:
         client = RecordingClient()
         client.reply("POST", "/users/@me/channels", {"id": "6", "type": 1})
         client.reply("POST", "/channels/6/messages", message_json())
-        return detached_cog(cls, engine=self.engine, client=client)  # pyright: ignore[reportArgumentType]
+        return detached_cog(cls, engine=self.engine, client=client)
 
 
 type Scenario = Callable[[World], Awaitable[None]]
@@ -105,10 +108,6 @@ async def _steam_not_subscribed(world: World) -> None:
     await _run(world, SteamSales, SteamSales.remove, "steam")
 
 
-async def _steam_percentage_out_of_range(world: World) -> None:
-    await _run(world, SteamSales, SteamSales.percentage, "steam", percent=150)
-
-
 async def _steam_someone_elses_pages(world: World) -> None:
     cog = world.cog(SteamSales)
     await SteamSales.show_page.invoke(cog, world.button("steam-show:999:90:1"), ["999", "90", "1"])
@@ -133,7 +132,6 @@ REFUSALS: dict[str, Scenario] = {
     "reminder remove of an unknown one": _reminder_unknown,
     "steam add when subscribed": _steam_already_subscribed,
     "steam remove when not subscribed": _steam_not_subscribed,
-    "steam percentage above 100": _steam_percentage_out_of_range,
     "steam pages of someone else": _steam_someone_elses_pages,
     "urban random when turned off": _urban_random_turned_off,
     "autoreassign enable without Manage Roles": _autoreassign_without_manage_roles,
@@ -251,3 +249,36 @@ async def test_autoreassign_names_the_missing_permission(
 def test_autoreassign_is_hidden_from_members_without_manage_roles() -> None:
     (group,) = AutoReassign.app_commands()
     assert group.params().default_member_permissions == Permissions.MANAGE_ROLES
+
+
+# --- Option limits ---------------------------------------------------------------------------------------------------
+
+
+def _synced_option(cog: type[GroupCog], command: str, option: str) -> dict[str, Any]:
+    """Return ``option`` of ``/<group> command`` as the cog's group is synced to Discord."""
+    (group,) = cog.app_commands()
+    (subcommand,) = (sub for sub in group.params().to_json()["options"] if sub["name"] == command)
+    (found,) = (opt for opt in subcommand["options"] if opt["name"] == option)
+    return found
+
+
+OPTION_LIMITS: dict[str, tuple[type[GroupCog], str, str, dict[str, int]]] = {
+    "autochannel setup category name": (AutoChannels, "setup", "category_name", {"min_length": 1, "max_length": 100}),
+    "autochannel setup hub name": (AutoChannels, "setup", "hub_name", {"min_length": 1, "max_length": 100}),
+    "autochannel guild-limit": (AutoChannels, "guild-limit", "limit", {"min_value": 0}),
+    "autochannel limit": (AutoChannels, "limit", "limit", {"min_value": 0, "max_value": 99}),
+    "autochannel name": (AutoChannels, "name", "name", {"min_length": 1, "max_length": 100}),
+    "reminder add": (Reminders, "add", "reminder", {"max_length": 1000}),
+    "reminder repeat": (Reminders, "repeat", "reminder", {"max_length": 1000}),
+    "steam percentage": (SteamSales, "percentage", "percent", {"min_value": 0, "max_value": 100}),
+    "tournament create name": (Tournaments, "create", "name", {"min_length": 1, "max_length": 100}),
+    "tournament create team size": (Tournaments, "create", "team_size", {"min_value": 1, "max_value": 25}),
+    "tournament team-create": (Tournaments, "team-create", "name", {"min_length": 1, "max_length": 100}),
+    "tournament vote question": (Tournaments, "vote", "question", {"max_length": 200}),
+}
+
+
+@pytest.mark.parametrize(("cog", "command", "option", "limits"), OPTION_LIMITS.values(), ids=OPTION_LIMITS.keys())
+def test_discord_enforces_the_option_limits(cog: type[GroupCog], command: str, option: str, limits: dict[str, int]) -> None:
+    synced = _synced_option(cog, command, option)
+    assert {key: synced[key] for key in synced.keys() & {"min_length", "max_length", "min_value", "max_value"}} == limits

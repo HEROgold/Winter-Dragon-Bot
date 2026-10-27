@@ -15,7 +15,7 @@ lazy from typing import TYPE_CHECKING, Any, override
 
 lazy from httpxyz import Request, Response
 
-lazy from wd_discord.client import (  # pyright: ignore[reportPrivateUsage] - the client's own reading of a failure
+lazy from wd_discord.client import (
     Client,
     _parse_error,
 )

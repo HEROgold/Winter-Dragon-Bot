@@ -86,7 +86,7 @@ class Love(Cog):
         """Create the compatibility check table if missing."""
         self.create_tables(CompatibilityCheck)
 
-    @Cog.command(name="love", description="Calculate compatibility with another user")  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue, reportUntypedFunctionDecorator]
+    @Cog.command(name="love", description="Calculate compatibility with another user")
     async def love(
         self,
         interaction: CommandInteraction,

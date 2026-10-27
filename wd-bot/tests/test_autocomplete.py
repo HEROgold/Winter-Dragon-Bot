@@ -38,7 +38,7 @@ class _Pets(Cog, auto_load=False):
         names = ["cat", "dog", "cow"]
         return [ApplicationCommandOptionChoice(name=name, value=name) for name in names if current in name]
 
-    @Cog.command(name="pet", description="Pick a pet")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="pet", description="Pick a pet")
     async def pet(self, interaction: CommandInteraction, name: Annotated[str, Lookup(pet_names)], weight: float = 1.0) -> None:
         _Pets.received.append(weight)
 
@@ -49,7 +49,7 @@ class _Many(GroupCog, name="many", auto_load=False):
     async def choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         return [ApplicationCommandOptionChoice(name=f"{current}{index}", value=str(index)) for index in range(40)]
 
-    @Cog.command(name="pick", description="Pick one")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="pick", description="Pick one")
     async def pick(self, interaction: CommandInteraction, choice: Annotated[str, Lookup(choices)]) -> None:
         return None
 
@@ -158,7 +158,7 @@ async def test_bot_dispatches_autocomplete_to_the_command(discord_client: Record
 class _Cups(Cog, auto_load=False):
     received: ClassVar[list[object]] = []
 
-    @Cog.command(name="cup", description="Show a cup")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="cup", description="Show a cup")
     async def cup(
         self,
         interaction: CommandInteraction,
@@ -308,7 +308,7 @@ def test_a_lookup_naming_a_missing_cog_method_raises() -> None:
     with pytest.raises(TypeError, match="nowhere"):
 
         class _Broken(Cog, auto_load=False):
-            @Cog.command(name="row", description="d")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+            @Cog.command(name="row", description="d")
             async def row(
                 self,
                 interaction: CommandInteraction,

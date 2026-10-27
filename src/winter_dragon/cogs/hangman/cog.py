@@ -33,7 +33,7 @@ class Hangman(Cog):
         """Create the hangman tables if missing."""
         self.create_tables(*HANGMAN_TABLES)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="hangman",
         description="Start a game of hangman in this channel",
         contexts=[InteractionContextType.GUILD],
@@ -52,7 +52,7 @@ class Hangman(Cog):
             content, buttons = game_message(game), guess_buttons(self.guess_button, game)
         await interaction.respond(content, components=buttons)
 
-    @Cog.component("hangman-guess")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.component("hangman-guess")
     async def guess_button(self, interaction: ComponentInteraction, game_id: str) -> None:
         """Open the modal for guessing a letter or the whole word."""
         with Session(self.bind) as session:
@@ -70,7 +70,7 @@ class Hangman(Cog):
         )
         await interaction.show_modal(modal)
 
-    @Cog.modal("hangman-guess")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.modal("hangman-guess")
     async def guess_modal(self, interaction: ModalSubmitInteraction, game_id: str) -> None:
         """Apply the submitted guess to the game and update its message."""
         user = interaction.user

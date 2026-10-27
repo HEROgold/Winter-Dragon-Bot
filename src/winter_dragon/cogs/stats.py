@@ -315,7 +315,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
             session.commit()
         return len(gone) == len(ordered)
 
-    @Cog.command(name="show", description="Show this server's member counts")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="show", description="Show this server's member counts")
     async def show(self, interaction: GuildCommandInteraction) -> None:
         """Answer with an embed of the guild's member counts."""
         unreadable = "I couldn't read this server's counts."
@@ -323,7 +323,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         counts = unwrap(await guild_counts(interaction.guild), unreadable)
         await interaction.respond(embeds=[stats_embed(guild.name, counts, guild.afk_channel)])
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="add",
         description="Add a category of channels showing this server's member counts",
         requires=Permissions.MANAGE_CHANNELS,
@@ -343,7 +343,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
             raise Refused(msg, cause=failure)
         await interaction.followup(embeds=[CreatedEmbed(description="Stats channels are set up.")], ephemeral=True)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="remove",
         description="Remove the stats category and its channels",
         requires=Permissions.MANAGE_CHANNELS,
@@ -362,7 +362,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
             raise Refused(msg)
         await interaction.followup(embeds=[DeletedEmbed(description="Removed the stats channels.")], ephemeral=True)
 
-    @Cog.command(name="reset", description="Recreate the stats channels of every server (bot owners only)")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="reset", description="Recreate the stats channels of every server (bot owners only)")
     async def reset(self, interaction: GuildCommandInteraction) -> None:
         """Delete and recreate every guild's stats channels; only the bot's owners may."""
         if not await is_owner(self.bot.client, interaction.user.id):
