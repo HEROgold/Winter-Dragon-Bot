@@ -263,7 +263,35 @@ class CommandInteraction(Interaction[CommandInteractionModel]):
         return None if resolved is None else Resolved(self.client, resolved, self.model.guild_id)
 
 
-class ComponentInteraction(Interaction[ComponentInteractionModel]):
+class _UpdatesMessage[M: InteractionModel](Interaction[M]):
+    """An interaction that comes from a message, so it can edit that message as its initial response."""
+
+    async def update(
+        self,
+        content: str | None = None,
+        *,
+        embeds: Sequence[Embed] | None = None,
+        components: Sequence[ActionRow] | None = None,
+    ) -> NetworkError | None:
+        """Edit the message the interaction came from as the initial response.
+
+        A modal only comes from a message when it was opened from a component on one. A ``None`` argument leaves
+        that part of the message unchanged. Once the interaction was answered, edits the original response instead.
+        """
+        if self.responded:
+            message = await self.edit_original(content, embeds=embeds, components=components)
+            return message if is_network_error(message) else None
+        data = message_data(content=content, embeds=embeds, components=components)
+        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data)
+
+    async def defer_update(self) -> NetworkError | None:
+        """Acknowledge now, without a loading state, and edit the source message later; no-op once answered."""
+        if self.responded:
+            return None
+        return await self._callback(InteractionCallbackType.DEFERRED_UPDATE_MESSAGE)
+
+
+class ComponentInteraction(_UpdatesMessage[ComponentInteractionModel]):
     """Someone clicked a button or chose from a select menu."""
 
     @property
@@ -286,30 +314,6 @@ class ComponentInteraction(Interaction[ComponentInteractionModel]):
         """The message the component is attached to."""
         return Message(self.client, MessageModel.model_validate(self.model.message))
 
-    async def update(
-        self,
-        content: str | None = None,
-        *,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-    ) -> NetworkError | None:
-        """Edit the component's message as the initial response.
-
-        A ``None`` argument leaves that part of the message unchanged. Once the interaction was answered,
-        edits the original response instead.
-        """
-        if self.responded:
-            message = await self.edit_original(content, embeds=embeds, components=components)
-            return message if is_network_error(message) else None
-        data = message_data(content=content, embeds=embeds, components=components)
-        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data)
-
-    async def defer_update(self) -> NetworkError | None:
-        """Acknowledge now, without a loading state, and edit the component's message later; no-op once answered."""
-        if self.responded:
-            return None
-        return await self._callback(InteractionCallbackType.DEFERRED_UPDATE_MESSAGE)
-
     async def show_modal(self, modal: Modal) -> NetworkError | None:
         """Answer with a pop-up form; its submit arrives as a :class:`ModalSubmitInteraction` carrying ``modal.custom_id``.
 
@@ -319,7 +323,7 @@ class ComponentInteraction(Interaction[ComponentInteractionModel]):
         return await self._callback(InteractionCallbackType.MODAL, data)
 
 
-class ModalSubmitInteraction(Interaction[ModalSubmitInteractionModel]):
+class ModalSubmitInteraction(_UpdatesMessage[ModalSubmitInteractionModel]):
     """Someone submitted a modal."""
 
     @property
@@ -341,30 +345,6 @@ class ModalSubmitInteraction(Interaction[ModalSubmitInteractionModel]):
         if self.model.message is None:
             return None
         return Message(self.client, MessageModel.model_validate(self.model.message))
-
-    async def update(
-        self,
-        content: str | None = None,
-        *,
-        embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
-    ) -> NetworkError | None:
-        """Edit the message the modal was opened from as the initial response.
-
-        Only valid when the modal was opened from a component on a message. A ``None`` argument leaves that part
-        unchanged. Once the interaction was answered, edits the original response instead.
-        """
-        if self.responded:
-            message = await self.edit_original(content, embeds=embeds, components=components)
-            return message if is_network_error(message) else None
-        data = message_data(content=content, embeds=embeds, components=components)
-        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data)
-
-    async def defer_update(self) -> NetworkError | None:
-        """Acknowledge now, without a loading state, and edit the source message later; no-op once answered."""
-        if self.responded:
-            return None
-        return await self._callback(InteractionCallbackType.DEFERRED_UPDATE_MESSAGE)
 
 
 def _text_values(components: Sequence[object]) -> Generator[tuple[str, str]]:

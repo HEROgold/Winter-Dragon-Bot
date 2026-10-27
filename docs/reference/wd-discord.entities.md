@@ -611,25 +611,21 @@ Someone ran an application command.
 - `@property options -> list[InteractionDataOption]` — The submitted option values; a subcommand's own values are nested in its option.
 - `@property resolved -> Resolved | None` — Full objects for the users, roles and channels the option values name.
 
-### `class ComponentInteraction(Interaction[ComponentInteractionModel])`
+### `class ComponentInteraction(_UpdatesMessage[ComponentInteractionModel])`
 Someone clicked a button or chose from a select menu.
 
 - `@property custom_id -> str` — The ``custom_id`` of the component that was used.
 - `@property component_type -> ComponentType` — The kind of component that was used.
 - `@property values -> list[str]` — The chosen values of a select menu; empty for buttons.
 - `@property message -> Message` — The message the component is attached to.
-- `async update(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> NetworkError | None` — Edit the component's message as the initial response.
-- `async defer_update() -> NetworkError | None` — Acknowledge now, without a loading state, and edit the component's message later; no-op once answered.
 - `async show_modal(modal: Modal) -> NetworkError | None` — Answer with a pop-up form; its submit arrives as a :class:`ModalSubmitInteraction` carrying ``modal.custom_id``.
 
-### `class ModalSubmitInteraction(Interaction[ModalSubmitInteractionModel])`
+### `class ModalSubmitInteraction(_UpdatesMessage[ModalSubmitInteractionModel])`
 Someone submitted a modal.
 
 - `@property custom_id -> str` — The ``custom_id`` of the modal that was submitted.
 - `@property values -> dict[str, str]` — What was typed, by the ``custom_id`` of each text input.
 - `@property message -> Message | None` — The message the modal was opened from, when it was opened from a component on a message.
-- `async update(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> NetworkError | None` — Edit the message the modal was opened from as the initial response.
-- `async defer_update() -> NetworkError | None` — Acknowledge now, without a loading state, and edit the source message later; no-op once answered.
 
 ### `class AutocompleteInteraction(Interaction[AutocompleteInteractionModel])`
 Someone is typing a value for an autocomplete option.
