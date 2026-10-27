@@ -41,6 +41,32 @@ def test_parse_dispatch_falls_back_to_raw_event_for_known_but_unmodeled_name() -
     assert event.data == {"guild_id": "1", "channel_id": "2"}
 
 
+def test_event_name_of_a_parsed_dispatch_is_the_event_it_came_from() -> None:
+    message = parse_dispatch(EventName.MESSAGE_CREATE, message_json())
+    channel_delete = parse_dispatch(EventName.CHANNEL_DELETE, {"id": "3", "type": 0, "guild_id": "7"})
+    assert EventName.of(message) is EventName.MESSAGE_CREATE
+    assert EventName.of(channel_delete) is EventName.CHANNEL_DELETE
+
+
+def test_event_name_of_an_interaction_is_interaction_create() -> None:
+    """INTERACTION_CREATE parses to a subclass per interaction type; each still names its event."""
+    ping = {"id": "1", "application_id": "2", "type": 1, "token": "tok", "version": 1}
+    interaction = parse_dispatch(EventName.INTERACTION_CREATE, ping)
+    assert type(interaction) is not EventName.INTERACTION_CREATE.model
+    assert EventName.of(interaction) is EventName.INTERACTION_CREATE
+
+
+def test_event_name_of_a_raw_event_is_none() -> None:
+    assert EventName.of(parse_dispatch(EventName.WEBHOOKS_UPDATE, {"channel_id": "2"})) is None
+
+
+def test_every_modeled_event_is_the_only_event_its_model_names() -> None:
+    """Two events sharing one model would make the binders and the state cache treat them the same."""
+    for event in EventName:
+        if event.model is not None:
+            assert EventName.of(event.model.model_construct()) is event
+
+
 def test_parse_dispatch_message_create() -> None:
     event = parse_dispatch(
         EventName.MESSAGE_CREATE,

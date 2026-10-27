@@ -370,6 +370,7 @@ Every dispatch event name Discord currently defines.
   STAGE_INSTANCE_CREATE, STAGE_INSTANCE_UPDATE, STAGE_INSTANCE_DELETE, SUBSCRIPTION_CREATE, SUBSCRIPTION_UPDATE,
   SUBSCRIPTION_DELETE, TYPING_START, USER_UPDATE, VOICE_CHANNEL_EFFECT_SEND, VOICE_CHANNEL_START_TIME_UPDATE,
   VOICE_CHANNEL_STATUS_UPDATE, VOICE_STATE_UPDATE, VOICE_SERVER_UPDATE, WEBHOOKS_UPDATE
+- `@classmethod of(model: DiscordModel) -> EventName | None` — Return the event a parsed dispatch ``model`` came from, or ``None`` if it isn't an event's model.
 
 ## `wd_discord.gateway.presence` — `wd-discord/src/wd_discord/gateway/presence.py`
 Presences and activities as the gateway sends them (https://docs.discord.com/developers/events/gateway-events#presence).

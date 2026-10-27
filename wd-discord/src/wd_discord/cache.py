@@ -14,13 +14,14 @@ lazy from typing import TYPE_CHECKING
 
 from wd_discord.resources.guild import Emoji, GuildMember, Role, Sticker
 from wd_discord.snowflake import Snowflake
-lazy from wd_discord.gateway import events as wire
 lazy from wd_discord.gateway.connection import ALL_MEMBERS_NONCE
+lazy from wd_discord.gateway.events import EventName
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
 
+    from wd_discord.gateway import events as wire
     from wd_discord.gateway.presence import Presence
     from wd_discord.models import DiscordModel
     from wd_discord.resources.channel.channel import Channel
@@ -147,38 +148,39 @@ class StateCache:
         Returns what the event replaced or removed (the channel before a CHANNEL_UPDATE, the role a
         GUILD_ROLE_DELETE deleted), or ``None`` when it replaced nothing the cache knew.
         """
-        handler = self._handlers().get(type(model))
+        event = EventName.of(model)
+        handler = None if event is None else self._handlers().get(event)
         return None if handler is None else handler(self, model)
 
     @classmethod
     @cache
-    def _handlers(cls) -> Mapping[type[DiscordModel], Callable[..., DiscordModel | None]]:
-        """Return how each dispatch model changes the cache, keyed by the model's exact class."""
+    def _handlers(cls) -> Mapping[EventName, Callable[..., DiscordModel | None]]:
+        """Return how each gateway event changes the cache, keyed by :class:`EventName` like the entity binders."""
         return {
-            wire.Ready: cls._ready,
-            wire.GuildCreate: cls._guild_create,
-            wire.GuildUpdate: cls._guild_update,
-            wire.GuildDelete: cls._guild_delete,
-            wire.ChannelCreate: cls._channel_upsert,
-            wire.ChannelUpdate: cls._channel_upsert,
-            wire.ChannelDelete: cls._channel_delete,
-            wire.ChannelPinsUpdate: cls._channel_pins_update,
-            wire.ThreadCreate: cls._channel_upsert,
-            wire.ThreadUpdate: cls._channel_upsert,
-            wire.ThreadDelete: cls._channel_delete,
-            wire.ThreadListSync: cls._thread_list_sync,
-            wire.ThreadMemberUpdate: cls._thread_member_update,
-            wire.ThreadMembersUpdate: cls._thread_members_update,
-            wire.GuildMemberAdd: cls._member_add,
-            wire.GuildMemberRemove: cls._member_remove,
-            wire.GuildMemberUpdate: cls._member_update,
-            wire.GuildMembersChunk: cls._members_chunk,
-            wire.GuildRoleCreate: cls._role_upsert,
-            wire.GuildRoleUpdate: cls._role_upsert,
-            wire.GuildRoleDelete: cls._role_delete,
-            wire.UserUpdate: cls._user_update,
-            wire.PresenceUpdate: cls._presence_update,
-            wire.VoiceStateUpdate: cls._voice_state_update,
+            EventName.READY: cls._ready,
+            EventName.GUILD_CREATE: cls._guild_create,
+            EventName.GUILD_UPDATE: cls._guild_update,
+            EventName.GUILD_DELETE: cls._guild_delete,
+            EventName.CHANNEL_CREATE: cls._channel_upsert,
+            EventName.CHANNEL_UPDATE: cls._channel_upsert,
+            EventName.CHANNEL_DELETE: cls._channel_delete,
+            EventName.CHANNEL_PINS_UPDATE: cls._channel_pins_update,
+            EventName.THREAD_CREATE: cls._channel_upsert,
+            EventName.THREAD_UPDATE: cls._channel_upsert,
+            EventName.THREAD_DELETE: cls._channel_delete,
+            EventName.THREAD_LIST_SYNC: cls._thread_list_sync,
+            EventName.THREAD_MEMBER_UPDATE: cls._thread_member_update,
+            EventName.THREAD_MEMBERS_UPDATE: cls._thread_members_update,
+            EventName.GUILD_MEMBER_ADD: cls._member_add,
+            EventName.GUILD_MEMBER_REMOVE: cls._member_remove,
+            EventName.GUILD_MEMBER_UPDATE: cls._member_update,
+            EventName.GUILD_MEMBERS_CHUNK: cls._members_chunk,
+            EventName.GUILD_ROLE_CREATE: cls._role_upsert,
+            EventName.GUILD_ROLE_UPDATE: cls._role_upsert,
+            EventName.GUILD_ROLE_DELETE: cls._role_delete,
+            EventName.USER_UPDATE: cls._user_update,
+            EventName.PRESENCE_UPDATE: cls._presence_update,
+            EventName.VOICE_STATE_UPDATE: cls._voice_state_update,
         }
 
     def _ready(self, model: wire.Ready) -> None:

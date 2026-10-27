@@ -31,6 +31,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Annotated, Literal
 lazy from enum import StrEnum
+lazy from functools import cache
 lazy from typing import Self, cast
 
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
@@ -713,6 +714,16 @@ class EventName(StrEnum):
         member.model = model
         return member
 
+    @classmethod
+    def of(cls, model: DiscordModel) -> EventName | None:
+        """Return the event a parsed dispatch ``model`` came from, or ``None`` if it isn't an event's model.
+
+        A subclass of an event's model (each interaction type under :class:`Interaction`) names that event too.
+        Everything keyed by event - the entity binders, the state cache's handlers - looks its event up here.
+        """
+        by_model = _events_by_model()
+        return next((by_model[base] for base in type(model).__mro__ if base in by_model), None)
+
     READY = ("READY", Ready)
     MESSAGE_CREATE = ("MESSAGE_CREATE", Message)
     GUILD_CREATE = ("GUILD_CREATE", GuildCreate)
@@ -808,3 +819,9 @@ class EventName(StrEnum):
     VOICE_SERVER_UPDATE = "VOICE_SERVER_UPDATE"
 
     WEBHOOKS_UPDATE = "WEBHOOKS_UPDATE"
+
+
+@cache
+def _events_by_model() -> Mapping[type[DiscordModel], EventName]:
+    """Return the event of each model an :class:`EventName` member carries."""
+    return {event.model: event for event in EventName if event.model is not None}
