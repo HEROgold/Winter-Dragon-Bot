@@ -22,12 +22,8 @@ from wd_discord.resources.guild.role import Role
 from wd_discord.resources.guild.sticker import Sticker
 from wd_discord.resources.guild.welcome_screen import WelcomeScreen
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.limits import MAX_GUILD_NAME_LENGTH, MIN_GUILD_NAME_LENGTH
 
-
-MIN_GUILD_NAME_LENGTH = 2
-"""A guild name holds at least 2 characters (https://docs.discord.com/developers/resources/guild#guild-object-guild-structure)."""
-MAX_GUILD_NAME_LENGTH = 100
-"""A guild name holds up to 100 characters (https://docs.discord.com/developers/resources/guild#guild-object-guild-structure)."""
 
 type GuildName = Annotated[str, Field(min_length=MIN_GUILD_NAME_LENGTH, max_length=MAX_GUILD_NAME_LENGTH)]
 

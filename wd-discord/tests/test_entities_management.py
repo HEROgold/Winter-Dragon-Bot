@@ -1,8 +1,11 @@
 """Unit tests: creating, editing and deleting channels, permission overwrites, and guild members (no network)."""
 
+from urllib.parse import unquote
+
 from wd_discord import AuditLogReason, Channel, ChannelType, Guild, Member, Permissions, is_gone, is_network_error
-from wd_discord.audit import MAX_REASON_LENGTH, REASON_HEADER
+from wd_discord.audit import REASON_HEADER
 from wd_discord.errors import ApiResponseError, JsonErrorCode
+from wd_discord.limits import ELLIPSIS, MAX_REASON_LENGTH
 from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, user_json
@@ -15,7 +18,7 @@ BOT_MEMBER_JSON = {**MEMBER_JSON, "user": user_json(id="4", username="robot", bo
 
 def test_reason_header_is_url_encoded_and_capped() -> None:
     assert AuditLogReason("Locked by <@1>").headers() == {REASON_HEADER: "Locked by %3C%401%3E"}
-    assert len(AuditLogReason("x" * 600).headers()[REASON_HEADER]) == MAX_REASON_LENGTH
+    assert unquote(AuditLogReason("x" * 600).headers()[REASON_HEADER]) == "x" * (MAX_REASON_LENGTH - 1) + ELLIPSIS
 
 
 def test_channel_params_send_only_what_is_set() -> None:

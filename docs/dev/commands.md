@@ -69,7 +69,7 @@ member: Annotated[User, Describe("Who to ban")]
 count: Annotated[int, Describe(t"How many, at most {MAX_ITEMS}")]
 ```
 
-- The rendered text must be 1 to 100 characters (`wd_discord.interactions.MAX_DESCRIPTION_LENGTH`), Discord's
+- The rendered text must be 1 to 100 characters (`wd_discord.limits.MAX_DESCRIPTION_LENGTH`), Discord's
   limit. A longer or empty one raises `ValueError` when the command is defined, not when it syncs.
 - A parameter takes one `Describe`. Two raise `TypeError`.
 - For a description that several commands repeat, name it once with a type alias:

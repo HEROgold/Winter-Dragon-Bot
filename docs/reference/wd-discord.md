@@ -23,7 +23,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
 
-- module names: MAX_REASON_LENGTH, REASON_HEADER
+- module names: REASON_HEADER
 - `type Reason = AuditLogReason | str | None`
 - `reason_headers(reason: Reason) -> dict[str, str]` — Return the headers for ``reason``: none without one, else the audit-log reason header.
 
@@ -31,7 +31,7 @@ Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit
 Why the bot made a change, as shown in the guild's audit log.
 
 - fields: text: str
-- `headers() -> dict[str, str]` — Return the request header carrying this reason, cut to :data:`MAX_REASON_LENGTH` and URL-encoded.
+- `headers() -> dict[str, str]` — Return the request header carrying this reason, cut to :data:`~wd_discord.limits.MAX_REASON_LENGTH` with :func:`~wd_discord.limits.truncate` and URL-encoded.
 
 ## `wd_discord.authenticate` — `wd-discord/src/wd_discord/authenticate.py`
 Location for all authentication related functions and classes.
@@ -133,8 +133,6 @@ An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the 
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
 Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
 
-- module names: MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH,
-  MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH
 - `type CustomId = str`
 - `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
@@ -194,9 +192,6 @@ Constants used throughout the library.
 
 ## `wd_discord.embed` — `wd-discord/src/wd_discord/embed.py`
 A minimal Discord embed model.
-
-- module names: MAX_EMBED_FIELDS, MAX_EMBED_CHARACTERS, MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH,
-  MAX_EMBED_FIELD_NAME_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH
 
 ### `class EmbedField(DiscordModel)`
 One entry in an embed's ``fields`` array.
@@ -278,7 +273,7 @@ Represents the Gateway Intents.
 ## `wd_discord.interactions` — `wd-discord/src/wd_discord/interactions.py`
 Discord application commands (https://docs.discord.com/developers/interactions/application-commands).
 
-- module names: MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, MAX_DESCRIPTION_LENGTH, CHAT_INPUT_NAME_PATTERN
+- module names: CHAT_INPUT_NAME_PATTERN
 - `type Name = str`
 - `type ChatInputName = str`
 - `type Description = str`
@@ -350,6 +345,16 @@ The JSON body for creating or editing an application command.
   ApplicationCommandType, nsfw: bool | None, handler: EntryPointCommandHandlerType | None
 - attributes: model_config
 - `to_json() -> JsonPayload` — Return the request body.
+
+## `wd_discord.limits` — `wd-discord/src/wd_discord/limits.py`
+Discord's documented limits, and :func:`truncate` to fit text into one of them.
+
+- module names: ELLIPSIS, MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH,
+  MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH, MAX_EMBED_FIELDS, MAX_EMBED_CHARACTERS,
+  MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH, MAX_EMBED_FIELD_NAME_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH,
+  MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, MAX_DESCRIPTION_LENGTH, MAX_REASON_LENGTH, MAX_USER_LIMIT,
+  MAX_CHANNEL_NAME_LENGTH, MIN_GUILD_NAME_LENGTH, MAX_GUILD_NAME_LENGTH, MAX_MESSAGES_PER_PAGE, MAX_MEMBERS_PER_PAGE
+- `truncate(text: str, limit: int) -> str` — Return ``text``, or when it's longer than ``limit`` characters, its start cut to fit ``limit`` with :data:`ELLIPSIS`.
 
 ## `wd_discord.log` — `wd-discord/src/wd_discord/log.py`
 Module-level loggers that reach a log file.
