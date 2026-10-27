@@ -129,6 +129,16 @@ The efficiency of a member's refuels over time, ready to draw as an SVG line.
 - fields: points: tuple[GraphPoint, ...], lowest: float, highest: float, first_day: datetime, last_day: datetime
 - `@property line -> str` — The ``points`` attribute of the SVG polyline.
 
+## `winter_dragon.web.profile_pages.hangman` — `src/winter_dragon/web/profile_pages/hangman.py`
+The Profile's hangman page: games the member took part in, how many were won, and a history, newest first.
+
+- `@profile_page hangman(context: ProfileContext) -> dict[str, object]` — Return the hangman page's context: the finished games the member took part in, newest first, and their counts.
+
+### `@dataclass class FinishedGame`
+One finished game the member took part in.
+
+- fields: word: str, won: bool, wrong_guesses: tuple[str, ...], finished: datetime
+
 ## `winter_dragon.web.profile_pages.incremental` — `src/winter_dragon/web/profile_pages/incremental.py`
 The Profile's Incremental game page: the member's save live in the browser, and buying generators.
 

@@ -26,6 +26,9 @@ from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percenta
 
 from winter_dragon.cogs.incremental import game
 from winter_dragon.cogs.incremental.models import IncrementalSave, SaveGenerator
+
+
+from winter_dragon.cogs.hangman.models import HangmanGame, HangmanParticipant, HangmanStatus
 from winter_dragon.cogs.reminder import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
 
@@ -433,6 +436,53 @@ def test_the_urban_page_shows_only_your_own_lookups(member: TestClient, bind: En
     page = member.get("/profile/urban").text
 
     assert "secretterm" not in page
+
+
+def _hangman_game(
+    bind: Engine,
+    word: str,
+    status: HangmanStatus,
+    days_ago: int,
+    *,
+    letters: str,
+    wrong_words: str = "",
+    members: tuple[int, ...] = (MEMBER_ID,),
+) -> None:
+    finished = None if status is HangmanStatus.ACTIVE else NOW - timedelta(days=days_ago)
+    game = HangmanGame(guild_id=1, channel_id=2, word=word, letters=letters, wrong_words=wrong_words, status=status, finished_at=finished)
+    with Session(bind) as session:
+        session.add(game)
+        session.commit()
+        session.refresh(game)
+        session.add_all(HangmanParticipant(game_id=game.id, user_id=member) for member in members)
+        session.commit()
+
+
+def test_the_profile_lists_the_hangman_page(member: TestClient) -> None:
+    assert 'href="/profile/hangman"' in member.get("/profile").text
+
+
+def test_the_hangman_page_counts_games_and_lists_finished_ones_newest_first(member: TestClient, bind: Engine) -> None:
+    _hangman_game(bind, "castle", HangmanStatus.WON, 3, letters="castlez")
+    _hangman_game(bind, "dragon", HangmanStatus.LOST, 1, letters="dxq", wrong_words="wizard")
+    _hangman_game(bind, "planet", HangmanStatus.ACTIVE, 0, letters="p")
+    _hangman_game(bind, "secret", HangmanStatus.WON, 2, letters="secret", members=(OTHER_ID,))
+
+    page = member.get("/profile/hangman").text
+
+    assert "Games played: 2. Games won: 1." in page
+    table = page[page.index("<table") :]
+    assert table.index("dragon") < table.index("castle")
+    assert "x, q, wizard" in table
+    assert "planet" not in page
+    assert "secret" not in page
+
+
+def test_the_hangman_page_without_games_is_an_empty_state(member: TestClient) -> None:
+    response = member.get("/profile/hangman")
+
+    assert response.status_code == 200
+    assert "not taken part" in response.text
 
 
 def test_a_profile_page_that_does_not_exist_is_not_found(member: TestClient) -> None:

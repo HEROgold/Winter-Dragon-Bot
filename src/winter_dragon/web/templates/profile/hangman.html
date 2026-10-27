@@ -1,0 +1,23 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Hangman</h2>
+  {% if not history %}
+    <p class="profile-empty">You have not taken part in a finished game yet. Use <code>/hangman</code> in Discord to start one, and guess a correct letter to join in.</p>
+  {% else %}
+    <p>Games played: {{ played }}. Games won: {{ won }}.</p>
+    <table class="table">
+      <thead><tr><th>Date</th><th>Word</th><th>Result</th><th>Wrong guesses</th></tr></thead>
+      <tbody>
+        {% for game in history %}
+          <tr>
+            <td>{{ game.finished.strftime('%Y-%m-%d') }}</td>
+            <td>{{ game.word }}</td>
+            <td>{% if game.won %}Won{% else %}Lost{% endif %}</td>
+            <td>{% if game.wrong_guesses %}{{ game.wrong_guesses | join(', ') }}{% else %}none{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
