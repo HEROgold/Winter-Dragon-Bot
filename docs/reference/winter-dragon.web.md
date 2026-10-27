@@ -45,15 +45,10 @@ Signing in with Discord and out again; the callback sets the HttpOnly session co
 ## `winter_dragon.web.discord_oauth` — `src/winter_dragon/web/discord_oauth.py`
 Signing in with Discord: the OAuth2 authorization code grant, used only to learn who is signing in.
 
-- module names: CALLBACK_PATH, REQUEST_TIMEOUT, logger
+- module names: CALLBACK_PATH, logger
 - `redirect_uri() -> URL` — Return the callback URL Discord redirects to, under :attr:`DashboardSettings.public_url`.
 - `authorization_url(state: str) -> URL` — Return the Discord page asking the user to sign in, which sends ``state`` back to the callback.
 - `async signed_in_user(code: str) -> User | None` — Return the Discord user who authorized the dashboard with ``code``; ``None`` when Discord refused it.
-
-### `class AccessToken(DiscordModel)`
-The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response).
-
-- fields: access_token: Token, token_type: str, expires_in: int, scope: str, refresh_token: Token | None
 
 ## `winter_dragon.web.formatting` — `src/winter_dragon/web/formatting.py`
 How the dashboard writes stored values for people: times in their zone, intervals and table names in words.

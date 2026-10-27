@@ -37,7 +37,7 @@ Why the bot made a change, as shown in the guild's audit log.
 Location for all authentication related functions and classes.
 
 - `get_auth_header(type_: TokenType, token: Token) -> Template` — Get the authorization header for a given token.
-- `get_bearer(token: Token) -> Template` — Get the bearer token header for a given token.
+- `client_credentials(application_id: SnowflakeLike, secret: Token) -> Token` — Return the application's ID and OAuth2 client ``secret`` as the token of :attr:`TokenType.BASIC` auth.
 - `user_agent(url: URL, version: UserAgentVersion, metadata: MetaData) -> Template` — Get the user agent header for a given URL and version.
 - `content_type(content_type: ContentType) -> Template` — Get the content type header for a given content type.
 - `render(template: Template) -> str` — Render a PEP 750 ``Template`` into a plain string.
@@ -49,7 +49,7 @@ A Discord secret: a bot token, an interaction or gateway token, or an OAuth acce
 ### `class TokenType(StrEnum)`
 Represents the type of token being used for authentication.
 
-- attributes: BOT
+- attributes: BOT, BEARER, BASIC
 
 ### `class UserAgentVersion(str)`
 Represents the version of the user agent being used for authentication.
@@ -373,11 +373,20 @@ Base for every Discord API response model.
 - attributes: model_config
 
 ## `wd_discord.oauth` — `wd-discord/src/wd_discord/oauth.py`
+OAuth2: scopes, and the authorization code grant's exchange and revoke (https://docs.discord.com/developers/topics/oauth2).
+
+- `async exchange_code(client: Client, code: str, redirect_uri: URL) -> AccessToken | NetworkError` — POST /oauth2/token - trade the ``code`` a user authorized with for an access token.
+- `async revoke_token(client: Client, token: Token) -> NetworkError | None` — POST /oauth2/token/revoke - revoke the access ``token``; ``client`` must authenticate as the application.
 
 ### `class OAuthScopes(StrEnum)`
 OAuth2 Scopes for the User Object.
 
 - attributes: IDENTIFY, EMAIL, PREMIUM
+
+### `class AccessToken(DiscordModel)`
+The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response).
+
+- fields: access_token: Token, token_type: str, expires_in: int, scope: str, refresh_token: Token | None
 
 ## `wd_discord.open_enum` — `wd-discord/src/wd_discord/open_enum.py`
 Enums for values Discord owns, which accept a value Discord adds later instead of refusing the payload.

@@ -1,5 +1,6 @@
 """Location for all authentication related functions and classes."""
 
+lazy from base64 import b64encode
 lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING, Any, Self, override
 
@@ -11,6 +12,8 @@ if TYPE_CHECKING:
 
     lazy from pydantic import GetCoreSchemaHandler
     lazy from pydantic_core import CoreSchema
+
+    lazy from wd_discord.snowflake import SnowflakeLike
 
 
 class _ModelStr(str):
@@ -50,6 +53,10 @@ class TokenType(StrEnum):
 
     BOT = "Bot"
     """Discord's authentication scheme is case-sensitive; it must be ``Bot``, not ``bot``."""
+    BEARER = "Bearer"
+    """An OAuth2 access token, acting as the user who granted it."""
+    BASIC = "Basic"
+    """The application's :func:`client_credentials`, which OAuth2's token endpoints take."""
 
 
 class UserAgentVersion(str):
@@ -83,9 +90,12 @@ def get_auth_header(type_: TokenType, token: Token) -> Template:
     return t"Authorization: {type_} {token}"
 
 
-def get_bearer(token: Token) -> Template:
-    """Get the bearer token header for a given token."""
-    return t"Authorization: Bearer {token}"
+def client_credentials(application_id: SnowflakeLike, secret: Token) -> Token:
+    """Return the application's ID and OAuth2 client ``secret`` as the token of :attr:`TokenType.BASIC` auth.
+
+    https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-exchange-example
+    """
+    return Token(b64encode(f"{application_id}:{secret}".encode()).decode())
 
 
 def user_agent(url: URL, version: UserAgentVersion, metadata: MetaData) -> Template:

@@ -7,38 +7,25 @@ its session cookie (https://docs.discord.com/developers/topics/oauth2#authorizat
 lazy from typing import TYPE_CHECKING
 lazy from urllib.parse import urlencode
 
-from wd_discord.authenticate import URL, Token
-from wd_discord.models import DiscordModel
-lazy from httpxyz import AsyncClient, BasicAuth, RequestError
+from wd_discord.authenticate import URL
 lazy from wd_bot.application import ApplicationId
 lazy from wd_config.discord import URLS
+lazy from wd_discord import Client, Token, TokenType, is_network_error
+lazy from wd_discord.authenticate import client_credentials
 lazy from wd_discord.log import get_logger
-lazy from wd_discord.oauth import OAuthScopes
-lazy from wd_discord.resources.user.user import User
+lazy from wd_discord.oauth import OAuthScopes, exchange_code, revoke_token
 
 lazy from winter_dragon.web.settings import DashboardSettings
 
 
 if TYPE_CHECKING:
-    from httpxyz import Response
+    from wd_discord.resources.user.user import User
 
 
 CALLBACK_PATH = "/auth/discord/callback"
 """Where Discord sends the browser back to after the user authorizes the dashboard."""
-REQUEST_TIMEOUT = 10.0
-"""Seconds a call to Discord's OAuth2 endpoints may take."""
 
 logger = get_logger(__name__)
-
-
-class AccessToken(DiscordModel):
-    """The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response)."""
-
-    access_token: Token
-    token_type: str
-    expires_in: int
-    scope: str
-    refresh_token: Token | None = None
 
 
 def redirect_uri() -> URL:
@@ -61,46 +48,18 @@ def authorization_url(state: str) -> URL:
     return URL(f"{URLS().oauth2_authorize}?{query}")
 
 
-def _api(path: str) -> URL:
-    urls = URLS()
-    return URL(f"{urls.base}/{urls.api_version}{path}")
-
-
-async def _send(  # noqa: PLR0913 - one keyword per part of the request
-    http: AsyncClient,
-    method: str,
-    path: str,
-    *,
-    data: dict[str, str] | None = None,
-    headers: dict[str, str] | None = None,
-    auth: BasicAuth | None = None,
-) -> Response | None:
-    """Send one request to Discord; ``None`` when it never got an answer, which is logged."""
-    try:
-        return await http.request(method, _api(path), data=data, headers=headers, auth=auth)
-    except RequestError as error:
-        logger.warning(t"Discord OAuth2 {method} {path} failed: {error}")
-        return None
-
-
 async def signed_in_user(code: str) -> User | None:
     """Return the Discord user who authorized the dashboard with ``code``; ``None`` when Discord refused it.
 
     Exchanges ``code`` for an access token, reads the user it belongs to, then revokes the token.
     """
-    auth = BasicAuth(str(ApplicationId.get()), DashboardSettings.client_secret)
-    grant = {"grant_type": "authorization_code", "code": code, "redirect_uri": redirect_uri()}
-    async with AsyncClient(timeout=REQUEST_TIMEOUT) as http:
-        granted = await _send(http, "POST", "/oauth2/token", data=grant, auth=auth)
-        if granted is None:
+    credentials = client_credentials(ApplicationId.get(), Token(DashboardSettings.client_secret))
+    async with Client(credentials, token_type=TokenType.BASIC) as application:
+        granted = await exchange_code(application, code, redirect_uri())
+        if is_network_error(granted):
+            logger.warning(t"Discord refused the OAuth2 code exchange: {granted}")
             return None
-        if not granted.is_success:
-            logger.warning(t"Discord refused the OAuth2 code exchange ({granted.status_code}): {granted.text}")
-            return None
-        token = AccessToken.model_validate(granted.json())
-        me = await _send(http, "GET", "/users/@me", headers={"Authorization": f"Bearer {token.access_token}"})
-        revoke = {"token": token.access_token, "token_type_hint": "access_token"}
-        await _send(http, "POST", "/oauth2/token/revoke", data=revoke, auth=auth)
-    if me is None or not me.is_success:
-        return None
-    return User.model_validate(me.json())
+        async with Client(granted.access_token, token_type=TokenType.BEARER) as user:
+            me = await user.users.me()
+        await revoke_token(application, granted.access_token)
+    return None if is_network_error(me) else me.model

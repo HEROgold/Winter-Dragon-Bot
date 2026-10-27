@@ -191,7 +191,7 @@ def test_the_signed_in_account_keeps_its_discord_id_as_a_snowflake_through_the_s
 def test_the_oauth_access_token_is_a_token_hidden_from_repr() -> None:
     from wd_discord import Token
 
-    from winter_dragon.web.discord_oauth import AccessToken
+    from wd_discord.oauth import AccessToken
 
     granted = AccessToken.model_validate(
         {"access_token": "secret-access", "token_type": "Bearer", "expires_in": 604800, "scope": "identify", "refresh_token": "secret-refresh"},
