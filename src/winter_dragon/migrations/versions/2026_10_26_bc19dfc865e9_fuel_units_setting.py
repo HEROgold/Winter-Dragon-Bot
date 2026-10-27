@@ -49,3 +49,5 @@ def downgrade() -> None:
     )
     op.drop_table("fuelpreferences")
     # ### end Alembic commands ###
+    # Dropping a table leaves its Postgres enum type behind; drop it so this revision can be applied again.
+    sa.Enum(name="fuelunits").drop(op.get_bind(), checkfirst=True)
