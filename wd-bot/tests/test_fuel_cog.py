@@ -154,10 +154,10 @@ async def test_an_old_carfuels_table_gains_the_lifecycle_columns_and_keeps_worki
         connection.execute(
             text(
                 "CREATE TABLE carfuels (id INTEGER PRIMARY KEY, user_id BIGINT, amount FLOAT, distance FLOAT,"
-                " price FLOAT, timestamp DATETIME, refueled_at DATETIME)",
+                " price FLOAT, timestamp DATETIME)",
             ),
         )
-        connection.execute(text(f"INSERT INTO carfuels VALUES (1, {ASKER_ID}, 40, 600, 50, '2026-10-01 12:00:00', NULL)"))
+        connection.execute(text(f"INSERT INTO carfuels VALUES (1, {ASKER_ID}, 40, 600, 50, '2026-10-01 12:00:00')"))
     cog = _cog(engine)
 
     await cog.load()
