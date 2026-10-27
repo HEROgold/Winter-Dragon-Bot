@@ -9,12 +9,9 @@ lazy from winter_dragon.web.profile import ProfileContext, profile_page
 
 @profile_page(slug="steam", title="Steam", template="profile/steam.html")
 def steam(context: ProfileContext) -> dict[str, object]:
-    """Return the Steam page's context: the member's sale notifications, newest first, and their total."""
+    """Return the Steam page's context: the member's sale notifications, newest first."""
     with Session(context.bind) as session:
         notifications = list(
             session.exec(owned_by(SaleNotification, member=context.member_id).order_by(col(SaleNotification.sent_at).desc())),
         )
-    return {
-        "notifications": [(entry, entry.sent_at.astimezone(context.zone)) for entry in notifications],
-        "total": len(notifications),
-    }
+    return {"notifications": [(entry, entry.sent_at.astimezone(context.zone)) for entry in notifications]}
