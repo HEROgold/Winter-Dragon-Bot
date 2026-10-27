@@ -13,6 +13,7 @@ lazy from wd_discord.entities.invite import Invite
 lazy from wd_discord.entities.member import Member, PartialMember
 lazy from wd_discord.entities.role import PartialRole, Role
 lazy from wd_discord.entities.voice import VoiceState
+lazy from wd_discord.limits import MAX_MEMBERS_PER_PAGE
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Emoji as EmojiModel
@@ -22,7 +23,6 @@ lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.guild import Sticker as StickerModel
 lazy from wd_discord.resources.guild import WelcomeScreen as WelcomeScreenModel
 lazy from wd_discord.resources.guild import WelcomeScreenChannel as WelcomeScreenChannelModel
-lazy from wd_discord.limits import MAX_MEMBERS_PER_PAGE
 lazy from wd_discord.resources.invite import Invite as InviteModel
 lazy from wd_discord.resources.voice import VoiceState as VoiceStateModel
 lazy from wd_discord.snowflake import Snowflake
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from wd_discord.audit import Reason
     from wd_discord.cache import GuildState
-    from wd_discord.client import Client, NetworkError, RequestResult
+    from wd_discord.client import NetworkError, RequestResult
     from wd_discord.entities.member import BaseMember
     from wd_discord.entities.user import BaseUser
     from wd_discord.gateway.events import GuildCreate
