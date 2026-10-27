@@ -7,9 +7,9 @@ audit log next to the action.
 from dataclasses import dataclass
 lazy from urllib.parse import quote
 
+lazy from wd_discord.limits import MAX_REASON_LENGTH, truncate
 
-MAX_REASON_LENGTH = 512
-"""The longest reason Discord keeps; a longer one is cut short (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object)."""
+
 REASON_HEADER = "X-Audit-Log-Reason"
 """The header that carries an audit log reason (https://docs.discord.com/developers/resources/audit-log)."""
 
@@ -21,8 +21,8 @@ class AuditLogReason:
     text: str
 
     def headers(self) -> dict[str, str]:
-        """Return the request header carrying this reason, cut to :data:`MAX_REASON_LENGTH` and URL-encoded."""
-        return {REASON_HEADER: quote(self.text[:MAX_REASON_LENGTH], safe=" ")}
+        """Return the request header carrying this reason, cut to :data:`~wd_discord.limits.MAX_REASON_LENGTH` with :func:`~wd_discord.limits.truncate` and URL-encoded."""
+        return {REASON_HEADER: quote(truncate(self.text, MAX_REASON_LENGTH), safe=" ")}
 
 
 type Reason = AuditLogReason | str | None

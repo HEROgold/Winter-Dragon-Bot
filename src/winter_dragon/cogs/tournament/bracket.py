@@ -3,7 +3,7 @@
 lazy from math import ceil, log2
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.components import MAX_BUTTON_LABEL_LENGTH
+lazy from wd_discord.limits import MAX_BUTTON_LABEL_LENGTH
 
 
 if TYPE_CHECKING:

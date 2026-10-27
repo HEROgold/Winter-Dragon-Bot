@@ -8,7 +8,7 @@ lazy from typing import TYPE_CHECKING, ClassVar, Self, override
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
-lazy from wd_discord.components import MAX_CUSTOM_ID_LENGTH
+lazy from wd_discord.limits import MAX_CUSTOM_ID_LENGTH
 
 lazy from wd_bot.checks import require_guild
 lazy from wd_bot.commands import wants_guild_interaction
