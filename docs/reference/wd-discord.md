@@ -492,6 +492,13 @@ Represents the permissions a member has in a guild or channel.
 Utilities for handling rate limits.
 
 - module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAJOR_PARAM_PREFIXES
+- `type RateLimiters = Mapping[RateLimitScope, RateLimiter]`
+- `new_rate_limiters() -> dict[RateLimitScope, RateLimiter]` — Build a fresh limiter set for one client: its buckets start empty and are shared with no other client.
+
+### `class RateLimitScope(StrEnum)`
+The scope a rate limit applies to, named as in Discord's ``X-RateLimit-Scope`` header.
+
+- attributes: USER, GLOBAL, SHARED
 
 ### `class RateLimiter(ABC)`
 A rate-limit strategy :class:`~wd_discord.client.Client` consults around each request.
@@ -531,7 +538,6 @@ Raised when a request exceeds the maximum number of rate-limit retries.
 ### `class RateLimitHandler(LoggerMixin)`
 Runs a single logical request through the rate-limit retry loop.
 
-- fields: limiters: ClassVar[dict[str, RateLimiter]]
 - `async acquire() -> None` — Wait on every limiter for this handler's route key before sending.
 - `update(headers: Headers) -> None` — Update the rate limiters with the response headers for this handler's route key.
 - `async wait_on_rate_limit(response: Response) -> None` — Parse a 429's body/headers and wait via the matching limiter before retrying.
