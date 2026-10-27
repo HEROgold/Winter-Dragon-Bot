@@ -69,7 +69,7 @@ class HangmanParticipant(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("game_id", HangmanGame))
     natural_key: ClassVar[tuple[str, ...]] = ("game_id", "user_id")
 
-    game_id: int = Field(index=True)
+    game_id: int = Field(foreign_key="hangmangame.id", sa_type=BigInteger, index=True)
     user_id: int = Field(sa_type=BigInteger)
 
 
