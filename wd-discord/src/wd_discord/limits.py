@@ -42,6 +42,8 @@ MAX_CHOICE_NAME_LENGTH = 100
 """A command option choice name, autocomplete results included, holds up to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-choice-structure)."""
 MAX_DESCRIPTION_LENGTH = 100
 """A command or option description holds 1 to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
+MAX_OPTION_VALUE_LENGTH = 6000
+"""A STRING option's ``min_length`` and ``max_length`` are at most 6000 (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 
 MAX_REASON_LENGTH = 512
 """The longest audit log reason Discord keeps (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object)."""

@@ -1,10 +1,11 @@
 """Unit tests: the command registry, command mentions and the scope-by-scope syncer (no network)."""
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 from wd_bot.auto_sync import CommandSyncer
 from wd_bot.cogs import Cog, GroupCog
+from wd_bot.commands import Describe, Length, Range
 from wd_bot.registry import GLOBAL, CommandPath, CommandRegistry, Scope, definition_matches
 from wd_bot.testing import detached_cog
 from wd_discord.errors.api import ApiResponseError
@@ -36,6 +37,18 @@ class _Steam(GroupCog, auto_load=False):
     @Cog.command(name="show", description="d")
     async def show(self, interaction: CommandInteraction) -> None:
         """Handle /steam show."""
+
+
+class _Limits(Cog, auto_load=False):
+    @Cog.command(name="limits", description="d")
+    async def limits(
+        self,
+        interaction: CommandInteraction,
+        name: Annotated[str, Describe("Pet name"), Length(min_length=2, max_length=32)],
+        count: Annotated[int, Range(min_value=1, max_value=10)],
+        ratio: Annotated[float, Range(min_value=0.5)] | None = None,
+    ) -> None:
+        """Handle /limits."""
 
 
 class _GuildOnly(Cog, auto_load=False):
@@ -224,6 +237,22 @@ async def test_changed_scope_is_overwritten_and_takes_discords_answer() -> None:
     assert client.sent[1].json == [_params(_Ping.ping).to_json()]
     assert registry.command_id("ping") == Snowflake(77)
     assert registry.in_sync(GLOBAL)
+
+
+async def test_option_length_and_range_are_sent_with_the_synced_command() -> None:
+    registry = _synced_registry(_Limits)
+    client = RecordingClient()
+    client.reply("GET", GLOBAL_ROUTE, [])
+    client.reply("PUT", GLOBAL_ROUTE, [_reported(_params(_Limits.limits), 77)])
+
+    await CommandSyncer(registry).sync(client, [GLOBAL])
+
+    (sent,) = client.sent[1].json
+    name, count, ratio = sent["options"]
+    assert (name["description"], name["min_length"], name["max_length"]) == ("Pet name", 2, 32)
+    assert (count["min_value"], count["max_value"]) == (1, 10)
+    assert ratio["min_value"] == 0.5
+    assert "max_value" not in ratio
 
 
 async def test_known_scope_in_sync_makes_no_calls() -> None:

@@ -133,6 +133,12 @@ Limit a channel option to some kinds of channel: ``category: Annotated[Channel, 
 ### `class Describe`
 Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
 
+### `class Length`
+Limit a string option's length: ``name: Annotated[str, Length(min_length=2, max_length=32)]``.
+
+### `class Range`
+Limit an ``int`` or ``float`` option's value: ``count: Annotated[int, Range(min_value=1, max_value=10)]``.
+
 ### `class Lookup`
 Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_names)]``.
 
@@ -143,7 +149,8 @@ Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_n
 A handler parameter as a Discord option: what Discord asks for, and what the handler gets.
 
 - fields: name: str, param_type: object, option_type: ApplicationCommandOptionType, required: bool, channel_types:
-  list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...]
+  list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...],
+  length: Length | None, range: Range | None
 - `definition(*, autocomplete: bool) -> ApplicationCommandOption` — Return the option as Discord defines it.
 - `argument(interaction: CommandInteraction, value: object, cog: Cog) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
 

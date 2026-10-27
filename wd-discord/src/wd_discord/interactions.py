@@ -14,6 +14,7 @@ from wd_discord.snowflake import Snowflake
 lazy from wd_discord.limits import (
     MAX_CHOICES,
     MAX_DESCRIPTION_LENGTH,
+    MAX_OPTION_VALUE_LENGTH,
     MAX_OPTIONS,
 )
 lazy from wd_discord.models import DiscordModel
@@ -167,8 +168,8 @@ class ApplicationCommandOption(DiscordModel):
     channel_types: list[ChannelType] | None = None
     min_value: int | float | None = None
     max_value: int | float | None = None
-    min_length: Annotated[int, Field(ge=0, le=6000)] | None = None
-    max_length: Annotated[int, Field(ge=1, le=6000)] | None = None
+    min_length: Annotated[int, Field(ge=0, le=MAX_OPTION_VALUE_LENGTH)] | None = None
+    max_length: Annotated[int, Field(ge=1, le=MAX_OPTION_VALUE_LENGTH)] | None = None
     autocomplete: bool | None = None
     file_types: Annotated[list[str], Field(max_length=10)] | None = None
 

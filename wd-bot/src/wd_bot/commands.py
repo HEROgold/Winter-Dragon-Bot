@@ -25,7 +25,13 @@ lazy from wd_discord.interactions import (
     ApplicationCommandParams,
     InteractionContextType,
 )
-lazy from wd_discord.limits import MAX_CHOICE_NAME_LENGTH, MAX_CHOICES, MAX_DESCRIPTION_LENGTH, truncate
+lazy from wd_discord.limits import (
+    MAX_CHOICE_NAME_LENGTH,
+    MAX_CHOICES,
+    MAX_DESCRIPTION_LENGTH,
+    MAX_OPTION_VALUE_LENGTH,
+    truncate,
+)
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.user import User as UserModel
@@ -95,6 +101,64 @@ class Describe:
             raise ValueError(msg)
 
 
+class Length:
+    """Limit a string option's length: ``name: Annotated[str, Length(min_length=2, max_length=32)]``.
+
+    Discord enforces it before the command reaches the handler. Raises ``ValueError`` unless at least one limit is
+    given, ``min_length`` is 0 to 6000, ``max_length`` is 1 to 6000
+    (:data:`~wd_discord.limits.MAX_OPTION_VALUE_LENGTH`), and ``min_length`` is not above ``max_length``.
+    """
+
+    __slots__ = ("max_length", "min_length")
+
+    def __init__(self, *, min_length: int | None = None, max_length: int | None = None) -> None:
+        """Allow values of ``min_length`` to ``max_length`` characters; ``None`` leaves that end open."""
+        if min_length is None and max_length is None:
+            msg = "Length needs a min_length, a max_length, or both"
+            raise ValueError(msg)
+        if min_length is not None and not 0 <= min_length <= MAX_OPTION_VALUE_LENGTH:
+            msg = f"Length min_length {min_length} must be 0 to {MAX_OPTION_VALUE_LENGTH}"
+            raise ValueError(msg)
+        if max_length is not None and not 1 <= max_length <= MAX_OPTION_VALUE_LENGTH:
+            msg = f"Length max_length {max_length} must be 1 to {MAX_OPTION_VALUE_LENGTH}"
+            raise ValueError(msg)
+        if min_length is not None and max_length is not None and min_length > max_length:
+            msg = f"Length min_length {min_length} is above its max_length {max_length}"
+            raise ValueError(msg)
+        self.min_length = min_length
+        self.max_length = max_length
+
+    def __repr__(self) -> str:
+        """Show the limits, so a command's signature changes when they do."""
+        return f"Length(min_length={self.min_length!r}, max_length={self.max_length!r})"
+
+
+class Range:
+    """Limit an ``int`` or ``float`` option's value: ``count: Annotated[int, Range(min_value=1, max_value=10)]``.
+
+    Discord enforces both bounds, inclusive, before the command reaches the handler. On an ``int`` parameter the
+    bounds must be ints. Raises ``ValueError`` unless at least one bound is given and ``min_value`` is not above
+    ``max_value``.
+    """
+
+    __slots__ = ("max_value", "min_value")
+
+    def __init__(self, *, min_value: float | None = None, max_value: float | None = None) -> None:
+        """Allow values from ``min_value`` to ``max_value``; ``None`` leaves that end open."""
+        if min_value is None and max_value is None:
+            msg = "Range needs a min_value, a max_value, or both"
+            raise ValueError(msg)
+        if min_value is not None and max_value is not None and min_value > max_value:
+            msg = f"Range min_value {min_value} is above its max_value {max_value}"
+            raise ValueError(msg)
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def __repr__(self) -> str:
+        """Show the bounds, so a command's signature changes when they do."""
+        return f"Range(min_value={self.min_value!r}, max_value={self.max_value!r})"
+
+
 class Lookup:
     """Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_names)]``.
 
@@ -151,6 +215,10 @@ class OptionSpec:
     """The :class:`Lookup` of a stored-row option; ``None`` for any other."""
     models: tuple[type[LifecycleModel], ...] = ()
     """The table classes a :class:`Lookup` option may name."""
+    length: Length | None = None
+    """The :class:`Length` of a string option; ``None`` leaves its length to Discord."""
+    range: Range | None = None
+    """The :class:`Range` of a number option; ``None`` leaves it unbounded."""
 
     def definition(self, *, autocomplete: bool) -> ApplicationCommandOption:
         """Return the option as Discord defines it."""
@@ -161,6 +229,10 @@ class OptionSpec:
             required=self.required,
             channel_types=self.channel_types,
             autocomplete=True if autocomplete else None,
+            min_length=None if self.length is None else self.length.min_length,
+            max_length=None if self.length is None else self.length.max_length,
+            min_value=None if self.range is None else self.range.min_value,
+            max_value=None if self.range is None else self.range.max_value,
         )
 
     def argument(self, interaction: CommandInteraction, value: object, cog: Cog) -> object:
@@ -382,6 +454,7 @@ class Command(AppCommand):
         if channel_types and option_type is not ApplicationCommandOptionType.CHANNEL:
             msg = f"Command {self.name!r}: ChannelTypes only applies to a channel parameter, not {param.name!r}"
             raise TypeError(msg)
+        length, bounds = self._limits_of(param.name, param_type if not models else None, metadata)
         return OptionSpec(
             param.name,
             param_type,
@@ -391,7 +464,35 @@ class Command(AppCommand):
             next(iter(descriptions), None),
             next(iter(lookups), None),
             models,
+            length,
+            bounds,
         )
+
+    def _limits_of(self, name: str, param_type: object, metadata: list[object]) -> tuple[Length | None, Range | None]:
+        """Return parameter ``name``'s :class:`Length` and :class:`Range`, if it has them.
+
+        ``param_type`` is the handler's type, or ``None`` for a stored-row option. Raises ``TypeError`` for a second
+        one of either, a ``Length`` off a ``str``, a ``Range`` off an ``int`` or ``float``, or a ``Range`` with a
+        non-int bound on an ``int``.
+        """
+        lengths = [item for item in metadata if isinstance(item, Length)]
+        ranges = [item for item in metadata if isinstance(item, Range)]
+        for kind, found in (("Length", lengths), ("Range", ranges)):
+            if len(found) > 1:
+                msg = f"Command {self.name!r}: parameter {name!r} has more than one {kind}"
+                raise TypeError(msg)
+        if lengths and param_type is not str:
+            msg = f"Command {self.name!r}: Length only applies to a str parameter, not {name!r}"
+            raise TypeError(msg)
+        if ranges and param_type not in (int, float):
+            msg = f"Command {self.name!r}: Range only applies to an int or float parameter, not {name!r}"
+            raise TypeError(msg)
+        if ranges and param_type is int and not all(
+            isinstance(end, int | None) for end in (ranges[0].min_value, ranges[0].max_value)
+        ):
+            msg = f"Command {self.name!r}: the Range of int parameter {name!r} needs int bounds"
+            raise TypeError(msg)
+        return next(iter(lengths), None), next(iter(ranges), None)
 
     @staticmethod
     def _unwrap(annotation: object) -> tuple[object, list[object]]:
@@ -421,14 +522,16 @@ class Command(AppCommand):
             yield option.definition(autocomplete=option.lookup is not None)
 
     def _own_signature(self) -> Generator[str]:
-        """Yield the handler's parameter signature, then its option descriptions when it has any.
+        """Yield the handler's parameter signature, then its option descriptions and limits when it has any.
 
-        The descriptions are rendered: the signature only holds an annotation's source, which doesn't change when a
-        constant a ``Describe`` names does.
+        Both are rendered: the signature only holds an annotation's source, which doesn't change when a constant a
+        ``Describe``, ``Length`` or ``Range`` names does.
         """
         yield command_signature(self.func)
         if descriptions := {name: spec.description for name, spec in self._options.items() if spec.description}:
             yield f"descriptions: {descriptions}"
+        if limits := {name: (spec.length, spec.range) for name, spec in self._options.items() if spec.length or spec.range}:
+            yield f"limits: {limits}"
 
     async def invoke(
         self,
