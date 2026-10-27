@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord` — `wd-discord/src/wd_discord/__init__.py`
 
-- exports: URLS, AnyGuildInteraction, AnyInteraction, ApiResponseError, Application, AuditLogReason,
+- exports: URLS, AnyGuildInteraction, AnyInteraction, ActivityType, ApiResponseError, Application, AuditLogReason,
   AutocompleteInteraction, BoundEvent, Channel, ChannelPinsUpdate, ChannelType, Client, Color, CommandInteraction,
   ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField, Emoji, Entitlement, EventName, Gateway,
   GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild, GuildCommand, GuildCommandInteraction,

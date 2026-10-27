@@ -3,10 +3,10 @@
 
 from __future__ import annotations
 
+lazy from enum import StrEnum
 lazy from typing import TYPE_CHECKING
 
-lazy from pydantic import BaseModel, RootModel
-lazy from wd_errors import ErrorNode
+lazy from pydantic import BaseModel, Field, RootModel
 
 from wd_discord.open_enum import OpenIntEnum
 
@@ -37,6 +37,27 @@ class JsonErrorCode(OpenIntEnum):
     """The user doesn't accept direct messages from the bot."""
     MISSING_PERMISSIONS = 50013
     """The bot can see the resource but lacks a permission the action needs."""
+
+
+class ErrorCode(StrEnum):
+    """Codes Discord puts on a field error inside a failed response's ``errors`` tree."""
+
+    BASE_TYPE_CHOICES = "BASE_TYPE_CHOICES"
+    BASE_TYPE_REQUIRED = "BASE_TYPE_REQUIRED"
+    APPLICATION_COMMAND_TOO_LARGE = "APPLICATION_COMMAND_TOO_LARGE"
+
+
+class ErrorMessage(BaseModel):
+    """Error message with a code and a message string."""
+
+    code: ErrorCode
+    message: str
+
+
+class ErrorNode(BaseModel):
+    """Node in the error tree, which can contain a list of error messages and/or child nodes."""
+
+    errors_list: list[ErrorMessage] = Field(default_factory=list, alias="_errors")
 
 
 class ApiErrorTree(RootModel[ErrorNode | dict[str, "ApiErrorTree"]]):

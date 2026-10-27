@@ -5,8 +5,7 @@ lazy from typing import TYPE_CHECKING
 
 lazy import pytest
 lazy from wd_config.discord import URLS
-lazy from wd_discord import Gateway, GatewayActivity, Status
-lazy from wd_errors import Activity
+lazy from wd_discord import ActivityType, Gateway, GatewayActivity, Status
 
 
 if TYPE_CHECKING:
@@ -36,7 +35,7 @@ async def test_gateway_connect_and_update_presence(
 
         # Sending a presence update (op 3); a clean send (no exception) means it was accepted.
         await gateway.update_presence(
-            [GatewayActivity("with wd-discord", Activity.CUSTOM, state="running tests")],
+            [GatewayActivity("with wd-discord", ActivityType.CUSTOM, state="running tests")],
             Status.online,
         )
         # Let the heartbeat/ack cycle run briefly to surface any protocol error.
