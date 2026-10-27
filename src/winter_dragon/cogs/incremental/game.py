@@ -150,28 +150,22 @@ def buy(session: Session, member_id: int, generator_key: str, *, now: datetime |
     if generator is None:
         msg = "That generator doesn't exist."
         raise Refused(msg)
-    _ensure_save(session, member_id, now)
-    try:
-        save = _ensure_save(session, member_id, now, lock=True)
-        balances = _balances(session, save.id)
-        owned = _owned(session, save.id)
-        seconds = max(0.0, (now - save.settled_at).total_seconds())
-        amounts = _amounts(game, balances, _rates(game, owned), seconds)
-        count = owned[generator.key].owned if generator.key in owned else 0
-        for cost in generator.price_for(count):
-            if amounts[cost.currency] < cost.amount:
-                currency = game.currency(cost.currency)
-                name = currency.name if currency is not None else cost.currency
-                msg = f"You need {cost.amount:,.1f} {name} for a {generator.name}, but you have {amounts[cost.currency]:,.1f}."
-                raise Refused(msg)  # noqa: TRY301 - the rollback below releases the lock
-            amounts[cost.currency] -= cost.amount
-        for key, amount in amounts.items():
-            upsert(session, SaveBalance(save_id=save.id, currency=key, amount=amount))
-        upsert(session, SaveGenerator(save_id=save.id, generator=generator.key, owned=count + 1))
-        save.settled_at = now
-        session.add(save)
-        session.commit()
-    except BaseException:
-        session.rollback()
-        raise
-    return open_save(session, member_id, now=now)
+    save = _ensure_save(session, member_id, now, lock=True)
+    view = _view(session, save, now)
+    offer = next(offer for offer in view.offers if offer.generator.key == generator.key)
+    amounts = {holding.currency.key: holding.amount for holding in view.holdings}
+    if not offer.affordable:
+        short = next(cost for cost in offer.price if amounts[cost.currency] < cost.amount)
+        currency = game.currency(short.currency)
+        name = currency.name if currency is not None else short.currency
+        msg = f"You need {short.amount:,.1f} {name} for a {generator.name}, but you have {amounts[short.currency]:,.1f}."
+        raise Refused(msg)
+    for cost in offer.price:
+        amounts[cost.currency] -= cost.amount
+    for key, amount in amounts.items():
+        upsert(session, SaveBalance(save_id=save.id, currency=key, amount=amount))
+    upsert(session, SaveGenerator(save_id=save.id, generator=generator.key, owned=offer.owned + 1))
+    save.settled_at = now
+    session.add(save)
+    session.commit()
+    return _view(session, save, now)
