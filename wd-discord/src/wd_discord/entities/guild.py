@@ -318,9 +318,8 @@ class BaseGuild(ClientBound):
 
     def _members(self, result: RequestResult) -> Generator[Member] | NetworkError:
         """Return the failure in ``result``, or each member in its JSON array as a :class:`Member` of this guild."""
-        if is_network_error(result):
-            return result
-        return (Member(self.client, GuildMember.model_validate(item), self.id) for item in result.json())
+        parsed = parse_all(result, GuildMember)
+        return parsed if is_network_error(parsed) else (Member(self.client, model, self.id) for model in parsed)
 
 
 class Guild(Entity[GuildModel], BaseGuild):

@@ -3,7 +3,7 @@
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.client import is_network_error
-lazy from wd_discord.entities.base import Entity
+lazy from wd_discord.entities.base import Entity, parse, parse_all
 lazy from wd_discord.entities.command import GlobalCommandStore, GuildCommandStore, PartialGlobalCommand
 lazy from wd_discord.entities.entitlement import Entitlement
 lazy from wd_discord.entities.guild import Guild, PartialGuild
@@ -175,10 +175,8 @@ class CurrentApplication:
 
     async def fetch(self, *, cache: bool = False) -> Application | NetworkError:
         """GET /applications/@me - the application object."""
-        result = await self.client.get(t"/applications/@me", cache=cache)
-        if is_network_error(result):
-            return result
-        return Application(self.client, ApplicationModel.model_validate(result.json()))
+        parsed = parse(await self.client.get(t"/applications/@me", cache=cache), ApplicationModel)
+        return parsed if is_network_error(parsed) else Application(self.client, parsed)
 
     async def id(self) -> Snowflake | NetworkError:
         """Return the application's ID, fetching and caching it when unknown.
@@ -215,6 +213,5 @@ class CurrentApplication:
         if guild is not None:
             params["guild_id"] = str(guild.id)
         result = await self.client.get(t"/applications/{application_id}/entitlements", params=params, cache=cache)
-        if is_network_error(result):
-            return result
-        return (Entitlement(self.client, EntitlementModel.model_validate(item)) for item in result.json())
+        parsed = parse_all(result, EntitlementModel)
+        return parsed if is_network_error(parsed) else (Entitlement(self.client, model) for model in parsed)

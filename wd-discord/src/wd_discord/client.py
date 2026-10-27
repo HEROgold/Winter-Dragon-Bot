@@ -45,7 +45,7 @@ lazy from wd_discord.authenticate import (
 )
 lazy from wd_discord.cache import StateCache
 lazy from wd_discord.entities.application import CurrentApplication
-lazy from wd_discord.entities.base import EntityStore
+lazy from wd_discord.entities.base import EntityStore, parse
 lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.events import bind
 lazy from wd_discord.entities.guild import PartialGuild
@@ -340,10 +340,7 @@ class Client(LoggerMixin):
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
-        result = await self.get(t"/gateway/bot")
-        if is_network_error(result):
-            return result
-        return GatewayBotInfo.model_validate(result.json())
+        return parse(await self.get(t"/gateway/bot"), GatewayBotInfo)
 
     async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents | None = None) -> ShardManager:
         """Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`."""
