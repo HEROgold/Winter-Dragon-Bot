@@ -1,7 +1,7 @@
 """Sale notification log and Steam profile page.
 
 Revision ID: 5b7094b12d2c
-Revises: c9b4b18ba344
+Revises: bc19dfc865e9
 Create Date: 2026-10-26 23:54:28.381135
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision: str = "5b7094b12d2c"
-down_revision: str | None = "c9b4b18ba344"
+down_revision: str | None = "bc19dfc865e9"
 branch_labels: str | None = None
 depends_on: str | None = None
 
