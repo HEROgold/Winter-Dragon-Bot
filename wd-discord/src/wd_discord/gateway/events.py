@@ -29,6 +29,7 @@ lazy-import proxy fails schema generation (``PydanticSchemaGenerationError``).
 
 from collections.abc import Mapping
 from datetime import datetime
+from typing import Annotated, Literal
 lazy from enum import StrEnum
 lazy from typing import Self, cast
 
@@ -414,6 +415,47 @@ class MessageComponentData(DiscordModel):
     """The chosen values; only sent for select menus."""
 
 
+class SubmittedTextInput(DiscordModel):
+    """A text input in a modal submit: what the member typed."""
+
+    type: Literal[ComponentType.TEXT_INPUT]
+    id: int | None = None
+    custom_id: str
+    value: str
+
+
+class SubmittedActionRow(DiscordModel):
+    """An action row in a modal submit, holding the components it was built with."""
+
+    type: Literal[ComponentType.ACTION_ROW]
+    id: int | None = None
+    components: list[SubmittedComponent] = Field(default_factory=list["SubmittedComponent"])
+
+
+class SubmittedLabel(DiscordModel):
+    """A label in a modal submit, holding the one component it labels."""
+
+    type: Literal[ComponentType.LABEL]
+    id: int | None = None
+    component: SubmittedComponent
+
+
+class SubmittedOtherComponent(DiscordModel):
+    """A submitted component without a text value of its own, such as a select menu; its choices are in ``values``."""
+
+    type: ComponentType
+    id: int | None = None
+    custom_id: str | None = None
+    values: list[str] | None = None
+
+
+type SubmittedComponent = Annotated[
+    SubmittedTextInput | SubmittedActionRow | SubmittedLabel | SubmittedOtherComponent,
+    Field(union_mode="left_to_right"),
+]
+"""A component of a modal submit: the first of these whose ``type`` fits."""
+
+
 class ModalSubmitData(DiscordModel):
     """The ``data`` block of a MODAL_SUBMIT INTERACTION_CREATE.
 
@@ -422,8 +464,30 @@ class ModalSubmitData(DiscordModel):
 
     custom_id: str
     """The ``custom_id`` of the modal."""
-    components: list[dict[str, object]] = Field(default_factory=list[dict[str, object]])
+    components: list[SubmittedComponent] = Field(default_factory=list["SubmittedComponent"])
     """The submitted components: labels or action rows holding the inputs, each with its ``custom_id`` and ``value``."""
+
+
+class Message(DiscordModel):
+    """MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message)."""
+
+    id: Snowflake
+    channel_id: Snowflake
+    guild_id: Snowflake | None = None
+    author: User
+    content: str
+    timestamp: str
+    edited_timestamp: str | None = None
+    tts: bool
+    mention_everyone: bool
+    mentions: list[MentionedUser] = Field(default_factory=list)
+    """Users the message mentions."""
+    attachments: list[Attachment] = Field(default_factory=list)
+    """Files attached to the message."""
+    embeds: list[Embed] = Field(default_factory=list)
+    """Embeds in the message."""
+    reactions: list[Reaction] = Field(default_factory=list)
+    """Reactions to the message; never on MESSAGE_CREATE, only on a fetched message."""
 
 
 class Interaction(DiscordModel):
@@ -507,7 +571,7 @@ class ModalSubmitInteraction(Interaction):
     """A MODAL_SUBMIT interaction: someone submitted a modal."""
 
     data: ModalSubmitData
-    message: dict[str, object] | None = None
+    message: Message | None = None
     """The message the modal was opened from, when it was opened from a component on a message."""
 
 
@@ -524,28 +588,6 @@ _INTERACTION_SUBCLASSES: dict[object, type[Interaction]] = {
     InteractionType.MODAL_SUBMIT: ModalSubmitInteraction,
 }
 """The subclass each interaction type parses into; IntEnum members hash like the wire ints."""
-
-
-class Message(DiscordModel):
-    """MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message)."""
-
-    id: Snowflake
-    channel_id: Snowflake
-    guild_id: Snowflake | None = None
-    author: User
-    content: str
-    timestamp: str
-    edited_timestamp: str | None = None
-    tts: bool
-    mention_everyone: bool
-    mentions: list[MentionedUser] = Field(default_factory=list)
-    """Users the message mentions."""
-    attachments: list[Attachment] = Field(default_factory=list)
-    """Files attached to the message."""
-    embeds: list[Embed] = Field(default_factory=list)
-    """Embeds in the message."""
-    reactions: list[Reaction] = Field(default_factory=list)
-    """Reactions to the message; never on MESSAGE_CREATE, only on a fetched message."""
 
 
 class MessageUpdate(Message):

@@ -29,6 +29,7 @@ lazy from wd_discord.gateway.events import ComponentInteraction as ComponentInte
 lazy from wd_discord.gateway.events import Interaction as InteractionModel
 lazy from wd_discord.gateway.events import Message as MessageModel
 lazy from wd_discord.gateway.events import ModalSubmitInteraction as ModalSubmitInteractionModel
+lazy from wd_discord.gateway.events import SubmittedActionRow, SubmittedLabel, SubmittedTextInput
 lazy from wd_discord.responses import InteractionCallbackType, MessageFlags, message_data
 
 
@@ -42,7 +43,7 @@ if TYPE_CHECKING:
     from wd_discord.components import ActionRow, ComponentType, Modal
     from wd_discord.embed import Embed
     from wd_discord.files import File
-    from wd_discord.gateway.events import InteractionDataOption, InteractionType
+    from wd_discord.gateway.events import InteractionDataOption, InteractionType, SubmittedComponent
     from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType, Locale
     from wd_discord.permissions import Permissions
     from wd_discord.resources.channel import Channel as ChannelModel
@@ -344,23 +345,18 @@ class ModalSubmitInteraction(_UpdatesMessage[ModalSubmitInteractionModel]):
         """The message the modal was opened from, when it was opened from a component on a message."""
         if self.model.message is None:
             return None
-        return Message(self.client, MessageModel.model_validate(self.model.message))
+        return Message(self.client, self.model.message)
 
 
-def _text_values(components: Sequence[object]) -> Generator[tuple[str, str]]:
-    """Yield ``(custom_id, value)`` of each submitted input in ``components``, however deeply labels and rows nest them."""
+def _text_values(components: Sequence[SubmittedComponent]) -> Generator[tuple[str, str]]:
+    """Yield ``(custom_id, value)`` of each submitted text input in ``components``, however deeply labels and rows nest them."""
     for component in components:
-        if not isinstance(component, dict):
-            continue
-        custom_id, value = component.get("custom_id"), component.get("value")
-        if isinstance(custom_id, str) and isinstance(value, str):
-            yield custom_id, value
-        nested = component.get("components")
-        if isinstance(nested, list):
-            yield from _text_values(nested)
-        inner = component.get("component")
-        if isinstance(inner, dict):
-            yield from _text_values([inner])
+        if isinstance(component, SubmittedTextInput):
+            yield component.custom_id, component.value
+        elif isinstance(component, SubmittedActionRow):
+            yield from _text_values(component.components)
+        elif isinstance(component, SubmittedLabel):
+            yield from _text_values([component.component])
 
 
 class AutocompleteInteraction(Interaction[AutocompleteInteractionModel]):

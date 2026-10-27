@@ -15,18 +15,18 @@ from typing import Literal, overload
 from wd_discord.models import DiscordModel
 
 from .events import (
+    EventName,
     ChannelCreate,
     ChannelDelete,
     ChannelPinsUpdate,
     ChannelUpdate,
-    EventName,
     GuildCreate,
     GuildDelete,
     GuildEmojisUpdate,
     GuildMemberAdd,
     GuildMemberRemove,
-    GuildMembersChunk,
     GuildMemberUpdate,
+    GuildMembersChunk,
     GuildRoleCreate,
     GuildRoleDelete,
     GuildRoleUpdate,
@@ -46,8 +46,8 @@ from .events import (
     ThreadCreate,
     ThreadDelete,
     ThreadListSync,
-    ThreadMembersUpdate,
     ThreadMemberUpdate,
+    ThreadMembersUpdate,
     ThreadUpdate,
     TypingStart,
     UserUpdate,
@@ -118,11 +118,11 @@ def parse_dispatch(name: Literal[EventName.MESSAGE_REACTION_ADD], data: Mapping[
 def parse_dispatch(name: Literal[EventName.MESSAGE_REACTION_REMOVE], data: Mapping[str, object]) -> MessageReactionRemove: ...
 @overload
 def parse_dispatch(
-    name: Literal[EventName.MESSAGE_REACTION_REMOVE_ALL], data: Mapping[str, object],
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE_ALL], data: Mapping[str, object]
 ) -> MessageReactionRemoveAll: ...
 @overload
 def parse_dispatch(
-    name: Literal[EventName.MESSAGE_REACTION_REMOVE_EMOJI], data: Mapping[str, object],
+    name: Literal[EventName.MESSAGE_REACTION_REMOVE_EMOJI], data: Mapping[str, object]
 ) -> MessageReactionRemoveEmoji: ...
 @overload
 def parse_dispatch(name: Literal[EventName.PRESENCE_UPDATE], data: Mapping[str, object]) -> PresenceUpdate: ...
@@ -132,11 +132,11 @@ def parse_dispatch(name: Literal[EventName.TYPING_START], data: Mapping[str, obj
 def parse_dispatch(name: Literal[EventName.USER_UPDATE], data: Mapping[str, object]) -> UserUpdate: ...
 @overload
 def parse_dispatch(
-    name: Literal[EventName.VOICE_CHANNEL_START_TIME_UPDATE], data: Mapping[str, object],
+    name: Literal[EventName.VOICE_CHANNEL_START_TIME_UPDATE], data: Mapping[str, object]
 ) -> VoiceChannelStartTimeUpdate: ...
 @overload
 def parse_dispatch(
-    name: Literal[EventName.VOICE_CHANNEL_STATUS_UPDATE], data: Mapping[str, object],
+    name: Literal[EventName.VOICE_CHANNEL_STATUS_UPDATE], data: Mapping[str, object]
 ) -> VoiceChannelStatusUpdate: ...
 @overload
 def parse_dispatch(name: Literal[EventName.VOICE_STATE_UPDATE], data: Mapping[str, object]) -> VoiceStateUpdate: ...

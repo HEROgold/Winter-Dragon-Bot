@@ -60,6 +60,8 @@ Runtime resolution of a gateway dispatch (event name, payload) pair into a typed
 ## `wd_discord.gateway.events` — `wd-discord/src/wd_discord/gateway/events.py`
 Typed gateway dispatch event payloads and the DiscordModel each event's name resolves to.
 
+- `type SubmittedComponent = SubmittedTextInput | SubmittedActionRow | SubmittedLabel | SubmittedOtherComponent`
+
 ### `class RawEvent(DiscordModel)`
 Fallback for any dispatch event without a dedicated model.
 
@@ -229,10 +231,37 @@ The ``data`` block of a MESSAGE_COMPONENT INTERACTION_CREATE (a button click or 
 
 - fields: custom_id: str, component_type: ComponentType, id: int | None, values: list[str] | None
 
+### `class SubmittedTextInput(DiscordModel)`
+A text input in a modal submit: what the member typed.
+
+- fields: type: Literal[ComponentType.TEXT_INPUT], id: int | None, custom_id: str, value: str
+
+### `class SubmittedActionRow(DiscordModel)`
+An action row in a modal submit, holding the components it was built with.
+
+- fields: type: Literal[ComponentType.ACTION_ROW], id: int | None, components: list[SubmittedComponent]
+
+### `class SubmittedLabel(DiscordModel)`
+A label in a modal submit, holding the one component it labels.
+
+- fields: type: Literal[ComponentType.LABEL], id: int | None, component: SubmittedComponent
+
+### `class SubmittedOtherComponent(DiscordModel)`
+A submitted component without a text value of its own, such as a select menu; its choices are in ``values``.
+
+- fields: type: ComponentType, id: int | None, custom_id: str | None, values: list[str] | None
+
 ### `class ModalSubmitData(DiscordModel)`
 The ``data`` block of a MODAL_SUBMIT INTERACTION_CREATE.
 
-- fields: custom_id: str, components: list[dict[str, object]]
+- fields: custom_id: str, components: list[SubmittedComponent]
+
+### `class Message(DiscordModel)`
+MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message).
+
+- fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None, author: User, content: str, timestamp: str,
+  edited_timestamp: str | None, tts: bool, mention_everyone: bool, mentions: list[MentionedUser], attachments:
+  list[Attachment], embeds: list[Embed], reactions: list[Reaction]
 
 ### `class Interaction(DiscordModel)`
 INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object).
@@ -262,19 +291,12 @@ A MESSAGE_COMPONENT interaction: someone clicked a button or chose from a select
 ### `class ModalSubmitInteraction(Interaction)`
 A MODAL_SUBMIT interaction: someone submitted a modal.
 
-- fields: data: ModalSubmitData, message: dict[str, object] | None
+- fields: data: ModalSubmitData, message: Message | None
 
 ### `class UnknownInteraction(Interaction)`
 An interaction type without its own subclass yet (PING); ``data`` stays untyped.
 
 - fields: data: Mapping[str, object] | None
-
-### `class Message(DiscordModel)`
-MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message).
-
-- fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None, author: User, content: str, timestamp: str,
-  edited_timestamp: str | None, tts: bool, mention_everyone: bool, mentions: list[MentionedUser], attachments:
-  list[Attachment], embeds: list[Embed], reactions: list[Reaction]
 
 ### `class MessageUpdate(Message)`
 MESSAGE_UPDATE (https://docs.discord.com/developers/events/gateway-events#message-update): the full edited message.
