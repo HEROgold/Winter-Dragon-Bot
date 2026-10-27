@@ -49,8 +49,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("game_id", sa.Integer(), nullable=False),
+        sa.Column("game_id", sa.BigInteger(), nullable=False),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.ForeignKeyConstraint(["game_id"], ["hangmangame.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -90,3 +91,5 @@ def downgrade() -> None:
     )
     op.drop_table("hangmangame")
     # ### end Alembic commands ###
+    # Dropping a table leaves its Postgres enum type behind; drop it so this revision can be applied again.
+    sa.Enum(name="hangmanstatus").drop(op.get_bind(), checkfirst=True)
