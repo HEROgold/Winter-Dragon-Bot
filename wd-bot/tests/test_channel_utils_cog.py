@@ -242,3 +242,22 @@ async def test_lock_refuses_threads(make_interaction: InteractionFactory, discor
     await ChannelUtils.lock.invoke(_cog(), interaction, interaction.options)
 
     assert _reply(discord_client) == "You can't lock or unlock this channel."
+
+
+async def test_delete_category_refuses_a_channel_that_is_not_a_category(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    text = {**CATEGORY, "type": 0}
+    interaction = make_interaction(
+        "channel-utils",
+        options=[InteractionDataOption(name="category", type=7, value="10")],
+        resolved=ResolvedData(channels={"10": ChannelModel.model_validate(text)}),
+        guild_id=GUILD_ID,
+        app_permissions=DELETE_PERMISSIONS,
+    )
+
+    await ChannelUtils.delete_category.invoke(_cog(), interaction, interaction.options)
+
+    assert [sent.path for sent in discord_client.sent if sent.method == "DELETE"] == []
+    assert _reply(discord_client) == "Pick a category channel for 'category'."

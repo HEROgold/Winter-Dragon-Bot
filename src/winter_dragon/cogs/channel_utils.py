@@ -76,9 +76,6 @@ class ChannelUtils(
 
         Deletes nothing unless the bot may view and manage every one of them.
         """
-        # TODO: Verify that autocomplete, only lists ChannelType.GUILD_CATEGORY channels, as annotated above.
-        # If not, add the check when reading the Annotated metadata and
-        # raise Refused if the channel is not one of the specified types.
         app_permissions = interaction.app_permissions
         if app_permissions is not None and DELETE_PERMISSIONS not in app_permissions:
             msg = "I need the View Channels and Manage Channels permissions to do that."
