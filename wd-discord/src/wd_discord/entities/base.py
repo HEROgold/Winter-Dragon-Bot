@@ -15,7 +15,10 @@ the fetched data model, which stays reachable as ``entity.model``.
 Every method returns failures as values (:data:`~wd_discord.client.NetworkError`), never raises; a response that
 can't be read as the expected model is a failure too (:data:`~wd_discord.errors.JsonErrorCode.GENERAL_ERROR`).
 
-Entities expose their IDs and the actions they take; read the rest of what Discord sent from ``entity.model``.
+A full entity exposes what Discord sent as properties named as Discord names them (``guild.name``,
+``guild.verification_level``), so a new field becomes a new property. An ``*_id`` field becomes a relation named
+without the suffix (``guild.owner``, ``channel.parent``): the related entity when the data in hand holds it, else its
+:class:`Partial`, never the raw ID. ``entity.model`` keeps the raw data, for a field with no entity form yet.
 
 Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``cache=True`` to accept an answer up to
 :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>` seconds old instead; see :meth:`Client.request

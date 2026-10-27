@@ -534,6 +534,17 @@ A guild, as Discord returned it.
 - `@property approximate_member_count -> int | None` — Roughly how many members the guild has; only from :meth:`fetch` with ``with_counts``.
 - `@property approximate_presence_count -> int | None` — Roughly how many members are online; only from :meth:`fetch` with ``with_counts``.
 - `@property welcome_screen -> WelcomeScreen | None` — A community guild's welcome screen, when Discord sent it along.
+- `@property discovery_splash -> ImageHash | None` — The guild's background in Server Discovery; only for a discoverable guild.
+- `@property permissions -> Permissions | None` — The current user's permissions in the guild, overwrites left out; only from the current user's guild list.
+- `@property widget_enabled -> bool | None` — Whether the guild's widget is on.
+- `@property default_message_notifications -> DefaultMessageNotificationLevel` — Which messages notify a member who hasn't picked a setting.
+- `@property explicit_content_filter -> ExplicitContentFilterLevel` — Whose messages Discord scans for explicit media.
+- `@property system_channel_flags -> SystemChannelFlags` — Which messages Discord leaves out of the system channel.
+- `@property max_presences -> int | None` — The most presences the guild tracks; ``None`` apart from the largest guilds.
+- `@property max_video_channel_users -> int | None` — The most users with video on in a voice channel.
+- `@property max_stage_video_channel_users -> int | None` — The most users with video on in a stage channel.
+- `@property premium_progress_bar_enabled -> bool` — Whether the guild shows its boost progress bar.
+- `@property incidents_data -> IncidentsData | None` — The raid and spam measures in force, if any.
 
 ### `class GatewayGuild(Guild)`
 A guild as GUILD_CREATE sent it: with its channels, threads, members and voice states.
@@ -545,6 +556,8 @@ A guild as GUILD_CREATE sent it: with its channels, threads, members and voice s
 - `@property member_count -> int | None` — How many members the guild has.
 - `@property large -> bool` — Whether the guild is past the gateway's large threshold, so ``members`` is incomplete.
 - `@property joined_at -> str | None` — When the bot joined the guild, as an ISO 8601 timestamp.
+- `@property unavailable -> bool` — Whether the guild is down in an outage; Discord sends little else about it then.
+- `@property presences -> Generator[Presence]` — The presences of the members GUILD_CREATE sent along.
 - `get_member(user_id: SnowflakeLike) -> Member | None` — Return the member ``user_id`` as cached, or if GUILD_CREATE sent them along.
 - `get_channel(channel_id: SnowflakeLike) -> Channel | None` — Return the channel or thread ``channel_id`` as cached, or if GUILD_CREATE sent it.
 

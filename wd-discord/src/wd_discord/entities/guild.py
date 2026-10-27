@@ -11,6 +11,7 @@ lazy from wd_discord.entities.channel import Channel, PartialChannel
 lazy from wd_discord.entities.emoji import Emoji, Sticker
 lazy from wd_discord.entities.invite import Invite
 lazy from wd_discord.entities.member import Member, PartialMember
+lazy from wd_discord.entities.presence import Presence
 lazy from wd_discord.entities.role import PartialRole, Role
 lazy from wd_discord.entities.voice import VoiceState
 lazy from wd_discord.limits import MAX_MEMBERS_PER_PAGE
@@ -41,11 +42,16 @@ if TYPE_CHECKING:
     from wd_discord.image import ImageHash
     from wd_discord.models import DiscordModel
     from wd_discord.partial_emoji import PartialEmoji
+    from wd_discord.permissions import Permissions
     from wd_discord.resources.channel import GuildChannelParams
     from wd_discord.resources.guild import (
+        DefaultMessageNotificationLevel,
+        ExplicitContentFilterLevel,
+        IncidentsData,
         MFALevel,
         NSFWLevel,
         PremiumTier,
+        SystemChannelFlags,
         VerificationLevel,
     )
     from wd_discord.snowflake import SnowflakeLike
@@ -495,6 +501,61 @@ class Guild(Entity[GuildModel], BaseGuild):
         screen = self.model.welcome_screen
         return None if screen is None else WelcomeScreen(self.client, screen, self.id)
 
+    @property
+    def discovery_splash(self) -> ImageHash | None:
+        """The guild's background in Server Discovery; only for a discoverable guild."""
+        return self.model.discovery_splash
+
+    @property
+    def permissions(self) -> Permissions | None:
+        """The current user's permissions in the guild, overwrites left out; only from the current user's guild list."""
+        return self.model.permissions
+
+    @property
+    def widget_enabled(self) -> bool | None:
+        """Whether the guild's widget is on."""
+        return self.model.widget_enabled
+
+    @property
+    def default_message_notifications(self) -> DefaultMessageNotificationLevel:
+        """Which messages notify a member who hasn't picked a setting."""
+        return self.model.default_message_notifications
+
+    @property
+    def explicit_content_filter(self) -> ExplicitContentFilterLevel:
+        """Whose messages Discord scans for explicit media."""
+        return self.model.explicit_content_filter
+
+    @property
+    def system_channel_flags(self) -> SystemChannelFlags:
+        """Which messages Discord leaves out of the system channel."""
+        return self.model.system_channel_flags
+
+    @property
+    def max_presences(self) -> int | None:
+        """The most presences the guild tracks; ``None`` apart from the largest guilds."""
+        return self.model.max_presences
+
+    @property
+    def max_video_channel_users(self) -> int | None:
+        """The most users with video on in a voice channel."""
+        return self.model.max_video_channel_users
+
+    @property
+    def max_stage_video_channel_users(self) -> int | None:
+        """The most users with video on in a stage channel."""
+        return self.model.max_stage_video_channel_users
+
+    @property
+    def premium_progress_bar_enabled(self) -> bool:
+        """Whether the guild shows its boost progress bar."""
+        return self.model.premium_progress_bar_enabled
+
+    @property
+    def incidents_data(self) -> IncidentsData | None:
+        """The raid and spam measures in force, if any."""
+        return self.model.incidents_data
+
     def _channel(self, channel_id: Snowflake | None) -> Channel | PartialChannel | None:
         """Return the channel ``channel_id`` in full when the guild's data has it, else as a handle."""
         if channel_id is None:
@@ -562,6 +623,17 @@ class GatewayGuild(Guild):
     def joined_at(self) -> str | None:
         """When the bot joined the guild, as an ISO 8601 timestamp."""
         return self.model.joined_at
+
+    @property
+    def unavailable(self) -> bool:
+        """Whether the guild is down in an outage; Discord sends little else about it then."""
+        return bool(self.model.unavailable)
+
+    @property
+    def presences(self) -> Generator[Presence]:
+        """The presences of the members GUILD_CREATE sent along."""
+        for presence in self.model.presences:
+            yield Presence(self.client, presence.model_copy(update={"guild_id": self.id}))
 
     @override
     def get_member(self, user_id: SnowflakeLike) -> Member | None:

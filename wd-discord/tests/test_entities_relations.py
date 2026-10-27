@@ -18,6 +18,7 @@ from wd_discord import (
     PartialMessage,
     PartialRole,
     PartialUser,
+    Permissions,
     Role,
     User,
     VoiceState,
@@ -31,11 +32,21 @@ from wd_discord.partial_emoji import PartialEmoji
 from wd_discord.resources.application import Application as ApplicationModel
 from wd_discord.resources.channel import Channel as ChannelModel
 from wd_discord.resources.entitlement import Entitlement as EntitlementModel
+from wd_discord.resources.guild import DefaultMessageNotificationLevel, ExplicitContentFilterLevel, SystemChannelFlags
 from wd_discord.resources.guild import Guild as GuildModel
 from wd_discord.resources.invite import Invite as InviteModel
 from wd_discord.resources.voice import VoiceState as VoiceStateModel
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, message_json, role_json, user_json, voice_state_json
+from wd_discord.testing import (
+    GUILD_JSON,
+    RecordingClient,
+    guild_create_json,
+    member_json,
+    message_json,
+    role_json,
+    user_json,
+    voice_state_json,
+)
 
 
 USER_JSON = user_json(id="9", username="owner")
@@ -92,6 +103,46 @@ def test_gateway_guild_resolves_relations_from_what_it_carries() -> None:
     assert guild.owner.display_name == "owner"
     assert isinstance(guild.afk_channel, Channel)
     assert guild.afk_channel.name == "AFK"
+
+
+def test_guild_passes_its_settings_through_under_discords_names() -> None:
+    payload = {
+        **GUILD_JSON,
+        "discovery_splash": "a" * 32,
+        "permissions": "8",
+        "widget_enabled": True,
+        "default_message_notifications": 1,
+        "explicit_content_filter": 2,
+        "system_channel_flags": 1,
+        "max_presences": 25000,
+        "max_video_channel_users": 25,
+        "max_stage_video_channel_users": 50,
+        "premium_progress_bar_enabled": True,
+        "incidents_data": {"invites_disabled_until": "2026-01-01T00:00:00+00:00", "dms_disabled_until": None},
+    }
+    guild = Guild(RecordingClient(), GuildModel.model_validate(payload))
+
+    assert str(guild.discovery_splash) == "a" * 32
+    assert guild.permissions == Permissions.ADMINISTRATOR
+    assert guild.widget_enabled is True
+    assert guild.default_message_notifications == DefaultMessageNotificationLevel.ONLY_MENTIONS
+    assert guild.explicit_content_filter == ExplicitContentFilterLevel.ALL_MEMBERS
+    assert guild.system_channel_flags == SystemChannelFlags.SUPPRESS_JOIN_NOTIFICATIONS
+    assert (guild.max_presences, guild.max_video_channel_users, guild.max_stage_video_channel_users) == (25000, 25, 50)
+    assert guild.premium_progress_bar_enabled is True
+    assert guild.incidents_data is not None
+    assert guild.incidents_data.invites_disabled_until == datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def test_gateway_guild_passes_through_what_only_guild_create_sends() -> None:
+    presence = {"user": {"id": "9"}, "status": "online", "activities": [], "client_status": {}}
+    guild = bind(RecordingClient(), parse_dispatch(EventName.GUILD_CREATE, guild_create_json(presences=[presence])))
+    assert isinstance(guild, GatewayGuild)
+
+    assert guild.unavailable is False
+    [online] = guild.presences
+    assert online.user == PartialUser(guild.client, Snowflake(9))
+    assert online.guild == PartialGuild(guild.client, Snowflake(7))
 
 
 def test_gateway_guild_fills_in_the_guild_its_children_left_out() -> None:
