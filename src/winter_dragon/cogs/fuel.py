@@ -77,14 +77,20 @@ def parse_refuel_date(value: str) -> datetime | None:
     return datetime.combine(day, time(), tzinfo=UTC)
 
 
+def graphable(refuels: Sequence[CarFuels]) -> list[tuple[datetime, float]]:
+    """Return the ``(date, efficiency)`` of each of ``refuels`` that added fuel, oldest first."""
+    ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.refuel_date)
+    return [(refuel.refuel_date, refuel.efficiency) for refuel in ordered]
+
+
 def render_efficiency_graph(refuels: Sequence[CarFuels]) -> bytes:
     """Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out."""
-    ordered = sorted((refuel for refuel in refuels if refuel.amount > 0), key=lambda refuel: refuel.refuel_date)
+    points = graphable(refuels)
     figure = Figure(figsize=(FuelSettings.graph_width_inches, FuelSettings.graph_height_inches))
     axes = figure.subplots()
     axes.plot(
-        date2num([refuel.refuel_date for refuel in ordered]),
-        [refuel.efficiency for refuel in ordered],
+        date2num([day for day, _ in points]),
+        [value for _, value in points],
         marker="o",
         linestyle="-",
         linewidth=2,
