@@ -213,7 +213,7 @@ class Client(LoggerMixin):
         method: str,
         route: Template,
         *,
-        cache: bool = False,
+        reuse_response: bool = False,
         **kwargs: Unpack[RequestKwargs],
     ) -> Response | ApiResponseError:
         """Send a request, returning the :class:`Response` or a parsed error value.
@@ -229,7 +229,7 @@ class Client(LoggerMixin):
         again; every caller gets that one answer, failures included. A caller that's cancelled leaves the read
         running for the others.
 
-        With ``cache``, such a GET's success is reused for :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>`
+        With ``reuse_response``, such a GET's success is reused for :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>`
         seconds. Changes made elsewhere stay unseen for up to that long, but any write this client sends drops
         the cached reads under the same guild, channel or user (``/guilds/{id}/...``) at once.
         """
@@ -240,7 +240,7 @@ class Client(LoggerMixin):
             if method != "GET":
                 self._forget_cached_under(resolved.path)
             return result
-        if cache and (hit := self._cached_read(key)) is not None:
+        if reuse_response and (hit := self._cached_read(key)) is not None:
             return hit
         shared = self._inflight.get(key)
         if shared is None:
@@ -248,7 +248,7 @@ class Client(LoggerMixin):
             self._inflight[key] = shared
             shared.add_done_callback(lambda done: self._forget_inflight(key, done))
         result = await asyncio.shield(shared)
-        if cache and not is_network_error(result):
+        if reuse_response and not is_network_error(result):
             self._remember(key, result)
         return result
 
@@ -305,9 +305,9 @@ class Client(LoggerMixin):
         self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
         return error
 
-    async def get(self, route: Template, *, cache: bool = False, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
-        """Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`)."""
-        return await self.request("GET", route, cache=cache, **kwargs)
+    async def get(self, route: Template, *, reuse_response: bool = False, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a GET request; with ``reuse_response``, reuse a recent answer to it (see :meth:`request`)."""
+        return await self.request("GET", route, reuse_response=reuse_response, **kwargs)
 
     async def post(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a POST request."""

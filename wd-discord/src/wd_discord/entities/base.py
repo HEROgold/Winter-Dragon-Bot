@@ -20,9 +20,10 @@ A full entity exposes what Discord sent as properties named as Discord names the
 without the suffix (``guild.owner``, ``channel.parent``): the related entity when the data in hand holds it, else its
 :class:`Partial`, never the raw ID. ``entity.model`` keeps the raw data, for a field with no entity form yet.
 
-Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``cache=True`` to accept an answer up to
+Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``reuse_response=True`` to accept an answer up to
 :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>` seconds old instead; see :meth:`Client.request
-<wd_discord.client.Client.request>`.
+<wd_discord.client.Client.request>`. That reuse is the REST client's own; it isn't the gateway
+:class:`~wd_discord.cache.StateCache`. Each fetch's docstring says whether it writes its answer to the state cache.
 """
 
 from abc import ABC, abstractmethod
@@ -175,8 +176,11 @@ class Partial[E](ClientBound, ABC):
     id: Snowflake
 
     @abstractmethod
-    async def fetch(self, *, cache: bool = False) -> E | NetworkError:
-        """Fetch the full entity; with ``cache``, a recent answer may be reused."""
+    async def fetch(self, *, reuse_response: bool = False) -> E | NetworkError:
+        """Fetch the full entity; with ``reuse_response``, a recent answer may be reused.
+
+        Each implementation says whether it writes to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
 
 
 type EntityType = type[Entity[Any] | Partial[Any]] | TypeAliasType
@@ -200,6 +204,9 @@ class EntityStore[P: Partial[object]](Store):
         """Return a handle on the object ``id``, without fetching it."""
         return self.partial_type(self.client, Snowflake.coerce(id))
 
-    async def fetch[E](self: _PartialFactory[E], id: SnowflakeLike, *, cache: bool = False) -> E | NetworkError:  # noqa: A002 - Discord's name for it
-        """Fetch the object ``id``; with ``cache``, a recent answer may be reused."""
-        return await self.partial(id).fetch(cache=cache)
+    async def fetch[E](self: _PartialFactory[E], id: SnowflakeLike, *, reuse_response: bool = False) -> E | NetworkError:  # noqa: A002 - Discord's name for it
+        """Fetch the object ``id``; with ``reuse_response``, a recent answer may be reused.
+
+        Writes to the client's gateway :class:`~wd_discord.cache.StateCache` only if the entity's own ``fetch`` does.
+        """
+        return await self.partial(id).fetch(reuse_response=reuse_response)

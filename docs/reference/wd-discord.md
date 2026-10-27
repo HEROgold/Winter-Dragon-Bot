@@ -110,8 +110,8 @@ A gateway dispatch as :meth:`Client.receive` took it.
 An async Discord REST client pinned to the configured API version (v10 by default).
 
 - `async aclose() -> None` — Close the underlying httpxyz transport.
-- `@returns_known_exception async request(method: str, route: Template, *, cache: bool=False, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
-- `async get(route: Template, *, cache: bool=False, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`).
+- `@returns_known_exception async request(method: str, route: Template, *, reuse_response: bool=False, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
+- `async get(route: Template, *, reuse_response: bool=False, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request; with ``reuse_response``, reuse a recent answer to it (see :meth:`request`).
 - `async post(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a POST request.
 - `async patch(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
 - `async put(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.

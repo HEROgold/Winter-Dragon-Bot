@@ -21,8 +21,8 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 async def test_a_cached_read_is_reused() -> None:
     client = RecordingClient()
     client.reply("GET", ROLES, [])
-    first = await client.get(t"/guilds/{1}/roles", cache=True)
-    second = await client.get(t"/guilds/{1}/roles", cache=True)
+    first = await client.get(t"/guilds/{1}/roles", reuse_response=True)
+    second = await client.get(t"/guilds/{1}/roles", reuse_response=True)
 
     assert first is second
     assert len(client.requests_to("GET", ROLES)) == 1
@@ -30,7 +30,7 @@ async def test_a_cached_read_is_reused() -> None:
 
 async def test_a_read_without_cache_goes_out_again() -> None:
     client = RecordingClient()
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
     await client.get(t"/guilds/{1}/roles")
 
     assert len(client.requests_to("GET", ROLES)) == 2
@@ -38,28 +38,28 @@ async def test_a_read_without_cache_goes_out_again() -> None:
 
 async def test_a_cached_read_expires(clock: list[float]) -> None:
     client = RecordingClient()
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
     clock[0] += RestCache.ttl + 1
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
 
     assert len(client.requests_to("GET", ROLES)) == 2
 
 
 async def test_a_write_under_the_same_guild_drops_it() -> None:
     client = RecordingClient()
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
     await client.post(t"/guilds/{1}/channels", json={"name": "new"})
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
 
     assert len(client.requests_to("GET", ROLES)) == 2
 
 
 async def test_a_write_elsewhere_keeps_it() -> None:
     client = RecordingClient()
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
     await client.post(t"/guilds/{2}/channels", json={"name": "new"})
     await client.post(t"/channels/{1}/messages", json={"content": "hi"})
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
 
     assert len(client.requests_to("GET", ROLES)) == 1
 
@@ -67,15 +67,15 @@ async def test_a_write_elsewhere_keeps_it() -> None:
 async def test_a_failure_is_not_cached() -> None:
     client = RecordingClient()
     client.fail("GET", ROLES, ApiResponseError(code=50013, message="Missing Permissions", status=403))
-    await client.get(t"/guilds/{1}/roles", cache=True)
-    await client.get(t"/guilds/{1}/roles", cache=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
+    await client.get(t"/guilds/{1}/roles", reuse_response=True)
 
     assert len(client.requests_to("GET", ROLES)) == 2
 
 
 async def test_other_params_are_cached_apart() -> None:
     client = RecordingClient()
-    await client.get(t"/guilds/{1}", cache=True, params={"with_counts": "true"})
-    await client.get(t"/guilds/{1}", cache=True)
+    await client.get(t"/guilds/{1}", reuse_response=True, params={"with_counts": "true"})
+    await client.get(t"/guilds/{1}", reuse_response=True)
 
     assert len(client.requests_to("GET", "/guilds/1")) == 2

@@ -55,9 +55,12 @@ class BaseMember(ClientBound):
     def _path(self) -> Template:
         return t"/guilds/{self.guild_id}/members/{self.id}"
 
-    async def fetch(self, *, cache: bool = False) -> Member | NetworkError:
-        """GET /guilds/{guild_id}/members/{user_id}; the answer also updates the client's cache."""
-        member = self._member(await self.client.get(self._path, cache=cache))
+    async def fetch(self, *, reuse_response: bool = False) -> Member | NetworkError:
+        """GET /guilds/{guild_id}/members/{user_id}.
+
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        member = self._member(await self.client.get(self._path, reuse_response=reuse_response))
         if not is_network_error(member):
             self.client.cache.store_members(self.guild_id, [member.model])
         return member

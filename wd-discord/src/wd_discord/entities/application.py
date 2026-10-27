@@ -173,9 +173,12 @@ class CurrentApplication:
         self.commands = GlobalCommandStore(client, PartialGlobalCommand)
         """The application's global commands."""
 
-    async def fetch(self, *, cache: bool = False) -> Application | NetworkError:
-        """GET /applications/@me - the application object."""
-        parsed = parse(await self.client.get(t"/applications/@me", cache=cache), ApplicationModel)
+    async def fetch(self, *, reuse_response: bool = False) -> Application | NetworkError:
+        """GET /applications/@me - the application object.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        parsed = parse(await self.client.get(t"/applications/@me", reuse_response=reuse_response), ApplicationModel)
         return parsed if is_network_error(parsed) else Application(self.client, parsed)
 
     async def id(self) -> Snowflake | NetworkError:
@@ -201,9 +204,12 @@ class CurrentApplication:
         user: BaseUser | None = None,
         guild: BaseGuild | None = None,
         exclude_ended: bool = False,
-        cache: bool = False,
+        reuse_response: bool = False,
     ) -> Generator[Entitlement] | NetworkError:
-        """GET /applications/{application_id}/entitlements - the application's entitlements, optionally for one owner."""
+        """GET /applications/{application_id}/entitlements - the application's entitlements, optionally for one owner.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
         application_id = await self.id()
         if is_network_error(application_id):
             return application_id
@@ -212,6 +218,8 @@ class CurrentApplication:
             params["user_id"] = str(user.id)
         if guild is not None:
             params["guild_id"] = str(guild.id)
-        result = await self.client.get(t"/applications/{application_id}/entitlements", params=params, cache=cache)
+        result = await self.client.get(
+            t"/applications/{application_id}/entitlements", params=params, reuse_response=reuse_response
+        )
         parsed = parse_all(result, EntitlementModel)
         return parsed if is_network_error(parsed) else (Entitlement(self.client, model) for model in parsed)

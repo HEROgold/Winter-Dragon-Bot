@@ -62,10 +62,10 @@ A user on a developer team.
 ### `class CurrentApplication`
 The client's own application: its data, its ID (which application-scoped routes need) and its commands.
 
-- `async fetch(*, cache: bool=False) -> Application | NetworkError` — GET /applications/@me - the application object.
+- `async fetch(*, reuse_response: bool=False) -> Application | NetworkError` — GET /applications/@me - the application object.
 - `async id() -> Snowflake | NetworkError` — Return the application's ID, fetching and caching it when unknown.
 - `guild_commands(guild: BaseGuild) -> GuildCommandStore` — Return the store of the application's commands registered in ``guild``.
-- `async fetch_entitlements(*, user: BaseUser | None=None, guild: BaseGuild | None=None, exclude_ended: bool=False, cache: bool=False) -> Generator[Entitlement] | NetworkError` — GET /applications/{application_id}/entitlements - the application's entitlements, optionally for one owner.
+- `async fetch_entitlements(*, user: BaseUser | None=None, guild: BaseGuild | None=None, exclude_ended: bool=False, reuse_response: bool=False) -> Generator[Entitlement] | NetworkError` — GET /applications/{application_id}/entitlements - the application's entitlements, optionally for one owner.
 
 ## `wd_discord.entities.base` — `wd-discord/src/wd_discord/entities/base.py`
 Bases of the high-level API: client-bound entities and the stores that create them.
@@ -94,14 +94,14 @@ A Discord object bound to the client that can act on it.
 A Discord object known only by ID, which can act without fetching it first.
 
 - fields: id: Snowflake
-- `async fetch(*, cache: bool=False) -> E | NetworkError` — Fetch the full entity; with ``cache``, a recent answer may be reused.
+- `async fetch(*, reuse_response: bool=False) -> E | NetworkError` — Fetch the full entity; with ``reuse_response``, a recent answer may be reused.
 
 ### `@dataclass class EntityStore[P: Partial[object]](Store)`
 A store of one kind of entity that can be handled by ID: ``partial(id)`` and ``fetch(id)``.
 
 - fields: partial_type: type[P]
 - `partial(id: SnowflakeLike) -> P` — Return a handle on the object ``id``, without fetching it.
-- `async fetch[E](id: SnowflakeLike, *, cache: bool=False) -> E | NetworkError` — Fetch the object ``id``; with ``cache``, a recent answer may be reused.
+- `async fetch[E](id: SnowflakeLike, *, reuse_response: bool=False) -> E | NetworkError` — Fetch the object ``id``; with ``reuse_response``, a recent answer may be reused.
 
 ## `wd_discord.entities.channel` — `wd-discord/src/wd_discord/entities/channel.py`
 Channels (https://docs.discord.com/developers/resources/channel).
@@ -113,14 +113,14 @@ Channels (https://docs.discord.com/developers/resources/channel).
 What can be done in a channel knowing only its ID: read, edit or delete it, send messages, set permissions.
 
 - `@property mention -> str` — A clickable mention of the channel, as ``<#id>``.
-- `async fetch(*, cache: bool=False) -> Channel | NetworkError` — GET /channels/{channel_id}.
+- `async fetch(*, reuse_response: bool=False) -> Channel | NetworkError` — GET /channels/{channel_id}.
 - `message(message_id: SnowflakeLike) -> PartialMessage` — Return a handle on the message ``message_id`` in this channel, without fetching it.
-- `async fetch_messages(*, before: BaseMessage | None=None, after: BaseMessage | None=None, around: BaseMessage | None=None, limit: int=MAX_MESSAGES_PER_PAGE, cache: bool=False) -> Generator[Message] | NetworkError` — GET /channels/{channel_id}/messages - one page of messages, newest first; needs READ_MESSAGE_HISTORY.
+- `async fetch_messages(*, before: BaseMessage | None=None, after: BaseMessage | None=None, around: BaseMessage | None=None, limit: int=MAX_MESSAGES_PER_PAGE, reuse_response: bool=False) -> Generator[Message] | NetworkError` — GET /channels/{channel_id}/messages - one page of messages, newest first; needs READ_MESSAGE_HISTORY.
 - `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — POST /channels/{channel_id}/messages - send a message; DM channels included.
 - `async delete_messages(messages: Iterable[BaseMessage], *, reason: Reason=None) -> NetworkError | None` — POST /channels/{channel_id}/messages/bulk-delete - delete 2 to 100 messages at once; needs MANAGE_MESSAGES.
 - `async trigger_typing() -> NetworkError | None` — POST /channels/{channel_id}/typing - show the bot as typing for about 10 seconds, or until it sends.
 - `async create_invite(*, max_age: int=DEFAULT_INVITE_MAX_AGE, max_uses: int=1, temporary: bool=False, unique: bool=True) -> Invite | NetworkError` — POST /channels/{channel_id}/invites - create an invite to this channel.
-- `async fetch_invites(*, cache: bool=False) -> Generator[Invite] | NetworkError` — GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS.
+- `async fetch_invites(*, reuse_response: bool=False) -> Generator[Invite] | NetworkError` — GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS.
 - `async edit(params: ChannelParams, *, reason: Reason=None) -> Channel | NetworkError` — PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
 - `async delete(*, reason: Reason=None) -> Channel | NetworkError` — DELETE /channels/{channel_id} - delete the channel, or close a DM; returns the deleted channel.
 - `async set_permissions(target: PermissionTarget, *, allow: Permissions | None=None, deny: Permissions | None=None, reason: Reason=None) -> NetworkError | None` — PUT /channels/{channel_id}/permissions/{overwrite_id} - set ``target``'s overwrite on the channel.
@@ -191,7 +191,7 @@ Application commands (https://docs.discord.com/developers/interactions/applicati
 ### `class BaseGlobalCommand(ClientBound)`
 What can be done to a global command knowing only its ID: read it again, edit it, delete it.
 
-- `async fetch(*, cache: bool=False) -> GlobalCommand | NetworkError` — GET /applications/{application_id}/commands/{command_id}.
+- `async fetch(*, reuse_response: bool=False) -> GlobalCommand | NetworkError` — GET /applications/{application_id}/commands/{command_id}.
 - `async edit(params: ApplicationCommandParams) -> GlobalCommand | NetworkError` — PATCH /applications/{application_id}/commands/{command_id} - replace the command's definition.
 - `async delete() -> NetworkError | None` — DELETE /applications/{application_id}/commands/{command_id}.
 
@@ -221,14 +221,14 @@ The application's global commands: register, fetch and list them.
 
 - `async path(command_id: SnowflakeLike | None=None) -> Template | NetworkError` — Return the global-commands route, or one command's, or the failure looking up the application ID.
 - `async create(params: ApplicationCommandParams) -> GlobalCommand | NetworkError` — POST /applications/{application_id}/commands - register a new global command.
-- `async fetch_all(*, cache: bool=False) -> Generator[GlobalCommand] | NetworkError` — GET /applications/{application_id}/commands - every registered global command.
+- `async fetch_all(*, reuse_response: bool=False) -> Generator[GlobalCommand] | NetworkError` — GET /applications/{application_id}/commands - every registered global command.
 - `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GlobalCommand] | NetworkError` — PUT /applications/{application_id}/commands - replace every global command with ``params``.
 
 ### `class BaseGuildCommand(ClientBound)`
 What can be done to a guild command knowing only its guild and ID: read it again, edit it, delete it.
 
 - `@property guild -> PartialGuild` — The guild the command is registered in.
-- `async fetch(*, cache: bool=False) -> GuildCommand | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}.
+- `async fetch(*, reuse_response: bool=False) -> GuildCommand | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}.
 - `async edit(params: ApplicationCommandParams) -> GuildCommand | NetworkError` — PATCH /applications/{application_id}/guilds/{guild_id}/commands/{command_id} - replace the definition.
 - `async delete() -> NetworkError | None` — DELETE /applications/{application_id}/guilds/{guild_id}/commands/{command_id}.
 
@@ -248,9 +248,9 @@ One guild's commands for the application: list them, or replace them all.
 - fields: guild_id: Snowflake
 - `async path() -> Template | NetworkError` — Return the guild-commands route, or the failure looking up the application ID.
 - `partial(command_id: SnowflakeLike) -> PartialGuildCommand` — Return a handle on the guild command ``command_id``, without fetching it.
-- `async fetch(command_id: SnowflakeLike, *, cache: bool=False) -> GuildCommand | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}.
+- `async fetch(command_id: SnowflakeLike, *, reuse_response: bool=False) -> GuildCommand | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}.
 - `async create(params: ApplicationCommandParams) -> GuildCommand | NetworkError` — POST /applications/{application_id}/guilds/{guild_id}/commands - register a command in the guild.
-- `async fetch_all(*, cache: bool=False) -> Generator[GuildCommand] | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild.
+- `async fetch_all(*, reuse_response: bool=False) -> Generator[GuildCommand] | NetworkError` — GET /applications/{application_id}/guilds/{guild_id}/commands - every command registered in the guild.
 - `async overwrite(params: Iterable[ApplicationCommandParams]) -> Generator[GuildCommand] | NetworkError` — PUT /applications/{application_id}/guilds/{guild_id}/commands - replace the guild's commands with ``params``.
 
 ## `wd_discord.entities.dispatches` — `wd-discord/src/wd_discord/entities/dispatches.py`
@@ -419,7 +419,7 @@ A guild's custom emoji, as Discord returned it.
 - `@property animated -> bool` — Whether the emoji is animated.
 - `@property available -> bool` — Whether the emoji can be used; ``False`` after the guild lost the boosts it needs.
 - `@property mention -> str` — The emoji as it's written in a message: ``<:name:id>``, or ``<a:name:id>`` when animated.
-- `async fetch(*, cache: bool=False) -> Emoji | NetworkError` — GET /guilds/{guild_id}/emojis/{emoji_id}.
+- `async fetch(*, reuse_response: bool=False) -> Emoji | NetworkError` — GET /guilds/{guild_id}/emojis/{emoji_id}.
 - `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/emojis/{emoji_id}; needs MANAGE_GUILD_EXPRESSIONS.
 
 ### `class Sticker(Entity[StickerModel])`
@@ -434,7 +434,7 @@ A sticker, as Discord returned it: a guild's own, or a standard one from a pack.
 - `@property available -> bool` — Whether a guild sticker can be used; ``False`` after the guild lost the boosts it needs.
 - `@property guild -> PartialGuild | None` — The guild that owns the sticker; ``None`` for a standard sticker.
 - `@property user -> User | None` — Who uploaded a guild sticker; only sent with MANAGE_GUILD_EXPRESSIONS.
-- `async fetch(*, cache: bool=False) -> Sticker | NetworkError` — GET /stickers/{sticker_id}.
+- `async fetch(*, reuse_response: bool=False) -> Sticker | NetworkError` — GET /stickers/{sticker_id}.
 - `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/stickers/{sticker_id} - delete a guild sticker; needs MANAGE_GUILD_EXPRESSIONS.
 
 ## `wd_discord.entities.entitlement` — `wd-discord/src/wd_discord/entities/entitlement.py`
@@ -482,22 +482,22 @@ What can be done to a guild knowing only its ID: read it, its channels, members,
 - `get_emoji(emoji_id: SnowflakeLike) -> Emoji | None` — Return the custom emoji ``emoji_id`` if the client knows it.
 - `get_voice_state(member: BaseMember | BaseUser) -> VoiceState | None` — Return ``member``'s voice state here if the client knows they're in a voice channel.
 - `async own_permissions() -> PermissionSolver | NetworkError` — Return what the client's own member may do in the guild, roles to give included.
-- `async fetch(*, with_counts: bool=False, cache: bool=False) -> Guild | NetworkError` — GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
+- `async fetch(*, with_counts: bool=False, reuse_response: bool=False) -> Guild | NetworkError` — GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
 - `channel(channel_id: SnowflakeLike) -> PartialChannel` — Return a handle on the channel ``channel_id``, without fetching it.
-- `async fetch_channels(*, cache: bool=False) -> Generator[Channel] | NetworkError` — GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
+- `async fetch_channels(*, reuse_response: bool=False) -> Generator[Channel] | NetworkError` — GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
 - `async create_channel(params: GuildChannelParams, *, reason: Reason=None) -> Channel | NetworkError` — POST /guilds/{guild_id}/channels - create a channel or category; needs MANAGE_CHANNELS.
 - `member(user_id: SnowflakeLike) -> PartialMember` — Return a handle on the member ``user_id`` of this guild, without fetching them.
-- `async fetch_members(*, after: BaseMember | BaseUser | None=None, limit: int=MAX_MEMBERS_PER_PAGE, cache: bool=False) -> Generator[Member] | NetworkError` — GET /guilds/{guild_id}/members - one page of members, by user ID, after the member ``after``.
-- `async all_members(*, page_size: int=MAX_MEMBERS_PER_PAGE, cache: bool=False) -> Generator[Member] | NetworkError` — Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent.
+- `async fetch_members(*, after: BaseMember | BaseUser | None=None, limit: int=MAX_MEMBERS_PER_PAGE, reuse_response: bool=False) -> Generator[Member] | NetworkError` — GET /guilds/{guild_id}/members - one page of members, by user ID, after the member ``after``.
+- `async all_members(*, page_size: int=MAX_MEMBERS_PER_PAGE, reuse_response: bool=False) -> Generator[Member] | NetworkError` — Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent.
 - `async search_members(query: str, *, limit: int=1) -> Generator[Member] | NetworkError` — GET /guilds/{guild_id}/members/search - the members whose username or nickname starts with ``query``.
 - `role(role_id: SnowflakeLike) -> PartialRole` — Return a handle on the role ``role_id`` of this guild, without fetching it.
-- `async fetch_roles(*, cache: bool=False) -> Generator[Role] | NetworkError` — GET /guilds/{guild_id}/roles - every role of the guild.
-- `async fetch_emojis(*, cache: bool=False) -> Generator[Emoji] | NetworkError` — GET /guilds/{guild_id}/emojis - the guild's custom emojis.
-- `async fetch_emoji(emoji_id: SnowflakeLike, *, cache: bool=False) -> Emoji | NetworkError` — GET /guilds/{guild_id}/emojis/{emoji_id}.
-- `async fetch_stickers(*, cache: bool=False) -> Generator[Sticker] | NetworkError` — GET /guilds/{guild_id}/stickers - the guild's own stickers.
-- `async fetch_invites(*, cache: bool=False) -> Generator[Invite] | NetworkError` — GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD.
-- `async fetch_voice_state(member: BaseMember | BaseUser | None=None, *, cache: bool=False) -> VoiceState | NetworkError` — GET /guilds/{guild_id}/voice-states/{user_id} - ``member``'s voice state here, or the bot's without one.
-- `async fetch_welcome_screen(*, cache: bool=False) -> WelcomeScreen | NetworkError` — GET /guilds/{guild_id}/welcome-screen; needs MANAGE_GUILD unless the screen is enabled.
+- `async fetch_roles(*, reuse_response: bool=False) -> Generator[Role] | NetworkError` — GET /guilds/{guild_id}/roles - every role of the guild.
+- `async fetch_emojis(*, reuse_response: bool=False) -> Generator[Emoji] | NetworkError` — GET /guilds/{guild_id}/emojis - the guild's custom emojis.
+- `async fetch_emoji(emoji_id: SnowflakeLike, *, reuse_response: bool=False) -> Emoji | NetworkError` — GET /guilds/{guild_id}/emojis/{emoji_id}.
+- `async fetch_stickers(*, reuse_response: bool=False) -> Generator[Sticker] | NetworkError` — GET /guilds/{guild_id}/stickers - the guild's own stickers.
+- `async fetch_invites(*, reuse_response: bool=False) -> Generator[Invite] | NetworkError` — GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD.
+- `async fetch_voice_state(member: BaseMember | BaseUser | None=None, *, reuse_response: bool=False) -> VoiceState | NetworkError` — GET /guilds/{guild_id}/voice-states/{user_id} - ``member``'s voice state here, or the bot's without one.
+- `async fetch_welcome_screen(*, reuse_response: bool=False) -> WelcomeScreen | NetworkError` — GET /guilds/{guild_id}/welcome-screen; needs MANAGE_GUILD unless the screen is enabled.
 - `async leave() -> NetworkError | None` — DELETE /users/@me/guilds/{guild_id} - remove the bot from the guild; fails for a guild it owns.
 
 ### `class Guild(Entity[GuildModel], BaseGuild)`
@@ -679,7 +679,7 @@ An invite to a guild channel, as Discord returned it.
 - `@property max_uses -> int | None` — How often the invite may be used; ``0`` for unlimited.
 - `@property max_age -> int | None` — The seconds the invite stays valid after creation; ``0`` for forever.
 - `@property temporary -> bool` — Whether members who join through the invite are removed again when they disconnect without a role.
-- `async fetch(*, cache: bool=False) -> Invite | NetworkError` — GET /invites/{invite_code}.
+- `async fetch(*, reuse_response: bool=False) -> Invite | NetworkError` — GET /invites/{invite_code}.
 - `async delete(*, reason: Reason=None) -> Invite | NetworkError` — DELETE /invites/{invite_code} - revoke the invite; needs MANAGE_CHANNELS on its channel, or MANAGE_GUILD.
 
 ## `wd_discord.entities.member` — `wd-discord/src/wd_discord/entities/member.py`
@@ -690,7 +690,7 @@ What can be done to a guild member knowing only their guild and user ID: read, e
 
 - `@property mention -> str` — A clickable mention of the member, as ``<@id>``.
 - `@property guild -> PartialGuild` — The guild the member is in.
-- `async fetch(*, cache: bool=False) -> Member | NetworkError` — GET /guilds/{guild_id}/members/{user_id}; the answer also updates the client's cache.
+- `async fetch(*, reuse_response: bool=False) -> Member | NetworkError` — GET /guilds/{guild_id}/members/{user_id}.
 - `async edit(params: MemberParams, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - change what ``params`` names; each field needs its permission.
 - `async move_to(channel: BaseChannel | None, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - move the member to the voice ``channel``.
 - `async set_nick(nick: str | None, *, reason: Reason=None) -> Member | NetworkError` — PATCH /guilds/{guild_id}/members/{user_id} - set the member's nickname, or clear it with ``None``.
@@ -738,7 +738,7 @@ What can be done to a message knowing only its channel and ID: read, edit, delet
 
 - `@property channel -> PartialChannel` — The channel the message was sent in.
 - `@property jump_url -> str` — A link that opens the message; works in DMs and guilds alike.
-- `async fetch(*, cache: bool=False) -> Message | NetworkError` — GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild.
+- `async fetch(*, reuse_response: bool=False) -> Message | NetworkError` — GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild.
 - `async edit(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — PATCH /channels/{channel_id}/messages/{message_id} - edit a message the bot sent.
 - `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /channels/{channel_id}/messages/{message_id}; someone else's message needs MANAGE_MESSAGES.
 - `async add_reaction(emoji: ReactionEmoji) -> NetworkError | None` — PUT /channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me - react as the bot.
@@ -818,7 +818,7 @@ What can be done to a role knowing only its guild and ID: read it, delete it, me
 - `@property guild -> PartialGuild` — The guild the role belongs to.
 - `@property mention -> str` — A clickable mention of the role, as ``<@&id>``; ``@everyone`` for the guild's default role.
 - `@property is_default -> bool` — Whether this is the guild's ``@everyone`` role, which shares the guild's ID.
-- `async fetch(*, cache: bool=False) -> Role | NetworkError` — GET /guilds/{guild_id}/roles/{role_id}.
+- `async fetch(*, reuse_response: bool=False) -> Role | NetworkError` — GET /guilds/{guild_id}/roles/{role_id}.
 - `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /guilds/{guild_id}/roles/{role_id}; needs MANAGE_ROLES.
 
 ### `@dataclass class Role(Entity[RoleModel], BaseRole)`
@@ -850,7 +850,7 @@ Users (https://docs.discord.com/developers/resources/user).
 What can be done to a user knowing only their ID: read them, open a DM, message them.
 
 - `@property mention -> str` — A clickable mention of the user, as ``<@id>``.
-- `async fetch(*, cache: bool=False) -> User | NetworkError` — GET /users/{user_id}.
+- `async fetch(*, reuse_response: bool=False) -> User | NetworkError` — GET /users/{user_id}.
 - `async dm() -> Channel | NetworkError` — POST /users/@me/channels - open the DM channel with this user, or return the one already open.
 - `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — Send this user a direct message, opening the DM channel first.
 

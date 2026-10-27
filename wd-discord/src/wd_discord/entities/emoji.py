@@ -70,9 +70,12 @@ class Emoji(Entity[EmojiModel]):
         """The emoji as it's written in a message: ``<:name:id>``, or ``<a:name:id>`` when animated."""
         return f"<{'a' if self.animated else ''}:{self.name}:{self.id}>"
 
-    async def fetch(self, *, cache: bool = False) -> Emoji | NetworkError:
-        """GET /guilds/{guild_id}/emojis/{emoji_id}."""
-        result = await self.client.get(t"/guilds/{self.guild_id}/emojis/{self.id}", cache=cache)
+    async def fetch(self, *, reuse_response: bool = False) -> Emoji | NetworkError:
+        """GET /guilds/{guild_id}/emojis/{emoji_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        result = await self.client.get(t"/guilds/{self.guild_id}/emojis/{self.id}", reuse_response=reuse_response)
         parsed = parse(result, EmojiModel)
         return parsed if is_network_error(parsed) else Emoji(self.client, parsed, self.guild_id)
 
@@ -129,9 +132,12 @@ class Sticker(Entity[StickerModel]):
         """Who uploaded a guild sticker; only sent with MANAGE_GUILD_EXPRESSIONS."""
         return None if self.model.user is None else User(self.client, self.model.user)
 
-    async def fetch(self, *, cache: bool = False) -> Sticker | NetworkError:
-        """GET /stickers/{sticker_id}."""
-        return self._entity(await self.client.get(t"/stickers/{self.id}", cache=cache), StickerModel, Sticker)
+    async def fetch(self, *, reuse_response: bool = False) -> Sticker | NetworkError:
+        """GET /stickers/{sticker_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entity(await self.client.get(t"/stickers/{self.id}", reuse_response=reuse_response), StickerModel, Sticker)
 
     async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/stickers/{sticker_id} - delete a guild sticker; needs MANAGE_GUILD_EXPRESSIONS.

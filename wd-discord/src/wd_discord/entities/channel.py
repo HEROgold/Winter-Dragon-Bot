@@ -67,9 +67,12 @@ class BaseChannel(ClientBound):
         """A clickable mention of the channel, as ``<#id>``."""
         return f"<#{self.id}>"
 
-    async def fetch(self, *, cache: bool = False) -> Channel | NetworkError:
-        """GET /channels/{channel_id}."""
-        return self._entity(await self.client.get(t"/channels/{self.id}", cache=cache), ChannelModel, Channel)
+    async def fetch(self, *, reuse_response: bool = False) -> Channel | NetworkError:
+        """GET /channels/{channel_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entity(await self.client.get(t"/channels/{self.id}", reuse_response=reuse_response), ChannelModel, Channel)
 
     def message(self, message_id: SnowflakeLike) -> PartialMessage:
         """Return a handle on the message ``message_id`` in this channel, without fetching it."""
@@ -82,19 +85,21 @@ class BaseChannel(ClientBound):
         after: BaseMessage | None = None,
         around: BaseMessage | None = None,
         limit: int = MAX_MESSAGES_PER_PAGE,
-        cache: bool = False,
+        reuse_response: bool = False,
     ) -> Generator[Message] | NetworkError:
         """GET /channels/{channel_id}/messages - one page of messages, newest first; needs READ_MESSAGE_HISTORY.
 
         Pass at most one of ``before``, ``after`` or ``around`` to choose where the page starts; for the next page,
         pass the oldest message of this one as ``before``.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
         """
         params = {"limit": str(limit)}
         for key, message in (("before", before), ("after", after), ("around", around)):
             if message is not None:
                 params[key] = str(message.id)
         return self._entities(
-            await self.client.get(t"/channels/{self.id}/messages", params=params, cache=cache),
+            await self.client.get(t"/channels/{self.id}/messages", params=params, reuse_response=reuse_response),
             MessageModel,
             Message,
         )
@@ -146,9 +151,14 @@ class BaseChannel(ClientBound):
         payload: JsonPayload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
         return self._entity(await self.client.post(t"/channels/{self.id}/invites", json=payload), InviteModel, Invite)
 
-    async def fetch_invites(self, *, cache: bool = False) -> Generator[Invite] | NetworkError:
-        """GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS."""
-        return self._entities(await self.client.get(t"/channels/{self.id}/invites", cache=cache), InviteModel, Invite)
+    async def fetch_invites(self, *, reuse_response: bool = False) -> Generator[Invite] | NetworkError:
+        """GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entities(
+            await self.client.get(t"/channels/{self.id}/invites", reuse_response=reuse_response), InviteModel, Invite
+        )
 
     async def edit(self, params: ChannelParams, *, reason: Reason = None) -> Channel | NetworkError:
         """PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
