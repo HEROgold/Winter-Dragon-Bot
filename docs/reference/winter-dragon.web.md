@@ -226,14 +226,11 @@ How often a reminder added on the page comes back.
 
 - attributes: NEVER, DAILY, WEEKLY, EVERY_DAYS
 
-### `class InvalidReminderError(ValueError)`
-The add form describes a reminder that can't be set; the message says why, for the person who filled it in.
-
 ### `@dataclass class ReminderDraft`
 What the add form holds, as typed, so a refused form comes back filled in.
 
 - fields: content: str, day: str, at: str, repeat: Repeat, every_days: str
-- `reminder(user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder` — Return the reminder this draft describes for the user ``user_id``, read in ``zone`` and checked against ``now``.
+- `reminder(user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder | Refused` — Return the reminder this draft describes for the user ``user_id``, read in ``zone``, or why it can't be set.
 
 ### `@dataclass class ReminderStop`
 One reminder on the page, with its due time in the visitor's zone.

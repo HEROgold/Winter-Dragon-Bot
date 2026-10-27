@@ -17,7 +17,7 @@ from winter_dragon.cogs.incremental import game
 from winter_dragon.cogs.incremental.catalogue import CatalogueError, load_catalogue
 from winter_dragon.cogs.incremental.cog import Incremental
 from winter_dragon.cogs.incremental.models import IncrementalSave, SaveBalance, SaveGenerator
-from winter_dragon.cogs.privacy import hide_owned
+from winter_dragon.cogs.privacy.domain import hide_owned
 
 
 if TYPE_CHECKING:

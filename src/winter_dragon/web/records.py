@@ -14,8 +14,8 @@ lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_db.schema import ensure_tables
 
 lazy from winter_dragon import cogs
-lazy from winter_dragon.cogs.privacy import DeletionRequest, stored_models
-lazy from winter_dragon.cogs.reminder import REMINDER_TABLES
+lazy from winter_dragon.cogs.privacy.domain import DeletionRequest, stored_models
+lazy from winter_dragon.cogs.reminder.domain import REMINDER_TABLES
 lazy from winter_dragon.web.formatting import humanized_name, plural, shown_value
 
 

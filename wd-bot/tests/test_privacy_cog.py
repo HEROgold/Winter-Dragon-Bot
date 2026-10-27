@@ -18,12 +18,14 @@ from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, user_json
 
-from winter_dragon.cogs import privacy
+from winter_dragon.cogs.privacy import cog as privacy
 from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild, RememberedRole, is_enabled, remembered_roles
 from winter_dragon.cogs.autochannel import AutoChannel, AutoChannelHub, AutoChannelSettings, hub_of, owned_channel, settings_of
 from winter_dragon.cogs.fuel import CarFuels
-from winter_dragon.cogs.privacy import DeletionStep, Privacy, UsageCount
-from winter_dragon.cogs.reminder import Reminder, Reminders, owned_reminders
+from winter_dragon.cogs.privacy.cog import Privacy
+from winter_dragon.cogs.privacy.domain import DeletionStep, UsageCount, hide_member_data
+from winter_dragon.cogs.reminder.cog import Reminders
+from winter_dragon.cogs.reminder.domain import Reminder, owned_reminders
 from winter_dragon.cogs.stats import PeakOnline, StatChannel, StatKind, guild_stat_channels
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 from winter_dragon.cogs.steam.store import SteamSaleStore
@@ -634,7 +636,7 @@ async def test_a_hidden_count_starts_again_from_one(engine: Engine, make_interac
     cog = _cog(engine)
     await _run(cog, make_interaction, "ping")
     await _run(cog, make_interaction, "ping")
-    privacy.hide_member_data(engine, MEMBER_ID, DAY_0)
+    hide_member_data(engine, MEMBER_ID, DAY_0)
 
     await _run(cog, make_interaction, "ping")
 

@@ -29,7 +29,7 @@ Surface: `/reminder add | repeat | remove`
 
 Settings (`[ReminderSettings]` in `cogs.ini`): `check_interval`.
 
-**Status:** ✅ Ported to `src/winter_dragon/cogs/reminder.py`; it keeps `main`'s `reminder`/`timedreminder` tables.
+**Status:** ✅ Ported to `src/winter_dragon/cogs/reminder/`; it keeps `main`'s `reminder`/`timedreminder` tables.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/reminder.py`
 
 ## Fuel tracking

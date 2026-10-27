@@ -11,14 +11,15 @@ lazy from fastapi import Request, status
 lazy from sqlmodel import Session
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from wd_db.extension.lifecycle import create_or_restore, find_by_key, row_key, soft_delete
+lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.cogs.reminder import (
+lazy from winter_dragon.cogs.reminder.domain import (
     REMINDER_TABLES,
     AnyReminder,
-    Reminder,
     ReminderSettings,
     TimedReminder,
+    new_reminder,
     owned_reminders,
 )
 lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, visitor_zone
@@ -49,10 +50,6 @@ class Repeat(StrEnum):
     """Every :attr:`ReminderDraft.every_days` days."""
 
 
-class InvalidReminderError(ValueError):
-    """The add form describes a reminder that can't be set; the message says why, for the person who filled it in."""
-
-
 @dataclass(frozen=True)
 class ReminderDraft:
     """What the add form holds, as typed, so a refused form comes back filled in."""
@@ -65,38 +62,19 @@ class ReminderDraft:
     repeat: Repeat = Repeat.NEVER
     every_days: str = "3"
 
-    def reminder(self, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder:
-        """Return the reminder this draft describes for the user ``user_id``, read in ``zone`` and checked against ``now``.
+    def reminder(self, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder | Refused:
+        """Return the reminder this draft describes for the user ``user_id``, read in ``zone``, or why it can't be set.
 
-        Raises:
-            InvalidReminderError: the text, the time or the repeat is out of what ``/reminder`` accepts.
-
+        Checked against ``now`` by :func:`~winter_dragon.cogs.reminder.domain.new_reminder`, as ``/reminder`` is.
         """
-        content = self.content.strip()
-        if not content:
-            msg = "Write what to remind you of."
-            raise InvalidReminderError(msg)
-        if len(content) > ReminderSettings.max_content_length:
-            msg = f"Keep your reminder under {ReminderSettings.max_content_length} characters."
-            raise InvalidReminderError(msg)
-        due = self._due(zone)
-        if not now < due <= now + timedelta(days=ReminderSettings.max_delay_days):
-            msg = f"Pick a time between now and {ReminderSettings.max_delay_days} days from now."
-            raise InvalidReminderError(msg)
-        interval = self._interval()
-        if interval is None:
-            return Reminder(content=content, user_id=int(user_id), timestamp=due)
-        return TimedReminder(content=content, user_id=int(user_id), timestamp=due, repeat_every=interval)
-
-    def _due(self, zone: ZoneInfo) -> datetime:
         try:
             local = datetime.combine(date.fromisoformat(self.day), time.fromisoformat(self.at))
         except ValueError:
-            msg = "Pick a date and a time."
-            raise InvalidReminderError(msg) from None
-        return local.replace(tzinfo=zone).astimezone(UTC)
+            return Refused("Pick a date and a time.")
+        return new_reminder(self.content, user_id, local.replace(tzinfo=zone).astimezone(UTC), now, self._interval())
 
     def _interval(self) -> timedelta | None:
+        """Return how often the reminder repeats; one out of range is kept just outside it, for ``new_reminder`` to refuse."""
         match self.repeat:
             case Repeat.NEVER:
                 return None
@@ -105,10 +83,8 @@ class ReminderDraft:
             case Repeat.WEEKLY:
                 return timedelta(weeks=1)
             case Repeat.EVERY_DAYS:
-                if not self.every_days.isdigit() or not 1 <= int(self.every_days) <= ReminderSettings.max_delay_days:
-                    msg = f"Repeat every 1 to {ReminderSettings.max_delay_days} days."
-                    raise InvalidReminderError(msg)
-                return timedelta(days=int(self.every_days))
+                days = int(self.every_days) if self.every_days.isdigit() else 0
+                return timedelta(days=min(days, ReminderSettings.max_delay_days + 1))
 
 
 def blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft:
@@ -209,16 +185,15 @@ def add_reminder(  # noqa: PLR0913 - one parameter per form field
     if repeat in Repeat:
         draft = replace(draft, repeat=Repeat(repeat))
     board = "reminders/_board.html"
-    try:
-        reminder = draft.reminder(account.id, visitor_zone(request), utc_now())
-    except InvalidReminderError as refused:
+    reminder = draft.reminder(account.id, visitor_zone(request), utc_now())
+    if isinstance(reminder, Refused):
         return _page(
             request,
             account,
             bind,
             draft,
             fragment=board,
-            error=str(refused),
+            error=reminder.message,
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
     with Session(bind) as session:

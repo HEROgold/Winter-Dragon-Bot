@@ -47,7 +47,7 @@ through the descriptor (`row.name = target`) writes through herogold's own sessi
 | Table | Owner | Purpose |
 |---|---|---|
 | `CarFuels` | `winter_dragon.cogs.fuel` | Refuel log per user. |
-| `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder` | One-off and repeating reminders. |
+| `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder.domain` | One-off and repeating reminders. |
 | `SteamSale`, `SteamSaleProperties`, `SteamUsers` | `winter_dragon.cogs.steam.models` | Known Steam sales and the users subscribed to them. |
 | `ApiTable`, `RiotTournaments` | `wd_db.extension.api_table` | Legacy, used only by `wd-cogs`. |
 | `archive_*` | `archive.models` | Every gateway event the [archive](../spec/archive.md) received, and the objects they carried. |

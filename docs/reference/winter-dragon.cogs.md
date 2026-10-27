@@ -399,11 +399,28 @@ Cog for the /love command.
 - `async load() -> None` — Create the compatibility check table if missing.
 - `@Cog.command async love(interaction: CommandInteraction, user: User) -> None` — Reply with a random compatibility love between the invoking user and ``user``.
 
-## `winter_dragon.cogs.privacy` — `src/winter_dragon/cogs/privacy.py`
+## `winter_dragon.cogs.privacy.cog` — `src/winter_dragon/cogs/privacy/cog.py`
 Privacy: soft-deleted records are purged for good once they've been deleted for :data:`RETENTION`.
 
-- module names: RETENTION, PURGE_INTERVAL, USAGE_RETENTION, PRIVACY_TABLES
 - `command_path(interaction: CommandInteraction) -> str` — Return the full name of the command ``interaction`` ran, with its group and subcommand: ``reminder add``.
+
+### `class Privacy(Cog)`
+Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked.
+
+- `async load() -> None` — Create the privacy tables; the bot then starts :meth:`purge_daily`.
+- `@Cog.periodic async purge_daily() -> None` — Purge what's due now; the bot repeats it every :data:`PURGE_INTERVAL` while the cog is loaded.
+- `@Cog.listener async on_guild_delete(event: GuildDelete) -> None` — Hide the data of a guild that removed the bot; a guild that only went offline keeps it.
+- `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Bring back the data a guild had when it removed the bot, if it's back within :data:`RETENTION`.
+- `async request_deletion(member_id: Snowflake, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later.
+- `deletion_steps(member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
+- `@Cog.listener async on_interaction(interaction: AnyInteraction) -> None` — Count a run of an application command; autocomplete and component interactions don't count.
+- `usage(member_id: Snowflake) -> Generator[UsageCount]` — Yield the member ``member_id``'s command usage counts, day by day.
+- `async purge(now: datetime) -> None` — Hard-delete every lifecycle row soft-deleted more than :data:`RETENTION` before ``now``, children first.
+
+## `winter_dragon.cogs.privacy.domain` — `src/winter_dragon/cogs/privacy/domain.py`
+The privacy tables, and the rules for hiding a member's or a guild's data, for the privacy cog and the dashboard.
+
+- module names: RETENTION, PURGE_INTERVAL, USAGE_RETENTION, PRIVACY_TABLES
 - `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
 - `stored_models(bind: Engine | Connection) -> list[type[LifecycleModel]]` — Return every lifecycle model whose table exists in ``bind``, children first.
 - `hide_owned(session: Session, models: Iterable[type[LifecycleModel]], now: datetime, *, member: Snowflake | None=None, guild: Snowflake | None=None) -> None` — Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``.
@@ -437,30 +454,33 @@ How often a member ran ``command`` in the guild ``guild_id`` (``None`` for a DM)
 
 - fields: command: str, guild_id: Snowflake | None, day: date, count: int
 
-### `class Privacy(Cog)`
-Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked.
-
-- `async load() -> None` — Create the privacy tables; the bot then starts :meth:`purge_daily`.
-- `@Cog.periodic async purge_daily() -> None` — Purge what's due now; the bot repeats it every :data:`PURGE_INTERVAL` while the cog is loaded.
-- `@Cog.listener async on_guild_delete(event: GuildDelete) -> None` — Hide the data of a guild that removed the bot; a guild that only went offline keeps it.
-- `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Bring back the data a guild had when it removed the bot, if it's back within :data:`RETENTION`.
-- `async request_deletion(member_id: Snowflake, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later.
-- `deletion_steps(member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
-- `@Cog.listener async on_interaction(interaction: AnyInteraction) -> None` — Count a run of an application command; autocomplete and component interactions don't count.
-- `usage(member_id: Snowflake) -> Generator[UsageCount]` — Yield the member ``member_id``'s command usage counts, day by day.
-- `async purge(now: datetime) -> None` — Hard-delete every lifecycle row soft-deleted more than :data:`RETENTION` before ``now``, children first.
-
-## `winter_dragon.cogs.reminder` — `src/winter_dragon/cogs/reminder.py`
+## `winter_dragon.cogs.reminder.cog` — `src/winter_dragon/cogs/reminder/cog.py`
 The /reminder command group: one-off and repeating reminders, sent as DMs by a background task.
+
+- `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
+- `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
+
+### `class Reminders(GroupCog, name='reminder', description='Set reminders for yourself')`
+Stores reminders and DMs them to their users when due, from a background task.
+
+- `async load() -> None` — Create the reminder tables if missing; the bot then starts :meth:`deliver_due`.
+- `@Cog.periodic async deliver_due() -> None` — Send the reminders due now; the bot repeats it every :attr:`ReminderSettings.check_interval` seconds.
+- `async send_due(now: datetime) -> int` — DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
+- `@Cog.command async add(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0) -> None` — Remind the invoking user of ``reminder`` once, after the given time.
+- `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
+- `async remove_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoking user's reminders whose content contains what they typed.
+- `@Cog.command async remove(interaction: CommandInteraction, reminder: Reminder | TimedReminder) -> None` — Remove the invoking user's ``reminder``; refuse another member's.
+
+## `winter_dragon.cogs.reminder.domain` — `src/winter_dragon/cogs/reminder/domain.py`
+The reminder tables, their queries, and the rules a new reminder must meet, for ``/reminder`` and the dashboard alike.
 
 - module names: SECONDS_PER_UNIT, REMINDER_TABLES
 - `type AnyReminder = Reminder | TimedReminder`
-- `delay_from(**amounts: int) -> timedelta | None` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
+- `delay_from(**amounts: int) -> timedelta` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), for :func:`new_reminder` to check.
+- `new_reminder(content: str, user_id: Snowflake, due: datetime, now: datetime, repeat_every: timedelta | None=None) -> AnyReminder | Refused` — Return the reminder of ``content`` for ``user_id``, due at ``due``, or why it can't be set at ``now``.
 - `next_occurrence(due: datetime, repeat_every: timedelta, now: datetime) -> datetime` — Return the first time after ``now`` that a reminder due at ``due`` and repeating every ``repeat_every`` is due.
 - `reminder_message(content: str) -> str` — Return the DM reminding someone of ``content``.
 - `owned_reminders(session: Session, user_id: Snowflake) -> Generator[AnyReminder]` — Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due.
-- `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
-- `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
 
 ### `class ReminderSettings`
 Settings for reminders, in their ``cogs.ini`` section.
@@ -479,17 +499,6 @@ A reminder sent once, then soft-deleted.
 A reminder sent again every :attr:`repeat_every`, until removed.
 
 - fields: repeat_every: timedelta
-
-### `class Reminders(GroupCog, name='reminder', description='Set reminders for yourself')`
-Stores reminders and DMs them to their users when due, from a background task.
-
-- `async load() -> None` — Create the reminder tables if missing; the bot then starts :meth:`deliver_due`.
-- `@Cog.periodic async deliver_due() -> None` — Send the reminders due now; the bot repeats it every :attr:`ReminderSettings.check_interval` seconds.
-- `async send_due(now: datetime) -> int` — DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
-- `@Cog.command async add(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0) -> None` — Remind the invoking user of ``reminder`` once, after the given time.
-- `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
-- `async remove_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoking user's reminders whose content contains what they typed.
-- `@Cog.command async remove(interaction: CommandInteraction, reminder: Reminder | TimedReminder) -> None` — Remove the invoking user's ``reminder``; refuse another member's.
 
 ## `winter_dragon.cogs.stats` — `src/winter_dragon/cogs/stats.py`
 The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels.

@@ -12,7 +12,7 @@ A member is reminded of something by DM, once or on repeat.
 - **Rules and limits:** a reminder arrives at most one check interval late; it may be set at most `max_delay_days` ahead, and a repeating one may wait at most that long between reminders; its text is at most `max_content_length` characters. A reminder that can't be DMed (the member closed their DMs) is treated as sent, not retried: a one-off one is removed, a repeating one moves on to its next time.
 - **Settings:** `ReminderSettings`: `check_interval` (60 s), `max_delay_days` (3650), `max_content_length` (1000).
 - **Dashboard:** the Reminders page: a route of upcoming reminders grouped by day; add, edit and delete.
-- **Status:** Live, [reminder.py](../../src/winter_dragon/cogs/reminder.py).
+- **Status:** Live, [reminder/](../../src/winter_dragon/cogs/reminder/cog.py).
 
 ## Fuel log
 

@@ -11,8 +11,8 @@ lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.bot import invite_url
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.cogs.privacy import RETENTION, DeletionStep, deletion_steps, hide_member_data
-lazy from winter_dragon.cogs.reminder import owned_reminders
+lazy from winter_dragon.cogs.privacy.domain import RETENTION, DeletionStep, deletion_steps, hide_member_data
+lazy from winter_dragon.cogs.reminder.domain import owned_reminders
 lazy from winter_dragon.config import Settings
 lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, current_account, visitor_zone
 lazy from winter_dragon.web.formatting import plural

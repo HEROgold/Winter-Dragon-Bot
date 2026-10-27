@@ -21,7 +21,7 @@ from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild
 from winter_dragon.cogs.autochannel import AutoChannels
 from winter_dragon.cogs.fuel import Fuel
 from winter_dragon.cogs.invite import Invite
-from winter_dragon.cogs.reminder import Reminders
+from winter_dragon.cogs.reminder.cog import Reminders
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SteamUsers
 from winter_dragon.cogs.tournament.cog import Tournaments

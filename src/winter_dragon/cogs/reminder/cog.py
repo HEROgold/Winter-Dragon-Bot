@@ -1,105 +1,38 @@
 """The /reminder command group: one-off and repeating reminders, sent as DMs by a background task."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Annotated
-lazy from typing import TYPE_CHECKING, ClassVar, override
+lazy from typing import TYPE_CHECKING, override
 
-from sqlalchemy import BigInteger
-from sqlmodel import Field, Session, col
+from sqlmodel import Session
 from wd_bot.commands import Describe, Length, Lookup
-from wd_db.extension.columns import AwareDateTime
-from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.cogs.reminder.domain import Reminder, ReminderSettings, TimedReminder
+lazy from winter_dragon.cogs.reminder.domain import (
+    REMINDER_TABLES,
+    delay_from,
+    new_reminder,
+    next_occurrence,
+    owned_reminders,
+    reminder_message,
+)
 lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Generator
+    lazy from datetime import datetime
 
     lazy from wd_discord import Client, CommandInteraction
     lazy from wd_discord.interactions import ApplicationCommandOptionChoice
-    lazy from wd_discord.snowflake import Snowflake
 
-
-SECONDS_PER_UNIT = {"minutes": 60, "hours": 3600, "days": 86400, "weeks": 604800}
-
-
-class ReminderSettings:
-    """Settings for reminders, in their ``cogs.ini`` section."""
-
-    check_interval = CogConfig(60)
-    """Seconds between two looks for due reminders; a reminder arrives at most this late."""
-    max_delay_days = CogConfig(3650)
-    """Days ahead a reminder may be set, or a repeating one may wait between reminders."""
-    max_content_length = CogConfig(1000)
-    """The longest reminder text accepted, keeping the reminder DM well within Discord's message limit."""
-
-
-class ReminderBase(LifecycleModel):
-    """What one-off and repeating reminders share; ``user_id`` is the Discord user to remind, who owns it."""
-
-    ownership: ClassVar[Ownership] = Ownership(member="user_id")
-
-    content: str
-    user_id: int = Field(sa_type=BigInteger, index=True)
-    timestamp: datetime = Field(sa_type=AwareDateTime)
-    """When the reminder is due next."""
-
-
-class Reminder(ReminderBase, table=True):
-    """A reminder sent once, then soft-deleted."""
-
-
-class TimedReminder(ReminderBase, table=True):
-    """A reminder sent again every :attr:`repeat_every`, until removed."""
-
-    repeat_every: timedelta
-
-
-type AnyReminder = Reminder | TimedReminder
-
-REMINDER_TABLES = (Reminder, TimedReminder)
-"""Every table the reminder cog creates on load."""
-
-
-def delay_from(**amounts: int) -> timedelta | None:
-    """Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
-
-    The range is (0, :attr:`ReminderSettings.max_delay_days`].
-
-    Adds whole seconds as integers first, so an absurd amount is refused rather than overflowing ``timedelta``.
-    """
-    seconds = sum(SECONDS_PER_UNIT[unit] * amount for unit, amount in amounts.items())
-    if not 0 < seconds <= timedelta(days=ReminderSettings.max_delay_days).total_seconds():
-        return None
-    return timedelta(seconds=seconds)
-
-
-def next_occurrence(due: datetime, repeat_every: timedelta, now: datetime) -> datetime:
-    """Return the first time after ``now`` that a reminder due at ``due`` and repeating every ``repeat_every`` is due.
-
-    Skips the occurrences missed while the bot was offline, instead of sending each of them.
-    """
-    missed = (now - due) // repeat_every if now >= due else -1
-    return due + repeat_every * (missed + 1)
-
-
-def reminder_message(content: str) -> str:
-    """Return the DM reminding someone of ``content``."""
-    return f"I'm here to remind you about\n`{content}`"
-
-
-def owned_reminders(session: Session, user_id: Snowflake) -> Generator[AnyReminder]:
-    """Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due."""
-    yield from session.exec(owned_by(TimedReminder, member=user_id))
-    yield from session.exec(owned_by(Reminder, member=user_id).order_by(col(Reminder.timestamp)))
+    lazy from winter_dragon.cogs.reminder.domain import AnyReminder
 
 
 def reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]:
@@ -169,14 +102,23 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         message = f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it."
         await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
 
-    @staticmethod
-    def _validated(delay: timedelta | None) -> timedelta:
-        """Return ``delay`` if a new reminder may wait that long; refuse saying why not otherwise."""
-        if delay is None:
-            days = ReminderSettings.max_delay_days
-            msg = f"Give me a time between 1 minute and {days} days from now, so I can remind you!"
-            raise Refused(msg)
-        return delay
+    async def _add(
+        self,
+        interaction: CommandInteraction,
+        content: str,
+        delay: timedelta,
+        *,
+        repeats: bool,
+    ) -> None:
+        """Store the invoking user's reminder of ``content``, due after ``delay`` and repeating so if ``repeats``."""
+        user = interaction.user
+        if user is None:
+            return
+        now = utc_now()
+        reminder = new_reminder(content, user.id, now + delay, now, delay if repeats else None)
+        if isinstance(reminder, Refused):
+            raise reminder
+        await self._store(interaction, reminder)
 
     @Cog.command(name="add", description="Get reminded of something once, after the given time")
     async def add(
@@ -192,11 +134,7 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         days: Annotated[int, Describe("The number of days to wait before reminding you")] = 0,
     ) -> None:
         """Remind the invoking user of ``reminder`` once, after the given time."""
-        user = interaction.user
-        if user is None:
-            return
-        delay = self._validated(delay_from(minutes=minutes, hours=hours, days=days))
-        await self._store(interaction, Reminder(content=reminder, user_id=int(user.id), timestamp=utc_now() + delay))
+        await self._add(interaction, reminder, delay_from(minutes=minutes, hours=hours, days=days), repeats=False)
 
     @Cog.command(name="repeat", description="Get reminded of something over and over, every given time")
     async def repeat(  # noqa: PLR0913 - one option per time unit
@@ -213,12 +151,8 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         weeks: Annotated[int, Describe("The number of weeks before reminding you again")] = 0,
     ) -> None:
         """Remind the invoking user of ``reminder`` every given time, starting one interval from now."""
-        user = interaction.user
-        if user is None:
-            return
-        every = self._validated(delay_from(minutes=minutes, hours=hours, days=days, weeks=weeks))
-        timed = TimedReminder(content=reminder, user_id=int(user.id), timestamp=utc_now() + every, repeat_every=every)
-        await self._store(interaction, timed)
+        every = delay_from(minutes=minutes, hours=hours, days=days, weeks=weeks)
+        await self._add(interaction, reminder, every, repeats=True)
 
     async def remove_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the invoking user's reminders whose content contains what they typed."""
