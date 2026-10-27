@@ -468,3 +468,43 @@ async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
     await Tournaments.create.invoke(cog, interaction, options)
     with Session(engine) as session:
         assert [found.name for found in session.exec(alive(Tournament))] == ["Rematch"]
+
+
+async def test_vote_takes_the_match_from_a_lookup_value(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _, final, _ = _played_final(session)
+        final_id = final.id
+    options = [
+        InteractionDataOption(name="match", type=3, value=f"tournamentmatch:{final_id}"),
+        InteractionDataOption(name="question", type=3, value="Side?"),
+        InteractionDataOption(name="answers", type=3, value="Left, Right"),
+    ]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.vote.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
+
+    with Session(engine) as session:
+        assert sorted(vote.question for vote in session.exec(alive(MatchVote))) == ["Map?", "Side?"]
+
+
+async def test_vote_refuses_a_match_value_that_is_not_in_the_list(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _played_final(session)
+    options = [
+        InteractionDataOption(name="match", type=3, value="1"),
+        InteractionDataOption(name="question", type=3, value="Side?"),
+        InteractionDataOption(name="answers", type=3, value="Left, Right"),
+    ]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.vote.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
+
+    assert _response(discord_client)["data"]["content"] == "I can't find that match; pick one from the list."  # pyright: ignore[reportIndexIssue]

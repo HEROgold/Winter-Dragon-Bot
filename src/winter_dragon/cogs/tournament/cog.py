@@ -5,7 +5,7 @@ lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Lookup
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
 
@@ -413,21 +413,21 @@ class Tournaments(
     async def ban(
         self,
         interaction: GuildCommandInteraction,
-        match: Annotated[int, Describe("The ID of the match to ban in")],
+        match: Annotated[TournamentMatch, Lookup("match_choices"), Describe("The match to ban in")],
         choice: Annotated[str, Describe("The item to ban")],
     ) -> None:
         """Record the invoker's team banning ``choice`` in ``match``."""
-        await self._draft(interaction, match, choice, DraftKind.BAN)
+        await self._draft(interaction, match.id or 0, choice, DraftKind.BAN)
 
     @Cog.command(name="pick", description="Pick something for your match, as your team's captain")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def pick(
         self,
         interaction: GuildCommandInteraction,
-        match: Annotated[int, Describe("The ID of the match to pick in")],
+        match: Annotated[TournamentMatch, Lookup("match_choices"), Describe("The match to pick in")],
         choice: Annotated[str, Describe("The item to pick")],
     ) -> None:
         """Record the invoker's team picking ``choice`` in ``match``."""
-        await self._draft(interaction, match, choice, DraftKind.PICK)
+        await self._draft(interaction, match.id or 0, choice, DraftKind.PICK)
 
     # --- Votes -----------------------------------------------------------------------------------------------------
 
@@ -435,13 +435,13 @@ class Tournaments(
     async def vote(
         self,
         interaction: GuildCommandInteraction,
-        match: Annotated[int, Describe("The ID of the match to vote in")],
+        match: Annotated[TournamentMatch, Lookup("match_choices"), Describe("The match to vote in")],
         question: Annotated[str, Describe("The question to vote on")],
         answers: Annotated[str, Describe("The answers to the question, separated by commas")],
     ) -> None:
         """Post a vote on ``question`` for the players of ``match``; organisers only."""
         with Session(self.bind) as session:
-            tournament, found = self._match(interaction, session, match)
+            tournament, found = self._match(interaction, session, match.id or 0)
             require_organiser(interaction, tournament)
             opened = open_vote(session, found, question[:200], parse_options(answers))
             session.commit()
@@ -449,14 +449,9 @@ class Tournaments(
             embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
         await interaction.respond(embeds=[embed], components=buttons)
 
-    @vote.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    @pick.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    @ban.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     @match_card.autocomplete("match")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the tournament's undecided matches whose line contains what was typed."""
-        # TODO: Consider/expirement if we can move autocomplete into Annotated,
-        # If we can do this, we should also consider moving the match_id Annotated to a Match Model,
         guild = interaction.guild
         with Session(self.bind) as session:
             tournament = None if guild is None else active_tournament(session, int(guild.id))
@@ -467,11 +462,7 @@ class Tournaments(
                 match for match in matches_of(session, tournament.id or 0) if not match.phase.decided and match.id is not None
             ]
         lines = ((match, match_line(match, names).replace("`", "")) for match in matches)
-        return [
-            ApplicationCommandOptionChoice(name=line[:100], value=match.id or 0)
-            for match, line in lines
-            if current.casefold() in line.casefold()
-        ]
+        return [Lookup.choice(match, line) for match, line in lines if current.casefold() in line.casefold()]
 
     @Cog.component("tourney-vote")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def vote_button(self, interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None:

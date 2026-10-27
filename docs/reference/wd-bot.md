@@ -137,13 +137,19 @@ Limit a channel option to some kinds of channel: ``category: Annotated[Channel, 
 ### `class Describe`
 Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
 
+### `class Lookup`
+Make an option pick a stored row: ``match: Annotated[Match, Lookup("match_choices"), Describe("The match")]``.
+
+- `@staticmethod choice(row: LifecycleModel, name: str) -> ApplicationCommandOptionChoice` — Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit.
+- `load(cog: Cog, models: tuple[type[LifecycleModel], ...], option: str, value: object) -> LifecycleModel` — Return the alive row ``value`` names, one of ``models``; raise ``Refused`` when there is none.
+
 ### `@dataclass class OptionSpec`
 A handler parameter as a Discord option: what Discord asks for, and what the handler gets.
 
 - fields: name: str, param_type: object, option_type: ApplicationCommandOptionType, required: bool, channel_types:
-  list[ChannelType] | None, description: str | None
+  list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...]
 - `definition(*, autocomplete: bool) -> ApplicationCommandOption` — Return the option as Discord defines it.
-- `argument(interaction: CommandInteraction, value: object) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
+- `argument(interaction: CommandInteraction, value: object, cog: Cog) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
 
 ### `class AppCommand(LoggerMixin, ABC)`
 What every application command shares: its name, description and where Discord lets it be used.

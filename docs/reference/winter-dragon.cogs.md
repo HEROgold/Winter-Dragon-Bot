@@ -638,10 +638,10 @@ Runs one tournament per guild: players sign up, teams form, and a single-elimina
 - `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction) -> None` — Cancel the tournament; organisers only.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: int) -> None` — Post the card of match ``match``.
 - `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, team_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
-- `@Cog.command async ban(interaction: GuildCommandInteraction, match: int, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
-- `@Cog.command async pick(interaction: GuildCommandInteraction, match: int, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
-- `@Cog.command async vote(interaction: GuildCommandInteraction, match: int, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
-- `@vote.autocomplete @pick.autocomplete @ban.autocomplete @match_card.autocomplete async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournament's undecided matches whose line contains what was typed.
+- `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
+- `@Cog.command async pick(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
+- `@Cog.command async vote(interaction: GuildCommandInteraction, match: TournamentMatch, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
+- `@match_card.autocomplete async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournament's undecided matches whose line contains what was typed.
 - `@Cog.component async vote_button(interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None` — Record the clicker's answer, then refresh the tally.
 - `@Cog.component async close_vote_button(interaction: GuildComponentInteraction, vote_id: str) -> None` — Close the vote and show the final tally; organisers only.
 
