@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from wd_discord.components import ButtonStyle, components_payload
-from wd_discord.embed import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS
+from wd_discord.limits import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS
 
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale

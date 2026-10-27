@@ -29,8 +29,8 @@ lazy from wd_discord import (
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
+lazy from wd_discord.limits import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT, truncate
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
-lazy from wd_discord.resources.channel.params import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
@@ -121,7 +121,7 @@ def owner_overwrite(user_id: Snowflake) -> OverwriteParams:
 
 def default_name(display_name: str) -> str:
     """Return the name of a member's channel when they didn't choose one."""
-    return f"{display_name}'s channel"[:MAX_CHANNEL_NAME_LENGTH]
+    return truncate(f"{display_name}'s channel", MAX_CHANNEL_NAME_LENGTH)
 
 
 def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams:

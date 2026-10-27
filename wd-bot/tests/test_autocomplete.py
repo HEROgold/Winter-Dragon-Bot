@@ -13,11 +13,10 @@ from wd_discord import AutocompleteInteraction
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.interactions import (
-    MAX_CHOICE_NAME_LENGTH,
-    MAX_CHOICES,
     ApplicationCommandOptionChoice,
     ApplicationCommandOptionType,
 )
+from wd_discord.limits import ELLIPSIS, MAX_CHOICE_NAME_LENGTH, MAX_CHOICES
 
 from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentMatch
 
@@ -203,7 +202,7 @@ def test_a_lookup_choice_names_the_table_and_the_id_and_cuts_long_names(engine: 
         cup = _cup(session, "x" * 150)
         choice = Lookup.choice(cup, cup.name)
     assert choice.value == f"tournament:{cup.id}"
-    assert choice.name == "x" * MAX_CHOICE_NAME_LENGTH
+    assert choice.name == "x" * (MAX_CHOICE_NAME_LENGTH - 1) + ELLIPSIS
 
 
 async def test_a_lookup_option_suggests_from_the_named_method(engine: Engine, discord_client: RecordingClient) -> None:

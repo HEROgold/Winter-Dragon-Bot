@@ -3,12 +3,12 @@
 import pytest
 from pydantic import ValidationError
 from wd_discord.components import (
-    MAX_MESSAGE_COMPONENTS,
     ActionRow,
     Button,
     ButtonStyle,
     components_payload,
 )
+from wd_discord.limits import MAX_MESSAGE_COMPONENTS
 
 
 def _button(custom_id: str) -> Button:

@@ -11,6 +11,11 @@ from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 # eager: pydantic needs the real classes, not lazy proxies, for the model fields below
 from wd_discord.permissions import ChannelType, Permissions, PermissionsField
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.limits import (
+    MAX_CHOICES,
+    MAX_DESCRIPTION_LENGTH,
+    MAX_OPTIONS,
+)
 lazy from wd_discord.models import DiscordModel
 
 
@@ -119,14 +124,6 @@ class Locale(OpenStrEnum):
     KOREAN = "ko"
 
 
-MAX_OPTIONS = 25
-"""A command or subcommand holds up to 25 options (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
-MAX_CHOICES = 25
-"""An option offers up to 25 choices (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
-MAX_CHOICE_NAME_LENGTH = 100
-"""A command option choice name, autocomplete results included, holds up to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-choice-structure)."""
-MAX_DESCRIPTION_LENGTH = 100
-"""A command or option description holds 1 to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 CHAT_INPUT_NAME_PATTERN = r"^[-_\u02BC\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$"
 """What a slash command or option name may hold (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-naming)."""
 

@@ -17,6 +17,7 @@ lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.channel import OverwriteParams, OverwriteType
 lazy from wd_discord.resources.channel import PermissionOverwrite as PermissionOverwriteModel
 lazy from wd_discord.resources.channel import ThreadMember as ThreadMemberModel
+lazy from wd_discord.limits import MAX_MESSAGES_PER_PAGE
 lazy from wd_discord.resources.invite import Invite as InviteModel
 lazy from wd_discord.responses import message_data
 lazy from wd_discord.snowflake import Snowflake
@@ -50,9 +51,6 @@ DEFAULT_INVITE_MAX_AGE = 86400
 
 type PermissionTarget = BaseRole | BaseMember | BaseUser
 """What a channel permission overwrite applies to: a role, or a member (their user works too)."""
-
-MAX_MESSAGES_PER_PAGE = 100
-"""The most messages ``GET /channels/{channel_id}/messages`` returns at once (https://docs.discord.com/developers/resources/message#get-channel-messages)."""
 
 
 class BaseChannel(ClientBound):

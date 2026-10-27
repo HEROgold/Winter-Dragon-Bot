@@ -19,15 +19,13 @@ lazy from wd_discord import Channel, Role, User
 lazy from wd_discord.authenticate import render
 lazy from wd_discord.entities import Resolved
 lazy from wd_discord.interactions import (
-    MAX_CHOICE_NAME_LENGTH,
-    MAX_CHOICES,
-    MAX_DESCRIPTION_LENGTH,
     ApplicationCommandOption,
     ApplicationCommandOptionChoice,
     ApplicationCommandOptionType,
     ApplicationCommandParams,
     InteractionContextType,
 )
+lazy from wd_discord.limits import MAX_CHOICE_NAME_LENGTH, MAX_CHOICES, MAX_DESCRIPTION_LENGTH, truncate
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Role as RoleModel
 lazy from wd_discord.resources.user import User as UserModel
@@ -102,7 +100,7 @@ class Lookup:
 
     The only way to autocomplete an option. ``choices`` is the cog method that suggests values, an
     :data:`AutocompleteHandler`; define it above the command, so type checkers can resolve the name. Discord shows at
-    most the first :data:`~wd_discord.interactions.MAX_CHOICES`.
+    most the first :data:`~wd_discord.limits.MAX_CHOICES`.
 
     On a ``str``, ``int`` or ``float`` parameter the handler gets the submitted value. On a
     :class:`~wd_db.extension.lifecycle.LifecycleModel` table class, or a union of them, the option is a STRING that
@@ -122,7 +120,7 @@ class Lookup:
     def choice(row: LifecycleModel, name: str) -> ApplicationCommandOptionChoice:
         """Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit."""
         return ApplicationCommandOptionChoice(
-            name=name[:MAX_CHOICE_NAME_LENGTH],
+            name=truncate(name, MAX_CHOICE_NAME_LENGTH),
             value=row_key(row),
         )
 

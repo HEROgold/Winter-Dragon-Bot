@@ -52,7 +52,7 @@ lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import PartialUser, UserStore
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler
+lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler, new_rate_limiters
 lazy from wd_discord.route import Route
 
 
@@ -167,6 +167,8 @@ class Client(LoggerMixin):
         self._inflight: dict[InflightKey, asyncio.Future[Response | ApiResponseError]] = {}
         self._cached: dict[InflightKey, tuple[float, Response]] = {}
         """Reads asked to be cached, with the :func:`time.monotonic` time each stops being valid."""
+        self._rate_limiters = new_rate_limiters()
+        """This client's own rate-limit buckets; no other client shares them."""
         self.cache = StateCache()
         """What the gateway told this client so far; see :meth:`receive`."""
         self.application = CurrentApplication(self, application_id)
@@ -279,7 +281,7 @@ class Client(LoggerMixin):
     async def _send(self, method: str, resolved: Route, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
         """Send one request under the rate limiters; a network error is raised, an API error returned."""
         path = resolved.path
-        handler = RateLimitHandler(resolved.key(method))
+        handler = RateLimitHandler(resolved.key(method), self._rate_limiters)
 
         async def send_once() -> Response:
             self.logger.debug(t"{method} {path}")

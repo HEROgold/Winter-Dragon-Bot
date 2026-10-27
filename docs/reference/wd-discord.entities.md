@@ -106,7 +106,7 @@ A store of one kind of entity that can be handled by ID: ``partial(id)`` and ``f
 ## `wd_discord.entities.channel` — `wd-discord/src/wd_discord/entities/channel.py`
 Channels (https://docs.discord.com/developers/resources/channel).
 
-- module names: DEFAULT_INVITE_MAX_AGE, MAX_MESSAGES_PER_PAGE
+- module names: DEFAULT_INVITE_MAX_AGE
 - `type PermissionTarget = BaseRole | BaseMember | BaseUser`
 
 ### `class BaseChannel(ClientBound)`
@@ -464,8 +464,6 @@ Gateway dispatch events bound to the client that received them.
 
 ## `wd_discord.entities.guild` — `wd-discord/src/wd_discord/entities/guild.py`
 Guilds (https://docs.discord.com/developers/resources/guild).
-
-- module names: MAX_MEMBERS_PER_PAGE
 
 ### `class BaseGuild(ClientBound)`
 What can be done to a guild knowing only its ID: read it, its channels, members, roles and expressions.
