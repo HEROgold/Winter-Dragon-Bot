@@ -6,6 +6,7 @@ lazy from wd_bot.bot import invite_url
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord import is_network_error
 lazy from wd_discord.permissions import ChannelType
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig, Settings
@@ -27,7 +28,7 @@ NO_SUPPORT_INVITE = "I couldn't create an invite to the support guild."
 """The refusal when the support guild has no channel to invite to, or Discord wouldn't make the invite."""
 
 
-async def invite_channel(client: Client, guild_id: int) -> BaseChannel | NetworkError | None:
+async def invite_channel(client: Client, guild_id: Snowflake) -> BaseChannel | NetworkError | None:
     """Return the channel to invite people to in the guild ``guild_id``: its system channel, else its first text channel.
 
     ``None`` when the guild has neither.
@@ -57,7 +58,7 @@ class Invite(GroupCog, name="invite", description="Invite the bot to your guild,
         if not Settings.support_guild_id:
             msg = "There is no support guild set up."
             raise Refused(msg)
-        channel = await invite_channel(self.bot.client, Settings.support_guild_id)
+        channel = await invite_channel(self.bot.client, Snowflake(Settings.support_guild_id))
         if channel is None or is_network_error(channel):
             self.logger.warning(t"No channel to invite to in support guild {Settings.support_guild_id}: {channel}")
             raise Refused(NO_SUPPORT_INVITE)

@@ -6,6 +6,7 @@ lazy from typing import TYPE_CHECKING, Annotated, Self
 
 from fastapi import Depends
 from pydantic import BaseModel, ConfigDict
+from wd_discord.snowflake import Snowflake
 lazy from fastapi import HTTPException, Request, status
 lazy from zoneinfo import ZoneInfo, available_timezones
 
@@ -31,7 +32,7 @@ class Account(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    id: int
+    id: Snowflake
     username: str
     display_name: str
     avatar_url: str | None = None
@@ -40,7 +41,7 @@ class Account(BaseModel):
     def from_user(cls, user: User) -> Self:
         """Return the account of the Discord ``user``."""
         avatar = None if user.avatar is None else user.avatar.url(f"avatars/{user.id}")
-        return cls(id=int(user.id), username=user.username, display_name=user.global_name or user.username, avatar_url=avatar)
+        return cls(id=user.id, username=user.username, display_name=user.global_name or user.username, avatar_url=avatar)
 
     @property
     def initials(self) -> str:
@@ -78,7 +79,7 @@ SignedIn = Annotated[Account, Depends(signed_in)]
 def sign_in(request: Request, account: Account) -> None:
     """Start a fresh session for ``account``, dropping whatever the old one held."""
     request.session.clear()
-    request.session[ACCOUNT_KEY] = account.model_dump()
+    request.session[ACCOUNT_KEY] = account.model_dump(mode="json")
 
 
 def sign_out(request: Request) -> None:

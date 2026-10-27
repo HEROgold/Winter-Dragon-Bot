@@ -17,7 +17,7 @@ A minimal Discord Gateway (WebSocket) connection for wd-discord.
 - module names: FATAL_CLOSE_CODES, NEW_SESSION_CLOSE_CODES, MAX_RESUME_ATTEMPTS, ALL_MEMBERS_NONCE
 - `type GatewayFrame = _DispatchFrame | _HeartbeatRequestFrame | _ReconnectFrame | _InvalidSessionFrame | _HeartbeatAckFrame`
 - `build_presence(activities: list[GatewayActivity], status: Status | str=Status.online, *, afk: bool=False, since: int | None=None) -> dict[str, Any]` — Build the ``d`` payload for a Presence Update (object -> API).
-- `build_identify(token: str, intents: Intents, *, shard: tuple[int, int] | None=None, presence: dict[str, Any] | None=None) -> dict[str, Any]` — Build the ``d`` payload for an IDENTIFY (object -> API).
+- `build_identify(token: Token, intents: Intents, *, shard: tuple[int, int] | None=None, presence: dict[str, Any] | None=None) -> dict[str, Any]` — Build the ``d`` payload for an IDENTIFY (object -> API).
 - `parse_ready(payload: dict[str, Any]) -> Ready` — Parse a READY dispatch payload into a :class:`Ready` (API -> object).
 
 ### `class Opcode(IntEnum)`
@@ -75,7 +75,7 @@ A guild that is offline or not sent yet (https://docs.discord.com/developers/res
 ### `class Ready(DiscordModel)`
 READY (https://docs.discord.com/developers/events/gateway-events#ready).
 
-- fields: v: int, user: User, guilds: list[UnavailableGuild], session_id: str, resume_gateway_url: str, shard:
+- fields: v: int, user: User, guilds: list[UnavailableGuild], session_id: str, resume_gateway_url: URL, shard:
   tuple[int, int] | None, application_id: str | None
 
 ### `class GuildCreate(Guild)`
@@ -259,15 +259,15 @@ The ``data`` block of a MODAL_SUBMIT INTERACTION_CREATE.
 ### `class Message(DiscordModel)`
 MESSAGE_CREATE (subset - https://docs.discord.com/developers/resources/message).
 
-- fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None, author: User, content: str, timestamp: str,
-  edited_timestamp: str | None, tts: bool, mention_everyone: bool, mentions: list[MentionedUser], attachments:
-  list[Attachment], embeds: list[Embed], reactions: list[Reaction]
+- fields: id: Snowflake, channel_id: Snowflake, guild_id: Snowflake | None, author: User, content: str, timestamp:
+  datetime, edited_timestamp: datetime | None, tts: bool, mention_everyone: bool, mentions: list[MentionedUser],
+  attachments: list[Attachment], embeds: list[Embed], reactions: list[Reaction]
 
 ### `class Interaction(DiscordModel)`
 INTERACTION_CREATE (https://docs.discord.com/developers/interactions/receiving-and-responding#interaction-object).
 
 - fields: id: Snowflake, application_id: Snowflake, type: InteractionType, guild_id: Snowflake | None, channel_id:
-  Snowflake | None, member: GuildMember | None, user: User | None, token: str, version: int, app_permissions:
+  Snowflake | None, member: GuildMember | None, user: User | None, token: Token, version: int, app_permissions:
   PermissionsField | None, locale: Locale | None, guild_locale: Locale | None, entitlements: list[Entitlement] | None,
   authorizing_integration_owners: dict[ApplicationIntegrationType, Snowflake] | None, context: InteractionContextType |
   None, attachment_size_limit: int | None, guild: PartialGuild | None, channel: Channel | None
@@ -450,7 +450,7 @@ https://docs.discord.com/developers/events/gateway-events#presence-update-presen
 Gateway sharding (https://docs.discord.com/developers/events/gateway#sharding).
 
 - module names: IDENTIFY_BATCH_DELAY
-- `shard_id_for_guild(guild_id: int, num_shards: int) -> int` — Return the shard a guild's events are routed to: ``(guild_id >> 22) % num_shards``.
+- `shard_id_for_guild(guild_id: Snowflake, num_shards: int) -> int` — Return the shard a guild's events are routed to: ``(guild_id >> 22) % num_shards``.
 - `rate_limit_key(shard_id: int, max_concurrency: int) -> int` — Return a shard's IDENTIFY rate-limit bucket: ``shard_id % max_concurrency``.
 - `identify_batches(shard_ids: list[int], max_concurrency: int) -> list[list[int]]` — Group ``shard_ids`` (ascending) into batches that may IDENTIFY concurrently.
 - `parse_gateway_bot(payload: dict[str, Any]) -> GatewayBotInfo` — Parse a ``GET /gateway/bot`` JSON body into a :class:`GatewayBotInfo` (API -> object).
@@ -464,12 +464,12 @@ The ``session_start_limit`` object from ``GET /gateway/bot``.
 ### `class GatewayBotInfo(DiscordModel)`
 The ``GET /gateway/bot`` response (API -> object via :func:`parse_gateway_bot`).
 
-- fields: url: str, shards: int, session_start_limit: SessionStartLimit
-- `@property connect_url -> str` — The WSS URL with the configured version and the encoding this library speaks.
+- fields: url: URL, shards: int, session_start_limit: SessionStartLimit
+- `@property connect_url -> URL` — The WSS URL with the configured version and the encoding this library speaks.
 
 ### `class ShardManager`
 Run one :class:`Gateway` per shard, respecting the IDENTIFY rate limits.
 
 - `@property alive -> bool` — Whether the shards are started and every one is :attr:`~Gateway.alive`.
-- `@with_known_exception shard_for_guild(guild_id: int) -> Gateway | RuntimeError` — Return the started shard handling ``guild_id``'s events, or the :class:`RuntimeError` if not started.
+- `@with_known_exception shard_for_guild(guild_id: Snowflake) -> Gateway | RuntimeError` — Return the started shard handling ``guild_id``'s events, or the :class:`RuntimeError` if not started.
 - `async serve_forever(dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None` — Run every shard's receive loop until cancelled.

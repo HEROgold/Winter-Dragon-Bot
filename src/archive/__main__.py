@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from herogold.log import LoggerMixin
 from sqlalchemy import create_engine
 from wd_bot.settings import Tokens
-from wd_discord import Sentry
+from wd_discord import Sentry, Token
 from wd_discord.intents import Intents
 
 from archive.cleanup import RawEventPurge
@@ -34,9 +34,9 @@ def parser() -> argparse.ArgumentParser:
     return root
 
 
-def token() -> str:
+def token() -> Token:
     """Return the archive's token: the read-only one, or the bot's own when none is set."""
-    return Tokens.read_only_token or Tokens.discord_token
+    return Token(Tokens.read_only_token or Tokens.discord_token)
 
 
 async def archive(engine: Engine) -> None:

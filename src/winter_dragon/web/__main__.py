@@ -13,7 +13,7 @@ lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.settings import Tokens
 lazy from wd_config.parser import OperatorFiles
 lazy from wd_db.constants import engine
-lazy from wd_discord import Client
+lazy from wd_discord import Client, Token
 
 from winter_dragon.web.settings import DashboardSettings
 lazy from winter_dragon.cogs import import_cogs
@@ -22,7 +22,7 @@ lazy from winter_dragon.web.app import create_app
 
 async def _load_application_id() -> None:
     """Ask Discord which application the bot token belongs to; sign-in and the invite link need its ID."""
-    async with Client(Tokens.discord_token) as client:
+    async with Client(Token(Tokens.discord_token)) as client:
         await ApplicationId.load(client)
 
 

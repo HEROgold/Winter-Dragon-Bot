@@ -133,7 +133,7 @@ class _MessageCog(Cog, auto_load=False):
 async def test_dispatch_hands_listeners_the_bound_entity(discord_client: RecordingClient) -> None:
     bot = _make_bot(discord_client)
     await bot.add_cog(_MessageCog(bot=bot))
-    data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="t")
+    data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="2026-10-22T00:00:00+00:00")
     model = MessageModel.model_validate(data)
     await bot._dispatch(EventName.MESSAGE_CREATE, model)
     await _drain_tasks()
@@ -149,7 +149,7 @@ async def test_a_removed_cogs_listeners_are_no_longer_called(discord_client: Rec
     cog = _MessageCog(bot=bot)
     await bot.add_cog(cog)
     await bot.remove_cog(cog)
-    model = MessageModel.model_validate(message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="t"))
+    model = MessageModel.model_validate(message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="2026-10-22T00:00:00+00:00"))
     await bot._dispatch(EventName.MESSAGE_CREATE, model)
     await _drain_tasks()
     assert _MessageCog.received == []

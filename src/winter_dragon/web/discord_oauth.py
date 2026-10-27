@@ -7,6 +7,7 @@ its session cookie (https://docs.discord.com/developers/topics/oauth2#authorizat
 lazy from typing import TYPE_CHECKING
 lazy from urllib.parse import urlencode
 
+from wd_discord.authenticate import URL, Token
 from wd_discord.models import DiscordModel
 lazy from httpxyz import AsyncClient, BasicAuth, RequestError
 lazy from wd_bot.application import ApplicationId
@@ -33,19 +34,19 @@ logger = get_logger(__name__)
 class AccessToken(DiscordModel):
     """The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response)."""
 
-    access_token: str
+    access_token: Token
     token_type: str
     expires_in: int
     scope: str
-    refresh_token: str | None = None
+    refresh_token: Token | None = None
 
 
-def redirect_uri() -> str:
+def redirect_uri() -> URL:
     """Return the callback URL Discord redirects to, under :attr:`DashboardSettings.public_url`."""
-    return f"{DashboardSettings.public_url.rstrip('/')}{CALLBACK_PATH}"
+    return URL(f"{DashboardSettings.public_url.rstrip('/')}{CALLBACK_PATH}")
 
 
-def authorization_url(state: str) -> str:
+def authorization_url(state: str) -> URL:
     """Return the Discord page asking the user to sign in, which sends ``state`` back to the callback."""
     query = urlencode(
         {
@@ -57,12 +58,12 @@ def authorization_url(state: str) -> str:
             "prompt": "none",
         },
     )
-    return f"{URLS().oauth2_authorize}?{query}"
+    return URL(f"{URLS().oauth2_authorize}?{query}")
 
 
-def _api(path: str) -> str:
+def _api(path: str) -> URL:
     urls = URLS()
-    return f"{urls.base}/{urls.api_version}{path}"
+    return URL(f"{urls.base}/{urls.api_version}{path}")
 
 
 async def _send(  # noqa: PLR0913 - one keyword per part of the request

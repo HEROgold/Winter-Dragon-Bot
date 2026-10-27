@@ -583,7 +583,7 @@ The fields and responses every interaction shares.
 
 - `@property id -> Snowflake` — The interaction's ID.
 - `@property type -> InteractionType` — The kind of interaction.
-- `@property token -> str` — The token for responding; valid for 15 minutes.
+- `@property token -> Token` — The token for responding; valid for 15 minutes.
 - `@property application_id -> Snowflake` — The ID of the application the interaction is for.
 - `@property user -> User | None` — Who triggered the interaction, whether in a guild or a DM.
 - `@property member -> Member | None` — The invoking guild member, when invoked in a guild.
@@ -746,8 +746,8 @@ A message, as Discord returned or dispatched it.
 - `@property embeds -> Generator[Embed]` — The message's embeds.
 - `@property reactions -> Generator[Reaction]` — The message's reactions; empty on a dispatched MESSAGE_CREATE.
 - `@property guild -> PartialGuild | None` — The guild the message was sent in; ``None`` in a DM or when Discord left it out.
-- `@property timestamp -> str` — When the message was sent, as an ISO 8601 timestamp.
-- `@property edited_timestamp -> str | None` — When the message was last edited, as an ISO 8601 timestamp; ``None`` if never.
+- `@property timestamp -> datetime` — When the message was sent.
+- `@property edited_timestamp -> datetime | None` — When the message was last edited; ``None`` if never.
 - `@property tts -> bool` — Whether the message was sent as text-to-speech.
 - `@property mention_everyone -> bool` — Whether the message mentions ``@everyone``.
 - `@property jump_url -> str` — A link that opens the message.

@@ -15,6 +15,7 @@ from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInt
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.interactions import ApplicationCommandOptionType
 from wd_discord.resources.user import User
+from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, user_json
 
 from winter_dragon.cogs import privacy
@@ -571,9 +572,9 @@ async def test_each_command_is_counted_per_member_guild_and_day(
     await _run(cog, make_interaction, "reminder", "add")
 
     assert set(cog.usage(MEMBER_ID)) == {
-        UsageCount(command="reminder add", guild_id=GUILD_ID, day=DAY_0.date(), count=2),
-        UsageCount(command="fuel add", guild_id=GUILD_ID, day=DAY_0.date(), count=1),
-        UsageCount(command="reminder add", guild_id=GUILD_ID, day=_day(1).date(), count=1),
+        UsageCount(command="reminder add", guild_id=Snowflake(GUILD_ID), day=DAY_0.date(), count=2),
+        UsageCount(command="fuel add", guild_id=Snowflake(GUILD_ID), day=DAY_0.date(), count=1),
+        UsageCount(command="reminder add", guild_id=Snowflake(GUILD_ID), day=_day(1).date(), count=1),
     }
     assert list(cog.usage(RIVAL_ID)) == []
 
@@ -616,7 +617,7 @@ async def test_a_hidden_count_starts_again_from_one(engine: Engine, make_interac
 
     await _run(cog, make_interaction, "ping")
 
-    assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="ping", guild_id=GUILD_ID, day=DAY_0.date(), count=1)]
+    assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="ping", guild_id=Snowflake(GUILD_ID), day=DAY_0.date(), count=1)]
 
 
 @pytest.mark.usefixtures("clock")

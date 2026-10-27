@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     lazy from random import Random
 
     lazy from sqlmodel import Session
+    lazy from wd_discord.snowflake import Snowflake
 
 
 WORDS_FILE = Path(__file__).parent / "words.txt"
@@ -36,9 +37,16 @@ def load_words() -> list[str]:
     return [word for word in WORDS_FILE.read_text(encoding="utf-8").split() if word]
 
 
-def start_game(session: Session, *, guild_id: int, channel_id: int, rng: Random, words: list[str] | None = None) -> HangmanGame:
+def start_game(
+    session: Session,
+    *,
+    guild_id: Snowflake,
+    channel_id: Snowflake,
+    rng: Random,
+    words: list[str] | None = None,
+) -> HangmanGame:
     """Store a new game in the channel with a word drawn from ``words`` (default: the bundled list)."""
-    game = HangmanGame(guild_id=guild_id, channel_id=channel_id, word=rng.choice(words or load_words()))
+    game = HangmanGame(guild_id=int(guild_id), channel_id=int(channel_id), word=rng.choice(words or load_words()))
     session.add(game)
     session.flush()
     return game
@@ -53,7 +61,7 @@ def parse_guess(text: str) -> str:
     return guess
 
 
-def guess(session: Session, game: HangmanGame, user_id: int, text: str) -> Guess:
+def guess(session: Session, game: HangmanGame, user_id: Snowflake, text: str) -> Guess:
     """Apply ``text`` (one letter or the whole word) from ``user_id`` to ``game``; the caller commits.
 
     A wrong letter and a wrong word each cost one life. Repeating a guess refuses and costs nothing. The member
@@ -94,11 +102,11 @@ def _guess_word(game: HangmanGame, word: str) -> Guess:
     return Guess.WRONG_WORD
 
 
-def _add_participant(session: Session, game: HangmanGame, user_id: int) -> None:
+def _add_participant(session: Session, game: HangmanGame, user_id: Snowflake) -> None:
     if game.id is None:
         msg = "A game must be stored before it is guessed at."
         raise ValueError(msg)
-    upsert(session, HangmanParticipant(game_id=game.id, user_id=user_id))
+    upsert(session, HangmanParticipant(game_id=game.id, user_id=int(user_id)))
 
 
 def _finish(game: HangmanGame, status: HangmanStatus) -> None:

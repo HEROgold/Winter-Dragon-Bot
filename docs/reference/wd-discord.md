@@ -43,8 +43,8 @@ Location for all authentication related functions and classes.
 - `render(template: Template) -> str` — Render a PEP 750 ``Template`` into a plain string.
 - `render_header(template: Template) -> tuple[str, str]` — Render a ``"Key: Value"`` header template into a ``(name, value)`` pair for httpxyz.
 
-### `class Token(str)`
-Represents a Discord bot token.
+### `class Token(_ModelStr)`
+A Discord secret: a bot token, an interaction or gateway token, or an OAuth access or refresh token.
 
 ### `class TokenType(StrEnum)`
 Represents the type of token being used for authentication.
@@ -54,7 +54,7 @@ Represents the type of token being used for authentication.
 ### `class UserAgentVersion(str)`
 Represents the version of the user agent being used for authentication.
 
-### `class URL(str)`
+### `class URL(_ModelStr)`
 Represents a URL.
 
 ### `class MetaData(str)`

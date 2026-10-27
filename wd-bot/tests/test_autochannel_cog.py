@@ -13,6 +13,7 @@ from wd_discord import Guild, Permissions, VoiceState, bind
 from wd_discord.gateway import EventName, parse_dispatch
 from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 from wd_discord.resources.channel import Channel as ChannelModel
+from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, member_json, message_json, user_json, voice_state_json
 
 from winter_dragon.cogs.autochannel import (
@@ -122,8 +123,8 @@ async def test_the_guild_limit_stops_new_channels(engine: Engine, client: Record
 async def test_leaving_an_empty_channel_deletes_it(engine: Engine, client: RecordingClient) -> None:
     seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
     cog = _cog(engine, client)
-    cog.voice.move(GUILD_ID, MEMBER_ID, 60)
-    cog.voice.move(GUILD_ID, 4, 60)
+    cog.voice.move(Snowflake(GUILD_ID), Snowflake(MEMBER_ID), Snowflake(60))
+    cog.voice.move(Snowflake(GUILD_ID), Snowflake(4), Snowflake(60))
 
     await cog.on_voice_state_update(_state(client, None))
     assert client.requests_to("DELETE", "/channels/60") == []  # someone is still in it
@@ -148,7 +149,8 @@ async def test_guild_create_cleans_up_channels_emptied_while_offline(engine: Eng
     cog = _cog(engine, client)
     await cog.on_guild_create(guild)
 
-    assert (cog.voice.occupied(GUILD_ID, 61), cog.voice.occupied(GUILD_ID, 60)) == (True, False)
+    guild_id = Snowflake(GUILD_ID)
+    assert (cog.voice.occupied(guild_id, Snowflake(61)), cog.voice.occupied(guild_id, Snowflake(60))) == (True, False)
     assert [sent.path for sent in client.sent if sent.method == "DELETE"] == ["/channels/60"]
     assert [channel.id for channel in _channels(engine)] == [61]
 
@@ -213,7 +215,7 @@ async def test_an_empty_channel_that_cant_be_deleted_is_kept_to_retry(engine: En
     seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
     client.reply("DELETE", "/channels/60", {"code": 50001, "message": "Missing Access"}, status=403)
     cog = _cog(engine, client)
-    cog.voice.move(GUILD_ID, MEMBER_ID, 60)
+    cog.voice.move(Snowflake(GUILD_ID), Snowflake(MEMBER_ID), Snowflake(60))
 
     await cog.on_voice_state_update(_state(client, None))
 

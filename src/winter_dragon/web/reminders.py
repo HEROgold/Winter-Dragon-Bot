@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
     from sqlalchemy import Engine
+    from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
 
     from winter_dragon.web.accounts import Account
@@ -64,7 +65,7 @@ class ReminderDraft:
     repeat: Repeat = Repeat.NEVER
     every_days: str = "3"
 
-    def reminder(self, user_id: int, zone: ZoneInfo, now: datetime) -> AnyReminder:
+    def reminder(self, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder:
         """Return the reminder this draft describes for the user ``user_id``, read in ``zone`` and checked against ``now``.
 
         Raises:
@@ -84,8 +85,8 @@ class ReminderDraft:
             raise InvalidReminderError(msg)
         interval = self._interval()
         if interval is None:
-            return Reminder(content=content, user_id=user_id, timestamp=due)
-        return TimedReminder(content=content, user_id=user_id, timestamp=due, repeat_every=interval)
+            return Reminder(content=content, user_id=int(user_id), timestamp=due)
+        return TimedReminder(content=content, user_id=int(user_id), timestamp=due, repeat_every=interval)
 
     def _due(self, zone: ZoneInfo) -> datetime:
         try:
@@ -146,7 +147,7 @@ class ReminderDay:
     stops: tuple[ReminderStop, ...]
 
 
-def reminder_days(bind: Engine, user_id: int, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]:
+def reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]:
     """Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first."""
     with Session(bind) as session:
         stops = [ReminderStop(reminder, zone) for reminder in owned_reminders(session, user_id)]
@@ -236,7 +237,7 @@ def remove_reminder(
     """Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be."""
     with Session(bind) as session:
         found = find_by_key(session, REMINDER_TABLES, key)
-        if found is not None and found.user_id == account.id:
+        if found is not None and found.user_id == int(account.id):
             soft_delete(session, found)
             session.commit()
     return after_post(request, router.prefix, lambda: _page(request, account, bind, fragment="reminders/_list.html"))

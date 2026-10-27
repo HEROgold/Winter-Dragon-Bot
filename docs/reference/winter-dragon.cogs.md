@@ -13,10 +13,10 @@ Public names only — open the file when you need a body. Index: [API reference]
 The /autoreassign command group: a member who leaves and rejoins a guild gets their roles back.
 
 - module names: REASSIGN_REASON, AUTO_REASSIGN_TABLES
-- `is_enabled(session: Session, guild_id: int) -> bool` — Whether the guild ``guild_id`` gives rejoining members their roles back.
-- `guild_setting(session: Session, guild_id: int) -> AutoReassignGuild | None` — Return the alive row turning giving roles back on in the guild ``guild_id``, if any.
-- `remembered_roles(session: Session, guild_id: int, user_id: int | None=None) -> Generator[RememberedRole]` — Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one.
-- `forget(session: Session, guild_id: int, user_id: int | None=None) -> list[RememberedRole]` — Soft-delete the roles :func:`remembered_roles` yields, and return them; the caller commits.
+- `is_enabled(session: Session, guild_id: Snowflake) -> bool` — Whether the guild ``guild_id`` gives rejoining members their roles back.
+- `guild_setting(session: Session, guild_id: Snowflake) -> AutoReassignGuild | None` — Return the alive row turning giving roles back on in the guild ``guild_id``, if any.
+- `remembered_roles(session: Session, guild_id: Snowflake, user_id: Snowflake | None=None) -> Generator[RememberedRole]` — Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one.
+- `forget(session: Session, guild_id: Snowflake, user_id: Snowflake | None=None) -> list[RememberedRole]` — Soft-delete the roles :func:`remembered_roles` yields, and return them; the caller commits.
 - `giveable(bot: PermissionSolver, role_ids: Iterable[Snowflake]) -> Generator[Snowflake]` — Yield the roles of ``role_ids`` the bot may give: still in the guild, not managed, and below its highest role.
 
 ### `class AutoReassignGuild(DiscordKeyedModel, table=True)`
@@ -46,9 +46,9 @@ The /autochannel command group: joining a guild's hub voice channel gives a memb
 - `owner_overwrite(user_id: Snowflake) -> OverwriteParams` — Return the overwrite letting the member ``user_id`` run their own channel.
 - `default_name(display_name: str) -> str` — Return the name of a member's channel when they didn't choose one.
 - `channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams` — Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
-- `hub_of(session: Session, guild_id: int) -> AutoChannelHub | None` — Return the guild ``guild_id``'s hub, if it has one.
-- `owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel | None` — Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any.
-- `settings_of(session: Session, user_id: int) -> AutoChannelSettings` — Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none.
+- `hub_of(session: Session, guild_id: Snowflake) -> AutoChannelHub | None` — Return the guild ``guild_id``'s hub, if it has one.
+- `owned_channel(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> AutoChannel | None` — Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any.
+- `settings_of(session: Session, user_id: Snowflake) -> AutoChannelSettings` — Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none.
 
 ### `class AutoChannelHub(DiscordKeyedModel, table=True)`
 A guild's hub: the voice channel that gives whoever joins it a channel of their own; ``id`` is the guild's.
@@ -68,9 +68,9 @@ How a member wants their automatic channels: its name and user limit, in every g
 ### `@dataclass class VoiceOccupancy`
 Who is in which voice channel, per guild, as far as the gateway told.
 
-- `reset(guild_id: int, states: Iterable[VoiceState]) -> None` — Forget what was known about ``guild_id``, and learn ``states`` instead.
-- `move(guild_id: int, user_id: int, channel_id: int | None) -> int | None` — Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were.
-- `occupied(guild_id: int, channel_id: int) -> bool` — Whether anyone is in the voice channel ``channel_id``.
+- `reset(guild_id: Snowflake, states: Iterable[VoiceState]) -> None` — Forget what was known about ``guild_id``, and learn ``states`` instead.
+- `move(guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None` — Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were.
+- `occupied(guild_id: Snowflake, channel_id: Snowflake) -> bool` — Whether anyone is in the voice channel ``channel_id``.
 
 ### `class AutoChannels(GroupCog, name='autochannel', description='Voice channels of your own, made by joining the hub channel', contexts=[InteractionContextType.GUILD])`
 Gives a member who joins the hub their own voice channel, and deletes it once it's empty.
@@ -114,7 +114,7 @@ Moderation helpers for channels: removing a category with its channels, and lock
 ## `winter_dragon.cogs.fuel` — `src/winter_dragon/cogs/fuel.py`
 The /fuel command group: log refuels, and graph fuel efficiency over time.
 
-- `member_units(session: Session, user_id: int) -> FuelUnits` — Return the units ``user_id`` picked, or km/L when they never did.
+- `member_units(session: Session, user_id: Snowflake) -> FuelUnits` — Return the units ``user_id`` picked, or km/L when they never did.
 - `parse_refuel_date(value: str) -> datetime | None` — Return midnight UTC of the ``YYYY-MM-DD`` day in ``value``, or ``None`` when it isn't one.
 - `graphable(refuels: Sequence[CarFuels], units: FuelUnits=FuelUnits.KM_PER_L) -> list[tuple[datetime, float]]` — Return the ``(date, efficiency in units)`` of each of ``refuels`` that added fuel, oldest first.
 - `render_efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits=FuelUnits.KM_PER_L) -> bytes` — Return a PNG line graph of the efficiency of ``refuels`` over time, oldest first; refuels without fuel are left out.
@@ -206,9 +206,9 @@ The rules of hangman: starting a game, and what a guess does to it.
 
 - module names: WORDS_FILE
 - `load_words() -> list[str]` — Return the words of the bundled list.
-- `start_game(session: Session, *, guild_id: int, channel_id: int, rng: Random, words: list[str] | None=None) -> HangmanGame` — Store a new game in the channel with a word drawn from ``words`` (default: the bundled list).
+- `start_game(session: Session, *, guild_id: Snowflake, channel_id: Snowflake, rng: Random, words: list[str] | None=None) -> HangmanGame` — Store a new game in the channel with a word drawn from ``words`` (default: the bundled list).
 - `parse_guess(text: str) -> str` — Return ``text`` as a guess: a single letter or a whole word, lowercase; refuse anything else.
-- `guess(session: Session, game: HangmanGame, user_id: int, text: str) -> Guess` — Apply ``text`` (one letter or the whole word) from ``user_id`` to ``game``; the caller commits.
+- `guess(session: Session, game: HangmanGame, user_id: Snowflake, text: str) -> Guess` — Apply ``text`` (one letter or the whole word) from ``user_id`` to ``game``; the caller commits.
 - `participants_of(session: Session, game: HangmanGame) -> list[int]` — Return the IDs of the members who took part in ``game``, in the order they joined.
 
 ### `class Guess(StrEnum)`
@@ -294,9 +294,9 @@ Plays the Incremental game: one save per member, whatever guild they are in.
 ## `winter_dragon.cogs.incremental.game` — `src/winter_dragon/cogs/incremental/game.py`
 The Incremental game's rules, with no Discord in it, so the Discord cog and the dashboard play the same game.
 
-- `find_save(session: Session, member_id: int, *, now: datetime | None=None) -> SaveView | None` — Return the member's save as of ``now``, or ``None`` when they have none; unlike :func:`open_save` it creates nothing.
-- `open_save(session: Session, member_id: int, *, now: datetime | None=None) -> SaveView` — Return the member's save as of ``now`` (default: the current time), creating it on first use.
-- `buy(session: Session, member_id: int, generator_key: str, *, now: datetime | None=None) -> SaveView` — Buy one generator for the member and return the save afterwards.
+- `find_save(session: Session, member_id: Snowflake, *, now: datetime | None=None) -> SaveView | None` — Return the member's save as of ``now``, or ``None`` when they have none; unlike :func:`open_save` it creates nothing.
+- `open_save(session: Session, member_id: Snowflake, *, now: datetime | None=None) -> SaveView` — Return the member's save as of ``now`` (default: the current time), creating it on first use.
+- `buy(session: Session, member_id: Snowflake, generator_key: str, *, now: datetime | None=None) -> SaveView` — Buy one generator for the member and return the save afterwards.
 
 ### `@dataclass class Holding`
 How much of a currency a save holds right now, and how fast it grows.
@@ -311,7 +311,7 @@ A generator a save can buy: how many it owns, what the next one costs, and wheth
 ### `@dataclass class SaveView`
 A save at one moment: what it holds, and what it can buy.
 
-- fields: member_id: int, as_of: datetime, holdings: tuple[Holding, ...], offers: tuple[Offer, ...]
+- fields: member_id: Snowflake, as_of: datetime, holdings: tuple[Holding, ...], offers: tuple[Offer, ...]
 
 ## `winter_dragon.cogs.incremental.models` — `src/winter_dragon/cogs/incremental/models.py`
 Database tables of the Incremental game. A save is one member's, whatever guild they play in.
@@ -352,7 +352,7 @@ Settings for /incremental, in its ``cogs.ini`` section.
 The /invite command group: invite the bot to a guild, or join the support guild.
 
 - module names: NO_SUPPORT_INVITE
-- `async invite_channel(client: Client, guild_id: int) -> BaseChannel | NetworkError | None` — Return the channel to invite people to in the guild ``guild_id``: its system channel, else its first text channel.
+- `async invite_channel(client: Client, guild_id: Snowflake) -> BaseChannel | NetworkError | None` — Return the channel to invite people to in the guild ``guild_id``: its system channel, else its first text channel.
 
 ### `class InviteSettings`
 Settings for /invite, in its ``cogs.ini`` section.
@@ -378,8 +378,8 @@ Logs every READY/MESSAGE_CREATE/GUILD_CREATE it's dispatched, at DEBUG level.
 ## `winter_dragon.cogs.percentage` — `src/winter_dragon/cogs/percentage.py`
 A cog with a single command: a random compatibility percentage between two users.
 
-- `record_check(session: Session, user_id: int, target_id: int, target_name: str) -> CompatibilityCheck` — Store that ``user_id`` checked ``target_id``, or refresh the earlier check of the same pair; the caller commits.
-- `calculate_percentage(user_id_a: int, user_id_b: int) -> int` — Compute a random 0-100 percentage, seeded by both user IDs (order-independent).
+- `record_check(session: Session, user_id: Snowflake, target_id: Snowflake, target_name: str) -> CompatibilityCheck` — Store that ``user_id`` checked ``target_id``, or refresh the earlier check of the same pair; the caller commits.
+- `calculate_percentage(user_id_a: Snowflake, user_id_b: Snowflake) -> int` — Compute a random 0-100 percentage, seeded by both user IDs (order-independent).
 - `build_love_embed(target: User, percent: int) -> Embed` — Build the "Love Meter" embed for ``target`` with the given compatibility ``percent``.
 
 ### `class PercentageSettings`
@@ -406,9 +406,9 @@ Privacy: soft-deleted records are purged for good once they've been deleted for 
 - `command_path(interaction: CommandInteraction) -> str` — Return the full name of the command ``interaction`` ran, with its group and subcommand: ``reminder add``.
 - `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
 - `stored_models(bind: Engine | Connection) -> list[type[LifecycleModel]]` — Return every lifecycle model whose table exists in ``bind``, children first.
-- `hide_owned(session: Session, models: Iterable[type[LifecycleModel]], now: datetime, *, member: int | None=None, guild: int | None=None) -> None` — Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``.
-- `hide_member_data(bind: Engine | Connection, member_id: int, now: datetime) -> bool` — Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
-- `deletion_steps(bind: Engine | Connection, member_id: int) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
+- `hide_owned(session: Session, models: Iterable[type[LifecycleModel]], now: datetime, *, member: Snowflake | None=None, guild: Snowflake | None=None) -> None` — Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``.
+- `hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> bool` — Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
+- `deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 
 ### `class DepartedGuild(DiscordKeyedModel, table=True)`
 A guild that removed the bot, whose data is hidden until it's back or purged; ``id`` is the guild's.
@@ -435,7 +435,7 @@ How often a member ran a command in a guild on one UTC day; the member owns it, 
 ### `@dataclass class UsageCount`
 How often a member ran ``command`` in the guild ``guild_id`` (``None`` for a DM) on ``day``.
 
-- fields: command: str, guild_id: int | None, day: date, count: int
+- fields: command: str, guild_id: Snowflake | None, day: date, count: int
 
 ### `class Privacy(Cog)`
 Purges soft-deleted records daily, and hides the data of departed guilds and of members who asked.
@@ -444,10 +444,10 @@ Purges soft-deleted records daily, and hides the data of departed guilds and of 
 - `@Cog.periodic async purge_daily() -> None` — Purge what's due now; the bot repeats it every :data:`PURGE_INTERVAL` while the cog is loaded.
 - `@Cog.listener async on_guild_delete(event: GuildDelete) -> None` — Hide the data of a guild that removed the bot; a guild that only went offline keeps it.
 - `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Bring back the data a guild had when it removed the bot, if it's back within :data:`RETENTION`.
-- `async request_deletion(member_id: int, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later.
-- `deletion_steps(member_id: int) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
+- `async request_deletion(member_id: Snowflake, now: datetime) -> None` — Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later.
+- `deletion_steps(member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 - `@Cog.listener async on_interaction(interaction: AnyInteraction) -> None` — Count a run of an application command; autocomplete and component interactions don't count.
-- `usage(member_id: int) -> Generator[UsageCount]` — Yield the member ``member_id``'s command usage counts, day by day.
+- `usage(member_id: Snowflake) -> Generator[UsageCount]` — Yield the member ``member_id``'s command usage counts, day by day.
 - `async purge(now: datetime) -> None` — Hard-delete every lifecycle row soft-deleted more than :data:`RETENTION` before ``now``, children first.
 
 ## `winter_dragon.cogs.reminder` — `src/winter_dragon/cogs/reminder.py`
@@ -458,7 +458,7 @@ The /reminder command group: one-off and repeating reminders, sent as DMs by a b
 - `delay_from(**amounts: int) -> timedelta | None` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
 - `next_occurrence(due: datetime, repeat_every: timedelta, now: datetime) -> datetime` — Return the first time after ``now`` that a reminder due at ``due`` and repeating every ``repeat_every`` is due.
 - `reminder_message(content: str) -> str` — Return the DM reminding someone of ``content``.
-- `owned_reminders(session: Session, user_id: int) -> Generator[AnyReminder]` — Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due.
+- `owned_reminders(session: Session, user_id: Snowflake) -> Generator[AnyReminder]` — Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due.
 - `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
 - `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
 
@@ -499,10 +499,10 @@ The /stats command group: a guild's member counts, shown on demand and as the na
 - `async guild_counts(guild: BaseGuild) -> GuildCounts | NetworkError` — Read ``guild``'s member, bot and online counts.
 - `channel_name(kind: StatKind, counts: GuildCounts, peak: int) -> str` — Return the name of the stats channel showing ``kind``.
 - `plan_renames(stats: Iterable[StatChannel], names: Mapping[int, str | None], counts: GuildCounts, peak: int) -> RenamePlan` — Plan updating ``stats`` to ``counts`` and ``peak``, given each existing channel's name by ID.
-- `category_params(guild_id: int) -> GuildChannelParams` — Return the stats category: listed first, visible to everyone, and joined by nobody.
+- `category_params(guild_id: Snowflake) -> GuildChannelParams` — Return the stats category: listed first, visible to everyone, and joined by nobody.
 - `stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None) -> Embed` — Return the embed /stats show answers with.
-- `guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]` — Return the stats channels recorded for the guild ``guild_id``, category included.
-- `stats_guild_ids(session: Session) -> Generator[int]` — Yield every guild with stats channels.
+- `guild_stat_channels(session: Session, guild_id: Snowflake) -> list[StatChannel]` — Return the stats channels recorded for the guild ``guild_id``, category included.
+- `stats_guild_ids(session: Session) -> Generator[Snowflake]` — Yield every guild with stats channels.
 
 ### `class StatsSettings`
 Settings for the stats channels, in their ``cogs.ini`` section.
@@ -542,8 +542,8 @@ Shows a guild's member counts, and keeps a locked category of voice channels nam
 - `async load() -> None` — Create the stats tables if missing; the bot then starts :meth:`rename_channels`.
 - `@Cog.periodic async rename_channels() -> None` — Update every guild's stats channels; the bot repeats it every :attr:`StatsSettings.update_interval` seconds.
 - `async update_all() -> None` — Update the stats channels of every guild that has them.
-- `async update_guild(guild_id: int) -> None` — Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones.
-- `async create_channels(client: Client, guild_id: int, *, reason: str) -> NetworkError | None` — Create ``guild_id``'s locked stats category and its channels, named after the current counts.
+- `async update_guild(guild_id: Snowflake) -> None` — Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones.
+- `async create_channels(client: Client, guild_id: Snowflake, *, reason: str) -> NetworkError | None` — Create ``guild_id``'s locked stats category and its channels, named after the current counts.
 - `async remove_channels(client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool` — Delete the channels of ``stats``, category last, soft-deleting each one that's gone; whether all of them are.
 - `@Cog.command async show(interaction: GuildCommandInteraction) -> None` — Answer with an embed of the guild's member counts.
 - `@Cog.command async add(interaction: GuildCommandInteraction) -> None` — Create the stats channels, unless the guild has them already.
@@ -621,7 +621,7 @@ Embeds and buttons that show Steam sales: the pages of /steam show and the sale 
 - `format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str` — Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps.
 - `page_count(total: int) -> int` — Return how many /steam show pages ``total`` sales take; at least one.
 - `build_page(sales: Sequence[SteamSale], properties: Mapping[int, set[SaleTypes]], *, page: int, color: int) -> Embed` — Build page ``page`` (0-based, clamped to the valid range) of the /steam show listing of ``sales``.
-- `page_buttons(handler: ComponentHandler, *, owner_id: int, percent: int, page: int, pages: int) -> list[ActionRow]` — Build the previous / page counter / next buttons under page ``page`` of ``pages``.
+- `page_buttons(handler: ComponentHandler, *, owner_id: Snowflake, percent: int, page: int, pages: int) -> list[ActionRow]` — Build the previous / page counter / next buttons under page ``page`` of ``pages``.
 - `build_notification(sales: Sequence[SteamSale], properties: Mapping[int, set[SaleTypes]], *, color: int) -> Embed` — Build the DM embed announcing ``sales``, dropping trailing sales that don't fit Discord's embed limits.
 
 ## `winter_dragon.cogs.steam.scrapers` — `src/winter_dragon/cogs/steam/scrapers.py`
@@ -674,7 +674,7 @@ Reads and writes Steam sales through one database session.
 - `due_rechecks(*, now: datetime, delay: timedelta) -> Sequence[SteamSale]` — Return the sales whose announced end was at least ``delay`` ago.
 - `next_recheck(*, delay: timedelta) -> datetime | None` — Return when the next sale is due for a re-check, if any sale has a known end.
 - `new_since(moment: datetime, percent: int) -> list[SteamSale]` — Return the sales of at least ``percent`` discovered after ``moment``, newest first.
-- `subscriber(user_id: int) -> SteamUsers | None` — Return the subscription of ``user_id``, if subscribed.
+- `subscriber(user_id: Snowflake) -> SteamUsers | None` — Return the subscription of ``user_id``, if subscribed.
 - `subscribers() -> Sequence[SteamUsers]` — Return every subscribed user.
 - `lowest_threshold() -> int | None` — Return the lowest ``sale_threshold`` among subscribers, or ``None`` without subscribers.
 
@@ -914,27 +914,27 @@ One player's answer to a vote; voting again changes it.
 ## `winter_dragon.cogs.tournament.service` — `src/winter_dragon/cogs/tournament/service.py`
 What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
-- `active_tournament(session: Session, guild_id: int) -> Tournament | None` — Return the guild's tournament that isn't over, if it has one.
+- `active_tournament(session: Session, guild_id: Snowflake) -> Tournament | None` — Return the guild's tournament that isn't over, if it has one.
 - `players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]` — Return everyone signed up for the tournament, in sign-up order.
-- `player_of(session: Session, tournament_id: int, user_id: int) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
+- `player_of(session: Session, tournament_id: int, user_id: Snowflake) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
 - `teams_of(session: Session, tournament_id: int) -> list[TournamentTeam]` — Return the tournament's teams, in the order they were formed.
 - `roster(session: Session, team_id: int) -> list[int]` — Return the user IDs of the team's players.
 - `matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
-- `sign_up(session: Session, tournament: Tournament, user_id: int) -> None` — Sign ``user_id`` up for a solo tournament.
-- `open_signups_of(session: Session, user_id: int) -> Generator[Tournament]` — Yield the tournaments ``user_id`` is signed up for that haven't started.
-- `withdraw(session: Session, tournament: Tournament, user_id: int) -> None` — Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team.
-- `create_team(session: Session, tournament: Tournament, captain_id: int, name: str) -> None` — Register the team ``name`` with ``captain_id`` as its captain and first player.
-- `add_to_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None` — Add ``user_id`` to the team ``captain_id`` captains.
-- `remove_from_team(session: Session, tournament: Tournament, captain_id: int, user_id: int) -> None` — Take ``user_id`` off the team ``captain_id`` captains.
+- `sign_up(session: Session, tournament: Tournament, user_id: Snowflake) -> None` — Sign ``user_id`` up for a solo tournament.
+- `open_signups_of(session: Session, user_id: Snowflake) -> Generator[Tournament]` — Yield the tournaments ``user_id`` is signed up for that haven't started.
+- `withdraw(session: Session, tournament: Tournament, user_id: Snowflake) -> None` — Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team.
+- `create_team(session: Session, tournament: Tournament, captain_id: Snowflake, name: str) -> None` — Register the team ``name`` with ``captain_id`` as its captain and first player.
+- `add_to_team(session: Session, tournament: Tournament, captain_id: Snowflake, user_id: Snowflake) -> None` — Add ``user_id`` to the team ``captain_id`` captains.
+- `remove_from_team(session: Session, tournament: Tournament, captain_id: Snowflake, user_id: Snowflake) -> None` — Take ``user_id`` off the team ``captain_id`` captains.
 - `start(session: Session, tournament: Tournament, rng: Random) -> None` — Form the teams of a solo tournament, then lay out the bracket and give the byes their wins.
 - `advance(session: Session, match: TournamentMatch) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
 - `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
-- `team_in_match(session: Session, match: TournamentMatch, user_id: int) -> TournamentTeam | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
-- `draft(session: Session, match: TournamentMatch, captain_id: int, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
+- `team_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentTeam | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
+- `draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
 - `drafts_of(session: Session, match_id: int) -> list[DraftChoice]` — Return the bans and picks made in the match, in the order they were made.
 - `open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote` — Open a vote on ``question`` among ``options`` for the players of ``match``.
-- `cast(session: Session, vote: MatchVote, user_id: int, choice: int) -> None` — Record ``user_id``'s answer ``choice`` to ``vote``, replacing their earlier one.
+- `cast(session: Session, vote: MatchVote, user_id: Snowflake, choice: int) -> None` — Record ``user_id``'s answer ``choice`` to ``vote``, replacing their earlier one.
 - `choices_of(session: Session, vote_id: int) -> list[int]` — Return every answer given to the vote.
 
 ## `winter_dragon.cogs.uptime` — `src/winter_dragon/cogs/uptime.py`

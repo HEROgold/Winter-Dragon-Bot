@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     lazy from datetime import datetime, timedelta
 
     lazy from sqlmodel import Session
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale
 
@@ -148,9 +149,9 @@ class SteamSaleStore:
         query = alive(SteamSale).where(SteamSale.sale_percent >= percent, col(SteamSale.discovered_at) > moment)
         return list(self.session.exec(query.order_by(col(SteamSale.discovered_at).desc())))
 
-    def subscriber(self, user_id: int) -> SteamUsers | None:
+    def subscriber(self, user_id: Snowflake) -> SteamUsers | None:
         """Return the subscription of ``user_id``, if subscribed."""
-        return alive_by_id(self.session, SteamUsers, user_id)
+        return alive_by_id(self.session, SteamUsers, int(user_id))
 
     def subscribers(self) -> Sequence[SteamUsers]:
         """Return every subscribed user."""

@@ -35,6 +35,7 @@ lazy from typing import Self, cast
 
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 
+from wd_discord.authenticate import URL, Token
 from wd_discord.components import ComponentType
 from wd_discord.embed import Embed
 from wd_discord.gateway.presence import Presence
@@ -86,7 +87,7 @@ class Ready(DiscordModel):
     guilds: list[UnavailableGuild] = Field(default_factory=list[UnavailableGuild])
     """The bot's guilds; each one arrives in full later as a GUILD_CREATE."""
     session_id: str
-    resume_gateway_url: str
+    resume_gateway_url: URL
     shard: tuple[int, int] | None = None
     application_id: str | None = None
 
@@ -476,8 +477,8 @@ class Message(DiscordModel):
     guild_id: Snowflake | None = None
     author: User
     content: str
-    timestamp: str
-    edited_timestamp: str | None = None
+    timestamp: datetime
+    edited_timestamp: datetime | None = None
     tts: bool
     mention_everyone: bool
     mentions: list[MentionedUser] = Field(default_factory=list)
@@ -508,7 +509,8 @@ class Interaction(DiscordModel):
     """The invoking member, when invoked in a guild."""
     user: User | None = None
     """The invoking user, when invoked in a DM."""
-    token: str
+    token: Token
+    """The continuation token for responding to this interaction; valid for 15 minutes."""
     version: int
     app_permissions: PermissionsField | None = None
     """Permissions the app has where the interaction was sent, including overwrites."""

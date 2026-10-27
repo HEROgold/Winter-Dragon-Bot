@@ -168,6 +168,30 @@ def test_signing_in_opens_your_data_page_and_signing_out_ends_it(member: TestCli
     assert member.get("/me", follow_redirects=False).status_code == 303
 
 
+def test_the_signed_in_account_keeps_its_discord_id_as_a_snowflake_through_the_session() -> None:
+    from winter_dragon.web.accounts import Account
+
+    account = Account.from_user(USER)
+    stored = account.model_dump(mode="json")
+
+    assert account.id == Snowflake(MEMBER_ID)
+    assert Account.model_validate(stored).id == Snowflake(MEMBER_ID)
+
+
+def test_the_oauth_access_token_is_a_token_hidden_from_repr() -> None:
+    from wd_discord import Token
+
+    from winter_dragon.web.discord_oauth import AccessToken
+
+    granted = AccessToken.model_validate(
+        {"access_token": "secret-access", "token_type": "Bearer", "expires_in": 604800, "scope": "identify", "refresh_token": "secret-refresh"},
+    )
+
+    assert isinstance(granted.access_token, Token)
+    assert isinstance(granted.refresh_token, Token)
+    assert "secret" not in repr(granted)
+
+
 # --- Your data --------------------------------------------------------------------------------------------------------
 
 

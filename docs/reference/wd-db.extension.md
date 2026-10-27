@@ -63,7 +63,7 @@ The lifecycle every bot table follows: timestamps, soft delete, create-or-restor
 - `soft_delete(session: Session, row: LifecycleModel, *, at: datetime | None=None) -> None` — Soft-delete ``row``: stamp its ``deleted_at`` with ``at`` (default now), hiding it from :func:`alive`. Caller commits.
 - `create_or_restore[M: LifecycleModel](session: Session, row: M) -> M` — Insert ``row``, or restore the soft-deleted row with the same ``id`` or natural key; return the stored row.
 - `upsert[M: LifecycleModel](session: Session, row: M, update: Callable[[M], object] | None=None) -> M` — Insert ``row``, or overwrite the stored row (alive or soft-deleted) with the same ``id`` or natural key; return it.
-- `owned_by[M: LifecycleModel](model: type[M], *, member: int | None=None, guild: int | None=None, include_deleted: bool=False) -> SelectOfScalar[M]` — Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.
+- `owned_by[M: LifecycleModel](model: type[M], *, member: SupportsInt | None=None, guild: SupportsInt | None=None, include_deleted: bool=False) -> SelectOfScalar[M]` — Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.
 - `lifecycle_models() -> Generator[type[LifecycleModel]]` — Yield every lifecycle model class that is a table.
 - `ensure_lifecycle_columns(bind: Engine | Connection, *models: type[LifecycleModel]) -> None` — Add the lifecycle columns missing from ``models``' existing tables, as an older bot created them.
 

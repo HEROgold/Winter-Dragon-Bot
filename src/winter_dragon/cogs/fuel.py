@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Sequence
 
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
+    lazy from wd_discord.snowflake import Snowflake
 
 
 class FuelSettings:
@@ -65,9 +66,9 @@ class FuelPreferences(DiscordKeyedModel, table=True):
     """The units fuel efficiency is shown in."""
 
 
-def member_units(session: Session, user_id: int) -> FuelUnits:
+def member_units(session: Session, user_id: Snowflake) -> FuelUnits:
     """Return the units ``user_id`` picked, or km/L when they never did."""
-    preferences = session.get(FuelPreferences, user_id)
+    preferences = session.get(FuelPreferences, int(user_id))
     return FuelUnits.KM_PER_L if preferences is None or preferences.deleted_at is not None else preferences.units
 
 
@@ -195,7 +196,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
                 ),
             )
             session.commit()
-            units = member_units(session, int(user.id))
+            units = member_units(session, user.id)
         logged = (
             f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {units.convert(distance / amount):.2f} {units}.\n"
             f"Use {self.mention(self.efficiency)} to see how that changes over time."
@@ -209,8 +210,8 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         if user is None:
             return
         with Session(self.bind) as session:
-            refuels = session.exec(owned_by(CarFuels, member=int(user.id))).all()
-            units = member_units(session, int(user.id))
+            refuels = session.exec(owned_by(CarFuels, member=user.id)).all()
+            units = member_units(session, user.id)
         if not refuels:
             msg = f"You haven't logged a refuel yet. Use {self.mention(self.add)} first."
             raise Refused(msg)

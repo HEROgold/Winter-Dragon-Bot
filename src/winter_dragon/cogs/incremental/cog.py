@@ -4,6 +4,7 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.cogs.incremental import game
@@ -35,7 +36,7 @@ class Incremental(Cog):
         if user is None:
             return
         with Session(self.bind) as session:
-            view = game.open_save(session, int(user.id))
+            view = game.open_save(session, user.id)
         await interaction.respond(embeds=[build_embed(view)], components=self._buttons(view))
 
     @Cog.component("incremental-refresh")
@@ -43,7 +44,7 @@ class Incremental(Cog):
         """Bring the save up to date in the same message; only its owner may."""
         self._check_owner(interaction, owner_id)
         with Session(self.bind) as session:
-            view = game.open_save(session, int(owner_id))
+            view = game.open_save(session, Snowflake.coerce(owner_id))
         await interaction.update(embeds=[build_embed(view)], components=self._buttons(view))
 
     @Cog.component("incremental-buy")
@@ -51,7 +52,7 @@ class Incremental(Cog):
         """Buy one ``generator`` and update the same message; only the save's owner may, and they must afford it."""
         self._check_owner(interaction, owner_id)
         with Session(self.bind) as session:
-            view = game.buy(session, int(owner_id), generator)
+            view = game.buy(session, Snowflake.coerce(owner_id), generator)
         await interaction.update(embeds=[build_embed(view)], components=self._buttons(view))
 
     def _buttons(self, view: SaveView) -> list[ActionRow]:

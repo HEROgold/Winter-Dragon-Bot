@@ -167,10 +167,10 @@ def plan_renames(stats: Iterable[StatChannel], names: Mapping[int, str | None], 
     return RenamePlan(renames, gone)
 
 
-def category_params(guild_id: int) -> GuildChannelParams:
+def category_params(guild_id: Snowflake) -> GuildChannelParams:
     """Return the stats category: listed first, visible to everyone, and joined by nobody."""
     everyone = OverwriteParams(
-        id=Snowflake(guild_id),  # the @everyone role shares the guild's ID
+        id=guild_id,  # the @everyone role shares the guild's ID
         type=OverwriteType.ROLE,
         allow=Permissions.VIEW_CHANNEL,
         deny=Permissions.CONNECT,
@@ -197,14 +197,15 @@ def stats_embed(name: str, counts: GuildCounts, afk_channel: BaseChannel | None)
     return Embed(title=f"{name} Stats", description=f"Information about {name}", fields=fields)
 
 
-def guild_stat_channels(session: Session, guild_id: int) -> list[StatChannel]:
+def guild_stat_channels(session: Session, guild_id: Snowflake) -> list[StatChannel]:
     """Return the stats channels recorded for the guild ``guild_id``, category included."""
     return list(session.exec(owned_by(StatChannel, guild=guild_id)))
 
 
-def stats_guild_ids(session: Session) -> Generator[int]:
+def stats_guild_ids(session: Session) -> Generator[Snowflake]:
     """Yield every guild with stats channels."""
-    yield from session.exec(select(StatChannel.guild_id).where(col(StatChannel.deleted_at).is_(None)).distinct())
+    stored = select(StatChannel.guild_id).where(col(StatChannel.deleted_at).is_(None)).distinct()
+    yield from (Snowflake(guild_id) for guild_id in session.exec(stored))
 
 
 class Stats(GroupCog, name="stats", description="Show this server's member counts", contexts=[InteractionContextType.GUILD]):
@@ -227,7 +228,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         for guild_id in guild_ids:
             await self.update_guild(guild_id)
 
-    async def update_guild(self, guild_id: int) -> None:
+    async def update_guild(self, guild_id: Snowflake) -> None:
         """Rename ``guild_id``'s stats channels to the current counts, record a new peak, and forget deleted ones."""
         guild = self.bot.client.guilds.partial(guild_id)
         counts = await guild_counts(guild)
@@ -248,15 +249,15 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
                 self.logger.warning(t"Could not rename stats channel {channel_id}: {renamed}")
 
     @staticmethod
-    def _raise_peak(session: Session, guild_id: int, online: int) -> int:
+    def _raise_peak(session: Session, guild_id: Snowflake, online: int) -> int:
         """Record ``online`` as ``guild_id``'s peak if it's higher than the one recorded; return the peak."""
 
         def raise_to_online(record: PeakOnline) -> None:
             record.peak = max(record.peak, online)
 
-        return upsert(session, PeakOnline(id=guild_id, peak=online), raise_to_online).peak
+        return upsert(session, PeakOnline(id=int(guild_id), peak=online), raise_to_online).peak
 
-    async def create_channels(self, client: Client, guild_id: int, *, reason: str) -> NetworkError | None:
+    async def create_channels(self, client: Client, guild_id: Snowflake, *, reason: str) -> NetworkError | None:
         """Create ``guild_id``'s locked stats category and its channels, named after the current counts."""
         guild = client.guilds.partial(guild_id)
         counts = await guild_counts(guild)
@@ -280,17 +281,17 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
         reason: str,
     ) -> tuple[list[StatChannel], NetworkError | None]:
         """Create the stats category and a channel per entry of ``names``; return what was made and what stopped it."""
-        guild_id = int(guild.id)
+        guild_id = guild.id
         category = await guild.create_channel(category_params(guild_id), reason=reason)
         if is_network_error(category):
             return [], category
-        created = [StatChannel(id=int(category.id), guild_id=guild_id, kind=StatKind.CATEGORY)]
+        created = [StatChannel(id=int(category.id), guild_id=int(guild_id), kind=StatKind.CATEGORY)]
         for kind, name in names.items():
             params = GuildChannelParams(name=name, type=ChannelType.GUILD_VOICE, parent_id=category.id)
             channel = await guild.create_channel(params, reason=reason)
             if is_network_error(channel):
                 return created, channel
-            created.append(StatChannel(id=int(channel.id), guild_id=guild_id, kind=kind))
+            created.append(StatChannel(id=int(channel.id), guild_id=int(guild_id), kind=kind))
         return created, None
 
     async def remove_channels(self, client: Client, stats: Iterable[StatChannel], *, reason: str) -> bool:
@@ -330,7 +331,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
     )
     async def add(self, interaction: GuildCommandInteraction) -> None:
         """Create the stats channels, unless the guild has them already."""
-        guild_id = int(interaction.guild_id)
+        guild_id = interaction.guild_id
         with Session(self.bind) as session:
             exists = bool(guild_stat_channels(session, guild_id))
         if exists:
@@ -351,7 +352,7 @@ class Stats(GroupCog, name="stats", description="Show this server's member count
     async def remove(self, interaction: GuildCommandInteraction) -> None:
         """Delete the guild's stats channels."""
         with Session(self.bind) as session:
-            stats = guild_stat_channels(session, int(interaction.guild_id))
+            stats = guild_stat_channels(session, interaction.guild_id)
         if not stats:
             msg = f"This server has no stats channels; {self.mention(self.add)} adds them."
             raise Refused(msg)

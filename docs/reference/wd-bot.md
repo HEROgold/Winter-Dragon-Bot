@@ -200,7 +200,7 @@ Message-component handlers: route a clicked component to the Cog method owning i
 A Cog method reached through the prefix of a ``custom_id``: what component and modal handlers share.
 
 - fields: kind: ClassVar[str]
-- `custom_id(*args: str | int) -> str` — Build a ``custom_id`` routed to this handler, carrying ``args``.
+- `custom_id(*args: str | int | Snowflake) -> str` — Build a ``custom_id`` routed to this handler, carrying ``args``.
 - `async invoke(cog: Cog, interaction: I, args: Sequence[str]) -> bool` — Call the handler through :data:`~wd_bot.guard.dispatch_guard`; return ``False`` if it raised.
 
 ### `class ComponentHandler(CustomIdHandler[ComponentInteraction])`

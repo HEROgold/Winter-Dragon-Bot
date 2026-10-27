@@ -44,7 +44,7 @@ def test_parse_dispatch_falls_back_to_raw_event_for_known_but_unmodeled_name() -
 def test_parse_dispatch_message_create() -> None:
     event = parse_dispatch(
         EventName.MESSAGE_CREATE,
-        message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="t"),
+        message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="2026-10-22T00:00:00+00:00"),
     )
     assert isinstance(event, Message)
     assert event.content == "hi"
@@ -72,7 +72,7 @@ def test_parse_dispatch_accepts_plain_str_matching_an_event_name() -> None:
     """Gateway.listen() only ever has a plain ``str`` off the socket, not an EventName member."""
     event = parse_dispatch(
         "MESSAGE_CREATE",
-        message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="t"),
+        message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="2026-10-22T00:00:00+00:00"),
     )
     assert isinstance(event, Message)
 
@@ -112,7 +112,7 @@ async def test_listen_dispatches_and_tracks_sequence() -> None:
                 "op": Opcode.DISPATCH,
                 "s": 1,
                 "t": "MESSAGE_CREATE",
-                "d": message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="t"),
+                "d": message_json(id="1", channel_id="2", author=user_json(username="bot"), content="hi", timestamp="2026-10-22T00:00:00+00:00"),
             },
             {"op": Opcode.DISPATCH, "s": 2, "t": "SOMETHING_UNMODELED", "d": {"foo": "bar"}},
         ],

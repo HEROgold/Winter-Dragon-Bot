@@ -18,6 +18,7 @@ lazy from wd_discord.responses import message_data
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
+    from datetime import datetime
     from string.templatelib import Template
 
     from wd_discord.audit import Reason
@@ -171,13 +172,13 @@ class Message(Entity[MessageModel], BaseMessage):
         return self._partial(PartialGuild, self.model.guild_id)
 
     @property
-    def timestamp(self) -> str:
-        """When the message was sent, as an ISO 8601 timestamp."""
+    def timestamp(self) -> datetime:
+        """When the message was sent."""
         return self.model.timestamp
 
     @property
-    def edited_timestamp(self) -> str | None:
-        """When the message was last edited, as an ISO 8601 timestamp; ``None`` if never."""
+    def edited_timestamp(self) -> datetime | None:
+        """When the message was last edited; ``None`` if never."""
         return self.model.edited_timestamp
 
     @property

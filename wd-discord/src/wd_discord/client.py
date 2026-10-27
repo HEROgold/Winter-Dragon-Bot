@@ -148,7 +148,7 @@ class Client(LoggerMixin):
 
     def __init__(
         self,
-        token: str,
+        token: Token,
         *,
         token_type: TokenType = TokenType.BOT,
         version: int | None = None,
@@ -159,7 +159,7 @@ class Client(LoggerMixin):
         ``version`` overrides the API version from :class:`~wd_config.discord.URLS`. ``application_id`` skips
         looking up the application's ID; see :meth:`CurrentApplication.id`.
         """
-        self.token = Token(token)
+        self.token = token
         self.token_type = token_type
         self.version = version if version is not None else URLS.version
         self.base_url = f"{URLS.base}/v{self.version}"

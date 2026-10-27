@@ -36,6 +36,7 @@ lazy from wd_db.extension.lifecycle import (
 lazy from wd_discord import CommandInteraction
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import ApplicationCommandOptionType
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.tournament.models import Tournament
@@ -118,7 +119,7 @@ class UsageCount:
 
     _: KW_ONLY
     command: str
-    guild_id: int | None
+    guild_id: Snowflake | None
     day: date
     count: int
 
@@ -162,8 +163,8 @@ def hide_owned(
     models: Iterable[type[LifecycleModel]],
     now: datetime,
     *,
-    member: int | None = None,
-    guild: int | None = None,
+    member: Snowflake | None = None,
+    guild: Snowflake | None = None,
 ) -> None:
     """Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``."""
     for model in models:
@@ -171,7 +172,7 @@ def hide_owned(
             soft_delete(session, row, at=now)
 
 
-def hide_member_data(bind: Engine | Connection, member_id: int, now: datetime) -> bool:
+def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> bool:
     """Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
 
     That's every row a member owns, also those a guild owns too, and their sign-up to each tournament that hasn't
@@ -181,11 +182,11 @@ def hide_member_data(bind: Engine | Connection, member_id: int, now: datetime) -
     """
     models = stored_models(bind)
     with Session(bind) as session:
-        request = session.get(DeletionRequest, member_id)
+        request = session.get(DeletionRequest, int(member_id))
         if request is not None and request.hidden_at is not None and request.purged_at is None:
             return False
         if request is None or request.purged_at is not None:
-            request = request or DeletionRequest(id=member_id, requested_at=now)
+            request = request or DeletionRequest(id=int(member_id), requested_at=now)
             request.requested_at, request.hidden_at, request.purged_at = now, None, None
             session.add(request)
             session.commit()
@@ -199,12 +200,12 @@ def hide_member_data(bind: Engine | Connection, member_id: int, now: datetime) -
     return True
 
 
-def deletion_steps(bind: Engine | Connection, member_id: int) -> Generator[tuple[DeletionStep, datetime]]:
+def deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]:
     """Yield the steps the member ``member_id``'s deletion request got through, with when, in order."""
     if DeletionRequest not in stored_models(bind):
         return
     with Session(bind) as session:
-        request = session.get(DeletionRequest, member_id)
+        request = session.get(DeletionRequest, int(member_id))
         if request is not None:
             yield from request.steps
 
@@ -223,9 +224,9 @@ class Privacy(Cog):
         await self.purge(utc_now())
 
     @staticmethod
-    def _departure(session: Session, guild_id: int) -> DepartedGuild | None:
+    def _departure(session: Session, guild_id: Snowflake) -> DepartedGuild | None:
         """Return the guild's departure that isn't over yet, if any."""
-        return alive_by_id(session, DepartedGuild, guild_id)
+        return alive_by_id(session, DepartedGuild, int(guild_id))
 
     # --- Departed guilds ---------------------------------------------------------------------------------------------
 
@@ -234,11 +235,11 @@ class Privacy(Cog):
         """Hide the data of a guild that removed the bot; a guild that only went offline keeps it."""
         if event.unavailable:
             return
-        guild_id, now, models = int(event.guild.id), utc_now(), stored_models(self.bind)
+        guild_id, now, models = event.guild.id, utc_now(), stored_models(self.bind)
         with Session(self.bind) as session:
             if self._departure(session, guild_id) is not None:
                 return
-            create_or_restore(session, DepartedGuild(id=guild_id, departed_at=now))
+            create_or_restore(session, DepartedGuild(id=int(guild_id), departed_at=now))
             hide_owned(session, models, now, guild=guild_id)
             session.commit()
         self.logger.info(t"Guild {guild_id} removed the bot; hid its data")
@@ -250,7 +251,7 @@ class Privacy(Cog):
         Only rows hidden at or after the departure come back; what the guild deleted before it stays deleted, and so
         do the rows of members who asked for deletion since.
         """
-        guild_id, now, models = int(guild.id), utc_now(), stored_models(self.bind)
+        guild_id, now, models = guild.id, utc_now(), stored_models(self.bind)
         with Session(self.bind) as session:
             departure = self._departure(session, guild_id)
             if departure is None:
@@ -262,7 +263,12 @@ class Privacy(Cog):
             session.commit()
 
     @staticmethod
-    def _restore_guild(session: Session, models: Iterable[type[LifecycleModel]], guild_id: int, departed_at: datetime) -> None:
+    def _restore_guild(
+        session: Session,
+        models: Iterable[type[LifecycleModel]],
+        guild_id: Snowflake,
+        departed_at: datetime,
+    ) -> None:
         """Restore the guild's rows hidden since ``departed_at``, except those of members who asked for deletion since."""
         asked_since = select(DeletionRequest.id).where(col(DeletionRequest.requested_at) >= departed_at)
         deleted_members = list(session.exec(asked_since))
@@ -280,12 +286,12 @@ class Privacy(Cog):
 
     # --- Member deletion requests ------------------------------------------------------------------------------------
 
-    async def request_deletion(self, member_id: int, now: datetime) -> None:
+    async def request_deletion(self, member_id: Snowflake, now: datetime) -> None:
         """Hide all of the member ``member_id``'s data at ``now`` (:func:`hide_member_data`); :meth:`purge` deletes it later."""
         if hide_member_data(self.bind, member_id, now):
             self.logger.info(t"Member {member_id} asked for their data to be deleted; hid it")
 
-    def deletion_steps(self, member_id: int) -> Generator[tuple[DeletionStep, datetime]]:
+    def deletion_steps(self, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]:
         """Yield the steps the member ``member_id``'s deletion request got through, with when, in order."""
         yield from deletion_steps(self.bind, member_id)
 
@@ -299,26 +305,28 @@ class Privacy(Cog):
         """
         if not isinstance(interaction, CommandInteraction) or interaction.user is None:
             return
-        user_id, command = int(interaction.user.id), command_path(interaction)
-        guild_id = None if interaction.guild is None else int(interaction.guild.id)
+        user_id, command = interaction.user.id, command_path(interaction)
+        guild_id = None if interaction.guild is None else interaction.guild.id
         try:
             self._count(user_id, command, guild_id, utc_now().date())
         except SQLAlchemyError as error:
             self.logger.warning(t"Could not count /{command} for member {user_id}: {error}")
 
-    def _count(self, user_id: int, command: str, guild_id: int | None, day: date) -> None:
+    def _count(self, user_id: Snowflake, command: str, guild_id: Snowflake | None, day: date) -> None:
         """Add one to the member's count of ``command`` in the guild on ``day``."""
         with Session(self.bind) as session:
-            first = CommandUsage(user_id=user_id, command=command, guild_id=guild_id, day=day, uses=1)
+            stored_guild = None if guild_id is None else int(guild_id)
+            first = CommandUsage(user_id=int(user_id), command=command, guild_id=stored_guild, day=day, uses=1)
             upsert(session, first, _count_once_more)
             session.commit()
 
-    def usage(self, member_id: int) -> Generator[UsageCount]:
+    def usage(self, member_id: Snowflake) -> Generator[UsageCount]:
         """Yield the member ``member_id``'s command usage counts, day by day."""
         with Session(self.bind) as session:
             counts = owned_by(CommandUsage, member=member_id).order_by(col(CommandUsage.day), col(CommandUsage.command))
             for row in session.exec(counts):
-                yield UsageCount(command=row.command, guild_id=row.guild_id, day=row.day, count=row.uses)
+                guild_id = None if row.guild_id is None else Snowflake(row.guild_id)
+                yield UsageCount(command=row.command, guild_id=guild_id, day=row.day, count=row.uses)
 
     # --- Purging -----------------------------------------------------------------------------------------------------
 

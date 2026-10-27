@@ -43,8 +43,8 @@ class Hangman(Cog):
         with Session(self.bind) as session:
             game = start_game(
                 session,
-                guild_id=int(interaction.guild_id),
-                channel_id=int(interaction.channel.id),
+                guild_id=interaction.guild_id,
+                channel_id=interaction.channel.id,
                 rng=self.rng,
             )
             session.commit()
@@ -78,7 +78,7 @@ class Hangman(Cog):
             return
         with Session(self.bind) as session:
             game = self._active(session, game_id)
-            guess(session, game, int(user.id), interaction.values.get(MODAL_INPUT, ""))
+            guess(session, game, user.id, interaction.values.get(MODAL_INPUT, ""))
             session.commit()
             session.refresh(game)
             content = game_message(game, participants_of(session, game))

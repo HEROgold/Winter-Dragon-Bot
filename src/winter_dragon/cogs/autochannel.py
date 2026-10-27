@@ -31,6 +31,7 @@ lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.limits import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT, truncate
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
@@ -41,7 +42,6 @@ if TYPE_CHECKING:
 
     lazy from wd_discord import GatewayGuild, GuildCommandInteraction, NetworkError, PartialMember, VoiceState
     lazy from wd_discord.entities import PartialGuild
-    lazy from wd_discord.snowflake import Snowflake
 
 
 OWNER_PERMISSIONS = (
@@ -95,21 +95,21 @@ AUTOCHANNEL_TABLES = (AutoChannelHub, AutoChannel, AutoChannelSettings)
 class VoiceOccupancy:
     """Who is in which voice channel, per guild, as far as the gateway told."""
 
-    _channels: defaultdict[int, dict[int, int]] = field(default_factory=lambda: defaultdict(dict))
+    _channels: defaultdict[Snowflake, dict[Snowflake, Snowflake]] = field(default_factory=lambda: defaultdict(dict))
     """Per guild, the voice channel each connected member is in."""
 
-    def reset(self, guild_id: int, states: Iterable[VoiceState]) -> None:
+    def reset(self, guild_id: Snowflake, states: Iterable[VoiceState]) -> None:
         """Forget what was known about ``guild_id``, and learn ``states`` instead."""
-        self._channels[guild_id] = {int(state.user.id): int(state.channel.id) for state in states if state.channel is not None}
+        self._channels[guild_id] = {state.user.id: state.channel.id for state in states if state.channel is not None}
 
-    def move(self, guild_id: int, user_id: int, channel_id: int | None) -> int | None:
+    def move(self, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None:
         """Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were."""
         before = self._channels[guild_id].pop(user_id, None)
         if channel_id is not None:
             self._channels[guild_id][user_id] = channel_id
         return before
 
-    def occupied(self, guild_id: int, channel_id: int) -> bool:
+    def occupied(self, guild_id: Snowflake, channel_id: Snowflake) -> bool:
         """Whether anyone is in the voice channel ``channel_id``."""
         return channel_id in self._channels[guild_id].values()
 
@@ -135,19 +135,19 @@ def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoCh
     )
 
 
-def hub_of(session: Session, guild_id: int) -> AutoChannelHub | None:
+def hub_of(session: Session, guild_id: Snowflake) -> AutoChannelHub | None:
     """Return the guild ``guild_id``'s hub, if it has one."""
-    return alive_by_id(session, AutoChannelHub, guild_id)
+    return alive_by_id(session, AutoChannelHub, int(guild_id))
 
 
-def owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel | None:
+def owned_channel(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> AutoChannel | None:
     """Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any."""
     return session.exec(owned_by(AutoChannel, member=owner_id, guild=guild_id)).first()
 
 
-def settings_of(session: Session, user_id: int) -> AutoChannelSettings:
+def settings_of(session: Session, user_id: Snowflake) -> AutoChannelSettings:
     """Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none."""
-    return alive_by_id(session, AutoChannelSettings, user_id) or AutoChannelSettings(id=user_id)
+    return alive_by_id(session, AutoChannelSettings, int(user_id)) or AutoChannelSettings(id=int(user_id))
 
 
 class AutoChannels(
@@ -172,12 +172,12 @@ class AutoChannels(
     @Cog.listener(EventName.GUILD_CREATE)
     async def on_guild_create(self, guild: GatewayGuild) -> None:
         """Learn who is in which voice channel, then delete the automatic channels that emptied while offline."""
-        guild_id = int(guild.id)
+        guild_id = guild.id
         self.voice.reset(guild_id, guild.voice_states)
         with Session(self.bind) as session:
             channels = list(session.exec(owned_by(AutoChannel, guild=guild_id)))
         for channel in channels:
-            if not self.voice.occupied(guild_id, channel.id):
+            if not self.voice.occupied(guild_id, Snowflake(channel.id)):
                 await self.delete_channel(channel)
 
     @Cog.listener(EventName.VOICE_STATE_UPDATE)
@@ -185,21 +185,21 @@ class AutoChannels(
         """Give a member joining the hub their own channel, and delete an automatic channel the member left empty."""
         if state.guild is None:
             return
-        guild_id, user_id = int(state.guild.id), int(state.user.id)
+        guild_id, user_id = state.guild.id, state.user.id
         async with self._lock:
-            after = None if state.channel is None else int(state.channel.id)
+            after = None if state.channel is None else state.channel.id
             before = self.voice.move(guild_id, user_id, after)
             with Session(self.bind) as session:
                 hub = hub_of(session, guild_id)
                 left = None if before is None or before == after else self._auto_channel(session, before)
-            if hub is not None and after == hub.channel_id and state.member is not None:
+            if hub is not None and after == Snowflake(hub.channel_id) and state.member is not None:
                 await self.give_channel(state.member, hub)
-            if left is not None and not self.voice.occupied(guild_id, left.id):
+            if left is not None and not self.voice.occupied(guild_id, Snowflake(left.id)):
                 await self.delete_channel(left)
 
     @staticmethod
-    def _auto_channel(session: Session, channel_id: int) -> AutoChannel | None:
-        return alive_by_id(session, AutoChannel, channel_id)
+    def _auto_channel(session: Session, channel_id: Snowflake) -> AutoChannel | None:
+        return alive_by_id(session, AutoChannel, int(channel_id))
 
     async def give_channel(self, member: Member | PartialMember, hub: AutoChannelHub) -> None:
         """Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
@@ -207,7 +207,7 @@ class AutoChannels(
         A member whose channel is gone (Discord no longer knows it) gets a new one; one who couldn't be moved for
         another reason (they left voice meanwhile, say) keeps theirs.
         """
-        guild_id, user_id = int(member.guild_id), int(member.id)
+        guild_id, user_id = member.guild_id, member.id
         with Session(self.bind) as session:
             existing = owned_channel(session, guild_id, user_id)
             count = len(session.exec(owned_by(AutoChannel, guild=guild_id)).all())
@@ -301,7 +301,7 @@ class AutoChannels(
         ],
     ) -> None:
         """Create the category ``category_name`` holding the hub voice channel ``hub_name``."""
-        guild_id = int(interaction.guild_id)
+        guild_id = interaction.guild_id
         with Session(self.bind) as session:
             exists = hub_of(session, guild_id) is not None
         if exists:
@@ -312,7 +312,7 @@ class AutoChannels(
             "I couldn't create the hub; do I have the Manage Channels permission?",
         )
         with Session(self.bind) as session:
-            create_or_restore(session, AutoChannelHub(id=guild_id, channel_id=int(hub.id)))
+            create_or_restore(session, AutoChannelHub(id=int(guild_id), channel_id=int(hub.id)))
             session.commit()
         await interaction.respond(
             embeds=[CreatedEmbed(description=f"All set: joining {hub.mention} gives members their own channel.")],
@@ -341,9 +341,9 @@ class AutoChannels(
         channel: Annotated[Channel, ChannelTypes(ChannelType.GUILD_VOICE)],
     ) -> None:
         """Make ``channel`` the guild's hub, replacing the one it had."""
-        guild_id = int(interaction.guild_id)
+        guild_id = interaction.guild_id
         with Session(self.bind) as session:
-            upsert(session, AutoChannelHub(id=guild_id, channel_id=int(channel.id)))
+            upsert(session, AutoChannelHub(id=int(guild_id), channel_id=int(channel.id)))
             session.commit()
         await interaction.respond(
             embeds=[ChangedEmbed(description=f"Joining {channel.mention} now gives members their own channel.")],
@@ -366,7 +366,7 @@ class AutoChannels(
     ) -> None:
         """Allow at most ``limit`` automatic channels at once, 0 for no limit."""
         with Session(self.bind) as session:
-            hub = hub_of(session, int(interaction.guild_id))
+            hub = hub_of(session, interaction.guild_id)
             if hub is not None:
                 hub.max_channels = limit
                 session.add(hub)
@@ -408,14 +408,14 @@ class AutoChannels(
 
     async def _change(self, interaction: GuildCommandInteraction, params: ChannelParams, **setting: str | int) -> None:
         """Save the invoker's ``setting``, then apply ``params`` to their channel in this guild, if they have one."""
-        user_id = int(interaction.user.id)
+        user_id = interaction.user.id
         with Session(self.bind) as session:
             settings = settings_of(session, user_id)
             for key, value in setting.items():
                 setattr(settings, key, value)
             upsert(session, settings)
             session.commit()
-            owned = owned_channel(session, int(interaction.guild_id), user_id)
+            owned = owned_channel(session, interaction.guild_id, user_id)
         if owned is None:
             await interaction.respond(embeds=[ChangedEmbed(description="Saved; your next channel gets it.")], ephemeral=True)
             return

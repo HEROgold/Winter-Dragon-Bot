@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Mapping, Sequence
 
     lazy from wd_bot.components import ComponentHandler
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from winter_dragon.cogs.steam.models import SteamSale
 
@@ -86,7 +87,7 @@ def build_page(
     )
 
 
-def page_buttons(handler: ComponentHandler, *, owner_id: int, percent: int, page: int, pages: int) -> list[ActionRow]:
+def page_buttons(handler: ComponentHandler, *, owner_id: Snowflake, percent: int, page: int, pages: int) -> list[ActionRow]:
     """Build the previous / page counter / next buttons under page ``page`` of ``pages``.
 
     Each button's ``custom_id`` carries the listing's owner, percentage and target page, so a click rebuilds the

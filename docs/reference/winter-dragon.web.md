@@ -20,7 +20,7 @@ Who is signed in to the dashboard, kept in the signed session cookie, and the CS
 ### `class Account(BaseModel)`
 The Discord user signed in to the dashboard: only what its pages show of them.
 
-- fields: id: int, username: str, display_name: str, avatar_url: str | None
+- fields: id: Snowflake, username: str, display_name: str, avatar_url: str | None
 - attributes: model_config
 - `@classmethod from_user(user: User) -> Self` — Return the account of the Discord ``user``.
 - `@property initials -> str` — The first two letters of the display name, shown when there is no avatar.
@@ -46,14 +46,14 @@ Signing in with Discord and out again; the callback sets the HttpOnly session co
 Signing in with Discord: the OAuth2 authorization code grant, used only to learn who is signing in.
 
 - module names: CALLBACK_PATH, REQUEST_TIMEOUT, logger
-- `redirect_uri() -> str` — Return the callback URL Discord redirects to, under :attr:`DashboardSettings.public_url`.
-- `authorization_url(state: str) -> str` — Return the Discord page asking the user to sign in, which sends ``state`` back to the callback.
+- `redirect_uri() -> URL` — Return the callback URL Discord redirects to, under :attr:`DashboardSettings.public_url`.
+- `authorization_url(state: str) -> URL` — Return the Discord page asking the user to sign in, which sends ``state`` back to the callback.
 - `async signed_in_user(code: str) -> User | None` — Return the Discord user who authorized the dashboard with ``code``; ``None`` when Discord refused it.
 
 ### `class AccessToken(DiscordModel)`
 The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response).
 
-- fields: access_token: str, token_type: str, expires_in: int, scope: str, refresh_token: str | None
+- fields: access_token: Token, token_type: str, expires_in: int, scope: str, refresh_token: Token | None
 
 ## `winter_dragon.web.formatting` — `src/winter_dragon/web/formatting.py`
 How the dashboard writes stored values for people: times in their zone, intervals and table names in words.
@@ -68,7 +68,7 @@ How the dashboard writes stored values for people: times in their zone, interval
 The landing page, and the data page: everything the bot stores about the signed-in member, and deleting it.
 
 - module names: router
-- `signposts(bind: Engine, member_id: int) -> Signposts` — Return what the signpost arms say for the member ``member_id``.
+- `signposts(bind: Engine, member_id: Snowflake) -> Signposts` — Return what the signpost arms say for the member ``member_id``.
 - `@router.get landing(request: Request, bind: Database) -> Response` — Show what the bot does, with the way in: signing in, or adding it to a server.
 - `@router.get data_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show everything the bot stores about the signed-in member, and the way to delete it.
 - `@router.get record_rows(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's rows of the table ``key``, when its record is opened.
@@ -103,7 +103,7 @@ The Profile: a member's own pages, one per feature, across every guild.
 ### `@dataclass class ProfileContext`
 What a Profile page reads to build itself: the database, the member whose Profile it is, and their time zone.
 
-- fields: bind: Engine, member_id: int, zone: ZoneInfo
+- fields: bind: Engine, member_id: Snowflake, zone: ZoneInfo
 
 ### `@dataclass class ProfilePage`
 One feature's page in the Profile.
@@ -145,7 +145,7 @@ The Profile's Incremental game page: the member's save live in the browser, and 
 - module names: TEMPLATE, FRAGMENT, RESYNC_SECONDS, router
 - `seconds_until_affordable(offer: game.Offer, per_second: dict[str, float], amounts: dict[str, float]) -> float | None` — Return how many seconds until the save can pay ``offer``'s price at the current rates, or ``None`` if never.
 - `snapshot_of(view: game.SaveView) -> Snapshot` — Turn the shared game module's ``view`` into what the page shows and ticks.
-- `snapshot(bind: Engine, member_id: int, *, now: datetime | None=None) -> Snapshot | None` — Return the member's save as of ``now``, or ``None`` when they haven't started one; this never creates a save.
+- `snapshot(bind: Engine, member_id: Snowflake, *, now: datetime | None=None) -> Snapshot | None` — Return the member's save as of ``now``, or ``None`` when they haven't started one; this never creates a save.
 - `@profile_page incremental(context: ProfileContext) -> dict[str, object]` — Return the page's context: the member's snapshot, or ``None`` to show how to start a save.
 - `@router.get resync(request: Request, account: Account, bind: Engine) -> Response` — Return the game fragment with a fresh snapshot, which htmx swaps in to re-sync the page.
 - `@router.post start(request: Request, account: Account, bind: Engine) -> Response` — Create the member's save, as their first ``/incremental`` in Discord does.
@@ -190,8 +190,8 @@ What the dashboard shows of the bot: the features its cogs define, and every rec
 - module names: HIDDEN_FIELDS
 - `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do.
 - `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first.
-- `member_records(bind: Engine, member_id: int) -> Generator[DataRecord]` — Yield a record for every table holding rows the member ``member_id`` owns, by name.
-- `record_table(bind: Engine, member_id: int, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows the member ``member_id`` owns in the table ``key``, times in ``zone``; ``None`` for no such table.
+- `member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]` — Yield a record for every table holding rows the member ``member_id`` owns, by name.
+- `record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows the member ``member_id`` owns in the table ``key``, times in ``zone``; ``None`` for no such table.
 
 ### `@dataclass class Feature`
 A command group the bot offers: ``/name``, and what it does.
@@ -216,7 +216,7 @@ The reminders page: a member's reminders by day, and adding or removing one, as 
 
 - module names: router
 - `blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft` — Return an empty add form, due tomorrow morning in ``zone``.
-- `reminder_days(bind: Engine, user_id: int, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]` — Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first.
+- `reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]` — Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first.
 - `@router.get reminders_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's reminders and the form to add one.
 - `@router.post add_reminder(request: Request, account: SignedIn, bind: Database, content: str='', day: str='', at: str='', repeat: str=Repeat.NEVER, every_days: str='3') -> Response` — Add the reminder the form describes, or show the form again with why it can't be set.
 - `@router.post remove_reminder(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be.
@@ -233,7 +233,7 @@ The add form describes a reminder that can't be set; the message says why, for t
 What the add form holds, as typed, so a refused form comes back filled in.
 
 - fields: content: str, day: str, at: str, repeat: Repeat, every_days: str
-- `reminder(user_id: int, zone: ZoneInfo, now: datetime) -> AnyReminder` — Return the reminder this draft describes for the user ``user_id``, read in ``zone`` and checked against ``now``.
+- `reminder(user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder` — Return the reminder this draft describes for the user ``user_id``, read in ``zone`` and checked against ``now``.
 
 ### `@dataclass class ReminderStop`
 One reminder on the page, with its due time in the visitor's zone.

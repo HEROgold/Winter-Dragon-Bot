@@ -230,7 +230,7 @@ async def _knock_everywhere(
     bot.loop = asyncio.get_running_loop()
     bot.client = discord_client
     await bot.add_cog(_Doorman(bot=bot))
-    data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="t")
+    data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="2026-10-22T00:00:00+00:00")
     dispatch_guard.logger.addHandler(caplog.handler)
     try:
         await bot._dispatch_interaction(make_interaction("enter"))

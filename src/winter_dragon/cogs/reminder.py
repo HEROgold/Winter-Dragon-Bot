@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     lazy from wd_discord import Client, CommandInteraction
     lazy from wd_discord.interactions import ApplicationCommandOptionChoice
+    lazy from wd_discord.snowflake import Snowflake
 
 
 SECONDS_PER_UNIT = {"minutes": 60, "hours": 3600, "days": 86400, "weeks": 604800}
@@ -95,7 +96,7 @@ def reminder_message(content: str) -> str:
     return f"I'm here to remind you about\n`{content}`"
 
 
-def owned_reminders(session: Session, user_id: int) -> Generator[AnyReminder]:
+def owned_reminders(session: Session, user_id: Snowflake) -> Generator[AnyReminder]:
     """Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due."""
     yield from session.exec(owned_by(TimedReminder, member=user_id))
     yield from session.exec(owned_by(Reminder, member=user_id).order_by(col(Reminder.timestamp)))
@@ -225,7 +226,7 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         if user is None:
             return []
         with Session(self.bind) as session:
-            return list(reminder_choices(owned_reminders(session, int(user.id)), current))
+            return list(reminder_choices(owned_reminders(session, user.id), current))
 
     @Cog.command(name="remove", description="Cancel one of your reminders")
     async def remove(

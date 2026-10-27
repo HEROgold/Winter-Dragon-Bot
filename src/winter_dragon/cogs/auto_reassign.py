@@ -56,22 +56,22 @@ class RememberedRole(LifecycleModel, table=True):
 AUTO_REASSIGN_TABLES = (AutoReassignGuild, RememberedRole)
 
 
-def is_enabled(session: Session, guild_id: int) -> bool:
+def is_enabled(session: Session, guild_id: Snowflake) -> bool:
     """Whether the guild ``guild_id`` gives rejoining members their roles back."""
     return guild_setting(session, guild_id) is not None
 
 
-def guild_setting(session: Session, guild_id: int) -> AutoReassignGuild | None:
+def guild_setting(session: Session, guild_id: Snowflake) -> AutoReassignGuild | None:
     """Return the alive row turning giving roles back on in the guild ``guild_id``, if any."""
-    return alive_by_id(session, AutoReassignGuild, guild_id)
+    return alive_by_id(session, AutoReassignGuild, int(guild_id))
 
 
-def remembered_roles(session: Session, guild_id: int, user_id: int | None = None) -> Generator[RememberedRole]:
+def remembered_roles(session: Session, guild_id: Snowflake, user_id: Snowflake | None = None) -> Generator[RememberedRole]:
     """Yield the roles remembered in the guild ``guild_id``: of the member ``user_id``, or of everyone without one."""
     yield from session.exec(owned_by(RememberedRole, guild=guild_id, member=user_id))
 
 
-def forget(session: Session, guild_id: int, user_id: int | None = None) -> list[RememberedRole]:
+def forget(session: Session, guild_id: Snowflake, user_id: Snowflake | None = None) -> list[RememberedRole]:
     """Soft-delete the roles :func:`remembered_roles` yields, and return them; the caller commits."""
     remembered = list(remembered_roles(session, guild_id, user_id))
     for row in remembered:
@@ -106,25 +106,25 @@ class AutoReassign(
     async def on_member_remove(self, event: MemberRemove) -> None:
         """Remember the roles of a member leaving a guild that gives roles back, replacing what was remembered."""
         member = event.member
-        guild_id = int(event.guild.id)
+        guild_id = event.guild.id
         if member is None:
             return
         with Session(self.bind) as session:
             if not is_enabled(session, guild_id):
                 return
-            forget(session, guild_id, int(member.id))
+            forget(session, guild_id, member.id)
             for role in member.roles:
-                create_or_restore(session, RememberedRole(guild_id=guild_id, user_id=int(member.id), role_id=int(role.id)))
+                create_or_restore(session, RememberedRole(guild_id=int(guild_id), user_id=int(member.id), role_id=int(role.id)))
             session.commit()
 
     @Cog.listener(EventName.GUILD_MEMBER_ADD)
     async def on_member_add(self, member: Member) -> None:
         """Give a rejoining member the roles remembered from when they left, then forget them."""
-        guild_id = int(member.guild_id)
+        guild_id = member.guild_id
         with Session(self.bind) as session:
             if not is_enabled(session, guild_id):
                 return
-            role_ids = [Snowflake(row.role_id) for row in forget(session, guild_id, int(member.id))]
+            role_ids = [Snowflake(row.role_id) for row in forget(session, guild_id, member.id)]
             session.commit()
         if not role_ids:
             return
@@ -165,7 +165,7 @@ class AutoReassign(
         """Start remembering leaving members' roles in this guild; needs MANAGE_ROLES."""
         guild = interaction.guild
         with Session(self.bind) as session:
-            if not is_enabled(session, int(guild.id)):
+            if not is_enabled(session, guild.id):
                 create_or_restore(session, AutoReassignGuild(id=int(guild.id)))
                 session.commit()
         message = "Members who leave and rejoin now get their roles back; my role must be above the roles to give."
@@ -191,7 +191,7 @@ class AutoReassign(
     )
     async def disable(self, interaction: GuildCommandInteraction) -> None:
         """Stop remembering roles in this guild, and forget those remembered; needs MANAGE_ROLES."""
-        guild_id = int(interaction.guild_id)
+        guild_id = interaction.guild_id
         with Session(self.bind) as session:
             if (setting := guild_setting(session, guild_id)) is not None:
                 soft_delete(session, setting)

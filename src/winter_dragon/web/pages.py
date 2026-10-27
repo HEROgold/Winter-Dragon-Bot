@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from sqlalchemy import Engine
+    from wd_discord.snowflake import Snowflake
 
     from winter_dragon.web.accounts import Account
 
@@ -88,7 +89,7 @@ class Signposts:
     """How many entries the bot stores about them."""
 
 
-def signposts(bind: Engine, member_id: int) -> Signposts:
+def signposts(bind: Engine, member_id: Snowflake) -> Signposts:
     """Return what the signpost arms say for the member ``member_id``."""
     with Session(bind) as session:
         reminder_count = sum(1 for _ in owned_reminders(session, member_id))

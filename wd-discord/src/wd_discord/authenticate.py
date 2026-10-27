@@ -1,17 +1,45 @@
 """Location for all authentication related functions and classes."""
 
 lazy from enum import StrEnum
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, Any, Self, override
+
+lazy from pydantic_core import core_schema
 
 
 if TYPE_CHECKING:
     lazy from string.templatelib import Template
 
+    lazy from pydantic import GetCoreSchemaHandler
+    lazy from pydantic_core import CoreSchema
 
-class Token(str):
-    """Represents a Discord bot token."""
+
+class _ModelStr(str):
+    """A ``str`` subclass pydantic validates from a plain string and serialises back to one."""
 
     __slots__ = ()
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source: type[Any], handler: GetCoreSchemaHandler) -> CoreSchema:
+        """Validate a ``str`` and wrap it in ``cls``."""
+        return core_schema.no_info_after_validator_function(cls._wrap, core_schema.str_schema())
+
+    @classmethod
+    def _wrap(cls, value: str) -> Self:
+        return cls(value)
+
+
+class Token(_ModelStr):
+    """A Discord secret: a bot token, an interaction or gateway token, or an OAuth access or refresh token.
+
+    ``repr`` hides the value, so a token never shows up in a log line or a traceback's locals.
+    """
+
+    __slots__ = ()
+
+    @override
+    def __repr__(self) -> str:
+        """Name the type without the secret."""
+        return f"{type(self).__name__}(<hidden>)"
 
 
 class TokenType(StrEnum):
@@ -30,7 +58,7 @@ class UserAgentVersion(str):
     __slots__ = ()
 
 
-class URL(str):
+class URL(_ModelStr):
     """Represents a URL."""
 
     __slots__ = ()

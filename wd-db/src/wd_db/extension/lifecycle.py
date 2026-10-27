@@ -7,7 +7,7 @@ exists soft-deleted restores it (:func:`create_or_restore`); :func:`upsert` chan
 
 from dataclasses import dataclass
 from datetime import datetime
-lazy from typing import TYPE_CHECKING, Any, ClassVar, override
+lazy from typing import TYPE_CHECKING, Any, ClassVar, SupportsInt, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field
@@ -185,8 +185,8 @@ def _same_key[M: LifecycleModel](session: Session, row: M) -> M | None:
 def owned_by[M: LifecycleModel](
     model: type[M],
     *,
-    member: int | None = None,
-    guild: int | None = None,
+    member: SupportsInt | None = None,
+    guild: SupportsInt | None = None,
     include_deleted: bool = False,
 ) -> SelectOfScalar[M]:
     """Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.
@@ -194,6 +194,7 @@ def owned_by[M: LifecycleModel](
     Each kind of owner is the column of the nearest table in the chain that declares one, so a row can be owned by
     its own member and, through its parent, by a guild. Matches nothing when no table in the chain declares an owner
     of the asked kind. ``include_deleted`` selects soft-deleted rows too; parents in the chain are never filtered.
+    ``member`` and ``guild`` are Discord IDs (a ``Snowflake``); this is where they become the stored ``int``.
     """
     statement = select(model) if include_deleted else alive(model)
     level: type[LifecycleModel] = model
@@ -209,7 +210,7 @@ def owned_by[M: LifecycleModel](
         level = through.parent
     for column, value in ((member_column, member), (guild_column, guild)):
         if value is not None:
-            statement = statement.where(false() if column is None else column == value)
+            statement = statement.where(false() if column is None else column == int(value))
     return statement
 
 

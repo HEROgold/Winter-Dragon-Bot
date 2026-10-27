@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy import Engine
     from wd_db.extension.lifecycle import LifecycleModel
+    from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
 
 
@@ -87,7 +88,7 @@ class RecordTable:
     rows: tuple[tuple[str, ...], ...]
 
 
-def member_records(bind: Engine, member_id: int) -> Generator[DataRecord]:
+def member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]:
     """Yield a record for every table holding rows the member ``member_id`` owns, by name."""
     models = sorted(stored_models(bind), key=lambda model: model.__name__)
     with Session(bind) as session:
@@ -97,7 +98,7 @@ def member_records(bind: Engine, member_id: int) -> Generator[DataRecord]:
                 yield DataRecord(model=model, count=count)
 
 
-def record_table(bind: Engine, member_id: int, key: str, zone: ZoneInfo) -> RecordTable | None:
+def record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None:
     """Return the rows the member ``member_id`` owns in the table ``key``, times in ``zone``; ``None`` for no such table."""
     model = next((model for model in stored_models(bind) if model.__table__.name == key), None)
     if model is None:

@@ -23,6 +23,12 @@ def test_auth_header_render() -> None:
     assert (name, value) == ("Authorization", "Bot my.token")
 
 
+def test_token_repr_hides_the_secret() -> None:
+    token = Token("my.secret.token")
+    assert "my.secret.token" not in repr(token)
+    assert str(token) == "my.secret.token"
+
+
 def test_content_type_header_render() -> None:
     assert render_header(content_type(ContentType.json)) == ("Content-Type", "application/json")
 

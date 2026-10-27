@@ -8,6 +8,7 @@ from wd_bot.commands import Describe, Range
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete, upsert
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -175,7 +176,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         if user is None:
             return
         with Session(self.bind) as session:
-            if SteamSaleStore(session).subscriber(int(user.id)) is not None:
+            if SteamSaleStore(session).subscriber(user.id) is not None:
                 msg = "Already in the list of recipients"
                 raise Refused(msg)
             create_or_restore(
@@ -204,7 +205,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         if user is None:
             return
         with Session(self.bind) as session:
-            subscriber = SteamSaleStore(session).subscriber(int(user.id))
+            subscriber = SteamSaleStore(session).subscriber(user.id)
 
             def set_threshold(subscription: SteamUsers) -> None:
                 subscription.sale_threshold = percent
@@ -223,7 +224,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         if user is None:
             return
         with Session(self.bind) as session:
-            subscriber = SteamSaleStore(session).subscriber(int(user.id))
+            subscriber = SteamSaleStore(session).subscriber(user.id)
             if subscriber is None:
                 msg = "Not in the list of recipients"
                 raise Refused(msg)
@@ -261,7 +262,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 return
             await interaction.defer()
             embed = build_page(sales, store.properties(sales), page=0, color=SteamSettings.embed_color)
-        buttons = page_buttons(self.show_page, owner_id=int(user.id), percent=percent, page=0, pages=page_count(len(sales)))
+        buttons = page_buttons(self.show_page, owner_id=user.id, percent=percent, page=0, pages=page_count(len(sales)))
         await interaction.edit_original(embeds=[embed], components=buttons)
 
     @Cog.component("steam-show")
@@ -277,5 +278,11 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             pages = page_count(len(sales))
             target = min(max(int(page), 0), pages - 1)
             embed = build_page(sales, store.properties(sales), page=target, color=SteamSettings.embed_color)
-        buttons = page_buttons(self.show_page, owner_id=int(owner_id), percent=int(percent), page=target, pages=pages)
+        buttons = page_buttons(
+            self.show_page,
+            owner_id=Snowflake.coerce(owner_id),
+            percent=int(percent),
+            page=target,
+            pages=pages,
+        )
         await interaction.update(embeds=[embed], components=buttons)

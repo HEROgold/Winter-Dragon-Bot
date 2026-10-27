@@ -18,6 +18,8 @@ lazy from wd_bot.guard import dispatch_guard
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Sequence
 
+    lazy from wd_discord.snowflake import Snowflake
+
     lazy from wd_bot.cogs import Cog
 
 
@@ -46,7 +48,7 @@ class CustomIdHandler[I: ComponentInteraction | ModalSubmitInteraction](LoggerMi
         self.wants_guild = wants_guild_interaction(func)
         """Whether the handler's ``interaction`` is annotated as a guild interaction; its cog must then be guild-only."""
 
-    def custom_id(self, *args: str | int) -> str:
+    def custom_id(self, *args: str | int | Snowflake) -> str:
         """Build a ``custom_id`` routed to this handler, carrying ``args``.
 
         Raises :class:`ValueError` if an arg contains the separator or the result exceeds Discord's 100 characters.

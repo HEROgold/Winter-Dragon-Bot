@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
     from string.templatelib import Template
 
+    from wd_discord.authenticate import Token
     from wd_discord.client import Client, NetworkError
     from wd_discord.components import ActionRow, ComponentType, Modal
     from wd_discord.embed import Embed
@@ -81,7 +82,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         return self.model.type
 
     @property
-    def token(self) -> str:
+    def token(self) -> Token:
         """The token for responding; valid for 15 minutes."""
         return self.model.token
 

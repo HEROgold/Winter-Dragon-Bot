@@ -15,6 +15,7 @@ lazy from wd_discord import (
     ComponentInteraction,
     GatewayBotInfo,
     ModalSubmitInteraction,
+    Token,
     is_network_error,
 )
 lazy from wd_discord.intents import Intents
@@ -255,7 +256,7 @@ class Bot(LoggerMixin):
         """
         OperatorFiles.check()
         self.loop = asyncio.get_running_loop()
-        async with Client(token) as client:
+        async with Client(Token(token)) as client:
             self.client = client
             gw_info = await self._fetch_gateway_info(client)
             manager = await client.get_shard_manager(gw_info, intents=self.intents)

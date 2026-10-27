@@ -137,7 +137,7 @@ class Tournaments(
 
     def _active(self, interaction: AnyGuildInteraction, session: Session) -> Tournament:
         """Return the guild's running or signing-up tournament; refuse when there's none."""
-        tournament = active_tournament(session, int(interaction.guild_id))
+        tournament = active_tournament(session, interaction.guild_id)
         if tournament is None:
             msg = f"There's no tournament here; {self.mention(self.create)} starts one."
             raise Refused(msg)
@@ -195,7 +195,7 @@ class Tournaments(
         The creator organises it.
         """
         with Session(self.bind) as session:
-            if active_tournament(session, int(interaction.guild_id)) is not None:
+            if active_tournament(session, interaction.guild_id) is not None:
                 msg = f"This server has a tournament going; {self.mention(self.cancel_tournament)} ends it."
                 raise Refused(msg)
             tournament = Tournament(
@@ -216,7 +216,7 @@ class Tournaments(
     async def join(self, interaction: GuildCommandInteraction) -> None:
         """Sign the invoker up for the guild's solo tournament."""
         with Session(self.bind) as session:
-            sign_up(session, self._active(interaction, session), int(interaction.user.id))
+            sign_up(session, self._active(interaction, session), interaction.user.id)
             session.commit()
         await interaction.respond(embeds=[CreatedEmbed(description="You're signed up!")], ephemeral=True)
 
@@ -224,7 +224,7 @@ class Tournaments(
     async def leave(self, interaction: GuildCommandInteraction) -> None:
         """Take the invoker out of the tournament; a captain leaving disbands their team."""
         with Session(self.bind) as session:
-            withdraw(session, self._active(interaction, session), int(interaction.user.id))
+            withdraw(session, self._active(interaction, session), interaction.user.id)
             session.commit()
         await interaction.respond(embeds=[DeletedEmbed(description="You've left the tournament.")], ephemeral=True)
 
@@ -250,7 +250,7 @@ class Tournaments(
     async def _signup_click(self, interaction: GuildComponentInteraction, tournament_id: str, *, join: bool) -> None:
         with Session(self.bind) as session:
             tournament = stored(session, Tournament, int(tournament_id), "This tournament is gone.")
-            user_id = int(interaction.user.id)
+            user_id = interaction.user.id
             if join:
                 sign_up(session, tournament, user_id)
             else:
@@ -271,7 +271,7 @@ class Tournaments(
     ) -> None:
         """Register the team ``name`` captained by the invoker."""
         with Session(self.bind) as session:
-            create_team(session, self._active(interaction, session), int(interaction.user.id), name)
+            create_team(session, self._active(interaction, session), interaction.user.id, name)
             session.commit()
         message = f"Team **{name}** is registered; add players with {self.mention(self.team_add)}."
         await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
@@ -284,7 +284,7 @@ class Tournaments(
     ) -> None:
         """Add ``player`` to the invoker's team."""
         with Session(self.bind) as session:
-            add_to_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
+            add_to_team(session, self._active(interaction, session), interaction.user.id, player.id)
             session.commit()
         await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your team.")], ephemeral=True)
 
@@ -296,7 +296,7 @@ class Tournaments(
     ) -> None:
         """Remove ``player`` from the invoker's team."""
         with Session(self.bind) as session:
-            remove_from_team(session, self._active(interaction, session), int(interaction.user.id), int(player.id))
+            remove_from_team(session, self._active(interaction, session), interaction.user.id, player.id)
             session.commit()
         message = f"Removed {player.mention} from your team."
         await interaction.respond(embeds=[ChangedEmbed(description=message)], ephemeral=True)
@@ -376,7 +376,7 @@ class Tournaments(
         """Suggest the tournament's undecided matches whose line contains what was typed."""
         guild = interaction.guild
         with Session(self.bind) as session:
-            tournament = None if guild is None else active_tournament(session, int(guild.id))
+            tournament = None if guild is None else active_tournament(session, guild.id)
             if tournament is None:
                 return []
             names = team_names(session, tournament.id or 0)
@@ -421,7 +421,7 @@ class Tournaments(
     async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
         with Session(self.bind) as session:
             _, found = self._match(interaction, session, match)
-            draft(session, found, int(interaction.user.id), kind, choice)
+            draft(session, found, interaction.user.id, kind, choice)
             session.commit()
         verb = "banned" if kind is DraftKind.BAN else "picked"
         drafted = CreatedEmbed(description=f"Your team {verb} **{choice}** in match #{match}.")
@@ -472,7 +472,7 @@ class Tournaments(
         """Record the clicker's answer, then refresh the tally."""
         with Session(self.bind) as session:
             vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
-            cast(session, vote, int(interaction.user.id), int(choice))
+            cast(session, vote, interaction.user.id, int(choice))
             session.commit()
             embed = vote_embed(vote, choices_of(session, int(vote_id)))
             buttons = vote_buttons(self.vote_button, self.close_vote_button, vote)

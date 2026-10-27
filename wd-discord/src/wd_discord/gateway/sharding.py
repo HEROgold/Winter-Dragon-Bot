@@ -19,6 +19,7 @@ lazy from typing import TYPE_CHECKING, Any, Self
 lazy from herogold.errors import with_known_exception
 lazy from wd_config.discord import URLS
 
+from wd_discord.authenticate import URL
 lazy from wd_discord.intents import Intents
 lazy from wd_discord.models import DiscordModel
 
@@ -30,7 +31,9 @@ if TYPE_CHECKING:
 
     lazy from httpxyz import RequestError
 
+    lazy from wd_discord.authenticate import Token
     lazy from wd_discord.client import Client
+    lazy from wd_discord.snowflake import Snowflake
     lazy from wd_discord.errors import ApiResponseError
 
     lazy from .events import Ready
@@ -39,9 +42,9 @@ IDENTIFY_BATCH_DELAY = 5.0
 """Seconds between IDENTIFY batches: ``max_concurrency`` IDENTIFYs are allowed per 5 seconds (https://docs.discord.com/developers/events/gateway#sharding-max-concurrency)."""
 
 
-def shard_id_for_guild(guild_id: int, num_shards: int) -> int:
+def shard_id_for_guild(guild_id: Snowflake, num_shards: int) -> int:
     """Return the shard a guild's events are routed to: ``(guild_id >> 22) % num_shards``."""
-    return (guild_id >> 22) % num_shards
+    return (int(guild_id) >> 22) % num_shards
 
 
 def rate_limit_key(shard_id: int, max_concurrency: int) -> int:
@@ -74,15 +77,15 @@ class SessionStartLimit(DiscordModel):
 class GatewayBotInfo(DiscordModel):
     """The ``GET /gateway/bot`` response (API -> object via :func:`parse_gateway_bot`)."""
 
-    url: str
+    url: URL
     shards: int
     """Discord's recommended number of shards."""
     session_start_limit: SessionStartLimit
 
     @property
-    def connect_url(self) -> str:
+    def connect_url(self) -> URL:
         """The WSS URL with the configured version and the encoding this library speaks."""
-        return f"{self.url}{URLS().gateway_query}"
+        return URL(f"{self.url}{URLS().gateway_query}")
 
 
 def parse_gateway_bot(payload: dict[str, Any]) -> GatewayBotInfo:
@@ -109,7 +112,7 @@ class ShardManager:
 
     def __init__(
         self,
-        token: str,
+        token: Token,
         info: GatewayBotInfo,
         *,
         intents: Intents | None = None,
@@ -128,7 +131,7 @@ class ShardManager:
         return bool(self.shards) and all(shard.alive for shard in self.shards)
 
     @with_known_exception(RuntimeError)
-    def shard_for_guild(self, guild_id: int) -> Gateway | RuntimeError:
+    def shard_for_guild(self, guild_id: Snowflake) -> Gateway | RuntimeError:
         """Return the started shard handling ``guild_id``'s events, or the :class:`RuntimeError` if not started."""
         if not self.shards:
             msg = "ShardManager is not started."

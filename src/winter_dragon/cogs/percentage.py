@@ -24,6 +24,7 @@ lazy from winter_dragon.config import CogConfig
 
 if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction
+    lazy from wd_discord.snowflake import Snowflake
 
 
 class PercentageSettings:
@@ -50,14 +51,14 @@ class CompatibilityCheck(LifecycleModel, table=True):
     """When the member last checked this user."""
 
 
-def record_check(session: Session, user_id: int, target_id: int, target_name: str) -> CompatibilityCheck:
+def record_check(session: Session, user_id: Snowflake, target_id: Snowflake, target_name: str) -> CompatibilityCheck:
     """Store that ``user_id`` checked ``target_id``, or refresh the earlier check of the same pair; the caller commits."""
-    return upsert(session, CompatibilityCheck(user_id=user_id, target_id=target_id, target_name=target_name))
+    return upsert(session, CompatibilityCheck(user_id=int(user_id), target_id=int(target_id), target_name=target_name))
 
 
-def calculate_percentage(user_id_a: int, user_id_b: int) -> int:
+def calculate_percentage(user_id_a: Snowflake, user_id_b: Snowflake) -> int:
     """Compute a random 0-100 percentage, seeded by both user IDs (order-independent)."""
-    rng = random.Random(user_id_a + user_id_b)  # noqa: S311 - not security-sensitive: a novelty percentage
+    rng = random.Random(int(user_id_a) + int(user_id_b))  # noqa: S311 - not security-sensitive: a novelty percentage
     return rng.randint(0, 100)
 
 
@@ -97,8 +98,8 @@ class Love(Cog):
         if asker is None:
             msg = "I couldn't work out who invoked this command."
             raise Refused(msg)
-        percent = calculate_percentage(int(asker.id), int(user.id))
+        percent = calculate_percentage(asker.id, user.id)
         with Session(self.bind) as session:
-            record_check(session, int(asker.id), int(user.id), user.display_name)
+            record_check(session, asker.id, user.id, user.display_name)
             session.commit()
         await interaction.respond(embeds=[build_love_embed(user, percent)])
