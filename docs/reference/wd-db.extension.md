@@ -57,6 +57,8 @@ The lifecycle every bot table follows: timestamps, soft delete, create-or-restor
 
 - module names: LIFECYCLE_COLUMNS
 - `alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]` — Return a select of ``model``'s rows that aren't soft-deleted; use it for every read.
+- `row_key(row: LifecycleModel) -> str` — Return the string naming ``row``: its table and ID, like ``reminder:12``; :func:`find_by_key` reads it back.
+- `find_by_key[M: LifecycleModel](session: Session, models: Iterable[type[M]], key: str) -> M | None` — Return the alive row that :func:`row_key` ``key`` names, if its table is one of ``models``; else ``None``.
 - `soft_delete(session: Session, row: LifecycleModel, *, at: datetime | None=None) -> None` — Soft-delete ``row``: stamp its ``deleted_at`` with ``at`` (default now), hiding it from :func:`alive`. Caller commits.
 - `create_or_restore[M: LifecycleModel](session: Session, row: M) -> M` — Insert ``row``, or restore the soft-deleted row with the same ``id`` or natural key; return the stored row.
 - `owned_by[M: LifecycleModel](model: type[M], *, member: int | None=None, guild: int | None=None, include_deleted: bool=False) -> SelectOfScalar[M]` — Return a select of ``model``'s alive rows owned by ``member`` and/or ``guild``, following its :class:`Through` chain.

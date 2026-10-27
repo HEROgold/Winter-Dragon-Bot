@@ -11,16 +11,15 @@ lazy from fastapi import Request, status
 lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from sqlmodel import Session
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
-lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete
+lazy from wd_db.extension.lifecycle import create_or_restore, find_by_key, row_key, soft_delete
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.reminder import (
+    REMINDER_TABLES,
     AnyReminder,
     Reminder,
     ReminderSettings,
     TimedReminder,
-    choice_value,
-    find_reminder,
     owned_reminders,
 )
 lazy from winter_dragon.web.accounts import Account, checked_csrf, signed_in, visitor_zone
@@ -124,7 +123,7 @@ class ReminderStop:
     @property
     def key(self) -> str:
         """The reminder's table and ID, which its delete button posts to."""
-        return choice_value(self.reminder)
+        return row_key(self.reminder)
 
     @property
     def due(self) -> datetime:
@@ -235,8 +234,8 @@ def remove_reminder(
 ) -> Response:
     """Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be."""
     with Session(bind) as session:
-        found = find_reminder(session, account.id, key)
-        if found is not None:
+        found = find_by_key(session, REMINDER_TABLES, key)
+        if found is not None and found.user_id == account.id:
             soft_delete(session, found)
             session.commit()
     if not is_htmx(request):
