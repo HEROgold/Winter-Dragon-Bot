@@ -12,7 +12,4 @@ def urban(context: ProfileContext) -> dict[str, object]:
     """Return the Urban page's context: the member's lookups, newest first, in their time zone."""
     with Session(context.bind) as session:
         lookups = list(session.exec(owned_by(Lookup, member=context.member_id).order_by(col(Lookup.looked_up_at).desc())))
-    return {
-        "lookups": [(lookup, lookup.looked_up_at.astimezone(context.zone)) for lookup in lookups],
-        "total": len(lookups),
-    }
+    return {"lookups": [(lookup, lookup.looked_up_at.astimezone(context.zone)) for lookup in lookups]}

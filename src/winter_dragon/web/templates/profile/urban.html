@@ -5,7 +5,7 @@
   {% if not lookups %}
     <p class="profile-empty">You have not looked anything up yet. Use <code>/urban search</code> in Discord to look up a word.</p>
   {% else %}
-    <p>{{ total }} {{ 'lookup' if total == 1 else 'lookups' }} in total.</p>
+    <p>{{ lookups|length }} {{ 'lookup' if lookups|length == 1 else 'lookups' }} in total.</p>
     <table class="table">
       <thead><tr><th>Date</th><th>Term</th></tr></thead>
       <tbody>
