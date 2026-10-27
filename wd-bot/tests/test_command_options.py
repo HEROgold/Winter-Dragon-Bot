@@ -20,6 +20,7 @@ lazy from wd_discord.testing import role_json, user_json
 if TYPE_CHECKING:
     lazy from conftest import InteractionFactory
     lazy from wd_discord import CommandInteraction
+    lazy from wd_discord.testing import RecordingClient
 
 
 ROLE = Role.model_validate(role_json(name="Members"))
@@ -90,6 +91,39 @@ async def test_channel_option_resolves_to_a_bound_channel(make_interaction: Inte
     (channel,) = received
     assert isinstance(channel, Channel)
     assert (channel.name, channel.type) == ("Games", ChannelType.GUILD_CATEGORY)
+
+
+async def test_a_channel_of_another_type_is_refused(
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    received: list[Channel] = []
+
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,  # noqa: ARG001
+        target: Annotated[Channel, ChannelTypes(ChannelType.GUILD_VOICE)],
+    ) -> None:
+        received.append(target)
+
+    await _invoke(Command(handler, name="cmd", description="d"), make_interaction, 7, "9")
+    assert received == []
+    assert discord_client.interaction_responses()[-1]["data"]["content"] == "Pick a voice channel for 'target'."
+
+
+async def test_a_channel_of_an_allowed_type_is_passed_through(make_interaction: InteractionFactory) -> None:
+    received: list[Channel] = []
+
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,  # noqa: ARG001
+        target: Annotated[Channel, ChannelTypes(ChannelType.GUILD_VOICE, ChannelType.GUILD_CATEGORY)],
+    ) -> None:
+        received.append(target)
+
+    await _invoke(Command(handler, name="cmd", description="d"), make_interaction, 7, "9")
+    (channel,) = received
+    assert channel.type is ChannelType.GUILD_CATEGORY
 
 
 async def test_role_option_resolves_to_the_role(make_interaction: InteractionFactory) -> None:

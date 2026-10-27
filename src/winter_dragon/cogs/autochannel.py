@@ -337,9 +337,6 @@ class AutoChannels(
         channel: Annotated[Channel, ChannelTypes(ChannelType.GUILD_VOICE)],
     ) -> None:
         """Make ``channel`` the guild's hub, replacing the one it had."""
-        # TODO: Verify that autocomplete, only lists ChannelType.GUILD_VOICE channels, as annotated above.
-        # If not, add the check when readong the Annotated metadata and
-        # raise Refused if the channel is not one of the specified types.
         guild_id = int(interaction.guild_id)
         with Session(self.bind) as session:
             hub = hub_of(session, guild_id)
