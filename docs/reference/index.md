@@ -20,7 +20,6 @@ first-level subpackage, with the file each lives in. Read the page before openin
 | [`wd_db`](wd-db.md) | The database package for the Winter Dragon project. |
 | [`wd_db.errors`](wd-db.errors.md) |  |
 | [`wd_db.extension`](wd-db.extension.md) |  |
-| [`wd_db.extras`](wd-db.extras.md) |  |
 | [`wd_discord`](wd-discord.md) | wd-discord: a small Discord API (v10) client library for Winter Dragon. |
 | [`wd_discord.entities`](wd-discord.entities.md) | The high-level API: Discord objects bound to the client that acts on them, and the stores creating them. |
 | [`wd_discord.errors`](wd-discord.errors.md) | Location of all discord and package related erros go. |

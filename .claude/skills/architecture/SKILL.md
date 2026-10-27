@@ -33,7 +33,7 @@ wd-types            wd-config             ← leafs: depend on nothing internal
 1. **Constructor injection** (default). Collaborators are parameters: `SteamSaleNotifier(client, store, color=...)` ([cogs/steam/notifier.py](../../../src/winter_dragon/cogs/steam/notifier.py)) takes its client and store from the cog that builds it. Cogs take `**kwargs: Unpack[BotArgs]` — `bot` `Required`, `db_session` `NotRequired` with a fallback in `Cog.__init__` ([wd_bot/cogs.py](../../../wd-bot/src/wd_bot/cogs.py)): `kwargs.get("db_session", Session(engine))`. Tests inject; runtime falls back to the shared default.
 
 2. **Self-registering factory registries** — an open set of handlers keyed by a value. A factory class holds a `ClassVar` dict + `register()`/`get_*()` classmethods, populated by `__init_subclass__` on a base, so defining a subclass IS the registration:
-   - `BaseModel.__init_subclass__` auto-collects every model ([wd_db/extension/model.py](../../../wd-db/src/wd_db/extension/model.py)).
+   - `MemberHiddenHook.__init_subclass__` registers each feature's cleanup for a hidden member ([member_hidden.py](../../../src/winter_dragon/member_hidden.py)).
    Registration happens at import time — a package `__init__` must import the modules holding the subclasses.
 
 3. **Service locator (module singletons)** — only for process-wide resources: `engine`/`session` in [wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) (via `SessionMixin`) and the static config classes (`Settings`, `DbUrl`). Anything a constructor parameter can carry doesn't get a new singleton.
@@ -44,6 +44,6 @@ Decorator injection for config values: `@Config.with_kwarg("Tokens", "discord_to
 
 1. **Import it.** If two packages need it, move it down a layer (usually wd-types/wd-core), don't copy. In-tree anti-examples: `Region`/`Platform` in both `riot_clash_api.py` and `league_of_legends.py`; `Cassiopeia*` protocols in two cogs.
 2. **Mixins** for orthogonal capabilities: `LoggerMixin` (herogold) gives `self.logger`; `SessionMixin` shares the DB session.
-3. **Base classes with behavior**: `BaseModel` is a repository (`add/update/get/get_all/delete/fetch`); `Cog`/`GroupCog` configure per-subclass `CogFlags` through `__init_subclass__`.
+3. **Base classes with behavior**: `LifecycleModel` gives every table timestamps, soft delete and a declared `Ownership` ([wd_db/extension/lifecycle.py](../../../wd-db/src/wd_db/extension/lifecycle.py)); `Cog`/`GroupCog` configure per-subclass `CogFlags` through `__init_subclass__`.
 4. **Decorators** for cross-cutting policy: `returns_known_exception`, `with_known_exception`, `@Config.with_kwarg`. Periodic work is `@Cog.periodic(seconds=...)` on an async tick: the bot starts it on load, cancels and awaits it on unload, and logs a raising tick without ending the loop — never hand-roll an asyncio task in `load()` (see `Heartbeat` in `winter_dragon/cogs/heartbeat.py`).
 5. **Descriptors/Protocols** — see advanced-patterns.

@@ -43,8 +43,7 @@ nav = [
     { "wd_db" = [
       { "wd_db" = "reference/wd-db.md" },
       { "wd_db.extension" = "reference/wd-db.extension.md" },
-      { "wd_db.errors" = "reference/wd-db.errors.md" },
-      { "wd_db.extras" = "reference/wd-db.extras.md" }
+      { "wd_db.errors" = "reference/wd-db.errors.md" }
     ] },
     { "wd_core" = "reference/wd-core.md" },
     { "wd_errors" = [

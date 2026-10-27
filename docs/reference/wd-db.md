@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_db` — `wd-db/src/wd_db/__init__.py`
 
-- exports: SQLModel, SessionMixin, session
+- exports: SessionMixin, session
 
 ## `wd_db.channel_types` — `wd-db/src/wd_db/channel_types.py`
 Module containing tags for the database.
@@ -54,11 +54,6 @@ Config descriptor scoped to the database settings file.
 The database URL components; ``wd_db.constants.DATABASE_URL`` is assembled from them.
 
 - attributes: driver_name, database, username, password, host, port
-
-### `class ApiTableSettings`
-How :class:`wd_db.extension.api_table.ApiTable` talks to external APIs.
-
-- attributes: request_timeout
 
 ## `wd_db.testing` — `wd-db/src/wd_db/testing.py`
 Test helpers for code built on wd-db: an in-memory sqlite database standing in for PostgreSQL.

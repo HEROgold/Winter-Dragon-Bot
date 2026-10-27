@@ -27,10 +27,7 @@ runtime-evaluated-base-classes = [
   "wd_discord.models.DiscordModel",
   # SQLModel tables resolve their annotations at class creation too, e.g. ``datetime | None`` for a nullable column.
   "sqlmodel.SQLModel",
-  "wd_db.extension.model.BaseModel",
   "wd_db.extension._herogold.BaseModel",
-  "wd_db.extension.model.SQLModel",
-  "wd_db.extension.model.DiscordID",
   "wd_db.extension.lifecycle.LifecycleModel",
   "wd_db.extension.lifecycle.DiscordKeyedModel",
   "archive.models.base.ArchiveEntity",

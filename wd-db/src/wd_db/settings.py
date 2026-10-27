@@ -27,9 +27,3 @@ class DbUrl:
     host = DatabaseConfig("postgres")
     port = DatabaseConfig(5432)
 
-
-class ApiTableSettings:
-    """How :class:`wd_db.extension.api_table.ApiTable` talks to external APIs."""
-
-    request_timeout = DatabaseConfig(10.0)
-    """Seconds an API table request may take before it times out."""
