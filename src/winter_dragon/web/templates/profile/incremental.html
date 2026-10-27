@@ -1,0 +1,7 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Incremental</h2>
+  {% include "profile/_incremental_game.html" %}
+  <script src="{{ url_for('static', path='incremental.js').path }}" defer></script>
+{% endblock %}

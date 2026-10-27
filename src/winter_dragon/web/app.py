@@ -50,6 +50,9 @@ def create_app(
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     for router in (pages.router, auth.router, reminders.router, profile.router):
         app.include_router(router)
+    for page in profile.profile_pages():
+        if page.router is not None:
+            app.include_router(page.router, prefix=page.path)
     app.add_exception_handler(SignInRequired, _to_sign_in)
     return app
 
