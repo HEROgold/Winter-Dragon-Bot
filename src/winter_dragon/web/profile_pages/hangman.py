@@ -1,7 +1,7 @@
 """The Profile's hangman page: games the member took part in, how many were won, and a history, newest first."""
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, cast
 
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive, owned_by
@@ -41,9 +41,8 @@ def hangman(context: ProfileContext) -> dict[str, object]:
                 word=game.word,
                 won=game.status is HangmanStatus.WON,
                 wrong_guesses=(*game.wrong_letters, *game.wrong_word_list),
-                finished=game.finished_at.astimezone(context.zone),
+                finished=cast("datetime", game.finished_at).astimezone(context.zone),  # the query keeps finished games only
             )
             for game in games
-            if game.finished_at is not None
         ]
     return {"history": history, "played": len(history), "won": sum(game.won for game in history)}
