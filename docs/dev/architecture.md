@@ -47,8 +47,8 @@ Each package's public API is listed in the [API reference](../reference/index.md
 4. The gateway connection (`wd_discord.gateway`) receives dispatch events. `parse_dispatch` validates each one
    into a model, and `wd_discord.bind` wraps it in an entity bound to the client: a `Message`, a `Guild`,
    a typed `Interaction`.
-5. `Bot` routes the result. Interactions go to the matching `@Cog.command`, `@Cog.component` or
-   autocomplete handler. Other events go to `@Cog.listener` methods.
+5. `Bot` routes the result. Interactions go to the matching `@Cog.command`, `@Cog.component`, or the
+   option's `Lookup` method for autocomplete. Other events go to `@Cog.listener` methods.
 
 ## Design rules
 

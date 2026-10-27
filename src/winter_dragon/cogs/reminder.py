@@ -7,7 +7,7 @@ lazy from typing import TYPE_CHECKING, ClassVar, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, col
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Lookup
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_bot.cogs import Cog, GroupCog
@@ -252,11 +252,19 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         timed = TimedReminder(content=reminder, user_id=int(user.id), timestamp=utc_now() + every, repeat_every=every)
         await self._store(interaction, timed)
 
+    async def remove_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
+        """Suggest the invoking user's reminders whose content contains what they typed."""
+        user = interaction.user
+        if user is None:
+            return []
+        with Session(self.bind) as session:
+            return list(reminder_choices(owned_reminders(session, int(user.id)), current))
+
     @Cog.command(name="remove", description="Cancel one of your reminders")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
     async def remove(
         self,
         interaction: CommandInteraction,
-        reminder: Annotated[str, Describe("The text of the reminder to remove")],
+        reminder: Annotated[str, Lookup(remove_choices), Describe("The text of the reminder to remove")],
     ) -> None:
         """Remove the invoking user's reminder named by ``reminder``."""
         # TODO: Update reminder Annotated to the reminder Model.
@@ -274,12 +282,3 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
             await interaction.respond("You have no reminder like that.", ephemeral=True)
             return
         await interaction.respond(embeds=[DeletedEmbed(description=f"Removed your reminder of\n`{content}`")], ephemeral=True)
-
-    @remove.autocomplete("reminder")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
-    async def remove_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
-        """Suggest the invoking user's reminders whose content contains what they typed."""
-        user = interaction.user
-        if user is None:
-            return []
-        with Session(self.bind) as session:
-            return list(reminder_choices(owned_reminders(session, int(user.id)), current))

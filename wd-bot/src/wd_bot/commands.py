@@ -13,13 +13,17 @@ lazy from types import LazyImportType, NoneType, UnionType
 lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
+lazy from sqlmodel import Session
+lazy from wd_db.extension.lifecycle import LifecycleModel, alive
 lazy from wd_discord import Channel, Role, User
 lazy from wd_discord.authenticate import render
 lazy from wd_discord.entities import Resolved
 lazy from wd_discord.interactions import (
+    MAX_CHOICE_NAME_LENGTH,
     MAX_CHOICES,
     MAX_DESCRIPTION_LENGTH,
     ApplicationCommandOption,
+    ApplicationCommandOptionChoice,
     ApplicationCommandOptionType,
     ApplicationCommandParams,
     InteractionContextType,
@@ -41,7 +45,6 @@ if TYPE_CHECKING:
 
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
     lazy from wd_discord.gateway.events import InteractionDataOption
-    lazy from wd_discord.interactions import ApplicationCommandOptionChoice
     lazy from wd_discord.permissions import ChannelType, Permissions
     lazy from wd_discord.snowflake import SnowflakeLike
 
@@ -93,6 +96,49 @@ class Describe:
             raise ValueError(msg)
 
 
+class Lookup:
+    """Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_names)]``.
+
+    The only way to autocomplete an option. ``choices`` is the cog method that suggests values, an
+    :data:`AutocompleteHandler`; define it above the command, so type checkers can resolve the name. Discord shows at
+    most the first :data:`~wd_discord.interactions.MAX_CHOICES`.
+
+    On a ``str``, ``int`` or ``float`` parameter the handler gets the submitted value. On a
+    :class:`~wd_db.extension.lifecycle.LifecycleModel` table class, or a union of them, the option is a STRING that
+    picks a stored row: build each suggestion with :meth:`choice`, and the handler gets the alive row, detached from
+    the session that loaded it (a handler that writes adds it to its own session). A value that doesn't parse, names
+    a table outside the annotation, or names a row that is gone or soft-deleted is refused. Lookup only loads by ID,
+    so ownership and scope checks (whose row it is, which guild it belongs to) stay in the handler.
+    """
+
+    __slots__ = ("choices",)
+
+    def __init__(self, choices: AutocompleteHandler) -> None:
+        """Suggest rows with the cog method ``choices``."""
+        self.choices = choices
+
+    @staticmethod
+    def choice(row: LifecycleModel, name: str) -> ApplicationCommandOptionChoice:
+        """Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit."""
+        return ApplicationCommandOptionChoice(
+            name=name[:MAX_CHOICE_NAME_LENGTH],
+            value=f"{type(row).__tablename__}:{row.id}",
+        )
+
+    def load(self, cog: Cog, models: tuple[type[LifecycleModel], ...], option: str, value: object) -> LifecycleModel:
+        """Return the alive row ``value`` names, one of ``models``; raise ``Refused`` when there is none."""
+        table, _, row_id = str(value).partition(":")
+        model = next((model for model in models if model.__tablename__ == table), None)
+        row = None
+        if model is not None and row_id.isdecimal():
+            with Session(cog.bind) as session:
+                row = session.exec(alive(model).where(model.id == int(row_id))).first()
+        if row is None:
+            msg = f"I can't find that {option}; pick one from the list."
+            raise Refused(msg)
+        return row
+
+
 @dataclass(frozen=True, slots=True)
 class OptionSpec:
     """A handler parameter as a Discord option: what Discord asks for, and what the handler gets."""
@@ -106,6 +152,10 @@ class OptionSpec:
     """The kinds of channel a channel option may name; ``None`` allows any."""
     description: str | None = None
     """The text from the parameter's :class:`Describe`; ``None`` shows the parameter name instead."""
+    lookup: Lookup | None = None
+    """The :class:`Lookup` of a stored-row option; ``None`` for any other."""
+    models: tuple[type[LifecycleModel], ...] = ()
+    """The table classes a :class:`Lookup` option may name."""
 
     def definition(self, *, autocomplete: bool) -> ApplicationCommandOption:
         """Return the option as Discord defines it."""
@@ -118,19 +168,22 @@ class OptionSpec:
             autocomplete=True if autocomplete else None,
         )
 
-    def argument(self, interaction: CommandInteraction, value: object) -> object:
+    def argument(self, interaction: CommandInteraction, value: object, cog: Cog) -> object:
         """Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
 
-        Raises :class:`~wd_errors.Refused` when a channel isn't one of the option's ``channel_types``.
+        Raises :class:`~wd_errors.Refused` when a channel isn't one of the option's ``channel_types``, or a
+        :class:`Lookup` value names no alive row.
 
         A parameter annotated with a bound entity gets one bound to the interaction's client; one annotated with the
         data model gets the model.
         """
+        if self.lookup is not None and self.models:
+            return self.lookup.load(cog, self.models, self.name, value)
         resolvers = _RESOLVERS.get(self.option_type)
         if resolvers is not None:
             resolved = interaction.resolved
             found = None if resolved is None else next(filter(None, (find(resolved, str(value)) for find in resolvers)), None)
-            if self.channel_types and found is not None and found.type not in self.channel_types:
+            if self.channel_types and isinstance(found, Channel) and found.type not in self.channel_types:
                 kinds = " or ".join(kind.name.removeprefix("GUILD_").replace("_", " ").lower() for kind in self.channel_types)
                 msg = f"Pick a {kinds} channel for {self.name!r}."
                 raise Refused(msg)
@@ -218,7 +271,8 @@ class Command(AppCommand):
     """Encapsulates one chat-input application command: its Discord definition and its handler.
 
     Built by :meth:`wd_bot.cogs.Cog.command`. ``func``'s parameters (after ``self``/``interaction``)
-    define the command's options via their type annotations.
+    define the command's options via their type annotations, read when the cog class is created: a command is
+    always a cog method, so its annotations may name anything in the class body.
     """
 
     def __init__(  # noqa: PLR0913 - each keyword is part of the command's Discord definition
@@ -250,23 +304,34 @@ class Command(AppCommand):
         """Whether the handler's ``interaction`` is annotated as a guild interaction; it must then be guild-only."""
         self.owner: type[Cog] | None = None
         """The cog class this command was defined on; set when that class is created."""
-        self._autocompletes: dict[str, AutocompleteHandler] = {}
-        annotations = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF)
-        parameters = inspect_signature(func, annotation_format=annotationlib.Format.STRING).parameters
-        self._options = {
+        self._specs: dict[str, OptionSpec] | None = None
+
+    @property
+    def _options(self) -> dict[str, OptionSpec]:
+        """The handler's parameters as Discord options, by name; raises ``TypeError`` before a cog class owns it."""
+        if self._specs is None:
+            msg = f"Command {self.name!r} isn't defined on a Cog, so it has no options"
+            raise TypeError(msg)
+        return self._specs
+
+    def _read_options(self) -> dict[str, OptionSpec]:
+        """Return the handler's parameters as options, reading its annotations now that its class body has run."""
+        annotations = annotationlib.get_annotations(self.func, format=annotationlib.Format.FORWARDREF)
+        parameters = inspect_signature(self.func, annotation_format=annotationlib.Format.STRING).parameters
+        return {
             name: self._option_of(param, annotations.get(name, Parameter.empty))
             for name, param in parameters.items()
             if name not in ("self", "interaction")
         }
-        """The handler's parameters as Discord options, by name."""
 
     def _option_of(self, param: Parameter, annotation: object) -> OptionSpec:
         """Return handler parameter ``param`` as an option: its type, metadata, and whether it's required.
 
         A default value or a ``T | None`` annotation makes the option optional. ``Annotated`` metadata, inside or
         outside the ``| None``, configures it: :class:`ChannelTypes` limits a channel option and :class:`Describe`
-        sets its description. ``User | Role`` takes a MENTIONABLE. Raises ``TypeError`` if the type has no Discord
-        option type or the metadata doesn't fit it.
+        sets its description. ``User | Role`` takes a MENTIONABLE. A :class:`Lookup` goes with a table class, or a
+        union of them, and makes a STRING. Raises ``TypeError`` if the type has no Discord option type or the
+        metadata doesn't fit it.
         """
         param_type, metadata = self._unwrap(self._resolve(annotation, self.func))
         required = param.default is Parameter.empty
@@ -276,11 +341,29 @@ class Command(AppCommand):
             metadata += inner
             required = False
         channel_types = [kind for item in metadata if isinstance(item, ChannelTypes) for kind in item.types]
+        lookups = [item for item in metadata if isinstance(item, Lookup)]
         descriptions = [item.text for item in metadata if isinstance(item, Describe)]
         if len(descriptions) > 1:
             msg = f"Command {self.name!r}: parameter {param.name!r} has more than one Describe"
             raise TypeError(msg)
-        if isinstance(param_type, UnionType) and frozenset(map(self._reify, get_args(param_type))) in _MENTIONABLES:
+        if len(lookups) > 1:
+            msg = f"Command {self.name!r}: parameter {param.name!r} has more than one Lookup"
+            raise TypeError(msg)
+        if lookups and not callable(lookups[0].choices):
+            msg = f"Command {self.name!r}: the Lookup of {param.name!r} names {lookups[0].choices!r}, which isn't a function"
+            raise TypeError(msg)
+        members = tuple(map(self._reify, get_args(param_type))) if isinstance(param_type, UnionType) else (param_type,)
+        tables = tuple(kind for kind in members if isinstance(kind, type) and issubclass(kind, LifecycleModel))
+        models = tables if len(tables) == len(members) else ()
+        if models and not lookups:
+            msg = f"Command {self.name!r}: parameter {param.name!r} is a LifecycleModel, so it needs a Lookup"
+            raise TypeError(msg)
+        if lookups and not models and param_type not in (str, int, float):
+            msg = f"Command {self.name!r}: a Lookup goes on a str, int, float or LifecycleModel parameter, not {param.name!r}"
+            raise TypeError(msg)
+        if models:
+            option_type = ApplicationCommandOptionType.STRING
+        elif isinstance(param_type, UnionType) and frozenset(map(self._reify, get_args(param_type))) in _MENTIONABLES:
             option_type = ApplicationCommandOptionType.MENTIONABLE
         elif isinstance(param_type, type) and param_type in _OPTION_TYPE_MAP:
             option_type = _OPTION_TYPE_MAP[param_type]
@@ -297,6 +380,8 @@ class Command(AppCommand):
             required,
             channel_types or None,
             next(iter(descriptions), None),
+            next(iter(lookups), None),
+            models,
         )
 
     @staticmethod
@@ -324,10 +409,10 @@ class Command(AppCommand):
     def options(self) -> Generator[ApplicationCommandOption]:
         """Yield this command's Discord option definitions, derived from its handler's parameters."""
         for name, option in self._options.items():
-            yield option.definition(autocomplete=name in self._autocompletes)
+            yield option.definition(autocomplete=option.lookup is not None)
 
     def _own_signature(self) -> Generator[str]:
-        """Yield the handler's parameter signature, then its option descriptions and autocompletes when it has any.
+        """Yield the handler's parameter signature, then its option descriptions when it has any.
 
         The descriptions are rendered: the signature only holds an annotation's source, which doesn't change when a
         constant a ``Describe`` names does.
@@ -335,26 +420,6 @@ class Command(AppCommand):
         yield command_signature(self.func)
         if descriptions := {name: spec.description for name, spec in self._options.items() if spec.description}:
             yield f"descriptions: {descriptions}"
-        if self._autocompletes:
-            yield f"autocomplete: {sorted(self._autocompletes)}"
-
-    def autocomplete(self, option: str) -> Callable[[AutocompleteHandler], AutocompleteHandler]:
-        """Tag a Cog method as the handler suggesting values for this command's ``option`` while it's typed.
-
-        The handler gets the interaction and the text typed so far, and returns the choices to suggest; Discord
-        shows at most the first :data:`~wd_discord.interactions.MAX_CHOICES`. Only STRING, INTEGER and NUMBER
-        options autocomplete. Use it right below the command, like ``@remove.autocomplete("reminder")``.
-        """
-        spec = self._options.get(option)
-        if spec is None or spec.param_type not in (str, int, float):
-            msg = f"Command {self.name!r}: option {option!r} isn't a str, int or float parameter, so it can't autocomplete"
-            raise TypeError(msg)
-
-        def decorator(func: AutocompleteHandler) -> AutocompleteHandler:
-            self._autocompletes[option] = func
-            return func
-
-        return decorator
 
     async def invoke(
         self,
@@ -371,7 +436,7 @@ class Command(AppCommand):
         if options is None:
             options = interaction.options
         try:
-            kwargs = self._build_kwargs(interaction, options)
+            kwargs = self._build_kwargs(cog, interaction, options)
             if self.guild_only or (self.owner is not None and self.owner.guild_only()):
                 interaction = require_guild(interaction)
             if self.requires is not None:
@@ -399,7 +464,8 @@ class Command(AppCommand):
         if options is None:
             options = interaction.options
         focused = next((option for option in options if option.focused), None)
-        handler = self._autocompletes.get(focused.name) if focused else None
+        spec = self._options.get(focused.name) if focused else None
+        handler = spec.lookup.choices if spec is not None and spec.lookup is not None else None
         if focused is None or handler is None:
             self.logger.warning(t"No autocomplete handler for the focused option of command '{self.name}'")
             return False
@@ -412,7 +478,12 @@ class Command(AppCommand):
         await interaction.suggest(choices)
         return True
 
-    def _build_kwargs(self, interaction: CommandInteraction, options: Sequence[InteractionDataOption]) -> dict[str, object]:
+    def _build_kwargs(
+        self,
+        cog: Cog,
+        interaction: CommandInteraction,
+        options: Sequence[InteractionDataOption],
+    ) -> dict[str, object]:
         """Map each submitted option to a handler argument, resolving user, channel, role and mentionable options.
 
         Options the handler doesn't declare, and objects missing from the interaction's resolved data, are skipped with
@@ -424,7 +495,7 @@ class Command(AppCommand):
             if spec is None:
                 self.logger.warning(t"Unknown option '{option.name}' for command '{self.name}', skipping it")
                 continue
-            value = spec.argument(interaction, option.value)
+            value = spec.argument(interaction, option.value, cog)
             if value is None:
                 self.logger.warning(t"Unresolved '{option.value}' for option '{option.name}' in command '{self.name}'")
                 continue
@@ -436,9 +507,11 @@ class Command(AppCommand):
         return self
 
     def __set_name__(self, owner: type, name: str) -> None:
-        """Remember the cog class this command is defined on, so a mention from any cog can find its path."""
-        if issubclass(owner, Cog):
-            self.owner = owner
+        """Remember the cog class this command is defined on, and read its options now that the class body has run."""
+        if not issubclass(owner, Cog):
+            return
+        self.owner = owner
+        self._specs = self._read_options()
 
 
 GUILD_INTERACTIONS = frozenset({"GuildCommandInteraction", "GuildComponentInteraction"})

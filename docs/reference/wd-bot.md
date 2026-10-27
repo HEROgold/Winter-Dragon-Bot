@@ -137,13 +137,19 @@ Limit a channel option to some kinds of channel: ``category: Annotated[Channel, 
 ### `class Describe`
 Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
 
+### `class Lookup`
+Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_names)]``.
+
+- `@staticmethod choice(row: LifecycleModel, name: str) -> ApplicationCommandOptionChoice` — Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit.
+- `load(cog: Cog, models: tuple[type[LifecycleModel], ...], option: str, value: object) -> LifecycleModel` — Return the alive row ``value`` names, one of ``models``; raise ``Refused`` when there is none.
+
 ### `@dataclass class OptionSpec`
 A handler parameter as a Discord option: what Discord asks for, and what the handler gets.
 
 - fields: name: str, param_type: object, option_type: ApplicationCommandOptionType, required: bool, channel_types:
-  list[ChannelType] | None, description: str | None
+  list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...]
 - `definition(*, autocomplete: bool) -> ApplicationCommandOption` — Return the option as Discord defines it.
-- `argument(interaction: CommandInteraction, value: object) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
+- `argument(interaction: CommandInteraction, value: object, cog: Cog) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
 
 ### `class AppCommand(LoggerMixin, ABC)`
 What every application command shares: its name, description and where Discord lets it be used.
@@ -158,7 +164,6 @@ What every application command shares: its name, description and where Discord l
 Encapsulates one chat-input application command: its Discord definition and its handler.
 
 - `options() -> Generator[ApplicationCommandOption]` — Yield this command's Discord option definitions, derived from its handler's parameters.
-- `autocomplete(option: str) -> Callable[[AutocompleteHandler], AutocompleteHandler]` — Tag a Cog method as the handler suggesting values for this command's ``option`` while it's typed.
 - `async invoke(cog: Cog, interaction: CommandInteraction, options: Sequence[InteractionDataOption] | None=None) -> bool` — Resolve option values into kwargs and call the wrapped handler.
 - `async complete(cog: Cog, interaction: AutocompleteInteraction, options: Sequence[InteractionDataOption] | None=None) -> bool` — Answer ``interaction`` with the focused option's suggestions.
 
@@ -307,3 +312,4 @@ Derive a stable signature string for a command's callable, used to detect defini
 Test helpers for cogs: build one to call its handlers on, without a running bot.
 
 - `detached_cog[C: Cog](cls: type[C], *, engine: Engine | None=None, **bot: object) -> C` — Return a ``cls`` built without :meth:`Cog.__init <wd_bot.cogs.Cog.__init__>`: no auto-load task, no hot reload.
+- `cog_command(func: Callable[..., Awaitable[None]], /, **definition: Any) -> Command` — Return ``func`` as a :class:`~wd_bot.commands.Command` on a throwaway cog class, built as ``@Cog.command`` builds it.

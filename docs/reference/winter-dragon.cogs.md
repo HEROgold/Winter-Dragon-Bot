@@ -293,8 +293,8 @@ Stores reminders and DMs them to their users when due, from a background task.
 - `async send_due(now: datetime) -> int` — DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
 - `@Cog.command async add(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0) -> None` — Remind the invoking user of ``reminder`` once, after the given time.
 - `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
+- `async remove_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoking user's reminders whose content contains what they typed.
 - `@Cog.command async remove(interaction: CommandInteraction, reminder: str) -> None` — Remove the invoking user's reminder named by ``reminder``.
-- `@remove.autocomplete async remove_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoking user's reminders whose content contains what they typed.
 
 ## `winter_dragon.cogs.stats` — `src/winter_dragon/cogs/stats.py`
 The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels.
@@ -636,12 +636,12 @@ Runs one tournament per guild: players sign up, teams form, and a single-elimina
 - `@Cog.command async start_tournament(interaction: GuildCommandInteraction) -> None` — Start the tournament and show its bracket; organisers only.
 - `@Cog.command async bracket(interaction: GuildCommandInteraction) -> None` — Show the bracket, or the sign-up card before the tournament starts.
 - `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction) -> None` — Cancel the tournament; organisers only.
+- `async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournament's undecided matches whose line contains what was typed.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: int) -> None` — Post the card of match ``match``.
 - `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, team_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
-- `@Cog.command async ban(interaction: GuildCommandInteraction, match: int, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
-- `@Cog.command async pick(interaction: GuildCommandInteraction, match: int, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
-- `@Cog.command async vote(interaction: GuildCommandInteraction, match: int, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
-- `@vote.autocomplete @pick.autocomplete @ban.autocomplete @match_card.autocomplete async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournament's undecided matches whose line contains what was typed.
+- `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
+- `@Cog.command async pick(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
+- `@Cog.command async vote(interaction: GuildCommandInteraction, match: TournamentMatch, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
 - `@Cog.component async vote_button(interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None` — Record the clicker's answer, then refresh the tally.
 - `@Cog.component async close_vote_button(interaction: GuildComponentInteraction, vote_id: str) -> None` — Close the vote and show the final tally; organisers only.
 
