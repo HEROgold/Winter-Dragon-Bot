@@ -256,14 +256,12 @@ Purges soft-deleted records daily, and hides the data of departed guilds and of 
 ## `winter_dragon.cogs.reminder` — `src/winter_dragon/cogs/reminder.py`
 The /reminder command group: one-off and repeating reminders, sent as DMs by a background task.
 
-- module names: SECONDS_PER_UNIT, REMINDER_TABLES, CHOICE_PREFIXES: dict[type[AnyReminder], str]
+- module names: SECONDS_PER_UNIT, REMINDER_TABLES
 - `type AnyReminder = Reminder | TimedReminder`
 - `delay_from(**amounts: int) -> timedelta | None` — Return the delay made of ``amounts`` per unit (``minutes=5, hours=1``), or ``None`` if it's out of range.
 - `next_occurrence(due: datetime, repeat_every: timedelta, now: datetime) -> datetime` — Return the first time after ``now`` that a reminder due at ``due`` and repeating every ``repeat_every`` is due.
 - `reminder_message(content: str) -> str` — Return the DM reminding someone of ``content``.
-- `choice_value(reminder: AnyReminder) -> str` — Return the autocomplete value naming ``reminder``: its table and ID, like ``repeat:12``.
 - `owned_reminders(session: Session, user_id: int) -> Generator[AnyReminder]` — Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due.
-- `find_reminder(session: Session, user_id: int, reminder: str) -> AnyReminder | None` — Return the reminder of the user ``user_id`` that ``reminder`` names.
 - `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
 - `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
 

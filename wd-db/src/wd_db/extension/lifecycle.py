@@ -101,6 +101,20 @@ def alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]:
     return select(model).where(col(model.deleted_at).is_(None))
 
 
+def row_key(row: LifecycleModel) -> str:
+    """Return the string naming ``row``: its table and ID, like ``reminder:12``; :func:`find_by_key` reads it back."""
+    return f"{type(row).__tablename__}:{row.id}"
+
+
+def find_by_key[M: LifecycleModel](session: Session, models: Iterable[type[M]], key: str) -> M | None:
+    """Return the alive row that :func:`row_key` ``key`` names, if its table is one of ``models``; else ``None``."""
+    table, _, row_id = key.partition(":")
+    model = next((model for model in models if model.__tablename__ == table), None)
+    if model is None or not row_id.isdecimal():
+        return None
+    return session.exec(alive(model).where(model.id == int(row_id))).first()
+
+
 def soft_delete(session: Session, row: LifecycleModel, *, at: datetime | None = None) -> None:
     """Soft-delete ``row``: stamp its ``deleted_at`` with ``at`` (default now), hiding it from :func:`alive`. Caller commits."""
     row.deleted_at = utc_now() if at is None else at

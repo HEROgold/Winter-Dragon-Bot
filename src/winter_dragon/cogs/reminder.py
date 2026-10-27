@@ -67,8 +67,6 @@ type AnyReminder = Reminder | TimedReminder
 
 REMINDER_TABLES = (Reminder, TimedReminder)
 """Every table the reminder cog creates on load."""
-CHOICE_PREFIXES: dict[type[AnyReminder], str] = {Reminder: "once", TimedReminder: "repeat"}
-"""How an autocomplete choice's value says which table its reminder is in."""
 
 
 def delay_from(**amounts: int) -> timedelta | None:
@@ -98,29 +96,10 @@ def reminder_message(content: str) -> str:
     return f"I'm here to remind you about\n`{content}`"
 
 
-def choice_value(reminder: AnyReminder) -> str:
-    """Return the autocomplete value naming ``reminder``: its table and ID, like ``repeat:12``."""
-    return f"{CHOICE_PREFIXES[type(reminder)]}:{reminder.id}"
-
-
 def owned_reminders(session: Session, user_id: int) -> Generator[AnyReminder]:
     """Yield every reminder of the user ``user_id``: repeating ones first, then one-off ones by when they're due."""
     yield from session.exec(owned_by(TimedReminder, member=user_id))
     yield from session.exec(owned_by(Reminder, member=user_id).order_by(col(Reminder.timestamp)))
-
-
-def find_reminder(session: Session, user_id: int, reminder: str) -> AnyReminder | None:
-    """Return the reminder of the user ``user_id`` that ``reminder`` names.
-
-    That's a :func:`choice_value` picked from autocomplete, or else typed text matching a reminder's content.
-    """
-    prefix, _, reminder_id = reminder.partition(":")
-    for model, model_prefix in CHOICE_PREFIXES.items():
-        if prefix == model_prefix and reminder_id.isdigit():
-            found = session.exec(alive(model).where(model.id == int(reminder_id))).first()
-            if found is not None and found.user_id == user_id:
-                return found
-    return next((owned for owned in owned_reminders(session, user_id) if owned.content == reminder), None)
 
 
 def reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]:

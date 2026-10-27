@@ -276,10 +276,10 @@ def test_you_can_only_delete_your_own_reminders(member: TestClient, bind: Engine
     )
     token = _csrf(member)
 
-    member.post(f"/reminders/once:{theirs}/delete", data={"csrf_token": token}, headers=HTMX)
+    member.post(f"/reminders/reminder:{theirs}/delete", data={"csrf_token": token}, headers=HTMX)
     assert sorted(_alive_contents(bind)) == ["mine", "theirs"]
 
-    response = member.post(f"/reminders/once:{mine}/delete", data={"csrf_token": token}, headers=HTMX)
+    response = member.post(f"/reminders/reminder:{mine}/delete", data={"csrf_token": token}, headers=HTMX)
     assert _alive_contents(bind) == ["theirs"]
     assert "No reminders coming up" in response.text
 

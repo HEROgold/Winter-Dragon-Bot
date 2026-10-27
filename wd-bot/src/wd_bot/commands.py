@@ -14,7 +14,7 @@ lazy from typing import TYPE_CHECKING, Annotated, Self, get_args, get_origin
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session
-lazy from wd_db.extension.lifecycle import LifecycleModel, alive
+lazy from wd_db.extension.lifecycle import LifecycleModel, find_by_key, row_key
 lazy from wd_discord import Channel, Role, User
 lazy from wd_discord.authenticate import render
 lazy from wd_discord.entities import Resolved
@@ -122,17 +122,13 @@ class Lookup:
         """Return the suggestion that picks ``row``, shown as ``name`` cut to Discord's length limit."""
         return ApplicationCommandOptionChoice(
             name=name[:MAX_CHOICE_NAME_LENGTH],
-            value=f"{type(row).__tablename__}:{row.id}",
+            value=row_key(row),
         )
 
     def load(self, cog: Cog, models: tuple[type[LifecycleModel], ...], option: str, value: object) -> LifecycleModel:
         """Return the alive row ``value`` names, one of ``models``; raise ``Refused`` when there is none."""
-        table, _, row_id = str(value).partition(":")
-        model = next((model for model in models if model.__tablename__ == table), None)
-        row = None
-        if model is not None and row_id.isdecimal():
-            with Session(cog.bind) as session:
-                row = session.exec(alive(model).where(model.id == int(row_id))).first()
+        with Session(cog.bind) as session:
+            row = find_by_key(session, models, str(value))
         if row is None:
             msg = f"I can't find that {option}; pick one from the list."
             raise Refused(msg)
