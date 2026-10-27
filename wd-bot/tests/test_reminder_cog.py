@@ -191,21 +191,26 @@ async def test_remove_by_autocomplete_value(
     (timed_id,) = seed(engine, TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)))
     cog, _ = _cog(engine)
 
-    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"repeat:{timed_id}"))
+    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"timedreminder:{timed_id}"))
 
     with Session(engine) as session:
         assert session.exec(alive(TimedReminder)).all() == []
     assert _embed(discord_client) == {"description": "Removed your reminder of\n`water`", "color": int(Settings.deleted_color)}
 
 
-async def test_remove_by_typed_content(engine: Engine, make_interaction: InteractionFactory) -> None:
+async def test_remove_refuses_typed_content_and_asks_for_the_list(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
     seed(engine, Reminder(content="feed the cat", user_id=ASKER_ID, timestamp=NOW))
     cog, _ = _cog(engine)
 
     await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder="feed the cat"))
 
     with Session(engine) as session:
-        assert session.exec(alive(Reminder)).all() == []
+        assert len(session.exec(alive(Reminder)).all()) == 1
+    assert _reply(discord_client) == "I can't find that reminder; pick one from the list."
 
 
 async def test_remove_leaves_other_users_reminders_alone(
@@ -216,12 +221,11 @@ async def test_remove_leaves_other_users_reminders_alone(
     (other_id,) = seed(engine, Reminder(content="theirs", user_id=99, timestamp=NOW))
     cog, _ = _cog(engine)
 
-    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"once:{other_id}"))
-    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder="theirs"))
+    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"reminder:{other_id}"))
 
     with Session(engine) as session:
         assert len(session.exec(alive(Reminder)).all()) == 1
-    assert _reply(discord_client) == "You have no reminder like that."
+    assert _reply(discord_client) == "That isn't your reminder; pick one from the list."
 
 
 async def test_autocomplete_suggests_own_matching_reminders(engine: Engine, discord_client: RecordingClient) -> None:
@@ -237,8 +241,8 @@ async def test_autocomplete_suggests_own_matching_reminders(engine: Engine, disc
     choices = await cog.remove_choices(_autocomplete(discord_client, "CAT"), "CAT")
 
     assert [(choice.name, choice.value) for choice in choices] == [
-        ("🔁 clean the cat box", f"repeat:{timed_id}"),
-        ("Feed the cat", f"once:{once_id}"),
+        ("🔁 clean the cat box", f"timedreminder:{timed_id}"),
+        ("Feed the cat", f"reminder:{once_id}"),
     ]
 
 
@@ -274,10 +278,10 @@ async def test_removed_reminder_is_not_sent_and_cannot_be_removed_again(
     (once_id,) = seed(engine, Reminder(content="feed the cat", user_id=ASKER_ID, timestamp=NOW))
     cog, client = _cog(engine)
 
-    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"once:{once_id}"))
-    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"once:{once_id}"))
+    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"reminder:{once_id}"))
+    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder=f"reminder:{once_id}"))
 
-    assert _reply(discord_client) == "You have no reminder like that."
+    assert _reply(discord_client) == "I can't find that reminder; pick one from the list."
     assert await cog.send_due(NOW) == 0
     assert _sent(client) == []
     assert await cog.remove_choices(_autocomplete(discord_client, ""), "") == []
@@ -324,7 +328,7 @@ async def test_reminders_in_old_tables_still_work_after_load(
     cog, client = await _loaded_cog(engine)
 
     assert await cog.send_due(NOW) == 1
-    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder="once:2"))
+    await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder="reminder:2"))
     await Reminders.repeat.invoke(cog, make_interaction("reminder"), _options(reminder="stretch", days=1))
 
     assert _sent(client) == [module.reminder_message("old due")]

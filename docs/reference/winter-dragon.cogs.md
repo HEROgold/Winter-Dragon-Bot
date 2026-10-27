@@ -294,7 +294,7 @@ Stores reminders and DMs them to their users when due, from a background task.
 - `@Cog.command async add(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0) -> None` — Remind the invoking user of ``reminder`` once, after the given time.
 - `@Cog.command async repeat(interaction: CommandInteraction, reminder: str, minutes: int=0, hours: int=0, days: int=0, weeks: int=0) -> None` — Remind the invoking user of ``reminder`` every given time, starting one interval from now.
 - `async remove_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoking user's reminders whose content contains what they typed.
-- `@Cog.command async remove(interaction: CommandInteraction, reminder: str) -> None` — Remove the invoking user's reminder named by ``reminder``.
+- `@Cog.command async remove(interaction: CommandInteraction, reminder: Reminder | TimedReminder) -> None` — Remove the invoking user's ``reminder``; refuse another member's.
 
 ## `winter_dragon.cogs.stats` — `src/winter_dragon/cogs/stats.py`
 The /stats command group: a guild's member counts, shown on demand and as the names of locked voice channels.
