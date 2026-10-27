@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0  # bump-by-label rebuilds its branch from origin/main
 
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.2
 
       - name: Bump Version
         uses: HEROgold/bump-by-label@0d7cfd05d8418971b55596b690742ddb37fd46ff # v4.0.0
