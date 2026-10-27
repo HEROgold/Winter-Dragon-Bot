@@ -1,7 +1,7 @@
 """Hangman port and profile page.
 
 Revision ID: e2cb2128ed54
-Revises: c9b4b18ba344
+Revises: fdbd33c005e3
 Create Date: 2026-10-26 23:58:09.969788
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 
 revision: str = "e2cb2128ed54"
-down_revision: str | None = "c9b4b18ba344"
+down_revision: str | None = "fdbd33c005e3"
 branch_labels: str | None = None
 depends_on: str | None = None
 
