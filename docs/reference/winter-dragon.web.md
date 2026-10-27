@@ -93,11 +93,12 @@ The Profile: a member's own pages, one per feature, across every guild.
 
 - module names: router
 - `type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]`
-- `profile_page(*, slug: str, title: str, template: str) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
+- `profile_page(*, slug: str, title: str, template: str, router: APIRouter | None=None) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
 - `profile_pages() -> list[ProfilePage]` — Return every registered page, by title.
 - `load_profile_pages() -> None` — Import every module in ``web/profile_pages/``, so each registers its page.
 - `@router.get profile(request: Request) -> Response` — Show the signed-in member's Profile: a link to each feature's page.
 - `@router.get profile_page_view(request: Request, slug: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's page ``slug`` of the Profile.
+- `render_profile_page(request: Request, slug: str, context: Mapping[str, object], *, fragment: str | None=None) -> Response` — Render page ``slug`` with ``context`` plus ``pages`` and ``page`` (whose ``path`` builds its URLs).
 
 ### `@dataclass class ProfileContext`
 What a Profile page reads to build itself: the database, the member whose Profile it is, and their time zone.
@@ -107,7 +108,7 @@ What a Profile page reads to build itself: the database, the member whose Profil
 ### `@dataclass class ProfilePage`
 One feature's page in the Profile.
 
-- fields: slug: str, title: str, template: str, context: ContextBuilder
+- fields: slug: str, title: str, template: str, context: ContextBuilder, router: APIRouter | None
 - `@property path -> str` — The URL the page is served at.
 
 ## `winter_dragon.web.profile_pages.fuel` — `src/winter_dragon/web/profile_pages/fuel.py`
@@ -131,7 +132,7 @@ The efficiency of a member's refuels over time, ready to draw as an SVG line.
 ## `winter_dragon.web.profile_pages.incremental` — `src/winter_dragon/web/profile_pages/incremental.py`
 The Profile's Incremental game page: the member's save live in the browser, and buying generators.
 
-- module names: PAGE_PATH, TEMPLATE, FRAGMENT, RESYNC_SECONDS, router
+- module names: TEMPLATE, FRAGMENT, RESYNC_SECONDS, router
 - `seconds_until_affordable(offer: game.Offer, per_second: dict[str, float], amounts: dict[str, float]) -> float | None` — Return how many seconds until the save can pay ``offer``'s price at the current rates, or ``None`` if never.
 - `snapshot_of(view: game.SaveView) -> Snapshot` — Turn the shared game module's ``view`` into what the page shows and ticks.
 - `snapshot(bind: Engine, member_id: int, *, now: datetime | None=None) -> Snapshot | None` — Return the member's save as of ``now``, or ``None`` when they haven't started one; this never creates a save.

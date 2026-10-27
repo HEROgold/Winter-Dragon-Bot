@@ -1,8 +1,8 @@
-<div id="incremental" class="game" hx-get="/profile/incremental/snapshot" hx-trigger="every {{ resync_seconds }}s, resync" hx-swap="outerHTML">
+<div id="incremental" class="game" hx-get="{{ page.path }}/snapshot" hx-trigger="every {{ resync_seconds }}s, resync" hx-swap="outerHTML">
   {% if message %}<p class="game-message{% if refused %} game-refused{% endif %}" role="status">{{ message }}</p>{% endif %}
   {% if not snapshot %}
     <p class="profile-empty">You have no save yet. Use <code>/incremental</code> in Discord, or start one here.</p>
-    <form method="post" action="/profile/incremental/start" hx-post="/profile/incremental/start" hx-target="#incremental" hx-swap="outerHTML">
+    <form method="post" action="{{ page.path }}/start" hx-post="{{ page.path }}/start" hx-target="#incremental" hx-swap="outerHTML">
       <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
       <button class="button button-primary" type="submit">Start my save</button>
     </form>
@@ -34,7 +34,7 @@
             </td>
             <td>{{ offer.produces_text }} per second</td>
             <td>
-              <form method="post" action="/profile/incremental/buy/{{ offer.key }}" hx-post="/profile/incremental/buy/{{ offer.key }}" hx-target="#incremental" hx-swap="outerHTML">
+              <form method="post" action="{{ page.path }}/buy/{{ offer.key }}" hx-post="{{ page.path }}/buy/{{ offer.key }}" hx-target="#incremental" hx-swap="outerHTML">
                 <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
                 <button class="button button-small {% if offer.affordable %}button-primary{% else %}button-quiet{% endif %}" type="submit" {% if not offer.affordable %}disabled{% endif %}>Buy</button>
               </form>

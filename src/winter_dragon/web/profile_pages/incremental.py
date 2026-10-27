@@ -18,21 +18,20 @@ lazy from wd_errors import Refused
 lazy from winter_dragon.cogs.incremental import game
 lazy from winter_dragon.cogs.incremental.view import format_amount, format_quantities
 lazy from winter_dragon.web.accounts import Account, checked_csrf, signed_in
-lazy from winter_dragon.web.profile import ProfileContext, profile_page, profile_pages
-lazy from winter_dragon.web.responses import database, is_htmx, render_mapping
+lazy from winter_dragon.web.profile import ProfileContext, profile_page, render_profile_page
+lazy from winter_dragon.web.responses import database, is_htmx
 
 
 if TYPE_CHECKING:
     lazy from datetime import datetime
 
 
-PAGE_PATH = "/profile/incremental"
 TEMPLATE = "profile/incremental.html"
 FRAGMENT = "profile/_incremental_game.html"
 RESYNC_SECONDS = 30
 """How often the page asks the server for a new snapshot."""
 
-router = APIRouter(prefix=PAGE_PATH)
+router = APIRouter()
 
 
 @dataclass(frozen=True)
@@ -123,7 +122,7 @@ def snapshot(bind: Engine, member_id: int, *, now: datetime | None = None) -> Sn
     return None if view is None else snapshot_of(view)
 
 
-@profile_page(slug="incremental", title="Incremental", template=TEMPLATE)
+@profile_page(slug="incremental", title="Incremental", template=TEMPLATE, router=router)
 def incremental(context: ProfileContext) -> dict[str, object]:
     """Return the page's context: the member's snapshot, or ``None`` to show how to start a save."""
     return {"snapshot": snapshot(context.bind, context.member_id), "message": None, "resync_seconds": RESYNC_SECONDS}
@@ -137,11 +136,7 @@ def _respond(request: Request, account: Account, bind: Engine, *, message: str |
         "refused": refused,
         "resync_seconds": RESYNC_SECONDS,
     }
-    if is_htmx(request):
-        return render_mapping(request, FRAGMENT, context)
-    pages = profile_pages()
-    page = next(candidate for candidate in pages if candidate.slug == "incremental")
-    return render_mapping(request, TEMPLATE, {"pages": pages, "page": page, **context})
+    return render_profile_page(request, "incremental", context, fragment=FRAGMENT if is_htmx(request) else None)
 
 
 @router.get("/snapshot")

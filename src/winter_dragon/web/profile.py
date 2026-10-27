@@ -27,7 +27,6 @@ lazy from winter_dragon.web.responses import database, render, render_mapping
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-
     from zoneinfo import ZoneInfo
 
 
@@ -58,6 +57,8 @@ class ProfilePage:
     """The Jinja template, extending ``profile/base.html``."""
     context: ContextBuilder
     """Builds the template's context for one member."""
+    router: APIRouter | None = None
+    """Extra routes of the page, mounted under :attr:`path`."""
 
     @property
     def path(self) -> str:
@@ -68,11 +69,20 @@ class ProfilePage:
 _pages: dict[str, ProfilePage] = {}
 
 
-def profile_page(*, slug: str, title: str, template: str) -> Callable[[ContextBuilder], ContextBuilder]:
-    """Register the decorated function as the context builder of a Profile page; return it unchanged."""
+def profile_page(
+    *,
+    slug: str,
+    title: str,
+    template: str,
+    router: APIRouter | None = None,
+) -> Callable[[ContextBuilder], ContextBuilder]:
+    """Register the decorated function as the context builder of a Profile page; return it unchanged.
+
+    The app mounts ``router``, when given, under the page's path.
+    """
 
     def register(context: ContextBuilder) -> ContextBuilder:
-        _pages[slug] = ProfilePage(slug=slug, title=title, template=template, context=context)
+        _pages[slug] = ProfilePage(slug=slug, title=title, template=template, context=context, router=router)
         return context
 
     return register
@@ -109,9 +119,31 @@ def profile_page_view(
     bind: Annotated[Engine, Depends(database)],
 ) -> Response:
     """Show the signed-in member's page ``slug`` of the Profile."""
-    pages = profile_pages()
-    page = next((candidate for candidate in pages if candidate.slug == slug), None)
+    page = _page(slug)
+    context = page.context(ProfileContext(bind=bind, member_id=account.id, zone=visitor_zone(request)))
+    return render_profile_page(request, slug, context)
+
+
+def _page(slug: str) -> ProfilePage:
+    """Return the registered page ``slug``; raise a 404 when there is none."""
+    page = next((candidate for candidate in profile_pages() if candidate.slug == slug), None)
     if page is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "There's no such Profile page.")
-    context = page.context(ProfileContext(bind=bind, member_id=account.id, zone=visitor_zone(request)))
-    return render_mapping(request, page.template, {"pages": pages, "page": page, **context})
+    return page
+
+
+def render_profile_page(
+    request: Request,
+    slug: str,
+    context: Mapping[str, object],
+    *,
+    fragment: str | None = None,
+) -> Response:
+    """Render page ``slug`` with ``context`` plus ``pages`` and ``page`` (whose ``path`` builds its URLs).
+
+    With ``fragment``, a template path, only that part of the page is rendered, as htmx swaps it in.
+    """
+    page = _page(slug)
+    if fragment is not None:
+        return render_mapping(request, fragment, {"page": page, **context})
+    return render_mapping(request, page.template, {"pages": profile_pages(), "page": page, **context})
