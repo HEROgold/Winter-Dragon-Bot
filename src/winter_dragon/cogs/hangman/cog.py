@@ -88,7 +88,7 @@ class Hangman(Cog):
     @staticmethod
     def _active(session: Session, game_id: str) -> HangmanGame:
         """Return the stored game ``game_id``; refuse when it is gone or over."""
-        game = session.exec(alive(HangmanGame).where(HangmanGame.id == int(game_id))).first()
+        game = session.exec(alive(HangmanGame).where(HangmanGame.id == int(game_id)).with_for_update()).first()
         if game is None:
             msg = "This game is gone."
             raise Refused(msg)
