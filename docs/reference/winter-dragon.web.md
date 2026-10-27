@@ -128,6 +128,11 @@ The efficiency of a member's refuels over time, ready to draw as an SVG line.
 - fields: points: tuple[GraphPoint, ...], lowest: float, highest: float, first_day: datetime, last_day: datetime
 - `@property line -> str` — The ``points`` attribute of the SVG polyline.
 
+## `winter_dragon.web.profile_pages.steam` — `src/winter_dragon/web/profile_pages/steam.py`
+The Profile's Steam page: the sales Steam DMs told the member about, newest first, with a total.
+
+- `@profile_page steam(context: ProfileContext) -> dict[str, object]` — Return the Steam page's context: the member's sale notifications, newest first.
+
 ## `winter_dragon.web.records` — `src/winter_dragon/web/records.py`
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 

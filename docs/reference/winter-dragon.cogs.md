@@ -420,6 +420,12 @@ A Discord user subscribed to Steam sale DMs; ``id`` is their Discord user ID, an
 
 - fields: ownership: ClassVar[Ownership], sale_threshold: int, last_notification: datetime
 
+### `class SaleNotification(LifecycleModel, table=True)`
+One sale a DM told a member about; ``user_id`` is their Discord user ID, and they own it.
+
+- fields: ownership: ClassVar[Ownership], user_id: int, sale_id: int, title: str, sale_percent: int, sale_threshold:
+  int, sent_at: datetime
+
 ## `winter_dragon.cogs.steam.notifier` — `src/winter_dragon/cogs/steam/notifier.py`
 DM subscribers the Steam sales they haven't been told about yet.
 
