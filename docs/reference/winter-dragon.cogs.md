@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `winter_dragon.cogs` — `src/winter_dragon/cogs/__init__.py`
 
-- `import_cogs() -> None` — Import every module of this package, so each feature and table the cogs define is known.
+- `import_cogs() -> None` — Import every module the bot loads as an extension, so each feature and table the cogs define is known.
 
 ## `winter_dragon.cogs.auto_reassign` — `src/winter_dragon/cogs/auto_reassign.py`
 The /autoreassign command group: a member who leaves and rejoins a guild gets their roles back.

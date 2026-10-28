@@ -8,8 +8,6 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `winter_dragon.config` — `src/winter_dragon/config.py`
 The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``.
 
-- module names: CONFIG_FILE, COGS_CONFIG_FILE
-
 ### `class Config[T](BaseConfig[T])`
 Config descriptor scoped to the app-wide settings file.
 
@@ -24,7 +22,7 @@ Application-wide settings.
 ## `winter_dragon.config_migration` — `src/winter_dragon/config_migration.py`
 Where every section of the old single ``config.ini`` lives now, and the startup step that moves it there.
 
-- module names: CONFIG_INI, COGS_INI, BOT_INI, DATABASE_INI, SENTRY_INI, DISCORD_INI, MOVES
+- module names: MOVES
 - `migrate_legacy_config() -> MigrationReport | None` — Move the old single ``config.ini`` into the per-scope files, logging what moved and what was dropped.
 
 ## `winter_dragon.event_logger` — `src/winter_dragon/event_logger.py`

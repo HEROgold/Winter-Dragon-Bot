@@ -255,8 +255,6 @@ Rendering the dashboard's templates, as a whole page or as the fragment an htmx 
 ## `winter_dragon.web.settings` — `src/winter_dragon/web/settings.py`
 The dashboard's config scope, in ``dashboard.ini``; only the web process defines it, so the bot never asks for it.
 
-- module names: DASHBOARD_CONFIG_FILE
-
 ### `class DashboardConfig[T](Config[T])`
 Config descriptor scoped to the dashboard settings file.
 

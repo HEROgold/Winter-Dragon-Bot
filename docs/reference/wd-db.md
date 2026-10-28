@@ -45,8 +45,6 @@ Tables a model defines are missing from a database the migrations manage.
 ## `wd_db.settings` — `wd-db/src/wd_db/settings.py`
 wd-db's settings, backed by their own database.ini file.
 
-- module names: DATABASE_CONFIG_FILE
-
 ### `class DatabaseConfig[T](Config[T])`
 Config descriptor scoped to the database settings file.
 

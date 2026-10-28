@@ -1,13 +1,10 @@
 """The dashboard's config scope, in ``dashboard.ini``; only the web process defines it, so the bot never asks for it."""
 
 from uuid import uuid4
-lazy from pathlib import Path
 
 lazy from wd_config import Config
+lazy from wd_config.constants import DASHBOARD_CONFIG_FILE
 lazy from wd_config.parser import required
-
-
-DASHBOARD_CONFIG_FILE = Path("dashboard.ini")
 
 
 class DashboardConfig[T](Config[T]):

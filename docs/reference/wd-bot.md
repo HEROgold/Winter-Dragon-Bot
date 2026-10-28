@@ -333,8 +333,6 @@ The bot's commands per scope, next to what Discord last reported for that scope.
 ## `wd_bot.settings` — `wd-bot/src/wd_bot/settings.py`
 wd-bot's settings, backed by their own bot.ini file (operator and internal settings together).
 
-- module names: BOT_CONFIG_FILE
-
 ### `class BotConfig[T](Config[T])`
 Config descriptor scoped to the bot settings file.
 
