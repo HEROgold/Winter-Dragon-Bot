@@ -42,7 +42,7 @@ In v2 this becomes a whitelist/blacklist per guild that changes where commands a
 
 When a command cannot run because the bot or the invoking user lacks something, the bot reports *what* is missing — permissions, roles, or channel overwrites — rather than failing opaquely.
 
-**Status:** ✅ Ported — `wd-bot/src/wd_bot/permissions.py`.
+**Status:** ✅ Ported. `@Cog.command(..., requires=...)` and `require_permissions` in `wd-bot/src/wd_bot/checks.py` refuse with the missing permission names.
 **Source on `main`:** `src/winter_dragon/bot/core/permissions.py`
 
 ## Error handling

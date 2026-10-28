@@ -57,8 +57,6 @@ def applied_forum_tags(self) -> Generator[ForumTag]:
     yield from (tag for tid in self.applied_tags for tag in self.available_tags if tag.id == tid)
 ```
 
-(`Snowflake` is a non-frozen `@dataclass`, so unhashable — resolve id→object by `==` scan, not a `dict`/`set`.)
-
 ## Errors as values, not exceptions
 
 Fallible functions return the error; the return type is a union the caller narrows:

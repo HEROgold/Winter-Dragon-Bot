@@ -42,4 +42,4 @@ Check a signature in [docs/reference/wd-discord.gateway.md](../../../docs/refere
 
 - `Gateway.connect()` blocks until READY; wrap it in `asyncio.wait_for(..., timeout=30)` like the driver does, or a bad token hangs the run.
 - `wd_db.constants` creates a Postgres engine at import time; on a host without psycopg2 use `run_test_bot` (it stubs a sqlite engine), not `python -m winter_dragon`.
-- `Bot.start()`'s `token` is injected by `@Config.with_kwarg`, so type checkers report it missing — the call site carries a coded `# ty: ignore`.
+- `Bot.start()`'s `token` is injected from bot.ini by `@BotConfig.with_kwarg`, so type checkers report it missing — the call site carries a coded `# ty: ignore`.

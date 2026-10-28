@@ -12,7 +12,7 @@ The backbone of server logging. When Discord emits an audit-log entry, a listene
 
 A diffing helper computes what actually changed between an entry's before/after states (including role additions and removals), so log embeds show the delta rather than a full object dump.
 
-**Status:** ✅ Ported for the pipeline itself — `wd-core/src/wd_core/events.py` holds the event base, factory, handler, and diff utilities. 🟡 for the listener cog that feeds it.
+**Status:** ❌ Missing. #323 deleted the copied discord.py-era pipeline (`wd_core.events`) as dead code, and neither the pipeline nor the listener cog that feeds it exists on `v2`.
 **Source on `main`:** `src/winter_dragon/bot/events/`, `extensions/server/audit_event_listener.py`
 
 ## Log channels

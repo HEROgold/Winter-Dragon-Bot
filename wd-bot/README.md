@@ -1,6 +1,6 @@
 # wd-bot
 
-The bot framework built on wd-discord: `Bot` (lifecycle, gateway, dispatch), `Cog`/`GroupCog`, slash commands, component handlers, autocomplete, help and application-command sync.
+The bot framework built on wd-discord: `Bot` (lifecycle, gateway, dispatch), `Cog`/`GroupCog`, slash commands, component handlers, autocomplete and application-command sync.
 
 - **Depends on:** wd-config, wd-core, wd-discord, wd-errors, wd-types (and imports `wd_db` without declaring it — known debt).
 - **Start here:** `wd_bot.bot.Bot(extensions_package=...)` → `start()`. Cogs subclass `wd_bot.cogs.Cog`/`GroupCog`; commands come from `@Cog.command`, buttons from `@Cog.component`, events from `@Cog.listener`.
