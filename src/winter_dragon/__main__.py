@@ -27,7 +27,7 @@ async def main() -> None:
     # Defining the app's scopes registers config.ini and cogs.ini with OperatorFiles, which bot.start() checks.
     importlib.import_module(f"{__package__}.config")
     bot = Bot(extensions_package=cogs)
-    # bot.start() is decorated with @BotConfig.with_kwarg("Tokens", "discord_token"), reading bot.ini, which
+    # bot.start() is decorated with @BotConfig.with_kwarg("Tokens", "discord_token", name="token"), reading bot.ini, which
     # injects `token` into kwargs at call time - real, but not reflected in its type
     # signature, so `token` still looks required here.
     Sentry()

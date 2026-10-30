@@ -43,7 +43,7 @@ class PermissionSolver:
         return self.member.user.id
 
     def _has_role(self, role_id: Snowflake) -> bool:
-        """Whether the member has the role ``role_id``; ``Snowflake`` is unhashable, hence the scan."""
+        """Whether the member has the role ``role_id``."""
         return any(role_id == own for own in self.member.roles)
 
     def base(self) -> Permissions:

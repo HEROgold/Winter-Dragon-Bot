@@ -57,13 +57,13 @@ async def main() -> int:
     try:
         Sentry()
 
-        # message_content/guild_messages are needed for MessageLogger to see anything -
-        # the config.ini default (BotConfig.Intents = 0) would leave the bot deaf to both.
+        # Only what MessageLogger needs to see messages: guilds, guild_messages and message_content,
+        # instead of the full default set in bot.ini (BotSettings.intents).
         intents = Intents.guilds | Intents.guild_messages | Intents.message_content
         bot = Bot(intents=intents, extensions_package=cogs)
         try:
-            # bot.start() is decorated with @Config.with_kwarg("Tokens", "discord_token"), which
-            # injects `token` into kwargs at call time - real, but not reflected in its type
+            # bot.start() is decorated with @BotConfig.with_kwarg("Tokens", "discord_token", name="token"),
+            # reading bot.ini, which injects `token` into kwargs at call time - real, but not reflected in its type
             # signature, so `token` still looks required here.
             await asyncio.wait_for(bot.start(), timeout=RUN_DURATION_SECONDS)  # ty: ignore[invalid-argument-type, missing-argument]
         except TimeoutError:

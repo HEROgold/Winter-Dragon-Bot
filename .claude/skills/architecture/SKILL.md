@@ -12,7 +12,7 @@ Per-package public API: [docs/reference/index.md](../../../docs/reference/index.
 ```
 wd-types            wd-config             ← leafs: depend on nothing internal
                     /       \
-                wd-db      wd-discord     ← infrastructure (each: wd-config only)
+                wd-db      wd-discord     ← infrastructure (wd-db: wd-config, wd-types; wd-discord: wd-config, wd-errors)
                    \       /    \
                     \  wd-core  wd-errors ← shared domain helpers / error machinery (on wd-discord)
                      \    |     /
@@ -23,7 +23,7 @@ wd-types            wd-config             ← leafs: depend on nothing internal
 
 - **The live feature code is `src/winter_dragon/cogs/`.** `python -m winter_dragon` builds `Bot(extensions_package=cogs)` from there. Its tests live in `wd-bot/tests/` (`test_steam_*`, `test_fuel_cog`, ...).
 - **`wd-cogs` is a legacy catalog** of discord.py-era cogs (`discord.Interaction`, `app_commands`); discord.py isn't installed and the app never loads it. Port a cog into `winter_dragon/cogs/` on the `wd_bot` API rather than editing it in place. (`Bot`'s default `extensions_package` is still `wd_cogs` — always pass one.)
-- **wd-discord never imports wd-core/wd-db/wd-bot.** It is the transport: HTTP (`Client`, transport only) plus stores and client-bound entities ([entities/](../../../wd-discord/src/wd_discord/entities/)), WebSocket ([gateway/](../../../wd-discord/src/wd_discord/gateway/)), errors-as-values. Responses are validated `DiscordModel`s (see [discord-api-models](../discord-api-models/SKILL.md)); outbound bodies are built without a socket so they test offline — plain functions/dataclasses (`build_presence`, `GatewayActivity.to_dict` in [gateway/connection.py](../../../wd-discord/src/wd_discord/gateway/connection.py)) or a pydantic `BaseModel` when Discord documents limits worth validating (`ApplicationCommandParams` in [interactions.py](../../../wd-discord/src/wd_discord/interactions.py)). Its only internal dep is `wd-config`.
+- **wd-discord never imports wd-core/wd-db/wd-bot.** It is the transport: HTTP (`Client`, transport only) plus stores and client-bound entities ([entities/](../../../wd-discord/src/wd_discord/entities/)), WebSocket ([gateway/](../../../wd-discord/src/wd_discord/gateway/)), errors-as-values. Responses are validated `DiscordModel`s (see [discord-api-models](../discord-api-models/SKILL.md)); outbound bodies are built without a socket so they test offline — plain functions/dataclasses (`build_presence`, `GatewayActivity.to_dict` in [gateway/connection.py](../../../wd-discord/src/wd_discord/gateway/connection.py)) or a pydantic `BaseModel` when Discord documents limits worth validating (`ApplicationCommandParams` in [interactions.py](../../../wd-discord/src/wd_discord/interactions.py)). Its internal deps are `wd-config` and `wd-errors`.
 - **wd-bot is framework, not features.** Lifecycle, extension discovery ([extensions.py](../../../wd-bot/src/wd_bot/extensions.py)), dispatch, command sync. A new feature is a cog in `winter_dragon/cogs/`; a reusable mechanism goes in `wd_bot` or `wd_core`.
 - **Declare every internal dep in the package's `pyproject.toml`** via `uv add --package <member> wd-x` (see [dependencies](../dependencies/SKILL.md)). Known debt: `wd-bot` imports `wd_db`, and `wd-errors` imports `wd_discord`, without declaring them.
 - Cross-package structural types go in **wd-types** (`Mentionable`, `utc_now`); shared error machinery in **wd-errors**.
@@ -38,7 +38,7 @@ wd-types            wd-config             ← leafs: depend on nothing internal
 
 3. **Service locator (module singletons)** — only for process-wide resources: `engine`/`session` in [wd_db/constants.py](../../../wd-db/src/wd_db/constants.py) (via `SessionMixin`) and the static config classes (`Settings`, `DbUrl`). Anything a constructor parameter can carry doesn't get a new singleton.
 
-Decorator injection for config values: `@Config.with_kwarg("Tokens", "discord_token")` (see config-and-constants).
+Decorator injection for config values: `@BotConfig.with_kwarg("Tokens", "discord_token", name="token")` on `Bot.start` (see config-and-constants).
 
 ## Avoiding repetition — the reuse toolbox, in order
 
