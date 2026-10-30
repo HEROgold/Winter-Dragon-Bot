@@ -134,6 +134,22 @@ async def test_leaving_an_empty_channel_deletes_it(engine: Engine, client: Recor
     assert _channels(engine) == []
 
 
+async def test_editing_an_owned_channel_in_discord_is_remembered_for_the_next_one(
+    engine: Engine,
+    client: RecordingClient,
+) -> None:
+    seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
+    data = {**NEW_CHANNEL, "name": "chill zone", "user_limit": 5}
+    edited = bind(client, parse_dispatch(EventName.CHANNEL_UPDATE, data))
+
+    await _cog(engine, client).on_channel_update(edited)
+
+    with Session(engine) as session:
+        settings = session.get(AutoChannelSettings, MEMBER_ID)
+    assert settings is not None
+    assert (settings.name, settings.user_limit) == ("chill zone", 5)
+
+
 async def test_guild_create_cleans_up_channels_emptied_while_offline(engine: Engine, client: RecordingClient) -> None:
     seed(
         engine,

@@ -198,6 +198,19 @@ class AutoChannels(
             if left is not None and not self.voice.occupied(guild_id, Snowflake(left.id)):
                 await self.delete_channel(left)
 
+    @Cog.listener(EventName.CHANNEL_UPDATE)
+    async def on_channel_update(self, channel: Channel) -> None:
+        """Remember the name and user limit an owner gave their automatic channel in Discord, for their next one."""
+        with Session(self.bind) as session:
+            record = self._auto_channel(session, channel.id)
+            if record is None:
+                return
+            settings = settings_of(session, Snowflake(record.owner_id))
+            settings.name = channel.name
+            settings.user_limit = channel.user_limit or 0
+            upsert(session, settings)
+            session.commit()
+
     @staticmethod
     def _auto_channel(session: Session, channel_id: Snowflake) -> AutoChannel | None:
         return alive_by_id(session, AutoChannel, int(channel_id))
