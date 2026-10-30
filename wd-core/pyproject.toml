@@ -14,7 +14,7 @@ requires-python = ">=3.15"
 dependencies = [
   "wd-config",
   "wd-discord",
-  "wd-types",
+  "wd-types"
 ]
 
 [tool.uv.sources]
