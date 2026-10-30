@@ -555,7 +555,7 @@ A guild as GUILD_CREATE sent it: with its channels, threads, members and voice s
 - `@property voice_states -> Generator[VoiceState]` — Who is in which voice channel: as cached, else as GUILD_CREATE sent it.
 - `@property member_count -> int | None` — How many members the guild has.
 - `@property large -> bool` — Whether the guild is past the gateway's large threshold, so ``members`` is incomplete.
-- `@property joined_at -> str | None` — When the bot joined the guild, as an ISO 8601 timestamp.
+- `@property joined_at -> datetime | None` — When the bot joined the guild.
 - `@property unavailable -> bool` — Whether the guild is down in an outage; Discord sends little else about it then.
 - `@property presences -> Generator[Presence]` — The presences of the members GUILD_CREATE sent along.
 - `get_member(user_id: SnowflakeLike) -> Member | None` — Return the member ``user_id`` as cached, or if GUILD_CREATE sent them along.

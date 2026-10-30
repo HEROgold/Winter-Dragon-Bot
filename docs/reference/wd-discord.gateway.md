@@ -81,7 +81,7 @@ READY (https://docs.discord.com/developers/events/gateway-events#ready).
 ### `class GuildCreate(Guild)`
 GUILD_CREATE (https://docs.discord.com/developers/events/gateway-events#guild-create).
 
-- fields: joined_at: str | None, large: bool | None, unavailable: bool | None, member_count: int | None, channels:
+- fields: joined_at: datetime | None, large: bool | None, unavailable: bool | None, member_count: int | None, channels:
   list[Channel], threads: list[Channel], members: list[GuildMember], voice_states: list[VoiceState], presences:
   list[Presence], stage_instances: list[dict[str, object]], guild_scheduled_events: list[dict[str, object]],
   soundboard_sounds: list[dict[str, object]], lazy: object | None, nsfw: object | None, region: object | None, version:

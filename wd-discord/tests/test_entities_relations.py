@@ -136,10 +136,12 @@ def test_guild_passes_its_settings_through_under_discords_names() -> None:
 
 def test_gateway_guild_passes_through_what_only_guild_create_sends() -> None:
     presence = {"user": {"id": "9"}, "status": "online", "activities": [], "client_status": {}}
-    guild = bind(RecordingClient(), parse_dispatch(EventName.GUILD_CREATE, guild_create_json(presences=[presence])))
+    payload = guild_create_json(presences=[presence], joined_at="2026-10-08T12:30:00.000000+00:00")
+    guild = bind(RecordingClient(), parse_dispatch(EventName.GUILD_CREATE, payload))
     assert isinstance(guild, GatewayGuild)
 
     assert guild.unavailable is False
+    assert guild.joined_at == datetime(2026, 10, 8, 12, 30, tzinfo=UTC)
     [online] = guild.presences
     assert online.user == PartialUser(guild.client, Snowflake(9))
     assert online.guild == PartialGuild(guild.client, Snowflake(7))

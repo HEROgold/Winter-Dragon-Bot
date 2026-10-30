@@ -100,7 +100,7 @@ class GuildCreate(Guild):
     ``guild_scheduled_events`` and ``soundboard_sounds`` are kept as plain objects until they get models.
     """
 
-    joined_at: str | None = None
+    joined_at: datetime | None = None
     large: bool | None = None
     unavailable: bool | None = None
     member_count: int | None = None

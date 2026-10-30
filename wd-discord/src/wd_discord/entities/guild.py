@@ -31,6 +31,7 @@ lazy from wd_discord.snowflake import Snowflake
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
+    from datetime import datetime
     from string.templatelib import Template
 
     from wd_discord.audit import Reason
@@ -664,8 +665,8 @@ class GatewayGuild(Guild):
         return bool(self.model.large)
 
     @property
-    def joined_at(self) -> str | None:
-        """When the bot joined the guild, as an ISO 8601 timestamp."""
+    def joined_at(self) -> datetime | None:
+        """When the bot joined the guild."""
         return self.model.joined_at
 
     @property
