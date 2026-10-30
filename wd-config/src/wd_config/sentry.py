@@ -7,7 +7,7 @@ lazy from confkit import Enum
 
 lazy from .config import Config
 lazy from .constants import SENTRY_CONFIG_FILE
-lazy from .parser import REQUIRED
+lazy from .parser import REQUIRED, is_required
 
 
 class SentryConfig[T](Config[T]):
@@ -38,4 +38,4 @@ class SentrySettings:
     def resolved_dsn(cls) -> str | None:
         """Return the DSN to pass to ``sentry_sdk.init``: ``None`` while it's empty or still :data:`REQUIRED`."""
         dsn = cls.dsn
-        return None if dsn in {"", REQUIRED} else dsn
+        return None if not dsn or is_required(dsn) else dsn

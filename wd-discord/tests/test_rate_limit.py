@@ -1,51 +1,14 @@
-"""Unit tests: rate-limit models, scope resolution, and the limiter classes."""
-
-lazy from datetime import UTC, datetime, timedelta
+"""Unit tests: the rate-limiter classes."""
 
 lazy import pytest
+lazy from httpxyz import AsyncClient, MockTransport, Response
+lazy from wd_discord import Client
 lazy from wd_discord import rate_limit as rate_limit_module
 lazy from wd_discord.rate_limit import (
     BucketRateLimiter,
-    Buckets,
     GlobalRateLimiter,
-    HeaderFormat,
-    ScopeError,
     SharedRateLimiter,
 )
-
-
-def _header(*, global_: bool | None = None, scope: str | None = None) -> HeaderFormat:
-    return HeaderFormat(
-        limit=5,
-        remaining=0,
-        reset=datetime(2016, 8, 2, tzinfo=UTC),
-        reset_after=timedelta(seconds=1),
-        bucket=Buckets.per_endpoint,
-        _global=global_,
-        _scope=scope,
-    )
-
-
-def test_bucket_values() -> None:
-    assert Buckets.global_ == "global_"
-    assert Buckets.per_endpoint == "per_endpoint"
-    assert Buckets.per_user == "per_user"
-    assert Buckets.shared == "shared"
-
-
-def test_scope_global() -> None:
-    assert _header(global_=True).scope == "global"
-
-
-def test_scope_named() -> None:
-    assert _header(scope="user").scope == "user"
-
-
-def test_scope_requires_exactly_one() -> None:
-    with pytest.raises(ScopeError):
-        _ = _header(global_=True, scope="user").scope
-    with pytest.raises(ScopeError):
-        _ = _header().scope
 
 
 @pytest.fixture
@@ -138,3 +101,29 @@ async def test_shared_limiter_acquire_and_update_are_noops(fake_clock: list[floa
 async def test_shared_limiter_on_429_sleeps_retry_after(fake_clock: list[float]) -> None:
     await SharedRateLimiter().on_429("k", 0.75)
     assert fake_clock[0] == pytest.approx(0.75)
+
+
+def _client_answering(token: str, headers: dict[str, str]) -> Client:
+    """A client for ``token`` whose every request gets a 200 carrying ``headers``."""
+    client = Client(token)
+    transport = MockTransport(lambda _request: Response(200, json={}, headers=headers))
+    client._client = AsyncClient(base_url=client.base_url, transport=transport)  # noqa: SLF001 - swap the transport
+    return client
+
+
+EXHAUSTED = {"X-RateLimit-Bucket": "abc", "X-RateLimit-Remaining": "0", "X-RateLimit-Reset-After": "3"}
+
+
+async def test_a_client_waits_on_its_own_exhausted_bucket(fake_clock: list[float]) -> None:
+    client = _client_answering("token-a", EXHAUSTED)
+    await client.post(t"/channels/{1}/messages")
+    await client.post(t"/channels/{1}/messages")
+    assert fake_clock[0] == pytest.approx(3.0)
+
+
+async def test_clients_with_different_tokens_do_not_share_buckets(fake_clock: list[float]) -> None:
+    first = _client_answering("token-a", EXHAUSTED)
+    second = _client_answering("token-b", EXHAUSTED)
+    await first.post(t"/channels/{1}/messages")
+    await second.post(t"/channels/{1}/messages")
+    assert fake_clock[0] == 0.0

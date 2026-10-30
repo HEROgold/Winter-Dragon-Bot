@@ -1,6 +1,6 @@
 """Unit tests: guild entities answer from the client's cache, and their fetches fill it."""
 
-from wd_discord import Guild, Member, Role
+from wd_discord import ApiResponseError, Guild, Member, Role, is_network_error
 from wd_discord.gateway import EventName, parse_dispatch
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, channel_json, guild_create_json, member_json, role_json
@@ -128,3 +128,29 @@ def test_the_cached_guild_carries_its_current_roles() -> None:
     cached = client.guilds.partial(7).cached
     assert cached is not None
     assert [role.id for role in cached.model.roles] == [Snowflake(9)]
+
+
+async def test_fetching_emojis_and_stickers_fills_a_known_guild() -> None:
+    client = connected()
+    client.reply("GET", "/guilds/7/emojis", [{"id": "30", "name": "wave"}])
+    sticker = {"id": "31", "name": "hi", "description": None, "tags": "wave", "type": 2, "format_type": 1}
+    client.reply("GET", "/guilds/7/stickers", [sticker])
+    guild = client.guilds.partial(7)
+    emojis = await guild.fetch_emojis()
+    stickers = await guild.fetch_stickers()
+    assert not is_network_error(emojis)
+    assert not is_network_error(stickers)
+    assert [emoji.id for emoji in emojis] == [Snowflake(30)]
+    assert [emoji.id for emoji in guild.emojis or []] == [Snowflake(30)]
+    assert [cached.id for cached in guild.stickers or []] == [Snowflake(31)]
+
+
+async def test_a_failed_list_fetch_leaves_the_cache_alone() -> None:
+    client = connected()
+    client.fail("GET", "/guilds/7/roles", ApiResponseError(code=50001, message="Missing Access"))
+    client.reply("GET", "/guilds/7/channels", {"not": "a list"})
+    guild = client.guilds.partial(7)
+    assert is_network_error(await guild.fetch_roles())
+    assert is_network_error(await guild.fetch_channels())
+    assert [role.name for role in guild.roles or []] == ["mods"]
+    assert [channel.id for channel in guild.channels or []] == [Snowflake(5)]

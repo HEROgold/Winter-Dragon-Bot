@@ -28,6 +28,7 @@ lazy from winter_dragon.web.responses import database, render, render_mapping
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+    from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
 
 
@@ -41,7 +42,7 @@ class ProfileContext:
     """What a Profile page reads to build itself: the database, the member whose Profile it is, and their time zone."""
 
     bind: Engine
-    member_id: int
+    member_id: Snowflake
     """The Discord user ID of the signed-in member; a page shows only their records."""
     zone: ZoneInfo
 

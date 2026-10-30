@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_discord` — `wd-discord/src/wd_discord/__init__.py`
 
-- exports: URLS, AnyGuildInteraction, AnyInteraction, ApiResponseError, Application, AuditLogReason,
+- exports: URLS, AnyGuildInteraction, AnyInteraction, ActivityType, ApiResponseError, Application, AuditLogReason,
   AutocompleteInteraction, BoundEvent, Channel, ChannelPinsUpdate, ChannelType, Client, Color, CommandInteraction,
   ComponentInteraction, CurrentUser, DiscordModel, Embed, EmbedField, Emoji, Entitlement, EventName, Gateway,
   GatewayActivity, GatewayBotInfo, GatewayGuild, GlobalCommand, Guild, GuildCommand, GuildCommandInteraction,
@@ -23,7 +23,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `wd_discord.audit` — `wd-discord/src/wd_discord/audit.py`
 Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit-log-entry-object).
 
-- module names: MAX_REASON_LENGTH, REASON_HEADER
+- module names: REASON_HEADER
 - `type Reason = AuditLogReason | str | None`
 - `reason_headers(reason: Reason) -> dict[str, str]` — Return the headers for ``reason``: none without one, else the audit-log reason header.
 
@@ -31,30 +31,30 @@ Audit-log reasons (https://docs.discord.com/developers/resources/audit-log#audit
 Why the bot made a change, as shown in the guild's audit log.
 
 - fields: text: str
-- `headers() -> dict[str, str]` — Return the request header carrying this reason, cut to :data:`MAX_REASON_LENGTH` and URL-encoded.
+- `headers() -> dict[str, str]` — Return the request header carrying this reason, cut to :data:`~wd_discord.limits.MAX_REASON_LENGTH` with :func:`~wd_discord.limits.truncate` and URL-encoded.
 
 ## `wd_discord.authenticate` — `wd-discord/src/wd_discord/authenticate.py`
 Location for all authentication related functions and classes.
 
 - `get_auth_header(type_: TokenType, token: Token) -> Template` — Get the authorization header for a given token.
-- `get_bearer(token: Token) -> Template` — Get the bearer token header for a given token.
+- `client_credentials(application_id: SnowflakeLike, secret: Token) -> Token` — Return the application's ID and OAuth2 client ``secret`` as the token of :attr:`TokenType.BASIC` auth.
 - `user_agent(url: URL, version: UserAgentVersion, metadata: MetaData) -> Template` — Get the user agent header for a given URL and version.
 - `content_type(content_type: ContentType) -> Template` — Get the content type header for a given content type.
 - `render(template: Template) -> str` — Render a PEP 750 ``Template`` into a plain string.
 - `render_header(template: Template) -> tuple[str, str]` — Render a ``"Key: Value"`` header template into a ``(name, value)`` pair for httpxyz.
 
-### `class Token(str)`
-Represents a Discord bot token.
+### `class Token(_ModelStr)`
+A Discord secret: a bot token, an interaction or gateway token, or an OAuth access or refresh token.
 
 ### `class TokenType(StrEnum)`
 Represents the type of token being used for authentication.
 
-- attributes: BOT
+- attributes: BOT, BEARER, BASIC
 
 ### `class UserAgentVersion(str)`
 Represents the version of the user agent being used for authentication.
 
-### `class URL(str)`
+### `class URL(_ModelStr)`
 Represents a URL.
 
 ### `class MetaData(str)`
@@ -110,8 +110,8 @@ A gateway dispatch as :meth:`Client.receive` took it.
 An async Discord REST client pinned to the configured API version (v10 by default).
 
 - `async aclose() -> None` — Close the underlying httpxyz transport.
-- `@returns_known_exception async request(method: str, route: Template, *, cache: bool=False, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
-- `async get(route: Template, *, cache: bool=False, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`).
+- `@returns_known_exception async request(method: str, route: Template, *, reuse_response: bool=False, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError` — Send a request, returning the :class:`Response` or a parsed error value.
+- `async get(route: Template, *, reuse_response: bool=False, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a GET request; with ``reuse_response``, reuse a recent answer to it (see :meth:`request`).
 - `async post(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a POST request.
 - `async patch(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PATCH request.
 - `async put(route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult` — Send a PUT request.
@@ -133,8 +133,6 @@ An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the 
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
 Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
 
-- module names: MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH,
-  MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH
 - `type CustomId = str`
 - `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
@@ -190,13 +188,10 @@ A pop-up form, shown as the response to an interaction.
 ## `wd_discord.constants` — `wd-discord/src/wd_discord/constants.py`
 Constants used throughout the library.
 
-- module names: DISCORD_EPOCH, RATE_LIMIT_BUCKET
+- module names: DISCORD_EPOCH
 
 ## `wd_discord.embed` — `wd-discord/src/wd_discord/embed.py`
 A minimal Discord embed model.
-
-- module names: MAX_EMBED_FIELDS, MAX_EMBED_CHARACTERS, MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH,
-  MAX_EMBED_FIELD_NAME_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH
 
 ### `class EmbedField(DiscordModel)`
 One entry in an embed's ``fields`` array.
@@ -240,10 +235,45 @@ https://docs.discord.com/developers/reference#image-formatting.
 - `@property base_url -> str` — The configured CDN host (:attr:`~wd_config.discord.URLS.cdn`), with a trailing slash.
 - `url(path: str, fmt: ImageFormats=ImageFormats.PNG) -> str` — Return the CDN URL of this image under ``path`` (e.g. ``avatars/{user_id}``) in format ``fmt``.
 
+## `wd_discord.intents` — `wd-discord/src/wd_discord/intents.py`
+Module that contains the Gateway Intents.
+
+- `type Decorator[**P, R] = Callable[P, R]`
+- `type DecoratorFactory[**P, R] = Callable[[Callable[P, R]], Decorator[P, R]]`
+- `requires_intents[**P, R](*required_intents: Intents, actual_intents: Intents | None=None) -> DecoratorFactory[P, R]` — Check if the required intents are enabled before executing the function.
+
+### `class Intents(IntFlag)`
+Represents the Gateway Intents.
+
+- attributes: GUILDS, GUILD_CREATE, GUILD_UPDATE, GUILD_DELETE, GUILD_ROLE_CREATE, GUILD_ROLE_UPDATE, GUILD_ROLE_DELETE,
+  CHANNEL_CREATE, CHANNEL_UPDATE, CHANNEL_DELETE, THREAD_CREATE, THREAD_UPDATE, THREAD_DELETE, THREAD_LIST_SYNC,
+  THREAD_MEMBER_UPDATE, STAGE_INSTANCE_CREATE, STAGE_INSTANCE_UPDATE, STAGE_INSTANCE_DELETE,
+  VOICE_CHANNEL_STATUS_UPDATE, VOICE_CHANNEL_START_TIME_UPDATE, guilds, GUILD_MEMBERS, GUILD_MEMBER_ADD,
+  GUILD_MEMBER_UPDATE, GUILD_MEMBER_REMOVE, members, GUILD_MODERATION, GUILD_AUDIT_LOG_ENTRY_CREATE, GUILD_BAN_ADD,
+  GUILD_BAN_REMOVE, moderation, bans, GUILD_EXPRESSIONS, GUILD_EMOJIS_UPDATE, GUILD_STICKERS_UPDATE,
+  GUILD_SOUNDBOARD_SOUND_CREATE, GUILD_SOUNDBOARD_SOUND_UPDATE, GUILD_SOUNDBOARD_SOUND_DELETE,
+  GUILD_SOUNDBOARD_SOUNDS_UPDATE, emojis, emojis_and_stickers, expressions, GUILD_INTEGRATIONS,
+  GUILD_INTEGRATIONS_UPDATE, INTEGRATION_CREATE, INTEGRATION_UPDATE, INTEGRATION_DELETE, integrations, GUILD_WEBHOOKS,
+  WEBHOOKS_UPDATE, webhooks, GUILD_INVITES, INVITE_CREATE, INVITE_DELETE, invites, GUILD_VOICE_STATES,
+  VOICE_CHANNEL_EFFECT_SEND, VOICE_STATE_UPDATE, voice_states, GUILD_PRESENCES, PRESENCE_UPDATE, presences,
+  GUILD_MESSAGES, MESSAGE_DELETE_BULK, guild_messages, GUILD_MESSAGE_REACTIONS, guild_reactions, GUILD_MESSAGE_TYPING,
+  guild_typing, DIRECT_MESSAGES, dm_messages, messages, DIRECT_MESSAGE_REACTIONS, dm_reactions, reactions,
+  DIRECT_MESSAGE_TYPING, dm_typing, typing, MESSAGE_CONTENT, message_content, GUILD_SCHEDULED_EVENTS,
+  GUILD_SCHEDULED_EVENT_CREATE, GUILD_SCHEDULED_EVENT_UPDATE, GUILD_SCHEDULED_EVENT_DELETE,
+  GUILD_SCHEDULED_EVENT_USER_ADD, GUILD_SCHEDULED_EVENT_USER_REMOVE, guild_scheduled_events,
+  AUTO_MODERATION_CONFIGURATION, AUTO_MODERATION_RULE_CREATE, AUTO_MODERATION_RULE_UPDATE, AUTO_MODERATION_RULE_DELETE,
+  auto_moderation_configuration, AUTO_MODERATION_EXECUTION, AUTO_MODERATION_ACTION_EXECUTION, auto_moderation_execution,
+  auto_moderation, GUILD_MESSAGE_POLLS, guild_polls, DIRECT_MESSAGE_POLLS, dm_polls, polls, THREAD_MEMBERS_UPDATE,
+  MESSAGE_CREATE, MESSAGE_UPDATES, MESSAGE_DELETE, CHANNEL_PINS_UPDATE, MESSAGE_POLL_VOTE_REMOVE, MESSAGE_REACTION_ADD,
+  MESSAGE_REACTION_REMOVE, MESSAGE_REACTION_REMOVE_ALL, MESSAGE_REACTION_REMOVE_EMOJI, TYPING_START,
+  MESSAGE_POLL_VOTE_ADD
+- `@classmethod none() -> Intents` — Return an Intents object with no intents set.
+- `@classmethod all() -> Intents` — Return an Intents object with all intents set.
+
 ## `wd_discord.interactions` — `wd-discord/src/wd_discord/interactions.py`
 Discord application commands (https://docs.discord.com/developers/interactions/application-commands).
 
-- module names: MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, MAX_DESCRIPTION_LENGTH, CHAT_INPUT_NAME_PATTERN
+- module names: CHAT_INPUT_NAME_PATTERN
 - `type Name = str`
 - `type ChatInputName = str`
 - `type Description = str`
@@ -316,6 +346,17 @@ The JSON body for creating or editing an application command.
 - attributes: model_config
 - `to_json() -> JsonPayload` — Return the request body.
 
+## `wd_discord.limits` — `wd-discord/src/wd_discord/limits.py`
+Discord's documented limits, and :func:`truncate` to fit text into one of them.
+
+- module names: ELLIPSIS, MAX_ACTION_ROWS, MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH,
+  MAX_BUTTON_LABEL_LENGTH, MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH, MAX_EMBED_FIELDS,
+  MAX_EMBED_CHARACTERS, MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH, MAX_EMBED_FIELD_NAME_LENGTH,
+  MAX_EMBED_FIELD_VALUE_LENGTH, MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, MAX_DESCRIPTION_LENGTH,
+  MAX_OPTION_VALUE_LENGTH, MAX_REASON_LENGTH, MAX_USER_LIMIT, MAX_CHANNEL_NAME_LENGTH, MIN_GUILD_NAME_LENGTH,
+  MAX_GUILD_NAME_LENGTH, MAX_MESSAGES_PER_PAGE, MAX_MEMBERS_PER_PAGE
+- `truncate(text: str, limit: int) -> str` — Return ``text``, or when it's longer than ``limit`` characters, its start cut to fit ``limit`` with :data:`ELLIPSIS`.
+
 ## `wd_discord.log` — `wd-discord/src/wd_discord/log.py`
 Module-level loggers that reach a log file.
 
@@ -332,11 +373,20 @@ Base for every Discord API response model.
 - attributes: model_config
 
 ## `wd_discord.oauth` — `wd-discord/src/wd_discord/oauth.py`
+OAuth2: scopes, and the authorization code grant's exchange and revoke (https://docs.discord.com/developers/topics/oauth2).
+
+- `async exchange_code(client: Client, code: str, redirect_uri: URL) -> AccessToken | NetworkError` — POST /oauth2/token - trade the ``code`` a user authorized with for an access token.
+- `async revoke_token(client: Client, token: Token) -> NetworkError | None` — POST /oauth2/token/revoke - revoke the access ``token``; ``client`` must authenticate as the application.
 
 ### `class OAuthScopes(StrEnum)`
 OAuth2 Scopes for the User Object.
 
 - attributes: IDENTIFY, EMAIL, PREMIUM
+
+### `class AccessToken(DiscordModel)`
+The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response).
+
+- fields: access_token: Token, token_type: str, expires_in: int, scope: str, refresh_token: Token | None
 
 ## `wd_discord.open_enum` — `wd-discord/src/wd_discord/open_enum.py`
 Enums for values Discord owns, which accept a value Discord adds later instead of refusing the payload.
@@ -362,6 +412,42 @@ A minimal emoji reference: a custom emoji ``id`` or a unicode ``name``.
 - `@property is_custom -> bool` — Whether this references a custom guild emoji (i.e. it has an ``id``).
 - `@property is_unicode -> bool` — Whether this references a standard unicode emoji (a ``name`` but no ``id``).
 - `@classmethod from_fields(emoji_id: Snowflake | None, emoji_name: str | None) -> PartialEmoji | None` — Build from a raw ``emoji_id`` / ``emoji_name`` pair; ``None`` when no emoji is set.
+
+## `wd_discord.payloads` — `wd-discord/src/wd_discord/payloads.py`
+Outbound request bodies and the keyword arguments :meth:`Client.request` accepts.
+
+### `class JsonPayload(TypedDict, total=False)`
+A JSON payload for a request.
+
+- fields: recipient_id: str, max_age: int, max_uses: int, temporary: bool, unique: bool, username: str, avatar: str,
+  banner: str, data: MessageData | ModalData, type: InteractionCallbackType, default_member_permissions: str,
+  channel_id: str | None, nick: str | None, communication_disabled_until: str | None, delete_message_seconds: int,
+  messages: list[str]
+
+### `class OverwritePayload(TypedDict)`
+A permission overwrite on a channel: what a role (``type`` 0) or member (``type`` 1) is allowed and denied.
+
+- fields: id: str, type: int, allow: str, deny: str
+
+### `class MemberPayload(TypedDict, total=False)`
+The attributes of a guild member to change; ``None`` clears what Discord lets clear.
+
+- fields: nick: str | None, roles: list[str] | None, mute: bool | None, deaf: bool | None, channel_id: str | None,
+  communication_disabled_until: str | None, flags: int | None
+
+### `class ChannelPayload(TypedDict, total=False)`
+The settings of a guild channel to create or change.
+
+- fields: name: str, type: int, topic: str, position: int, bitrate: int, user_limit: int, rate_limit_per_user: int,
+  nsfw: bool, parent_id: str, permission_overwrites: list[OverwritePayload]
+
+### `class RequestKwargs(TypedDict, total=False, closed=True)`
+The keyword arguments accepted by :meth:`Client.request` and its convenience methods.
+
+- fields: content: RequestContent, data: RequestData, files: RequestFiles, json: JsonPayload | MessageData |
+  ChannelPayload | MemberPayload | OverwritePayload | list[JsonPayload], params: QueryParamTypes, headers: HeaderTypes,
+  cookies: CookieTypes, auth: AuthTypes | UseClientDefault, follow_redirects: bool | UseClientDefault, timeout:
+  TimeoutTypes | UseClientDefault, extensions: RequestExtensions
 
 ## `wd_discord.permission_solver` — `wd-discord/src/wd_discord/permission_solver.py`
 Work out what a member may do in a guild or one of its channels, the way Discord does.
@@ -421,20 +507,13 @@ Represents the permissions a member has in a guild or channel.
 Utilities for handling rate limits.
 
 - module names: logger, GLOBAL_REQUESTS_PER_SECOND, MAJOR_PARAM_PREFIXES
+- `type RateLimiters = Mapping[RateLimitScope, RateLimiter]`
+- `new_rate_limiters() -> dict[RateLimitScope, RateLimiter]` — Build a fresh limiter set for one client: its buckets start empty and are shared with no other client.
 
-### `class Buckets(StrEnum)`
-Represents the different buckets for rate limits.
+### `class RateLimitScope(StrEnum)`
+The scope a rate limit applies to, named as in Discord's ``X-RateLimit-Scope`` header.
 
-- attributes: global_, per_endpoint, per_user, shared
-
-### `class ScopeError(BaseError)`
-Raised when both _global and _scope are set or when neither are set in a HeaderFormat.
-
-### `@dataclass class HeaderFormat`
-Example header format for rate limits.
-
-- fields: limit: int, remaining: int, reset: datetime, reset_after: timedelta, bucket: Buckets
-- `@property scope -> str` — Get the scope of the rate limit.
+- attributes: USER, GLOBAL, SHARED
 
 ### `class RateLimiter(ABC)`
 A rate-limit strategy :class:`~wd_discord.client.Client` consults around each request.
@@ -474,7 +553,6 @@ Raised when a request exceeds the maximum number of rate-limit retries.
 ### `class RateLimitHandler(LoggerMixin)`
 Runs a single logical request through the rate-limit retry loop.
 
-- fields: limiters: ClassVar[dict[str, RateLimiter]]
 - `async acquire() -> None` — Wait on every limiter for this handler's route key before sending.
 - `update(headers: Headers) -> None` — Update the rate limiters with the response headers for this handler's route key.
 - `async wait_on_rate_limit(response: Response) -> None` — Parse a 429's body/headers and wait via the matching limiter before retrying.
@@ -518,7 +596,7 @@ One REST route: a template whose literal parts are the route and whose interpola
 - `key(method: str) -> RouteKey` — Collapse this route to Discord's rate-limit route shape for ``method``.
 
 ## `wd_discord.sentry` — `wd-discord/src/wd_discord/sentry.py`
-Module to handle Sentry setup for wd-discord.
+Sentry setup for the bot, the web dashboard and the client library.
 
 ### `class Sentry`
 A class to handle Sentry setup.

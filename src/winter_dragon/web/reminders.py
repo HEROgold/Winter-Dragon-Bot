@@ -8,29 +8,33 @@ lazy from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, Form
 lazy from fastapi import Request, status
-lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from sqlmodel import Session
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from wd_db.extension.lifecycle import create_or_restore, find_by_key, row_key, soft_delete
+lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.cogs.reminder import (
+lazy from winter_dragon.cogs.reminder.domain import (
     REMINDER_TABLES,
     AnyReminder,
-    Reminder,
     ReminderSettings,
     TimedReminder,
+    new_reminder,
     owned_reminders,
 )
-lazy from winter_dragon.web.accounts import Account, checked_csrf, signed_in, visitor_zone
+lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, visitor_zone
 lazy from winter_dragon.web.formatting import day_label, every
-lazy from winter_dragon.web.responses import database, is_htmx, render, see_other
+lazy from winter_dragon.web.responses import Database, after_post, page_or_fragment
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from sqlalchemy import Engine
+    from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
+
+    from winter_dragon.web.accounts import Account
 
 
 router = APIRouter(prefix="/reminders")
@@ -46,10 +50,6 @@ class Repeat(StrEnum):
     """Every :attr:`ReminderDraft.every_days` days."""
 
 
-class InvalidReminderError(ValueError):
-    """The add form describes a reminder that can't be set; the message says why, for the person who filled it in."""
-
-
 @dataclass(frozen=True)
 class ReminderDraft:
     """What the add form holds, as typed, so a refused form comes back filled in."""
@@ -62,38 +62,19 @@ class ReminderDraft:
     repeat: Repeat = Repeat.NEVER
     every_days: str = "3"
 
-    def reminder(self, user_id: int, zone: ZoneInfo, now: datetime) -> AnyReminder:
-        """Return the reminder this draft describes for the user ``user_id``, read in ``zone`` and checked against ``now``.
+    def reminder(self, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder | Refused:
+        """Return the reminder this draft describes for the user ``user_id``, read in ``zone``, or why it can't be set.
 
-        Raises:
-            InvalidReminderError: the text, the time or the repeat is out of what ``/reminder`` accepts.
-
+        Checked against ``now`` by :func:`~winter_dragon.cogs.reminder.domain.new_reminder`, as ``/reminder`` is.
         """
-        content = self.content.strip()
-        if not content:
-            msg = "Write what to remind you of."
-            raise InvalidReminderError(msg)
-        if len(content) > ReminderSettings.max_content_length:
-            msg = f"Keep your reminder under {ReminderSettings.max_content_length} characters."
-            raise InvalidReminderError(msg)
-        due = self._due(zone)
-        if not now < due <= now + timedelta(days=ReminderSettings.max_delay_days):
-            msg = f"Pick a time between now and {ReminderSettings.max_delay_days} days from now."
-            raise InvalidReminderError(msg)
-        interval = self._interval()
-        if interval is None:
-            return Reminder(content=content, user_id=user_id, timestamp=due)
-        return TimedReminder(content=content, user_id=user_id, timestamp=due, repeat_every=interval)
-
-    def _due(self, zone: ZoneInfo) -> datetime:
         try:
             local = datetime.combine(date.fromisoformat(self.day), time.fromisoformat(self.at))
         except ValueError:
-            msg = "Pick a date and a time."
-            raise InvalidReminderError(msg) from None
-        return local.replace(tzinfo=zone).astimezone(UTC)
+            return Refused("Pick a date and a time.")
+        return new_reminder(self.content, user_id, local.replace(tzinfo=zone).astimezone(UTC), now, self._interval())
 
     def _interval(self) -> timedelta | None:
+        """Return how often the reminder repeats; one out of range is kept just outside it, for ``new_reminder`` to refuse."""
         match self.repeat:
             case Repeat.NEVER:
                 return None
@@ -102,10 +83,8 @@ class ReminderDraft:
             case Repeat.WEEKLY:
                 return timedelta(weeks=1)
             case Repeat.EVERY_DAYS:
-                if not self.every_days.isdigit() or not 1 <= int(self.every_days) <= ReminderSettings.max_delay_days:
-                    msg = f"Repeat every 1 to {ReminderSettings.max_delay_days} days."
-                    raise InvalidReminderError(msg)
-                return timedelta(days=int(self.every_days))
+                days = int(self.every_days) if self.every_days.isdigit() else 0
+                return timedelta(days=min(days, ReminderSettings.max_delay_days + 1))
 
 
 def blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft:
@@ -144,7 +123,7 @@ class ReminderDay:
     stops: tuple[ReminderStop, ...]
 
 
-def reminder_days(bind: Engine, user_id: int, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]:
+def reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]:
     """Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first."""
     with Session(bind) as session:
         stops = [ReminderStop(reminder, zone) for reminder in owned_reminders(session, user_id)]
@@ -160,15 +139,16 @@ def _page(  # noqa: PLR0913 - the form's state is part of what's rendered
     bind: Engine,
     draft: ReminderDraft | None = None,
     *,
-    template: str | None = None,
+    fragment: str = "reminders/page.html",
     error: str | None = None,
     status_code: int = 200,
 ) -> Response:
-    """Render the reminders page, or the part of it ``template`` names for an htmx swap."""
+    """Render the reminders page, or the part of it the template ``fragment`` holds for an htmx swap."""
     zone, now = visitor_zone(request), utc_now()
-    return render(
+    return page_or_fragment(
         request,
-        template or "reminders/page.html",
+        "reminders/page.html",
+        fragment,
         status_code=status_code,
         days=list(reminder_days(bind, account.id, zone, now)),
         draft=draft or blank_draft(zone, now),
@@ -182,8 +162,8 @@ def _page(  # noqa: PLR0913 - the form's state is part of what's rendered
 @router.get("")
 def reminders_page(
     request: Request,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
 ) -> Response:
     """Show the signed-in member's reminders and the form to add one."""
     return _page(request, account, bind)
@@ -192,8 +172,8 @@ def reminders_page(
 @router.post("", dependencies=[Depends(checked_csrf)])
 def add_reminder(  # noqa: PLR0913 - one parameter per form field
     request: Request,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
     content: Annotated[str, Form()] = "",
     day: Annotated[str, Form()] = "",
     at: Annotated[str, Form()] = "",
@@ -204,40 +184,35 @@ def add_reminder(  # noqa: PLR0913 - one parameter per form field
     draft = ReminderDraft(content=content, day=day, at=at, every_days=every_days)
     if repeat in Repeat:
         draft = replace(draft, repeat=Repeat(repeat))
-    board = "reminders/_board.html" if is_htmx(request) else None
-    try:
-        reminder = draft.reminder(account.id, visitor_zone(request), utc_now())
-    except InvalidReminderError as refused:
+    board = "reminders/_board.html"
+    reminder = draft.reminder(account.id, visitor_zone(request), utc_now())
+    if isinstance(reminder, Refused):
         return _page(
             request,
             account,
             bind,
             draft,
-            template=board,
-            error=str(refused),
+            fragment=board,
+            error=reminder.message,
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
     with Session(bind) as session:
         create_or_restore(session, reminder)
         session.commit()
-    if board is None:
-        return see_other(router.prefix)
-    return _page(request, account, bind, template=board)
+    return after_post(request, router.prefix, lambda: _page(request, account, bind, fragment=board))
 
 
 @router.post("/{key}/delete", dependencies=[Depends(checked_csrf)])
 def remove_reminder(
     request: Request,
     key: str,
-    account: Annotated[Account, Depends(signed_in)],
-    bind: Annotated[Engine, Depends(database)],
+    account: SignedIn,
+    bind: Database,
 ) -> Response:
     """Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be."""
     with Session(bind) as session:
         found = find_by_key(session, REMINDER_TABLES, key)
-        if found is not None and found.user_id == account.id:
+        if found is not None and found.user_id == int(account.id):
             soft_delete(session, found)
             session.commit()
-    if not is_htmx(request):
-        return see_other(router.prefix)
-    return _page(request, account, bind, template="reminders/_list.html")
+    return after_post(request, router.prefix, lambda: _page(request, account, bind, fragment="reminders/_list.html"))

@@ -2,6 +2,7 @@
 
 lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import owned_by
+lazy from wd_discord.snowflake import Snowflake
 
 lazy from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
 lazy from winter_dragon.web.profile import ProfileContext, profile_page
@@ -13,7 +14,7 @@ def love(context: ProfileContext) -> dict[str, object]:
     with Session(context.bind) as session:
         checks = list(session.exec(owned_by(CompatibilityCheck, member=context.member_id)))
     rows = [
-        (check, calculate_percentage(context.member_id, check.target_id), check.checked_at.astimezone(context.zone))
+        (check, calculate_percentage(context.member_id, Snowflake(check.target_id)), check.checked_at.astimezone(context.zone))
         for check in checks
     ]
     rows.sort(key=lambda row: (row[1], row[0].checked_at), reverse=True)

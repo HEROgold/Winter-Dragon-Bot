@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 lazy from sqlalchemy.exc import IntegrityError
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, upsert
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -43,7 +44,7 @@ class Offer:
 class SaveView:
     """A save at one moment: what it holds, and what it can buy."""
 
-    member_id: int
+    member_id: Snowflake
     as_of: datetime
     holdings: tuple[Holding, ...]
     offers: tuple[Offer, ...]
@@ -94,20 +95,20 @@ def _view(session: Session, save: IncrementalSave, now: datetime) -> SaveView:
         price = tuple(generator.price_for(count))
         offers.append(Offer(generator, count, price, all(amounts[cost.currency] >= cost.amount for cost in price)))
     holdings = tuple(Holding(currency, amounts[currency.key], rates.get(currency.key, 0.0)) for currency in game.currencies)
-    return SaveView(int(save.id), now, holdings, tuple(offers))
+    return SaveView(Snowflake(save.id), now, holdings, tuple(offers))
 
 
-def _find(session: Session, member_id: int, *, lock: bool = False) -> IncrementalSave | None:
-    statement = alive(IncrementalSave).where(col(IncrementalSave.id) == member_id)
+def _find(session: Session, member_id: Snowflake, *, lock: bool = False) -> IncrementalSave | None:
+    statement = alive(IncrementalSave).where(col(IncrementalSave.id) == int(member_id))
     return session.exec(statement.with_for_update() if lock else statement).first()
 
 
-def _ensure_save(session: Session, member_id: int, now: datetime, *, lock: bool = False) -> IncrementalSave:
+def _ensure_save(session: Session, member_id: Snowflake, now: datetime, *, lock: bool = False) -> IncrementalSave:
     """Return the member's save, creating it first when they have none; two creations racing end up with one save."""
     if (save := _find(session, member_id, lock=lock)) is not None:
         return save
     try:
-        create_or_restore(session, IncrementalSave(id=member_id, settled_at=now))
+        create_or_restore(session, IncrementalSave(id=int(member_id), settled_at=now))
         session.commit()
     except IntegrityError:
         session.rollback()
@@ -118,14 +119,14 @@ def _ensure_save(session: Session, member_id: int, now: datetime, *, lock: bool 
     return save
 
 
-def find_save(session: Session, member_id: int, *, now: datetime | None = None) -> SaveView | None:
+def find_save(session: Session, member_id: Snowflake, *, now: datetime | None = None) -> SaveView | None:
     """Return the member's save as of ``now``, or ``None`` when they have none; unlike :func:`open_save` it creates nothing."""
     now = utc_now() if now is None else now
     save = _find(session, member_id)
     return None if save is None else _view(session, save, now)
 
 
-def open_save(session: Session, member_id: int, *, now: datetime | None = None) -> SaveView:
+def open_save(session: Session, member_id: Snowflake, *, now: datetime | None = None) -> SaveView:
     """Return the member's save as of ``now`` (default: the current time), creating it on first use.
 
     Production since the save was last stored is included, however long that was. Reading doesn't change the stored amounts.
@@ -134,7 +135,7 @@ def open_save(session: Session, member_id: int, *, now: datetime | None = None) 
     return _view(session, _ensure_save(session, member_id, now), now)
 
 
-def buy(session: Session, member_id: int, generator_key: str, *, now: datetime | None = None) -> SaveView:
+def buy(session: Session, member_id: Snowflake, generator_key: str, *, now: datetime | None = None) -> SaveView:
     """Buy one generator for the member and return the save afterwards.
 
     The save row is locked for the whole transaction, so two buys on one save run one after the other. Each settles

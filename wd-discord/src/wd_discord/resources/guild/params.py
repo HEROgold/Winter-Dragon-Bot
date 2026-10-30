@@ -4,10 +4,10 @@ from datetime import datetime
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
-lazy from wd_core.client import MemberPayload
 
 from wd_discord.resources.guild.member import GuildMemberFlags
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.payloads import MemberPayload
 
 
 class MemberParams(BaseModel):

@@ -122,7 +122,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
             type=InteractionType.APPLICATION_COMMAND,
             token="tok",  # noqa: S106
             version=1,
-            **_sender(user, guild_id, channel_id, permissions),  # pyright: ignore[reportArgumentType]
+            **_sender(user, guild_id, channel_id, permissions),
             app_permissions=app_permissions,
             data=InteractionData(id="10", name=name, type=1, options=list(options), resolved=resolved),
         )
@@ -166,7 +166,7 @@ def make_component_interaction(discord_client: RecordingClient) -> ComponentInte
             type=InteractionType.MESSAGE_COMPONENT,
             token="tok",  # noqa: S106
             version=1,
-            **_sender(user, guild_id, None, permissions),  # pyright: ignore[reportArgumentType]
+            **_sender(user, guild_id, None, permissions),
             data=MessageComponentData(custom_id=custom_id, component_type=ComponentType.BUTTON),
             message={"id": "11"},
         )
@@ -210,7 +210,7 @@ def make_modal_submit(discord_client: RecordingClient) -> ModalSubmitFactory:
             type=InteractionType.MODAL_SUBMIT,
             token="tok",  # noqa: S106
             version=1,
-            **_sender(user, guild_id, channel_id, None),  # pyright: ignore[reportArgumentType]
+            **_sender(user, guild_id, channel_id, None),
             data=ModalSubmitData(custom_id=custom_id, components=inputs),
         )
         return ModalSubmitInteraction(discord_client, model)

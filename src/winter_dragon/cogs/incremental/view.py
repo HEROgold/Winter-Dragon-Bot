@@ -5,6 +5,7 @@ lazy from typing import TYPE_CHECKING
 lazy from confkit.data_types import Hex
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import Embed, EmbedField, EmbedFooter
+lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS
 
 lazy from winter_dragon.cogs.incremental.catalogue import catalogue
 lazy from winter_dragon.config import CogConfig
@@ -17,9 +18,6 @@ if TYPE_CHECKING:
 
     lazy from winter_dragon.cogs.incremental.catalogue import Quantity
     lazy from winter_dragon.cogs.incremental.game import Offer, SaveView
-
-
-BUTTONS_PER_ROW = 5
 
 
 class IncrementalSettings:
@@ -86,4 +84,7 @@ def build_buttons(view: SaveView, *, refresh: ComponentHandler, buy: ComponentHa
             for offer in view.offers
         ),
     ]
-    return [ActionRow(components=buttons[start : start + BUTTONS_PER_ROW]) for start in range(0, len(buttons), BUTTONS_PER_ROW)]
+    return [
+        ActionRow(components=buttons[start : start + MAX_ACTION_ROW_BUTTONS])
+        for start in range(0, len(buttons), MAX_ACTION_ROW_BUTTONS)
+    ]

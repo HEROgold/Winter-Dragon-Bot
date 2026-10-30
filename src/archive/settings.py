@@ -1,12 +1,8 @@
 """The archive's settings, in their own ``archive.ini``; its token lives with the bot's in ``bot.ini``."""
 
-from pathlib import Path
-
 from wd_config import Config
-from wd_core.intents import Intents
-
-
-ARCHIVE_CONFIG_FILE = Path("archive.ini")
+from wd_config.constants import ARCHIVE_CONFIG_FILE
+from wd_discord.intents import Intents
 
 
 class ArchiveConfig[T](Config[T]):

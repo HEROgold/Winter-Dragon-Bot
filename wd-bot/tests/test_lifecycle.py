@@ -13,11 +13,13 @@ from wd_db.extension.lifecycle import (
     Ownership,
     Through,
     alive,
+    alive_by_id,
     create_or_restore,
     ensure_lifecycle_columns,
     lifecycle_models,
     owned_by,
     soft_delete,
+    upsert,
 )
 from wd_db.testing import sqlite_engine
 
@@ -139,6 +141,64 @@ def test_create_or_restore_restores_by_natural_key_and_overwrites_fields(engine:
     with Session(engine) as session:
         (board,) = session.exec(owned_by(LifecycleBoard, member=4))
     assert (board.topic, board.deleted_at) == ("new", None)
+
+
+def test_alive_by_id_finds_an_alive_row_but_not_a_soft_deleted_or_missing_one(engine: Engine) -> None:
+    kept_id = _stored(engine, _board("kept"))
+    gone_id = _stored(engine, _board("gone"))
+    _soft_delete(engine, gone_id)
+
+    with Session(engine) as session:
+        kept = alive_by_id(session, LifecycleBoard, kept_id)
+        assert kept is not None
+        assert kept.name == "kept"
+        assert alive_by_id(session, LifecycleBoard, gone_id) is None
+        assert alive_by_id(session, LifecycleBoard, gone_id + 100) is None
+        assert alive_by_id(session, LifecycleBoard, None) is None
+
+
+def _upserted(engine: Engine, row: LifecycleBoard) -> int:
+    def retopic(board: LifecycleBoard) -> None:
+        board.topic += " again"
+
+    with Session(engine) as session:
+        stored = upsert(session, row, retopic)
+        session.commit()
+        assert stored.id is not None
+        return stored.id
+
+
+def test_upsert_restores_a_soft_deleted_row_with_the_new_fields(engine: Engine) -> None:
+    board_id = _stored(engine, _board(topic="old"))
+    _soft_delete(engine, board_id)
+
+    assert _upserted(engine, _board(topic="new")) == board_id
+    assert _alive_boards(engine) == [("plans", "new")]
+
+
+def test_upsert_changes_the_alive_row_with_update(engine: Engine) -> None:
+    board_id = _stored(engine, _board(topic="old"))
+
+    assert _upserted(engine, _board(topic="ignored")) == board_id
+    assert _alive_boards(engine) == [("plans", "old again")]
+
+
+def test_upsert_without_update_gives_the_alive_row_the_new_fields(engine: Engine) -> None:
+    board_id = _stored(engine, _board(topic="old"))
+
+    with Session(engine) as session:
+        assert upsert(session, LifecycleBoard(id=board_id, guild_id=1, owner_id=3, name="renamed", topic="new")).id == board_id
+        session.commit()
+
+    assert _alive_boards(engine) == [("renamed", "new")]
+
+
+def test_upsert_creates_a_row_with_no_key_stored(engine: Engine) -> None:
+    _stored(engine, _board("kept"))
+
+    _upserted(engine, _board("fresh", topic="new"))
+
+    assert sorted(_alive_boards(engine)) == [("fresh", "new"), ("kept", "")]
 
 
 def test_alive_duplicate_conflicts(engine: Engine) -> None:

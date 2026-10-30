@@ -12,7 +12,7 @@ from winter_dragon.cogs.fuel import FuelSettings
 from winter_dragon.cogs.heartbeat import HeartbeatSettings
 from winter_dragon.cogs.invite import InviteSettings
 from winter_dragon.cogs.percentage import PercentageSettings
-from winter_dragon.cogs.reminder import ReminderSettings
+from winter_dragon.cogs.reminder.domain import ReminderSettings
 from winter_dragon.cogs.stats import StatsSettings
 from winter_dragon.cogs.tournament.cog import TournamentSettings
 from winter_dragon.cogs.urban import UrbanSettings

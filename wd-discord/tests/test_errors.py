@@ -1,7 +1,7 @@
-"""Unit tests: Discord error parsing (API -> object) and the activity/platform enums."""
+"""Unit tests: Discord error parsing (API -> object) and the activity type enum."""
 
-lazy from wd_discord import ApiResponseError
-lazy from wd_errors import Activity, Platform
+lazy from wd_discord import ActivityType, ApiResponseError
+lazy from wd_discord.errors import ErrorCode
 
 
 def test_parse_simple_error() -> None:
@@ -33,16 +33,21 @@ def test_parse_error_with_field_tree() -> None:
     assert error.errors is not None
 
 
-def test_activity_enum_values() -> None:
-    assert Activity.PLAYING == 0
-    assert Activity.STREAMING == 1
-    assert Activity.LISTENING == 2
-    assert Activity.WATCHING == 3
-    assert Activity.CUSTOM == 4
-    assert Activity.COMPETING == 5
+def test_activity_type_values() -> None:
+    assert ActivityType.PLAYING == 0
+    assert ActivityType.STREAMING == 1
+    assert ActivityType.LISTENING == 2
+    assert ActivityType.WATCHING == 3
+    assert ActivityType.CUSTOM == 4
+    assert ActivityType.COMPETING == 5
 
 
-def test_platform_enum_values() -> None:
-    assert Platform.DESKTOP == "desktop"
-    assert Platform.ANDROID == "android"
-    assert Platform.IOS == "ios"
+def test_field_error_code_parses_into_error_code() -> None:
+    payload = {
+        "code": 50035,
+        "message": "Invalid Form Body",
+        "errors": {"name": {"_errors": [{"code": "BASE_TYPE_REQUIRED", "message": "Required"}]}},
+    }
+    error = ApiResponseError.model_validate(payload)
+    assert error.errors is not None
+    assert [message.code for message in error.errors] == [ErrorCode.BASE_TYPE_REQUIRED]

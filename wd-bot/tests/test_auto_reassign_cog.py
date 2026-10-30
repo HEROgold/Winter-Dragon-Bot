@@ -30,7 +30,11 @@ MEMBER_PATH = f"/guilds/{GUILD_ID}/members/{MEMBER_ID}"
 
 
 def _role(
-    role_id: int, *, managed: bool = False, position: int = 1, permissions: Permissions = Permissions.none(),
+    role_id: int,
+    *,
+    managed: bool = False,
+    position: int = 1,
+    permissions: Permissions = Permissions.none(),
 ) -> dict[str, Any]:
     return role_json(
         id=str(role_id),
@@ -51,7 +55,10 @@ def _member(*role_ids: int, user: dict[str, Any] = USER) -> dict[str, Any]:
 
 
 def _connect(
-    client: RecordingClient, roles: list[dict[str, Any]], *member_role_ids: int, bot_role: dict[str, Any] | None = None,
+    client: RecordingClient,
+    roles: list[dict[str, Any]],
+    *member_role_ids: int,
+    bot_role: dict[str, Any] | None = None,
 ) -> None:
     """Have ``client`` connect as the bot and receive the guild, with the member holding ``member_role_ids``."""
     client.receive(parse_ready({"v": 10, "session_id": "s", "resume_gateway_url": "wss://x", "user": BOT_USER, "guilds": []}))
@@ -217,6 +224,12 @@ async def test_leaving_again_remembers_only_the_latest_roles(engine: Engine) -> 
     assert _given(client) == ["9"]
 
 
+def _confirmed(response: dict[str, Any]) -> str:
+    """Return the description of the confirmation embed ``response`` carries."""
+    (embed,) = response["data"]["embeds"]
+    return embed["description"]
+
+
 def _enabled(engine: Engine) -> bool:
     with Session(engine) as session:
         return is_enabled(session, GUILD_ID)
@@ -248,7 +261,7 @@ async def test_enable_warns_about_roles_above_the_bot(
 
     await AutoReassign.enable.invoke(_cog(engine, discord_client), enable, enable.options)
 
-    reply = discord_client.interaction_responses()[0]["data"]["content"]
+    reply = _confirmed(discord_client.interaction_responses()[0])
     assert "<@&12>" in reply
     assert "<@&8>" not in reply
 
@@ -263,7 +276,7 @@ async def test_enable_warns_without_manage_roles(
 
     await AutoReassign.enable.invoke(_cog(engine, discord_client), enable, enable.options)
 
-    assert "Manage Roles" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert "Manage Roles" in _confirmed(discord_client.interaction_responses()[0])
     assert _enabled(engine)  # it still turns on; the warning says what to fix
 
 
@@ -277,7 +290,7 @@ async def test_enable_without_problems_gives_the_plain_hint(
 
     await AutoReassign.enable.invoke(_cog(engine, discord_client), enable, enable.options)
 
-    reply = discord_client.interaction_responses()[0]["data"]["content"]
+    reply = _confirmed(discord_client.interaction_responses()[0])
     assert reply.startswith("Members who leave and rejoin now get their roles back")
     assert "<@&" not in reply
 
@@ -343,7 +356,7 @@ async def test_enable_disable_enable_leaves_it_on(
         await command.invoke(cog, interaction, interaction.options)
 
     assert _enabled(engine)
-    responses = [response["data"]["content"] for response in discord_client.interaction_responses()]
+    responses = [_confirmed(response) for response in discord_client.interaction_responses()]
     assert responses[1] == "Rejoining members no longer get their roles back."
     assert all(response.startswith("Members who leave and rejoin now get their roles back") for response in responses[::2])
 
@@ -379,7 +392,9 @@ async def test_roles_given_back_and_forgotten_never_come_back(engine: Engine) ->
     await cog.on_member_remove(_leave(client))
     await cog.on_member_add(_join(client))
     client.receive(
-        parse_dispatch(EventName.GUILD_MEMBER_UPDATE, {**_member(9), "avatar": None, "banner": None, "guild_id": str(GUILD_ID)}),
+        parse_dispatch(
+            EventName.GUILD_MEMBER_UPDATE, {**_member(9), "avatar": None, "banner": None, "guild_id": str(GUILD_ID)}
+        ),
     )
 
     await cog.on_member_remove(_leave(client))

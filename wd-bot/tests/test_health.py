@@ -4,9 +4,10 @@ import asyncio
 import os
 import time
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
+from wd_bot.bot import Bot
 from wd_bot.testing import detached_cog
 
 import winter_dragon.cogs.health as health_cog
@@ -16,6 +17,8 @@ from winter_dragon.cogs.health import Health
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from wd_discord.gateway.sharding import ShardManager
 
 
 @pytest.fixture
@@ -61,30 +64,33 @@ def test_main_exits_with_the_checks_result(alive_file: Path) -> None:
     assert health.main(["bot"]) == 0
 
 
-async def _one_pass(cog: Health, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def stop(_: float) -> None:
-        raise asyncio.CancelledError
-
-    monkeypatch.setattr(health_cog.asyncio, "sleep", stop)
-    with pytest.raises(asyncio.CancelledError):
-        await cog._run()  # noqa: SLF001
-
-
-async def test_the_cog_touches_the_alive_file_while_every_shard_is_alive(
-    alive_file: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_the_cog_touches_the_alive_file_while_every_shard_is_alive(alive_file: Path) -> None:
     cog = detached_cog(Health, shard_manager=SimpleNamespace(alive=True))
-    await _one_pass(cog, monkeypatch)
+    await cog.touch_alive_file()
     assert alive_file.exists()
 
 
 @pytest.mark.parametrize("manager", [None, SimpleNamespace(alive=False)])
 async def test_the_cog_leaves_the_alive_file_alone_while_the_bot_is_not_connected(
     alive_file: Path,
-    monkeypatch: pytest.MonkeyPatch,
     manager: SimpleNamespace | None,
 ) -> None:
     cog = detached_cog(Health, shard_manager=manager)
-    await _one_pass(cog, monkeypatch)
+    await cog.touch_alive_file()
+    assert not alive_file.exists()
+
+
+async def test_a_loaded_cog_keeps_touching_the_file_until_it_is_unloaded(alive_file: Path) -> None:
+    bot = Bot()
+    bot.loop = asyncio.get_running_loop()
+    bot.shard_manager = cast("ShardManager", SimpleNamespace(alive=True))
+    cog = Health(bot=bot)
+
+    await bot.add_cog(cog)
+    await asyncio.sleep(0)
+    assert alive_file.exists()
+
+    await bot.remove_cog(cog)
+    alive_file.unlink()
+    await asyncio.sleep(0)
     assert not alive_file.exists()

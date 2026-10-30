@@ -13,13 +13,12 @@ lazy from wd_discord.resources.user import User as UserModel
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from wd_core.client import JsonPayload
-
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
     from wd_discord.embed import Embed
     from wd_discord.entities.message import Message
     from wd_discord.image import ImageHash
+    from wd_discord.payloads import JsonPayload
     from wd_discord.snowflake import Snowflake
 
 
@@ -37,9 +36,12 @@ class BaseUser(ClientBound):
         """A clickable mention of the user, as ``<@id>``."""
         return f"<@{self.id}>"
 
-    async def fetch(self, *, cache: bool = False) -> User | NetworkError:
-        """GET /users/{user_id}."""
-        return self._entity(await self.client.get(t"/users/{self.id}", cache=cache), UserModel, User)
+    async def fetch(self, *, reuse_response: bool = False) -> User | NetworkError:
+        """GET /users/{user_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entity(await self.client.get(t"/users/{self.id}", reuse_response=reuse_response), UserModel, User)
 
     async def dm(self) -> Channel | NetworkError:
         """POST /users/@me/channels - open the DM channel with this user, or return the one already open."""

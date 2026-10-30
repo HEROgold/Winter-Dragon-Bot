@@ -14,6 +14,7 @@ lazy from wd_discord.gateway import (
     shard_id_for_guild,
 )
 lazy from wd_discord.gateway import sharding as sharding_module
+lazy from wd_discord.snowflake import Snowflake
 
 
 GATEWAY_BOT_PAYLOAD = {
@@ -24,10 +25,10 @@ GATEWAY_BOT_PAYLOAD = {
 
 
 def test_shard_id_for_guild() -> None:
-    guild_id = (5 << 22) | 12345  # low 22 bits must not affect routing
+    guild_id = Snowflake((5 << 22) | 12345)  # low 22 bits must not affect routing
     assert shard_id_for_guild(guild_id, 9) == 5
     assert shard_id_for_guild(guild_id, 4) == 1
-    assert shard_id_for_guild(0, 3) == 0
+    assert shard_id_for_guild(Snowflake(0), 3) == 0
 
 
 def test_rate_limit_key() -> None:
@@ -145,11 +146,11 @@ async def test_num_shards_overrides_recommendation(recorded_sleeps: list[float])
 @pytest.mark.usefixtures("fake_gateway", "recorded_sleeps")
 async def test_shard_for_guild_routes_after_start() -> None:
     manager = ShardManager("token", _info(shards=3, max_concurrency=16))
-    error = manager.shard_for_guild(1 << 22)
+    error = manager.shard_for_guild(Snowflake(1 << 22))
     assert isinstance(error, RuntimeError)
     assert "not started" in str(error)
     await manager._start()
-    shard = manager.shard_for_guild((4 << 22) | 7)
+    shard = manager.shard_for_guild(Snowflake((4 << 22) | 7))
     assert not isinstance(shard, RuntimeError)
     assert shard.shard == (1, 3)
 

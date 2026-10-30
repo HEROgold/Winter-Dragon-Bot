@@ -1,17 +1,20 @@
 """Guilds (https://docs.discord.com/developers/resources/guild)."""
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING, override
+lazy from typing import TYPE_CHECKING, Any, override
 
 lazy from wd_discord.audit import reason_headers
+lazy from wd_discord.cache import StateCache
 lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import ClientBound, Entity, Partial, every_page, no_content, parse, parse_all
 lazy from wd_discord.entities.channel import Channel, PartialChannel
 lazy from wd_discord.entities.emoji import Emoji, Sticker
 lazy from wd_discord.entities.invite import Invite
 lazy from wd_discord.entities.member import Member, PartialMember
+lazy from wd_discord.entities.presence import Presence
 lazy from wd_discord.entities.role import PartialRole, Role
 lazy from wd_discord.entities.voice import VoiceState
+lazy from wd_discord.limits import MAX_MEMBERS_PER_PAGE
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.guild import Emoji as EmojiModel
@@ -27,7 +30,9 @@ lazy from wd_discord.snowflake import Snowflake
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
+    from datetime import datetime
+    from string.templatelib import Template
 
     from wd_discord.audit import Reason
     from wd_discord.cache import GuildState
@@ -36,19 +41,21 @@ if TYPE_CHECKING:
     from wd_discord.entities.user import BaseUser
     from wd_discord.gateway.events import GuildCreate
     from wd_discord.image import ImageHash
+    from wd_discord.models import DiscordModel
     from wd_discord.partial_emoji import PartialEmoji
+    from wd_discord.permissions import Permissions
     from wd_discord.resources.channel import GuildChannelParams
     from wd_discord.resources.guild import (
+        DefaultMessageNotificationLevel,
+        ExplicitContentFilterLevel,
+        IncidentsData,
         MFALevel,
         NSFWLevel,
         PremiumTier,
+        SystemChannelFlags,
         VerificationLevel,
     )
     from wd_discord.snowflake import SnowflakeLike
-
-
-MAX_MEMBERS_PER_PAGE = 1000
-"""The most members ``GET /guilds/{guild_id}/members`` returns at once (https://docs.discord.com/developers/resources/guild#list-guild-members)."""
 
 
 class BaseGuild(ClientBound):
@@ -159,7 +166,7 @@ class BaseGuild(ClientBound):
         """
         guild = self.cached
         if guild is None:
-            guild = await self.fetch(cache=True)
+            guild = await self.fetch(reuse_response=True)
             if is_network_error(guild):
                 return guild
         me = self.client.cache.user
@@ -170,17 +177,41 @@ class BaseGuild(ClientBound):
             me = current.model
         own = self.get_member(me.id)
         if own is None:
-            own = await self.member(me.id).fetch(cache=True)
+            own = await self.member(me.id).fetch(reuse_response=True)
             if is_network_error(own):
                 return own
         return PermissionSolver(guild.model, own.model)
 
     # --- From Discord: a request each, whose answer also updates the cache ------------------------
 
-    async def fetch(self, *, with_counts: bool = False, cache: bool = False) -> Guild | NetworkError:
-        """GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts."""
+    async def _stored[M: DiscordModel, E: Entity[Any]](  # noqa: PLR0913 - route, model, store and entity are each one step
+        self,
+        route: Template,
+        model: type[M],
+        store: Callable[[StateCache, Snowflake, list[M]], object],
+        entity: type[E],
+        *args: object,
+        params: dict[str, str] | None = None,
+        reuse_response: bool = False,
+    ) -> Generator[E] | NetworkError:
+        """GET ``route`` as a list of ``model``; ``store`` it in the state cache, then wrap each item as ``entity``.
+
+        ``store`` is a :class:`~wd_discord.cache.StateCache` method taking this guild's ID, and ``args`` follow
+        the client and the item in ``entity``'s call. A failure leaves the cache as it was.
+        """
+        parsed = parse_all(await self.client.get(route, params=params or {}, reuse_response=reuse_response), model)
+        if is_network_error(parsed):
+            return parsed
+        store(self.client.cache, self.id, parsed)
+        return (entity(self.client, item, *args) for item in parsed)
+
+    async def fetch(self, *, with_counts: bool = False, reuse_response: bool = False) -> Guild | NetworkError:
+        """GET /guilds/{guild_id}; ``with_counts`` fills in the approximate member and online counts.
+
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
         params = {"with_counts": "true"} if with_counts else {}
-        parsed = parse(await self.client.get(t"/guilds/{self.id}", params=params, cache=cache), GuildModel)
+        parsed = parse(await self.client.get(t"/guilds/{self.id}", params=params, reuse_response=reuse_response), GuildModel)
         if is_network_error(parsed):
             return parsed
         self.client.cache.store_guild(parsed)
@@ -190,13 +221,14 @@ class BaseGuild(ClientBound):
         """Return a handle on the channel ``channel_id``, without fetching it."""
         return PartialChannel(self.client, Snowflake.coerce(channel_id))
 
-    async def fetch_channels(self, *, cache: bool = False) -> Generator[Channel] | NetworkError:
-        """GET /guilds/{guild_id}/channels - the guild's channels, threads excluded."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/channels", cache=cache), ChannelModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_channels(self.id, parsed)
-        return (Channel(self.client, channel) for channel in parsed)
+    async def fetch_channels(self, *, reuse_response: bool = False) -> Generator[Channel] | NetworkError:
+        """GET /guilds/{guild_id}/channels - the guild's channels, threads excluded.
+
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return await self._stored(
+            t"/guilds/{self.id}/channels", ChannelModel, StateCache.store_channels, Channel, reuse_response=reuse_response
+        )
 
     async def create_channel(
         self,
@@ -217,33 +249,36 @@ class BaseGuild(ClientBound):
         *,
         after: BaseMember | BaseUser | None = None,
         limit: int = MAX_MEMBERS_PER_PAGE,
-        cache: bool = False,
+        reuse_response: bool = False,
     ) -> Generator[Member] | NetworkError:
         """GET /guilds/{guild_id}/members - one page of members, by user ID, after the member ``after``.
 
         Pass the last member of a page as ``after`` to get the next one; a page shorter than ``limit`` is the last.
         Needs the GUILD_MEMBERS intent.
+
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
         """
         params = {"limit": str(limit), "after": "0" if after is None else str(after.id)}
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/members", params=params, cache=cache), GuildMember)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_members(self.id, parsed)
-        return (Member(self.client, member, self.id) for member in parsed)
+        route = t"/guilds/{self.id}/members"
+        return await self._stored(
+            route, GuildMember, StateCache.store_members, Member, self.id, params=params, reuse_response=reuse_response
+        )
 
     async def all_members(
         self,
         *,
         page_size: int = MAX_MEMBERS_PER_PAGE,
-        cache: bool = False,
+        reuse_response: bool = False,
     ) -> Generator[Member] | NetworkError:
         """Every member of the guild, by user ID, read ``page_size`` at a time; needs the GUILD_MEMBERS intent.
 
         ``page_size`` is capped at Discord's :data:`MAX_MEMBERS_PER_PAGE`, since a page shorter than it ends the list.
+
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
         """
         page_size = min(page_size, MAX_MEMBERS_PER_PAGE)
         members = await every_page(
-            lambda after: self.fetch_members(after=after, limit=page_size, cache=cache),
+            lambda after: self.fetch_members(after=after, limit=page_size, reuse_response=reuse_response),
             page_size,
         )
         if is_network_error(members):
@@ -259,55 +294,73 @@ class BaseGuild(ClientBound):
         """Return a handle on the role ``role_id`` of this guild, without fetching it."""
         return PartialRole(self.client, Snowflake.coerce(role_id), self.id)
 
-    async def fetch_roles(self, *, cache: bool = False) -> Generator[Role] | NetworkError:
-        """GET /guilds/{guild_id}/roles - every role of the guild."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/roles", cache=cache), RoleModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_roles(self.id, parsed)
-        return (Role(self.client, role, self.id) for role in parsed)
+    async def fetch_roles(self, *, reuse_response: bool = False) -> Generator[Role] | NetworkError:
+        """GET /guilds/{guild_id}/roles - every role of the guild.
 
-    async def fetch_emojis(self, *, cache: bool = False) -> Generator[Emoji] | NetworkError:
-        """GET /guilds/{guild_id}/emojis - the guild's custom emojis."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/emojis", cache=cache), EmojiModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_emojis(self.id, parsed)
-        return (Emoji(self.client, emoji, self.id) for emoji in parsed)
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return await self._stored(
+            t"/guilds/{self.id}/roles", RoleModel, StateCache.store_roles, Role, self.id, reuse_response=reuse_response
+        )
 
-    async def fetch_emoji(self, emoji_id: SnowflakeLike, *, cache: bool = False) -> Emoji | NetworkError:
-        """GET /guilds/{guild_id}/emojis/{emoji_id}."""
-        parsed = parse(await self.client.get(t"/guilds/{self.id}/emojis/{emoji_id}", cache=cache), EmojiModel)
+    async def fetch_emojis(self, *, reuse_response: bool = False) -> Generator[Emoji] | NetworkError:
+        """GET /guilds/{guild_id}/emojis - the guild's custom emojis.
+
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return await self._stored(
+            t"/guilds/{self.id}/emojis", EmojiModel, StateCache.store_emojis, Emoji, self.id, reuse_response=reuse_response
+        )
+
+    async def fetch_emoji(self, emoji_id: SnowflakeLike, *, reuse_response: bool = False) -> Emoji | NetworkError:
+        """GET /guilds/{guild_id}/emojis/{emoji_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        parsed = parse(await self.client.get(t"/guilds/{self.id}/emojis/{emoji_id}", reuse_response=reuse_response), EmojiModel)
         return parsed if is_network_error(parsed) else Emoji(self.client, parsed, self.id)
 
-    async def fetch_stickers(self, *, cache: bool = False) -> Generator[Sticker] | NetworkError:
-        """GET /guilds/{guild_id}/stickers - the guild's own stickers."""
-        parsed = parse_all(await self.client.get(t"/guilds/{self.id}/stickers", cache=cache), StickerModel)
-        if is_network_error(parsed):
-            return parsed
-        self.client.cache.store_stickers(self.id, parsed)
-        return (Sticker(self.client, sticker) for sticker in parsed)
+    async def fetch_stickers(self, *, reuse_response: bool = False) -> Generator[Sticker] | NetworkError:
+        """GET /guilds/{guild_id}/stickers - the guild's own stickers.
 
-    async def fetch_invites(self, *, cache: bool = False) -> Generator[Invite] | NetworkError:
-        """GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD."""
-        return self._entities(await self.client.get(t"/guilds/{self.id}/invites", cache=cache), InviteModel, Invite)
+        Stores the answer in the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return await self._stored(
+            t"/guilds/{self.id}/stickers", StickerModel, StateCache.store_stickers, Sticker, reuse_response=reuse_response
+        )
+
+    async def fetch_invites(self, *, reuse_response: bool = False) -> Generator[Invite] | NetworkError:
+        """GET /guilds/{guild_id}/invites - every open invite to the guild; needs MANAGE_GUILD.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entities(
+            await self.client.get(t"/guilds/{self.id}/invites", reuse_response=reuse_response), InviteModel, Invite
+        )
 
     async def fetch_voice_state(
         self,
         member: BaseMember | BaseUser | None = None,
         *,
-        cache: bool = False,
+        reuse_response: bool = False,
     ) -> VoiceState | NetworkError:
         """GET /guilds/{guild_id}/voice-states/{user_id} - ``member``'s voice state here, or the bot's without one.
 
         Fails when they aren't connected to a voice channel of the guild.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
         """
         route = t"/guilds/{self.id}/voice-states/@me" if member is None else t"/guilds/{self.id}/voice-states/{member.id}"
-        return self._entity(await self.client.get(route, cache=cache), VoiceStateModel, VoiceState)
+        return self._entity(await self.client.get(route, reuse_response=reuse_response), VoiceStateModel, VoiceState)
 
-    async def fetch_welcome_screen(self, *, cache: bool = False) -> WelcomeScreen | NetworkError:
-        """GET /guilds/{guild_id}/welcome-screen; needs MANAGE_GUILD unless the screen is enabled."""
-        parsed = parse(await self.client.get(t"/guilds/{self.id}/welcome-screen", cache=cache), WelcomeScreenModel)
+    async def fetch_welcome_screen(self, *, reuse_response: bool = False) -> WelcomeScreen | NetworkError:
+        """GET /guilds/{guild_id}/welcome-screen; needs MANAGE_GUILD unless the screen is enabled.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        parsed = parse(
+            await self.client.get(t"/guilds/{self.id}/welcome-screen", reuse_response=reuse_response), WelcomeScreenModel
+        )
         return parsed if is_network_error(parsed) else WelcomeScreen(self.client, parsed, self.id)
 
     async def leave(self) -> NetworkError | None:
@@ -316,9 +369,8 @@ class BaseGuild(ClientBound):
 
     def _members(self, result: RequestResult) -> Generator[Member] | NetworkError:
         """Return the failure in ``result``, or each member in its JSON array as a :class:`Member` of this guild."""
-        if is_network_error(result):
-            return result
-        return (Member(self.client, GuildMember.model_validate(item), self.id) for item in result.json())
+        parsed = parse_all(result, GuildMember)
+        return parsed if is_network_error(parsed) else (Member(self.client, model, self.id) for model in parsed)
 
 
 class Guild(Entity[GuildModel], BaseGuild):
@@ -494,6 +546,61 @@ class Guild(Entity[GuildModel], BaseGuild):
         screen = self.model.welcome_screen
         return None if screen is None else WelcomeScreen(self.client, screen, self.id)
 
+    @property
+    def discovery_splash(self) -> ImageHash | None:
+        """The guild's background in Server Discovery; only for a discoverable guild."""
+        return self.model.discovery_splash
+
+    @property
+    def permissions(self) -> Permissions | None:
+        """The current user's permissions in the guild, overwrites left out; only from the current user's guild list."""
+        return self.model.permissions
+
+    @property
+    def widget_enabled(self) -> bool | None:
+        """Whether the guild's widget is on."""
+        return self.model.widget_enabled
+
+    @property
+    def default_message_notifications(self) -> DefaultMessageNotificationLevel:
+        """Which messages notify a member who hasn't picked a setting."""
+        return self.model.default_message_notifications
+
+    @property
+    def explicit_content_filter(self) -> ExplicitContentFilterLevel:
+        """Whose messages Discord scans for explicit media."""
+        return self.model.explicit_content_filter
+
+    @property
+    def system_channel_flags(self) -> SystemChannelFlags:
+        """Which messages Discord leaves out of the system channel."""
+        return self.model.system_channel_flags
+
+    @property
+    def max_presences(self) -> int | None:
+        """The most presences the guild tracks; ``None`` apart from the largest guilds."""
+        return self.model.max_presences
+
+    @property
+    def max_video_channel_users(self) -> int | None:
+        """The most users with video on in a voice channel."""
+        return self.model.max_video_channel_users
+
+    @property
+    def max_stage_video_channel_users(self) -> int | None:
+        """The most users with video on in a stage channel."""
+        return self.model.max_stage_video_channel_users
+
+    @property
+    def premium_progress_bar_enabled(self) -> bool:
+        """Whether the guild shows its boost progress bar."""
+        return self.model.premium_progress_bar_enabled
+
+    @property
+    def incidents_data(self) -> IncidentsData | None:
+        """The raid and spam measures in force, if any."""
+        return self.model.incidents_data
+
     def _channel(self, channel_id: Snowflake | None) -> Channel | PartialChannel | None:
         """Return the channel ``channel_id`` in full when the guild's data has it, else as a handle."""
         if channel_id is None:
@@ -508,7 +615,7 @@ class GatewayGuild(Guild):
     """
 
     if TYPE_CHECKING:
-        model: GuildCreate  # pyright: ignore[reportIncompatibleVariableOverride]
+        model: GuildCreate
 
     @property
     @override
@@ -558,9 +665,20 @@ class GatewayGuild(Guild):
         return bool(self.model.large)
 
     @property
-    def joined_at(self) -> str | None:
-        """When the bot joined the guild, as an ISO 8601 timestamp."""
+    def joined_at(self) -> datetime | None:
+        """When the bot joined the guild."""
         return self.model.joined_at
+
+    @property
+    def unavailable(self) -> bool:
+        """Whether the guild is down in an outage; Discord sends little else about it then."""
+        return bool(self.model.unavailable)
+
+    @property
+    def presences(self) -> Generator[Presence]:
+        """The presences of the members GUILD_CREATE sent along."""
+        for presence in self.model.presences:
+            yield Presence(self.client, presence.model_copy(update={"guild_id": self.id}))
 
     @override
     def get_member(self, user_id: SnowflakeLike) -> Member | None:

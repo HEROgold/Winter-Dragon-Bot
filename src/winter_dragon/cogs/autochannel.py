@@ -11,16 +11,17 @@ lazy from typing import TYPE_CHECKING, Annotated, ClassVar, Unpack, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Length, Range
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import alive_by_id, create_or_restore, owned_by, soft_delete, upsert
 
 # Command resolves option annotations from module globals at runtime, so Channel must be available here.
 lazy from wd_discord import (
     Channel,
     ChannelType,
+    GuildCommandInteraction,
     Member,
     Permissions,
     is_gone,
@@ -29,8 +30,9 @@ lazy from wd_discord import (
 lazy from wd_discord.errors import ApiResponseError
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
+lazy from wd_discord.limits import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT, truncate
 lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams, OverwriteParams, OverwriteType
-lazy from wd_discord.resources.channel.params import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
@@ -39,9 +41,8 @@ lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
 
-    lazy from wd_discord import GatewayGuild, GuildCommandInteraction, NetworkError, PartialMember, VoiceState
+    lazy from wd_discord import GatewayGuild, NetworkError, PartialMember, VoiceState
     lazy from wd_discord.entities import PartialGuild
-    lazy from wd_discord.snowflake import Snowflake
 
 
 OWNER_PERMISSIONS = (
@@ -95,21 +96,21 @@ AUTOCHANNEL_TABLES = (AutoChannelHub, AutoChannel, AutoChannelSettings)
 class VoiceOccupancy:
     """Who is in which voice channel, per guild, as far as the gateway told."""
 
-    _channels: defaultdict[int, dict[int, int]] = field(default_factory=lambda: defaultdict(dict))
+    _channels: defaultdict[Snowflake, dict[Snowflake, Snowflake]] = field(default_factory=lambda: defaultdict(dict))
     """Per guild, the voice channel each connected member is in."""
 
-    def reset(self, guild_id: int, states: Iterable[VoiceState]) -> None:
+    def reset(self, guild_id: Snowflake, states: Iterable[VoiceState]) -> None:
         """Forget what was known about ``guild_id``, and learn ``states`` instead."""
-        self._channels[guild_id] = {int(state.user.id): int(state.channel.id) for state in states if state.channel is not None}
+        self._channels[guild_id] = {state.user.id: state.channel.id for state in states if state.channel is not None}
 
-    def move(self, guild_id: int, user_id: int, channel_id: int | None) -> int | None:
+    def move(self, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None:
         """Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were."""
         before = self._channels[guild_id].pop(user_id, None)
         if channel_id is not None:
             self._channels[guild_id][user_id] = channel_id
         return before
 
-    def occupied(self, guild_id: int, channel_id: int) -> bool:
+    def occupied(self, guild_id: Snowflake, channel_id: Snowflake) -> bool:
         """Whether anyone is in the voice channel ``channel_id``."""
         return channel_id in self._channels[guild_id].values()
 
@@ -121,7 +122,7 @@ def owner_overwrite(user_id: Snowflake) -> OverwriteParams:
 
 def default_name(display_name: str) -> str:
     """Return the name of a member's channel when they didn't choose one."""
-    return f"{display_name}'s channel"[:MAX_CHANNEL_NAME_LENGTH]
+    return truncate(f"{display_name}'s channel", MAX_CHANNEL_NAME_LENGTH)
 
 
 def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams:
@@ -135,20 +136,19 @@ def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoCh
     )
 
 
-def hub_of(session: Session, guild_id: int) -> AutoChannelHub | None:
+def hub_of(session: Session, guild_id: Snowflake) -> AutoChannelHub | None:
     """Return the guild ``guild_id``'s hub, if it has one."""
-    return session.exec(alive(AutoChannelHub).where(AutoChannelHub.id == guild_id)).first()
+    return alive_by_id(session, AutoChannelHub, int(guild_id))
 
 
-def owned_channel(session: Session, guild_id: int, owner_id: int) -> AutoChannel | None:
+def owned_channel(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> AutoChannel | None:
     """Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any."""
     return session.exec(owned_by(AutoChannel, member=owner_id, guild=guild_id)).first()
 
 
-def settings_of(session: Session, user_id: int) -> AutoChannelSettings:
+def settings_of(session: Session, user_id: Snowflake) -> AutoChannelSettings:
     """Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none."""
-    found = session.exec(alive(AutoChannelSettings).where(AutoChannelSettings.id == user_id)).first()
-    return found or AutoChannelSettings(id=user_id)
+    return alive_by_id(session, AutoChannelSettings, int(user_id)) or AutoChannelSettings(id=int(user_id))
 
 
 class AutoChannels(
@@ -173,12 +173,12 @@ class AutoChannels(
     @Cog.listener(EventName.GUILD_CREATE)
     async def on_guild_create(self, guild: GatewayGuild) -> None:
         """Learn who is in which voice channel, then delete the automatic channels that emptied while offline."""
-        guild_id = int(guild.id)
+        guild_id = guild.id
         self.voice.reset(guild_id, guild.voice_states)
         with Session(self.bind) as session:
             channels = list(session.exec(owned_by(AutoChannel, guild=guild_id)))
         for channel in channels:
-            if not self.voice.occupied(guild_id, channel.id):
+            if not self.voice.occupied(guild_id, Snowflake(channel.id)):
                 await self.delete_channel(channel)
 
     @Cog.listener(EventName.VOICE_STATE_UPDATE)
@@ -186,21 +186,21 @@ class AutoChannels(
         """Give a member joining the hub their own channel, and delete an automatic channel the member left empty."""
         if state.guild is None:
             return
-        guild_id, user_id = int(state.guild.id), int(state.user.id)
+        guild_id, user_id = state.guild.id, state.user.id
         async with self._lock:
-            after = None if state.channel is None else int(state.channel.id)
+            after = None if state.channel is None else state.channel.id
             before = self.voice.move(guild_id, user_id, after)
             with Session(self.bind) as session:
                 hub = hub_of(session, guild_id)
                 left = None if before is None or before == after else self._auto_channel(session, before)
-            if hub is not None and after == hub.channel_id and state.member is not None:
+            if hub is not None and after == Snowflake(hub.channel_id) and state.member is not None:
                 await self.give_channel(state.member, hub)
-            if left is not None and not self.voice.occupied(guild_id, left.id):
+            if left is not None and not self.voice.occupied(guild_id, Snowflake(left.id)):
                 await self.delete_channel(left)
 
     @staticmethod
-    def _auto_channel(session: Session, channel_id: int) -> AutoChannel | None:
-        return session.exec(alive(AutoChannel).where(AutoChannel.id == channel_id)).first()
+    def _auto_channel(session: Session, channel_id: Snowflake) -> AutoChannel | None:
+        return alive_by_id(session, AutoChannel, int(channel_id))
 
     async def give_channel(self, member: Member | PartialMember, hub: AutoChannelHub) -> None:
         """Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
@@ -208,7 +208,7 @@ class AutoChannels(
         A member whose channel is gone (Discord no longer knows it) gets a new one; one who couldn't be moved for
         another reason (they left voice meanwhile, say) keeps theirs.
         """
-        guild_id, user_id = int(member.guild_id), int(member.id)
+        guild_id, user_id = member.guild_id, member.id
         with Session(self.bind) as session:
             existing = owned_channel(session, guild_id, user_id)
             count = len(session.exec(owned_by(AutoChannel, guild=guild_id)).all())
@@ -271,7 +271,7 @@ class AutoChannels(
     def _forget(self, channel: AutoChannel) -> None:
         """Forget the automatic ``channel``, which is gone: soft-delete its record."""
         with Session(self.bind) as session:
-            found = session.exec(alive(AutoChannel).where(AutoChannel.id == channel.id)).first()
+            found = alive_by_id(session, AutoChannel, channel.id)
             if found is not None:
                 soft_delete(session, found)
                 session.commit()
@@ -282,7 +282,7 @@ class AutoChannels(
         if is_network_error(sent):
             self.logger.debug(t"Could not DM {member.id}: {sent}")
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="setup",
         description="Create a category with a hub channel members join to get their own",
         requires=Permissions.MANAGE_GUILD,
@@ -290,25 +290,30 @@ class AutoChannels(
     async def setup(
         self,
         interaction: GuildCommandInteraction,
-        category_name: Annotated[str, Describe("The name of the category to create")],
-        hub_name: Annotated[str, Describe("The name of the hub channel to create")],
+        category_name: Annotated[
+            str,
+            Describe("The name of the category to create"),
+            Length(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH),
+        ],
+        hub_name: Annotated[
+            str,
+            Describe("The name of the hub channel to create"),
+            Length(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH),
+        ],
     ) -> None:
         """Create the category ``category_name`` holding the hub voice channel ``hub_name``."""
-        guild_id = int(interaction.guild_id)
+        guild_id = interaction.guild_id
         with Session(self.bind) as session:
             exists = hub_of(session, guild_id) is not None
         if exists:
             msg = f"This server has a hub already; {self.mention(self.mark)} moves it."
-            raise Refused(msg)
-        if not (0 < len(category_name) <= MAX_CHANNEL_NAME_LENGTH and 0 < len(hub_name) <= MAX_CHANNEL_NAME_LENGTH):
-            msg = f"Keep both names under {MAX_CHANNEL_NAME_LENGTH} characters."
             raise Refused(msg)
         hub = unwrap(
             await self._create_hub(interaction.guild, category_name, hub_name),
             "I couldn't create the hub; do I have the Manage Channels permission?",
         )
         with Session(self.bind) as session:
-            create_or_restore(session, AutoChannelHub(id=guild_id, channel_id=int(hub.id)))
+            create_or_restore(session, AutoChannelHub(id=int(guild_id), channel_id=int(hub.id)))
             session.commit()
         await interaction.respond(
             embeds=[CreatedEmbed(description=f"All set: joining {hub.mention} gives members their own channel.")],
@@ -326,7 +331,7 @@ class AutoChannels(
             reason="Automatic channels hub",
         )
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="mark",
         description="Make a voice channel the hub members join to get their own",
         requires=Permissions.MANAGE_GUILD,
@@ -337,21 +342,16 @@ class AutoChannels(
         channel: Annotated[Channel, ChannelTypes(ChannelType.GUILD_VOICE)],
     ) -> None:
         """Make ``channel`` the guild's hub, replacing the one it had."""
-        guild_id = int(interaction.guild_id)
+        guild_id = interaction.guild_id
         with Session(self.bind) as session:
-            hub = hub_of(session, guild_id)
-            if hub is None:
-                create_or_restore(session, AutoChannelHub(id=guild_id, channel_id=int(channel.id)))
-            else:
-                hub.channel_id = int(channel.id)
-                session.add(hub)
+            upsert(session, AutoChannelHub(id=int(guild_id), channel_id=int(channel.id)))
             session.commit()
         await interaction.respond(
             embeds=[ChangedEmbed(description=f"Joining {channel.mention} now gives members their own channel.")],
             ephemeral=True,
         )
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="guild-limit",
         description="Set how many automatic channels this server allows at once",
         requires=Permissions.MANAGE_GUILD,
@@ -359,14 +359,15 @@ class AutoChannels(
     async def guild_limit(
         self,
         interaction: GuildCommandInteraction,
-        limit: Annotated[int, Describe("The maximum number of automatic channels this server allows at once, 0 for no limit")],
+        limit: Annotated[
+            int,
+            Describe("The maximum number of automatic channels this server allows at once, 0 for no limit"),
+            Range(min_value=0),
+        ],
     ) -> None:
         """Allow at most ``limit`` automatic channels at once, 0 for no limit."""
-        if limit < 0:
-            msg = "Give me 0 for no limit, or a positive number."
-            raise Refused(msg)
         with Session(self.bind) as session:
-            hub = hub_of(session, int(interaction.guild_id))
+            hub = hub_of(session, interaction.guild_id)
             if hub is not None:
                 hub.max_channels = limit
                 session.add(hub)
@@ -380,43 +381,42 @@ class AutoChannels(
             ephemeral=True,
         )
 
-    @Cog.command(name="limit", description="Set how many users fit in your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="limit", description="Set how many users fit in your channel")
     async def set_limit(
         self,
         interaction: GuildCommandInteraction,
-        limit: Annotated[int, Describe("The maximum number of users that can be in your channel, 0 for no limit")],
+        limit: Annotated[
+            int,
+            Describe("The maximum number of users that can be in your channel, 0 for no limit"),
+            Range(min_value=0, max_value=MAX_USER_LIMIT),
+        ],
     ) -> None:
         """Remember ``limit`` as the invoker's user limit, and apply it to their channel here if they have one."""
-        if not 0 <= limit <= MAX_USER_LIMIT:
-            msg = f"Give me 0 for no limit, or up to {MAX_USER_LIMIT}."
-            raise Refused(msg)
         await self._change(interaction, ChannelParams(user_limit=limit), user_limit=limit)
 
-    @Cog.command(name="name", description="Set the name of your channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="name", description="Set the name of your channel")
     async def set_name(
         self,
         interaction: GuildCommandInteraction,
-        name: Annotated[str, Describe("The new name for your channel")],
+        name: Annotated[
+            str,
+            Describe("The new name for your channel"),
+            Length(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH),
+        ],
     ) -> None:
         """Remember ``name`` as the invoker's channel name, and rename their channel here if they have one."""
-        if not 0 < len(name) <= MAX_CHANNEL_NAME_LENGTH:
-            msg = f"Keep the name under {MAX_CHANNEL_NAME_LENGTH} characters."
-            raise Refused(msg)
         await self._change(interaction, ChannelParams(name=name), name=name)
 
     async def _change(self, interaction: GuildCommandInteraction, params: ChannelParams, **setting: str | int) -> None:
         """Save the invoker's ``setting``, then apply ``params`` to their channel in this guild, if they have one."""
-        user_id = int(interaction.user.id)
+        user_id = interaction.user.id
         with Session(self.bind) as session:
             settings = settings_of(session, user_id)
             for key, value in setting.items():
                 setattr(settings, key, value)
-            if settings in session:
-                session.add(settings)
-            else:
-                create_or_restore(session, settings)
+            upsert(session, settings)
             session.commit()
-            owned = owned_channel(session, int(interaction.guild_id), user_id)
+            owned = owned_channel(session, interaction.guild_id, user_id)
         if owned is None:
             await interaction.respond(embeds=[ChangedEmbed(description="Saved; your next channel gets it.")], ephemeral=True)
             return

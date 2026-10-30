@@ -17,6 +17,7 @@ lazy from wd_discord.resources.channel import Channel as ChannelModel
 lazy from wd_discord.resources.channel import OverwriteParams, OverwriteType
 lazy from wd_discord.resources.channel import PermissionOverwrite as PermissionOverwriteModel
 lazy from wd_discord.resources.channel import ThreadMember as ThreadMemberModel
+lazy from wd_discord.limits import MAX_MESSAGES_PER_PAGE
 lazy from wd_discord.resources.invite import Invite as InviteModel
 lazy from wd_discord.responses import message_data
 lazy from wd_discord.snowflake import Snowflake
@@ -26,8 +27,6 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Iterable, Sequence
     from datetime import datetime
 
-    from wd_core.client import JsonPayload
-
     from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
     from wd_discord.components import ActionRow
@@ -36,6 +35,7 @@ if TYPE_CHECKING:
     from wd_discord.entities.message import BaseMessage
     from wd_discord.entities.user import BaseUser
     from wd_discord.image import ImageHash
+    from wd_discord.payloads import JsonPayload
     from wd_discord.permissions import ChannelType
     from wd_discord.resources.channel import (
         ChannelParams,
@@ -52,9 +52,6 @@ DEFAULT_INVITE_MAX_AGE = 86400
 type PermissionTarget = BaseRole | BaseMember | BaseUser
 """What a channel permission overwrite applies to: a role, or a member (their user works too)."""
 
-MAX_MESSAGES_PER_PAGE = 100
-"""The most messages ``GET /channels/{channel_id}/messages`` returns at once (https://docs.discord.com/developers/resources/message#get-channel-messages)."""
-
 
 class BaseChannel(ClientBound):
     """What can be done in a channel knowing only its ID: read, edit or delete it, send messages, set permissions."""
@@ -70,9 +67,12 @@ class BaseChannel(ClientBound):
         """A clickable mention of the channel, as ``<#id>``."""
         return f"<#{self.id}>"
 
-    async def fetch(self, *, cache: bool = False) -> Channel | NetworkError:
-        """GET /channels/{channel_id}."""
-        return self._entity(await self.client.get(t"/channels/{self.id}", cache=cache), ChannelModel, Channel)
+    async def fetch(self, *, reuse_response: bool = False) -> Channel | NetworkError:
+        """GET /channels/{channel_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entity(await self.client.get(t"/channels/{self.id}", reuse_response=reuse_response), ChannelModel, Channel)
 
     def message(self, message_id: SnowflakeLike) -> PartialMessage:
         """Return a handle on the message ``message_id`` in this channel, without fetching it."""
@@ -85,19 +85,21 @@ class BaseChannel(ClientBound):
         after: BaseMessage | None = None,
         around: BaseMessage | None = None,
         limit: int = MAX_MESSAGES_PER_PAGE,
-        cache: bool = False,
+        reuse_response: bool = False,
     ) -> Generator[Message] | NetworkError:
         """GET /channels/{channel_id}/messages - one page of messages, newest first; needs READ_MESSAGE_HISTORY.
 
         Pass at most one of ``before``, ``after`` or ``around`` to choose where the page starts; for the next page,
         pass the oldest message of this one as ``before``.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
         """
         params = {"limit": str(limit)}
         for key, message in (("before", before), ("after", after), ("around", around)):
             if message is not None:
                 params[key] = str(message.id)
         return self._entities(
-            await self.client.get(t"/channels/{self.id}/messages", params=params, cache=cache),
+            await self.client.get(t"/channels/{self.id}/messages", params=params, reuse_response=reuse_response),
             MessageModel,
             Message,
         )
@@ -149,9 +151,14 @@ class BaseChannel(ClientBound):
         payload: JsonPayload = {"max_age": max_age, "max_uses": max_uses, "temporary": temporary, "unique": unique}
         return self._entity(await self.client.post(t"/channels/{self.id}/invites", json=payload), InviteModel, Invite)
 
-    async def fetch_invites(self, *, cache: bool = False) -> Generator[Invite] | NetworkError:
-        """GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS."""
-        return self._entities(await self.client.get(t"/channels/{self.id}/invites", cache=cache), InviteModel, Invite)
+    async def fetch_invites(self, *, reuse_response: bool = False) -> Generator[Invite] | NetworkError:
+        """GET /channels/{channel_id}/invites - the channel's open invites; needs MANAGE_CHANNELS.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entities(
+            await self.client.get(t"/channels/{self.id}/invites", reuse_response=reuse_response), InviteModel, Invite
+        )
 
     async def edit(self, params: ChannelParams, *, reason: Reason = None) -> Channel | NetworkError:
         """PATCH /channels/{channel_id} - change the settings set in ``params``; needs MANAGE_CHANNELS.
@@ -243,14 +250,12 @@ class Channel(Entity[ChannelModel], BaseChannel):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the channel belongs to; ``None`` for DM channels."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def parent(self) -> PartialChannel | None:
         """The category a guild channel sits in, or the channel a thread was started in."""
-        parent_id = self.model.parent_id
-        return None if parent_id is None else PartialChannel(self.client, parent_id)
+        return self._partial(PartialChannel, self.model.parent_id)
 
     @property
     def position(self) -> int | None:
@@ -270,8 +275,7 @@ class Channel(Entity[ChannelModel], BaseChannel):
     @property
     def last_message(self) -> PartialMessage | None:
         """The latest message sent in the channel (or thread started, in a forum); it may have been deleted since."""
-        message_id = self.model.last_message_id
-        return None if message_id is None else PartialMessage(self.client, message_id, self.id)
+        return self._partial(PartialMessage, self.model.last_message_id, self.id)
 
     @property
     def bitrate(self) -> int | None:
@@ -312,8 +316,7 @@ class Channel(Entity[ChannelModel], BaseChannel):
     @property
     def owner(self) -> PartialUser | None:
         """Who created a group DM or thread."""
-        owner_id = self.model.owner_id
-        return None if owner_id is None else PartialUser(self.client, owner_id)
+        return self._partial(PartialUser, self.model.owner_id)
 
     @property
     def overwrites(self) -> Generator[PermissionOverwrite]:
@@ -443,8 +446,7 @@ class ThreadMember(Entity[ThreadMemberModel]):
     @property
     def user(self) -> PartialUser | None:
         """The member of the thread; Discord leaves it out of some payloads."""
-        user_id = self.model.user_id
-        return None if user_id is None else PartialUser(self.client, user_id)
+        return self._partial(PartialUser, self.model.user_id)
 
     @property
     def joined_at(self) -> datetime:

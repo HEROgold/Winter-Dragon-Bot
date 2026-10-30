@@ -11,20 +11,19 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from wd_discord.open_enum import OpenIntEnum
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.limits import (
+    MAX_ACTION_ROW_BUTTONS,
+    MAX_BUTTON_LABEL_LENGTH,
+    MAX_CUSTOM_ID_LENGTH,
+    MAX_LABEL_LENGTH,
+    MAX_MESSAGE_COMPONENTS,
+    MAX_MODAL_TITLE_LENGTH,
+    MAX_TEXT_INPUT_LENGTH,
+)
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
-
-
-MAX_ACTION_ROW_BUTTONS = 5
-"""An action row holds up to 5 buttons (https://docs.discord.com/developers/components/reference#action-row)."""
-MAX_MESSAGE_COMPONENTS = 40
-"""A message holds up to 40 components in total, counting nested ones (https://docs.discord.com/developers/components/reference)."""
-MAX_CUSTOM_ID_LENGTH = 100
-"""A component's ``custom_id`` holds up to 100 characters (https://docs.discord.com/developers/components/reference#anatomy-of-a-component-custom-id)."""
-MAX_BUTTON_LABEL_LENGTH = 80
-"""A button label holds up to 80 characters (https://docs.discord.com/developers/components/reference#button)."""
 
 
 class ComponentType(OpenIntEnum):
@@ -131,14 +130,6 @@ def components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]:
         msg = f"custom_id must be unique within a message, duplicated: {duplicates}"
         raise ValueError(msg)
     return [row.model_dump(mode="json", exclude_none=True) for row in rows]
-
-
-MAX_MODAL_TITLE_LENGTH = 45
-"""A modal title holds up to 45 characters (https://docs.discord.com/developers/interactions/receiving-and-responding#modal)."""
-MAX_LABEL_LENGTH = 45
-"""A label holds up to 45 characters (https://docs.discord.com/developers/components/reference#label)."""
-MAX_TEXT_INPUT_LENGTH = 4000
-"""A text input accepts up to 4000 characters (https://docs.discord.com/developers/components/reference#text-input)."""
 
 
 class TextInputStyle(OpenIntEnum):

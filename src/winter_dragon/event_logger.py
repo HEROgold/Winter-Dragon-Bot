@@ -18,10 +18,10 @@ lazy from typing import TYPE_CHECKING, override
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_bot.settings import Tokens
-lazy from wd_core.intents import Intents
-lazy from wd_discord import models
+lazy from wd_discord import Token, models
 lazy from wd_discord.gateway.connection import Disconnect, Gateway, GatewayFrame
 lazy from wd_discord.gateway.events import EventName
+lazy from wd_discord.intents import Intents
 
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class EventLoggingGateway(Gateway):
 async def main() -> None:
     """Connect with every intent and log events until interrupted."""
     LoggerMixin.set_log_directory("logs")
-    gateway = EventLoggingGateway(Tokens.read_only_token, intents=Intents.all())
+    gateway = EventLoggingGateway(Token(Tokens.read_only_token), intents=Intents.all())
     gateway.capture_model_warnings()
     await gateway.connect()
     try:

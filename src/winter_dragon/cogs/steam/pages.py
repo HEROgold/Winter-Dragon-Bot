@@ -4,14 +4,13 @@ lazy from textwrap import dedent
 lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
-lazy from wd_discord.embed import (
+lazy from wd_discord.embed import Embed, EmbedField, EmbedFooter
+lazy from wd_discord.limits import (
     MAX_EMBED_CHARACTERS,
     MAX_EMBED_FIELD_NAME_LENGTH,
     MAX_EMBED_FIELD_VALUE_LENGTH,
     MAX_EMBED_FIELDS,
-    Embed,
-    EmbedField,
-    EmbedFooter,
+    truncate,
 )
 lazy from wd_discord.timestamp import DiscordTime
 
@@ -25,6 +24,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Mapping, Sequence
 
     lazy from wd_bot.components import ComponentHandler
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from winter_dragon.cogs.steam.models import SteamSale
 
@@ -94,7 +94,7 @@ def _sale_field(
 ) -> EmbedField:
     """Build the embed field describing ``sale``."""
     value = format_sale(sale, properties.get(sale.id or 0, set()), open_in_steam=open_in_steam)
-    return EmbedField(name=name[:MAX_EMBED_FIELD_NAME_LENGTH], value=value)
+    return EmbedField(name=truncate(name, MAX_EMBED_FIELD_NAME_LENGTH), value=value)
 
 
 def page_count(total: int) -> int:
@@ -124,7 +124,7 @@ def build_page(
     )
 
 
-def page_buttons(handler: ComponentHandler, *, owner_id: int, percent: int, page: int, pages: int) -> list[ActionRow]:
+def page_buttons(handler: ComponentHandler, *, owner_id: Snowflake, percent: int, page: int, pages: int) -> list[ActionRow]:
     """Build the previous / page counter / next buttons under page ``page`` of ``pages``.
 
     Each button's ``custom_id`` carries the listing's owner, percentage and target page, so a click rebuilds the

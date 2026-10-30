@@ -1,21 +1,17 @@
 """The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``."""
 
 lazy import logging
-lazy from pathlib import Path
 
 lazy from confkit.data_types import Hex, List
 lazy from wd_config import Config as BaseConfig
-
-
-CONFIG_FILE = Path("config.ini")
-COGS_CONFIG_FILE = Path("cogs.ini")
+lazy from wd_config.constants import APP_CONFIG_FILE, COGS_CONFIG_FILE
 
 
 class Config[T](BaseConfig[T]):
     """Config descriptor scoped to the app-wide settings file."""
 
 
-Config.bind(CONFIG_FILE, operator=True)
+Config.bind(APP_CONFIG_FILE, operator=True)
 
 
 class CogConfig[T](BaseConfig[T]):

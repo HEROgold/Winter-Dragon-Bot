@@ -15,11 +15,15 @@ the fetched data model, which stays reachable as ``entity.model``.
 Every method returns failures as values (:data:`~wd_discord.client.NetworkError`), never raises; a response that
 can't be read as the expected model is a failure too (:data:`~wd_discord.errors.JsonErrorCode.GENERAL_ERROR`).
 
-Entities expose their IDs and the actions they take; read the rest of what Discord sent from ``entity.model``.
+A full entity exposes what Discord sent as properties named as Discord names them (``guild.name``,
+``guild.verification_level``), so a new field becomes a new property. An ``*_id`` field becomes a relation named
+without the suffix (``guild.owner``, ``channel.parent``): the related entity when the data in hand holds it, else its
+:class:`Partial`, never the raw ID. ``entity.model`` keeps the raw data, for a field with no entity form yet.
 
-Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``cache=True`` to accept an answer up to
+Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``reuse_response=True`` to accept an answer up to
 :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>` seconds old instead; see :meth:`Client.request
-<wd_discord.client.Client.request>`.
+<wd_discord.client.Client.request>`. That reuse is the REST client's own; it isn't the gateway
+:class:`~wd_discord.cache.StateCache`. Each fetch's docstring says whether it writes its answer to the state cache.
 """
 
 from abc import ABC, abstractmethod
@@ -138,6 +142,15 @@ class ClientBound:
         parsed = parse_all(result, model)
         return parsed if is_network_error(parsed) else (entity(self.client, item) for item in parsed)
 
+    def _partial[P: Partial[Any]](
+        self,
+        partial: type[P],
+        id: Snowflake | None,  # noqa: A002 - Discord's name for it
+        *args: object,
+    ) -> P | None:
+        """Return a ``partial`` handle on ``id`` bound to this client (``args`` follow the ID), or ``None`` without one."""
+        return None if id is None else partial(self.client, id, *args)
+
 
 @dataclass(frozen=True)
 class Store(ClientBound):
@@ -163,8 +176,11 @@ class Partial[E](ClientBound, ABC):
     id: Snowflake
 
     @abstractmethod
-    async def fetch(self, *, cache: bool = False) -> E | NetworkError:
-        """Fetch the full entity; with ``cache``, a recent answer may be reused."""
+    async def fetch(self, *, reuse_response: bool = False) -> E | NetworkError:
+        """Fetch the full entity; with ``reuse_response``, a recent answer may be reused.
+
+        Each implementation says whether it writes to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
 
 
 type EntityType = type[Entity[Any] | Partial[Any]] | TypeAliasType
@@ -188,6 +204,9 @@ class EntityStore[P: Partial[object]](Store):
         """Return a handle on the object ``id``, without fetching it."""
         return self.partial_type(self.client, Snowflake.coerce(id))
 
-    async def fetch[E](self: _PartialFactory[E], id: SnowflakeLike, *, cache: bool = False) -> E | NetworkError:  # noqa: A002 - Discord's name for it
-        """Fetch the object ``id``; with ``cache``, a recent answer may be reused."""
-        return await self.partial(id).fetch(cache=cache)
+    async def fetch[E](self: _PartialFactory[E], id: SnowflakeLike, *, reuse_response: bool = False) -> E | NetworkError:  # noqa: A002 - Discord's name for it
+        """Fetch the object ``id``; with ``reuse_response``, a recent answer may be reused.
+
+        Writes to the client's gateway :class:`~wd_discord.cache.StateCache` only if the entity's own ``fetch`` does.
+        """
+        return await self.partial(id).fetch(reuse_response=reuse_response)

@@ -1,10 +1,12 @@
 """Unit tests: header builders render correct, case-sensitive Discord headers."""
+
 lazy from wd_discord import Client, Token, TokenType
 lazy from wd_discord.authenticate import (
     URL,
     ContentType,
     MetaData,
     UserAgentVersion,
+    client_credentials,
     content_type,
     get_auth_header,
     render,
@@ -23,6 +25,12 @@ def test_auth_header_render() -> None:
     assert (name, value) == ("Authorization", "Bot my.token")
 
 
+def test_token_repr_hides_the_secret() -> None:
+    token = Token("my.secret.token")
+    assert "my.secret.token" not in repr(token)
+    assert str(token) == "my.secret.token"
+
+
 def test_content_type_header_render() -> None:
     assert render_header(content_type(ContentType.json)) == ("Content-Type", "application/json")
 
@@ -37,3 +45,17 @@ def test_client_default_headers() -> None:
     assert headers["Authorization"] == "Bot my.token"
     assert "Content-Type" not in headers  # set per request: JSON, or multipart for uploads
     assert headers["User-Agent"].startswith("DiscordBot (")
+
+
+def test_client_credentials_render_as_basic_auth() -> None:
+    # base64("2:shh"), the application ID and client secret Discord's OAuth2 token endpoints take as Basic auth.
+    name, value = render_header(get_auth_header(TokenType.BASIC, client_credentials(2, Token("shh"))))
+    assert (name, value) == ("Authorization", "Basic MjpzaGg=")
+
+
+def test_an_access_token_renders_as_bearer_auth() -> None:
+    assert render_header(get_auth_header(TokenType.BEARER, Token("access"))) == ("Authorization", "Bearer access")
+
+
+def test_client_credentials_hide_the_secret() -> None:
+    assert "MjpzaGg" not in repr(client_credentials(2, Token("shh")))

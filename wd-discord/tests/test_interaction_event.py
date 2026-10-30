@@ -55,6 +55,17 @@ def test_parse_dispatch_parses_application_command_interaction() -> None:
     assert interaction.invoking_user.username == "asker"
 
 
+def test_the_interaction_token_is_a_token_hidden_from_repr() -> None:
+    from wd_discord import Token
+
+    payload = {"id": "1", "application_id": "2", "type": 1, "token": "secret-interaction-token", "version": 1}
+    interaction = parse_dispatch("INTERACTION_CREATE", payload)
+    assert isinstance(interaction, Interaction)
+    assert isinstance(interaction.token, Token)
+    assert interaction.token == "secret-interaction-token"
+    assert "secret-interaction-token" not in repr(interaction)
+
+
 def test_realistic_interaction_create_reports_no_unknown_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     """Fields Discord sends on every interaction are declared, so none reach the unknown-field reporter."""
     reports: list[tuple[str, dict[str, object]]] = []

@@ -141,7 +141,6 @@ https://docs.discord.com/developers/resources/channel#overwrite-object.
 ## `wd_discord.resources.channel.params` — `wd-discord/src/wd_discord/resources/channel/params.py`
 Request bodies for creating and modifying guild channels.
 
-- module names: MAX_USER_LIMIT, MAX_CHANNEL_NAME_LENGTH
 - `type ChannelName = str`
 
 ### `class OverwriteParams(BaseModel)`
@@ -259,7 +258,6 @@ https://docs.discord.com/developers/resources/guild#guild-object-system-channel-
 ## `wd_discord.resources.guild.guild` — `wd-discord/src/wd_discord/resources/guild/guild.py`
 Discord guild model.
 
-- module names: MIN_GUILD_NAME_LENGTH, MAX_GUILD_NAME_LENGTH
 - `type GuildName = str`
 
 ### `class Guild(DiscordModel)`

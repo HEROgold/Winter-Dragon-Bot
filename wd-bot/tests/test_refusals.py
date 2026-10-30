@@ -1,21 +1,30 @@
 """Unit tests: guild-only handlers get guild interactions, and a refused action answers the user privately."""
 
 lazy import asyncio
-lazy from typing import TYPE_CHECKING
+lazy import logging
+lazy from typing import TYPE_CHECKING, ClassVar
 
 lazy import pytest
 lazy from wd_bot.bot import Bot
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_discord import GuildCommandInteraction, narrow_to_guild
+lazy from wd_bot.guard import dispatch_guard
+lazy from wd_discord import (
+    GuildCommandInteraction,
+    GuildComponentInteraction,
+    narrow_to_guild,
+)
 lazy from wd_discord.errors import ApiResponseError, JsonErrorCode
+lazy from wd_discord.gateway import EventName
+lazy from wd_discord.gateway.events import Message as MessageModel
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permissions import Permissions
+lazy from wd_discord.testing import message_json, user_json
 lazy from wd_errors import Refused, unwrap
 
 
 if TYPE_CHECKING:
     lazy from conftest import ComponentInteractionFactory, InteractionFactory
-    lazy from wd_discord import CommandInteraction, GuildComponentInteraction
+    lazy from wd_discord import CommandInteraction, ComponentInteraction, Message
     lazy from wd_discord.testing import RecordingClient
 
 EPHEMERAL = 1 << 6
@@ -186,3 +195,88 @@ async def test_a_subcommand_of_a_guild_only_group_gets_a_guild_interaction(
 
     assert cog.seen == [7]
     assert _only_answer(discord_client)["content"] == "This only works in a server."
+
+
+class _Doorman(Cog, auto_load=False):
+    """A cog whose command, button and listener all turn everyone away, or all break."""
+
+    breaks: ClassVar[bool] = False
+
+    @classmethod
+    def _turn_away(cls) -> None:
+        if cls.breaks:
+            msg = "the door is stuck"
+            raise RuntimeError(msg)
+        msg = "Members only."
+        raise Refused(msg)
+
+    @Cog.command(name="enter", description="d")
+    async def enter(self, interaction: CommandInteraction) -> None:  # noqa: ARG002
+        self._turn_away()
+
+    @Cog.component("enter")
+    async def enter_button(self, interaction: ComponentInteraction) -> None:  # noqa: ARG002
+        self._turn_away()
+
+    @Cog.listener(EventName.MESSAGE_CREATE)
+    async def on_message_create(self, message: Message) -> None:  # noqa: ARG002
+        self._turn_away()
+
+
+async def _knock_everywhere(
+    make_interaction: InteractionFactory,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+    caplog: pytest.LogCaptureFixture,
+) -> list[logging.LogRecord]:
+    """Run ``/enter``, click the ``enter`` button and post a message through a Bot; return what wd-bot logged about them."""
+    bot = Bot()
+    bot.loop = asyncio.get_running_loop()
+    bot.client = discord_client
+    await bot.add_cog(_Doorman(bot=bot))
+    data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="2026-10-22T00:00:00+00:00")
+    dispatch_guard.logger.addHandler(caplog.handler)
+    try:
+        await bot._dispatch_interaction(make_interaction("enter"))
+        await bot._dispatch_interaction(make_component_interaction("enter"))
+        await bot._dispatch(EventName.MESSAGE_CREATE, MessageModel.model_validate(data))
+        await asyncio.gather(*(task for task in asyncio.all_tasks() if task is not asyncio.current_task()))
+    finally:
+        dispatch_guard.logger.removeHandler(caplog.handler)
+    return caplog.records
+
+
+async def test_a_component_and_a_listener_refuse_like_a_command(
+    make_interaction: InteractionFactory,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    _Doorman.breaks = False
+
+    records = await _knock_everywhere(make_interaction, make_component_interaction, discord_client, caplog)
+
+    assert [response["data"] for response in discord_client.interaction_responses()] == [
+        {"content": "Members only.", "flags": EPHEMERAL},
+    ] * 2
+    assert [(record.levelno, record.getMessage().partition(" refused: ")[2]) for record in records] == [
+        (logging.INFO, "Members only. (None)"),
+    ] * 3
+
+
+async def test_a_component_and_a_listener_report_a_crash_like_a_command(
+    make_interaction: InteractionFactory,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+    caplog: pytest.LogCaptureFixture,
+    error_reply: dict[str, object],
+) -> None:
+    _Doorman.breaks = True
+
+    records = await _knock_everywhere(make_interaction, make_component_interaction, discord_client, caplog)
+
+    assert [response["data"] for response in discord_client.interaction_responses()] == [error_reply] * 2
+    assert [(record.levelno, record.getMessage().startswith("Unhandled exception in ")) for record in records] == [
+        (logging.ERROR, True),
+    ] * 3
+    assert [str(record.exc_info[1]) for record in records if record.exc_info] == ["the door is stuck"] * 3

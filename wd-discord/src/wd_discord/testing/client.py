@@ -15,7 +15,8 @@ lazy from typing import TYPE_CHECKING, Any, override
 
 lazy from httpxyz import Request, Response
 
-lazy from wd_discord.client import (  # pyright: ignore[reportPrivateUsage] - the client's own reading of a failure
+lazy from wd_discord.authenticate import Token
+lazy from wd_discord.client import (
     Client,
     _parse_error,
 )
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
     from wd_discord.snowflake import SnowflakeLike
 
 
-TEST_TOKEN = "token"  # noqa: S105 - a placeholder; RecordingClient never sends it anywhere
+TEST_TOKEN = Token("token")  # noqa: S105 - a placeholder; RecordingClient never sends it anywhere
 TEST_APPLICATION_ID = 2
 
 

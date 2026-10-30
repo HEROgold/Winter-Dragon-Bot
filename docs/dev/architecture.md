@@ -23,12 +23,12 @@ wd-types            wd-config             ← no internal dependencies
 | Package | Owns |
 |---|---|
 | `wd-config` | The unbound confkit `Config[T]` base each scope binds to its own ini file, the first-launch check, and the `discord.ini` / `sentry.ini` scopes. |
-| `wd-discord` | The Discord API v10 client: REST transport, gateway, pydantic response models, client-bound entities. |
+| `wd-discord` | The Discord API v10 client: REST transport, gateway, pydantic response models, client-bound entities, `Intents`, request payloads and Sentry setup. |
 | `wd-db` | SQLModel/SQLAlchemy engine and session, model base classes. |
-| `wd-core` | Audit-log events, gateway intents, Sentry setup, an HTTP client for third-party APIs. |
-| `wd-errors` | Error base classes and the self-registering error-handler factory. |
+| `wd-core` | The bot's default intents and permissions, and `PackageVersion`. |
+| `wd-errors` | `Refused` and `unwrap` (errors as values), `BaseError`, size errors, `ExtensionError` and `StartupError`. |
 | `wd-types` | Cross-package protocols and type aliases. |
-| `wd-bot` | `Bot`, `Cog`/`GroupCog`, slash commands, components, autocomplete, help, command sync. |
+| `wd-bot` | `Bot`, `Cog`/`GroupCog`, slash commands, components, autocomplete, command sync. |
 | `winter_dragon` | `python -m winter_dragon` and the live cogs in `src/winter_dragon/cogs/`. |
 | `wd-cogs` | **Legacy** discord.py-era cogs, not loaded. Port a cog into `winter_dragon/cogs/` before using it. |
 

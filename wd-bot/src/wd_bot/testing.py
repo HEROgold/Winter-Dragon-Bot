@@ -1,7 +1,7 @@
 """Test helpers for cogs: build one to call its handlers on, without a running bot."""
 
 lazy from types import SimpleNamespace
-lazy from typing import TYPE_CHECKING, Any, cast
+lazy from typing import TYPE_CHECKING, cast
 
 lazy from sqlmodel import Session
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     lazy from wd_bot.bot import Bot
     lazy from wd_bot.cogs import Cog
-    lazy from wd_bot.commands import Command
+    lazy from wd_bot.commands import Command, CommandDefinition
 
 
 def detached_cog[C: Cog](cls: type[C], *, engine: Engine | None = None, **bot: object) -> C:
@@ -32,7 +32,7 @@ def detached_cog[C: Cog](cls: type[C], *, engine: Engine | None = None, **bot: o
     return cog
 
 
-def cog_command(func: Callable[..., Awaitable[None]], /, **definition: Any) -> Command:  # noqa: ANN401 - Command's keywords
+def cog_command(func: Callable[..., Awaitable[None]], definition: CommandDefinition, /) -> Command:
     """Return ``func`` as a :class:`~wd_bot.commands.Command` on a throwaway cog class, built as ``@Cog.command`` builds it.
 
     A command reads its options when a cog class takes it, so a handler written outside a cog needs one.
@@ -40,6 +40,6 @@ def cog_command(func: Callable[..., Awaitable[None]], /, **definition: Any) -> C
     from wd_bot.cogs import Cog  # noqa: PLC0415
     from wd_bot.commands import Command  # noqa: PLC0415
 
-    command = Command(func, **definition)
+    command = Command(func, definition)
     type("TestCog", (Cog,), {"command": command}, auto_load=False)
     return command

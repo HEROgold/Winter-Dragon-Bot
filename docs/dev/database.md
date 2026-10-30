@@ -30,12 +30,9 @@ checks the tables exist in a database the migrations manage, and raises `Unmigra
 one: the [migration](#migrations) creates it. In any other database (the sqlite test bot, tests) it creates the
 missing tables itself.
 
-Base classes in `wd_db.extension.model`:
-
-- `SQLModel` — the base for a plain table.
-- `DiscordID` — a table keyed by a Discord ID.
-- `BaseModel` — repository helpers (`add`, `update`, `get`, `get_all`, `delete`, `fetch`). Every subclass is
-  registered automatically.
+Every bot table subclasses `LifecycleModel` from `wd_db.extension.lifecycle`, or `DiscordKeyedModel` for a table
+keyed by a Discord ID. It adds `created_at`, `updated_at` and `deleted_at` and declares its `Ownership`. Read rows
+with `alive(...)` (one row: `alive_by_id`) and write them with `create_or_restore`, `upsert` and `soft_delete`.
 
 Link one model to another with `herogold.orm.Relationship`, but read and set the link with
 `wd_db.extension.relationships` (`linked(session, row, "name")`, `link(session, row, "name", target)`). Assigning
@@ -47,9 +44,8 @@ through the descriptor (`row.name = target`) writes through herogold's own sessi
 | Table | Owner | Purpose |
 |---|---|---|
 | `CarFuels` | `winter_dragon.cogs.fuel` | Refuel log per user. |
-| `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder` | One-off and repeating reminders. |
+| `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder.domain` | One-off and repeating reminders. |
 | `SteamSale`, `SteamSaleProperties`, `SteamUsers` | `winter_dragon.cogs.steam.models` | Known Steam sales and the users subscribed to them. |
-| `ApiTable`, `RiotTournaments` | `wd_db.extension.api_table` | Legacy, used only by `wd-cogs`. |
 | `archive_*` | `archive.models` | Every gateway event the [archive](../spec/archive.md) received, and the objects they carried. |
 
 Each table's columns are listed as `fields` in the [API reference](../reference/index.md).

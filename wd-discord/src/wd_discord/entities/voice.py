@@ -38,14 +38,12 @@ class VoiceState(Entity[VoiceStateModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild this voice state is for; ``None`` outside a guild."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def channel(self) -> PartialChannel | None:
         """The voice channel the user is in; ``None`` once they disconnected."""
-        channel_id = self.model.channel_id
-        return None if channel_id is None else PartialChannel(self.client, channel_id)
+        return self._partial(PartialChannel, self.model.channel_id)
 
     @property
     def session_id(self) -> str:

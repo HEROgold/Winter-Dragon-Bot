@@ -37,6 +37,25 @@ def test_message_update_parses_the_full_message() -> None:
     assert event.content == "edited"
 
 
+def test_message_timestamps_parse_as_aware_datetimes() -> None:
+    from datetime import UTC, datetime
+
+    event = parse_dispatch(
+        EventName.MESSAGE_UPDATE,
+        message_json(
+            id="1",
+            channel_id="2",
+            author=AUTHOR,
+            content="edited",
+            timestamp="2026-10-22T00:00:00+00:00",
+            edited_timestamp="2026-10-22T00:01:00+00:00",
+        ),
+    )
+    assert isinstance(event, MessageUpdate)
+    assert event.timestamp == datetime(2026, 10, 22, tzinfo=UTC)
+    assert event.edited_timestamp == datetime(2026, 10, 22, 0, 1, tzinfo=UTC)
+
+
 def test_message_delete_and_bulk_delete() -> None:
     single = parse_dispatch(EventName.MESSAGE_DELETE, {"id": "1", "channel_id": "2", "guild_id": "3"})
     bulk = parse_dispatch(EventName.MESSAGE_DELETE_BULK, {"ids": ["1", "4"], "channel_id": "2"})

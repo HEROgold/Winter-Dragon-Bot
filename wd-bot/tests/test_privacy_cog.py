@@ -1,10 +1,8 @@
 """Unit tests: the privacy cog purges soft-deleted records 30 days after their deletion, and nothing else (sqlite)."""
 
-import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session, select
@@ -17,18 +15,22 @@ from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInt
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.interactions import ApplicationCommandOptionType
 from wd_discord.resources.user import User
+from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, user_json
 
-from winter_dragon.cogs import privacy
+from winter_dragon.cogs.privacy import cog as privacy
 from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild, RememberedRole, is_enabled, remembered_roles
 from winter_dragon.cogs.autochannel import AutoChannel, AutoChannelHub, AutoChannelSettings, hub_of, owned_channel, settings_of
 from winter_dragon.cogs.fuel import CarFuels
-from winter_dragon.cogs.privacy import DeletionStep, Privacy, UsageCount
-from winter_dragon.cogs.reminder import Reminder, Reminders, owned_reminders
+from winter_dragon.cogs.privacy.cog import Privacy
+from winter_dragon.cogs.privacy.domain import DeletionStep, UsageCount, hide_member_data
+from winter_dragon.cogs.reminder.cog import Reminders
+from winter_dragon.cogs.reminder.domain import Reminder, owned_reminders
 from winter_dragon.cogs.stats import PeakOnline, StatChannel, StatKind, guild_stat_channels
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 from winter_dragon.cogs.steam.store import SteamSaleStore
 from winter_dragon.cogs.tournament import service as tournaments
+from winter_dragon.member_hidden import MemberHiddenHook
 from winter_dragon.cogs.tournament.models import (
     MatchPhase,
     TeamMode,
@@ -43,7 +45,6 @@ from winter_dragon.cogs.tournament.models import (
 if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
-    from wd_bot.auto_reload import AutoReloadWatcher
 
 
 DAY_0 = datetime(2026, 10, 1, 12, 0, tzinfo=UTC)
@@ -148,22 +149,6 @@ async def test_a_row_that_fails_is_logged_and_the_others_are_still_purged(
 
     assert "Could not purge SteamSale 10" in caplog.text
     assert _created_at_after_storing_again(foreign_keys_engine, 1) == DAY_0  # the reminder went anyway
-
-
-async def test_load_starts_the_daily_task_and_unload_cancels_it(engine: Engine) -> None:
-    cog = detached_cog(Privacy, engine=engine, loop=asyncio.get_running_loop())
-    cog._auto_reloader = cast("AutoReloadWatcher", SimpleNamespace(deregister=lambda: None))  # noqa: SLF001 - what __init__ sets up
-
-    await cog.load()
-    task = cog._task  # noqa: SLF001 - the task the cog owns
-    assert task is not None
-    await asyncio.sleep(0)
-    assert not task.done()
-
-    await cog.unload()
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert cog._task is None  # noqa: SLF001
 
 
 # --- Departed guilds -------------------------------------------------------------------------------------------------
@@ -490,6 +475,26 @@ async def test_a_deletion_request_takes_the_member_out_of_tournaments_that_have_
     assert _signups(engine, solo) == ([], [RIVAL_ID])
 
 
+HIDDEN_BY_TEST_HOOK: list[int] = []
+"""The members :class:`FeatureHook` saw hidden."""
+
+
+class FeatureHook(MemberHiddenHook):
+    """A feature outside the privacy cog that cleans up after a hidden member; defining it registers it."""
+
+    @classmethod
+    def on_member_hidden(cls, session: Session, member_id: Snowflake) -> None:
+        HIDDEN_BY_TEST_HOOK.append(member_id)
+
+
+async def test_a_deletion_request_runs_every_registered_member_hidden_hook(engine: Engine) -> None:
+    HIDDEN_BY_TEST_HOOK.clear()
+
+    await _cog(engine).request_deletion(MEMBER_ID, DAY_0)
+
+    assert HIDDEN_BY_TEST_HOOK == [MEMBER_ID]
+
+
 async def test_a_second_request_while_one_is_pending_changes_nothing(engine: Engine) -> None:
     cog = _cog(engine)
     await cog.request_deletion(MEMBER_ID, DAY_0)
@@ -590,9 +595,9 @@ async def test_each_command_is_counted_per_member_guild_and_day(
     await _run(cog, make_interaction, "reminder", "add")
 
     assert set(cog.usage(MEMBER_ID)) == {
-        UsageCount(command="reminder add", guild_id=GUILD_ID, day=DAY_0.date(), count=2),
-        UsageCount(command="fuel add", guild_id=GUILD_ID, day=DAY_0.date(), count=1),
-        UsageCount(command="reminder add", guild_id=GUILD_ID, day=_day(1).date(), count=1),
+        UsageCount(command="reminder add", guild_id=Snowflake(GUILD_ID), day=DAY_0.date(), count=2),
+        UsageCount(command="fuel add", guild_id=Snowflake(GUILD_ID), day=DAY_0.date(), count=1),
+        UsageCount(command="reminder add", guild_id=Snowflake(GUILD_ID), day=_day(1).date(), count=1),
     }
     assert list(cog.usage(RIVAL_ID)) == []
 
@@ -614,6 +619,28 @@ async def test_a_command_used_in_a_dm_is_counted_without_a_guild(engine: Engine,
     await _run(cog, make_interaction, "reminder", "add", guild_id=None)
 
     assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="reminder add", guild_id=None, day=DAY_0.date(), count=1)]
+
+
+@pytest.mark.usefixtures("clock")
+async def test_a_command_used_twice_in_a_dm_is_counted_twice(engine: Engine, make_interaction: InteractionFactory) -> None:
+    cog = _cog(engine)
+
+    await _run(cog, make_interaction, "ping", guild_id=None)
+    await _run(cog, make_interaction, "ping", guild_id=None)
+
+    assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="ping", guild_id=None, day=DAY_0.date(), count=2)]
+
+
+@pytest.mark.usefixtures("clock")
+async def test_a_hidden_count_starts_again_from_one(engine: Engine, make_interaction: InteractionFactory) -> None:
+    cog = _cog(engine)
+    await _run(cog, make_interaction, "ping")
+    await _run(cog, make_interaction, "ping")
+    hide_member_data(engine, MEMBER_ID, DAY_0)
+
+    await _run(cog, make_interaction, "ping")
+
+    assert list(cog.usage(MEMBER_ID)) == [UsageCount(command="ping", guild_id=Snowflake(GUILD_ID), day=DAY_0.date(), count=1)]
 
 
 @pytest.mark.usefixtures("clock")

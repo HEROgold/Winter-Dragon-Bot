@@ -15,13 +15,6 @@
       "severity": "error"
     },
     {
-      "column": 15,
-      "path": "src/winter_dragon/cogs/heartbeat.py",
-      "name": "missing-override-decorator",
-      "concise_description": "Class member `Heartbeat.load` overrides a member in a parent class but is missing an `@override` decorator",
-      "severity": "error"
-    },
-    {
       "column": 21,
       "path": "src/winter_dragon/cogs/steam/scrapers.py",
       "name": "implicit-any-empty-container",
@@ -8703,14 +8696,14 @@
     },
     {
       "column": 65,
-      "path": "wd-core/src/wd_core/intents.py",
+      "path": "wd-discord/src/wd_discord/intents.py",
       "name": "no-matching-overload",
       "concise_description": "No matching overload found for function `str.join` called with arguments: (Generator[str | None])",
       "severity": "error"
     },
     {
       "column": 16,
-      "path": "wd-core/src/wd_core/intents.py",
+      "path": "wd-discord/src/wd_discord/intents.py",
       "name": "bad-return",
       "concise_description": "Returned type `(*args: Any, **kwargs: Any) -> Any` is not assignable to declared return type `(ParamSpec(P)) -> R`",
       "severity": "error"
@@ -9364,13 +9357,6 @@
       "path": "wd-discord/src/wd_discord/responses.py",
       "name": "bad-assignment",
       "concise_description": "`int` is not assignable to TypedDict key `flags` with type `MessageFlags`",
-      "severity": "error"
-    },
-    {
-      "column": 53,
-      "path": "wd-errors/src/wd_errors/base.py",
-      "name": "implicit-any-empty-container",
-      "concise_description": "Cannot infer type of empty container; it will be treated as containing `Any`",
       "severity": "error"
     },
     {

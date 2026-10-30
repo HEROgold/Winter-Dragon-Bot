@@ -47,9 +47,12 @@ class BaseRole(ClientBound):
         """Whether this is the guild's ``@everyone`` role, which shares the guild's ID."""
         return self.id == self.guild_id
 
-    async def fetch(self, *, cache: bool = False) -> Role | NetworkError:
-        """GET /guilds/{guild_id}/roles/{role_id}."""
-        return self._role(await self.client.get(t"/guilds/{self.guild_id}/roles/{self.id}", cache=cache))
+    async def fetch(self, *, reuse_response: bool = False) -> Role | NetworkError:
+        """GET /guilds/{guild_id}/roles/{role_id}.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._role(await self.client.get(t"/guilds/{self.guild_id}/roles/{self.id}", reuse_response=reuse_response))
 
     async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /guilds/{guild_id}/roles/{role_id}; needs MANAGE_ROLES."""

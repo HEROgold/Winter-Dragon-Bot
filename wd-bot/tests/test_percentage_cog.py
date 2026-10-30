@@ -99,7 +99,7 @@ async def test_handler_replies_with_love_embed(
     ]
 
 
-async def test_handler_without_asker_replies_content_only(
+async def test_handler_without_asker_refuses_privately(
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -107,8 +107,7 @@ async def test_handler_without_asker_replies_content_only(
     interaction = _interaction(make_interaction, None)
     await Love.love.invoke(_cog(engine), interaction)
     (response,) = discord_client.interaction_responses()
-    assert "embeds" not in response["data"]
-    assert response["data"]["content"]
+    assert response["data"] == {"content": "I couldn't work out who invoked this command.", "flags": 64}
 
 
 async def test_handler_records_a_check_owned_by_the_asker(engine: Engine, make_interaction: InteractionFactory) -> None:

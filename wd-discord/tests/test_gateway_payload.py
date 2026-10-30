@@ -1,22 +1,21 @@
 """Unit tests: gateway presence (object -> API) and READY (API -> object) helpers."""
 
-lazy from wd_discord.gateway import GatewayActivity, Status, build_presence, parse_ready
+lazy from wd_discord.gateway import ActivityType, GatewayActivity, Status, build_presence, parse_ready
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_discord.testing import user_json
-lazy from wd_errors import Activity
 
 
 def test_activity_to_dict_minimal() -> None:
-    assert GatewayActivity("Hello", Activity.PLAYING).to_dict() == {"name": "Hello", "type": 0}
+    assert GatewayActivity("Hello", ActivityType.PLAYING).to_dict() == {"name": "Hello", "type": 0}
 
 
 def test_activity_to_dict_with_extras() -> None:
-    activity = GatewayActivity("watching", Activity.CUSTOM, url="https://x", state="hi")
+    activity = GatewayActivity("watching", ActivityType.CUSTOM, url="https://x", state="hi")
     assert activity.to_dict() == {"name": "watching", "type": 4, "url": "https://x", "state": "hi"}
 
 
 def test_build_presence_shape() -> None:
-    presence = build_presence([GatewayActivity("a game", Activity.PLAYING)], Status.dnd)
+    presence = build_presence([GatewayActivity("a game", ActivityType.PLAYING)], Status.dnd)
     assert presence == {
         "since": None,
         "activities": [{"name": "a game", "type": 0}],

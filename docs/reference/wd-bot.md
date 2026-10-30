@@ -44,26 +44,17 @@ Brings Discord's commands in line with a :class:`~wd_bot.registry.CommandRegistr
 ## `wd_bot.bot` — `wd-bot/src/wd_bot/bot.py`
 Module that contains the bot.
 
-- module names: COMMAND_ERROR_REPLY, ERROR_COLOR
-- `error_embed(interaction_id: Snowflake) -> Embed` — Return the reply to the interaction ``interaction_id`` whose handler raised.
 - `invite_url() -> str` — Return the link to invite the bot to a server, with the scopes and permissions in ``bot.ini``.
-
-### `class MissingError(Exception)`
-Raised when a required attribute is missing.
 
 ### `class Bot(LoggerMixin)`
 A forever-running Discord bot: connects to the gateway, loads extensions, dispatches events.
 
 - fields: launch_time: datetime.datetime, loop: asyncio.AbstractEventLoop, client: Client, cogs: dict[str, Cog]
-- `get_bot_invite() -> str` — Get the link to invite the bot to a server, as :func:`invite_url` builds it.
-- `async add_cog(cog: Cog) -> None` — Register a cog and any of its @Cog.listener()-tagged methods.
-- `async remove_cog(cog: Cog) -> set[Scope]` — Unregister ``cog``'s listeners, commands and components and unload it; return the command scopes that changed.
+- `async add_cog(cog: Cog) -> None` — Register a cog's commands, listeners and component handlers, load it, then start its periodic tasks.
+- `async remove_cog(cog: Cog) -> set[Scope]` — Unregister ``cog``'s handlers, stop its periodic tasks and unload it; return the command scopes that changed.
 - `@property commands -> Generator[AppCommand]` — Yield every registered top-level command (plain commands and subcommand groups).
 - `async sync_commands(client: Client, scopes: Iterable[Scope] | None=None) -> None` — Sync ``scopes`` (default: every scope the registry knows) to Discord via :attr:`syncer`.
-- `async get_extensions() -> AsyncGenerator[str]` — Get all extensions from :attr:`extensions_package`.
-- `async reload_extension(module_name: str) -> None` — Re-import the extension module ``module_name``, swap its cogs for fresh ones and sync what changed.
-- `async load_extension(extension: str) -> None` — Load a single extension from :attr:`extensions_package`.
-- `async load_extensions() -> None` — Load all cogs from :attr:`extensions_package`.
+- `async reload_extension(module_name: str) -> None` — Reload the extension module ``module_name`` via :attr:`extensions`, then sync the command scopes it changed.
 - `@with_known_exception @BotConfig.with_kwarg async start(token: str) -> None` — Start the bot with the token from bot.ini.
 
 ## `wd_bot.checks` — `wd-bot/src/wd_bot/checks.py`
@@ -82,9 +73,10 @@ Checks made before a command or component acts, and answering the user when one 
 Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency.
 
 - module names: default_flags
-- `command(name: str, description: str, default_member_permissions: Permissions | None=None, contexts: Iterable[InteractionContextType] | None=None, guild_ids: Iterable[SnowflakeLike] | None=None, requires: Permissions | None=None) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
+- `command(name: str, description: str, *, requires: Permissions | None=None, **options: Unpack[DefinitionOptions]) -> Callable[[Callable[..., Awaitable[None]]], Command]` — Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 - `component(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ComponentHandler]` — Tag a Cog method as the handler for components whose ``custom_id`` starts with ``prefix``.
 - `modal(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ModalHandler]` — Tag a Cog method as the handler for modal submits whose ``custom_id`` starts with ``prefix``.
+- `periodic(seconds: Seconds) -> Callable[[Callable[..., Awaitable[float | None]]], PeriodicTask]` — Tag a Cog method as a tick the bot runs every ``seconds`` while the cog is loaded; see :class:`PeriodicTask`.
 
 ### `class BotArgs(TypedDict)`
 TypedDict for bot arguments.
@@ -100,12 +92,16 @@ Flags for Cog behavior.
 A wd-native feature unit: a class whose methods can be tagged with @Cog.listener().
 
 - fields: bot: Bot, flags: CogFlags
-- attributes: listener, command, component, modal
+- attributes: listener, command, component, modal, periodic
 - `async auto_load() -> None` — Load the cog if auto_load is True.
+- `@classmethod attributes_of[T](kind: type[T]) -> Generator[T]` — Yield the ``kind`` attributes defined on this cog class or inherited from its bases, by attribute name.
 - `@classmethod commands() -> Generator[Command]` — Yield the :class:`Command` attributes defined on this cog class or inherited from its bases.
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield what this cog registers as top-level Discord commands: each of its commands.
 - `@classmethod components() -> Generator[ComponentHandler]` — Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases.
 - `@classmethod modals() -> Generator[ModalHandler]` — Yield the :class:`ModalHandler` attributes defined on this cog class or inherited from its bases.
+- `@classmethod periodic_tasks() -> Generator[PeriodicTask]` — Yield the :class:`PeriodicTask` attributes defined on this cog class or inherited from its bases.
+- `start_periodic_tasks() -> None` — Start every periodic task of this cog; :meth:`wd_bot.bot.Bot.add_cog` calls it after :meth:`load`.
+- `async stop_periodic_tasks() -> None` — Cancel this cog's periodic tasks and wait until they've stopped; :meth:`wd_bot.bot.Bot.remove_cog` calls it.
 - `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run ``command`` from this cog: ``/name``.
 - `@classmethod guild_only() -> bool` — Whether the cog is used in guilds only: every one of its commands is; its components inherit this.
 - `@classmethod check_guild_handlers() -> None` — Raise :class:`TypeError` if a handler expects a guild interaction it wouldn't get.
@@ -117,11 +113,9 @@ A wd-native feature unit: a class whose methods can be tagged with @Cog.listener
 - `async unload() -> None` — Unregister any auto-reload watcher.
 
 ### `class GroupCog(Cog)`
-A cog whose commands are registered as subcommands of one Discord command, ``/<group_name> <command>``.
+A cog whose commands are registered as subcommands of one Discord command, ``/<group> <command>``.
 
-- fields: group_name: ClassVar[str], group_description: ClassVar[str], group_default_member_permissions:
-  ClassVar[Permissions | None], group_contexts: ClassVar[list[InteractionContextType] | None], group_guild_ids:
-  ClassVar[list[SnowflakeLike] | None]
+- fields: group_definition: ClassVar[CommandDefinition]
 - `@classmethod app_commands() -> Generator[AppCommand]` — Yield this cog's single top-level Discord command: the group holding its commands.
 - `@classmethod path_of(command: Command) -> CommandPath` — Return the path a user types to run the subcommand ``command``: ``/<group> <command>``.
 - `@classmethod guild_only() -> bool` — Whether the group is offered in guilds only; its subcommands and components then get guild interactions.
@@ -129,15 +123,20 @@ A cog whose commands are registered as subcommands of one Discord command, ``/<g
 ## `wd_bot.commands` — `wd-bot/src/wd_bot/commands.py`
 Application commands: the shared :class:`AppCommand` base, plain :class:`Command` and :class:`CommandGroup`.
 
-- module names: GUILD_INTERACTIONS
 - `type AutocompleteHandler = Callable[..., Awaitable[Iterable[ApplicationCommandOptionChoice]]]`
-- `wants_guild_interaction(func: Callable[..., object]) -> bool` — Whether ``func``'s ``interaction`` parameter is annotated as a guild interaction.
+- `wants_guild_interaction(func: Callable[..., object]) -> bool` — Whether ``func``'s ``interaction`` parameter is annotated with a guild interaction type, an :class:`InGuild`.
 
 ### `class ChannelTypes`
 Limit a channel option to some kinds of channel: ``category: Annotated[Channel, ChannelTypes(GUILD_CATEGORY)]``.
 
 ### `class Describe`
 Give an option the description Discord shows under it: ``reason: Annotated[str, Describe("Why")]``.
+
+### `class Length`
+Limit a string option's length: ``name: Annotated[str, Length(min_length=2, max_length=32)]``.
+
+### `class Range`
+Limit an ``int`` or ``float`` option's value: ``count: Annotated[int, Range(min_value=1, max_value=10)]``.
 
 ### `class Lookup`
 Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_names)]``.
@@ -149,9 +148,23 @@ Suggest an option's values while it's typed: ``name: Annotated[str, Lookup(pet_n
 A handler parameter as a Discord option: what Discord asks for, and what the handler gets.
 
 - fields: name: str, param_type: object, option_type: ApplicationCommandOptionType, required: bool, channel_types:
-  list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...]
+  list[ChannelType] | None, description: str | None, lookup: Lookup | None, models: tuple[type[LifecycleModel], ...],
+  length: Length | None, range: Range | None
 - `definition(*, autocomplete: bool) -> ApplicationCommandOption` — Return the option as Discord defines it.
 - `argument(interaction: CommandInteraction, value: object, cog: Cog) -> object` — Return the handler argument for the submitted ``value``; ``None`` when the object it names wasn't sent along.
+
+### `class DefinitionOptions(TypedDict, total=False)`
+The optional parts of a :class:`CommandDefinition`, as keywords, in any iterable form.
+
+- fields: default_member_permissions: Permissions | None, contexts: Iterable[InteractionContextType] | None, guild_ids:
+  Iterable[SnowflakeLike] | None
+
+### `@dataclass class CommandDefinition`
+What Discord is told about a command: its name, description, who may use it, where, and in which guilds.
+
+- fields: name: str, description: str, default_member_permissions: Permissions | None, contexts:
+  tuple[InteractionContextType, ...] | None, guild_ids: tuple[Snowflake, ...] | None
+- `@classmethod of(name: str, description: str, **options: Unpack[DefinitionOptions]) -> Self` — Return the definition of ``name``, holding ``options``' iterables as tuples and its guild ids as snowflakes.
 
 ### `class AppCommand(LoggerMixin, ABC)`
 What every application command shares: its name, description and where Discord lets it be used.
@@ -186,8 +199,8 @@ Message-component handlers: route a clicked component to the Cog method owning i
 A Cog method reached through the prefix of a ``custom_id``: what component and modal handlers share.
 
 - fields: kind: ClassVar[str]
-- `custom_id(*args: str | int) -> str` — Build a ``custom_id`` routed to this handler, carrying ``args``.
-- `async invoke(cog: Cog, interaction: I, args: Sequence[str]) -> bool` — Call the handler; return ``False`` if it raised (the exception is logged).
+- `custom_id(*args: str | int | Snowflake) -> str` — Build a ``custom_id`` routed to this handler, carrying ``args``.
+- `async invoke(cog: Cog, interaction: I, args: Sequence[str]) -> bool` — Call the handler through :data:`~wd_bot.guard.dispatch_guard`; return ``False`` if it raised.
 
 ### `class ComponentHandler(CustomIdHandler[ComponentInteraction])`
 A Cog method handling every component whose ``custom_id`` starts with :attr:`prefix`.
@@ -200,23 +213,43 @@ A Cog method handling every modal whose ``custom_id`` starts with :attr:`prefix`
 - attributes: kind
 
 ## `wd_bot.extensions` — `wd-bot/src/wd_bot/extensions.py`
-Finding the extension modules a bot loads its cogs from.
+Finding, importing, reloading and rolling back the extension modules a bot loads its cogs from.
 
 ### `class ExtensionDiscovery`
 Lists the modules inside an extensions package, at any depth.
 
 - `modules() -> Generator[str]` — Yield every module (not package) under :attr:`package`, named relative to it.
 
-## `wd_bot.help` — `wd-bot/src/wd_bot/help.py`
-Module for defining the help command.
+### `class ExtensionLoader(LoggerMixin)`
+Imports a bot's extension modules and builds their cogs; reloads one in place, rolling back on failure.
 
-- module names: default_help
+- `async load_all() -> None` — Load every module in :attr:`package`, recording (not raising) each failure in :attr:`failed`.
+- `async load(extension: str) -> None` — Import the module ``extension`` (named relative to :attr:`package`) and add its cogs to the bot.
+- `async add_cogs(module: ModuleType) -> None` — Build every concrete :class:`~wd_bot.cogs.Cog` subclass in ``module`` and add it to the bot.
+- `async reload(module_name: str) -> set[Scope]` — Re-import the module ``module_name`` and swap its cogs for fresh ones; return the command scopes that changed.
 
-### `class HelpCommand(View, Command)`
-The help command.
+## `wd_bot.guard` — `wd-bot/src/wd_bot/guard.py`
+The one guard command, component and listener dispatch run their handler through.
 
-### `class DefaultHelpCommand(HelpCommand)`
-Default implementation for a simple help command.
+- module names: COMMAND_ERROR_REPLY, ERROR_COLOR, dispatch_guard
+- `error_embed(interaction_id: Snowflake) -> Embed` — Return the reply to the interaction ``interaction_id`` whose handler raised.
+
+### `class DispatchGuard(LoggerMixin)`
+Runs a handler, turning a refusal or an unexpected exception into the right reply and log entry.
+
+- `async run(handler: str, call: Callable[[], Awaitable[object]], interaction: AnyInteraction | None=None) -> bool` — Await ``call()``, the handler described as ``handler`` (e.g. ``"command 'ping'"``).
+
+## `wd_bot.handlers` — `wd-bot/src/wd_bot/handlers.py`
+Which cog methods handle gateway events, component clicks and modal submits: the counterpart of the command registry.
+
+### `class HandlerRegistry(LoggerMixin)`
+The ``@Cog.listener`` methods per gateway event, and the ``@Cog.component`` and ``@Cog.modal`` handler per prefix.
+
+- `register(cog: Cog) -> None` — Add ``cog``'s listeners, component handlers and modal handlers.
+- `unregister(cog: Cog) -> None` — Remove ``cog``'s listeners, component handlers and modal handlers.
+- `listeners(event_name: str) -> Sequence[Listener]` — Return the bound listener methods for the gateway event ``event_name``, in registration order.
+- `component(prefix: str) -> tuple[Cog, CustomIdHandler[ComponentInteraction]] | None` — Return the cog and component handler owning the ``custom_id`` prefix ``prefix``, or ``None`` if none does.
+- `modal(prefix: str) -> tuple[Cog, CustomIdHandler[ModalSubmitInteraction]] | None` — Return the cog and modal handler owning the ``custom_id`` prefix ``prefix``, or ``None`` if none does.
 
 ## `wd_bot.listener` — `wd-bot/src/wd_bot/listener.py`
 Runtime `listener()` decorator: tag a Cog method as a gateway dispatch-event listener.
@@ -233,18 +266,17 @@ The tables of a module's table classes, taken out of ``SQLModel.metadata`` so th
 - `@classmethod detach(module_name: str, module: ModuleType | None) -> ModuleTables` — Remove the tables of the classes ``module`` defines from ``SQLModel.metadata``; ``None`` detaches nothing.
 - `restore() -> None` — Drop the tables added since :meth:`detach` and put the detached ones back, as before the reload.
 
-## `wd_bot.paths` — `wd-bot/src/wd_bot/paths.py`
-Centralized filesystem paths shared across the bot codebase.
+## `wd_bot.periodic` — `wd-bot/src/wd_bot/periodic.py`
+Periodic tasks: a Cog method the bot runs on an interval for as long as the cog is loaded.
 
-- module names: CORE_DIR, PACKAGE_DIR, ROOT_DIR, EXTENSIONS, DYNAMIC_DIR, IMG_DIR, METRICS_FILE
+- `type Seconds = float | Callable[[], float]`
 
-## `wd_bot.permissions` — `wd-bot/src/wd_bot/permissions.py`
-Module for handling permission related things in Discord bot interactions.
+### `class PeriodicTask`
+A Cog method run every :attr:`seconds` while its cog is loaded, starting right after the cog loads.
 
-### `class PermissionsNotifier`
-Notify users about missing permissions, roles or overwrites.
-
-- `async notify() -> None` — Notify the user about missing permissions, roles or overwrites.
+- `@property name -> str` — The tick method's name.
+- `interval() -> float` — Return the default wait between two ticks, in seconds.
+- `start(cog: Cog) -> asyncio.Task[None]` — Start ticking for ``cog`` on its bot's loop; cancel the returned task to stop.
 
 ## `wd_bot.registry` — `wd-bot/src/wd_bot/registry.py`
 Which application commands the bot registers where, and the IDs Discord gave them.
@@ -301,8 +333,6 @@ The bot's commands per scope, next to what Discord last reported for that scope.
 ## `wd_bot.settings` — `wd-bot/src/wd_bot/settings.py`
 wd-bot's settings, backed by their own bot.ini file (operator and internal settings together).
 
-- module names: BOT_CONFIG_FILE
-
 ### `class BotConfig[T](Config[T])`
 Config descriptor scoped to the bot settings file.
 
@@ -325,4 +355,4 @@ Derive a stable signature string for a command's callable, used to detect defini
 Test helpers for cogs: build one to call its handlers on, without a running bot.
 
 - `detached_cog[C: Cog](cls: type[C], *, engine: Engine | None=None, **bot: object) -> C` — Return a ``cls`` built without :meth:`Cog.__init <wd_bot.cogs.Cog.__init__>`: no auto-load task, no hot reload.
-- `cog_command(func: Callable[..., Awaitable[None]], /, **definition: Any) -> Command` — Return ``func`` as a :class:`~wd_bot.commands.Command` on a throwaway cog class, built as ``@Cog.command`` builds it.
+- `cog_command(func: Callable[..., Awaitable[None]], definition: CommandDefinition, /) -> Command` — Return ``func`` as a :class:`~wd_bot.commands.Command` on a throwaway cog class, built as ``@Cog.command`` builds it.

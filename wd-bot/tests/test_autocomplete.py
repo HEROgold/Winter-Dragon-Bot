@@ -6,18 +6,17 @@ import pytest
 from sqlmodel import Session, select
 from wd_bot.bot import Bot
 from wd_bot.cogs import Cog, GroupCog
-from wd_bot.commands import Command, Describe, Lookup
+from wd_bot.commands import Command, CommandDefinition, Describe, Lookup
 from wd_bot.testing import cog_command, detached_cog
 from wd_db.extension.lifecycle import soft_delete
 from wd_discord import AutocompleteInteraction
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.interactions import (
-    MAX_CHOICE_NAME_LENGTH,
-    MAX_CHOICES,
     ApplicationCommandOptionChoice,
     ApplicationCommandOptionType,
 )
+from wd_discord.limits import ELLIPSIS, MAX_CHOICE_NAME_LENGTH, MAX_CHOICES
 
 from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentMatch
 
@@ -39,7 +38,7 @@ class _Pets(Cog, auto_load=False):
         names = ["cat", "dog", "cow"]
         return [ApplicationCommandOptionChoice(name=name, value=name) for name in names if current in name]
 
-    @Cog.command(name="pet", description="Pick a pet")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="pet", description="Pick a pet")
     async def pet(self, interaction: CommandInteraction, name: Annotated[str, Lookup(pet_names)], weight: float = 1.0) -> None:
         _Pets.received.append(weight)
 
@@ -50,7 +49,7 @@ class _Many(GroupCog, name="many", auto_load=False):
     async def choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         return [ApplicationCommandOptionChoice(name=f"{current}{index}", value=str(index)) for index in range(40)]
 
-    @Cog.command(name="pick", description="Pick one")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="pick", description="Pick one")
     async def pick(self, interaction: CommandInteraction, choice: Annotated[str, Lookup(choices)]) -> None:
         return None
 
@@ -94,7 +93,7 @@ async def test_a_plain_lookup_option_gets_the_submitted_value(make_interaction: 
         received.append(name)
 
     options = [InteractionDataOption(name="name", type=3, value="cat")]
-    assert await cog_command(handler, name="pet", description="d").invoke(object(), make_interaction("pet", options=options))
+    assert await cog_command(handler, CommandDefinition("pet", "d")).invoke(object(), make_interaction("pet", options=options))
     assert received == ["cat"]
 
 
@@ -159,7 +158,7 @@ async def test_bot_dispatches_autocomplete_to_the_command(discord_client: Record
 class _Cups(Cog, auto_load=False):
     received: ClassVar[list[object]] = []
 
-    @Cog.command(name="cup", description="Show a cup")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="cup", description="Show a cup")
     async def cup(
         self,
         interaction: CommandInteraction,
@@ -203,7 +202,7 @@ def test_a_lookup_choice_names_the_table_and_the_id_and_cuts_long_names(engine: 
         cup = _cup(session, "x" * 150)
         choice = Lookup.choice(cup, cup.name)
     assert choice.value == f"tournament:{cup.id}"
-    assert choice.name == "x" * MAX_CHOICE_NAME_LENGTH
+    assert choice.name == "x" * (MAX_CHOICE_NAME_LENGTH - 1) + ELLIPSIS
 
 
 async def test_a_lookup_option_suggests_from_the_named_method(engine: Engine, discord_client: RecordingClient) -> None:
@@ -282,7 +281,7 @@ async def test_a_union_of_tables_loads_whichever_the_value_names(
     with Session(engine) as session:
         cup = _cup(session)
     options = [InteractionDataOption(name="row", type=3, value=f"tournament:{cup.id}")]
-    assert await cog_command(handler, name="row", description="d").invoke(
+    assert await cog_command(handler, CommandDefinition("row", "d")).invoke(
         _cups(engine, discord_client),
         make_interaction("row", options=options),
     )
@@ -294,7 +293,7 @@ def test_lookup_on_a_type_that_cannot_autocomplete_raises() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):
-        cog_command(handler, name="row", description="d")
+        cog_command(handler, CommandDefinition("row", "d"))
 
 
 def test_a_model_without_lookup_raises() -> None:
@@ -302,14 +301,14 @@ def test_a_model_without_lookup_raises() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="Lookup"):
-        cog_command(handler, name="row", description="d")
+        cog_command(handler, CommandDefinition("row", "d"))
 
 
 def test_a_lookup_naming_a_missing_cog_method_raises() -> None:
     with pytest.raises(TypeError, match="nowhere"):
 
         class _Broken(Cog, auto_load=False):
-            @Cog.command(name="row", description="d")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+            @Cog.command(name="row", description="d")
             async def row(
                 self,
                 interaction: CommandInteraction,
@@ -323,4 +322,4 @@ def test_a_command_outside_a_cog_has_no_options() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="isn't defined on a Cog"):
-        list(Command(handler, name="row", description="d").options())
+        list(Command(handler, CommandDefinition("row", "d")).options())

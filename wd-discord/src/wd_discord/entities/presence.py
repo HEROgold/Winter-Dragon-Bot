@@ -26,8 +26,7 @@ class Presence(Entity[PresenceModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the presence was seen in; ``None`` inside GUILD_CREATE and GUILD_MEMBERS_CHUNK."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def member(self) -> PartialMember | None:

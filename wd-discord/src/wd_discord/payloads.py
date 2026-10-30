@@ -1,8 +1,6 @@
-"""Domain specific web-client for WD."""
+"""Outbound request bodies and the keyword arguments :meth:`Client.request` accepts."""
 
 from typing import TYPE_CHECKING, TypedDict
-
-lazy from httpxyz import AsyncClient as _AsyncClient
 
 
 if TYPE_CHECKING:
@@ -18,6 +16,7 @@ if TYPE_CHECKING:
         RequestFiles,
         TimeoutTypes,
     )
+
     from wd_discord.responses import InteractionCallbackType, MessageData, ModalData
 
 
@@ -92,7 +91,3 @@ class RequestKwargs(TypedDict, total=False, closed=True):
     follow_redirects: bool | UseClientDefault
     timeout: TimeoutTypes | UseClientDefault
     extensions: RequestExtensions
-
-
-class AsyncClient(_AsyncClient):
-    """Async client for WD."""

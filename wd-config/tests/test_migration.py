@@ -289,24 +289,12 @@ result |= {
 
 
 def test_mapping_matches_the_scopes(boot_config: BootConfig) -> None:
-    """The migration's target files and internal defaults are the ones the scopes bind and write."""
+    """The migration's internal defaults are the ones the scopes write."""
     boot = boot_config(
         """
-from wd_bot.settings import BOT_CONFIG_FILE
-from wd_config.constants import DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
-from wd_db.settings import DATABASE_CONFIG_FILE
 from winter_dragon import config_migration as migration
-from winter_dragon.config import COGS_CONFIG_FILE, CONFIG_FILE
 import wd_config.discord
 result = {
-    "files": [
-        str(migration.CONFIG_INI) == str(CONFIG_FILE),
-        str(migration.COGS_INI) == str(COGS_CONFIG_FILE),
-        str(migration.BOT_INI) == str(BOT_CONFIG_FILE),
-        str(migration.DATABASE_INI) == str(DATABASE_CONFIG_FILE),
-        str(migration.SENTRY_INI) == str(SENTRY_CONFIG_FILE),
-        str(migration.DISCORD_INI) == str(DISCORD_CONFIG_FILE),
-    ],
     "defaults": {
         f"{move.to_section or move.section}.{key}": value
         for move in migration.MOVES
@@ -317,7 +305,6 @@ result = {
         files={"discord.ini": ""},
     )
 
-    assert all(boot.values["files"])
     written = boot.files["discord.ini"]
     for name, default in boot.values["defaults"].items():
         section, key = name.split(".")

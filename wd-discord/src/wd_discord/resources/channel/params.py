@@ -7,18 +7,13 @@ https://docs.discord.com/developers/resources/channel#modify-channel.
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer
-lazy from wd_core.client import ChannelPayload, OverwritePayload
 
 from wd_discord.permissions import ChannelType, Permissions
 from wd_discord.resources.channel.overwrite import OverwriteType
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.limits import MAX_CHANNEL_NAME_LENGTH, MAX_USER_LIMIT
+lazy from wd_discord.payloads import ChannelPayload, OverwritePayload
 
-
-MAX_USER_LIMIT = 99
-"""The most users a voice channel can be limited to; 0 means no limit (https://docs.discord.com/developers/resources/channel#modify-channel-json-params-guild-channel)."""
-
-MAX_CHANNEL_NAME_LENGTH = 100
-"""A channel name holds 1 to 100 characters (https://docs.discord.com/developers/resources/channel#channel-object-channel-structure)."""
 
 type ChannelName = Annotated[str, Field(min_length=1, max_length=MAX_CHANNEL_NAME_LENGTH)]
 

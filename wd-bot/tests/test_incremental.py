@@ -17,7 +17,7 @@ from winter_dragon.cogs.incremental import game
 from winter_dragon.cogs.incremental.catalogue import CatalogueError, load_catalogue
 from winter_dragon.cogs.incremental.cog import Incremental
 from winter_dragon.cogs.incremental.models import IncrementalSave, SaveBalance, SaveGenerator
-from winter_dragon.cogs.privacy import hide_owned
+from winter_dragon.cogs.privacy.domain import hide_owned
 
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ def test_shipped_catalogue_loads() -> None:
 
 def test_catalogue_values_are_frozen() -> None:
     with pytest.raises(ValidationError):
-        load_catalogue().currencies[0].name = "x"  # pyright: ignore[reportAttributeAccessIssue]
+        load_catalogue().currencies[0].name = "x"
 
 
 def test_valid_catalogue_parses(tmp_path: Path) -> None:
@@ -176,7 +176,7 @@ def test_buy_locks_the_save_row(engine: Engine) -> None:
     statements: list[str] = []
 
     def record(state: object) -> None:
-        statements.append(str(state.statement.compile(dialect=postgresql.dialect())))  # pyright: ignore[reportAttributeAccessIssue]
+        statements.append(str(state.statement.compile(dialect=postgresql.dialect())))
 
     event.listen(Session, "do_orm_execute", record)
     try:
@@ -199,11 +199,11 @@ def test_simultaneous_buys_cannot_spend_the_same_coins_twice(tmp_path: Path) -> 
 
     @event.listens_for(engine, "connect")
     def _manual_transactions(connection: object, _record: object) -> None:
-        connection.isolation_level = None  # pyright: ignore[reportAttributeAccessIssue]
+        connection.isolation_level = None
 
     @event.listens_for(engine, "begin")
     def _begin_immediate(connection: object) -> None:
-        connection.exec_driver_sql("BEGIN IMMEDIATE")  # pyright: ignore[reportAttributeAccessIssue]
+        connection.exec_driver_sql("BEGIN IMMEDIATE")
 
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:

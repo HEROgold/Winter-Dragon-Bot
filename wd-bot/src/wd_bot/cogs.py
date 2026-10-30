@@ -1,7 +1,8 @@
 """Module that contains Cogs: wd-native feature units with no discord.ext.commands dependency."""
 
+lazy import asyncio
 lazy from enum import IntFlag, auto
-lazy from typing import TYPE_CHECKING, Any, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
+lazy from typing import TYPE_CHECKING, ClassVar, NotRequired, Required, Self, TypedDict, Unpack, override
 
 lazy from herogold.log import LoggerMixin
 lazy from sqlmodel import Session, SQLModel
@@ -11,14 +12,15 @@ lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.snowflake import Snowflake
 
 lazy from wd_bot.auto_reload import AutoReloadWatcher
-lazy from wd_bot.commands import Command, CommandGroup
-lazy from wd_bot.components import ComponentHandler, CustomIdHandler, ModalHandler
+lazy from wd_bot.commands import Command, CommandDefinition, CommandGroup
+lazy from wd_bot.components import ComponentHandler, ModalHandler
 lazy from wd_bot.listener import listener
+lazy from wd_bot.periodic import PeriodicTask
 lazy from wd_bot.registry import CommandPath
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Awaitable, Callable, Generator, Iterable
+    lazy from collections.abc import Awaitable, Callable, Generator
 
     lazy from sqlalchemy import Connection, Engine
     lazy from wd_discord import AnyInteraction
@@ -26,37 +28,30 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import SnowflakeLike
 
     lazy from wd_bot.bot import Bot
-    lazy from wd_bot.commands import AppCommand
+    lazy from wd_bot.commands import AppCommand, DefinitionOptions
+    lazy from wd_bot.periodic import Seconds
     lazy from wd_bot.registry import CommandMention
 
 
 def command(
     name: str,
     description: str,
-    default_member_permissions: Permissions | None = None,
-    contexts: Iterable[InteractionContextType] | None = None,
-    guild_ids: Iterable[SnowflakeLike] | None = None,
+    *,
     requires: Permissions | None = None,
+    **options: Unpack[DefinitionOptions],
 ) -> Callable[[Callable[..., Awaitable[None]]], Command]:
     """Tag a Cog method as a chat-input application command, building a :class:`Command` for it.
 
-    ``guild_ids`` registers the command in just those guilds instead of globally; on a :class:`GroupCog`
-    the group's ``guild_ids`` apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
+    ``name``, ``description`` and ``options`` make its :class:`~wd_bot.commands.CommandDefinition`. ``guild_ids``
+    registers the command in just those guilds instead of globally; on a :class:`GroupCog` the group's ``guild_ids``
+    apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
     before the handler runs; use it for a subcommand needing more than its group.
     """
     # TODO: By defult, when name isn't specified, user the method name.
     # TODO: When description isn't specified, use the first line of the docstring. (configurable in .ini)
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
-        return Command(
-            func,
-            name=name,
-            description=description,
-            default_member_permissions=default_member_permissions,
-            contexts=contexts,
-            guild_ids=guild_ids,
-            requires=requires,
-        )
+        return Command(func, CommandDefinition.of(name, description, **options), requires=requires)
 
     return decorator
 
@@ -75,6 +70,18 @@ def modal(prefix: str) -> Callable[[Callable[..., Awaitable[None]]], ModalHandle
 
     def decorator(func: Callable[..., Awaitable[None]]) -> ModalHandler:
         return ModalHandler(func, prefix=prefix)
+
+    return decorator
+
+
+def periodic(seconds: Seconds) -> Callable[[Callable[..., Awaitable[float | None]]], PeriodicTask]:
+    """Tag a Cog method as a tick the bot runs every ``seconds`` while the cog is loaded; see :class:`PeriodicTask`.
+
+    ``seconds`` may be a function returning them, read before every wait, such as ``lambda: Settings.interval``.
+    """
+
+    def decorator(func: Callable[..., Awaitable[float | None]]) -> PeriodicTask:
+        return PeriodicTask(func, seconds=seconds)
 
     return decorator
 
@@ -113,11 +120,13 @@ class Cog(LoggerMixin):
     command = command
     component = component
     modal = modal
+    periodic = periodic
+    _running: tuple[asyncio.Task[None], ...] = ()
 
     def __init__(self, **kwargs: Unpack[BotArgs]) -> None:
         """Initialize the Cog instance with a bot reference and a database session."""
         self.bot = kwargs["bot"]
-        self.session = kwargs.get("db_session", Session(engine))
+        self.session = kwargs["db_session"] if "db_session" in kwargs else Session(engine)
         self._auto_reloader = AutoReloadWatcher(bot=self.bot, cog_cls=type(self))
 
         # Don't start the auto_load loop for the abstract/base Cog classes
@@ -146,12 +155,17 @@ class Cog(LoggerMixin):
             await self.bot.add_cog(self)
 
     @classmethod
-    def commands(cls) -> Generator[Command]:
-        """Yield the :class:`Command` attributes defined on this cog class or inherited from its bases."""
+    def attributes_of[T](cls, kind: type[T]) -> Generator[T]:
+        """Yield the ``kind`` attributes defined on this cog class or inherited from its bases, by attribute name."""
         for attr_name in dir(cls):
             attr = getattr(cls, attr_name)
-            if isinstance(attr, Command):
+            if isinstance(attr, kind):
                 yield attr
+
+    @classmethod
+    def commands(cls) -> Generator[Command]:
+        """Yield the :class:`Command` attributes defined on this cog class or inherited from its bases."""
+        yield from cls.attributes_of(Command)
 
     @classmethod
     def app_commands(cls) -> Generator[AppCommand]:
@@ -161,20 +175,28 @@ class Cog(LoggerMixin):
     @classmethod
     def components(cls) -> Generator[ComponentHandler]:
         """Yield the :class:`ComponentHandler` attributes defined on this cog class or inherited from its bases."""
-        yield from cls._handlers(ComponentHandler)
+        yield from cls.attributes_of(ComponentHandler)
 
     @classmethod
     def modals(cls) -> Generator[ModalHandler]:
         """Yield the :class:`ModalHandler` attributes defined on this cog class or inherited from its bases."""
-        yield from cls._handlers(ModalHandler)
+        yield from cls.attributes_of(ModalHandler)
 
     @classmethod
-    def _handlers[H: CustomIdHandler[Any]](cls, handler_type: type[H]) -> Generator[H]:
-        """Yield the ``handler_type`` attributes defined on this cog class or inherited from its bases."""
-        for attr_name in dir(cls):
-            attr = getattr(cls, attr_name)
-            if isinstance(attr, handler_type):
-                yield attr
+    def periodic_tasks(cls) -> Generator[PeriodicTask]:
+        """Yield the :class:`PeriodicTask` attributes defined on this cog class or inherited from its bases."""
+        yield from cls.attributes_of(PeriodicTask)
+
+    def start_periodic_tasks(self) -> None:
+        """Start every periodic task of this cog; :meth:`wd_bot.bot.Bot.add_cog` calls it after :meth:`load`."""
+        self._running = tuple(task.start(self) for task in type(self).periodic_tasks())
+
+    async def stop_periodic_tasks(self) -> None:
+        """Cancel this cog's periodic tasks and wait until they've stopped; :meth:`wd_bot.bot.Bot.remove_cog` calls it."""
+        running, self._running = self._running, ()
+        for task in running:
+            task.cancel()
+        await asyncio.gather(*running, return_exceptions=True)
 
     @classmethod
     def path_of(cls, command: Command) -> CommandPath:
@@ -240,7 +262,7 @@ class Cog(LoggerMixin):
 
 
 class GroupCog(Cog):
-    """A cog whose commands are registered as subcommands of one Discord command, ``/<group_name> <command>``.
+    """A cog whose commands are registered as subcommands of one Discord command, ``/<group> <command>``.
 
     Configure the group with class keywords::
 
@@ -251,54 +273,42 @@ class GroupCog(Cog):
     has none of them per subcommand).
     """
 
-    group_name: ClassVar[str]
-    group_description: ClassVar[str]
-    group_default_member_permissions: ClassVar[Permissions | None] = None
-    group_contexts: ClassVar[list[InteractionContextType] | None] = None
-    group_guild_ids: ClassVar[list[SnowflakeLike] | None] = None
+    group_definition: ClassVar[CommandDefinition]
+    """The group's definition, from the class keywords."""
 
-    def __init_subclass__(  # noqa: PLR0913 - each keyword is a class-level group setting
+    def __init_subclass__(
         cls: type[Self],
         *,
         name: str | None = None,
         description: str | None = None,
-        default_member_permissions: Permissions | None = None,
-        contexts: Iterable[InteractionContextType] | None = None,
-        guild_ids: Iterable[SnowflakeLike] | None = None,
         auto_load: bool = True,
         flags: CogFlags | None = None,
+        **options: Unpack[DefinitionOptions],
     ) -> None:
         """Configure the subcommand group, plus the usual loader and hot-reload behavior."""
         super().__init_subclass__(auto_load=auto_load, flags=flags)
-        cls.group_name = name or _kebab_case(cls.__name__)
-        cls.group_description = description or (cls.__doc__ or cls.__name__).strip().splitlines()[0]
-        cls.group_default_member_permissions = default_member_permissions
-        cls.group_contexts = None if contexts is None else list(contexts)
-        cls.group_guild_ids = None if guild_ids is None else list(guild_ids)
+        cls.group_definition = CommandDefinition.of(
+            name or _kebab_case(cls.__name__),
+            description or (cls.__doc__ or cls.__name__).strip().splitlines()[0],
+            **options,
+        )
 
     @classmethod
     def app_commands(cls) -> Generator[AppCommand]:
         """Yield this cog's single top-level Discord command: the group holding its commands."""
-        yield CommandGroup(
-            name=cls.group_name,
-            description=cls.group_description,
-            subcommands=cls.commands(),
-            default_member_permissions=cls.group_default_member_permissions,
-            contexts=cls.group_contexts,
-            guild_ids=cls.group_guild_ids,
-        )
+        yield CommandGroup(cls.group_definition, cls.commands())
 
     @classmethod
     @override
     def path_of(cls, command: Command) -> CommandPath:
         """Return the path a user types to run the subcommand ``command``: ``/<group> <command>``."""
-        return CommandPath(cls.group_name, command.name)
+        return CommandPath(cls.group_definition.name, command.name)
 
     @classmethod
     @override
     def guild_only(cls) -> bool:
         """Whether the group is offered in guilds only; its subcommands and components then get guild interactions."""
-        return cls.group_contexts == [InteractionContextType.GUILD]
+        return cls.group_definition.contexts == (InteractionContextType.GUILD,)
 
 
 def _kebab_case(name: str) -> str:

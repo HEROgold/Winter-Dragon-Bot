@@ -14,16 +14,16 @@ lazy from herogold.errors import with_known_exception
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_discord.embed import (
+lazy from wd_discord.embed import Embed, EmbedField, EmbedFooter
+lazy from wd_discord.limits import (
     MAX_EMBED_CHARACTERS,
     MAX_EMBED_FIELD_NAME_LENGTH,
     MAX_EMBED_FIELD_VALUE_LENGTH,
     MAX_EMBED_FIELDS,
-    Embed,
-    EmbedField,
-    EmbedFooter,
+    MAX_EMBED_TITLE_LENGTH,
+    truncate,
 )
-lazy from wd_errors import BaseError
+lazy from wd_errors import BaseError, Refused
 
 lazy from winter_dragon.config import CogConfig
 
@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 
 DEFINE_URL = "https://api.urbandictionary.com/v0/define"
 RANDOM_URL = "https://api.urbandictionary.com/v0/random"
-ELLIPSIS = "…"
 
 
 class Lookup(LifecycleModel, table=True):
@@ -79,11 +78,6 @@ class DefinitionList(BaseModel):
 
 class LookupFailed(BaseError):  # noqa: N818 - reads as the outcome callers branch on
     """Urban Dictionary couldn't be asked, or answered something unexpected; the message says which, for the user."""
-
-
-def truncate(text: str, limit: int) -> str:
-    """Return ``text``, cut to ``limit`` characters with an ellipsis when it's longer."""
-    return text if len(text) <= limit else text[: limit - len(ELLIPSIS)] + ELLIPSIS
 
 
 def definition_field(index: int, definition: Definition) -> EmbedField:
@@ -168,15 +162,14 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         """Create the lookup table if missing."""
         self.create_tables(Lookup)
 
-    @Cog.command(name="search", description="Look up the meaning of a word on Urban Dictionary")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="search", description="Look up the meaning of a word on Urban Dictionary")
     async def search(self, interaction: CommandInteraction, query: str) -> None:
         """Reply with the definitions of ``query``."""
         await interaction.defer()
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.define(query)
         if isinstance(definitions, LookupFailed):
-            await interaction.respond(str(definitions))
-            return
+            raise Refused(str(definitions))
         if not definitions:
             await interaction.respond(f"No definitions found for `{truncate(query, 100)}`.")
             return
@@ -185,19 +178,18 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
             with Session(self.bind) as session:
                 session.add(Lookup(user_id=int(user.id), term=query))
                 session.commit()
-        title = truncate(f"Urban Dictionary: {query}", 256)
+        title = truncate(f"Urban Dictionary: {query}", MAX_EMBED_TITLE_LENGTH)
         await interaction.respond(embeds=[build_embed(title, definitions, UrbanSettings.max_definitions)])
 
-    @Cog.command(name="random", description="Get random definitions from Urban Dictionary")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="random", description="Get random definitions from Urban Dictionary")
     async def random(self, interaction: CommandInteraction) -> None:
         """Reply with definitions of random terms, unless that's turned off."""
         if not UrbanSettings.allow_random:
-            await interaction.respond("Random definitions are turned off.", ephemeral=True)
-            return
+            msg = "Random definitions are turned off."
+            raise Refused(msg)
         await interaction.defer()
         async with UrbanDictionary(self.http) as urban:
             definitions = await urban.random()
         if isinstance(definitions, LookupFailed):
-            await interaction.respond(str(definitions))
-            return
+            raise Refused(str(definitions))
         await interaction.respond(embeds=[build_embed("Urban Dictionary: random", definitions, UrbanSettings.max_definitions)])

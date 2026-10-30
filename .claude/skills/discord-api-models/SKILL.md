@@ -103,7 +103,9 @@ Gateway dispatches follow the same split: `wd_discord.gateway.events` parses eac
 model, and `wd_discord.bind(client, model)` ([entities/events.py](../../../wd-discord/src/wd_discord/entities/events.py))
 wraps it in its entity (`Message`, `Guild`, `Ready`, a typed `Interaction` subclass, ...) so listeners act
 without passing a client around; events with no entity yet come back as `RawEvent`. `event_entities()`
-is the event → entity map that generates `wd_bot/listener.pyi`. Interactions bind to
+is the event → entity map that generates `wd_bot/listener.pyi`. To add an event, give its `EventName` member
+its model (`FOO = ("FOO", Foo)`), then key its entry in `_bindings()` (entities/events.py) and, if it changes
+gateway state, in `StateCache._handlers()` (cache.py) by that member; `EventName.of(model)` finds the event. Interactions bind to
 `CommandInteraction`/`ComponentInteraction`/`AutocompleteInteraction` with `respond`/`defer`/
 `edit_original`/`followup` (plus `update`/`defer_update` on components).
 

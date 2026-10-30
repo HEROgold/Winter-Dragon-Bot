@@ -1,6 +1,10 @@
 """Unit tests: the web dashboard's sign-in, data page, deletion request and reminders, on sqlite (no network)."""
 
+import html
 import re
+import subprocess
+import sys
+import textwrap
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
@@ -10,11 +14,14 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
 from wd_bot.application import ApplicationId
+from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
-from wd_db.testing import seed
+from wd_db.testing import seed, sqlite_engine
+from wd_discord.gateway.events import InteractionDataOption
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
-from wd_discord.testing import user_json
+from wd_discord.testing import RecordingClient, user_json
+from wd_errors import Refused
 
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
@@ -29,18 +36,23 @@ from winter_dragon.cogs.incremental.models import IncrementalSave, SaveGenerator
 
 
 from winter_dragon.cogs.hangman.models import HangmanGame, HangmanParticipant, HangmanStatus
-from winter_dragon.cogs.reminder import Reminder, TimedReminder
+from winter_dragon.cogs.reminder import cog as reminder_cog
+from winter_dragon.cogs.reminder.cog import Reminders
+from winter_dragon.cogs.reminder.domain import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
+from winter_dragon.cogs.tournament import service as tournaments
+from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentStatus, TournamentTeam
 
 
 from winter_dragon.cogs.urban import Lookup
 from winter_dragon.web import auth, pages, profile, reminders
 from winter_dragon.web.app import create_app
 from winter_dragon.web.profile_pages import incremental as incremental_page
-from winter_dragon.web.reminders import InvalidReminderError, ReminderDraft, Repeat
+from winter_dragon.web.reminders import ReminderDraft, Repeat
 
 
 if TYPE_CHECKING:
+    from conftest import InteractionFactory
     from sqlalchemy import Engine
 
 
@@ -168,6 +180,30 @@ def test_signing_in_opens_your_data_page_and_signing_out_ends_it(member: TestCli
     assert member.get("/me", follow_redirects=False).status_code == 303
 
 
+def test_the_signed_in_account_keeps_its_discord_id_as_a_snowflake_through_the_session() -> None:
+    from winter_dragon.web.accounts import Account
+
+    account = Account.from_user(USER)
+    stored = account.model_dump(mode="json")
+
+    assert account.id == Snowflake(MEMBER_ID)
+    assert Account.model_validate(stored).id == Snowflake(MEMBER_ID)
+
+
+def test_the_oauth_access_token_is_a_token_hidden_from_repr() -> None:
+    from wd_discord import Token
+
+    from wd_discord.oauth import AccessToken
+
+    granted = AccessToken.model_validate(
+        {"access_token": "secret-access", "token_type": "Bearer", "expires_in": 604800, "scope": "identify", "refresh_token": "secret-refresh"},
+    )
+
+    assert isinstance(granted.access_token, Token)
+    assert isinstance(granted.refresh_token, Token)
+    assert "secret" not in repr(granted)
+
+
 # --- Your data --------------------------------------------------------------------------------------------------------
 
 
@@ -185,6 +221,24 @@ def test_the_data_page_lists_only_what_the_bot_stores_about_you(member: TestClie
     assert "mine" in rows
     assert "theirs" not in rows
     assert "9 Oct 2026, 09:00" in rows  # 07:00 UTC, in Amsterdam
+
+
+def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestClient, bind: Engine) -> None:
+    with Session(bind) as session:
+        for name, status in (("open", TournamentStatus.SIGNUP), ("started", TournamentStatus.RUNNING)):
+            tournament = Tournament(guild_id=1, channel_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2)
+            session.add(tournament)
+            session.commit()
+            tournaments.create_team(session, tournament, Snowflake(MEMBER_ID), f"{name} team")
+            tournament.status = status
+            session.commit()
+
+    page = member.get("/me").text
+    rows = member.get(f"/me/records/{TournamentTeam.__table__.name}", headers=HTMX).text
+
+    assert "Tournament team" in page
+    assert "open team" in rows
+    assert "started team" not in rows  # leaving a started tournament doesn't disband the team
 
 
 def test_a_record_that_does_not_exist_is_not_found(member: TestClient) -> None:
@@ -306,12 +360,107 @@ def test_you_can_only_delete_your_own_reminders(member: TestClient, bind: Engine
         (ReminderDraft(content="  ", day="2026-10-09"), "Write what to remind you of"),
         (ReminderDraft(content="x" * 5000, day="2026-10-09"), "Keep your reminder under"),
         (ReminderDraft(content="x", day="not a day"), "Pick a date and a time"),
-        (ReminderDraft(content="x", day="2026-10-09", repeat=Repeat.EVERY_DAYS, every_days="0"), "Repeat every 1 to"),
+        (ReminderDraft(content="x", day="2026-10-09", repeat=Repeat.EVERY_DAYS, every_days="0"), "Pick a repeat between"),
+        (ReminderDraft(content="x", day="2026-10-09", repeat=Repeat.EVERY_DAYS, every_days="9" * 30), "Pick a repeat between"),
     ],
 )
 def test_a_draft_that_cannot_be_a_reminder_says_why(draft: ReminderDraft, why: str) -> None:
-    with pytest.raises(InvalidReminderError, match=why):
-        draft.reminder(MEMBER_ID, ZoneInfo(ZONE), NOW)
+    refused = draft.reminder(Snowflake(MEMBER_ID), ZoneInfo(ZONE), NOW)
+
+    assert isinstance(refused, Refused)
+    assert refused.message.startswith(why)
+
+
+TOMORROW_9_LOCAL = {"day": "2026-10-09", "at": "09:00"}
+"""On the form: 07:00 UTC tomorrow, 19 hours after :data:`NOW`."""
+
+
+@pytest.mark.parametrize(
+    ("content", "form_time", "command_time", "refusal"),
+    [
+        ("Water the plants", TOMORROW_9_LOCAL, {"hours": 19}, None),
+        ("   ", TOMORROW_9_LOCAL, {"hours": 19}, "Write what to remind you of."),
+        ("x" * 1001, TOMORROW_9_LOCAL, {"hours": 19}, "Keep your reminder under 1000 characters."),
+        ("Too late", {"day": "2026-10-08", "at": "09:00"}, {"minutes": 0}, "Pick a time between now and 3650 days from now."),
+        ("Too far", {"day": "2037-01-01", "at": "09:00"}, {"days": 4000}, "Pick a time between now and 3650 days from now."),
+    ],
+)
+async def test_the_dashboard_and_the_reminder_command_accept_and_refuse_the_same_reminders(  # noqa: PLR0913 - one input per entry point
+    member: TestClient,
+    bind: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+    monkeypatch: pytest.MonkeyPatch,
+    content: str,
+    form_time: dict[str, str],
+    command_time: dict[str, int],
+    refusal: str | None,
+) -> None:
+    monkeypatch.setattr(reminder_cog, "utc_now", lambda: NOW)
+    bot_engine = sqlite_engine()
+    cog = detached_cog(Reminders, engine=bot_engine, client=discord_client)
+
+    response = member.post("/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX)
+    options = [InteractionDataOption(name="reminder", type=3, value=content)]
+    options += [InteractionDataOption(name=unit, type=4, value=amount) for unit, amount in command_time.items()]
+    await Reminders.add.invoke(cog, make_interaction("reminder"), options)
+
+    stored = []
+    for engine in (bind, bot_engine):
+        with Session(engine) as session:
+            stored.append([(row.content, row.timestamp.astimezone(UTC)) for row in session.exec(alive(Reminder))])
+    if refusal is None:
+        assert stored[0] == stored[1] == [(content, NOW + timedelta(hours=19))]
+    else:
+        error = re.search(r'role="alert">([^<]*)<', response.text)
+        assert error is not None
+        assert html.unescape(error.group(1)) == discord_client.interaction_responses()[-1]["data"]["content"] == refusal
+        assert stored == [[], []]
+
+
+WITHOUT_COGS = """
+import sys
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
+
+from sqlmodel import Session
+from wd_db.testing import sqlite_engine
+from wd_discord.snowflake import Snowflake
+
+from winter_dragon.web import pages, reminders
+from winter_dragon.web.records import create_dashboard_tables
+
+now, member = datetime(2026, 10, 8, 12, tzinfo=UTC), Snowflake(42)
+bind = sqlite_engine()
+create_dashboard_tables(bind)
+reminder = reminders.ReminderDraft(content="Water the plants", day="2026-10-09").reminder(member, ZoneInfo("UTC"), now)
+with Session(bind) as session:
+    session.add(reminder)
+    session.commit()
+print(pages.signposts(bind, member))
+print(len(list(reminders.reminder_days(bind, member, ZoneInfo("UTC"), now))))
+print(pages.hide_member_data(bind, member, now))
+print(sorted(name for name in sys.modules if name.startswith("winter_dragon.cogs")))
+"""
+
+
+def test_reminders_and_deletion_work_with_only_the_domain_modules_imported() -> None:
+    """The dashboard adds, lists and counts reminders and hides a member's data without the cogs' Discord adapters.
+
+    Runs in a fresh interpreter, so no other test has imported a cog already.
+    """
+    proc = subprocess.run(  # noqa: S603
+        [sys.executable, "-I", "-c", textwrap.dedent(WITHOUT_COGS)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    signposts, days, hidden, loaded = proc.stdout.splitlines()
+    assert (signposts, days, hidden) == ("Signposts(reminders='1 reminder', records='1 entry')", "1", "True")
+    assert "winter_dragon.cogs.reminder.cog" not in loaded
+    assert "winter_dragon.cogs.privacy.cog" not in loaded
 
 
 def _refuel(days_ago: int, distance: float, amount: float, user_id: int = MEMBER_ID) -> CarFuels:

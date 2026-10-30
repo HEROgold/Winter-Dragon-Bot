@@ -1,8 +1,7 @@
 """Constants used across the bot."""
 
+lazy from wd_discord.intents import Intents
 lazy from wd_discord.permissions import Permissions
-
-lazy from wd_core.intents import Intents
 
 
 intents = Intents.none() | sum(

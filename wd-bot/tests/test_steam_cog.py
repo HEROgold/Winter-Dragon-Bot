@@ -108,6 +108,12 @@ def _replies(client: RecordingClient) -> list[dict[str, object]]:
     return [response["data"] for response in client.interaction_responses()]
 
 
+def _confirmed(client: RecordingClient) -> str:
+    """Return the description of the confirmation embed of the last response ``client`` sent."""
+    (embed,) = _replies(client)[-1]["embeds"]
+    return embed["description"]
+
+
 def _seed(engine: Engine, *sales: ScrapedSale, now: datetime = NOW) -> None:
     with Session(engine) as session:
         for sale in sales:
@@ -140,7 +146,7 @@ async def test_add_subscribes_once(
     assert user.id == ASKER_ID
     assert user.sale_threshold == SteamSettings.default_threshold
     first, second = _replies(discord_client)
-    assert "</steam show:42>" in str(first["content"])
+    assert "</steam show:42>" in first["embeds"][0]["description"]
     assert second == {"content": "Already in the list of recipients", "flags": 64}
 
 
@@ -156,7 +162,7 @@ async def test_percentage_updates_the_threshold(
 
     with Session(engine) as session:
         assert session.exec(alive(SteamUsers)).one().sale_threshold == 75
-    assert _replies(discord_client)[-1]["content"] == "Changed your sale notification threshold to 75%."
+    assert _confirmed(discord_client) == "Changed your sale notification threshold to 75%."
 
 
 async def test_a_returning_subscriber_is_restored_with_the_new_threshold(
@@ -173,17 +179,7 @@ async def test_a_returning_subscriber_is_restored_with_the_new_threshold(
     with Session(engine) as session:
         (user,) = session.exec(alive(SteamUsers)).all()
     assert (user.id, user.sale_threshold) == (ASKER_ID, 75)
-    assert str(_replies(discord_client)[-1]["content"]).startswith("Changed your sale notification threshold to 75%.")
-
-
-async def test_percentage_rejects_values_outside_0_to_100(
-    engine: Engine,
-    make_interaction: InteractionFactory,
-    discord_client: RecordingClient,
-) -> None:
-    cog, _client = _cog(engine)
-    await SteamSales.percentage.invoke(cog, make_interaction("steam"), _percent(150))
-    assert "between 0 and 100" in str(_replies(discord_client)[-1]["content"])
+    assert _confirmed(discord_client).startswith("Changed your sale notification threshold to 75%.")
 
 
 async def test_remove_unsubscribes(
@@ -198,7 +194,7 @@ async def test_remove_unsubscribes(
 
     with Session(engine) as session:
         assert session.exec(alive(SteamUsers)).all() == []
-    assert _replies(discord_client)[-1]["content"] == "I will no longer notify you of new steam games."
+    assert _confirmed(discord_client) == "I will no longer notify you of new steam games."
 
 
 async def test_show_without_sales_replies_ephemerally(

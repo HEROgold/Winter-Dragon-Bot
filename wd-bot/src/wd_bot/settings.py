@@ -1,14 +1,10 @@
 """wd-bot's settings, backed by their own bot.ini file (operator and internal settings together)."""
 
-lazy from pathlib import Path
-
 lazy from confkit.data_types import List
 lazy from wd_config import Config
+lazy from wd_config.constants import BOT_CONFIG_FILE
 lazy from wd_config.parser import REQUIRED
 lazy from wd_core.constants import BOT_PERMISSIONS, intents
-
-
-BOT_CONFIG_FILE = Path("bot.ini")
 
 
 class BotConfig[T](Config[T]):

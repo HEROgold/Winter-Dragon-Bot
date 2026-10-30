@@ -8,15 +8,17 @@ lazy from typing import TYPE_CHECKING, ClassVar, Self, override
 
 lazy from herogold.log import LoggerMixin
 lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
-lazy from wd_discord.components import MAX_CUSTOM_ID_LENGTH
-lazy from wd_errors import Refused
+lazy from wd_discord.limits import MAX_CUSTOM_ID_LENGTH
 
-lazy from wd_bot.checks import answer_refusal, require_guild
+lazy from wd_bot.checks import require_guild
 lazy from wd_bot.commands import wants_guild_interaction
+lazy from wd_bot.guard import dispatch_guard
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Awaitable, Callable, Sequence
+
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from wd_bot.cogs import Cog
 
@@ -46,7 +48,7 @@ class CustomIdHandler[I: ComponentInteraction | ModalSubmitInteraction](LoggerMi
         self.wants_guild = wants_guild_interaction(func)
         """Whether the handler's ``interaction`` is annotated as a guild interaction; its cog must then be guild-only."""
 
-    def custom_id(self, *args: str | int) -> str:
+    def custom_id(self, *args: str | int | Snowflake) -> str:
         """Build a ``custom_id`` routed to this handler, carrying ``args``.
 
         Raises :class:`ValueError` if an arg contains the separator or the result exceeds Discord's 100 characters.
@@ -70,16 +72,12 @@ class CustomIdHandler[I: ComponentInteraction | ModalSubmitInteraction](LoggerMi
         return interaction
 
     async def invoke(self, cog: Cog, interaction: I, args: Sequence[str]) -> bool:
-        """Call the handler; return ``False`` if it raised (the exception is logged)."""
-        try:
+        """Call the handler through :data:`~wd_bot.guard.dispatch_guard`; return ``False`` if it raised."""
+
+        async def call() -> None:
             await self.func(cog, self._prepare(cog, interaction), *args)
-        except Refused as refused:
-            self.logger.debug(t"{self.kind.capitalize()} '{self.prefix}' refused: {refused.message} ({refused.cause})")
-            await answer_refusal(interaction, refused)
-        except Exception:
-            self.logger.exception(t"Unhandled exception in {self.kind} handler '{self.prefix}' (interaction {interaction.id})")
-            return False
-        return True
+
+        return await dispatch_guard.run(f"{self.kind} '{self.prefix}'", call, interaction)
 
 
 class ComponentHandler(CustomIdHandler[ComponentInteraction]):

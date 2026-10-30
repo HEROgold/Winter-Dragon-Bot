@@ -236,7 +236,7 @@ async def test_a_refused_guess_changes_nothing(
     assert response["data"]["flags"] == 64
     assert "Use letters only" in response["data"]["content"]
     with Session(engine) as session:
-        assert session.get(HangmanGame, game_id).letters == ""  # pyright: ignore[reportOptionalMemberAccess]
+        assert session.get(HangmanGame, game_id).letters == ""
 
 
 async def test_the_final_guess_ends_the_game_and_removes_the_button(
@@ -254,7 +254,7 @@ async def test_the_final_guess_ends_the_game_and_removes_the_button(
     assert "**You won!**" in data["content"]
     assert data["components"] == []
     with Session(engine) as session:
-        assert session.get(HangmanGame, game_id).status is HangmanStatus.WON  # pyright: ignore[reportOptionalMemberAccess]
+        assert session.get(HangmanGame, game_id).status is HangmanStatus.WON
 
 
 async def test_games_in_one_channel_do_not_interfere(

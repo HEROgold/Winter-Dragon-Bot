@@ -25,6 +25,8 @@ lazy from winter_dragon.web.responses import database, is_htmx
 if TYPE_CHECKING:
     lazy from datetime import datetime
 
+    lazy from wd_discord.snowflake import Snowflake
+
 
 TEMPLATE = "profile/incremental.html"
 FRAGMENT = "profile/_incremental_game.html"
@@ -115,7 +117,7 @@ def snapshot_of(view: game.SaveView) -> Snapshot:
     )
 
 
-def snapshot(bind: Engine, member_id: int, *, now: datetime | None = None) -> Snapshot | None:
+def snapshot(bind: Engine, member_id: Snowflake, *, now: datetime | None = None) -> Snapshot | None:
     """Return the member's save as of ``now``, or ``None`` when they haven't started one; this never creates a save."""
     with Session(bind) as session:
         view = game.find_save(session, member_id, now=now)

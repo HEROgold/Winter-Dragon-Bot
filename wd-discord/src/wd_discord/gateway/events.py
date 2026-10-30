@@ -31,10 +31,12 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Annotated, Literal
 lazy from enum import StrEnum
+lazy from functools import cache
 lazy from typing import Self, cast
 
 lazy from pydantic import Field, ModelWrapValidatorHandler, model_validator
 
+from wd_discord.authenticate import URL, Token
 from wd_discord.components import ComponentType
 from wd_discord.embed import Embed
 from wd_discord.gateway.presence import Presence
@@ -86,7 +88,7 @@ class Ready(DiscordModel):
     guilds: list[UnavailableGuild] = Field(default_factory=list[UnavailableGuild])
     """The bot's guilds; each one arrives in full later as a GUILD_CREATE."""
     session_id: str
-    resume_gateway_url: str
+    resume_gateway_url: URL
     shard: tuple[int, int] | None = None
     application_id: str | None = None
 
@@ -98,7 +100,7 @@ class GuildCreate(Guild):
     ``guild_scheduled_events`` and ``soundboard_sounds`` are kept as plain objects until they get models.
     """
 
-    joined_at: str | None = None
+    joined_at: datetime | None = None
     large: bool | None = None
     unavailable: bool | None = None
     member_count: int | None = None
@@ -476,8 +478,8 @@ class Message(DiscordModel):
     guild_id: Snowflake | None = None
     author: User
     content: str
-    timestamp: str
-    edited_timestamp: str | None = None
+    timestamp: datetime
+    edited_timestamp: datetime | None = None
     tts: bool
     mention_everyone: bool
     mentions: list[MentionedUser] = Field(default_factory=list)
@@ -508,7 +510,8 @@ class Interaction(DiscordModel):
     """The invoking member, when invoked in a guild."""
     user: User | None = None
     """The invoking user, when invoked in a DM."""
-    token: str
+    token: Token
+    """The continuation token for responding to this interaction; valid for 15 minutes."""
     version: int
     app_permissions: PermissionsField | None = None
     """Permissions the app has where the interaction was sent, including overwrites."""
@@ -711,6 +714,16 @@ class EventName(StrEnum):
         member.model = model
         return member
 
+    @classmethod
+    def of(cls, model: DiscordModel) -> EventName | None:
+        """Return the event a parsed dispatch ``model`` came from, or ``None`` if it isn't an event's model.
+
+        A subclass of an event's model (each interaction type under :class:`Interaction`) names that event too.
+        Everything keyed by event - the entity binders, the state cache's handlers - looks its event up here.
+        """
+        by_model = _events_by_model()
+        return next((by_model[base] for base in type(model).__mro__ if base in by_model), None)
+
     READY = ("READY", Ready)
     MESSAGE_CREATE = ("MESSAGE_CREATE", Message)
     GUILD_CREATE = ("GUILD_CREATE", GuildCreate)
@@ -806,3 +819,9 @@ class EventName(StrEnum):
     VOICE_SERVER_UPDATE = "VOICE_SERVER_UPDATE"
 
     WEBHOOKS_UPDATE = "WEBHOOKS_UPDATE"
+
+
+@cache
+def _events_by_model() -> Mapping[type[DiscordModel], EventName]:
+    """Return the event of each model an :class:`EventName` member carries."""
+    return {event.model: event for event in EventName if event.model is not None}

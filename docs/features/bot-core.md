@@ -10,7 +10,7 @@ Audience: maintainers and the bot developer. Most of this is invisible to ordina
 
 Extensions are found by walking the extensions package rather than being listed by hand. Each cog declares whether it should load automatically (`auto_load=True`); anything prefixed with `_` is skipped. Cogs that need setup work expose a load hook the bot calls after construction, so an extension can be a plain class with no boilerplate `setup()` function.
 
-**Status:** ✅ Ported — `wd-bot/src/wd_bot/bot.py`, `cogs.py`, `extension_manager.py`.
+**Status:** ✅ Ported — `wd-bot/src/wd_bot/bot.py`, `cogs.py`, `extensions.py`.
 **Source on `main`:** `src/winter_dragon/bot/core/bot.py`, `core/cogs.py`, `core/extension_manager.py`, `extensions/__init__.py`
 
 ## Hot reload
@@ -42,7 +42,7 @@ In v2 this becomes a whitelist/blacklist per guild that changes where commands a
 
 When a command cannot run because the bot or the invoking user lacks something, the bot reports *what* is missing — permissions, roles, or channel overwrites — rather than failing opaquely.
 
-**Status:** ✅ Ported — `wd-bot/src/wd_bot/permissions.py`.
+**Status:** ✅ Ported. `@Cog.command(..., requires=...)` and `require_permissions` in `wd-bot/src/wd_bot/checks.py` refuse with the missing permission names.
 **Source on `main`:** `src/winter_dragon/bot/core/permissions.py`
 
 ## Error handling
@@ -61,16 +61,16 @@ Settings are declared as typed descriptors on the classes that use them, backed 
 
 ## Scheduled tasks
 
-`main` wraps discord.py's task loops to add logging and error reporting. The v2 bot has no task framework of its own: a cog that works in the background starts a plain asyncio task in `load()`, cancels it in `unload()`, and catches and logs failures inside its loop so one failed run doesn't stop it (see the Steam and reminder cogs).
+`main` wraps discord.py's task loops to add logging and error reporting. The v2 bot does the same with wd-bot's periodic tasks: a cog tags an async tick with `@Cog.periodic(seconds=...)`, and the bot starts it when the cog loads and cancels and awaits it when the cog unloads, so a reload never leaves a second loop running. A tick that raises is logged and the next one runs as usual; a tick may return the seconds to wait before the next one (see the Steam and reminder cogs).
 
-**Status:** ✅ Replaced by plain asyncio tasks per cog; the discord.py-based `tasks.py`/`routines.py` were removed.
+**Status:** ✅ Replaced by wd-bot periodic tasks (`wd-bot/src/wd_bot/periodic.py`); the discord.py-based `tasks.py`/`routines.py` were removed.
 **Source on `main`:** `src/winter_dragon/bot/core/tasks.py`
 
 ## Telemetry
 
 Sentry integration is environment-aware (development vs production) and captures unhandled errors from both the event loop and command execution.
 
-**Status:** ✅ Ported — `wd-core/src/wd_core/sentry.py`, `wd-config/src/wd_config/sentry.py`.
+**Status:** ✅ Ported — `wd-discord/src/wd_discord/sentry.py`, `wd-config/src/wd_config/sentry.py`.
 **Source on `main`:** `src/winter_dragon/bot/core/sentry.py`
 
 ---

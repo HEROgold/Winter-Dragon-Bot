@@ -4,7 +4,7 @@ import asyncio
 from typing import TYPE_CHECKING, cast
 
 from sqlmodel import Session, select
-from wd_core.intents import Intents
+from wd_discord.intents import Intents
 
 from archive import models as db
 from archive.gateway import ArchiveGateway

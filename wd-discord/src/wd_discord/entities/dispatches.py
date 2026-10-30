@@ -41,11 +41,9 @@ lazy from wd_discord.gateway.events import VoiceChannelStatusUpdate as VoiceChan
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from wd_discord.client import Client
     from wd_discord.partial_emoji import PartialEmoji
     from wd_discord.permissions import ChannelType
     from wd_discord.resources.guild import GuildMember
-    from wd_discord.snowflake import Snowflake
 
 
 class GuildDelete(Entity[GuildDeleteModel]):
@@ -73,8 +71,7 @@ class ChannelPinsUpdate(Entity[ChannelPinsUpdateModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def last_pin_timestamp(self) -> datetime | None:
@@ -112,8 +109,7 @@ class ThreadDelete(Entity[ThreadDeleteModel]):
     @property
     def parent(self) -> PartialChannel | None:
         """The channel the thread was in."""
-        parent_id = self.model.parent_id
-        return None if parent_id is None else PartialChannel(self.client, parent_id)
+        return self._partial(PartialChannel, self.model.parent_id)
 
     @property
     def type(self) -> ChannelType:
@@ -305,7 +301,7 @@ class MessageDelete(Entity[MessageDeleteModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
 
 class MessageDeleteBulk(Entity[MessageDeleteBulkModel]):
@@ -325,7 +321,7 @@ class MessageDeleteBulk(Entity[MessageDeleteBulkModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
 
 class ReactionAdd(Entity[MessageReactionAddModel]):
@@ -350,8 +346,7 @@ class ReactionAdd(Entity[MessageReactionAddModel]):
     @property
     def message_author(self) -> PartialUser | None:
         """Who sent the message reacted to, when Discord says."""
-        author_id = self.model.message_author_id
-        return None if author_id is None else PartialUser(self.client, author_id)
+        return self._partial(PartialUser, self.model.message_author_id)
 
     @property
     def channel(self) -> PartialChannel:
@@ -361,7 +356,7 @@ class ReactionAdd(Entity[MessageReactionAddModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def emoji(self) -> PartialEmoji:
@@ -395,7 +390,7 @@ class ReactionRemove(Entity[MessageReactionRemoveModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def emoji(self) -> PartialEmoji:
@@ -424,7 +419,7 @@ class ReactionRemoveAll(Entity[MessageReactionRemoveAllModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
 
 class ReactionRemoveEmoji(Entity[MessageReactionRemoveEmojiModel]):
@@ -443,7 +438,7 @@ class ReactionRemoveEmoji(Entity[MessageReactionRemoveEmojiModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def emoji(self) -> PartialEmoji:
@@ -473,7 +468,7 @@ class TypingStart(Entity[TypingStartModel]):
     @property
     def guild(self) -> PartialGuild | None:
         """The channel's guild; ``None`` for a DM."""
-        return _guild(self.client, self.model.guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def started_at(self) -> datetime:
@@ -509,8 +504,3 @@ class GuildStickersUpdate(Entity[GuildStickersUpdateModel]):
         """Every sticker the guild has now."""
         for sticker in self.model.stickers:
             yield Sticker(self.client, sticker)
-
-
-def _guild(client: Client, guild_id: Snowflake | None) -> PartialGuild | None:
-    """Return the guild ``guild_id`` names, or ``None`` for a DM."""
-    return None if guild_id is None else PartialGuild(client, guild_id)

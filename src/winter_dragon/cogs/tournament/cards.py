@@ -4,8 +4,16 @@ lazy from enum import StrEnum
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.components import MAX_ACTION_ROW_BUTTONS, ActionRow, Button, ButtonStyle
-lazy from wd_discord.embed import MAX_EMBED_DESCRIPTION_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH, Embed, EmbedField
+lazy from wd_discord.components import ActionRow, Button, ButtonStyle
+lazy from wd_discord.embed import Embed, EmbedField
+lazy from wd_discord.limits import (
+    MAX_ACTION_ROW_BUTTONS,
+    MAX_BUTTON_LABEL_LENGTH,
+    MAX_EMBED_DESCRIPTION_LENGTH,
+    MAX_EMBED_FIELD_VALUE_LENGTH,
+    MAX_EMBED_FIELDS,
+    truncate,
+)
 
 lazy from .bracket import round_name, tally
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
@@ -45,7 +53,7 @@ class MatchAction(StrEnum):
 def mentions(user_ids: Sequence[int]) -> str:
     """Return the users as mentions, or a dash for nobody; cut to fit an embed field."""
     text = ", ".join(f"<@{user_id}>" for user_id in user_ids) or "—"
-    return text if len(text) <= MAX_EMBED_FIELD_VALUE_LENGTH else text[: MAX_EMBED_FIELD_VALUE_LENGTH - 1] + "…"
+    return truncate(text, MAX_EMBED_FIELD_VALUE_LENGTH)
 
 
 def signup_embed(
@@ -68,7 +76,7 @@ def signup_embed(
             f"Captains register a team of up to {tournament.team_size} players with {team_create}, "
             f"then add their teammates with {team_add}."
         )
-        fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:25]
+        fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:MAX_EMBED_FIELDS]
     status = "open" if tournament.status is TournamentStatus.SIGNUP else tournament.status.value
     return Embed(title=f"🏆 {tournament.name}", description=f"{how}\nSign-up is {status}.", fields=fields)
 
@@ -108,9 +116,7 @@ def participants_embed(
             f"**{name}** ({len(players)}/{tournament.team_size}): {', '.join(f'<@{user_id}>' for user_id in players) or '—'}"
             for name, players in rosters.items()
         ]
-    text = "\n".join(lines) or "Nobody has signed up yet."
-    if len(text) > MAX_EMBED_DESCRIPTION_LENGTH:
-        text = text[: MAX_EMBED_DESCRIPTION_LENGTH - 1] + "…"
+    text = truncate("\n".join(lines) or "Nobody has signed up yet.", MAX_EMBED_DESCRIPTION_LENGTH)
     return Embed(title=f"🏆 {tournament.name}: {count} participant{'' if count == 1 else 's'}", description=text)
 
 
@@ -135,9 +141,10 @@ def bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], na
     fields = [
         EmbedField(
             name=round_name(round_, rounds),
-            value="\n".join(match_line(match, names) for match in matches if match.round == round_)[
-                :MAX_EMBED_FIELD_VALUE_LENGTH
-            ],
+            value=truncate(
+                "\n".join(match_line(match, names) for match in matches if match.round == round_),
+                MAX_EMBED_FIELD_VALUE_LENGTH,
+            ),
         )
         for round_ in range(rounds)
     ]
@@ -162,7 +169,9 @@ def match_embed(
         bans = ", ".join(draft.value for draft in own if draft.kind is DraftKind.BAN) or "—"
         picks = ", ".join(draft.value for draft in own if draft.kind is DraftKind.PICK) or "—"
         value = f"{mentions(rosters.get(team_id, []))}\nBans: {bans}\nPicks: {picks}"
-        fields.append(EmbedField(name=names.get(team_id, "?"), value=value[:MAX_EMBED_FIELD_VALUE_LENGTH], inline=True))
+        fields.append(
+            EmbedField(name=names.get(team_id, "?"), value=truncate(value, MAX_EMBED_FIELD_VALUE_LENGTH), inline=True),
+        )
     title = f"Match #{match.id} — {round_name(match.round, rounds)}"
     description = PHASE_LABELS[match.phase]
     if match.phase.decided and match.winner_id is not None:
@@ -204,7 +213,7 @@ def _team_buttons(
         components=[
             Button(
                 style=style,
-                label=f"{names.get(team, '?')} {verb}"[:80],
+                label=f"{names.get(team, '?')} {verb}"[:MAX_BUTTON_LABEL_LENGTH],
                 custom_id=handler.custom_id(match_id, action, team),
             )
             for team in teams

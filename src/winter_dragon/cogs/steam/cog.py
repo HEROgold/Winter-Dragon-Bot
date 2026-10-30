@@ -1,14 +1,15 @@
 """The /steam command group, its page buttons, and the background scrape of Steam's specials."""
 
 from typing import Annotated
-lazy import asyncio
 lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
-from wd_bot.commands import Describe
+from wd_bot.commands import Describe, Range
 lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete
+lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete, upsert
+lazy from wd_discord.snowflake import Snowflake
+lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.steam.models import STEAM_TABLES, SteamUsers
@@ -18,6 +19,7 @@ lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure, S
 lazy from winter_dragon.cogs.steam.settings import SteamSettings
 lazy from winter_dragon.cogs.steam.store import SteamSaleStore
 lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
+lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 
 if TYPE_CHECKING:
@@ -26,9 +28,6 @@ if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction, ComponentInteraction
 
     lazy from winter_dragon.cogs.steam.models import SteamSale
-
-
-MAX_PERCENT = 100
 
 
 def next_scrape_time(now: datetime, interval: timedelta) -> datetime:
@@ -58,7 +57,8 @@ def sale_queries(percent: int, complete_percent: int, top_sellers: int) -> Gener
 class SteamSales(GroupCog, name="steam", description="Get notified about free and discounted Steam games"):
     """Lists Steam sales on request and DMs subscribers new ones, re-checking sales right after they end."""
 
-    _task: asyncio.Task[None] | None = None
+    _next_scrape: datetime | None = None
+    """When to scrape next; ``None`` until the first scrape, which runs as soon as the cog loads."""
     _throttle: RequestThrottle | None = None
 
     @property
@@ -78,35 +78,27 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
 
     @override
     async def load(self) -> None:
-        """Create the Steam tables if missing, then start the background scrape loop."""
+        """Create the Steam tables if missing; the bot then starts :meth:`scrape_and_recheck`."""
         self.create_tables(*STEAM_TABLES)
-        self._task = self.bot.loop.create_task(self._run())
 
-    @override
-    async def unload(self) -> None:
-        """Stop the background scrape loop."""
-        if self._task is not None:
-            self._task.cancel()
-            self._task = None
-        await super().unload()
+    @Cog.periodic(seconds=lambda: SteamSettings.min_sleep)
+    async def scrape_and_recheck(self) -> float:
+        """Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
 
-    async def _run(self) -> None:
-        """Scrape on load, then on :func:`next_scrape_time`, and re-check sales just after they end, forever."""
-        next_scrape = utc_now()
-        while True:
-            now = utc_now()
-            if now >= next_scrape:
-                await self._guarded(self.scrape(now))
-                next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
-                self.logger.info(t"Next Steam scrape at {next_scrape:%Y-%m-%d %H:%M} UTC")
-            await self._guarded(self.recheck_due(utc_now()))
-            with Session(self.bind) as session:
-                next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
-            wake = min(next_scrape, next_recheck) if next_recheck is not None else next_scrape
-            await asyncio.sleep(max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds()))
+        Scrapes on load, then on :func:`next_scrape_time`.
+        """
+        if self._next_scrape is None or utc_now() >= self._next_scrape:
+            await self._guarded(self.scrape(utc_now()))
+            self._next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
+            self.logger.info(t"Next Steam scrape at {self._next_scrape:%Y-%m-%d %H:%M} UTC")
+        await self._guarded(self.recheck_due(utc_now()))
+        with Session(self.bind) as session:
+            next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
+        wake = self._next_scrape if next_recheck is None else min(self._next_scrape, next_recheck)
+        return max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds())
 
     async def _guarded(self, work: Coroutine[object, object, None]) -> None:
-        """Run ``work``, logging instead of raising, so one failed run never stops the loop."""
+        """Run ``work``, logging instead of raising, so a failed scrape doesn't skip the re-check after it."""
         try:
             await work
         except Exception:
@@ -177,76 +169,71 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
             f"Use {self.mention(self.show)} to see every current sale."
         )
 
-    @Cog.command(name="add", description="Get notified automatically about free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="add", description="Get notified automatically about free steam games")
     async def add(self, interaction: CommandInteraction) -> None:
         """Subscribe the invoking user to Steam sale DMs."""
         user = interaction.user
         if user is None:
             return
         with Session(self.bind) as session:
-            if SteamSaleStore(session).subscriber(int(user.id)) is not None:
-                await interaction.respond(
-                    content="Already in the list of recipients",
-                    ephemeral=True,
-                )
-                return
+            if SteamSaleStore(session).subscriber(user.id) is not None:
+                msg = "Already in the list of recipients"
+                raise Refused(msg)
             create_or_restore(
                 session,
                 SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=SteamSettings.default_threshold),
             )
             session.commit()
-        await interaction.respond(
-            content=f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales.",
-            ephemeral=True,
-        )
+        subscribed = f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales."
+        await interaction.respond(embeds=[CreatedEmbed(description=subscribed)], ephemeral=True)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="percentage",
         description="Get notified of steam games on sale for the given percentage or higher",
     )
     async def percentage(
         self,
         interaction: CommandInteraction,
-        percent: Annotated[int, Describe("The minimum percentage the discount has to be before getting notified")],
+        percent: Annotated[
+            int,
+            Describe("The minimum percentage the discount has to be before getting notified"),
+            Range(min_value=0, max_value=100),
+        ],
     ) -> None:
         """Set the minimum discount the invoking user is notified about, subscribing them when they aren't."""
         user = interaction.user
         if user is None:
             return
-        if not 0 <= percent <= MAX_PERCENT:
-            await interaction.respond(
-                content=f"The percentage must be between 0 and {MAX_PERCENT}.",
-                ephemeral=True,
-            )
-            return
         with Session(self.bind) as session:
-            subscriber = SteamSaleStore(session).subscriber(int(user.id))
-            if subscriber is None:
-                create_or_restore(session, SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent))
-            else:
-                subscriber.sale_threshold = percent
-                session.add(subscriber)
+            subscriber = SteamSaleStore(session).subscriber(user.id)
+
+            def set_threshold(subscription: SteamUsers) -> None:
+                subscription.sale_threshold = percent
+
+            upsert(session, SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent), set_threshold)
             session.commit()
         content = f"Changed your sale notification threshold to {percent}%."
         if subscriber is None:
             content += f"\nI will notify you of new steam games! Use {self.mention(self.remove)} to stop."
-        await interaction.respond(content=content, ephemeral=True)
+        await interaction.respond(embeds=[ChangedEmbed(description=content)], ephemeral=True)
 
-    @Cog.command(name="remove", description="No longer get notified of free steam games")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="remove", description="No longer get notified of free steam games")
     async def remove(self, interaction: CommandInteraction) -> None:
         """Unsubscribe the invoking user from Steam sale DMs."""
         user = interaction.user
         if user is None:
             return
         with Session(self.bind) as session:
-            subscriber = SteamSaleStore(session).subscriber(int(user.id))
-            if subscriber is not None:
-                soft_delete(session, subscriber)
-                session.commit()
-        content = "Not in the list of recipients" if subscriber is None else "I will no longer notify you of new steam games."
-        await interaction.respond(content=content, ephemeral=True)
+            subscriber = SteamSaleStore(session).subscriber(user.id)
+            if subscriber is None:
+                msg = "Not in the list of recipients"
+                raise Refused(msg)
+            soft_delete(session, subscriber)
+            session.commit()
+        unsubscribed = "I will no longer notify you of new steam games."
+        await interaction.respond(embeds=[DeletedEmbed(description=unsubscribed)], ephemeral=True)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="show",
         description="Get a list of steam games that are on sale for the given percentage or higher",
     )
@@ -275,27 +262,27 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 return
             await interaction.defer()
             embed = build_page(sales, store.properties(sales), page=0, color=SteamSettings.embed_color)
-        buttons = page_buttons(self.show_page, owner_id=int(user.id), percent=percent, page=0, pages=page_count(len(sales)))
+        buttons = page_buttons(self.show_page, owner_id=user.id, percent=percent, page=0, pages=page_count(len(sales)))
         await interaction.edit_original(embeds=[embed], components=buttons)
 
-    @Cog.component("steam-show")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.component("steam-show")
     async def show_page(self, interaction: ComponentInteraction, owner_id: str, percent: str, page: str) -> None:
         """Turn a /steam show listing to ``page``; only the user who ran the command may."""
         user = interaction.user
         if user is None or str(user.id) != owner_id:
-            await interaction.respond(
-                content=(
-                    "Only the person who ran this command can page through it. "
-                    f"Use {self.mention(self.show)} for your own list."
-                ),
-                ephemeral=True,
-            )
-            return
+            msg = f"Only the person who ran this command can page through it. Use {self.mention(self.show)} for your own list."
+            raise Refused(msg)
         with Session(self.bind) as session:
             store = SteamSaleStore(session)
             sales = store.current_sales(int(percent), now=utc_now(), outdated_after=self._outdated_after)
             pages = page_count(len(sales))
             target = min(max(int(page), 0), pages - 1)
             embed = build_page(sales, store.properties(sales), page=target, color=SteamSettings.embed_color)
-        buttons = page_buttons(self.show_page, owner_id=int(owner_id), percent=int(percent), page=target, pages=pages)
+        buttons = page_buttons(
+            self.show_page,
+            owner_id=Snowflake.coerce(owner_id),
+            percent=int(percent),
+            page=target,
+            pages=pages,
+        )
         await interaction.update(embeds=[embed], components=buttons)

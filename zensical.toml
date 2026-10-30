@@ -37,21 +37,15 @@ nav = [
       { "wd_discord.entities" = "reference/wd-discord.entities.md" },
       { "wd_discord.resources" = "reference/wd-discord.resources.md" },
       { "wd_discord.gateway" = "reference/wd-discord.gateway.md" },
-      { "wd_discord.errors" = "reference/wd-discord.errors.md" },
-      { "wd_discord.utils" = "reference/wd-discord.utils.md" }
+      { "wd_discord.errors" = "reference/wd-discord.errors.md" }
     ] },
     { "wd_config" = "reference/wd-config.md" },
     { "wd_db" = [
       { "wd_db" = "reference/wd-db.md" },
       { "wd_db.extension" = "reference/wd-db.extension.md" },
-      { "wd_db.errors" = "reference/wd-db.errors.md" },
-      { "wd_db.extras" = "reference/wd-db.extras.md" }
+      { "wd_db.errors" = "reference/wd-db.errors.md" }
     ] },
-    { "wd_core" = [
-      { "wd_core" = "reference/wd-core.md" },
-      { "wd_core.command" = "reference/wd-core.command.md" },
-      { "wd_core.ui" = "reference/wd-core.ui.md" }
-    ] },
+    { "wd_core" = "reference/wd-core.md" },
     { "wd_errors" = [
       { "wd_errors" = "reference/wd-errors.md" },
       { "wd_errors.handlers" = "reference/wd-errors.handlers.md" }

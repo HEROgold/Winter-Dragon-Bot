@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 COG_SETTINGS = """
 from wd_config import OperatorFiles
-from winter_dragon.cogs.reminder import ReminderSettings
+from winter_dragon.cogs.reminder.domain import ReminderSettings
 from winter_dragon.cogs.stats import StatsSettings
 from winter_dragon.cogs.steam.settings import SteamSettings
 from winter_dragon.cogs.urban import UrbanSettings

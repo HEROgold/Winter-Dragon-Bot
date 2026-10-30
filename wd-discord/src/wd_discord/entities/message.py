@@ -18,6 +18,7 @@ lazy from wd_discord.responses import message_data
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
+    from datetime import datetime
     from string.templatelib import Template
 
     from wd_discord.audit import Reason
@@ -72,9 +73,12 @@ class BaseMessage(ClientBound):
     def _path(self) -> Template:
         return t"/channels/{self.channel_id}/messages/{self.id}"
 
-    async def fetch(self, *, cache: bool = False) -> Message | NetworkError:
-        """GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild."""
-        return self._entity(await self.client.get(self._path, cache=cache), MessageModel, Message)
+    async def fetch(self, *, reuse_response: bool = False) -> Message | NetworkError:
+        """GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild.
+
+        Doesn't write to the client's gateway :class:`~wd_discord.cache.StateCache`.
+        """
+        return self._entity(await self.client.get(self._path, reuse_response=reuse_response), MessageModel, Message)
 
     async def edit(
         self,
@@ -168,17 +172,16 @@ class Message(Entity[MessageModel], BaseMessage):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the message was sent in; ``None`` in a DM or when Discord left it out."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
-    def timestamp(self) -> str:
-        """When the message was sent, as an ISO 8601 timestamp."""
+    def timestamp(self) -> datetime:
+        """When the message was sent."""
         return self.model.timestamp
 
     @property
-    def edited_timestamp(self) -> str | None:
-        """When the message was last edited, as an ISO 8601 timestamp; ``None`` if never."""
+    def edited_timestamp(self) -> datetime | None:
+        """When the message was last edited; ``None`` if never."""
         return self.model.edited_timestamp
 
     @property

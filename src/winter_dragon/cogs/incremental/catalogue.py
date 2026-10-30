@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Self
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, ValidationError, model_validator
 from pydantic_core import core_schema
 lazy import tomllib
+lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_ACTION_ROWS
 
 
 if TYPE_CHECKING:
@@ -21,8 +22,8 @@ if TYPE_CHECKING:
 
 CATALOGUE_PATH = Path(__file__).with_name("catalogue.toml")
 """Where the catalogue lives in the repo."""
-MAX_GENERATORS = 24
-"""One Refresh button plus a Buy button per generator must fit Discord's 25 buttons on a message."""
+MAX_GENERATORS = MAX_ACTION_ROWS * MAX_ACTION_ROW_BUTTONS - 1
+"""One Refresh button plus a Buy button per generator must fit in a message's action rows of buttons."""
 
 
 class CatalogueError(Exception):

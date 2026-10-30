@@ -13,8 +13,9 @@ from winter_dragon.event_logger import EventLoggingGateway
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
-    from wd_core.intents import Intents
+    from wd_discord.authenticate import Token
     from wd_discord.gateway.connection import Disconnect, GatewayFrame
+    from wd_discord.intents import Intents
     from wd_discord.models import DiscordModel
 
     from archive.writer import Writer
@@ -28,7 +29,7 @@ class ArchiveGateway(EventLoggingGateway):
     is stored raw from its parsed form.
     """
 
-    def __init__(self, token: str, *, intents: Intents, writer: Writer) -> None:
+    def __init__(self, token: Token, *, intents: Intents, writer: Writer) -> None:
         """Connect with ``token`` and ``intents``, queueing writes on ``writer``."""
         super().__init__(token, intents=intents)
         self.writer = writer

@@ -3,7 +3,7 @@
 lazy from typing import TYPE_CHECKING, Annotated
 
 lazy import pytest
-lazy from wd_bot.commands import ChannelTypes, Command, Describe
+lazy from wd_bot.commands import ChannelTypes, Command, CommandDefinition, Describe, Length, Range
 lazy from wd_bot.testing import cog_command
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
@@ -48,7 +48,7 @@ def test_channel_option_limited_to_categories() -> None:
     ) -> None:
         """Handle."""
 
-    (option,) = cog_command(handler, name="cmd", description="d").options()
+    (option,) = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert option.type is ApplicationCommandOptionType.CHANNEL
     assert option.channel_types == [ChannelType.GUILD_CATEGORY]
     assert option.required is True
@@ -62,7 +62,7 @@ def test_optional_annotated_channel_option() -> None:
     ) -> None:
         """Handle."""
 
-    (option,) = cog_command(handler, name="cmd", description="d").options()
+    (option,) = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert (option.type, option.channel_types, option.required) == (
         ApplicationCommandOptionType.CHANNEL,
         [ChannelType.GUILD_VOICE],
@@ -79,7 +79,7 @@ def test_channel_types_on_a_non_channel_parameter_is_refused() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="ChannelTypes"):
-        cog_command(handler, name="cmd", description="d")
+        cog_command(handler, CommandDefinition("cmd", "d"))
 
 
 async def test_channel_option_resolves_to_a_bound_channel(make_interaction: InteractionFactory) -> None:
@@ -88,7 +88,7 @@ async def test_channel_option_resolves_to_a_bound_channel(make_interaction: Inte
     async def handler(self: object, interaction: CommandInteraction, target: Channel) -> None:  # noqa: ARG001
         received.append(target)
 
-    await _invoke(cog_command(handler, name="cmd", description="d"), make_interaction, 7, "9")
+    await _invoke(cog_command(handler, CommandDefinition("cmd", "d")), make_interaction, 7, "9")
     (channel,) = received
     assert isinstance(channel, Channel)
     assert (channel.name, channel.type) == ("Games", ChannelType.GUILD_CATEGORY)
@@ -107,7 +107,7 @@ async def test_a_channel_of_another_type_is_refused(
     ) -> None:
         received.append(target)
 
-    await _invoke(cog_command(handler, name="cmd", description="d"), make_interaction, 7, "9")
+    await _invoke(cog_command(handler, CommandDefinition("cmd", "d")), make_interaction, 7, "9")
     assert received == []
     assert discord_client.interaction_responses()[-1]["data"]["content"] == "Pick a voice channel for 'target'."
 
@@ -122,7 +122,7 @@ async def test_a_channel_of_an_allowed_type_is_passed_through(make_interaction: 
     ) -> None:
         received.append(target)
 
-    await _invoke(cog_command(handler, name="cmd", description="d"), make_interaction, 7, "9")
+    await _invoke(cog_command(handler, CommandDefinition("cmd", "d")), make_interaction, 7, "9")
     (channel,) = received
     assert channel.type is ChannelType.GUILD_CATEGORY
 
@@ -133,7 +133,7 @@ async def test_role_option_resolves_to_the_role(make_interaction: InteractionFac
     async def handler(self: object, interaction: CommandInteraction, target: Role) -> None:  # noqa: ARG001
         received.append(target)
 
-    command = cog_command(handler, name="cmd", description="d")
+    command = cog_command(handler, CommandDefinition("cmd", "d"))
     assert next(command.options()).type is ApplicationCommandOptionType.ROLE
     await _invoke(command, make_interaction, 8, "8")
     assert received == [ROLE]
@@ -150,7 +150,7 @@ async def test_mentionable_option_resolves_a_user_or_a_role(
     async def handler(self: object, interaction: CommandInteraction, target: BoundUser | Role) -> None:  # noqa: ARG001
         received.append(target)
 
-    command = cog_command(handler, name="cmd", description="d")
+    command = cog_command(handler, CommandDefinition("cmd", "d"))
     assert next(command.options()).type is ApplicationCommandOptionType.MENTIONABLE
     await _invoke(command, make_interaction, 9, value)
     (target,) = received
@@ -161,7 +161,7 @@ def test_optional_mentionable_option() -> None:
     async def handler(self: object, interaction: CommandInteraction, target: User | Role | None = None) -> None:
         """Handle."""
 
-    (option,) = cog_command(handler, name="cmd", description="d").options()
+    (option,) = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert (option.type, option.required) == (ApplicationCommandOptionType.MENTIONABLE, False)
 
 
@@ -177,7 +177,7 @@ def test_described_option_shows_its_description() -> None:
     ) -> None:
         """Handle."""
 
-    described, plain = cog_command(handler, name="cmd", description="d").options()
+    described, plain = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert described.description == "Who to ban"
     assert plain.description == "days"
 
@@ -191,7 +191,7 @@ def test_describe_inside_and_outside_the_optional_union() -> None:
     ) -> None:
         """Handle."""
 
-    inside, outside = cog_command(handler, name="cmd", description="d").options()
+    inside, outside = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert (inside.type, inside.required, inside.description) == (ApplicationCommandOptionType.STRING, False, "Inside")
     assert (outside.type, outside.required, outside.description) == (ApplicationCommandOptionType.STRING, False, "Outside")
 
@@ -204,7 +204,7 @@ def test_describe_combines_with_channel_types() -> None:
     ) -> None:
         """Handle."""
 
-    (option,) = cog_command(handler, name="cmd", description="d").options()
+    (option,) = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert (option.channel_types, option.description) == ([ChannelType.GUILD_CATEGORY], "Where to move")
 
 
@@ -216,7 +216,7 @@ def test_describe_renders_a_template_string() -> None:
     ) -> None:
         """Handle."""
 
-    (option,) = cog_command(handler, name="cmd", description="d").options()
+    (option,) = cog_command(handler, CommandDefinition("cmd", "d")).options()
     assert option.description == "At most 025, like 'this'"
 
 
@@ -242,7 +242,7 @@ def test_two_describes_on_one_parameter_are_refused() -> None:
         """Handle."""
 
     with pytest.raises(TypeError, match="more than one Describe"):
-        cog_command(handler, name="cmd", description="d")
+        cog_command(handler, CommandDefinition("cmd", "d"))
 
 
 def test_signature_changes_with_an_interpolated_description() -> None:
@@ -254,7 +254,7 @@ def test_signature_changes_with_an_interpolated_description() -> None:
         ) -> None:
             """Handle."""
 
-        return cog_command(handler, name="cmd", description="d")
+        return cog_command(handler, CommandDefinition("cmd", "d"))
 
     assert make(5).signature() != make(10).signature()
 
@@ -268,4 +268,80 @@ def test_describe_naming_an_unknown_constant_fails_at_definition() -> None:
         """Handle."""
 
     with pytest.raises(NameError, match="UNDEFINED_LIMIT"):
-        cog_command(handler, name="cmd", description="d")
+        cog_command(handler, CommandDefinition("cmd", "d"))
+
+
+@pytest.mark.parametrize(
+    ("limits", "message"),
+    [
+        ({}, "needs a min_length, a max_length, or both"),
+        ({"min_length": -1}, "must be 0 to 6000"),
+        ({"max_length": 0}, "must be 1 to 6000"),
+        ({"max_length": 6001}, "must be 1 to 6000"),
+        ({"min_length": 5, "max_length": 4}, "is above its max_length"),
+    ],
+)
+def test_length_outside_discords_limits_is_refused(limits: dict[str, int], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        Length(**limits)
+
+
+@pytest.mark.parametrize(
+    ("limits", "message"),
+    [({}, "needs a min_value, a max_value, or both"), ({"min_value": 3, "max_value": 2}, "is above its max_value")],
+)
+def test_range_with_no_or_crossed_bounds_is_refused(limits: dict[str, int], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        Range(**limits)
+
+
+def test_length_on_a_non_string_parameter_is_refused() -> None:
+    async def handler(self: object, interaction: CommandInteraction, count: Annotated[int, Length(max_length=3)]) -> None:
+        """Handle."""
+
+    with pytest.raises(TypeError, match="Length only applies to a str parameter"):
+        cog_command(handler, CommandDefinition("cmd", "d"))
+
+
+def test_range_on_a_string_parameter_is_refused() -> None:
+    async def handler(self: object, interaction: CommandInteraction, name: Annotated[str, Range(max_value=3)]) -> None:
+        """Handle."""
+
+    with pytest.raises(TypeError, match="Range only applies to an int or float parameter"):
+        cog_command(handler, CommandDefinition("cmd", "d"))
+
+
+def test_range_on_an_int_parameter_needs_int_bounds() -> None:
+    async def handler(self: object, interaction: CommandInteraction, count: Annotated[int, Range(min_value=0.5)]) -> None:
+        """Handle."""
+
+    with pytest.raises(TypeError, match="needs int bounds"):
+        cog_command(handler, CommandDefinition("cmd", "d"))
+
+
+def test_two_lengths_on_one_parameter_are_refused() -> None:
+    async def handler(
+        self: object,
+        interaction: CommandInteraction,
+        name: Annotated[str, Length(max_length=3), Length(max_length=4)],
+    ) -> None:
+        """Handle."""
+
+    with pytest.raises(TypeError, match="more than one Length"):
+        cog_command(handler, CommandDefinition("cmd", "d"))
+
+
+def test_signature_changes_with_a_limit_from_a_variable() -> None:
+    def make(limit: int) -> Command:
+        async def handler(
+            self: object,
+            interaction: CommandInteraction,
+            name: Annotated[str, Length(max_length=limit)],
+            count: Annotated[int, Range(max_value=limit)],
+        ) -> None:
+            """Handle."""
+
+        return cog_command(handler, CommandDefinition("cmd", "d"))
+
+    assert make(5).signature() != make(10).signature()
+    assert make(5).signature() == make(5).signature()

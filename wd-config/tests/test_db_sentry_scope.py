@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 SETTINGS = """
 from wd_config import OperatorFiles
 from wd_config.sentry import SentrySettings
-from wd_db.settings import ApiTableSettings, DbUrl
+from wd_db.settings import DbUrl
 from wd_db.constants import DATABASE_URL
 result = {
     "driver": DbUrl.driver_name,
@@ -20,7 +20,6 @@ result = {
     "host": DbUrl.host,
     "port": DbUrl.port,
     "url": DATABASE_URL.render_as_string(hide_password=False),
-    "timeout": ApiTableSettings.request_timeout,
     "dsn": SentrySettings.dsn,
     "environment": SentrySettings.environment.value,
     "telemetry": SentrySettings.Telemetry,
@@ -38,11 +37,9 @@ def test_fresh_boot_writes_database_and_sentry_ini(boot_config: BootConfig) -> N
     assert values["dsn"] == "!!"
     assert values["host"] == "postgres"
     assert values["port"] == 5432
-    assert values["timeout"] == 10.0
     assert values["environment"] == "development"
     assert values["telemetry"] is True
     assert boot.files["database.ini"]["DbUrl"]["password"] == "!!"
-    assert boot.files["database.ini"]["ApiTableSettings"]["request_timeout"] == "10.0"
     assert boot.files["sentry.ini"]["SentrySettings"]["dsn"] == "!!"
     assert "database.ini:DbUrl:password" in values["unset"]
     assert "sentry.ini:SentrySettings:dsn" in values["unset"]
@@ -56,7 +53,6 @@ def test_prewritten_values_resolve_and_build_the_url(boot_config: BootConfig) ->
             "database.ini": (
                 "[DbUrl]\ndriver_name = postgresql\ndatabase = wd\nusername = me\npassword = s3cret\n"
                 "host = db.local\nport = 6543\n"
-                "[ApiTableSettings]\nrequest_timeout = 2.5\n"
             ),
             "sentry.ini": (
                 "[SentrySettings]\nTelemetry = False\ndsn = https://key@sentry.example/1\nenvironment = production\n"
@@ -66,7 +62,6 @@ def test_prewritten_values_resolve_and_build_the_url(boot_config: BootConfig) ->
     values = boot.values
 
     assert values["url"] == "postgresql://me:s3cret@db.local:6543/wd"
-    assert values["timeout"] == 2.5
     assert values["dsn"] == "https://key@sentry.example/1"
     assert values["environment"] == "production"
     assert values["telemetry"] is False
@@ -78,21 +73,36 @@ def test_database_and_sentry_settings_stay_out_of_config_ini(boot_config: BootCo
     boot = boot_config(SETTINGS + "import winter_dragon.config\n")
     config = boot.files.get("config.ini", {})
 
-    assert {"DbUrl", "ApiTableSettings", "SentrySettings"}.isdisjoint(config)
+    assert {"DbUrl", "SentrySettings"}.isdisjoint(config)
 
 
 SENTRY_INIT = """
 import sentry_sdk
 from wd_config.sentry import SentrySettings
-from {module} import Sentry
+from wd_discord import Sentry
 Sentry()
-result = {{"dsn": SentrySettings.dsn, "resolved": SentrySettings.resolved_dsn(), "client_dsn": sentry_sdk.get_client().dsn}}
+result = {"dsn": SentrySettings.dsn, "resolved": SentrySettings.resolved_dsn(), "client_dsn": sentry_sdk.get_client().dsn}
 """
 
 
 def test_unset_dsn_initialises_sentry_without_a_dsn(boot_config: BootConfig) -> None:
-    """The `!!` placeholder DSN counts as no DSN, so both Sentry set-ups start without one instead of failing."""
-    for module in ("wd_core.sentry", "wd_discord.sentry"):
-        boot = boot_config(SENTRY_INIT.format(module=module))
+    """The `!!` placeholder DSN counts as no DSN, so Sentry starts without one instead of failing."""
+    boot = boot_config(SENTRY_INIT)
 
-        assert boot.values == {"dsn": "!!", "resolved": None, "client_dsn": None}
+    assert boot.values == {"dsn": "!!", "resolved": None, "client_dsn": None}
+
+
+def test_placeholder_dsn_with_a_hint_counts_as_unset(boot_config: BootConfig) -> None:
+    """A `!!` placeholder followed by a hint for the operator is still no DSN."""
+    hinted = "!! https://sentry.io/settings/projects/"
+    boot = boot_config(SENTRY_INIT, files={"sentry.ini": f"[SentrySettings]\ndsn = {hinted}\n"})
+
+    assert boot.values == {"dsn": hinted, "resolved": None, "client_dsn": None}
+
+
+def test_filled_in_dsn_reaches_the_sentry_client(boot_config: BootConfig) -> None:
+    """A real DSN in sentry.ini is the one Sentry starts with."""
+    dsn = "https://key@sentry.example/1"
+    boot = boot_config(SENTRY_INIT, files={"sentry.ini": f"[SentrySettings]\ndsn = {dsn}\n"})
+
+    assert boot.values == {"dsn": dsn, "resolved": dsn, "client_dsn": dsn}

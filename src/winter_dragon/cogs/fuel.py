@@ -23,12 +23,14 @@ lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.ui import CreatedEmbed
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Sequence
 
     lazy from wd_discord import AutocompleteInteraction, CommandInteraction
+    lazy from wd_discord.snowflake import Snowflake
 
 
 class FuelSettings:
@@ -64,9 +66,9 @@ class FuelPreferences(DiscordKeyedModel, table=True):
     """The units fuel efficiency is shown in."""
 
 
-def member_units(session: Session, user_id: int) -> FuelUnits:
+def member_units(session: Session, user_id: Snowflake) -> FuelUnits:
     """Return the units ``user_id`` picked, or km/L when they never did."""
-    preferences = session.get(FuelPreferences, user_id)
+    preferences = session.get(FuelPreferences, int(user_id))
     return FuelUnits.KM_PER_L if preferences is None or preferences.deleted_at is not None else preferences.units
 
 
@@ -150,7 +152,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         """Create the refuel table if missing."""
         self.create_tables(CarFuels, FuelPreferences)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="add",
         description="Log a refuel: total price, distance driven since the last one, fuel added, optional YYYY-MM-DD date",
     )
@@ -172,8 +174,8 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
         if user is None:
             return
         if min(price, distance, amount) <= 0:
-            await interaction.respond("The price, distance and amount must all be more than 0.", ephemeral=True)
-            return
+            msg = "The price, distance and amount must all be more than 0."
+            raise Refused(msg)
         now = utc_now()
         refueled_at = now if date is None else parse_refuel_date(date)
         if refueled_at is None:
@@ -194,25 +196,25 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
                 ),
             )
             session.commit()
-            units = member_units(session, int(user.id))
-        await interaction.respond(
+            units = member_units(session, user.id)
+        logged = (
             f"Logged a refuel of {amount:g} for {price:g} after {distance:g}: {units.convert(distance / amount):.2f} {units}.\n"
-            f"Use {self.mention(self.efficiency)} to see how that changes over time.",
-            ephemeral=True,
+            f"Use {self.mention(self.efficiency)} to see how that changes over time."
         )
+        await interaction.respond(embeds=[CreatedEmbed(description=logged)], ephemeral=True)
 
-    @Cog.command(name="efficiency", description="Show a graph of your fuel efficiency over time, in your units")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="efficiency", description="Show a graph of your fuel efficiency over time, in your units")
     async def efficiency(self, interaction: CommandInteraction) -> None:
         """Reply with a graph of the invoking user's fuel efficiency."""
         user = interaction.user
         if user is None:
             return
         with Session(self.bind) as session:
-            refuels = session.exec(owned_by(CarFuels, member=int(user.id))).all()
-            units = member_units(session, int(user.id))
+            refuels = session.exec(owned_by(CarFuels, member=user.id)).all()
+            units = member_units(session, user.id)
         if not refuels:
-            await interaction.respond(f"You haven't logged a refuel yet. Use {self.mention(self.add)} first.", ephemeral=True)
-            return
+            msg = f"You haven't logged a refuel yet. Use {self.mention(self.add)} first."
+            raise Refused(msg)
         await interaction.defer(ephemeral=True)
         graph = await asyncio.to_thread(render_efficiency_graph, refuels, units)
         await interaction.respond(
@@ -228,7 +230,7 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             if current.lower() in unit.value.lower()
         ]
 
-    @Cog.command(name="units", description="Pick how your fuel efficiency is shown: km/L or L/100km")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="units", description="Pick how your fuel efficiency is shown: km/L or L/100km")
     async def units(
         self,
         interaction: CommandInteraction,

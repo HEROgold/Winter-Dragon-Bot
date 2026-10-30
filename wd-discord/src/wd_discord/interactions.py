@@ -2,17 +2,26 @@
 
 from __future__ import annotations
 
-lazy from typing import Annotated, Self
+lazy from typing import TYPE_CHECKING, Annotated, Self
 
 lazy from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
-lazy from wd_core.client import JsonPayload
 
 from wd_discord.open_enum import OpenIntEnum, OpenStrEnum
 
 # eager: pydantic needs the real classes, not lazy proxies, for the model fields below
 from wd_discord.permissions import ChannelType, Permissions, PermissionsField
 from wd_discord.snowflake import Snowflake
+lazy from wd_discord.limits import (
+    MAX_CHOICES,
+    MAX_DESCRIPTION_LENGTH,
+    MAX_OPTION_VALUE_LENGTH,
+    MAX_OPTIONS,
+)
 lazy from wd_discord.models import DiscordModel
+
+
+if TYPE_CHECKING:
+    from wd_discord.payloads import JsonPayload
 
 
 class ApplicationCommandType(OpenIntEnum):
@@ -116,14 +125,6 @@ class Locale(OpenStrEnum):
     KOREAN = "ko"
 
 
-MAX_OPTIONS = 25
-"""A command or subcommand holds up to 25 options (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
-MAX_CHOICES = 25
-"""An option offers up to 25 choices (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
-MAX_CHOICE_NAME_LENGTH = 100
-"""A command option choice name, autocomplete results included, holds up to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-choice-structure)."""
-MAX_DESCRIPTION_LENGTH = 100
-"""A command or option description holds 1 to 100 characters (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-option-structure)."""
 CHAT_INPUT_NAME_PATTERN = r"^[-_\u02BC\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$"
 """What a slash command or option name may hold (https://docs.discord.com/developers/interactions/application-commands#application-command-object-application-command-naming)."""
 
@@ -167,8 +168,8 @@ class ApplicationCommandOption(DiscordModel):
     channel_types: list[ChannelType] | None = None
     min_value: int | float | None = None
     max_value: int | float | None = None
-    min_length: Annotated[int, Field(ge=0, le=6000)] | None = None
-    max_length: Annotated[int, Field(ge=1, le=6000)] | None = None
+    min_length: Annotated[int, Field(ge=0, le=MAX_OPTION_VALUE_LENGTH)] | None = None
+    max_length: Annotated[int, Field(ge=1, le=MAX_OPTION_VALUE_LENGTH)] | None = None
     autocomplete: bool | None = None
     file_types: Annotated[list[str], Field(max_length=10)] | None = None
 

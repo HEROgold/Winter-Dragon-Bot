@@ -7,38 +7,13 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_errors` — `wd-errors/src/wd_errors/__init__.py`
 
-- exports: Activity, BaseError, ErrorCode, ErrorMessage, ErrorNode, Platform, Refused, unwrap
+- exports: BaseError, Refused, unwrap
 
 ## `wd_errors.base` — `wd-errors/src/wd_errors/base.py`
-Base error classes for the wd-discord package.
-
-### `class ErrorCode(StrEnum)`
-Various error codes that can be returned by the Discord API.
-
-- attributes: BASE_TYPE_CHOICES, BASE_TYPE_REQUIRED, APPLICATION_COMMAND_TOO_LARGE
-
-### `class Platform(StrEnum)`
-Platform a user is using to access Discord.
-
-- attributes: DESKTOP, ANDROID, IOS
-
-### `class Activity(IntEnum)`
-Activity a user is engaged in on Discord.
-
-- attributes: PLAYING, STREAMING, LISTENING, WATCHING, CUSTOM, COMPETING
-
-### `class ErrorMessage(BaseModel)`
-Error message with a code and a message string.
-
-- fields: code: ErrorCode, message: str
+Base error class for Winter Dragon.
 
 ### `class BaseError(Exception)`
-Base class for all errors in the wd-discord package.
-
-### `class ErrorNode(BaseModel)`
-Node in the error tree, which can contain a list of error messages and/or child nodes.
-
-- fields: errors_list: list[ErrorMessage]
+Base class for Winter Dragon's own errors.
 
 ## `wd_errors.extension` — `wd-errors/src/wd_errors/extension.py`
 Module that contains extension related errors.

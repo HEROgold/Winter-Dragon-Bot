@@ -103,3 +103,18 @@ async def test_dispatch_sends_ephemeral_error_when_component_handler_raises(
     assert discord_client.interaction_responses() == [
         {"type": 4, "data": error_reply},
     ]
+
+
+async def test_a_removed_cogs_components_are_no_longer_dispatched(
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    CLICKS.clear()
+    bot = _make_bot(discord_client)
+    cog = _PagerCog(bot=bot)
+    await bot.add_cog(cog)
+    await bot.remove_cog(cog)
+
+    await bot._dispatch_interaction(make_component_interaction("pager:1"))
+
+    assert CLICKS == []

@@ -24,9 +24,10 @@ Config descriptor for WinterDragon.
 - `on_file_change(origin: Literal['get', 'set'], old: T, new: T) -> None` — Re-read this scope's file, so a value edited on disk is used from its next read on, without a restart.
 
 ## `wd_config.constants` — `wd-config/src/wd_config/constants.py`
-The ini files of the scopes wd-config binds itself.
+Every config scope's ini file, declared once.
 
-- module names: DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
+- module names: APP_CONFIG_FILE, COGS_CONFIG_FILE, BOT_CONFIG_FILE, DATABASE_CONFIG_FILE, DASHBOARD_CONFIG_FILE,
+  ARCHIVE_CONFIG_FILE, DISCORD_CONFIG_FILE, SENTRY_CONFIG_FILE
 
 ## `wd_config.discord` — `wd-config/src/wd_config/discord.py`
 Discord-scoped configuration, backed by its own discord.ini file.

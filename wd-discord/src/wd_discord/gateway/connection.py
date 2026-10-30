@@ -26,14 +26,15 @@ lazy import sentry_sdk
 lazy from herogold.log import LoggerMixin
 lazy from pydantic import ValidationError
 lazy from wd_config.discord import URLS
-lazy from wd_core.intents import Intents
-lazy from wd_errors import Activity
 lazy from websockets.asyncio.client import connect
 lazy from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
+lazy from wd_discord.authenticate import URL
+lazy from wd_discord.intents import Intents
+
 lazy from .dispatch import parse_dispatch
 lazy from .events import EventName, GuildCreate, RawEvent, Ready
-lazy from .presence import Status
+lazy from .presence import ActivityType, Status
 
 
 if TYPE_CHECKING:
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
 
     lazy from websockets.asyncio.client import ClientConnection
 
+    lazy from wd_discord.authenticate import Token
     lazy from wd_discord.models import DiscordModel
     lazy from wd_discord.snowflake import Snowflake
 
@@ -141,7 +143,7 @@ class GatewayActivity:
     """An activity shown on the bot's presence (object -> API via :meth:`to_dict`)."""
 
     name: str
-    type: Activity = Activity.PLAYING
+    type: ActivityType = ActivityType.PLAYING
     url: str | None = None
     state: str | None = None
 
@@ -172,7 +174,7 @@ def build_presence(
 
 
 def build_identify(
-    token: str,
+    token: Token,
     intents: Intents,
     *,
     shard: tuple[int, int] | None = None,
@@ -216,10 +218,10 @@ class Gateway(LoggerMixin):
 
     def __init__(
         self,
-        token: str,
+        token: Token,
         *,
         intents: Intents | None = None,
-        url: str | None = None,
+        url: URL | None = None,
         shard: tuple[int, int] | None = None,
     ) -> None:
         """Create a gateway for ``token`` with the given ``intents`` (default: none).
@@ -229,7 +231,7 @@ class Gateway(LoggerMixin):
         """
         self.token = token
         self.intents = intents or Intents.none()
-        self.url = url if url is not None else URLS().gateway_url
+        self.url = url if url is not None else URL(URLS().gateway_url)
         self.shard = shard
         self._ws: ClientConnection | None = None
         self._heartbeat_task: asyncio.Task[None] | None = None
@@ -296,7 +298,7 @@ class Gateway(LoggerMixin):
                 self._ready_dispatched = False
                 return self.ready
 
-    async def _open(self, url: str) -> ClientConnection:
+    async def _open(self, url: URL) -> ClientConnection:
         """Connect to ``url``, wait for HELLO, start heartbeating at the interval it names, and return the socket."""
         ws = self._ws = await connect(url)
         hello = json.loads(await ws.recv())
@@ -313,7 +315,7 @@ class Gateway(LoggerMixin):
         if self.ready is None:
             msg = "There is no session to resume."
             raise RuntimeError(msg)
-        await self._open(f"{self.ready.resume_gateway_url}/{URLS().gateway_query}")
+        await self._open(URL(f"{self.ready.resume_gateway_url}/{URLS().gateway_query}"))
         await self._send(Opcode.RESUME, {"token": self.token, "session_id": self.ready.session_id, "seq": self._seq})
 
     async def run(self, dispatch: Callable[[str, DiscordModel], Awaitable[None]]) -> None:

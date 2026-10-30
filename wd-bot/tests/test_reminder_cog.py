@@ -1,7 +1,6 @@
 """Unit tests: the /reminder commands, their autocomplete, and sending due reminders (no network)."""
 
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -17,14 +16,13 @@ from wd_discord.gateway.events import InteractionData, InteractionDataOption, In
 from wd_discord.resources.user import User
 from wd_discord.testing import RecordingClient, message_json, user_json
 
-import winter_dragon.cogs.reminder as module
-from winter_dragon.cogs.reminder import Reminder, Reminders, TimedReminder, delay_from, next_occurrence
+import winter_dragon.cogs.reminder.cog as module
+from winter_dragon.cogs.reminder.cog import Reminders
+from winter_dragon.cogs.reminder.domain import Reminder, TimedReminder, delay_from, next_occurrence, reminder_message
 from winter_dragon.config import Settings
 
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
-
     from conftest import InteractionFactory
     from sqlalchemy import Engine
 
@@ -80,8 +78,18 @@ def test_delay_from_adds_every_unit() -> None:
 
 
 @pytest.mark.parametrize("amounts", [{}, {"minutes": 0}, {"minutes": -5}, {"days": 10**15}, {"weeks": 600}])
-def test_delay_from_refuses_no_negative_or_absurd_delays(amounts: dict[str, int]) -> None:
-    assert delay_from(**amounts) is None
+async def test_repeat_refuses_no_negative_or_absurd_delays(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+    amounts: dict[str, int],
+) -> None:
+    cog, _ = _cog(engine)
+    await Reminders.repeat.invoke(cog, make_interaction("reminder"), _options(reminder="never", **amounts))
+
+    with Session(engine) as session:
+        assert session.exec(alive(TimedReminder)).all() == []
+    assert _reply(discord_client) == "Pick a time between now and 3650 days from now."
 
 
 def test_next_occurrence_is_one_interval_on_when_just_due() -> None:
@@ -120,20 +128,7 @@ async def test_add_without_a_time_stores_nothing(
 
     with Session(engine) as session:
         assert session.exec(alive(Reminder)).all() == []
-    assert "Give me a time" in _reply(discord_client)
-
-
-async def test_add_refuses_a_too_long_reminder(
-    engine: Engine,
-    make_interaction: InteractionFactory,
-    discord_client: RecordingClient,
-) -> None:
-    cog, _ = _cog(engine)
-    await Reminders.add.invoke(cog, make_interaction("reminder"), _options(reminder="x" * 1001, minutes=5))
-
-    with Session(engine) as session:
-        assert session.exec(alive(Reminder)).all() == []
-    assert "under 1000 characters" in _reply(discord_client)
+    assert _reply(discord_client) == "Pick a time between now and 3650 days from now."
 
 
 async def test_repeat_stores_a_timed_reminder(engine: Engine, make_interaction: InteractionFactory) -> None:
@@ -255,13 +250,9 @@ async def test_autocomplete_truncates_long_names(engine: Engine, discord_client:
     assert len(choice.name) == 100
 
 
-def _no_background_task(coroutine: Coroutine[object, object, None]) -> None:
-    coroutine.close()
-
-
 async def _loaded_cog(engine: Engine) -> tuple[Reminders, RecordingClient]:
-    """Build a Reminders cog on ``engine`` and load it, without starting its background task."""
-    cog, client = _cog(engine, loop=SimpleNamespace(create_task=_no_background_task))
+    """Build a Reminders cog on ``engine`` and load it; detached from a bot, its background task doesn't start."""
+    cog, client = _cog(engine)
     await cog.load()
     return cog, client
 
@@ -331,7 +322,7 @@ async def test_reminders_in_old_tables_still_work_after_load(
     await Reminders.remove.invoke(cog, make_interaction("reminder"), _options(reminder="reminder:2"))
     await Reminders.repeat.invoke(cog, make_interaction("reminder"), _options(reminder="stretch", days=1))
 
-    assert _sent(client) == [module.reminder_message("old due")]
+    assert _sent(client) == [reminder_message("old due")]
     assert _embed(discord_client)["color"] == int(Settings.created_color)
     assert await cog.send_due(NOW + timedelta(days=2)) == 1
-    assert _sent(client)[-1] == module.reminder_message("stretch")
+    assert _sent(client)[-1] == reminder_message("stretch")

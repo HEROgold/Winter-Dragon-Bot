@@ -6,6 +6,7 @@ lazy from typing import TYPE_CHECKING, override
 from sqlmodel import Session
 lazy from wd_bot.cogs import Cog
 lazy from wd_db.extension.lifecycle import alive
+lazy from wd_discord import GuildCommandInteraction  # noqa: TC002 - wd_bot reads the handler's interaction type at runtime
 lazy from wd_discord.components import Label, Modal, TextInput
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_errors import Refused
@@ -16,7 +17,7 @@ lazy from .service import guess, participants_of, start_game
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord import ComponentInteraction, GuildCommandInteraction, ModalSubmitInteraction
+    lazy from wd_discord import ComponentInteraction, ModalSubmitInteraction
 
 MODAL_INPUT = "guess"
 """The ``custom_id`` of the text input in the Guess modal."""
@@ -33,7 +34,7 @@ class Hangman(Cog):
         """Create the hangman tables if missing."""
         self.create_tables(*HANGMAN_TABLES)
 
-    @Cog.command(  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(
         name="hangman",
         description="Start a game of hangman in this channel",
         contexts=[InteractionContextType.GUILD],
@@ -43,8 +44,8 @@ class Hangman(Cog):
         with Session(self.bind) as session:
             game = start_game(
                 session,
-                guild_id=int(interaction.guild_id),
-                channel_id=int(interaction.channel.id),
+                guild_id=interaction.guild_id,
+                channel_id=interaction.channel.id,
                 rng=self.rng,
             )
             session.commit()
@@ -52,7 +53,7 @@ class Hangman(Cog):
             content, buttons = game_message(game), guess_buttons(self.guess_button, game)
         await interaction.respond(content, components=buttons)
 
-    @Cog.component("hangman-guess")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.component("hangman-guess")
     async def guess_button(self, interaction: ComponentInteraction, game_id: str) -> None:
         """Open the modal for guessing a letter or the whole word."""
         with Session(self.bind) as session:
@@ -70,7 +71,7 @@ class Hangman(Cog):
         )
         await interaction.show_modal(modal)
 
-    @Cog.modal("hangman-guess")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.modal("hangman-guess")
     async def guess_modal(self, interaction: ModalSubmitInteraction, game_id: str) -> None:
         """Apply the submitted guess to the game and update its message."""
         user = interaction.user
@@ -78,7 +79,7 @@ class Hangman(Cog):
             return
         with Session(self.bind) as session:
             game = self._active(session, game_id)
-            guess(session, game, int(user.id), interaction.values.get(MODAL_INPUT, ""))
+            guess(session, game, user.id, interaction.values.get(MODAL_INPUT, ""))
             session.commit()
             session.refresh(game)
             content = game_message(game, participants_of(session, game))

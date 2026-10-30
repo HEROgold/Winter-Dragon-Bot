@@ -37,14 +37,14 @@ if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
     from string.templatelib import Template
 
-    from wd_core.client import JsonPayload
-
+    from wd_discord.authenticate import Token
     from wd_discord.client import Client, NetworkError
     from wd_discord.components import ActionRow, ComponentType, Modal
     from wd_discord.embed import Embed
     from wd_discord.files import File
     from wd_discord.gateway.events import InteractionDataOption, InteractionType, SubmittedComponent
     from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType, Locale
+    from wd_discord.payloads import JsonPayload
     from wd_discord.permissions import Permissions
     from wd_discord.resources.channel import Channel as ChannelModel
     from wd_discord.responses import MessageData, ModalData
@@ -82,7 +82,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         return self.model.type
 
     @property
-    def token(self) -> str:
+    def token(self) -> Token:
         """The token for responding; valid for 15 minutes."""
         return self.model.token
 
@@ -108,16 +108,14 @@ class Interaction[M: InteractionModel](Entity[M]):
     @property
     def guild(self) -> PartialGuild | None:
         """The guild the interaction was sent from, if any."""
-        guild_id = self.model.guild_id
-        return None if guild_id is None else PartialGuild(self.client, guild_id)
+        return self._partial(PartialGuild, self.model.guild_id)
 
     @property
     def channel(self) -> Channel | PartialChannel | None:
         """The channel the interaction was sent from, in full when Discord sent it along (it usually does)."""
         if self.model.channel is not None:
             return _full_channel(self.client, self.model.channel, self.model.guild_id)
-        channel_id = self.model.channel_id
-        return None if channel_id is None else PartialChannel(self.client, channel_id)
+        return self._partial(PartialChannel, self.model.channel_id)
 
     @property
     def entitlements(self) -> Generator[Entitlement]:

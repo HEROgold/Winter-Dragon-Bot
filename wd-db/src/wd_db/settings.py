@@ -1,12 +1,8 @@
 """wd-db's settings, backed by their own database.ini file."""
 
-lazy from pathlib import Path
-
 lazy from wd_config import Config
+lazy from wd_config.constants import DATABASE_CONFIG_FILE
 lazy from wd_config.parser import REQUIRED
-
-
-DATABASE_CONFIG_FILE = Path("database.ini")
 
 
 class DatabaseConfig[T](Config[T]):
@@ -27,9 +23,3 @@ class DbUrl:
     host = DatabaseConfig("postgres")
     port = DatabaseConfig(5432)
 
-
-class ApiTableSettings:
-    """How :class:`wd_db.extension.api_table.ApiTable` talks to external APIs."""
-
-    request_timeout = DatabaseConfig(10.0)
-    """Seconds an API table request may take before it times out."""

@@ -7,17 +7,24 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
 # Command resolves option annotations from module globals at runtime, so these must be available here.
-lazy from wd_discord import Channel, Role, User, is_gone
+lazy from wd_discord import (
+    Channel,
+    GuildCommandInteraction,
+    Role,
+    User,
+    is_gone,
+)
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.ui import ChangedEmbed, DeletedEmbed
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable
 
-    lazy from wd_discord import GuildCommandInteraction
     lazy from wd_discord.entities import PermissionOverwrite
 
 
@@ -66,7 +73,7 @@ class ChannelUtils(
 ):
     """Moderation helpers for channels: removing a category with its channels, and locking channels."""
 
-    @Cog.command(name="delete-category", description="Delete a category and every channel inside it")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="delete-category", description="Delete a category and every channel inside it")
     async def delete_category(
         self,
         interaction: GuildCommandInteraction,
@@ -90,7 +97,8 @@ class ChannelUtils(
         if not is_gone(await whole.delete(reason=reason)):
             msg = "I deleted the channels, but couldn't delete the category."
             raise Refused(msg)
-        await interaction.followup(f"Deleted the category {category.name} and its channels.", ephemeral=True)
+        deleted = DeletedEmbed(description=f"Deleted the category {category.name} and its channels.")
+        await interaction.followup(embeds=[deleted], ephemeral=True)
 
     @staticmethod
     async def _deletable(interaction: GuildCommandInteraction, category: Channel) -> list[Channel]:
@@ -118,7 +126,7 @@ class ChannelUtils(
             raise Refused(msg)
         return doomed
 
-    @Cog.command(name="lock", description="Stop a role or member from sending messages in this channel")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="lock", description="Stop a role or member from sending messages in this channel")
     async def lock(
         self,
         interaction: GuildCommandInteraction,
@@ -127,7 +135,7 @@ class ChannelUtils(
         """Deny ``target`` SEND_MESSAGES in the channel the command was used in."""
         await self._set_lock(interaction, target, lock=True)
 
-    @Cog.command(name="unlock", description="Let a role or member send messages in this channel again")  # pyright: ignore[reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue]
+    @Cog.command(name="unlock", description="Let a role or member send messages in this channel again")
     async def unlock(
         self,
         interaction: GuildCommandInteraction,
@@ -155,4 +163,5 @@ class ChannelUtils(
         if failure is not None:
             msg = f"I couldn't change the permissions here: {failure}"
             raise Refused(msg, cause=failure)
-        await interaction.respond(f"{action} this channel for {target.mention}.", ephemeral=True)
+        changed = ChangedEmbed(description=f"{action} this channel for {target.mention}.")
+        await interaction.respond(embeds=[changed], ephemeral=True)

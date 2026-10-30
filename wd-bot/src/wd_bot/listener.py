@@ -37,7 +37,7 @@ def listener(name: str | None = None) -> Callable[[Callable[..., Awaitable[None]
     reason - EventName only covers modeled events, and this decorator has to keep working for
     the ones it doesn't cover yet too.
 
-    This is a bare attribute tag at runtime either way - see ``wd_bot.bot.Bot._listeners`` for
+    This is a bare attribute tag at runtime either way - see ``wd_bot.handlers.HandlerRegistry`` for
     why the registry itself can't be made fully sound (a dict keyed by a runtime string can't
     statically track which payload type belongs to which key; the type-checking that matters
     happens here, at registration).

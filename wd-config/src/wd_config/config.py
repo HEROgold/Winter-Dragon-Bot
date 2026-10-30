@@ -36,15 +36,15 @@ class Config[T](CKConfig[T]):
         """
         # Pretty sure this is not required. Simply using set_file() + new subclass should be enough.
         cls.set_file(file)
-        cls._parser = UNSET  # pyright: ignore[reportPrivateUsage]
-        cls._has_read_config = False  # pyright: ignore[reportPrivateUsage]
+        cls._parser = UNSET
+        cls._has_read_config = False
         if optional:
             cls.write_on_edit = file.exists()
-            cls._watcher = OptionalFileWatcher(file)  # pyright: ignore[reportPrivateUsage]
+            cls._watcher = OptionalFileWatcher(file)
         if operator:
             OperatorFiles.register(file)
 
     @override
     def on_file_change(self, origin: Literal["get", "set"], old: T, new: T) -> None:
         """Re-read this scope's file, so a value edited on disk is used from its next read on, without a restart."""
-        self._parser.read(self._file)  # pyright: ignore[reportPrivateUsage]
+        self._parser.read(self._file)

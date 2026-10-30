@@ -118,8 +118,7 @@ class Channel(DiscordModel):
     def applied_forum_tags(self) -> Generator[ForumTag]:
         """The ForumTag objects for ``applied_tags``, resolved against ``available_tags``.
 
-        Returned in ``applied_tags`` order; empty when either list is absent. ``Snowflake`` is an
-        unhashable dataclass, so this is a linear ``==`` scan (mirroring ``Team.owner``), not a dict lookup.
+        Returned in ``applied_tags`` order; empty when either list is absent.
         """
         if not self.applied_tags or not self.available_tags:
             return

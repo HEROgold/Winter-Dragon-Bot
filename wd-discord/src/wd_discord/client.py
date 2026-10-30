@@ -45,14 +45,14 @@ lazy from wd_discord.authenticate import (
 )
 lazy from wd_discord.cache import StateCache
 lazy from wd_discord.entities.application import CurrentApplication
-lazy from wd_discord.entities.base import EntityStore
+lazy from wd_discord.entities.base import EntityStore, parse
 lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.events import bind
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import PartialUser, UserStore
 lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
-lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler
+lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler, new_rate_limiters
 lazy from wd_discord.route import Route
 
 
@@ -61,11 +61,11 @@ if TYPE_CHECKING:
     lazy from string.templatelib import Template
 
     lazy from httpxyz import Response
-    lazy from wd_core.client import RequestKwargs
-    lazy from wd_core.intents import Intents
 
     lazy from wd_discord.entities.events import BoundEvent
+    lazy from wd_discord.intents import Intents
     lazy from wd_discord.models import DiscordModel
+    lazy from wd_discord.payloads import RequestKwargs
     lazy from wd_discord.snowflake import SnowflakeLike
 
 
@@ -148,7 +148,7 @@ class Client(LoggerMixin):
 
     def __init__(
         self,
-        token: str,
+        token: Token,
         *,
         token_type: TokenType = TokenType.BOT,
         version: int | None = None,
@@ -159,7 +159,7 @@ class Client(LoggerMixin):
         ``version`` overrides the API version from :class:`~wd_config.discord.URLS`. ``application_id`` skips
         looking up the application's ID; see :meth:`CurrentApplication.id`.
         """
-        self.token = Token(token)
+        self.token = token
         self.token_type = token_type
         self.version = version if version is not None else URLS.version
         self.base_url = f"{URLS.base}/v{self.version}"
@@ -167,6 +167,8 @@ class Client(LoggerMixin):
         self._inflight: dict[InflightKey, asyncio.Future[Response | ApiResponseError]] = {}
         self._cached: dict[InflightKey, tuple[float, Response]] = {}
         """Reads asked to be cached, with the :func:`time.monotonic` time each stops being valid."""
+        self._rate_limiters = new_rate_limiters()
+        """This client's own rate-limit buckets; no other client shares them."""
         self.cache = StateCache()
         """What the gateway told this client so far; see :meth:`receive`."""
         self.application = CurrentApplication(self, application_id)
@@ -211,7 +213,7 @@ class Client(LoggerMixin):
         method: str,
         route: Template,
         *,
-        cache: bool = False,
+        reuse_response: bool = False,
         **kwargs: Unpack[RequestKwargs],
     ) -> Response | ApiResponseError:
         """Send a request, returning the :class:`Response` or a parsed error value.
@@ -227,7 +229,7 @@ class Client(LoggerMixin):
         again; every caller gets that one answer, failures included. A caller that's cancelled leaves the read
         running for the others.
 
-        With ``cache``, such a GET's success is reused for :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>`
+        With ``reuse_response``, such a GET's success is reused for :attr:`RestCache.ttl <wd_config.discord.RestCache.ttl>`
         seconds. Changes made elsewhere stay unseen for up to that long, but any write this client sends drops
         the cached reads under the same guild, channel or user (``/guilds/{id}/...``) at once.
         """
@@ -238,7 +240,7 @@ class Client(LoggerMixin):
             if method != "GET":
                 self._forget_cached_under(resolved.path)
             return result
-        if cache and (hit := self._cached_read(key)) is not None:
+        if reuse_response and (hit := self._cached_read(key)) is not None:
             return hit
         shared = self._inflight.get(key)
         if shared is None:
@@ -246,7 +248,7 @@ class Client(LoggerMixin):
             self._inflight[key] = shared
             shared.add_done_callback(lambda done: self._forget_inflight(key, done))
         result = await asyncio.shield(shared)
-        if cache and not is_network_error(result):
+        if reuse_response and not is_network_error(result):
             self._remember(key, result)
         return result
 
@@ -279,7 +281,7 @@ class Client(LoggerMixin):
     async def _send(self, method: str, resolved: Route, **kwargs: Unpack[RequestKwargs]) -> Response | ApiResponseError:
         """Send one request under the rate limiters; a network error is raised, an API error returned."""
         path = resolved.path
-        handler = RateLimitHandler(resolved.key(method))
+        handler = RateLimitHandler(resolved.key(method), self._rate_limiters)
 
         async def send_once() -> Response:
             self.logger.debug(t"{method} {path}")
@@ -303,9 +305,9 @@ class Client(LoggerMixin):
         self.logger.warning(t"API error {error.code}: {error.message} for {method} {path}")
         return error
 
-    async def get(self, route: Template, *, cache: bool = False, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
-        """Send a GET request; with ``cache``, reuse a recent answer to it (see :meth:`request`)."""
-        return await self.request("GET", route, cache=cache, **kwargs)
+    async def get(self, route: Template, *, reuse_response: bool = False, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
+        """Send a GET request; with ``reuse_response``, reuse a recent answer to it (see :meth:`request`)."""
+        return await self.request("GET", route, reuse_response=reuse_response, **kwargs)
 
     async def post(self, route: Template, **kwargs: Unpack[RequestKwargs]) -> RequestResult:
         """Send a POST request."""
@@ -338,10 +340,7 @@ class Client(LoggerMixin):
 
     async def get_gateway_bot(self) -> GatewayBotInfo | NetworkError:
         """GET /gateway/bot - the gateway WebSocket URL + recommended shard/session info."""
-        result = await self.get(t"/gateway/bot")
-        if is_network_error(result):
-            return result
-        return GatewayBotInfo.model_validate(result.json())
+        return parse(await self.get(t"/gateway/bot"), GatewayBotInfo)
 
     async def get_shard_manager(self, info: GatewayBotInfo, *, intents: Intents | None = None) -> ShardManager:
         """Return an unstarted :class:`ShardManager` for the given :class:`GatewayBotInfo`."""

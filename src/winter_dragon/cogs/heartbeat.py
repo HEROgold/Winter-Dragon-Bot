@@ -1,7 +1,5 @@
 """A cog demonstrating independent background work, not just reacting to dispatch events."""
 
-lazy import asyncio
-
 lazy from wd_bot.cogs import Cog
 
 lazy from winter_dragon.config import CogConfig
@@ -15,14 +13,9 @@ class HeartbeatSettings:
 
 
 class Heartbeat(Cog):
-    """Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long as the bot keeps running."""
+    """Logs "still alive" every :attr:`HeartbeatSettings.interval` seconds for as long as the cog is loaded."""
 
-    async def load(self) -> None:
-        """Start the heartbeat background task once registered with the bot."""
-        self.bot.loop.create_task(self._beat())
-
-    async def _beat(self) -> None:
-        """Log a heartbeat forever, at the configured interval."""
-        while True:
-            await asyncio.sleep(HeartbeatSettings.interval)
-            self.logger.debug(t"Heartbeat: still alive")
+    @Cog.periodic(seconds=lambda: HeartbeatSettings.interval)
+    async def beat(self) -> None:
+        """Log a heartbeat; the bot repeats it at the configured interval and stops when the cog unloads."""
+        self.logger.debug(t"Heartbeat: still alive")

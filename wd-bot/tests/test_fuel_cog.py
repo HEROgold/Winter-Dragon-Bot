@@ -54,7 +54,7 @@ async def test_add_stores_the_refuel(
     with Session(engine) as session:
         (refuel,) = session.exec(alive(CarFuels)).all()
     assert (refuel.user_id, refuel.price, refuel.distance, refuel.amount) == (ASKER_ID, 72.5, 600.0, 40.0)
-    assert "15.00 km/L" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert "15.00 km/L" in discord_client.interaction_responses()[0]["data"]["embeds"][0]["description"]
 
 
 async def test_add_refuses_non_positive_values(
@@ -164,7 +164,7 @@ async def test_an_old_carfuels_table_gains_the_lifecycle_columns_and_keeps_worki
     await Fuel.add.invoke(cog, make_interaction("fuel"), _numbers(price=72.5, distance=650, amount=40.5))
     await Fuel.efficiency.invoke(cog, make_interaction("fuel"), [])
 
-    assert "km/L" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert "km/L" in discord_client.interaction_responses()[0]["data"]["embeds"][0]["description"]
     ((_, (filename, _, _)),) = discord_client.requests_to("POST", FOLLOWUP)[0].files
     assert filename == "fuel_efficiency.png"
     assert set(LIFECYCLE_COLUMNS) <= {column["name"] for column in inspect(engine).get_columns("carfuels")}
@@ -232,4 +232,4 @@ async def test_add_reports_the_efficiency_in_the_chosen_units(
 
     await Fuel.add.invoke(_cog(engine), make_interaction("fuel"), _numbers(price=72.5, distance=500, amount=40))
 
-    assert "8.00 L/100km" in discord_client.interaction_responses()[0]["data"]["content"]
+    assert "8.00 L/100km" in discord_client.interaction_responses()[0]["data"]["embeds"][0]["description"]

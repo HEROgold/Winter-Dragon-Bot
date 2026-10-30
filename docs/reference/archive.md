@@ -84,8 +84,6 @@ A payload sorted for one table.
 ## `archive.settings` — `src/archive/settings.py`
 The archive's settings, in their own ``archive.ini``; its token lives with the bot's in ``bot.ini``.
 
-- module names: ARCHIVE_CONFIG_FILE
-
 ### `class ArchiveConfig[T](Config[T])`
 Config descriptor scoped to the archive settings file.
 
