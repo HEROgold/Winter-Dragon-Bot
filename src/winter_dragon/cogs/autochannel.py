@@ -12,7 +12,7 @@ lazy from typing import TYPE_CHECKING, Annotated, ClassVar, Unpack, override
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
 from wd_bot.commands import Describe, Length, Range
-from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
+from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 lazy from wd_db.extension.lifecycle import alive_by_id, create_or_restore, owned_by, soft_delete, upsert
@@ -39,10 +39,11 @@ lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Iterable
+    lazy from collections.abc import Container, Iterable
 
     lazy from wd_discord import GatewayGuild, NetworkError, PartialMember, VoiceState
     lazy from wd_discord.entities import PartialGuild
+    lazy from wd_discord.resources.channel import PermissionOverwrite
 
 
 OWNER_PERMISSIONS = (
@@ -89,7 +90,26 @@ class AutoChannelSettings(DiscordKeyedModel, table=True):
     """How many users fit in the channel; 0 means no limit."""
 
 
-AUTOCHANNEL_TABLES = (AutoChannelHub, AutoChannel, AutoChannelSettings)
+class AutoChannelOverwrite(LifecycleModel, table=True):
+    """A permission overwrite a member set on their automatic channel in a guild, for their next channel there.
+
+    Role and member IDs belong to one guild, so unlike :class:`AutoChannelSettings` these are kept per guild.
+    """
+
+    ownership: ClassVar[Ownership] = Ownership(member="owner_id", guild="guild_id")
+    natural_key: ClassVar[tuple[str, ...]] = ("guild_id", "owner_id", "target_id")
+
+    guild_id: int = Field(sa_type=BigInteger, index=True)
+    owner_id: int = Field(sa_type=BigInteger, index=True)
+    target_id: int = Field(sa_type=BigInteger)
+    """The role (``@everyone``'s is the guild's ID) or member the overwrite applies to."""
+    target_type: int
+    """An :class:`OverwriteType`: whether ``target_id`` is a role or a member."""
+    allow: int = Field(default=0, sa_type=BigInteger)
+    deny: int = Field(default=0, sa_type=BigInteger)
+
+
+AUTOCHANNEL_TABLES = (AutoChannelHub, AutoChannel, AutoChannelSettings, AutoChannelOverwrite)
 
 
 @dataclass
@@ -125,14 +145,23 @@ def default_name(display_name: str) -> str:
     return truncate(f"{display_name}'s channel", MAX_CHANNEL_NAME_LENGTH)
 
 
-def channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams:
-    """Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say."""
+def channel_params(
+    member: Member,
+    parent_id: Snowflake | None,
+    settings: AutoChannelSettings,
+    remembered: Iterable[OverwriteParams] = (),
+) -> GuildChannelParams:
+    """Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
+
+    It gets the ``remembered`` overwrites, and always the member's own, which replaces a remembered one.
+    """
+    others = [overwrite for overwrite in remembered if overwrite.id != member.id]
     return GuildChannelParams(
         name=settings.name or default_name(member.display_name),
         type=ChannelType.GUILD_VOICE,
         parent_id=parent_id,
         user_limit=settings.user_limit,
-        permission_overwrites=[owner_overwrite(member.id)],
+        permission_overwrites=[*others, owner_overwrite(member.id)],
     )
 
 
@@ -144,6 +173,50 @@ def hub_of(session: Session, guild_id: Snowflake) -> AutoChannelHub | None:
 def owned_channel(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> AutoChannel | None:
     """Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any."""
     return session.exec(owned_by(AutoChannel, member=owner_id, guild=guild_id)).first()
+
+
+def remembered_overwrites(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> list[AutoChannelOverwrite]:
+    """Return the overwrites the member ``owner_id`` set on their channel in the guild ``guild_id``."""
+    return list(session.exec(owned_by(AutoChannelOverwrite, member=owner_id, guild=guild_id)))
+
+
+def remember_overwrites(session: Session, record: AutoChannel, overwrites: Iterable[PermissionOverwrite]) -> None:
+    """Make the overwrites remembered for ``record``'s owner exactly ``overwrites``, minus the owner's own; caller commits.
+
+    The owner's own overwrite is left out: every channel gets it anyway, and an owner who removed it by accident
+    would otherwise lose it for good.
+    """
+    wanted = {int(o.id): o for o in overwrites if not (o.type == OverwriteType.MEMBER and int(o.id) == record.owner_id)}
+    for row in remembered_overwrites(session, Snowflake(record.guild_id), Snowflake(record.owner_id)):
+        if row.target_id not in wanted:
+            soft_delete(session, row)
+    for target_id, overwrite in wanted.items():
+        stored = AutoChannelOverwrite(
+            guild_id=record.guild_id,
+            owner_id=record.owner_id,
+            target_id=target_id,
+            target_type=int(overwrite.type),
+            allow=int(overwrite.allow),
+            deny=int(overwrite.deny),
+        )
+        upsert(session, stored)
+
+
+def usable_overwrites(rows: Iterable[AutoChannelOverwrite], role_ids: Container[Snowflake] | None) -> list[OverwriteParams]:
+    """Return ``rows`` as overwrites to set, without those for roles not in ``role_ids`` (``None`` if unknown: all stay).
+
+    A member who left the guild can't be told apart here; :meth:`AutoChannels.create_channel` retries without them.
+    """
+    return [
+        OverwriteParams(
+            id=Snowflake(row.target_id),
+            type=OverwriteType(row.target_type),
+            allow=Permissions(row.allow),
+            deny=Permissions(row.deny),
+        )
+        for row in rows
+        if role_ids is None or row.target_type != OverwriteType.ROLE or Snowflake(row.target_id) in role_ids
+    ]
 
 
 def settings_of(session: Session, user_id: Snowflake) -> AutoChannelSettings:
@@ -200,7 +273,7 @@ class AutoChannels(
 
     @Cog.listener(EventName.CHANNEL_UPDATE)
     async def on_channel_update(self, channel: Channel) -> None:
-        """Remember the name and user limit an owner gave their automatic channel in Discord, for their next one."""
+        """Remember the name, user limit and permission overwrites an owner gave their automatic channel, for the next."""
         with Session(self.bind) as session:
             record = self._auto_channel(session, channel.id)
             if record is None:
@@ -209,6 +282,8 @@ class AutoChannels(
             settings.name = channel.name
             settings.user_limit = channel.user_limit or 0
             upsert(session, settings)
+            if channel.model.permission_overwrites is not None:  # absent means unknown, not none
+                remember_overwrites(session, record, channel.model.permission_overwrites)
             session.commit()
 
     @staticmethod
@@ -226,6 +301,7 @@ class AutoChannels(
             existing = owned_channel(session, guild_id, user_id)
             count = len(session.exec(owned_by(AutoChannel, guild=guild_id)).all())
             settings = settings_of(session, user_id)
+            remembered = remembered_overwrites(session, guild_id, user_id)
         if existing is not None:
             own = member.guild.channel(existing.id)
             moved = await member.move_to(own, reason=CREATE_REASON)
@@ -240,7 +316,7 @@ class AutoChannels(
         if hub.max_channels and count >= hub.max_channels:
             await self._tell(member, "This server has as many automatic channels as it allows; try again later.")
             return
-        failure = await self.create_channel(member, hub, settings)
+        failure = await self.create_channel(member, hub, settings, remembered)
         if failure is not None:
             self.logger.warning(t"Could not give {user_id} a channel in guild {guild_id}: {failure}")
 
@@ -249,8 +325,12 @@ class AutoChannels(
         member: Member | PartialMember,
         hub: AutoChannelHub,
         settings: AutoChannelSettings,
+        remembered: Iterable[AutoChannelOverwrite] = (),
     ) -> NetworkError | None:
-        """Create ``member``'s channel in the hub's category, remember it and move them into it."""
+        """Create ``member``'s channel in the hub's category, remember it and move them into it.
+
+        The ``remembered`` overwrites are set on it; if Discord refuses them (a member left, say), it is made without.
+        """
         client = self.bot.client
         hub_channel = await client.channels.partial(hub.channel_id).fetch()
         if is_network_error(hub_channel):
@@ -258,8 +338,15 @@ class AutoChannels(
         full = member if isinstance(member, Member) else await member.fetch()
         if is_network_error(full):
             return full
-        params = channel_params(full, None if hub_channel.parent is None else hub_channel.parent.id, settings)
-        channel = await client.guilds.partial(hub.id).create_channel(params, reason=f"{CREATE_REASON} for {full.id}")
+        parent_id = None if hub_channel.parent is None else hub_channel.parent.id
+        guild = client.guilds.partial(hub.id)
+        roles = full.guild.roles
+        overwrites = usable_overwrites(remembered, None if roles is None else {role.id for role in roles})
+        reason = f"{CREATE_REASON} for {full.id}"
+        channel = await guild.create_channel(channel_params(full, parent_id, settings, overwrites), reason=reason)
+        if overwrites and isinstance(channel, ApiResponseError):
+            self.logger.debug(t"Could not create {full.id}'s channel with their overwrites, retrying without: {channel}")
+            channel = await guild.create_channel(channel_params(full, parent_id, settings), reason=reason)
         if is_network_error(channel):
             return channel
         record = AutoChannel(id=int(channel.id), guild_id=hub.id, owner_id=int(full.id))
