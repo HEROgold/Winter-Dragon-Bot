@@ -20,6 +20,7 @@ from winter_dragon.cogs.autochannel import (
     OWNER_PERMISSIONS,
     AutoChannel,
     AutoChannelHub,
+    AutoChannelOverwrite,
     AutoChannels,
     AutoChannelSettings,
     VoiceOccupancy,
@@ -132,6 +133,86 @@ async def test_leaving_an_empty_channel_deletes_it(engine: Engine, client: Recor
     await cog.on_voice_state_update(_state(client, None, user_id=4))
     assert len(client.requests_to("DELETE", "/channels/60")) == 1
     assert _channels(engine) == []
+
+
+async def test_editing_an_owned_channel_in_discord_is_remembered_for_the_next_one(
+    engine: Engine,
+    client: RecordingClient,
+) -> None:
+    seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
+    data = {**NEW_CHANNEL, "name": "chill zone", "user_limit": 5}
+    edited = bind(client, parse_dispatch(EventName.CHANNEL_UPDATE, data))
+
+    await _cog(engine, client).on_channel_update(edited)
+
+    with Session(engine) as session:
+        settings = session.get(AutoChannelSettings, MEMBER_ID)
+    assert settings is not None
+    assert (settings.name, settings.user_limit) == ("chill zone", 5)
+
+
+async def test_permission_overwrites_an_owner_sets_in_discord_come_back_on_their_next_channel(
+    engine: Engine,
+    client: RecordingClient,
+) -> None:
+    seed(
+        engine,
+        AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID),
+        AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID),
+    )
+    hidden = Permissions.VIEW_CHANNEL
+    muted = Permissions.SPEAK
+    data = {
+        **NEW_CHANNEL,
+        "permission_overwrites": [
+            {"id": str(GUILD_ID), "type": 0, "allow": "0", "deny": str(int(hidden))},
+            {"id": "8", "type": 1, "allow": str(int(hidden)), "deny": str(int(muted))},
+            {"id": str(MEMBER_ID), "type": 1, "allow": str(int(OWNER_PERMISSIONS)), "deny": "0"},
+        ],
+    }
+    cog = _cog(engine, client)
+    await cog.on_channel_update(bind(client, parse_dispatch(EventName.CHANNEL_UPDATE, data)))
+    with Session(engine) as session:  # the owner's own overwrite is never stored
+        assert sorted(row.target_id for row in session.exec(alive(AutoChannelOverwrite))) == [1, 8]
+    await cog.delete_channel(_channels(engine)[0])
+
+    await cog.on_voice_state_update(_state(client, HUB_ID))
+
+    (create,) = client.requests_to("POST", f"/guilds/{GUILD_ID}/channels")
+    assert sorted(create.json["permission_overwrites"], key=lambda o: int(o["id"])) == [
+        {"id": "1", "type": 0, "allow": "0", "deny": str(int(hidden))},
+        {"id": "3", "type": 1, "allow": str(int(OWNER_PERMISSIONS)), "deny": "0"},
+        {"id": "8", "type": 1, "allow": str(int(hidden)), "deny": str(int(muted))},
+    ]
+
+
+async def test_an_overwrite_the_owner_removed_is_forgotten(engine: Engine, client: RecordingClient) -> None:
+    seed(
+        engine,
+        AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID),
+        AutoChannelOverwrite(guild_id=GUILD_ID, owner_id=MEMBER_ID, target_id=8, target_type=1, deny=int(Permissions.SPEAK)),
+    )
+    data = {**NEW_CHANNEL, "permission_overwrites": []}
+
+    await _cog(engine, client).on_channel_update(bind(client, parse_dispatch(EventName.CHANNEL_UPDATE, data)))
+
+    with Session(engine) as session:
+        assert list(session.exec(alive(AutoChannelOverwrite))) == []
+
+
+async def test_a_channel_is_made_without_overwrites_discord_refuses(engine: Engine, client: RecordingClient) -> None:
+    seed(
+        engine,
+        AutoChannelHub(id=GUILD_ID, channel_id=HUB_ID),
+        AutoChannelOverwrite(guild_id=GUILD_ID, owner_id=MEMBER_ID, target_id=8, target_type=1, deny=int(Permissions.SPEAK)),
+    )
+    client.reply("POST", f"/guilds/{GUILD_ID}/channels", {"code": 10013, "message": "Unknown User"}, status=404)
+
+    await _cog(engine, client).on_voice_state_update(_state(client, HUB_ID))
+
+    first, second = client.requests_to("POST", f"/guilds/{GUILD_ID}/channels")
+    assert len(first.json["permission_overwrites"]) == 2
+    assert len(second.json["permission_overwrites"]) == 1
 
 
 async def test_guild_create_cleans_up_channels_emptied_while_offline(engine: Engine, client: RecordingClient) -> None:
