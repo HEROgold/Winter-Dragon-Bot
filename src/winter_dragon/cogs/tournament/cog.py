@@ -11,7 +11,11 @@ lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import alive_by_id
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
-lazy from wd_discord import User  # noqa: TC002
+lazy from wd_discord import (  # noqa: TC002 - wd_bot reads the handler's interaction type at runtime
+    GuildCommandInteraction,
+    GuildComponentInteraction,
+    User,
+)
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
 lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
@@ -58,12 +62,7 @@ lazy from .service import (
 
 if TYPE_CHECKING:
     lazy from wd_db.extension.lifecycle import LifecycleModel
-    lazy from wd_discord import (
-        AnyGuildInteraction,
-        AutocompleteInteraction,
-        GuildCommandInteraction,
-        GuildComponentInteraction,
-    )
+    lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import ActionRow
     lazy from wd_discord.embed import Embed
 

@@ -625,13 +625,18 @@ class Command(AppCommand):
 def wants_guild_interaction(func: Callable[..., object]) -> bool:
     """Whether ``func``'s ``interaction`` parameter is annotated with a guild interaction type, an :class:`InGuild`.
 
-    Resolves the annotation to its type, so an alias of a guild interaction still counts. A type that can't be resolved
-    at runtime doesn't count, so a guild handler imports its interaction type outside ``TYPE_CHECKING``.
+    Resolves the annotation to its type, so an alias of a guild interaction still counts. An annotation that can't be
+    resolved at runtime doesn't count, unless it names a guild interaction type: that raises ``TypeError``, since the
+    handler would silently lose its guild. A guild handler imports its interaction type outside ``TYPE_CHECKING``.
     """
     annotation = annotationlib.get_annotations(func, format=annotationlib.Format.FORWARDREF).get("interaction")
     try:
         kind = Command._resolve(annotation, func)  # noqa: SLF001 - the shared annotation resolver
-    except NameError:
+    except NameError as error:
+        source = annotation.__forward_arg__ if isinstance(annotation, annotationlib.ForwardRef) else str(annotation)
+        if source.rpartition(".")[2] in {guild.__name__ for guild in InGuild.__subclasses__()}:
+            msg = f"{func.__qualname__}: {source} doesn't resolve; import it outside TYPE_CHECKING"
+            raise TypeError(msg) from error
         return False
     return isinstance(kind, type) and issubclass(kind, InGuild)
 

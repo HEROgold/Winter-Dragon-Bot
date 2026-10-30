@@ -187,10 +187,20 @@ def test_guild_interaction_is_detected_by_type_not_by_name(tmp_path: Path) -> No
         "async def misnamed(self, interaction: GuildCommandInteraction) -> None: ...\n"
         "async def bare(self, other) -> None: ...\n",
     )
+    (tmp_path / "hidden_guild_module.py").write_text(
+        "from __future__ import annotations\n"
+        "async def type_only(self, interaction: CommandInteraction) -> None: ...\n"
+        "async def hidden_guild(self, interaction: GuildCommandInteraction) -> None: ...\n",
+    )
     script = (
         "import guild_handler_module as m\n"
+        "import hidden_guild_module as hidden\n"
         "from wd_bot.commands import wants_guild_interaction\n"
-        "print([wants_guild_interaction(f) for f in (m.aliased, m.press, m.misnamed, m.bare)])\n"
+        "print([wants_guild_interaction(f) for f in (m.aliased, m.press, m.misnamed, m.bare, hidden.type_only)])\n"
+        "try:\n"
+        "    wants_guild_interaction(hidden.hidden_guild)\n"
+        "except TypeError as error:\n"
+        "    print(error)\n"
     )
     result = subprocess.run(  # noqa: S603
         [sys.executable, "-c", script],
@@ -202,7 +212,9 @@ def test_guild_interaction_is_detected_by_type_not_by_name(tmp_path: Path) -> No
         timeout=60,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "[True, True, False, False]"
+    detected, refused = result.stdout.strip().splitlines()
+    assert detected == "[True, True, False, False, False]"  # a type-only plain interaction isn't a guild one
+    assert refused == "hidden_guild: GuildCommandInteraction doesn't resolve; import it outside TYPE_CHECKING"
 
 
 def test_signature_changes_with_description() -> None:
