@@ -7,6 +7,7 @@ lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import (
     MAX_EMBED_CHARACTERS,
     MAX_EMBED_FIELD_NAME_LENGTH,
+    MAX_EMBED_FIELD_VALUE_LENGTH,
     MAX_EMBED_FIELDS,
     Embed,
     EmbedField,
@@ -16,6 +17,8 @@ lazy from wd_discord.timestamp import DiscordTime
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes
 lazy from winter_dragon.cogs.steam.settings import SteamSettings
+lazy from winter_dragon.config import Settings
+lazy from winter_dragon.redirect_link import RedirectLink, UnsafeLinkError
 
 
 if TYPE_CHECKING:
@@ -30,8 +33,12 @@ HTTP_SCHEMES = ("https://", "http://")
 """The URL schemes Discord renders masked links for."""
 
 
-def format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str:
-    """Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps."""
+def format_sale(sale: SteamSale, properties: set[SaleTypes], *, open_in_steam: bool = False) -> str:
+    """Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps.
+
+    With ``open_in_steam``, also link to the dashboard's redirect page, which opens the sale in the Steam app, if the
+    link fits in an embed field.
+    """
     text = dedent(f"""\
         [{sale.title}]({sale.url})
         Sale: {sale.sale_percent}%
@@ -43,7 +50,28 @@ def format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str:
         text += f"\nSale ends: {DiscordTime(sale.sale_end):R}"
     if (app_id := sale.steam_url.app_id) is not None and (install_url := _install_url(app_id)) is not None:
         text += f"\nInstall game: [Click here]({install_url})"
+    if open_in_steam and (open_url := _open_url(sale)) is not None:
+        line = f"\nOpen in Steam: [Click here]({open_url})"
+        if len(text) + len(line) <= MAX_EMBED_FIELD_VALUE_LENGTH:
+            text += line
     return text
+
+
+def _open_url(sale: SteamSale) -> str | None:
+    """Return the redirect page opening ``sale`` in the Steam app, or ``None`` without one.
+
+    Desktops open the page in the Steam client; phones open the store page, which the Steam mobile app handles. There
+    is none without an http(s) :attr:`Settings.dashboard_url`, or for a store URL the redirect page would refuse.
+    """
+    dashboard = str(Settings.dashboard_url)
+    if not dashboard.startswith(HTTP_SCHEMES):
+        return None
+    store = sale.steam_url
+    try:
+        link = RedirectLink(store.client_url, mobile=store, fallback=store)
+    except UnsafeLinkError:
+        return None
+    return link.on(dashboard)
 
 
 def _install_url(app_id: int) -> str | None:
@@ -57,9 +85,16 @@ def _install_url(app_id: int) -> str | None:
     return f"{redirect}/install/{app_id}"
 
 
-def _sale_field(name: str, sale: SteamSale, properties: Mapping[int, set[SaleTypes]]) -> EmbedField:
+def _sale_field(
+    name: str,
+    sale: SteamSale,
+    properties: Mapping[int, set[SaleTypes]],
+    *,
+    open_in_steam: bool = False,
+) -> EmbedField:
     """Build the embed field describing ``sale``."""
-    return EmbedField(name=name[:MAX_EMBED_FIELD_NAME_LENGTH], value=format_sale(sale, properties.get(sale.id or 0, set())))
+    value = format_sale(sale, properties.get(sale.id or 0, set()), open_in_steam=open_in_steam)
+    return EmbedField(name=name[:MAX_EMBED_FIELD_NAME_LENGTH], value=value)
 
 
 def page_count(total: int) -> int:
@@ -126,7 +161,7 @@ def build_notification(sales: Sequence[SteamSale], properties: Mapping[int, set[
     title = "🎮 New Steam Sales"
     fields: list[EmbedField] = []
     for index, sale in enumerate(sales[:MAX_EMBED_FIELDS], 1):
-        field = _sale_field(f"Game {index}", sale, properties)
+        field = _sale_field(f"Game {index}", sale, properties, open_in_steam=True)
         if Embed(title=title, fields=[*fields, field]).character_count() > MAX_EMBED_CHARACTERS:
             break
         fields.append(field)

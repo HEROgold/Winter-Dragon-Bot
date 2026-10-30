@@ -29,6 +29,10 @@ Later:
 10. **Owner panel:** command sync and resync, latency and resource use, command usage, announcements to guilds.
 11. **Climb** (with [Ranked tracking](ranked-tracking.md)): a Tracked Player's games, Attention Points and Notes.
 
+## App links
+
+Discord only makes `http(s)` links clickable, so the bot links app links like `steam://` through `/redirect?uri=<link>&mobile=<link>&fallback=<page>`. The page opens `uri`, or `mobile` on a phone, and shows a button in case the browser blocks the jump, plus the `fallback` web page. Anyone can open it without signing in. It refuses `http`, `javascript`, `data`, `vbscript`, `file`, `blob`, `ftp`, `ws` and `telnet` links, and a fallback that isn't `https`. The rules are in [redirect_link.py](../../src/winter_dragon/redirect_link.py). The bot builds these links on `Settings.dashboard_url` in `config.ini`, which has to match `public_url` in `dashboard.ini`.
+
 ## Design
 
 The approved design is the "alpine route" in [sketches/dashboard/](../../sketches/dashboard/index.html): one family (Archivo, condensed for headings), snow and granite with route blue as the only accent and ember only for destructive actions, and the white-blue-white route marker meaning only "you are here" or "chosen". New pages reuse its stylesheet rather than inventing a new look.

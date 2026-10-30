@@ -32,6 +32,8 @@ class Settings:
     """The bot's name."""
     support_guild_id = Config(0)
     """The official support guild that /invite guild invites to; ``0`` when there is none."""
+    dashboard_url = Config("")
+    """The address people open the dashboard on, as ``public_url`` in ``dashboard.ini``; empty hides links to it."""
     log_level = Config(logging.DEBUG)
     """The lowest level logged, as a :mod:`logging` level number."""
     created_color = Config(Hex(0x00FF00))
