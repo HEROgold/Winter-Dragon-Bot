@@ -44,7 +44,10 @@ def upgrade() -> None:
     op.create_index(op.f("ix_autochanneloverwrite_id"), "autochanneloverwrite", ["id"], unique=True)
     op.create_index(op.f("ix_autochanneloverwrite_owner_id"), "autochanneloverwrite", ["owner_id"], unique=False)
     op.create_index(
-        "uq_autochanneloverwrite_natural_key", "autochanneloverwrite", ["guild_id", "owner_id", "target_id"], unique=True
+        "uq_autochanneloverwrite_natural_key",
+        "autochanneloverwrite",
+        ["guild_id", "owner_id", "target_id"],
+        unique=True,
     )
     # ### end Alembic commands ###
 
