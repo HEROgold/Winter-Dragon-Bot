@@ -951,6 +951,7 @@ A member whose data is hidden leaves each tournament that hasn't started, by the
 
 - attributes: tables
 - `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Withdraw the member ``member_id`` from every tournament they're signed up for that hasn't started.
+- `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the teams the member ``member_id`` captains in tournaments that haven't started, which withdrawing disbands.
 
 ## `winter_dragon.cogs.uptime` — `src/winter_dragon/cogs/uptime.py`
 The /uptime command group: how long the bot has been running.

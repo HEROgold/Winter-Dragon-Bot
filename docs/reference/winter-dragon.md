@@ -47,12 +47,19 @@ Container health checks, run by compose: ``python -m winter_dragon.health bot`` 
 ## `winter_dragon.member_hidden` — `src/winter_dragon/member_hidden.py`
 Hooks a feature registers to clean up after a member whose data is hidden, so privacy needn't know the feature.
 
+### `@dataclass class RemovedRows`
+Rows of ``model`` a hook removes that the member doesn't own; ``ids`` selects their ``id``.
+
+- fields: model: type[LifecycleModel], ids: SelectOfScalar[int | None]
+
 ### `class MemberHiddenHook`
 A feature's own cleanup when a member's data is hidden; defining a subclass registers it.
 
 - fields: tables: ClassVar[tuple[type[LifecycleModel], ...]]
 - `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Clean up the member ``member_id``'s data in ``session``, before their owned rows are hidden; don't commit.
+- `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the rows :meth:`on_member_hidden` removes that the member ``member_id`` doesn't own; none by default.
 - `@staticmethod run_all(session: Session, member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> None` — Call every registered hook whose :attr:`tables` are all in ``stored``, for the member ``member_id``.
+- `@staticmethod removed_by_all(member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> Generator[RemovedRows]` — Yield the rows the hooks :meth:`run_all` calls remove for the member ``member_id``, beyond what they own.
 
 ## `winter_dragon.run_test_bot` — `src/winter_dragon/run_test_bot.py`
 Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.

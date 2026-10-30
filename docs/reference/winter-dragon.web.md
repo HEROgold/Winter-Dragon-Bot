@@ -185,8 +185,8 @@ What the dashboard shows of the bot: the features its cogs define, and every rec
 - module names: HIDDEN_FIELDS
 - `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do.
 - `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first.
-- `member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]` — Yield a record for every table holding rows the member ``member_id`` owns, by name.
-- `record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows the member ``member_id`` owns in the table ``key``, times in ``zone``; ``None`` for no such table.
+- `member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]` — Yield a record for every table holding rows a deletion request by the member ``member_id`` removes, by name.
+- `record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows of the table ``key`` a deletion request by the member ``member_id`` removes, times in ``zone``.
 
 ### `@dataclass class Feature`
 A command group the bot offers: ``/name``, and what it does.

@@ -6,11 +6,11 @@ Each action takes an open session and leaves committing to the caller. An action
 
 lazy from typing import TYPE_CHECKING, override
 
-from sqlmodel import Session, col
+from sqlmodel import Session, col, select
 lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.member_hidden import MemberHiddenHook
+lazy from winter_dragon.member_hidden import MemberHiddenHook, RemovedRows
 
 lazy from .bracket import first_round, next_match, round_count, split_into_teams, valid_options
 lazy from .models import (
@@ -147,6 +147,22 @@ class WithdrawHiddenMember(MemberHiddenHook):
         """Withdraw the member ``member_id`` from every tournament they're signed up for that hasn't started."""
         for tournament in list(open_signups_of(session, member_id)):
             withdraw(session, tournament, member_id)
+
+    @classmethod
+    @override
+    def removes(cls, member_id: Snowflake) -> Generator[RemovedRows]:
+        """Yield the teams the member ``member_id`` captains in tournaments that haven't started, which withdrawing disbands."""
+        captained = (
+            select(col(TournamentTeam.id))
+            .join(Tournament, col(TournamentTeam.tournament_id) == col(Tournament.id))
+            .where(
+                TournamentTeam.captain_id == int(member_id),
+                col(TournamentTeam.deleted_at).is_(None),
+                col(Tournament.deleted_at).is_(None),
+                Tournament.status == TournamentStatus.SIGNUP,
+            )
+        )
+        yield RemovedRows(TournamentTeam, captained)
 
 
 def create_team(session: Session, tournament: Tournament, captain_id: Snowflake, name: str) -> None:

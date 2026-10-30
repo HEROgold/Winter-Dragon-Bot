@@ -1,28 +1,31 @@
 """What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
-The records come from the lifecycle tables' :class:`~wd_db.extension.lifecycle.Ownership`, the same rule a deletion
-request follows, so the data page lists exactly what deleting would remove.
+The records come from the lifecycle tables' :class:`~wd_db.extension.lifecycle.Ownership` and the rows each
+:class:`~winter_dragon.member_hidden.MemberHiddenHook` removes, the same rules a deletion request follows, so the data
+page lists exactly what deleting would remove.
 """
 
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
-lazy from sqlalchemy import func
-lazy from sqlmodel import Session, select
+lazy from sqlalchemy import func, or_
+lazy from sqlmodel import Session, col, select
 lazy from wd_bot.cogs import GroupCog
-lazy from wd_db.extension.lifecycle import owned_by
+lazy from wd_db.extension.lifecycle import alive, owned_by
 lazy from wd_db.schema import ensure_tables
 
 lazy from winter_dragon import cogs
 lazy from winter_dragon.cogs.privacy.domain import DeletionRequest, stored_models
 lazy from winter_dragon.cogs.reminder.domain import REMINDER_TABLES
+lazy from winter_dragon.member_hidden import MemberHiddenHook
 lazy from winter_dragon.web.formatting import humanized_name, plural, shown_value
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Collection, Generator
 
     from sqlalchemy import Engine
+    from sqlmodel.sql.expression import SelectOfScalar
     from wd_db.extension.lifecycle import LifecycleModel
     from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
@@ -88,25 +91,44 @@ class RecordTable:
     rows: tuple[tuple[str, ...], ...]
 
 
+def _removed_by_deletion[M: LifecycleModel](
+    model: type[M],
+    member_id: Snowflake,
+    stored: Collection[type[LifecycleModel]],
+) -> SelectOfScalar[M]:
+    """Select the ``model`` rows a deletion request by ``member_id`` removes: those they own, and those a hook removes."""
+    owned = owned_by(model, member=member_id)
+    hooked = [rows.ids for rows in MemberHiddenHook.removed_by_all(member_id, stored) if rows.model is model]
+    if not hooked:
+        return owned
+    ids = (owned.with_only_columns(col(model.id)), *hooked)
+    return alive(model).where(or_(*(col(model.id).in_(selected) for selected in ids)))
+
+
 def member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]:
-    """Yield a record for every table holding rows the member ``member_id`` owns, by name."""
-    models = sorted(stored_models(bind), key=lambda model: model.__name__)
+    """Yield a record for every table holding rows a deletion request by the member ``member_id`` removes, by name."""
+    stored = stored_models(bind)
     with Session(bind) as session:
-        for model in models:
-            count = session.exec(select(func.count()).select_from(owned_by(model, member=member_id).subquery())).one()
+        for model in sorted(stored, key=lambda model: model.__name__):
+            listed = _removed_by_deletion(model, member_id, stored)
+            count = session.exec(select(func.count()).select_from(listed.subquery())).one()
             if count:
                 yield DataRecord(model=model, count=count)
 
 
 def record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None:
-    """Return the rows the member ``member_id`` owns in the table ``key``, times in ``zone``; ``None`` for no such table."""
-    model = next((model for model in stored_models(bind) if model.__table__.name == key), None)
+    """Return the rows of the table ``key`` a deletion request by the member ``member_id`` removes, times in ``zone``.
+
+    ``None`` for no such table.
+    """
+    stored = stored_models(bind)
+    model = next((model for model in stored if model.__table__.name == key), None)
     if model is None:
         return None
     fields = tuple(name for name in model.model_fields if name not in HIDDEN_FIELDS)
     with Session(bind) as session:
         rows = tuple(
             tuple(shown_value(getattr(row, name), zone) for name in fields)
-            for row in session.exec(owned_by(model, member=member_id))
+            for row in session.exec(_removed_by_deletion(model, member_id, stored))
         )
     return RecordTable(columns=tuple(humanized_name(name) for name in fields), rows=rows)

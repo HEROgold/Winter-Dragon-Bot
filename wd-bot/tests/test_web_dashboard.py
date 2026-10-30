@@ -40,6 +40,8 @@ from winter_dragon.cogs.reminder import cog as reminder_cog
 from winter_dragon.cogs.reminder.cog import Reminders
 from winter_dragon.cogs.reminder.domain import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
+from winter_dragon.cogs.tournament import service as tournaments
+from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentStatus, TournamentTeam
 
 
 from winter_dragon.cogs.urban import Lookup
@@ -219,6 +221,24 @@ def test_the_data_page_lists_only_what_the_bot_stores_about_you(member: TestClie
     assert "mine" in rows
     assert "theirs" not in rows
     assert "9 Oct 2026, 09:00" in rows  # 07:00 UTC, in Amsterdam
+
+
+def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestClient, bind: Engine) -> None:
+    with Session(bind) as session:
+        for name, status in (("open", TournamentStatus.SIGNUP), ("started", TournamentStatus.RUNNING)):
+            tournament = Tournament(guild_id=1, channel_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2)
+            session.add(tournament)
+            session.commit()
+            tournaments.create_team(session, tournament, Snowflake(MEMBER_ID), f"{name} team")
+            tournament.status = status
+            session.commit()
+
+    page = member.get("/me").text
+    rows = member.get(f"/me/records/{TournamentTeam.__table__.name}", headers=HTMX).text
+
+    assert "Tournament team" in page
+    assert "open team" in rows
+    assert "started team" not in rows  # leaving a started tournament doesn't disband the team
 
 
 def test_a_record_that_does_not_exist_is_not_found(member: TestClient) -> None:
