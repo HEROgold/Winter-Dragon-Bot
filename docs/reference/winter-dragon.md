@@ -17,7 +17,8 @@ Config descriptor scoped to the cog settings file; every cog shares it, one sect
 ### `class Settings`
 Application-wide settings.
 
-- attributes: bot_name, support_guild_id, log_level, created_color, changed_color, deleted_color, bot_status_messages
+- attributes: bot_name, support_guild_id, dashboard_url, log_level, created_color, changed_color, deleted_color,
+  bot_status_messages
 
 ## `winter_dragon.config_migration` — `src/winter_dragon/config_migration.py`
 Where every section of the old single ``config.ini`` lives now, and the startup step that moves it there.
@@ -60,6 +61,21 @@ A feature's own cleanup when a member's data is hidden; defining a subclass regi
 - `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the rows :meth:`on_member_hidden` removes that the member ``member_id`` doesn't own; none by default.
 - `@staticmethod run_all(session: Session, member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> None` — Call every registered hook whose :attr:`tables` are all in ``stored``, for the member ``member_id``.
 - `@staticmethod removed_by_all(member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> Generator[RemovedRows]` — Yield the rows the hooks :meth:`run_all` calls remove for the member ``member_id``, beyond what they own.
+
+## `winter_dragon.redirect_link` — `src/winter_dragon/redirect_link.py`
+Links to the dashboard's ``/redirect`` page, which opens an app link (``steam://...``) Discord won't make clickable.
+
+- module names: REDIRECT_PATH, BLOCKED_SCHEMES, FALLBACK_SCHEME
+
+### `class UnsafeLinkError(ValueError)`
+A link the redirect page won't open; the message says why, for the visitor who followed it.
+
+### `@dataclass class RedirectLink`
+Where the redirect page sends a visitor: ``uri``, ``mobile`` on a phone, and a ``fallback`` page without the app.
+
+- fields: uri: str, mobile: str | None, fallback: str | None
+- `target(*, phone: bool) -> str` — Return the link to open: :attr:`mobile` on a phone when there is one, else :attr:`uri`.
+- `on(dashboard_url: str) -> str` — Return the URL of this link's redirect page on the dashboard served at ``dashboard_url``.
 
 ## `winter_dragon.run_test_bot` — `src/winter_dragon/run_test_bot.py`
 Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.

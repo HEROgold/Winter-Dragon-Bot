@@ -93,6 +93,7 @@ from winter_dragon.config import Settings
 result = {
     "bot_name": Settings.bot_name,
     "support_guild_id": Settings.support_guild_id,
+    "dashboard_url": Settings.dashboard_url,
     "log_level": Settings.log_level,
     "created_color": int(Settings.created_color),
     "changed_color": int(Settings.changed_color),
@@ -110,6 +111,7 @@ def test_fresh_boot_writes_app_settings_to_config_ini(boot_config: BootConfig) -
     assert boot.values == {
         "bot_name": "WinterDragon",
         "support_guild_id": 0,
+        "dashboard_url": "",
         "log_level": 10,
         "created_color": 0x00FF00,
         "changed_color": 0xFFFF00,
@@ -122,6 +124,7 @@ def test_fresh_boot_writes_app_settings_to_config_ini(boot_config: BootConfig) -
     assert set(boot.files["config.ini"]["Settings"]) == {
         "bot_name",
         "support_guild_id",
+        "dashboard_url",
         "log_level",
         "created_color",
         "changed_color",

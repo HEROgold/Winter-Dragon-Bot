@@ -16,7 +16,7 @@ Members opt in to DMs, set the minimum discount they care about, and browse curr
 
 Surface: `/steam add | percentage | remove | show`
 
-Settings (`[SteamSettings]` in `cogs.ini`): `country_code`, `stored_percent`, `complete_percent`, `top_sellers`, `request_interval`, `update_interval`, `outdated_after`, `recheck_delay`, `embed_color`, `steam_redirect`. The install link needs `steam_redirect` to be an https redirect to `steam://`; Discord won't render a raw `steam://` link.
+Settings (`[SteamSettings]` in `cogs.ini`): `country_code`, `stored_percent`, `complete_percent`, `top_sellers`, `request_interval`, `update_interval`, `outdated_after`, `recheck_delay`, `embed_color`, `steam_redirect`. The install link needs `steam_redirect` to be an https redirect to `steam://`; Discord won't render a raw `steam://` link. Sale DMs also link each sale to the dashboard's [redirect page](../spec/dashboard.md#app-links), which opens it in the Steam client on desktop and the store page on phones. That link needs `dashboard_url` in `config.ini`.
 
 **Status:** ✅ Ported to `src/winter_dragon/cogs/steam/`.
 **Source on `main`:** `src/winter_dragon/bot/extensions/user/steam/`

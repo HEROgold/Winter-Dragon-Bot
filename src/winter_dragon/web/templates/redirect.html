@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{% if error %}Can't open this link{% else %}Opening your app{% endif %} · {% endblock %}
+
+{% block main %}
+<main class="page">
+  {% if error %}
+    <h1 class="page-title">Can't open this link</h1>
+    <p class="page-lead">{{ error }}</p>
+  {% else %}
+    <h1 class="page-title">Opening your app</h1>
+    <p class="page-lead">If your browser asks, allow it to open the app. Nothing happening? Open it yourself.</p>
+    <p><a class="button button-primary" href="{{ target }}">Open</a></p>
+    {% if fallback %}
+      <p><a href="{{ fallback }}">Don't have the app? Open the web page instead.</a></p>
+    {% endif %}
+    <script>
+      window.location.href = {{ target|tojson }};
+    </script>
+  {% endif %}
+</main>
+{% endblock %}

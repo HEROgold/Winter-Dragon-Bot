@@ -627,7 +627,7 @@ Sends each subscriber one DM with the sales above their threshold discovered sin
 Embeds and buttons that show Steam sales: the pages of /steam show and the sale DMs.
 
 - module names: HTTP_SCHEMES
-- `format_sale(sale: SteamSale, properties: set[SaleTypes]) -> str` — Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps.
+- `format_sale(sale: SteamSale, properties: set[SaleTypes], *, open_in_steam: bool=False) -> str` — Describe one sale: link, discount, price, kind, when it was last seen, and an install link for apps.
 - `page_count(total: int) -> int` — Return how many /steam show pages ``total`` sales take; at least one.
 - `build_page(sales: Sequence[SteamSale], properties: Mapping[int, set[SaleTypes]], *, page: int, color: int) -> Embed` — Build page ``page`` (0-based, clamped to the valid range) of the /steam show listing of ``sales``.
 - `page_buttons(handler: ComponentHandler, *, owner_id: Snowflake, percent: int, page: int, pages: int) -> list[ActionRow]` — Build the previous / page counter / next buttons under page ``page`` of ``pages``.
@@ -757,7 +757,7 @@ Lets requests through at least ``interval`` seconds apart, and none at all while
 ## `winter_dragon.cogs.steam.urls` — `src/winter_dragon/cogs/steam/urls.py`
 Steam store URLs, and the IDs of the store items they point at.
 
-- module names: STORE_URL, APP_URL_PATTERN, ITEM_URL_PATTERN, ITEM_PATHS
+- module names: STORE_URL, CLIENT_OPEN_URL, APP_URL_PATTERN, ITEM_URL_PATTERN, ITEM_PATHS
 
 ### `class StoreItemKind(StrEnum)`
 What a Steam store ID numbers; the value is the key Steam's store APIs take such an ID under.
@@ -776,6 +776,7 @@ One store item: app, package and bundle IDs are separate number ranges, so the k
 A Steam store URL.
 
 - `@property app_id -> int | None` — The app ID of an app page URL, or ``None`` for any other page (bundles, subs, search).
+- `@property client_url -> str` — The ``steam://`` link opening this page in the Steam client.
 - `@property is_app -> bool` — Whether this URL points at a single app's store page.
 - `@property is_bundle -> bool` — Whether this URL points at a bundle (``/bundle/``) or a package (``/sub/``).
 - `@property store_item -> StoreItemID | None` — The store item this URL's page is for, or ``None`` for a page that isn't one item's.

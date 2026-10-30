@@ -4,12 +4,15 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from wd_discord.components import ButtonStyle, components_payload
-from wd_discord.limits import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELDS
+from wd_discord.limits import MAX_EMBED_CHARACTERS, MAX_EMBED_FIELD_VALUE_LENGTH, MAX_EMBED_FIELDS
 
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale
 from winter_dragon.cogs.steam.pages import build_notification, build_page, format_sale, page_buttons
 from winter_dragon.cogs.steam.settings import SteamSettings
+from winter_dragon.cogs.steam.urls import SteamURL
+from winter_dragon.config import Settings
+from winter_dragon.redirect_link import RedirectLink
 
 
 if TYPE_CHECKING:
@@ -18,6 +21,7 @@ if TYPE_CHECKING:
 
 NOW = datetime(2026, 10, 8, 12, 0, tzinfo=UTC)
 COLOR = 0x094D7F
+DASHBOARD = "https://dash.example"
 
 
 def sale(sale_id: int, *, title: str | None = None, url: str | None = None) -> SteamSale:
@@ -105,3 +109,56 @@ def test_format_sale_shows_a_known_end_relative_to_now() -> None:
     ending.sale_end = datetime(2026, 10, 15, 17, tzinfo=UTC)
     assert f"Sale ends: <t:{int(ending.sale_end.timestamp())}:R>" in format_sale(ending, set())
     assert "Sale ends" not in format_sale(sale(11), set())
+
+
+def test_store_urls_open_in_the_steam_client() -> None:
+    url = SteamURL("https://store.steampowered.com/bundle/555/")
+    assert url.client_url == "steam://openurl/https://store.steampowered.com/bundle/555/"
+
+
+def test_sale_dms_link_to_open_the_sale_in_steam(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "dashboard_url", DASHBOARD)
+    embed = build_notification([sale(10)], {}, color=COLOR)
+    store = "https://store.steampowered.com/app/10/"
+    link = RedirectLink(f"steam://openurl/{store}", mobile=store, fallback=store).on(DASHBOARD)
+    assert embed.fields is not None
+    assert f"Open in Steam: [Click here]({link})" in embed.fields[0].value
+
+
+def test_no_open_link_without_a_dashboard_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "dashboard_url", "")
+    embed = build_notification([sale(10)], {}, color=COLOR)
+    assert embed.fields is not None
+    assert "Open in Steam" not in embed.fields[0].value
+
+
+def test_steam_show_pages_have_no_open_link(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "dashboard_url", DASHBOARD)
+    embed = build_page([sale(10)], {}, page=0, color=COLOR)
+    assert embed.fields is not None
+    assert "Open in Steam" not in embed.fields[0].value
+
+
+def test_notification_with_open_links_stays_within_6000_characters(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "dashboard_url", DASHBOARD)
+    sales = [sale(index, title="x" * 200) for index in range(25)]
+    embed = build_notification(sales, {}, color=COLOR)
+    assert embed.fields is not None
+    assert 0 < len(embed.fields) < len(sales)
+    assert embed.character_count() <= MAX_EMBED_CHARACTERS
+
+
+def test_no_open_link_without_an_http_dashboard_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "dashboard_url", "dash.example")
+    embed = build_notification([sale(10)], {}, color=COLOR)
+    assert embed.fields is not None
+    assert "Open in Steam" not in embed.fields[0].value
+
+
+def test_open_link_is_left_out_when_the_field_would_be_too_long(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(Settings, "dashboard_url", DASHBOARD)
+    long_url = f"https://store.steampowered.com/app/10/{'x' * 300}/"
+    embed = build_notification([sale(10, title="x" * 256, url=long_url)], {}, color=COLOR)
+    assert embed.fields is not None
+    assert "Open in Steam" not in embed.fields[0].value
+    assert len(embed.fields[0].value) <= MAX_EMBED_FIELD_VALUE_LENGTH

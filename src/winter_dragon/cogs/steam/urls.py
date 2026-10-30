@@ -6,6 +6,8 @@ lazy from enum import StrEnum
 
 
 STORE_URL = "https://store.steampowered.com/"
+CLIENT_OPEN_URL = "steam://openurl/"
+"""Prefix that opens the https page after it in the Steam client."""
 APP_URL_PATTERN = re.compile(r"(?:https?://)?store\.steampowered\.com/app/(\d+)")
 """An app page, e.g. ``https://store.steampowered.com/app/1168660/Barro_2020/``."""
 ITEM_URL_PATTERN = re.compile(r"(?:https?://)?store\.steampowered\.com/(app|sub|bundle)/(\d+)")
@@ -58,6 +60,11 @@ class SteamURL(str):
         """The app ID of an app page URL, or ``None`` for any other page (bundles, subs, search)."""
         match = APP_URL_PATTERN.match(self)
         return int(match[1]) if match else None
+
+    @property
+    def client_url(self) -> str:
+        """The ``steam://`` link opening this page in the Steam client."""
+        return f"{CLIENT_OPEN_URL}{self}"
 
     @property
     def is_app(self) -> bool:

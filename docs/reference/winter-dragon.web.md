@@ -206,6 +206,13 @@ The rows of one :class:`DataRecord`, as the data page shows them.
 
 - fields: columns: tuple[str, ...], rows: tuple[tuple[str, ...], ...]
 
+## `winter_dragon.web.redirect` — `src/winter_dragon/web/redirect.py`
+The redirect page: opens an app link (``steam://...``) from Discord, which only makes http(s) links clickable.
+
+- module names: router, MOBILE_HINT, PHONE_AGENTS
+- `is_phone(headers: Mapping[str, str]) -> bool` — Whether the request ``headers`` come from a phone: by its client hint, else by its ``User-Agent``.
+- `@router.get open_link(request: Request, uri: str='', mobile: str | None=None, fallback: str | None=None) -> Response` — Open ``uri``, or ``mobile`` on a phone, with a button in case the browser blocks it and a ``fallback`` page.
+
 ## `winter_dragon.web.reminders` — `src/winter_dragon/web/reminders.py`
 The reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord.
 
