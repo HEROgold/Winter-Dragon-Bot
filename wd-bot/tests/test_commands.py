@@ -115,7 +115,7 @@ async def test_invoke_skips_unresolved_user_option(make_interaction: Interaction
     assert calls == [None]
 
 
-async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str], make_interaction: InteractionFactory) -> None:
+async def test_invoke_skips_unknown_option(caplog: pytest.LogCaptureFixture, make_interaction: InteractionFactory) -> None:
     """An option the handler doesn't declare is skipped with a warning instead of raising TypeError."""
     calls: list[int] = []
 
@@ -129,7 +129,7 @@ async def test_invoke_skips_unknown_option(capsys: pytest.CaptureFixture[str], m
     )
     assert await command.invoke(object(), interaction) is True
     assert calls == [3]
-    assert "Unknown option 'stale'" in capsys.readouterr().err
+    assert "Unknown option 'stale'" in caplog.text
 
 
 def test_command_tolerates_unimportable_non_option_annotations() -> None:

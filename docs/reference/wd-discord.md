@@ -360,7 +360,7 @@ Discord's documented limits, and :func:`truncate` to fit text into one of them.
 ## `wd_discord.log` — `wd-discord/src/wd_discord/log.py`
 Module-level loggers that reach a log file.
 
-- `@cache get_logger(name: str) -> Logger` — Return the logger for ``name``, the same one on every call, writing to ``logs/<name>.log``.
+- `@cache get_logger(name: str) -> Logger` — Return the logger for ``name``, the same one on every call, writing to ``logs/wd.<name>.log``.
 
 ## `wd_discord.models` — `wd-discord/src/wd_discord/models.py`
 Shared pydantic base for all Discord API response models.

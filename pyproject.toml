@@ -39,7 +39,7 @@ dependencies = [
   "wd-errors",
   "wd-types",
   "wd-cogs",
-  "herogold==5.0.0",
+  "herogold==6.0.0",
   "httpxyz>=0.42.1",
   "pydantic>=2.14.1",
   "matplotlib>=3.11.2",

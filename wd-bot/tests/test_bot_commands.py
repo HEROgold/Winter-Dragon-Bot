@@ -83,13 +83,13 @@ class _OtherPingCog(Cog, auto_load=False):
         CALLS.append(interaction)
 
 
-async def test_add_cog_warns_on_duplicate_command_name(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_add_cog_warns_on_duplicate_command_name(caplog: pytest.LogCaptureFixture) -> None:
     bot = _make_bot()
     await bot.add_cog(_PingCog(bot=bot))
     other = _OtherPingCog(bot=bot)
     await bot.add_cog(other)
     assert _entry(bot, "ping").cog is other
-    assert "Duplicate command 'ping'" in capsys.readouterr().err
+    assert "Duplicate command 'ping'" in caplog.text
 
 
 async def test_dispatch_interaction_invokes_matching_command(
@@ -267,11 +267,11 @@ class _BrokenSyncer:
         raise RuntimeError(msg)
 
 
-async def test_startup_sync_logs_failure_instead_of_raising(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_startup_sync_logs_failure_instead_of_raising(caplog: pytest.LogCaptureFixture) -> None:
     bot = _make_bot()
     bot.syncer = _BrokenSyncer()
     await bot._startup_sync(object())  # type: ignore[arg-type]
-    err = capsys.readouterr().err
+    err = caplog.text
     assert "Startup command sync failed" in err
     assert "discord is down" in err
 

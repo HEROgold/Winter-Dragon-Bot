@@ -258,11 +258,11 @@ wheels = [
 
 [[package]]
 name = "herogold"
-version = "5.0.0"
+version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3b/e8/8b303f148391ca96df69028eb7b17ab7bf330d77271bf83807433a2fd2c6/herogold-5.0.0.tar.gz", hash = "sha256:4de7dd994b63516b6d98f4922adb95722c0e7e2b801299c50bf12df2ffaf54fd", size = 85964, upload-time = "2026-10-06T18:05:52.411Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/27/7f2d42778f625ca52513a9081efcc9cbc35687ed4fb4c85505613e3e6f84/herogold-6.0.0.tar.gz", hash = "sha256:34c562643b5658e32f333aa0d062e972900d8444cd49534b49c15668475324c6", size = 93372, upload-time = "2026-10-31T12:53:17.164Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/aa/db/42249480d7208d7d9e5e234a87daa71b8de8a6f1f7757fc27ef348c8e5dd/herogold-5.0.0-py3-none-any.whl", hash = "sha256:cec1f767fe1f94d65cc3d0df1bd8e18eaed6c3f1de32b6073f105719fe021b4f", size = 76372, upload-time = "2026-10-06T18:05:51.331Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/32/a5006ce9348b5ecc53c15d4258f0f352a01e8ac04127060b8b3600224b0b/herogold-6.0.0-py3-none-any.whl", hash = "sha256:9623a865622905b3b2f957e0a3a1bb00509e2c1503e0469f0a75ed5643103ace", size = 82547, upload-time = "2026-10-31T12:53:16.149Z" },
 ]
 
 [package.optional-dependencies]
@@ -1282,7 +1282,7 @@ docs = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.20.1" },
     { name = "fastapi", specifier = ">=0.162.0" },
-    { name = "herogold", specifier = "==5.0.0" },
+    { name = "herogold", specifier = "==6.0.0" },
     { name = "httpxyz", specifier = ">=0.42.1" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "jinja2", specifier = ">=3.1.6" },

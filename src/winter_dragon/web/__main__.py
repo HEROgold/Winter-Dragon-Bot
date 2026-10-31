@@ -9,6 +9,7 @@ lazy from datetime import timedelta
 
 from wd_discord import Sentry
 lazy import uvicorn
+lazy from herogold import log
 lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.settings import Tokens
 lazy from wd_config.parser import OperatorFiles
@@ -30,6 +31,7 @@ def main() -> None:
     """Check every operator file is filled in, learn the application ID, then serve the dashboard until stopped."""
     # dashboard.ini is registered on import; importing the cogs registers config.ini and cogs.ini, so the check
     # covers every file the pages read.
+    log.setup()
     import_cogs()
     OperatorFiles.check()
     Sentry()
