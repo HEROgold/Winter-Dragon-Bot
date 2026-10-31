@@ -35,7 +35,6 @@ A bot that does nothing but log every frame the Discord gateway sends it.
 A gateway that logs every frame it receives as raw JSON before handling it.
 
 - `async log_ready(name: str, event: DiscordModel) -> None` — Log READY, which :meth:`connect` consumes before :meth:`_handle` sees it; other events are logged raw.
-- `capture_model_warnings() -> None` — Send ``wd_discord.models``' log records (unknown-field warnings) through this gateway's handlers.
 
 ## `winter_dragon.health` — `src/winter_dragon/health.py`
 Container health checks, run by compose: ``python -m winter_dragon.health bot`` or ``... web``.

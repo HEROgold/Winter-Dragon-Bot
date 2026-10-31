@@ -17,7 +17,7 @@ sys.modules before anything else runs, so the real wd_db.constants module body n
 
 Enables Sentry with environment=test (restored to its original value on exit either way) and
 points herogold's logger at ./logs so a DEBUG-level .log file is left behind for inspection -
-herogold hardcodes DEBUG for both the global and per-class loggers already; set_log_directory
+herogold.log.setup() logs DEBUG to the per-class files already; its directory argument
 just makes sure the resulting files land somewhere predictable.
 """
 
@@ -25,7 +25,7 @@ lazy import asyncio
 lazy import sys
 lazy import types
 
-lazy from herogold.log import LoggerMixin
+lazy from herogold import log
 lazy from sqlmodel import create_engine
 lazy from wd_bot.bot import Bot
 lazy from wd_config.sentry import Environments, SentrySettings
@@ -50,7 +50,7 @@ async def main() -> int:
     """Run the bot for up to RUN_DURATION_SECONDS, then report the outcome."""
     _stub_wd_db_engine()
 
-    LoggerMixin.set_log_directory("logs")
+    log.setup("logs")
 
     original_environment = SentrySettings.environment
     SentrySettings.environment = Environments.test  # ty: ignore[invalid-assignment] - Config descriptor set-type

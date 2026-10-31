@@ -235,15 +235,12 @@ async def _knock_everywhere(
     bot.client = discord_client
     await bot.add_cog(_Doorman(bot=bot))
     data = message_json(id="1", channel_id="2", author=user_json(), content="hi", timestamp="2026-10-22T00:00:00+00:00")
-    dispatch_guard.logger.addHandler(caplog.handler)
-    try:
-        await bot._dispatch_interaction(make_interaction("enter"))
-        await bot._dispatch_interaction(make_component_interaction("enter"))
-        await bot._dispatch(EventName.MESSAGE_CREATE, MessageModel.model_validate(data))
-        await asyncio.gather(*(task for task in asyncio.all_tasks() if task is not asyncio.current_task()))
-    finally:
-        dispatch_guard.logger.removeHandler(caplog.handler)
-    return caplog.records
+    caplog.set_level(logging.INFO, logger=dispatch_guard.logger.name)
+    await bot._dispatch_interaction(make_interaction("enter"))
+    await bot._dispatch_interaction(make_component_interaction("enter"))
+    await bot._dispatch(EventName.MESSAGE_CREATE, MessageModel.model_validate(data))
+    await asyncio.gather(*(task for task in asyncio.all_tasks() if task is not asyncio.current_task()))
+    return [record for record in caplog.records if record.name == dispatch_guard.logger.name]
 
 
 async def test_a_component_and_a_listener_refuse_like_a_command(

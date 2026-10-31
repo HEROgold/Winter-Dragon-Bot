@@ -14,6 +14,7 @@ lazy import importlib
 lazy import sys
 
 from wd_discord import Sentry
+lazy from herogold import log
 lazy from wd_bot.bot import Bot
 
 lazy from . import cogs
@@ -23,6 +24,7 @@ lazy from .config_migration import migrate_legacy_config
 async def main() -> None:
     """Migrate an old config.ini, then construct the bot and run it forever."""
     # Before any settings class is imported: confkit reads each ini file once, when its class is defined.
+    log.setup()
     migrate_legacy_config()
     # Defining the app's scopes registers config.ini and cogs.ini with OperatorFiles, which bot.start() checks.
     importlib.import_module(f"{__package__}.config")

@@ -1,7 +1,7 @@
 """Run the archive: ``uv run python -m archive [--database-url URL]``.
 
 Applies the database migrations, then records every gateway event until interrupted: each frame goes to the log
-file (``logs/ArchiveGateway.log``) and, through the writer, to the database. The token is ``bot.ini``'s
+file (``logs/archive.gateway.ArchiveGateway.log``) and, through the writer, to the database. The token is ``bot.ini``'s
 ``read_only_token``, or ``discord_token`` when that is empty; the other settings are in ``archive.ini``.
 """
 
@@ -10,7 +10,7 @@ import asyncio
 import sys
 from typing import TYPE_CHECKING
 
-from herogold.log import LoggerMixin
+from herogold import log
 from sqlalchemy import create_engine
 from wd_bot.settings import Tokens
 from wd_discord import Sentry, Token
@@ -49,7 +49,6 @@ async def archive(engine: Engine) -> None:
     )
     purge = RawEventPurge(engine, retention_days=ArchiveSettings.raw_event_retention_days)
     gateway = ArchiveGateway(token(), intents=Intents(ArchiveSettings.intents), writer=writer)
-    gateway.capture_model_warnings()
     async with asyncio.TaskGroup() as tasks:
         tasks.create_task(writer.run())
         tasks.create_task(purge.run())
@@ -63,7 +62,7 @@ async def archive(engine: Engine) -> None:
 def main(argv: list[str] | None = None) -> int:
     """Migrate the database, then run the archive; return the exit code."""
     url = parser().parse_args(argv).database_url
-    LoggerMixin.set_log_directory("logs")
+    log.setup("logs")
     if (failed := migrations(["--url", url, "upgrade"] if url else ["upgrade"])) != 0:
         return failed
     if url:

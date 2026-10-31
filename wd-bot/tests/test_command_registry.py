@@ -289,7 +289,7 @@ async def test_guild_scope_uses_the_guild_route() -> None:
     assert registry.command_id("local", Snowflake(9)) == Snowflake(5)
 
 
-async def test_writes_disallowed_reads_but_never_puts(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_writes_disallowed_reads_but_never_puts(caplog: pytest.LogCaptureFixture) -> None:
     registry = _synced_registry(_Ping)
     client = RecordingClient()
     client.reply("GET", GLOBAL_ROUTE, [_reported(_params(_Ping.ping), description="older")])
@@ -298,10 +298,10 @@ async def test_writes_disallowed_reads_but_never_puts(capsys: pytest.CaptureFixt
 
     assert _methods(client) == [("GET", GLOBAL_ROUTE)]
     assert registry.command_id("ping") == Snowflake(42)
-    assert "skipping the write" in capsys.readouterr().err
+    assert "skipping the write" in caplog.text
 
 
-async def test_failed_read_writes_nothing(capsys: pytest.CaptureFixture[str]) -> None:
+async def test_failed_read_writes_nothing(caplog: pytest.LogCaptureFixture) -> None:
     registry = _synced_registry(_Ping)
     client = RecordingClient()
     client.fail("GET", GLOBAL_ROUTE, ApiResponseError(code=0, message="Discord is down"))
@@ -310,7 +310,7 @@ async def test_failed_read_writes_nothing(capsys: pytest.CaptureFixture[str]) ->
 
     assert _methods(client) == [("GET", GLOBAL_ROUTE)]
     assert not registry.is_known(GLOBAL)
-    assert "Failed to fetch the commands in global" in capsys.readouterr().err
+    assert "Failed to fetch the commands in global" in caplog.text
 
 
 async def test_overlapping_syncs_of_one_scope_write_once() -> None:
