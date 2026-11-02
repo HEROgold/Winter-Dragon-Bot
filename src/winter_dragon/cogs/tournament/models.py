@@ -58,22 +58,31 @@ class DraftKind(StrEnum):
 
 
 ACTIVE = (TournamentStatus.SIGNUP, TournamentStatus.RUNNING)
-"""The statuses of a tournament that isn't over; a guild has at most one."""
+"""The statuses of a tournament that isn't over."""
 
 
 class Tournament(LifecycleModel, table=True):
-    """A guild's tournament, run in one channel by its organiser; the guild owns it and everything in it."""
+    """A guild's tournament, shown in any channels it is posted to; the guild owns it and everything in it."""
 
     ownership: ClassVar[Ownership] = Ownership(guild="guild_id")
 
     guild_id: int = Field(sa_type=BigInteger, index=True)
-    channel_id: int = Field(sa_type=BigInteger)
     organiser_id: int = Field(sa_type=BigInteger)
     name: str
     mode: TeamMode
     team_size: int
     status: TournamentStatus = TournamentStatus.SIGNUP
     winner_team_id: int | None = None
+
+
+class TournamentPost(LifecycleModel, table=True):
+    """A message showing a tournament in one channel of its guild; the bot edits it whenever the tournament changes."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
+
+    tournament_id: int = Field(index=True)
+    channel_id: int = Field(sa_type=BigInteger)
+    message_id: int = Field(sa_type=BigInteger)
 
 
 class TournamentTeam(LifecycleModel, table=True):
@@ -147,4 +156,13 @@ class MatchBallot(LifecycleModel, table=True):
     """The index of the chosen answer."""
 
 
-TOURNAMENT_TABLES = (Tournament, TournamentTeam, TournamentPlayer, TournamentMatch, DraftChoice, MatchVote, MatchBallot)
+TOURNAMENT_TABLES = (
+    Tournament,
+    TournamentPost,
+    TournamentTeam,
+    TournamentPlayer,
+    TournamentMatch,
+    DraftChoice,
+    MatchVote,
+    MatchBallot,
+)

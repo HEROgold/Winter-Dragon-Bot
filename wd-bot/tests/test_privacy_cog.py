@@ -217,7 +217,6 @@ def _seed_guild(engine: Engine, guild_id: int = GUILD_ID) -> int:
         )
         tournament = Tournament(
             guild_id=guild_id,
-            channel_id=1,
             organiser_id=MEMBER_ID,
             name="cup",
             mode=TeamMode.SOLO,
@@ -266,7 +265,7 @@ def _seed_member(engine: Engine) -> None:
 def _guild_data(engine: Engine, vote_id: int, guild_id: int = GUILD_ID) -> dict[str, object]:
     """Return what the guild's commands and listeners see of its data."""
     with Session(engine) as session:
-        tournament = tournaments.active_tournament(session, guild_id)
+        tournament = next(iter(tournaments.visible_tournaments(session, guild_id, MEMBER_ID, None)), None)
         tournament_id = None if tournament is None else tournament.id
         return {
             "hub": hub_of(session, guild_id) is not None,
@@ -428,7 +427,7 @@ def _seed_signup(engine: Engine, guild_id: int, mode: TeamMode) -> int:
     Return its ID.
     """
     with Session(engine) as session:
-        tournament = Tournament(guild_id=guild_id, channel_id=1, organiser_id=RIVAL_ID, name="open", mode=mode, team_size=2)
+        tournament = Tournament(guild_id=guild_id, organiser_id=RIVAL_ID, name="open", mode=mode, team_size=2)
         session.add(tournament)
         session.commit()
         if mode is TeamMode.CAPTAINS:

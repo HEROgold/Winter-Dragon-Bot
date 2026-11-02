@@ -234,7 +234,7 @@ def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestC
     with Session(bind) as session:
         for name, status in (("open", TournamentStatus.SIGNUP), ("started", TournamentStatus.RUNNING)):
             tournament = Tournament(
-                guild_id=1, channel_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2
+                guild_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2
             )
             session.add(tournament)
             session.commit()
