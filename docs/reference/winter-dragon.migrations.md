@@ -95,3 +95,10 @@ feat(autochannel): remember settings owners change in Discord.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_02_4f7b28620752_353_team_model` — `src/winter_dragon/migrations/versions/2026_11_02_4f7b28620752_353_team_model.py`
+353 team model.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
