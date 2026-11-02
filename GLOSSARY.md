@@ -87,12 +87,28 @@ _Avoid_: Comment, reflection, annotation
 ## Tournaments
 
 **Team**:
-A group of members, which may span guilds, that exists apart from any tournament and can enter many. It may have a captain. Its roster can change and it stays the same team.
+A group of members, which may span guilds, that exists apart from any tournament and can enter many. It may have a captain. Its roster can change and it stays the same team. A team is either temporary or lasting.
 _Avoid_: Squad, roster, clan
 
+**Temporary team**:
+A team drawn at random for one occasion, such as splitting a voice channel, that ends when that occasion does. It doesn't count towards a member's teams formed.
+_Avoid_: Random team, shuffle, split
+
+**Lasting team**:
+A team kept until its members disband it, either made that way or kept from a temporary team. Only lasting teams count as teams formed.
+_Avoid_: Persistent team, permanent team, saved team
+
 **Tournament entry**:
-A team's place in one tournament, with the players who play for it there.
+A team's place in one tournament.
 _Avoid_: Tournament team, registration
+
+**Lineup**:
+The players who play for a tournament entry in one match. It carries over to the entry's next match until someone changes it.
+_Avoid_: Roster (for one match), stand-ins
+
+**Tournament post**:
+A message showing a tournament in one channel of its guild, with its signup and bracket. A tournament can have posts in many channels.
+_Avoid_: Announcement, tournament channel
 
 ## Member stats
 

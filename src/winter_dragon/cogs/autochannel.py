@@ -351,7 +351,7 @@ class AutoChannels(
             return channel
         record = AutoChannel(id=int(channel.id), guild_id=hub.id, owner_id=int(full.id))
         with Session(self.bind) as session:
-            session.add(record)
+            record = create_or_restore(session, record)  # a channel ID can come back after its row was soft-deleted
             session.commit()
             session.refresh(record)
         moved = await full.move_to(channel, reason=CREATE_REASON)
