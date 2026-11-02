@@ -14,7 +14,7 @@ from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
 lazy from sqlalchemy import inspect
 lazy from sqlmodel import Session, SQLModel
-lazy from wd_db.extension.lifecycle import lifecycle_models, owned_by, soft_delete
+lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, lifecycle_models, owned_by, soft_delete
 
 lazy from winter_dragon.member_hidden import MemberHiddenHook
 
@@ -134,11 +134,21 @@ def hide_owned(
             soft_delete(session, row, at=now)
 
 
+def anonymise_member(session: Session, models: Iterable[type[LifecycleModel]], member_id: Snowflake) -> None:
+    """Replace ``member_id`` with :data:`~wd_db.extension.lifecycle.DELETED_MEMBER` in every alive row's anonymised columns."""
+    for model in models:
+        for name in model.anonymised:
+            for row in session.exec(alive(model).where(getattr(model, name) == int(member_id))).all():
+                setattr(row, name, DELETED_MEMBER)
+                session.add(row)
+
+
 def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> bool:
     """Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
 
     That's every row a member owns, also those a guild owns too, after every registered
-    :class:`~winter_dragon.member_hidden.MemberHiddenHook` cleaned up its feature. Does nothing while an earlier
+    :class:`~winter_dragon.member_hidden.MemberHiddenHook` cleaned up its feature. Columns a model lists as
+    anonymised get the member's ID replaced instead, and their rows stay alive. Does nothing while an earlier
     request is hidden but not purged yet; one that never got hidden (hiding failed) is hidden now. What the member
     stores afterwards is new data, which this request leaves be.
     """
@@ -153,6 +163,7 @@ def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datet
             session.add(request)
             session.commit()
         MemberHiddenHook.run_all(session, member_id, models)
+        anonymise_member(session, models, member_id)
         hide_owned(session, models, now, member=member_id)
         request.hidden_at = now
         session.add(request)

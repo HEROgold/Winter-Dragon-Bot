@@ -2,12 +2,13 @@
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
-from sqlmodel import Session, select
+from sqlalchemy import BigInteger
+from sqlmodel import Field, Session, select
 from wd_bot.testing import detached_cog
-from wd_db.extension.lifecycle import alive, create_or_restore, owned_by, soft_delete
+from wd_db.extension.lifecycle import DELETED_MEMBER, LifecycleModel, alive, create_or_restore, owned_by, soft_delete
 from wd_db.testing import seed, sqlite_engine
 from wd_discord import AutocompleteInteraction, GatewayGuild, GuildDelete, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
@@ -31,6 +32,7 @@ from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSalePrope
 from winter_dragon.cogs.steam.store import SteamSaleStore
 from winter_dragon.cogs.tournament import service as tournaments
 from winter_dragon.member_hidden import MemberHiddenHook
+from winter_dragon.web.records import member_records
 from winter_dragon.cogs.tournament.models import (
     MatchPhase,
     TeamMode,
@@ -710,3 +712,30 @@ async def test_a_deletion_request_covers_the_member_s_usage_counts(
     await cog.request_deletion(MEMBER_ID, DAY_0)
 
     assert list(cog.usage(MEMBER_ID)) == []
+
+
+class AnonymisedScore(LifecycleModel, table=True):
+    """A test table whose ``player_id`` a deletion request anonymises."""
+
+    anonymised: ClassVar[tuple[str, ...]] = ("player_id",)
+
+    player_id: int = Field(sa_type=BigInteger)
+
+
+@pytest.mark.usefixtures("clock")
+async def test_a_deletion_request_anonymises_rows_instead_of_hiding_them(engine: Engine) -> None:
+    member_row, other_row = seed(engine, AnonymisedScore(player_id=MEMBER_ID), AnonymisedScore(player_id=999))
+
+    await _cog(engine).request_deletion(MEMBER_ID, DAY_0)
+
+    with Session(engine) as session:
+        alive_ids = {row.id for row in session.exec(alive(AnonymisedScore)).all()}
+        assert alive_ids == {member_row, other_row}
+        assert session.get(AnonymisedScore, member_row).player_id == DELETED_MEMBER
+        assert session.get(AnonymisedScore, other_row).player_id == 999
+
+
+async def test_the_data_page_lists_rows_a_deletion_request_anonymises(engine: Engine) -> None:
+    seed(engine, AnonymisedScore(player_id=MEMBER_ID))
+
+    assert AnonymisedScore in [record.model for record in member_records(engine, Snowflake(MEMBER_ID))]

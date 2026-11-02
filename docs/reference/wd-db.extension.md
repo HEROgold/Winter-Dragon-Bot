@@ -26,7 +26,7 @@ Read and replace a herogold model's custom data inside the caller's session.
 ## `wd_db.extension.lifecycle` — `wd-db/src/wd_db/extension/lifecycle.py`
 The lifecycle every bot table follows: timestamps, soft delete, create-or-restore and a declared owner.
 
-- module names: LIFECYCLE_COLUMNS
+- module names: LIFECYCLE_COLUMNS, DELETED_MEMBER
 - `alive[M: LifecycleModel](model: type[M]) -> SelectOfScalar[M]` — Return a select of ``model``'s rows that aren't soft-deleted; use it for every read.
 - `alive_by_id[M: LifecycleModel](session: Session, model: type[M], record_id: int | None) -> M | None` — Return the ``model`` row ``record_id``, unless there's none or it's soft-deleted.
 - `row_key(row: LifecycleModel) -> str` — Return the string naming ``row``: its table and ID, like ``reminder:12``; :func:`find_by_key` reads it back.
@@ -52,7 +52,7 @@ Who a lifecycle table's rows belong to; member deletion and guild departure find
 The base of every bot table: ``created_at``, ``updated_at`` and ``deleted_at``, all aware UTC.
 
 - fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], alive_unique: ClassVar[tuple[str,
-  ...]], created_at: datetime, updated_at: datetime, deleted_at: datetime | None
+  ...]], anonymised: ClassVar[tuple[str, ...]], created_at: datetime, updated_at: datetime, deleted_at: datetime | None
 
 ### `class DiscordKeyedModel(LifecycleModel)`
 A lifecycle model with one row per Discord object, whose ``id`` is that object's Discord ID.
