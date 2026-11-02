@@ -917,8 +917,8 @@ The /tournament command group: sign-up, teams, a single-elimination bracket, mat
 
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
-- `team_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
-- `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one.
+- `entry_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
+- `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, entry_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one.
 
 ### `class TournamentSettings`
 Settings for /tournament, in its ``cogs.ini`` section.
@@ -946,7 +946,7 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Cancel the tournament; organisers only.
 - `async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: TournamentMatch) -> None` — Post the card of match ``match``.
-- `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, team_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
+- `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, entry_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
 - `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
 - `@Cog.command async pick(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
 - `@Cog.command async vote(interaction: GuildCommandInteraction, match: TournamentMatch, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
@@ -984,14 +984,14 @@ Whether a team bans something from the match, or picks it.
 A guild's tournament, shown in any channels it is posted to; the guild owns it and everything in it.
 
 - fields: ownership: ClassVar[Ownership], guild_id: int, organiser_id: int, name: str, mode: TeamMode, team_size: int,
-  status: TournamentStatus, winner_team_id: int | None
+  status: TournamentStatus, winner_entry_id: int | None
 
 ### `class TournamentPost(LifecycleModel, table=True)`
 A message showing a tournament in one channel of its guild; the bot edits it whenever the tournament changes.
 
 - fields: ownership: ClassVar[Ownership], tournament_id: int, channel_id: int, message_id: int
 
-### `class TournamentTeam(LifecycleModel, table=True)`
+### `class TournamentEntry(LifecycleModel, table=True)`
 A team in a tournament; its captain bans and picks for it.
 
 - fields: ownership: ClassVar[Ownership], tournament_id: int, name: str, captain_id: int
@@ -1000,18 +1000,18 @@ A team in a tournament; its captain bans and picks for it.
 A player signed up for a tournament, and the team they play in once they have one.
 
 - fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], tournament_id: int, user_id: int,
-  team_id: int | None
+  entry_id: int | None
 
 ### `class TournamentMatch(LifecycleModel, table=True)`
 One match of a tournament's single-elimination bracket; round 0 is the first.
 
-- fields: ownership: ClassVar[Ownership], tournament_id: int, round: int, slot: int, team_a_id: int | None, team_b_id:
+- fields: ownership: ClassVar[Ownership], tournament_id: int, round: int, slot: int, entry_a_id: int | None, entry_b_id:
   int | None, phase: MatchPhase, winner_id: int | None
 
 ### `class DraftChoice(LifecycleModel, table=True)`
 Something a team banned from, or picked for, a match.
 
-- fields: ownership: ClassVar[Ownership], match_id: int, team_id: int, kind: DraftKind, value: str
+- fields: ownership: ClassVar[Ownership], match_id: int, entry_id: int, kind: DraftKind, value: str
 
 ### `class MatchVote(LifecycleModel, table=True)`
 A question the players of a match vote on, like which map to play.
@@ -1032,8 +1032,8 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `add_post(session: Session, tournament: Tournament, channel_id: Snowflake, message_id: Snowflake) -> None` — Record that the tournament is shown by ``message_id`` in ``channel_id``.
 - `players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]` — Return everyone signed up for the tournament, in sign-up order.
 - `player_of(session: Session, tournament_id: int, user_id: Snowflake) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
-- `teams_of(session: Session, tournament_id: int) -> list[TournamentTeam]` — Return the tournament's teams, in the order they were formed.
-- `roster(session: Session, team_id: int) -> list[int]` — Return the user IDs of the team's players.
+- `entries_of(session: Session, tournament_id: int) -> list[TournamentEntry]` — Return the tournament's teams, in the order they were formed.
+- `roster(session: Session, entry_id: int) -> list[int]` — Return the user IDs of the team's players.
 - `matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
 - `sign_up(session: Session, tournament: Tournament, user_id: Snowflake) -> None` — Sign ``user_id`` up for a solo tournament.
 - `open_signups_of(session: Session, user_id: Snowflake) -> Generator[Tournament]` — Yield the tournaments ``user_id`` is signed up for that haven't started.
@@ -1045,7 +1045,7 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `advance(session: Session, match: TournamentMatch) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
 - `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
-- `team_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentTeam | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
+- `entry_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentEntry | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
 - `draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
 - `drafts_of(session: Session, match_id: int) -> list[DraftChoice]` — Return the bans and picks made in the match, in the order they were made.
 - `open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote` — Open a vote on ``question`` among ``options`` for the players of ``match``.
