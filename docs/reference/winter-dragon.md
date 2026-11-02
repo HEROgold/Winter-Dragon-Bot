@@ -81,3 +81,24 @@ Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.
 
 - module names: RUN_DURATION_SECONDS
 - `async main() -> int` — Run the bot for up to RUN_DURATION_SECONDS, then report the outcome.
+
+## `winter_dragon.voice_channels` — `src/winter_dragon/voice_channels.py`
+Voice channels a cog creates and records, deleted once everyone left.
+
+### `@dataclass class VoiceOccupancy`
+Who is in which voice channel, per guild, as far as the gateway told.
+
+- `reset(guild_id: Snowflake, states: Iterable[VoiceState]) -> None` — Forget what was known about ``guild_id``, and learn ``states`` instead.
+- `move(guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None` — Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were.
+- `occupied(guild_id: Snowflake, channel_id: Snowflake) -> bool` — Whether anyone is in the voice channel ``channel_id``.
+
+### `@dataclass class EmptiedChannels[M: DiscordKeyedModel]`
+Voice channels a cog created and records as ``model`` rows (``id`` is the channel's), deleted once empty.
+
+- fields: model: type[M], bind: Engine | Connection, client: Client, logger: Logger, reason: str, on_forgotten:
+  Callable[[Session, M], None] | None
+- `record(session: Session, channel_id: Snowflake) -> M | None` — Return the live row recording the voice channel ``channel_id``, or ``None`` if it has none.
+- `async delete(record: M) -> None` — Delete the voice channel of ``record`` and forget it once it's gone; one that's left is tried again later.
+- `forget(record: M) -> None` — Forget the voice channel of ``record``, which is gone: soft-delete its row.
+- `async sweep(voice: VoiceOccupancy, guild_id: Snowflake) -> None` — Delete the recorded voice channels of ``guild_id`` that nobody is in.
+- `async left(voice: VoiceOccupancy, guild_id: Snowflake, before: Snowflake | None, after: Snowflake | None) -> None` — Delete the recorded voice channel ``before`` once the member who left it left it empty.
