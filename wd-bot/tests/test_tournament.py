@@ -9,7 +9,7 @@ import pytest
 from sqlmodel import Session, col
 from wd_bot.commands import Lookup
 from wd_bot.testing import detached_cog
-from wd_db.extension.lifecycle import DELETED_MEMBER, alive, owned_by
+from wd_db.extension.lifecycle import DELETED_MEMBER, alive, owned_by, soft_delete
 from wd_discord import AutocompleteInteraction
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType, ResolvedData
@@ -20,7 +20,7 @@ from wd_discord.snowflake import Snowflake
 from wd_errors import Refused
 from wd_types.clock import utc_now
 
-from winter_dragon.cogs.privacy.domain import hide_member_data
+from winter_dragon.cogs.privacy.domain import anonymise_member, hide_member_data
 from winter_dragon.cogs.team import service as team_service
 from winter_dragon.cogs.team.models import Team, TeamKind, TeamOrigin
 from winter_dragon.cogs.team.split import split_into_teams
@@ -425,7 +425,9 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     assert embed["title"] == "🏆 Cup"
     labels = [button["label"] for button in post.json["components"][0]["components"]]
     assert labels == ["Join", "Leave", "Participants"]
-    assert _response(discord_client)["data"]["embeds"][0]["description"] == "**Cup** is open for sign-up."
+    assert _response(discord_client)["type"] == 5  # DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    (followup,) = discord_client.requests_to("POST", "/webhooks/2/tok")
+    assert followup.json["embeds"][0]["description"] == "**Cup** is open for sign-up."
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().organiser_id == ORGANISER
         (row,) = session.exec(alive(TournamentPost)).all()
@@ -476,7 +478,9 @@ async def test_post_shows_a_tournament_in_this_channel_and_refuses_another_serve
         options,
     )
 
-    assert _response(discord_client)["data"]["embeds"][0]["description"] == "Posted **Cup** here."
+    assert _response(discord_client)["type"] == 5  # DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    (followup,) = discord_client.requests_to("POST", "/webhooks/2/tok")
+    assert followup.json["embeds"][0]["description"] == "Posted **Cup** here."
     with Session(engine) as session:
         (row,) = session.exec(alive(TournamentPost)).all()
         assert (row.tournament_id, row.channel_id, row.message_id) == (tournament_id, 21, 210)
@@ -493,7 +497,10 @@ async def test_post_shows_a_tournament_in_this_channel_and_refuses_another_serve
         foreign_options,
     )
 
-    assert _response(discord_client)["data"]["content"] == "That tournament belongs to another server."
+    assert (
+        discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json["content"]
+        == "That tournament belongs to another server."
+    )
     assert len(discord_client.requests_to("POST", "/channels/21/messages")) == 1
 
 
@@ -1359,3 +1366,179 @@ def test_a_member_deletion_anonymises_the_match_audit(engine: Engine) -> None:
             [(DELETED_MEMBER, 10), (12, DELETED_MEMBER)]
         )
         assert decided.decided_by == DELETED_MEMBER
+
+
+# --- Review fixes: cancel, posts, lineups, clashes, votes and the log ------------------------------------------------
+
+
+def test_cancel_soft_deletes_the_posts_match_events_and_lineup_changes(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament, _, _ = _played_final(session)
+        service.add_post(session, tournament, 20, 200)
+        entry = service.entries_of(session, tournament.id or 0)[0]
+        session.add(LineupChange(entry_id=entry.id or 0, user_id=100, playing=True, changed_by=ORGANISER, changed_at=utc_now()))
+        session.commit()
+        assert session.exec(owned_by(MatchEvent, guild=GUILD_ID)).first() is not None
+
+        service.cancel(session, tournament)
+        session.commit()
+
+        for model in (TournamentPost, MatchEvent, LineupChange):
+            assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
+
+
+async def test_cancel_edits_each_post_to_the_bracket_without_buttons(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/20/messages/200", message_json(id="200", channel_id="20"))
+    with Session(engine) as session:
+        tournament, _, _ = _played_final(session)
+        service.add_post(session, tournament, 20, 200)
+        session.commit()
+        options = [_pick(tournament)]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
+
+    (edit,) = discord_client.requests_to("PATCH", "/channels/20/messages/200")
+    assert not edit.json.get("components")
+    assert edit.json["embeds"]
+    assert "called off" in _response(discord_client)["data"]["embeds"][0]["description"]
+
+
+async def test_a_click_does_not_edit_the_message_it_just_updated(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/21/messages/210", message_json(id="210", channel_id="21"))
+    with Session(engine) as session:
+        tournament = _tournament(session, team_size=2)
+        service.add_post(session, tournament, 20, 11)  # the component factory's clicked message is 11
+        service.add_post(session, tournament, 21, 210)
+        session.commit()
+        tournament_id = tournament.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.join_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+
+    assert discord_client.requests_to("PATCH", "/channels/20/messages/11") == []
+    assert len(discord_client.requests_to("PATCH", "/channels/21/messages/210")) == 1
+
+
+def test_anonymising_two_members_of_one_lineup_keeps_both_rows(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=3)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        _add_to_entry(session, tournament, reds, 10, 21)
+        _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (match,) = _round(session, tournament, 0)
+        match_id, reds_id = match.id or 0, reds.id or 0
+
+        anonymise_member(session, [MatchLineup], 20)
+        anonymise_member(session, [MatchLineup], 21)
+        session.commit()
+
+        rows = list(session.exec(alive(MatchLineup).where(MatchLineup.match_id == match_id, MatchLineup.entry_id == reds_id)))
+        assert sorted(row.user_id for row in rows) == [DELETED_MEMBER, DELETED_MEMBER, 10]
+
+
+def test_anonymised_members_are_not_a_clash(engine: Engine) -> None:
+    match_id, _ = _clash_match(engine)
+    with Session(engine) as session:
+        anonymise_member(session, [MatchLineup], 20)
+        session.commit()
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == []
+
+
+async def test_a_captain_cannot_drop_players_from_the_other_side(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    match_id, blues_id = _clash_match(engine)
+    cog = _cog(engine, discord_client)
+    reds_captain = User.model_validate(user_json(id="10", username="reds"))
+
+    await Tournaments.clash_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-clash:{match_id}:{blues_id}", user=reds_captain, guild_id=GUILD_ID),
+        [str(match_id), str(blues_id)],
+    )
+
+    assert _response(discord_client)["data"]["content"] == "You can only drop players from your own entry."
+    with Session(engine) as session:
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [20]
+
+
+def test_only_the_match_lineup_votes_not_every_entry_player(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        (match,) = _round(session, tournament, 0)
+        vote = service.open_vote(session, match, "Map?", ["Dust", "Mirage"], ORGANISER)
+        for row in session.exec(alive(MatchLineup).where(MatchLineup.user_id == 100)):
+            soft_delete(session, row)
+        session.commit()
+
+        with _refused("Only the players of this match can vote."):
+            service.cast(session, vote, 100, 0)
+        service.cast(session, vote, 101, 0)
+
+
+def test_include_over_shows_finished_tournaments_too(engine: Engine) -> None:
+    with Session(engine) as session:
+        _named(session, "Old", organiser_id=ORGANISER, status=TournamentStatus.FINISHED)
+
+        assert list(service.visible_tournaments(session, GUILD_ID, ORGANISER, None)) == []
+        found = service.visible_tournaments(session, GUILD_ID, ORGANISER, None, include_over=True)
+        assert [tournament.name for tournament in found] == ["Old"]
+
+
+async def test_log_match_choices_offers_decided_matches_of_finished_tournaments(
+    engine: Engine,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        _finish(session, tournament)
+    cog = _cog(engine, discord_client)
+
+    assert await cog.match_choices(_autocomplete(discord_client), "") == []
+    assert len(await cog.log_match_choices(_autocomplete(discord_client), "")) == 1
+
+
+async def test_log_shows_the_match_of_a_finished_tournament(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        _finish(session, tournament)
+        (final,) = _round(session, tournament, 0)
+        pick = _pick(tournament)
+        match_option = InteractionDataOption(name="match", type=3, value=f"tournamentmatch:{final.id}")
+    options = [pick, match_option]
+    cog = _cog(engine, discord_client)
+    organiser = User.model_validate(user_json(id=str(ORGANISER), username="organiser"))
+
+    await Tournaments.log.invoke(
+        cog,
+        make_interaction("tournament", options=options, user=organiser, guild_id=GUILD_ID),
+        options,
+    )
+
+    (embed,) = _response(discord_client)["data"]["embeds"]
+    assert embed["title"].startswith("Log: ")

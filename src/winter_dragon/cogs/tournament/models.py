@@ -155,7 +155,6 @@ class MatchLineup(LifecycleModel, table=True):
     """A member playing for an entry in one match; a decided match's lineup is what was played."""
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
-    natural_key: ClassVar[tuple[str, ...]] = ("match_id", "entry_id", "user_id")
     anonymised: ClassVar[tuple[str, ...]] = ("user_id",)
 
     match_id: int = Field(index=True)
