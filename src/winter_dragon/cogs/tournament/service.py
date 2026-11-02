@@ -25,6 +25,7 @@ lazy from .models import (
     Tournament,
     TournamentMatch,
     TournamentPlayer,
+    TournamentPost,
     TournamentStatus,
     TournamentTeam,
 )
@@ -38,10 +39,48 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import Snowflake
 
 
-def active_tournament(session: Session, guild_id: Snowflake) -> Tournament | None:
-    """Return the guild's tournament that isn't over, if it has one."""
-    query = alive(Tournament).where(Tournament.guild_id == int(guild_id), col(Tournament.status).in_(ACTIVE))
-    return session.exec(query).first()
+def visible_tournaments(
+    session: Session,
+    guild_id: Snowflake,
+    user_id: Snowflake,
+    channel_id: Snowflake | None,
+) -> Generator[Tournament]:
+    """Yield the guild's tournaments that aren't over and that ``user_id`` organises or signed up for.
+
+    Also yields the ones posted in ``channel_id``, by name.
+    """
+    query = (
+        alive(Tournament)
+        .where(Tournament.guild_id == int(guild_id), col(Tournament.status).in_(ACTIVE))
+        .order_by(col(Tournament.name))
+    )
+    signed_up = {
+        player.tournament_id for player in session.exec(alive(TournamentPlayer).where(TournamentPlayer.user_id == int(user_id)))
+    }
+    posted = set()
+    if channel_id is not None:
+        posted = {
+            post.tournament_id
+            for post in session.exec(alive(TournamentPost).where(TournamentPost.channel_id == int(channel_id)))
+        }
+    visible = [
+        tournament
+        for tournament in session.exec(query)
+        if tournament.organiser_id == int(user_id) or tournament.id in signed_up or tournament.id in posted
+    ]
+    yield from visible
+
+
+def posts_of(session: Session, tournament_id: int) -> Generator[TournamentPost]:
+    """Yield the tournament's posts."""
+    yield from session.exec(
+        alive(TournamentPost).where(TournamentPost.tournament_id == tournament_id).order_by(col(TournamentPost.id)),
+    )
+
+
+def add_post(session: Session, tournament: Tournament, channel_id: Snowflake, message_id: Snowflake) -> None:
+    """Record that the tournament is shown by ``message_id`` in ``channel_id``."""
+    session.add(TournamentPost(tournament_id=_id(tournament), channel_id=int(channel_id), message_id=int(message_id)))
 
 
 def players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]:
