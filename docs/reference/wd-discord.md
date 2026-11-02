@@ -131,10 +131,10 @@ An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the 
 - `@classmethod from_hex(text: str) -> Color` — Parse ``"#00ff00"``, ``"00ff00"`` or ``"0x00ff00"``.
 
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
-Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
+Legacy message components: action rows, buttons and select menus (https://docs.discord.com/developers/components/reference).
 
 - `type CustomId = str`
-- `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
+- `components_payload(rows: Sequence[ActionRow]) -> list[dict[str, Any]]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
 ### `class ComponentType(OpenIntEnum)`
 The type of a component.
@@ -155,10 +155,17 @@ A clickable button; must sit inside an :class:`ActionRow`.
   sku_id: Snowflake | None, url: str | None, disabled: bool
 - attributes: model_config
 
-### `class ActionRow(BaseModel)`
-A row of up to 5 buttons at the bottom of a message.
+### `class UserSelect(BaseModel)`
+A menu picking users; must sit alone inside an :class:`ActionRow`.
 
-- fields: type: Literal[ComponentType.ACTION_ROW], components: list[Button]
+- fields: type: Literal[ComponentType.USER_SELECT], custom_id: CustomId, placeholder: str | None, min_values: int |
+  None, max_values: int | None, disabled: bool
+- attributes: model_config
+
+### `class ActionRow(BaseModel)`
+A row of up to 5 buttons, or one select menu, at the bottom of a message.
+
+- fields: type: Literal[ComponentType.ACTION_ROW], components: list[Button | UserSelect]
 - attributes: model_config
 
 ### `class TextInputStyle(OpenIntEnum)`

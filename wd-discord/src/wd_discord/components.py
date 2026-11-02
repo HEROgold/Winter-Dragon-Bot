@@ -1,11 +1,11 @@
-"""Legacy message components: action rows and buttons (https://docs.discord.com/developers/components/reference).
+"""Legacy message components: action rows, buttons and select menus (https://docs.discord.com/developers/components/reference).
 
 Only the legacy layout is modeled: action rows holding buttons, sent next to ``content``/``embeds``.
 The ``IS_COMPONENTS_V2`` flag would disable ``content`` and ``embeds`` entirely, so it isn't supported here.
 """
 
 lazy from collections import Counter
-lazy from typing import TYPE_CHECKING, Annotated, Literal, Self
+lazy from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -106,16 +106,37 @@ class Button(BaseModel):
         return self
 
 
+class UserSelect(BaseModel):
+    """A menu picking users; must sit alone inside an :class:`ActionRow`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal[ComponentType.USER_SELECT] = ComponentType.USER_SELECT
+    custom_id: CustomId
+    placeholder: Annotated[str, StringConstraints(max_length=150)] | None = None
+    min_values: Annotated[int, Field(ge=0, le=25)] | None = None
+    max_values: Annotated[int, Field(ge=1, le=25)] | None = None
+    disabled: bool = False
+
+
 class ActionRow(BaseModel):
-    """A row of up to 5 buttons at the bottom of a message."""
+    """A row of up to 5 buttons, or one select menu, at the bottom of a message."""
 
     model_config = ConfigDict(extra="forbid")
 
     type: Literal[ComponentType.ACTION_ROW] = ComponentType.ACTION_ROW
-    components: Annotated[list[Button], Field(min_length=1, max_length=MAX_ACTION_ROW_BUTTONS)]
+    components: Annotated[list[Button | UserSelect], Field(min_length=1, max_length=MAX_ACTION_ROW_BUTTONS)]
+
+    @model_validator(mode="after")
+    def _check_select_alone(self) -> Self:
+        """Refuse a select menu sharing its row with any other component."""
+        if any(isinstance(component, UserSelect) for component in self.components) and len(self.components) > 1:
+            msg = "A select menu must be alone in its action row"
+            raise ValueError(msg)
+        return self
 
 
-def components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]:
+def components_payload(rows: Sequence[ActionRow]) -> list[dict[str, Any]]:
     """Return the ``components`` JSON for a message, checking the message-wide limits.
 
     Raises :class:`ValueError` when the message has more than 40 components or reuses a ``custom_id``,
@@ -125,7 +146,7 @@ def components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]:
     if total > MAX_MESSAGE_COMPONENTS:
         msg = f"A message holds at most {MAX_MESSAGE_COMPONENTS} components, got {total}"
         raise ValueError(msg)
-    custom_ids = Counter(button.custom_id for row in rows for button in row.components if button.custom_id is not None)
+    custom_ids = Counter(component.custom_id for row in rows for component in row.components if component.custom_id is not None)
     if duplicates := sorted(custom_id for custom_id, count in custom_ids.items() if count > 1):
         msg = f"custom_id must be unique within a message, duplicated: {duplicates}"
         raise ValueError(msg)
