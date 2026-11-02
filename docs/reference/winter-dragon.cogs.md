@@ -787,7 +787,7 @@ A Steam store URL.
 - `@property store_item -> StoreItemID | None` — The store item this URL's page is for, or ``None`` for a page that isn't one item's.
 
 ## `winter_dragon.cogs.team.cog` — `src/winter_dragon/cogs/team/cog.py`
-The /team command group: create a lasting team, see its captain and members, and leave it.
+The /team command group: create a lasting team, invite and manage its members, and leave it.
 
 ### `class TeamSettings`
 Settings for /team, in its ``cogs.ini`` section.
@@ -802,6 +802,11 @@ Lasting teams: create one, see who is in it, and leave it.
 - `@Cog.command async create(interaction: GuildCommandInteraction, name: str) -> None` — Create the lasting team ``name`` with the invoker as its captain.
 - `@Cog.command async show(interaction: GuildCommandInteraction, team: Team) -> None` — Post the team's name, captain and members.
 - `@Cog.command async leave_team(interaction: GuildCommandInteraction, team: Team) -> None` — Take the invoker out of the team.
+- `@Cog.command async invite(interaction: GuildCommandInteraction, team: Team, member: User) -> None` — Post a public invite with a Join button that only ``member`` can press.
+- `@Cog.component async accept_invite(interaction: GuildComponentInteraction, team_id: str, invitee_id: str) -> None` — Join the invitee to the team when the invitee presses Join.
+- `@Cog.command async kick_member(interaction: GuildCommandInteraction, team: Team, member: User) -> None` — Take ``member`` out of the team, for its captain.
+- `@Cog.command async make_captain(interaction: GuildCommandInteraction, team: Team, member: User) -> None` — Make ``member`` the captain of the team, for its captain.
+- `@Cog.command async disband_team(interaction: GuildCommandInteraction, team: Team) -> None` — Soft-delete the team and every membership, for its captain.
 
 ## `winter_dragon.cogs.team.models` — `src/winter_dragon/cogs/team/models.py`
 The team tables: a team and its members, lasting or temporary.
@@ -837,6 +842,17 @@ What can happen to a lasting team: creating it, listing its members, and members
 - `teams_of(session: Session, user_id: int) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name.
 - `membership(session: Session, team: Team, user_id: int) -> TeamMember | None` — Return ``user_id``'s alive membership of ``team``, if they're in it.
 - `leave(session: Session, team: Team, user_id: int) -> None` — Take ``user_id`` out of ``team``.
+- `require_captain(team: Team, user_id: int) -> None` — Refuse unless ``user_id`` captains ``team``.
+- `join(session: Session, team: Team, user_id: int) -> None` — Add ``user_id`` to ``team``, joining now; refuse when they're in it already.
+- `kick(session: Session, team: Team, captain_id: int, user_id: int) -> None` — Take ``user_id`` out of ``team`` for its captain; the captain can't kick themselves.
+- `hand_over(session: Session, team: Team, captain_id: int, user_id: int) -> None` — Make the member ``user_id`` captain of ``team``, for its captain.
+- `disband(session: Session, team: Team, captain_id: int) -> None` — Disband ``team`` for its captain: soft-delete it and every membership.
+
+### `class LeaveHiddenMember(MemberHiddenHook)`
+A member whose data is hidden leaves each of their teams, by the rule ``/team leave`` follows.
+
+- attributes: tables
+- `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Take the member ``member_id`` out of every team they're in, handing over captaincies.
 
 ## `winter_dragon.cogs.team.split` — `src/winter_dragon/cogs/team/split.py`
 Splitting members into teams: pure arithmetic, no database, no Discord.

@@ -9,7 +9,9 @@ from sqlmodel import Session
 from wd_bot.commands import Lookup
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
-from wd_discord.gateway.events import InteractionDataOption
+from wd_discord.gateway.events import InteractionDataOption, ResolvedData
+from wd_discord.resources.user import User
+from wd_discord.snowflake import Snowflake
 from wd_errors import Refused
 
 from winter_dragon.cogs.team import service
@@ -19,7 +21,7 @@ from winter_dragon.cogs.team.split import split_into, split_into_teams
 
 
 if TYPE_CHECKING:
-    from conftest import InteractionFactory
+    from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
     from wd_discord.testing import RecordingClient
 
@@ -222,3 +224,164 @@ def _team_option(engine: Engine, team_id: int) -> InteractionDataOption:
     """The ``team`` option as the autocomplete suggested it for the team."""
     team = _team_row(engine, team_id)
     return InteractionDataOption(name="team", type=3, value=Lookup.choice(team, team.name).value)
+
+
+# --- Invites, kicks, captaincy and disbanding -------------------------------------------------------------------------
+
+
+def _member(user_id: int) -> User:
+    return User.model_validate({"id": str(user_id), "username": f"user{user_id}", "discriminator": "0"})
+
+
+def _member_option(user_id: int) -> tuple[InteractionDataOption, ResolvedData]:
+    """The ``member`` User option for ``user_id``, with the user it resolves to."""
+    option = InteractionDataOption(name="member", type=6, value=str(user_id))
+    return option, ResolvedData(users={str(user_id): _member(user_id)})
+
+
+def test_join_adds_the_member_and_refuses_one_already_in_the_team(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER)
+    with Session(engine) as session:
+        service.join(session, session.get_one(Team, team_id), 4)
+        session.commit()
+    assert _member_ids(engine, team_id) == [INVOKER, 4]
+    with Session(engine) as session, pytest.raises(Refused, match="You're in that team already."):
+        service.join(session, session.get_one(Team, team_id), 4)
+
+
+def test_only_the_captain_passes_require_captain(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session:
+        team = session.get_one(Team, team_id)
+        service.require_captain(team, INVOKER)
+        with pytest.raises(Refused, match="Only the team's captain can do that."):
+            service.require_captain(team, 4)
+
+
+def test_kick_takes_a_member_out_for_the_captain(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1), (5, 2))
+    with Session(engine) as session:
+        service.kick(session, session.get_one(Team, team_id), INVOKER, 4)
+        session.commit()
+    assert _member_ids(engine, team_id) == [INVOKER, 5]
+
+
+def test_kick_refuses_a_non_captain_a_self_kick_and_a_non_member(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session:
+        team = session.get_one(Team, team_id)
+        with pytest.raises(Refused, match="Only the team's captain can do that."):
+            service.kick(session, team, 4, INVOKER)
+        with pytest.raises(Refused, match="Use leave to leave your own team."):
+            service.kick(session, team, INVOKER, INVOKER)
+        with pytest.raises(Refused, match="They aren't in that team."):
+            service.kick(session, team, INVOKER, 9)
+
+
+def test_hand_over_makes_a_member_the_captain(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session:
+        service.hand_over(session, session.get_one(Team, team_id), INVOKER, 4)
+        session.commit()
+    assert _captain(engine, team_id) == 4
+
+
+def test_hand_over_refuses_a_non_captain_and_a_non_member(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session:
+        team = session.get_one(Team, team_id)
+        with pytest.raises(Refused, match="Only the team's captain can do that."):
+            service.hand_over(session, team, 4, 4)
+        with pytest.raises(Refused, match="They aren't in that team."):
+            service.hand_over(session, team, INVOKER, 9)
+
+
+def test_disband_soft_deletes_the_team_and_every_membership(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session:
+        service.disband(session, session.get_one(Team, team_id), INVOKER)
+        session.commit()
+    with Session(engine) as session:
+        assert session.get_one(Team, team_id).deleted_at is not None
+        assert session.exec(alive(TeamMember)).all() == []
+
+
+def test_disband_refuses_a_non_captain(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session, pytest.raises(Refused, match="Only the team's captain can do that."):
+        service.disband(session, session.get_one(Team, team_id), 4)
+
+
+def test_a_hidden_captain_hands_the_captaincy_over(engine: Engine) -> None:
+    team_id = _seed(engine, INVOKER, (4, 1))
+    with Session(engine) as session:
+        service.LeaveHiddenMember.on_member_hidden(session, Snowflake(INVOKER))
+        session.commit()
+    assert _captain(engine, team_id) == 4
+    assert _member_ids(engine, team_id) == [4]
+
+
+async def test_invite_replies_with_a_join_button_only_the_invitee_can_press(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    team_id = _seed(engine, INVOKER)
+    member, resolved = _member_option(4)
+    options = [_team_option(engine, team_id), member]
+    await Teams.invite.invoke(
+        _cog(engine, discord_client),
+        make_interaction("team", options=options, resolved=resolved, guild_id=GUILD_ID, channel_id=20),
+        options,
+    )
+
+    data = _response(discord_client)
+    assert data["embeds"][0]["description"] == f"<@4>, <@{INVOKER}> invites you to **Crew**."
+    (button,) = data["components"][0]["components"]
+    assert button["custom_id"] == f"team-invite:{team_id}:4"
+    assert button["label"] == "Join"
+
+
+async def test_a_click_on_the_invite_joins_only_the_invitee(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    team_id = _seed(engine, INVOKER)
+    cog = _cog(engine, discord_client)
+
+    await Teams.accept_invite.invoke(
+        cog,
+        make_component_interaction(f"team-invite:{team_id}:4", guild_id=GUILD_ID, user=_member(9)),
+        [str(team_id), "4"],
+    )
+    assert _response(discord_client)["content"] == "This invite isn't for you."
+    assert _member_ids(engine, team_id) == [INVOKER]
+
+    await Teams.accept_invite.invoke(
+        cog,
+        make_component_interaction(f"team-invite:{team_id}:4", guild_id=GUILD_ID, user=_member(4)),
+        [str(team_id), "4"],
+    )
+    update = discord_client.interaction_responses()[-1]
+    assert update["type"] == 7
+    assert update["data"]["embeds"][0]["description"] == "<@4> joined **Crew**."
+    assert _member_ids(engine, team_id) == [INVOKER, 4]
+
+
+async def test_a_non_captain_cannot_kick(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    team_id = _seed(engine, 4, (INVOKER, 1), (5, 2))
+    member, resolved = _member_option(5)
+    options = [_team_option(engine, team_id), member]
+    await Teams.kick_member.invoke(
+        _cog(engine, discord_client),
+        make_interaction("team", options=options, resolved=resolved, guild_id=GUILD_ID, channel_id=20),
+        options,
+    )
+
+    assert _response(discord_client)["content"] == "Only the team's captain can do that."
+    assert _member_ids(engine, team_id) == [4, INVOKER, 5]

@@ -89,9 +89,11 @@ Requires a Riot API key, supplied through configuration.
 
 A lasting team is a group of members that exists apart from any tournament and may span guilds. You create one and become its captain, and anyone in it can leave. When the captain leaves, the longest-standing member takes over; when the last member leaves, the team is disbanded.
 
-Surface: `/team create | show | leave`
+Surface: `/team create | show | leave | invite | kick | captain | disband`
 
-**Status:** 🟡 New in `src/winter_dragon/cogs/team/`. Invites, splits and tournament entries follow in #424, #426, #427 and #429.
+An invite is a public message with a Join button that only the invitee can press. A member's data deletion takes them out of their teams with the same captain hand-over as leaving.
+
+**Status:** 🟡 New in `src/winter_dragon/cogs/team/`. Splits and tournament entries follow in #426, #427 and #429.
 
 ## Tournaments
 

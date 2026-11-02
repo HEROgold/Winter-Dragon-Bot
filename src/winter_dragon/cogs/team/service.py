@@ -4,18 +4,22 @@ Each function takes an open session and leaves committing to the caller. A refus
 :class:`~wd_errors.Refused` saying why, for the member; the caller then drops the session's changes.
 """
 
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
+lazy from winter_dragon.member_hidden import MemberHiddenHook
+
 lazy from .models import Team, TeamKind, TeamMember, TeamOrigin
 
 
 if TYPE_CHECKING:
     lazy from collections.abc import Generator
+
+    lazy from wd_discord.snowflake import Snowflake
 
 
 def create_team(session: Session, name: str, captain_id: int) -> Team:
@@ -65,3 +69,62 @@ def leave(session: Session, team: Team, user_id: int) -> None:
     elif team.captain_id == user_id:
         team.captain_id = remaining[0].user_id
         session.add(team)
+
+
+def require_captain(team: Team, user_id: int) -> None:
+    """Refuse unless ``user_id`` captains ``team``."""
+    if team.captain_id != user_id:
+        msg = "Only the team's captain can do that."
+        raise Refused(msg)
+
+
+def join(session: Session, team: Team, user_id: int) -> None:
+    """Add ``user_id`` to ``team``, joining now; refuse when they're in it already."""
+    if membership(session, team, user_id) is not None:
+        msg = "You're in that team already."
+        raise Refused(msg)
+    create_or_restore(session, TeamMember(team_id=team.id or 0, user_id=user_id, joined_at=utc_now()))
+
+
+def kick(session: Session, team: Team, captain_id: int, user_id: int) -> None:
+    """Take ``user_id`` out of ``team`` for its captain; the captain can't kick themselves."""
+    require_captain(team, captain_id)
+    if user_id == captain_id:
+        msg = "Use leave to leave your own team."
+        raise Refused(msg)
+    member = membership(session, team, user_id)
+    if member is None:
+        msg = "They aren't in that team."
+        raise Refused(msg)
+    soft_delete(session, member)
+
+
+def hand_over(session: Session, team: Team, captain_id: int, user_id: int) -> None:
+    """Make the member ``user_id`` captain of ``team``, for its captain."""
+    require_captain(team, captain_id)
+    if membership(session, team, user_id) is None:
+        msg = "They aren't in that team."
+        raise Refused(msg)
+    team.captain_id = user_id
+    session.add(team)
+
+
+def disband(session: Session, team: Team, captain_id: int) -> None:
+    """Disband ``team`` for its captain: soft-delete it and every membership."""
+    require_captain(team, captain_id)
+    for member in list(members_of(session, team.id or 0)):
+        soft_delete(session, member)
+    soft_delete(session, team)
+
+
+class LeaveHiddenMember(MemberHiddenHook):
+    """A member whose data is hidden leaves each of their teams, by the rule ``/team leave`` follows."""
+
+    tables = (Team, TeamMember)
+
+    @classmethod
+    @override
+    def on_member_hidden(cls, session: Session, member_id: Snowflake) -> None:
+        """Take the member ``member_id`` out of every team they're in, handing over captaincies."""
+        for team in list(teams_of(session, int(member_id))):
+            leave(session, team, int(member_id))
