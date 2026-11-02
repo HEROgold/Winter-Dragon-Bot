@@ -57,20 +57,20 @@ def signup_embed(
     rosters: Mapping[str, Sequence[int]],
     solo_players: Sequence[int],
     *,
-    team_create: CommandMention,
-    team_add: CommandMention,
+    enter: CommandMention,
+    entry_add: CommandMention,
 ) -> Embed:
-    """Return the sign-up card: the format, and who signed up, alone or per team.
+    """Return the sign-up card: the format, and who signed up, alone or per entry.
 
-    ``team_create`` and ``team_add`` are mentions of the commands that join a captains' tournament.
+    ``enter`` and ``entry_add`` are mentions of the commands that enter a team into a captains' tournament and add its players.
     """
     if tournament.mode is TeamMode.SOLO:
         how = f"Sign up alone; teams of {tournament.team_size} are drawn when the tournament starts."
         fields = [EmbedField(name=f"Players ({len(solo_players)})", value=mentions(solo_players))]
     else:
         how = (
-            f"Captains register a team of up to {tournament.team_size} players with {team_create}, "
-            f"then add their teammates with {team_add}."
+            f"Captains enter a team of up to {tournament.team_size} players with {enter}, "
+            f"then add their players with {entry_add}."
         )
         fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:MAX_EMBED_FIELDS]
     status = "open" if tournament.status is TournamentStatus.SIGNUP else tournament.status.value

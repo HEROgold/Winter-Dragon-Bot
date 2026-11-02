@@ -86,24 +86,33 @@ class TournamentPost(LifecycleModel, table=True):
 
 
 class TournamentEntry(LifecycleModel, table=True):
-    """A team in a tournament; its captain bans and picks for it."""
+    """A team's place in one tournament; its team's captain bans and picks for it."""
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
 
     tournament_id: int = Field(index=True)
+    team_id: int = Field(index=True)
     name: str
-    captain_id: int = Field(sa_type=BigInteger)
 
 
-class TournamentPlayer(LifecycleModel, table=True):
-    """A player signed up for a tournament, and the team they play in once they have one."""
+class TournamentSignup(LifecycleModel, table=True):
+    """A member signed up alone for a solo tournament, before its teams are drawn."""
 
     ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("tournament_id", Tournament))
     natural_key: ClassVar[tuple[str, ...]] = ("tournament_id", "user_id")
 
     tournament_id: int = Field(index=True)
     user_id: int = Field(sa_type=BigInteger)
-    entry_id: int | None = None
+
+
+class EntryPlayer(LifecycleModel, table=True):
+    """A member playing for a tournament entry; a member may play for several entries of one tournament."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("entry_id", TournamentEntry))
+    natural_key: ClassVar[tuple[str, ...]] = ("entry_id", "user_id")
+
+    entry_id: int = Field(index=True)
+    user_id: int = Field(sa_type=BigInteger)
 
 
 class TournamentMatch(LifecycleModel, table=True):
@@ -160,7 +169,8 @@ TOURNAMENT_TABLES = (
     Tournament,
     TournamentPost,
     TournamentEntry,
-    TournamentPlayer,
+    TournamentSignup,
+    EntryPlayer,
     TournamentMatch,
     DraftChoice,
     MatchVote,

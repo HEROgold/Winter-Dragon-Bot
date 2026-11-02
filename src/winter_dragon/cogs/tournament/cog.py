@@ -21,6 +21,8 @@ lazy from wd_discord.interactions import ApplicationCommandOptionChoice, Interac
 lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.cogs.team.models import Team, TeamKind
+lazy from winter_dragon.cogs.team.service import teams_of
 lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
@@ -45,31 +47,35 @@ lazy from .models import (
     MatchVote,
     TeamMode,
     Tournament,
+    TournamentEntry,
     TournamentMatch,
     TournamentStatus,
 )
 lazy from .service import (
+    add_player,
     add_post,
-    add_to_team,
     advance,
     cancel,
     cast,
     choices_of,
-    create_team,
     draft,
     drafts_of,
     entries_of,
+    entry_of_captain,
     matches_of,
     open_vote,
-    players_of,
     posts_of,
-    remove_from_team,
+    remove_player,
     report,
     roster,
     sign_up,
+    signups_of,
     start,
     visible_tournaments,
     withdraw,
+)
+lazy from .service import (
+    enter as enter_team,
 )
 
 
@@ -77,6 +83,7 @@ if TYPE_CHECKING:
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import ActionRow
     lazy from wd_discord.embed import Embed
+    lazy from wd_discord.snowflake import Snowflake
 
 
 class TournamentSettings:
@@ -103,6 +110,15 @@ def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) 
 def entry_names(session: Session, tournament_id: int) -> dict[int, str]:
     """Return each team's name by its ID."""
     return {team.id: team.name for team in entries_of(session, tournament_id) if team.id is not None}
+
+
+def captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry:
+    """Return the entry whose team ``captain_id`` captains in ``tournament``; refuse when there's none."""
+    entry = entry_of_captain(session, tournament, captain_id)
+    if entry is None:
+        msg = "You don't captain an entry in this tournament."
+        raise Refused(msg)
+    return entry
 
 
 def play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, entry_id: str) -> None:
@@ -183,7 +199,7 @@ class Tournaments(
         """Return each team's players by team name, and the players signed up alone."""
         tournament_id = tournament.id or 0
         rosters = {team.name: roster(session, team.id) for team in entries_of(session, tournament_id) if team.id is not None}
-        solo = [player.user_id for player in players_of(session, tournament_id)]
+        solo = [signup.user_id for signup in signups_of(session, tournament_id)]
         return rosters, solo
 
     def _signup_card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
@@ -198,8 +214,8 @@ class Tournaments(
             tournament,
             rosters,
             solo,
-            team_create=self.mention(self.team_create),
-            team_add=self.mention(self.team_add),
+            enter=self.mention(self.enter),
+            entry_add=self.mention(self.entry_add),
         )
         return embed, buttons
 
@@ -355,58 +371,71 @@ class Tournaments(
         await interaction.update(embeds=[embed], components=buttons)
         await self._refresh_posts(int(tournament_id))
 
-    @Cog.command(name="team-create", description="Register a team for a tournament, as its captain")
-    async def team_create(
+    async def team_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
+        """Suggest the lasting teams the invoker captains whose name contains what was typed."""
+        user = interaction.user
+        if user is None:
+            return []
+        with Session(self.bind) as session:
+            teams = [team for team in teams_of(session, int(user.id)) if team.kind is TeamKind.LASTING]
+        return [
+            Lookup.choice(team, team.name)
+            for team in teams
+            if team.captain_id == int(user.id) and current.casefold() in team.name.casefold()
+        ]
+
+    @Cog.command(name="enter", description="Enter one of your teams into a tournament, as its captain")
+    async def enter(
         self,
         interaction: GuildCommandInteraction,
         tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
-        name: Annotated[
-            str,
-            Describe("The name of the team"),
-            Length(min_length=1, max_length=TournamentSettings.max_name_length),
-        ],
+        team: Annotated[Team, Lookup(team_choices), Describe("Your team to enter")],
     ) -> None:
-        """Register the team ``name`` captained by the invoker."""
+        """Enter the invoker's team into the tournament, with the invoker as its first player."""
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
-            create_team(session, found, interaction.user.id, name)
+            enter_team(session, found, stored(session, Team, team.id or 0, "That team is gone."), interaction.user.id)
             session.commit()
             tournament_id = found.id or 0
         await self._refresh_posts(tournament_id)
-        message = f"Team **{name}** is registered; add players with {self.mention(self.team_add)}."
+        message = f"Your team **{team.name}** is entered; add players with {self.mention(self.entry_add)}."
         await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
 
-    @Cog.command(name="team-add", description="Add a player to the team you captain")
-    async def team_add(
+    @Cog.command(name="entry-add", description="Add a server member to the entry you captain")
+    async def entry_add(
         self,
         interaction: GuildCommandInteraction,
         tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
-        player: Annotated[User, Describe("The player to add to the team")],
+        player: Annotated[User, Describe("The player to add to your entry")],
     ) -> None:
-        """Add ``player`` to the invoker's team."""
+        """Add ``player``, a member of this server and of your team, to the entry you captain."""
+        member = await interaction.guild.member(player.id).fetch()
+        if is_network_error(member):
+            msg = "They aren't in this server, so they can't play in its tournament."
+            raise Refused(msg)
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
-            add_to_team(session, found, interaction.user.id, player.id)
+            add_player(session, found, captained_entry(session, found, interaction.user.id), interaction.user.id, player.id)
             session.commit()
             tournament_id = found.id or 0
         await self._refresh_posts(tournament_id)
-        await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your team.")], ephemeral=True)
+        await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your entry.")], ephemeral=True)
 
-    @Cog.command(name="team-remove", description="Remove a player from the team you captain")
-    async def team_remove(
+    @Cog.command(name="entry-remove", description="Remove a player from the entry you captain")
+    async def entry_remove(
         self,
         interaction: GuildCommandInteraction,
         tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
-        player: Annotated[User, Describe("The player to remove from the team")],
+        player: Annotated[User, Describe("The player to remove from your entry")],
     ) -> None:
-        """Remove ``player`` from the invoker's team."""
+        """Remove ``player`` from the entry you captain."""
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
-            remove_from_team(session, found, interaction.user.id, player.id)
+            remove_player(session, found, captained_entry(session, found, interaction.user.id), interaction.user.id, player.id)
             session.commit()
             tournament_id = found.id or 0
         await self._refresh_posts(tournament_id)
-        message = f"Removed {player.mention} from your team."
+        message = f"Removed {player.mention} from your entry."
         await interaction.respond(embeds=[ChangedEmbed(description=message)], ephemeral=True)
 
     # --- Running it ------------------------------------------------------------------------------------------------

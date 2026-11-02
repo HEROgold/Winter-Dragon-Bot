@@ -273,7 +273,6 @@ OPTION_LIMITS: dict[str, tuple[type[GroupCog], str, str, dict[str, int]]] = {
     "steam percentage": (SteamSales, "percentage", "percent", {"min_value": 0, "max_value": 100}),
     "tournament create name": (Tournaments, "create", "name", {"min_length": 1, "max_length": 100}),
     "tournament create team size": (Tournaments, "create", "team_size", {"min_value": 1, "max_value": 25}),
-    "tournament team-create": (Tournaments, "team-create", "name", {"min_length": 1, "max_length": 100}),
     "tournament vote question": (Tournaments, "vote", "question", {"max_length": 200}),
 }
 
