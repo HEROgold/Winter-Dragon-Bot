@@ -103,8 +103,8 @@ An invite is a public message with a Join button that only the invitee can press
 
 Team tournaments with a single-elimination bracket. A guild can run several at once. A tournament isn't tied to a channel: `/tournament post` shows it in any channel (Manage Messages there), and every post is kept up to date as the tournament changes. The organiser (whoever opened it, or anyone who can manage the server) opens sign-up with a team size and one of two ways to form teams:
 
-- **Solo:** players join alone (a Join button on the sign-up card, or `/tournament join`); starting the tournament shuffles them into teams of the team size, players left over joining the first teams, and the first player drawn into a team captains it.
-- **Captains:** a captain registers a team and adds or removes its players, up to the team size. A captain leaving disbands their team.
+- **Solo:** players join alone (a Join button on the sign-up card, or `/tournament join`); starting the tournament shuffles them into teams of the team size, players left over joining the first teams, and the first player drawn into a team captains it. Each drawn team is a temporary team that ends when the tournament finishes or is cancelled.
+- **Captains:** a captain enters one of their lasting teams with `/tournament enter`, then picks its players with `/tournament entry-add` and `/tournament entry-remove`, up to the team size. Players must be members of the server. A member can play for several entries of one tournament. A captain leaving the tournament withdraws their entry.
 
 Starting draws the seeds and lays out every round. The bracket is padded to a power of two with byes for the top seeds, which win at once, so two byes never meet. Each match card walks through ready → bans → picks → live, and the organiser's buttons move it on, report the winner once it's live, or record a forfeit at any point. A team's captain bans and picks with commands during those phases, and the card lists them. Winners move on to their next match, and the final's winner is the champion.
 
@@ -112,7 +112,7 @@ The organiser can open a vote for a match (e.g. which map), answered with button
 
 Everything is stored, so a tournament survives a restart.
 
-Surface: `/tournament create | post | join | leave | team-create | team-add | team-remove | start | bracket | match | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
+Surface: `/tournament create | post | join | leave | enter | entry-add | entry-remove | start | bracket | match | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
 
 **Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open (HER-355).
 **Source on `main`:** `src/winter_dragon/bot/extensions/tournament/`

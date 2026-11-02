@@ -896,7 +896,7 @@ The arithmetic of a single-elimination bracket, and of splitting players into te
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
 - module names: PHASE_LABELS, TEAM_BUTTONS
-- `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int], *, team_create: CommandMention, team_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per team.
+- `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int], *, enter: CommandMention, entry_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per entry.
 - `signup_buttons(join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join, Leave and Participants buttons under a sign-up card.
 - `participants_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int]) -> Embed` — Return everyone signed up to ``tournament``: one line per player, or one line per team with its players.
 - `match_line(match: TournamentMatch, names: Mapping[int, str]) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
@@ -918,6 +918,7 @@ The /tournament command group: sign-up, teams, a single-elimination bracket, mat
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
 - `entry_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
+- `captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry` — Return the entry whose team ``captain_id`` captains in ``tournament``; refuse when there's none.
 - `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, entry_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one.
 
 ### `class TournamentSettings`
@@ -938,9 +939,10 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.component async join_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
 - `@Cog.component async leave_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Take the clicker out, then refresh the sign-up card.
 - `@Cog.component async participants_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Show the clicker, and only them, everyone signed up so far.
-- `@Cog.command async team_create(interaction: GuildCommandInteraction, tournament: Tournament, name: str) -> None` — Register the team ``name`` captained by the invoker.
-- `@Cog.command async team_add(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Add ``player`` to the invoker's team.
-- `@Cog.command async team_remove(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Remove ``player`` from the invoker's team.
+- `async team_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the lasting teams the invoker captains whose name contains what was typed.
+- `@Cog.command async enter(interaction: GuildCommandInteraction, tournament: Tournament, team: Team) -> None` — Enter the invoker's team into the tournament, with the invoker as its first player.
+- `@Cog.command async entry_add(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Add ``player``, a member of this server and of your team, to the entry you captain.
+- `@Cog.command async entry_remove(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Remove ``player`` from the entry you captain.
 - `@Cog.command async start_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Start the tournament and show its bracket; organisers only.
 - `@Cog.command async bracket(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Show the bracket, or the sign-up card before the tournament starts.
 - `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Cancel the tournament; organisers only.
@@ -992,15 +994,19 @@ A message showing a tournament in one channel of its guild; the bot edits it whe
 - fields: ownership: ClassVar[Ownership], tournament_id: int, channel_id: int, message_id: int
 
 ### `class TournamentEntry(LifecycleModel, table=True)`
-A team in a tournament; its captain bans and picks for it.
+A team's place in one tournament; its team's captain bans and picks for it.
 
-- fields: ownership: ClassVar[Ownership], tournament_id: int, name: str, captain_id: int
+- fields: ownership: ClassVar[Ownership], tournament_id: int, team_id: int, name: str
 
-### `class TournamentPlayer(LifecycleModel, table=True)`
-A player signed up for a tournament, and the team they play in once they have one.
+### `class TournamentSignup(LifecycleModel, table=True)`
+A member signed up alone for a solo tournament, before its teams are drawn.
 
-- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], tournament_id: int, user_id: int,
-  entry_id: int | None
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], tournament_id: int, user_id: int
+
+### `class EntryPlayer(LifecycleModel, table=True)`
+A member playing for a tournament entry; a member may play for several entries of one tournament.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], entry_id: int, user_id: int
 
 ### `class TournamentMatch(LifecycleModel, table=True)`
 One match of a tournament's single-elimination bracket; round 0 is the first.
@@ -1030,22 +1036,23 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `visible_tournaments(session: Session, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Generator[Tournament]` — Yield the guild's tournaments that aren't over and that ``user_id`` organises or signed up for.
 - `posts_of(session: Session, tournament_id: int) -> Generator[TournamentPost]` — Yield the tournament's posts.
 - `add_post(session: Session, tournament: Tournament, channel_id: Snowflake, message_id: Snowflake) -> None` — Record that the tournament is shown by ``message_id`` in ``channel_id``.
-- `players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]` — Return everyone signed up for the tournament, in sign-up order.
-- `player_of(session: Session, tournament_id: int, user_id: Snowflake) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
+- `signups_of(session: Session, tournament_id: int) -> list[TournamentSignup]` — Return everyone signed up alone for the tournament, in sign-up order.
+- `signup_of(session: Session, tournament_id: int, user_id: Snowflake) -> TournamentSignup | None` — Return the user's solo sign-up for the tournament, if any.
 - `entries_of(session: Session, tournament_id: int) -> list[TournamentEntry]` — Return the tournament's teams, in the order they were formed.
-- `roster(session: Session, entry_id: int) -> list[int]` — Return the user IDs of the team's players.
+- `roster(session: Session, entry_id: int) -> list[int]` — Return the user IDs of the entry's players.
 - `matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
 - `sign_up(session: Session, tournament: Tournament, user_id: Snowflake) -> None` — Sign ``user_id`` up for a solo tournament.
-- `open_signups_of(session: Session, user_id: Snowflake) -> Generator[Tournament]` — Yield the tournaments ``user_id`` is signed up for that haven't started.
-- `withdraw(session: Session, tournament: Tournament, user_id: Snowflake) -> None` — Take ``user_id`` out of the tournament before it starts; a captain leaving disbands their team.
-- `create_team(session: Session, tournament: Tournament, captain_id: Snowflake, name: str) -> None` — Register the team ``name`` with ``captain_id`` as its captain and first player.
-- `add_to_team(session: Session, tournament: Tournament, captain_id: Snowflake, user_id: Snowflake) -> None` — Add ``user_id`` to the team ``captain_id`` captains.
-- `remove_from_team(session: Session, tournament: Tournament, captain_id: Snowflake, user_id: Snowflake) -> None` — Take ``user_id`` off the team ``captain_id`` captains.
+- `open_signups_of(session: Session, user_id: Snowflake) -> Generator[Tournament]` — Yield the tournaments ``user_id`` signed up for, alone or in an entry, that haven't started.
+- `withdraw(session: Session, tournament: Tournament, user_id: Snowflake) -> None` — Take ``user_id`` out of the tournament before it starts; a captain leaving withdraws their entry.
+- `enter(session: Session, tournament: Tournament, team: Team, captain_id: Snowflake) -> TournamentEntry` — Enter the lasting ``team`` into ``tournament`` for its captain, with the captain as its first player.
+- `add_player(session: Session, tournament: Tournament, entry: TournamentEntry, captain_id: Snowflake, user_id: Snowflake) -> None` — Add the team member ``user_id`` to ``entry``'s players, for its captain.
+- `remove_player(session: Session, tournament: Tournament, entry: TournamentEntry, captain_id: Snowflake, user_id: Snowflake) -> None` — Take ``user_id`` off ``entry``'s players, for its captain; the captain stays.
+- `entry_of_captain(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry | None` — Return the entry whose team ``captain_id`` captains in ``tournament``, if any.
 - `start(session: Session, tournament: Tournament, rng: Random) -> None` — Form the teams of a solo tournament, then lay out the bracket and give the byes their wins.
 - `advance(session: Session, match: TournamentMatch) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
 - `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
-- `entry_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentEntry | None` — Return the team ``user_id`` plays for in ``match``, if they play in it.
+- `entry_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentEntry | None` — Return the entry in ``match`` whose team ``user_id`` captains, if they captain one of the two.
 - `draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
 - `drafts_of(session: Session, match_id: int) -> list[DraftChoice]` — Return the bans and picks made in the match, in the order they were made.
 - `open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote` — Open a vote on ``question`` among ``options`` for the players of ``match``.
@@ -1053,11 +1060,11 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `choices_of(session: Session, vote_id: int) -> list[int]` — Return every answer given to the vote.
 
 ### `class WithdrawHiddenMember(MemberHiddenHook)`
-A member whose data is hidden leaves each tournament that hasn't started, by the rule ``/tournament leave`` follows.
+A member whose data is hidden leaves each tournament that hasn't started.
 
 - attributes: tables
-- `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Withdraw the member ``member_id`` from every tournament they're signed up for that hasn't started.
-- `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the teams the member ``member_id`` captains in tournaments that haven't started, which withdrawing disbands.
+- `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Take the member ``member_id`` out of every tournament they're in that hasn't started.
+- `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the entries the member ``member_id`` is the only player of, in tournaments that haven't started.
 
 ## `winter_dragon.cogs.uptime` — `src/winter_dragon/cogs/uptime.py`
 The /uptime command group: how long the bot has been running.
