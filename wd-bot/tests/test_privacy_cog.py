@@ -246,7 +246,7 @@ def _seed_guild(engine: Engine, guild_id: int = GUILD_ID) -> int:
         )
         session.add(match)
         session.flush()
-        vote = tournaments.open_vote(session, match, "map?", ["dust", "inferno"])
+        vote = tournaments.open_vote(session, match, "map?", ["dust", "inferno"], MEMBER_ID)
         tournaments.cast(session, vote, MEMBER_ID, 1)
         session.commit()
         assert vote.id is not None

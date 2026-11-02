@@ -1,10 +1,12 @@
 """The tournament tables: a tournament, its teams and players, its bracket's matches, their drafts and votes."""
 
+from datetime import datetime
 lazy from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field
+from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
 
 
@@ -55,6 +57,18 @@ class DraftKind(StrEnum):
 
     BAN = "ban"
     PICK = "pick"
+
+
+class MatchEventKind(StrEnum):
+    """What happened in a match."""
+
+    PHASE = "phase"
+    DRAFT = "draft"
+    VOTE_OPENED = "vote opened"
+    VOTE_CLOSED = "vote closed"
+    WINNER = "winner"
+    FORFEIT = "forfeit"
+    CLASH_DROPPED = "clash dropped"
 
 
 ACTIVE = (TournamentStatus.SIGNUP, TournamentStatus.RUNNING)
@@ -128,6 +142,13 @@ class TournamentMatch(LifecycleModel, table=True):
     entry_b_id: int | None = None
     phase: MatchPhase = MatchPhase.WAITING
     winner_id: int | None = None
+    started_at: datetime | None = Field(default=None, sa_type=AwareDateTime)
+    """When the match went live."""
+    decided_at: datetime | None = Field(default=None, sa_type=AwareDateTime)
+    """When the match got its winner."""
+    decided_by: int | None = Field(default=None, sa_type=BigInteger)
+    """The member who reported the winner; ``None`` for a bye, which no one reports."""
+    anonymised: ClassVar[tuple[str, ...]] = ("decided_by",)
 
 
 class MatchLineup(LifecycleModel, table=True):
@@ -140,6 +161,35 @@ class MatchLineup(LifecycleModel, table=True):
     match_id: int = Field(index=True)
     entry_id: int = Field(index=True)
     user_id: int = Field(sa_type=BigInteger)
+
+
+class MatchEvent(LifecycleModel, table=True):
+    """Something someone did in a match, and when."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
+    anonymised: ClassVar[tuple[str, ...]] = ("actor_id",)
+
+    match_id: int = Field(index=True)
+    kind: MatchEventKind
+    actor_id: int = Field(sa_type=BigInteger)
+    at: datetime = Field(sa_type=AwareDateTime)
+    detail: str = ""
+
+
+class LineupChange(LifecycleModel, table=True):
+    """A member put in or taken out of an entry's lineup, by whom, when, and why."""
+
+    ownership: ClassVar[Ownership] = Ownership(through=Through("entry_id", TournamentEntry))
+    anonymised: ClassVar[tuple[str, ...]] = ("user_id", "changed_by")
+
+    entry_id: int = Field(index=True)
+    match_id: int | None = None
+    """The match whose lineup changed; ``None`` when only the entry's current players did."""
+    user_id: int = Field(sa_type=BigInteger)
+    playing: bool
+    changed_by: int = Field(sa_type=BigInteger)
+    changed_at: datetime = Field(sa_type=AwareDateTime)
+    reason: str | None = None
 
 
 class DraftChoice(LifecycleModel, table=True):
@@ -185,7 +235,9 @@ TOURNAMENT_TABLES = (
     EntryPlayer,
     TournamentMatch,
     MatchLineup,
+    LineupChange,
     DraftChoice,
+    MatchEvent,
     MatchVote,
     MatchBallot,
 )

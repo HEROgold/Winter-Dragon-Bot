@@ -114,9 +114,11 @@ A member in both lineups of a ready match is a clash. The match can't move on un
 
 The organiser can open a vote for a match (e.g. which map), answered with buttons by that match's players only. Voting again changes your answer, and the organiser closes the vote to show the final tally.
 
+Each match keeps an audit. A match records when it went live, when it was decided, and who decided it. Its events are the phase changes, draft choices, votes opened and closed, the reported winner, a forfeit, and a clash dropped, each with its actor and time. Lineup changes are logged with the entry, the member, in or out, who made the change, when, and the reason given (e.g. stand-in or illness). `/tournament log` shows a match's events and the lineup changes that applied to it. Only the organiser, guild admins and the captains of the match's two entries can see it. On a member's data deletion, their actions and places in this audit are anonymised, and the rows are kept.
+
 Everything is stored, so a tournament survives a restart.
 
-Surface: `/tournament create | post | join | leave | enter | entry-add | entry-remove | lineup-in | lineup-out | start | bracket | match | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
+Surface: `/tournament create | post | join | leave | enter | entry-add | entry-remove | lineup-in | lineup-out | start | bracket | match | log | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
 
 **Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open (HER-355).
 **Source on `main`:** `src/winter_dragon/bot/extensions/tournament/`
