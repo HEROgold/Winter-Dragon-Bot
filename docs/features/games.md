@@ -101,7 +101,7 @@ An invite is a public message with a Join button that only the invitee can press
 
 ## Tournaments
 
-Team tournaments with a single-elimination bracket; a guild runs one at a time, in the channel it was opened in. The organiser (whoever opened it, or anyone who can manage the server) opens sign-up with a team size and one of two ways to form teams:
+Team tournaments with a single-elimination bracket. A guild can run several at once. A tournament isn't tied to a channel: `/tournament post` shows it in any channel (Manage Messages there), and every post is kept up to date as the tournament changes. The organiser (whoever opened it, or anyone who can manage the server) opens sign-up with a team size and one of two ways to form teams:
 
 - **Solo:** players join alone (a Join button on the sign-up card, or `/tournament join`); starting the tournament shuffles them into teams of the team size, players left over joining the first teams, and the first player drawn into a team captains it.
 - **Captains:** a captain registers a team and adds or removes its players, up to the team size. A captain leaving disbands their team.
@@ -112,7 +112,7 @@ The organiser can open a vote for a match (e.g. which map), answered with button
 
 Everything is stored, so a tournament survives a restart.
 
-Surface: `/tournament create | join | leave | team-create | team-add | team-remove | start | bracket | match | ban | pick | vote | cancel`; the match options autocomplete the undecided matches.
+Surface: `/tournament create | post | join | leave | team-create | team-add | team-remove | start | bracket | match | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
 
 **Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open (HER-355).
 **Source on `main`:** `src/winter_dragon/bot/extensions/tournament/`

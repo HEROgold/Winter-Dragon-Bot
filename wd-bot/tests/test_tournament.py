@@ -6,10 +6,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 from sqlmodel import Session
+from wd_bot.commands import Lookup
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive, owned_by
-from wd_discord.gateway.events import InteractionDataOption
+from wd_discord import AutocompleteInteraction
+from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
+from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.permissions import Permissions
+from wd_discord.resources.user import User
+from wd_discord.testing import message_json, user_json
 from wd_errors import Refused
 
 from winter_dragon.cogs.tournament import service
@@ -26,6 +31,7 @@ from winter_dragon.cogs.tournament.models import (
     Tournament,
     TournamentMatch,
     TournamentPlayer,
+    TournamentPost,
     TournamentStatus,
     TournamentTeam,
 )
@@ -45,7 +51,6 @@ ORGANISER = 3
 def _tournament(session: Session, mode: TeamMode = TeamMode.SOLO, team_size: int = 1) -> Tournament:
     tournament = Tournament(
         guild_id=GUILD_ID,
-        channel_id=20,
         organiser_id=ORGANISER,
         name="Cup",
         mode=mode,
@@ -55,6 +60,28 @@ def _tournament(session: Session, mode: TeamMode = TeamMode.SOLO, team_size: int
     session.commit()
     session.refresh(tournament)
     return tournament
+
+
+def _named(
+    session: Session,
+    name: str,
+    *,
+    organiser_id: int = 50,
+    guild_id: int = GUILD_ID,
+    status: TournamentStatus = TournamentStatus.SIGNUP,
+) -> Tournament:
+    tournament = Tournament(
+        guild_id=guild_id, organiser_id=organiser_id, name=name, mode=TeamMode.SOLO, team_size=1, status=status
+    )
+    session.add(tournament)
+    session.commit()
+    session.refresh(tournament)
+    return tournament
+
+
+def _pick(tournament: Tournament) -> InteractionDataOption:
+    """The ``tournament`` option as the autocomplete suggests it for ``tournament``; read it while its session is open."""
+    return InteractionDataOption(name="tournament", type=3, value=Lookup.choice(tournament, tournament.name).value)
 
 
 def _solo(session: Session, players: int, team_size: int = 1) -> Tournament:
@@ -273,8 +300,7 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    from wd_discord.gateway.events import InteractionDataOption  # noqa: PLC0415
-
+    discord_client.reply("POST", "/channels/20/messages", message_json(id="200", channel_id="20"))
     options = [
         InteractionDataOption(name="name", type=3, value="Cup"),
         InteractionDataOption(name="team_size", type=4, value=2),
@@ -296,13 +322,81 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     )
     await Tournaments.create.invoke(cog, interaction, options)
 
-    data = _response(discord_client)["data"]
-    (embed,) = data["embeds"]
+    (post,) = discord_client.requests_to("POST", "/channels/20/messages")
+    (embed,) = post.json["embeds"]
     assert embed["title"] == "🏆 Cup"
-    labels = [button["label"] for button in data["components"][0]["components"]]
+    labels = [button["label"] for button in post.json["components"][0]["components"]]
     assert labels == ["Join", "Leave", "Participants"]
+    assert _response(discord_client)["data"]["embeds"][0]["description"] == "**Cup** is open for sign-up."
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().organiser_id == ORGANISER
+        (row,) = session.exec(alive(TournamentPost)).all()
+        assert (row.channel_id, row.message_id) == (20, 200)
+
+
+async def test_a_guild_can_run_two_tournaments_at_once(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("POST", "/channels/20/messages", message_json(id="200", channel_id="20"))
+    cog = _cog(engine, discord_client)
+    for name in ("Cup", "League"):
+        options = [InteractionDataOption(name="name", type=3, value=name)]
+        interaction = make_interaction(
+            "tournament",
+            options=options,
+            guild_id=GUILD_ID,
+            channel_id=20,
+            permissions=Permissions.MANAGE_GUILD,
+        )
+        await Tournaments.create.invoke(cog, interaction, options)
+
+    with Session(engine) as session:
+        assert sorted(found.name for found in session.exec(alive(Tournament))) == ["Cup", "League"]
+
+
+async def test_post_shows_a_tournament_in_this_channel_and_refuses_another_server(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("POST", "/channels/21/messages", message_json(id="210", channel_id="21"))
+    with Session(engine) as session:
+        tournament = _named(session, "Cup", organiser_id=ORGANISER)
+        foreign = _named(session, "Foreign", guild_id=GUILD_ID + 1, organiser_id=ORGANISER)
+        tournament_id = tournament.id or 0
+        options = [_pick(tournament)]
+        foreign_options = [_pick(foreign)]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.post_tournament.invoke(
+        cog,
+        make_interaction(
+            "tournament", options=options, guild_id=GUILD_ID, channel_id=21, permissions=Permissions.MANAGE_MESSAGES
+        ),
+        options,
+    )
+
+    assert _response(discord_client)["data"]["embeds"][0]["description"] == "Posted **Cup** here."
+    with Session(engine) as session:
+        (row,) = session.exec(alive(TournamentPost)).all()
+        assert (row.tournament_id, row.channel_id, row.message_id) == (tournament_id, 21, 210)
+
+    await Tournaments.post_tournament.invoke(
+        cog,
+        make_interaction(
+            "tournament",
+            options=foreign_options,
+            guild_id=GUILD_ID,
+            channel_id=21,
+            permissions=Permissions.MANAGE_MESSAGES,
+        ),
+        foreign_options,
+    )
+
+    assert _response(discord_client)["data"]["content"] == "That tournament belongs to another server."
+    assert len(discord_client.requests_to("POST", "/channels/21/messages")) == 1
 
 
 async def test_the_join_button_signs_up_and_refreshes_the_card(
@@ -447,17 +541,19 @@ async def test_join_leave_join_signs_up_once(
     discord_client: RecordingClient,
 ) -> None:
     with Session(engine) as session:
-        tournament_id = _tournament(session, team_size=2).id or 0
+        tournament = _tournament(session, team_size=2)
+        tournament_id = tournament.id or 0
+        options = [_pick(tournament)]
     cog = _cog(engine, discord_client)
 
     for command in (Tournaments.join, Tournaments.leave, Tournaments.join):
-        await command.invoke(cog, make_interaction("tournament", guild_id=GUILD_ID), [])
+        await command.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     with Session(engine) as session:
         assert [player.user_id for player in service.players_of(session, tournament_id)] == [ORGANISER]
 
 
-async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
+async def test_cancel_hides_the_tournament(
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -465,31 +561,18 @@ async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
     with Session(engine) as session:
         tournament, _, _ = _played_final(session)
         tournament_id = tournament.id or 0
+        options = [_pick(tournament)]
     cog = _cog(engine, discord_client)
 
-    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", guild_id=GUILD_ID), [])
+    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     with Session(engine) as session:
-        assert service.active_tournament(session, GUILD_ID) is None
+        assert list(service.visible_tournaments(session, GUILD_ID, ORGANISER, None)) == []
         assert service.players_of(session, tournament_id) == []
         assert service.teams_of(session, tournament_id) == []
         assert service.matches_of(session, tournament_id) == []
         for model in (Tournament, DraftChoice, MatchVote, MatchBallot):
             assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
-    options = [
-        InteractionDataOption(name="name", type=3, value="Rematch"),
-        InteractionDataOption(name="team_size", type=4, value=1),
-    ]
-    interaction = make_interaction(
-        "tournament",
-        options=options,
-        guild_id=GUILD_ID,
-        channel_id=20,
-        permissions=Permissions.MANAGE_GUILD,
-    )
-    await Tournaments.create.invoke(cog, interaction, options)
-    with Session(engine) as session:
-        assert [found.name for found in session.exec(alive(Tournament))] == ["Rematch"]
 
 
 async def test_vote_takes_the_match_from_a_lookup_value(
@@ -549,7 +632,7 @@ async def test_match_card_takes_the_match_from_a_lookup_value(
     assert "Dust" in str(embed)
 
 
-async def test_match_card_refuses_a_match_when_the_guild_has_no_tournament(
+async def test_match_card_refuses_a_match_of_another_server(
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -566,4 +649,80 @@ async def test_match_card_refuses_a_match_when_the_guild_has_no_tournament(
         options,
     )
 
-    assert _response(discord_client)["data"]["content"].startswith("There's no tournament here;")
+    assert _response(discord_client)["data"]["content"] == "That tournament belongs to another server."
+
+
+def _autocomplete(client: RecordingClient) -> AutocompleteInteraction:
+    """An autocomplete interaction from the organiser in ``GUILD_ID``, typing into the tournament option."""
+    model = AutocompleteInteractionModel(
+        id="1",
+        application_id="2",
+        type=InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE,
+        token="tok",  # noqa: S106
+        version=1,
+        guild_id=str(GUILD_ID),
+        user=User.model_validate(user_json(id=str(ORGANISER), username="organiser")),
+        data=InteractionData(id="10", name="tournament", type=1),
+    )
+    return AutocompleteInteraction(client, model)
+
+
+async def test_tournament_choices_suggests_the_visible_tournaments_that_match(
+    engine: Engine,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _named(session, "Spring Cup", organiser_id=ORGANISER)
+        _named(session, "Autumn Cup", organiser_id=ORGANISER)
+        _named(session, "Winter League", organiser_id=ORGANISER)
+        _named(session, "Hidden Cup")
+    cog = _cog(engine, discord_client)
+
+    choices = await cog.tournament_choices(_autocomplete(discord_client), "cup")
+
+    assert sorted(choice.name for choice in choices) == ["Autumn Cup", "Spring Cup"]
+
+
+async def test_the_join_button_edits_every_post_of_the_tournament(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/20/messages/200", message_json(id="200", channel_id="20"))
+    discord_client.reply("PATCH", "/channels/21/messages/210", message_json(id="210", channel_id="21"))
+    with Session(engine) as session:
+        tournament = _tournament(session, team_size=2)
+        service.add_post(session, tournament, 20, 200)
+        service.add_post(session, tournament, 21, 210)
+        session.commit()
+        tournament_id = tournament.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.join_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+
+    for channel_id, message_id in ((20, 200), (21, 210)):
+        (edit,) = discord_client.requests_to("PATCH", f"/channels/{channel_id}/messages/{message_id}")
+        assert edit.json["embeds"][0]["fields"][0]["name"] == "Players (1)"
+
+
+def test_visible_tournaments_are_the_organisers_signed_up_and_posted_ones(engine: Engine) -> None:
+    with Session(engine) as session:
+        _named(session, "Organised", organiser_id=ORGANISER)
+        signed_up = _named(session, "Signed")
+        service.sign_up(session, signed_up, ORGANISER)
+        posted = _named(session, "Posted")
+        service.add_post(session, posted, 20, 200)
+        _named(session, "Hidden")
+        _named(session, "Finished", organiser_id=ORGANISER, status=TournamentStatus.FINISHED)
+        _named(session, "Elsewhere", guild_id=GUILD_ID + 1, organiser_id=ORGANISER)
+        session.commit()
+
+        assert [found.name for found in service.visible_tournaments(session, GUILD_ID, ORGANISER, 99)] == [
+            "Organised",
+            "Signed",
+        ]
+        assert [found.name for found in service.visible_tournaments(session, GUILD_ID, 7, 20)] == ["Posted"]

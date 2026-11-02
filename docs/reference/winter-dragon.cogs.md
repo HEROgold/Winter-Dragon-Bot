@@ -926,23 +926,25 @@ Settings for /tournament, in its ``cogs.ini`` section.
 - attributes: max_name_length, max_team_size
 
 ### `class Tournaments(GroupCog, name='tournament', description='Run a team tournament: sign-up, a bracket, drafts and votes', contexts=[InteractionContextType.GUILD])`
-Runs one tournament per guild: players sign up, teams form, and a single-elimination bracket plays out.
+Runs tournaments per guild: players sign up, teams form, and a single-elimination bracket plays out.
 
 - attributes: rng
 - `async load() -> None` — Create the tournament tables if missing.
+- `async tournament_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournaments the invoker can see whose name contains what was typed.
 - `@Cog.command async create(interaction: GuildCommandInteraction, name: str, team_size: int=1, captains: bool=False) -> None` — Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
-- `@Cog.command async join(interaction: GuildCommandInteraction) -> None` — Sign the invoker up for the guild's solo tournament.
-- `@Cog.command async leave(interaction: GuildCommandInteraction) -> None` — Take the invoker out of the tournament; a captain leaving disbands their team.
+- `@Cog.command async post_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Post ``tournament`` in this channel; every change to the tournament edits the post.
+- `@Cog.command async join(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Sign the invoker up for the tournament.
+- `@Cog.command async leave(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Take the invoker out of the tournament; a captain leaving disbands their team.
 - `@Cog.component async join_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
 - `@Cog.component async leave_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Take the clicker out, then refresh the sign-up card.
 - `@Cog.component async participants_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Show the clicker, and only them, everyone signed up so far.
-- `@Cog.command async team_create(interaction: GuildCommandInteraction, name: str) -> None` — Register the team ``name`` captained by the invoker.
-- `@Cog.command async team_add(interaction: GuildCommandInteraction, player: User) -> None` — Add ``player`` to the invoker's team.
-- `@Cog.command async team_remove(interaction: GuildCommandInteraction, player: User) -> None` — Remove ``player`` from the invoker's team.
-- `@Cog.command async start_tournament(interaction: GuildCommandInteraction) -> None` — Start the tournament and show its bracket; organisers only.
-- `@Cog.command async bracket(interaction: GuildCommandInteraction) -> None` — Show the bracket, or the sign-up card before the tournament starts.
-- `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction) -> None` — Cancel the tournament; organisers only.
-- `async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournament's undecided matches whose line contains what was typed.
+- `@Cog.command async team_create(interaction: GuildCommandInteraction, tournament: Tournament, name: str) -> None` — Register the team ``name`` captained by the invoker.
+- `@Cog.command async team_add(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Add ``player`` to the invoker's team.
+- `@Cog.command async team_remove(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Remove ``player`` from the invoker's team.
+- `@Cog.command async start_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Start the tournament and show its bracket; organisers only.
+- `@Cog.command async bracket(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Show the bracket, or the sign-up card before the tournament starts.
+- `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Cancel the tournament; organisers only.
+- `async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: TournamentMatch) -> None` — Post the card of match ``match``.
 - `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, team_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
 - `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
@@ -979,10 +981,15 @@ Whether a team bans something from the match, or picks it.
 - attributes: BAN, PICK
 
 ### `class Tournament(LifecycleModel, table=True)`
-A guild's tournament, run in one channel by its organiser; the guild owns it and everything in it.
+A guild's tournament, shown in any channels it is posted to; the guild owns it and everything in it.
 
-- fields: ownership: ClassVar[Ownership], guild_id: int, channel_id: int, organiser_id: int, name: str, mode: TeamMode,
-  team_size: int, status: TournamentStatus, winner_team_id: int | None
+- fields: ownership: ClassVar[Ownership], guild_id: int, organiser_id: int, name: str, mode: TeamMode, team_size: int,
+  status: TournamentStatus, winner_team_id: int | None
+
+### `class TournamentPost(LifecycleModel, table=True)`
+A message showing a tournament in one channel of its guild; the bot edits it whenever the tournament changes.
+
+- fields: ownership: ClassVar[Ownership], tournament_id: int, channel_id: int, message_id: int
 
 ### `class TournamentTeam(LifecycleModel, table=True)`
 A team in a tournament; its captain bans and picks for it.
@@ -1020,7 +1027,9 @@ One player's answer to a vote; voting again changes it.
 ## `winter_dragon.cogs.tournament.service` — `src/winter_dragon/cogs/tournament/service.py`
 What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
-- `active_tournament(session: Session, guild_id: Snowflake) -> Tournament | None` — Return the guild's tournament that isn't over, if it has one.
+- `visible_tournaments(session: Session, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Generator[Tournament]` — Yield the guild's tournaments that aren't over and that ``user_id`` organises or signed up for.
+- `posts_of(session: Session, tournament_id: int) -> Generator[TournamentPost]` — Yield the tournament's posts.
+- `add_post(session: Session, tournament: Tournament, channel_id: Snowflake, message_id: Snowflake) -> None` — Record that the tournament is shown by ``message_id`` in ``channel_id``.
 - `players_of(session: Session, tournament_id: int) -> list[TournamentPlayer]` — Return everyone signed up for the tournament, in sign-up order.
 - `player_of(session: Session, tournament_id: int, user_id: Snowflake) -> TournamentPlayer | None` — Return the user's sign-up for the tournament, if any.
 - `teams_of(session: Session, tournament_id: int) -> list[TournamentTeam]` — Return the tournament's teams, in the order they were formed.
