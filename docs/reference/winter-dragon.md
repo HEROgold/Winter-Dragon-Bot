@@ -82,6 +82,11 @@ Run a real wd_bot.Bot for up to 10 minutes against the live Discord API.
 - module names: RUN_DURATION_SECONDS
 - `async main() -> int` — Run the bot for up to RUN_DURATION_SECONDS, then report the outcome.
 
+## `winter_dragon.stored` — `src/winter_dragon/stored.py`
+Loading a stored row a command needs, refusing when it's gone.
+
+- `stored[M: LifecycleModel](session: Session, model: type[M], record_id: int, gone: str) -> M` — Return the alive ``model`` stored as ``record_id``; refuse with ``gone`` when there's none.
+
 ## `winter_dragon.voice_channels` — `src/winter_dragon/voice_channels.py`
 Voice channels a cog creates and records, deleted once everyone left.
 

@@ -10,9 +10,10 @@ from sqlmodel import Session, col, select
 lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
 lazy from wd_errors import Refused
 
+lazy from winter_dragon.cogs.team.split import split_into_teams
 lazy from winter_dragon.member_hidden import MemberHiddenHook, RemovedRows
 
-lazy from .bracket import first_round, next_match, round_count, split_into_teams, valid_options
+lazy from .bracket import first_round, next_match, round_count, valid_options
 lazy from .models import (
     ACTIVE,
     DraftChoice,

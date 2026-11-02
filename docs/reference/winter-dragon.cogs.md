@@ -786,11 +786,69 @@ A Steam store URL.
 - `@property is_bundle -> bool` — Whether this URL points at a bundle (``/bundle/``) or a package (``/sub/``).
 - `@property store_item -> StoreItemID | None` — The store item this URL's page is for, or ``None`` for a page that isn't one item's.
 
+## `winter_dragon.cogs.team.cog` — `src/winter_dragon/cogs/team/cog.py`
+The /team command group: create a lasting team, see its captain and members, and leave it.
+
+### `class TeamSettings`
+Settings for /team, in its ``cogs.ini`` section.
+
+- attributes: max_name_length
+
+### `class Teams(GroupCog, name='team', description='Teams of members that outlast any one tournament', contexts=[InteractionContextType.GUILD])`
+Lasting teams: create one, see who is in it, and leave it.
+
+- `async load() -> None` — Create the team tables if missing.
+- `async team_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoker's teams whose name contains what was typed.
+- `@Cog.command async create(interaction: GuildCommandInteraction, name: str) -> None` — Create the lasting team ``name`` with the invoker as its captain.
+- `@Cog.command async show(interaction: GuildCommandInteraction, team: Team) -> None` — Post the team's name, captain and members.
+- `@Cog.command async leave_team(interaction: GuildCommandInteraction, team: Team) -> None` — Take the invoker out of the team.
+
+## `winter_dragon.cogs.team.models` — `src/winter_dragon/cogs/team/models.py`
+The team tables: a team and its members, lasting or temporary.
+
+- module names: TEAM_TABLES
+
+### `class TeamKind(StrEnum)`
+Whether a team was drawn for one occasion or is kept.
+
+- attributes: TEMPORARY, LASTING
+
+### `class TeamOrigin(StrEnum)`
+How a team came to be.
+
+- attributes: CREATED, VOICE_SPLIT, TEXT_SPLIT, SOLO_TOURNAMENT
+
+### `class Team(LifecycleModel, table=True)`
+A group of members, from any guild, apart from any tournament; it belongs to no guild.
+
+- fields: name: str, kind: TeamKind, origin: TeamOrigin, captain_id: int | None, ended_at: datetime | None
+
+### `class TeamMember(LifecycleModel, table=True)`
+A member of a team, since ``joined_at``; the longest-standing member takes over from a leaving captain.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], team_id: int, user_id: int, joined_at:
+  datetime
+
+## `winter_dragon.cogs.team.service` — `src/winter_dragon/cogs/team/service.py`
+What can happen to a lasting team: creating it, listing its members, and members leaving it.
+
+- `create_team(session: Session, name: str, captain_id: int) -> Team` — Create the lasting team ``name`` with ``captain_id`` as its captain and first member.
+- `members_of(session: Session, team_id: int) -> Generator[TeamMember]` — Yield the team's members, longest-standing first.
+- `teams_of(session: Session, user_id: int) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name.
+- `membership(session: Session, team: Team, user_id: int) -> TeamMember | None` — Return ``user_id``'s alive membership of ``team``, if they're in it.
+- `leave(session: Session, team: Team, user_id: int) -> None` — Take ``user_id`` out of ``team``.
+
+## `winter_dragon.cogs.team.split` — `src/winter_dragon/cogs/team/split.py`
+Splitting members into teams: pure arithmetic, no database, no Discord.
+
+- module names: MIN_TEAMS
+- `split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]` — Shuffle ``user_ids`` into teams of ``team_size``; players left over join the first teams, one each.
+- `split_into(user_ids: Sequence[int], count: int, rng: Random) -> list[list[int]]` — Shuffle ``user_ids`` into ``count`` teams whose sizes differ by at most one; none if there are too few players.
+
 ## `winter_dragon.cogs.tournament.bracket` — `src/winter_dragon/cogs/tournament/bracket.py`
 The arithmetic of a single-elimination bracket, and of splitting players into teams; no database, no Discord.
 
-- module names: MIN_TEAMS, MAX_VOTE_OPTIONS, MAX_QUESTION_LENGTH
-- `split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]` — Shuffle ``user_ids`` into teams of ``team_size``; players left over join the first teams, one each.
+- module names: MAX_VOTE_OPTIONS, MAX_QUESTION_LENGTH
 - `round_count(teams: int) -> int` — Return how many rounds a bracket of ``teams`` teams takes.
 - `first_round(team_ids: Sequence[int]) -> list[tuple[int, int | None]]` — Pair ``team_ids`` for the first round, in seed order; ``None`` is a bye.
 - `next_match(round_: int, slot: int) -> tuple[int, int, bool]` — Return where the winner of match ``slot`` of round ``round_`` plays next: round, slot, and whether as team A.
@@ -803,7 +861,6 @@ The arithmetic of a single-elimination bracket, and of splitting players into te
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
 - module names: PHASE_LABELS, TEAM_BUTTONS
-- `mentions(user_ids: Sequence[int]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.
 - `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int], *, team_create: CommandMention, team_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per team.
 - `signup_buttons(join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join, Leave and Participants buttons under a sign-up card.
 - `participants_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int]) -> Embed` — Return everyone signed up to ``tournament``: one line per player, or one line per team with its players.
@@ -825,7 +882,6 @@ The /tournament command group: sign-up, teams, a single-elimination bracket, mat
 
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
-- `stored[M: LifecycleModel](session: Session, model: type[M], record_id: int, gone: str) -> M` — Return the alive ``model`` stored as ``record_id``; refuse with ``gone`` when there's none.
 - `team_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
 - `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one.
 
