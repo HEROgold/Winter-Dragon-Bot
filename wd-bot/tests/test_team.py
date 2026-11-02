@@ -13,6 +13,7 @@ from wd_discord.gateway.events import InteractionDataOption, ResolvedData
 from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 from wd_errors import Refused
+from wd_types.clock import utc_now
 
 from winter_dragon.cogs.team import service
 from winter_dragon.cogs.team.cog import Teams
@@ -21,7 +22,7 @@ from winter_dragon.cogs.team.split import split_into, split_into_teams
 
 
 if TYPE_CHECKING:
-    from conftest import ComponentInteractionFactory, InteractionFactory
+    from conftest import ComponentInteractionFactory, InteractionFactory, ModalSubmitFactory
     from sqlalchemy import Engine
     from wd_discord.testing import RecordingClient
 
@@ -385,3 +386,199 @@ async def test_a_non_captain_cannot_kick(
 
     assert _response(discord_client)["content"] == "Only the team's captain can do that."
     assert _member_ids(engine, team_id) == [4, INVOKER, 5]
+
+
+# --- Temporary teams -------------------------------------------------------------------------------------------------
+
+
+def _split_teams(engine: Engine, groups: list[list[int]], origin: TeamOrigin = TeamOrigin.TEXT_SPLIT) -> list[int]:
+    """Store one temporary team per group through the service; return their IDs."""
+    with Session(engine) as session:
+        teams = service.create_temporary_teams(session, groups, origin)
+        session.commit()
+        return [team.id or 0 for team in teams]
+
+
+def _temporary_row(
+    engine: Engine,
+    *,
+    created_at: datetime,
+    kind: TeamKind = TeamKind.TEMPORARY,
+    origin: TeamOrigin = TeamOrigin.TEXT_SPLIT,
+) -> int:
+    """Store a team created at ``created_at`` directly, so its age is under the test's control; return its ID."""
+    with Session(engine) as session:
+        team = Team(name="Temp", kind=kind, origin=origin, created_at=created_at)
+        session.add(team)
+        session.commit()
+        return team.id or 0
+
+
+def test_create_temporary_teams_stores_numbered_unended_teams_with_their_members(engine: Engine) -> None:
+    team_ids = _split_teams(engine, [[3, 4], [5, 6]])
+    with Session(engine) as session:
+        teams = [session.get_one(Team, team_id) for team_id in team_ids]
+        assert [team.name for team in teams] == ["Team 1", "Team 2"]
+        assert all(team.kind is TeamKind.TEMPORARY for team in teams)
+        assert all(team.origin is TeamOrigin.TEXT_SPLIT for team in teams)
+        assert all(team.captain_id is None and team.ended_at is None for team in teams)
+    assert _member_ids(engine, team_ids[0]) == [3, 4]
+    assert _member_ids(engine, team_ids[1]) == [5, 6]
+
+
+def test_keep_makes_the_team_lasting_with_the_presser_as_captain(engine: Engine) -> None:
+    (team_id,) = _split_teams(engine, [[3, 4, 5]])
+    with Session(engine) as session:
+        service.keep(session, session.get_one(Team, team_id), 4, "  Owls  ")
+        session.commit()
+    with Session(engine) as session:
+        team = session.get_one(Team, team_id)
+        assert team.name == "Owls"
+        assert team.kind is TeamKind.LASTING
+        assert team.captain_id == 4
+    assert _member_ids(engine, team_id) == [3, 4, 5]
+
+
+def test_keep_refuses_a_non_member_and_an_empty_name(engine: Engine) -> None:
+    (team_id,) = _split_teams(engine, [[3, 4]])
+    with Session(engine) as session, pytest.raises(Refused, match="Only this team's members can keep it."):
+        service.keep(session, session.get_one(Team, team_id), 9, "Owls")
+    with Session(engine) as session, pytest.raises(Refused, match="A team needs a name."):
+        service.keep(session, session.get_one(Team, team_id), 3, "   ")
+
+
+def test_keep_refuses_an_ended_team_and_one_kept_already(engine: Engine) -> None:
+    (ended_id,) = _split_teams(engine, [[3, 4]])
+    with Session(engine) as session:
+        team = session.get_one(Team, ended_id)
+        team.ended_at = utc_now()
+        session.add(team)
+        session.commit()
+    with Session(engine) as session, pytest.raises(Refused, match="That team has ended."):
+        service.keep(session, session.get_one(Team, ended_id), 3, "Owls")
+
+    (kept_id,) = _split_teams(engine, [[3, 4]])
+    with Session(engine) as session:
+        service.keep(session, session.get_one(Team, kept_id), 3, "Owls")
+        session.commit()
+    with Session(engine) as session, pytest.raises(Refused, match="That team is kept already."):
+        service.keep(session, session.get_one(Team, kept_id), 4, "Hawks")
+
+
+def test_end_expired_ends_old_temporary_teams_and_spares_the_rest(engine: Engine) -> None:
+    now = datetime(2026, 1, 3, tzinfo=UTC)
+    old = _temporary_row(engine, created_at=now - timedelta(days=2))
+    young = _temporary_row(engine, created_at=now - timedelta(hours=1))
+    lasting = _temporary_row(engine, created_at=now - timedelta(days=2), kind=TeamKind.LASTING)
+    solo = _temporary_row(engine, created_at=now - timedelta(days=2), origin=TeamOrigin.SOLO_TOURNAMENT)
+    with Session(engine) as session:
+        assert service.end_expired(session, now, timedelta(hours=24)) == 1
+        session.commit()
+    with Session(engine) as session:
+        assert session.get_one(Team, old).ended_at is not None
+        assert session.get_one(Team, young).ended_at is None
+        assert session.get_one(Team, lasting).ended_at is None
+        assert session.get_one(Team, solo).ended_at is None
+
+
+async def test_split_asks_for_members_with_a_user_select(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    options = [InteractionDataOption(name="teams", type=4, value="2")]
+    await Teams.split.invoke(
+        _cog(engine, discord_client),
+        make_interaction("team", options=options, guild_id=GUILD_ID, channel_id=20),
+        options,
+    )
+
+    data = _response(discord_client)
+    assert data["content"] == "Pick the members to split into 2 teams."
+    (select,) = data["components"][0]["components"]
+    assert select["type"] == 5
+    assert select["custom_id"] == "team-split:2"
+
+
+async def test_picking_members_posts_two_teams_with_a_keep_button_each(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    cog = _cog(engine, discord_client)
+    cog.rng = Random(0)
+
+    await Teams.split_select.invoke(
+        cog,
+        make_component_interaction("team-split:2", guild_id=GUILD_ID, values=["3", "4", "5"]),
+        ["2"],
+    )
+
+    data = _response(discord_client)
+    assert [field["name"] for field in data["embeds"][0]["fields"]] == ["Team 1", "Team 2"]
+    with Session(engine) as session:
+        teams = list(session.exec(alive(Team)))
+        ids = {team.name: team.id for team in teams}
+        members = sorted(member.user_id for team in teams for member in service.members_of(session, team.id or 0))
+    buttons = data["components"][0]["components"]
+    assert [button["custom_id"] for button in buttons] == [f"team-keep:{ids['Team 1']}", f"team-keep:{ids['Team 2']}"]
+    assert [button["label"] for button in buttons] == ["Keep Team 1", "Keep Team 2"]
+    assert members == [3, 4, 5]
+
+
+async def test_picking_too_few_members_is_refused(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    await Teams.split_select.invoke(
+        _cog(engine, discord_client),
+        make_component_interaction("team-split:2", guild_id=GUILD_ID, values=["3"]),
+        ["2"],
+    )
+
+    assert _response(discord_client)["content"] == "Pick at least 2 members for 2 teams."
+    with Session(engine) as session:
+        assert session.exec(alive(Team)).all() == []
+
+
+async def test_the_keep_button_refuses_a_non_member(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    (team_id,) = _split_teams(engine, [[INVOKER, 4]])
+    await Teams.keep_button.invoke(
+        _cog(engine, discord_client),
+        make_component_interaction(f"team-keep:{team_id}", guild_id=GUILD_ID, user=_member(9)),
+        [str(team_id)],
+    )
+
+    assert _response(discord_client)["content"] == "Only this team's members can keep it."
+
+
+async def test_the_keep_modal_makes_the_team_lasting_for_the_presser(
+    engine: Engine,
+    make_modal_submit: ModalSubmitFactory,
+    discord_client: RecordingClient,
+) -> None:
+    (team_id,) = _split_teams(engine, [[INVOKER, 4]])
+    await Teams.keep_modal.invoke(
+        _cog(engine, discord_client),
+        make_modal_submit(f"team-keep-name:{team_id}", {"name": "Owls"}, guild_id=GUILD_ID),
+        [str(team_id)],
+    )
+
+    assert _response(discord_client)["embeds"][0]["description"] == "Kept as **Owls**; you're its captain."
+    team = _team_row(engine, team_id)
+    assert team.name == "Owls"
+    assert team.kind is TeamKind.LASTING
+    assert team.captain_id == INVOKER
+
+
+async def test_the_tick_ends_a_temporary_team_created_two_days_ago(engine: Engine, discord_client: RecordingClient) -> None:
+    team_id = _temporary_row(engine, created_at=utc_now() - timedelta(days=2))
+
+    await _cog(engine, discord_client).end_expired_teams()
+
+    assert _team_row(engine, team_id).ended_at is not None
