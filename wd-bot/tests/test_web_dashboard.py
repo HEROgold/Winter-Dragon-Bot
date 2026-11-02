@@ -860,3 +860,55 @@ def test_the_incremental_posts_need_the_csrf_token(member: TestClient, bind: Eng
         assert member.post(path, headers=HTMX).status_code == 403
     with Session(bind) as session:
         assert session.exec(alive(IncrementalSave)).all() == []
+
+
+def _enter_tournaments(bind: Engine, team_name: str, tournaments: tuple[tuple[str, TournamentStatus, bool], ...]) -> None:
+    """Enter the named team in each (tournament name, status, won) tournament; ``won`` makes that entry the winner."""
+    from winter_dragon.cogs.team.models import Team
+
+    with Session(bind) as session:
+        team = session.exec(select(Team).where(Team.name == team_name)).one()
+        assert team.id is not None
+        for name, status, won in tournaments:
+            tournament = Tournament(
+                guild_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2, status=status
+            )
+            session.add(tournament)
+            session.commit()
+            session.refresh(tournament)
+            assert tournament.id is not None
+            entry = TournamentEntry(tournament_id=tournament.id, team_id=team.id, name=team_name)
+            session.add(entry)
+            session.commit()
+            session.refresh(entry)
+            if won:
+                tournament.winner_entry_id = entry.id
+                session.add(tournament)
+                session.commit()
+
+
+def test_the_teams_page_lists_the_tournaments_each_team_entered(member: TestClient, bind: Engine) -> None:
+    _team(bind, "Ironclad", TeamKind.LASTING, (MEMBER_ID, OTHER_ID), captain_id=MEMBER_ID)
+    _enter_tournaments(
+        bind,
+        "Ironclad",
+        (("Spring Cup", TournamentStatus.FINISHED, True), ("Summer Cup", TournamentStatus.RUNNING, False)),
+    )
+
+    page = member.get("/profile/teams").text
+
+    assert "Spring Cup" in page
+    assert "Summer Cup" in page
+    assert "Won" in page
+    assert "Playing" in page
+
+
+def test_the_teams_page_shows_no_tournaments_for_a_team_that_entered_none(member: TestClient, bind: Engine) -> None:
+    _team(bind, "Harbour Lads", TeamKind.LASTING, (MEMBER_ID,), captain_id=MEMBER_ID)
+    _enter_tournaments(bind, "Harbour Lads", ())
+
+    page = member.get("/profile/teams").text
+
+    assert "Harbour Lads" in page
+    assert "Spring Cup" not in page
+    assert "Playing" not in page
