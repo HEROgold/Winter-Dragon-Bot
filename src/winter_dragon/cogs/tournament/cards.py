@@ -116,16 +116,16 @@ def participants_embed(
     return Embed(title=f"🏆 {tournament.name}: {count} participant{'' if count == 1 else 's'}", description=text)
 
 
-def _team(names: Mapping[int, str], team_id: int | None, *, bye: bool) -> str:
-    if team_id is None:
+def _team(names: Mapping[int, str], entry_id: int | None, *, bye: bool) -> str:
+    if entry_id is None:
         return "bye" if bye else "TBD"
-    return names.get(team_id, f"Team {team_id}")
+    return names.get(entry_id, f"Team {entry_id}")
 
 
 def match_line(match: TournamentMatch, names: Mapping[int, str]) -> str:
     """Return one line of the bracket: the match's number, its teams, and its state or winner."""
     bye = match.round == 0
-    teams = f"{_team(names, match.team_a_id, bye=False)} vs {_team(names, match.team_b_id, bye=bye)}"
+    teams = f"{_team(names, match.entry_a_id, bye=False)} vs {_team(names, match.entry_b_id, bye=bye)}"
     if match.phase.decided and match.winner_id is not None:
         return f"`#{match.id}` {teams} — 🏆 {names.get(match.winner_id, '?')}"
     return f"`#{match.id}` {teams} — {PHASE_LABELS[match.phase]}"
@@ -144,7 +144,7 @@ def bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], na
         )
         for round_ in range(rounds)
     ]
-    champion = tournament.winner_team_id
+    champion = tournament.winner_entry_id
     description = f"🏆 Champion: **{names.get(champion, '?')}**" if champion is not None else "Single elimination."
     return Embed(title=f"{tournament.name} — bracket", description=description, fields=fields)
 
@@ -158,15 +158,15 @@ def match_embed(
 ) -> Embed:
     """Return a match card: its round, phase, the teams' players, and what each team banned and picked."""
     fields: list[EmbedField] = []
-    for team_id in (match.team_a_id, match.team_b_id):
-        if team_id is None:
+    for entry_id in (match.entry_a_id, match.entry_b_id):
+        if entry_id is None:
             continue
-        own = [draft for draft in drafts if draft.team_id == team_id]
+        own = [draft for draft in drafts if draft.entry_id == entry_id]
         bans = ", ".join(draft.value for draft in own if draft.kind is DraftKind.BAN) or "—"
         picks = ", ".join(draft.value for draft in own if draft.kind is DraftKind.PICK) or "—"
-        value = f"{mentions(rosters.get(team_id, []))}\nBans: {bans}\nPicks: {picks}"
+        value = f"{mentions(rosters.get(entry_id, []))}\nBans: {bans}\nPicks: {picks}"
         fields.append(
-            EmbedField(name=names.get(team_id, "?"), value=truncate(value, MAX_EMBED_FIELD_VALUE_LENGTH), inline=True),
+            EmbedField(name=names.get(entry_id, "?"), value=truncate(value, MAX_EMBED_FIELD_VALUE_LENGTH), inline=True),
         )
     title = f"Match #{match.id} — {round_name(match.round, rounds)}"
     description = PHASE_LABELS[match.phase]
@@ -177,9 +177,9 @@ def match_embed(
 
 def match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str]) -> list[ActionRow]:
     """Return the organiser's controls under a match card: next phase, report a winner, or a forfeit."""
-    if match.phase.decided or match.team_a_id is None or match.team_b_id is None or match.id is None:
+    if match.phase.decided or match.entry_a_id is None or match.entry_b_id is None or match.id is None:
         return []
-    teams = (match.team_a_id, match.team_b_id)
+    teams = (match.entry_a_id, match.entry_b_id)
     rows: list[ActionRow] = []
     following = match.phase.next
     if following is not None:

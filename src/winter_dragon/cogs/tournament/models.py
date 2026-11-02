@@ -72,7 +72,7 @@ class Tournament(LifecycleModel, table=True):
     mode: TeamMode
     team_size: int
     status: TournamentStatus = TournamentStatus.SIGNUP
-    winner_team_id: int | None = None
+    winner_entry_id: int | None = None
 
 
 class TournamentPost(LifecycleModel, table=True):
@@ -85,7 +85,7 @@ class TournamentPost(LifecycleModel, table=True):
     message_id: int = Field(sa_type=BigInteger)
 
 
-class TournamentTeam(LifecycleModel, table=True):
+class TournamentEntry(LifecycleModel, table=True):
     """A team in a tournament; its captain bans and picks for it."""
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
@@ -103,7 +103,7 @@ class TournamentPlayer(LifecycleModel, table=True):
 
     tournament_id: int = Field(index=True)
     user_id: int = Field(sa_type=BigInteger)
-    team_id: int | None = None
+    entry_id: int | None = None
 
 
 class TournamentMatch(LifecycleModel, table=True):
@@ -115,8 +115,8 @@ class TournamentMatch(LifecycleModel, table=True):
     round: int
     slot: int
     """The match's place in its round, top to bottom; it feeds slot ``slot // 2`` of the next round."""
-    team_a_id: int | None = None
-    team_b_id: int | None = None
+    entry_a_id: int | None = None
+    entry_b_id: int | None = None
     phase: MatchPhase = MatchPhase.WAITING
     winner_id: int | None = None
 
@@ -127,7 +127,7 @@ class DraftChoice(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
 
     match_id: int = Field(index=True)
-    team_id: int
+    entry_id: int
     kind: DraftKind
     value: str
 
@@ -159,7 +159,7 @@ class MatchBallot(LifecycleModel, table=True):
 TOURNAMENT_TABLES = (
     Tournament,
     TournamentPost,
-    TournamentTeam,
+    TournamentEntry,
     TournamentPlayer,
     TournamentMatch,
     DraftChoice,
