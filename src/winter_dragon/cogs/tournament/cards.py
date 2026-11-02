@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     lazy from wd_bot.components import ComponentHandler
     lazy from wd_bot.registry import CommandMention
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from .models import DraftChoice, MatchVote, Tournament, TournamentMatch
 
@@ -54,8 +55,8 @@ class MatchAction(StrEnum):
 
 def signup_embed(
     tournament: Tournament,
-    rosters: Mapping[str, Sequence[int]],
-    solo_players: Sequence[int],
+    rosters: Mapping[str, Sequence[Snowflake]],
+    solo_players: Sequence[Snowflake],
     *,
     enter: CommandMention,
     entry_add: CommandMention,
@@ -99,8 +100,8 @@ def signup_buttons(
 
 def participants_embed(
     tournament: Tournament,
-    rosters: Mapping[str, Sequence[int]],
-    solo_players: Sequence[int],
+    rosters: Mapping[str, Sequence[Snowflake]],
+    solo_players: Sequence[Snowflake],
 ) -> Embed:
     """Return everyone signed up to ``tournament``: one line per player, or one line per team with its players."""
     if tournament.mode is TeamMode.SOLO:
@@ -153,7 +154,7 @@ def match_embed(
     match: TournamentMatch,
     rounds: int,
     names: Mapping[int, str],
-    rosters: Mapping[int, Sequence[int]],
+    rosters: Mapping[int, Sequence[Snowflake]],
     drafts: Sequence[DraftChoice],
 ) -> Embed:
     """Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash."""
@@ -186,7 +187,7 @@ def match_buttons(
     match: TournamentMatch,
     names: Mapping[int, str],
     clash_handler: ComponentHandler,
-    clash: Sequence[int] = (),
+    clash: Sequence[Snowflake] = (),
 ) -> list[ActionRow]:
     """Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit."""
     if match.phase.decided or match.entry_a_id is None or match.entry_b_id is None or match.id is None:

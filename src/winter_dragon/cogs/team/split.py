@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 MIN_TEAMS = 2
 
 
-def split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]:
+def split_into_teams[T](user_ids: Sequence[T], team_size: int, rng: Random) -> list[list[T]]:
     """Shuffle ``user_ids`` into teams of ``team_size``; players left over join the first teams, one each.
 
     Returns no teams when there are too few players for two.
@@ -27,13 +27,13 @@ def split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> li
     return teams
 
 
-def split_into(user_ids: Sequence[int], count: int, rng: Random) -> list[list[int]]:
+def split_into[T](user_ids: Sequence[T], count: int, rng: Random) -> list[list[T]]:
     """Shuffle ``user_ids`` into ``count`` teams whose sizes differ by at most one; none if there are too few players."""
     if count < 1 or len(user_ids) < count:
         return []
     shuffled = list(user_ids)
     rng.shuffle(shuffled)
-    teams: list[list[int]] = [[] for _ in range(count)]
+    teams: list[list[T]] = [[] for _ in range(count)]
     for index, user_id in enumerate(shuffled):
         teams[index % count].append(user_id)
     return teams

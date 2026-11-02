@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 lazy from sqlalchemy import exists
 lazy from sqlalchemy.orm import aliased
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, alive_by_id, create_or_restore, soft_delete, upsert
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -20,7 +21,7 @@ lazy from winter_dragon.cogs.team.split import split_into_teams
 lazy from winter_dragon.member_hidden import MemberHiddenHook, RemovedRows
 lazy from winter_dragon.stored import stored
 
-lazy from .bracket import first_round, next_match, round_count, valid_options
+lazy from .bracket import BracketSlot, first_round, next_match, round_count, valid_options
 lazy from .models import (
     ACTIVE,
     DraftChoice,
@@ -48,7 +49,6 @@ if TYPE_CHECKING:
     lazy from datetime import datetime
     lazy from random import Random
 
-    from wd_discord.snowflake import Snowflake
     lazy from sqlmodel.sql.expression import SelectOfScalar
     lazy from wd_db.extension.lifecycle import LifecycleModel
 
@@ -83,10 +83,10 @@ def visible_tournaments(
     yield from visible
 
 
-def posts_of(session: Session, tournament_id: int) -> Generator[TournamentPost]:
+def posts_of(session: Session, tournament: Tournament) -> Generator[TournamentPost]:
     """Yield the tournament's posts."""
     yield from session.exec(
-        alive(TournamentPost).where(TournamentPost.tournament_id == tournament_id).order_by(col(TournamentPost.id)),
+        alive(TournamentPost).where(TournamentPost.tournament_id == _id(tournament)).order_by(col(TournamentPost.id)),
     )
 
 
@@ -108,48 +108,48 @@ def _joined_tournament_ids(session: Session, user_id: Snowflake) -> set[int]:
     return joined
 
 
-def signups_of(session: Session, tournament_id: int) -> list[TournamentSignup]:
+def signups_of(session: Session, tournament: Tournament) -> list[TournamentSignup]:
     """Return everyone signed up alone for the tournament, in sign-up order."""
-    query = alive(TournamentSignup).where(TournamentSignup.tournament_id == tournament_id).order_by(col(TournamentSignup.id))
+    query = alive(TournamentSignup).where(TournamentSignup.tournament_id == _id(tournament)).order_by(col(TournamentSignup.id))
     return list(session.exec(query))
 
 
-def signup_of(session: Session, tournament_id: int, user_id: Snowflake) -> TournamentSignup | None:
+def signup_of(session: Session, tournament: Tournament, user_id: Snowflake) -> TournamentSignup | None:
     """Return the user's solo sign-up for the tournament, if any."""
     query = alive(TournamentSignup).where(
-        TournamentSignup.tournament_id == tournament_id,
+        TournamentSignup.tournament_id == _id(tournament),
         TournamentSignup.user_id == int(user_id),
     )
     return session.exec(query).first()
 
 
-def entries_of(session: Session, tournament_id: int) -> list[TournamentEntry]:
+def entries_of(session: Session, tournament: Tournament) -> list[TournamentEntry]:
     """Return the tournament's teams, in the order they were formed."""
-    query = alive(TournamentEntry).where(TournamentEntry.tournament_id == tournament_id).order_by(col(TournamentEntry.id))
+    query = alive(TournamentEntry).where(TournamentEntry.tournament_id == _id(tournament)).order_by(col(TournamentEntry.id))
     return list(session.exec(query))
 
 
-def roster(session: Session, entry_id: int) -> list[int]:
+def roster(session: Session, entry: TournamentEntry) -> list[Snowflake]:
     """Return the user IDs of the entry's players."""
-    return [player.user_id for player in _players_of_entry(session, entry_id)]
+    return [Snowflake(player.user_id) for player in _players_of_entry(session, entry)]
 
 
-def _players_of_entry(session: Session, entry_id: int) -> list[EntryPlayer]:
+def _players_of_entry(session: Session, entry: TournamentEntry) -> list[EntryPlayer]:
     """Return the entry's player rows, in the order they were added."""
-    return list(session.exec(alive(EntryPlayer).where(EntryPlayer.entry_id == entry_id).order_by(col(EntryPlayer.id))))
+    return list(session.exec(alive(EntryPlayer).where(EntryPlayer.entry_id == _id(entry)).order_by(col(EntryPlayer.id))))
 
 
-def _player_of_entry(session: Session, entry_id: int, user_id: Snowflake) -> EntryPlayer | None:
+def _player_of_entry(session: Session, entry: TournamentEntry, user_id: Snowflake) -> EntryPlayer | None:
     """Return the player row of ``user_id`` in the entry, if they play for it."""
-    query = alive(EntryPlayer).where(EntryPlayer.entry_id == entry_id, EntryPlayer.user_id == int(user_id))
+    query = alive(EntryPlayer).where(EntryPlayer.entry_id == _id(entry), EntryPlayer.user_id == int(user_id))
     return session.exec(query).first()
 
 
-def matches_of(session: Session, tournament_id: int) -> list[TournamentMatch]:
+def matches_of(session: Session, tournament: Tournament) -> list[TournamentMatch]:
     """Return the tournament's matches, round by round, top to bottom."""
     query = (
         alive(TournamentMatch)
-        .where(TournamentMatch.tournament_id == tournament_id)
+        .where(TournamentMatch.tournament_id == _id(tournament))
         .order_by(col(TournamentMatch.round), col(TournamentMatch.slot))
     )
     return list(session.exec(query))
@@ -202,7 +202,7 @@ def sign_up(session: Session, tournament: Tournament, user_id: Snowflake) -> Non
     if tournament.mode is not TeamMode.SOLO:
         msg = "Teams sign up for this tournament; a captain enters a team with /tournament enter."
         raise Refused(msg)
-    if signup_of(session, _id(tournament), user_id) is not None:
+    if signup_of(session, tournament, user_id) is not None:
         msg = "You're signed up already."
         raise Refused(msg)
     create_or_restore(session, TournamentSignup(tournament_id=_id(tournament), user_id=int(user_id)))
@@ -222,9 +222,8 @@ def withdraw(session: Session, tournament: Tournament, user_id: Snowflake) -> No
     if tournament.status is not TournamentStatus.SIGNUP:
         msg = "The tournament has started; ask the organiser to forfeit your matches instead."
         raise Refused(msg)
-    tournament_id = _id(tournament)
     if tournament.mode is TeamMode.SOLO:
-        signup = signup_of(session, tournament_id, user_id)
+        signup = signup_of(session, tournament, user_id)
         if signup is None:
             msg = "You aren't signed up."
             raise Refused(msg)
@@ -243,7 +242,7 @@ def withdraw(session: Session, tournament: Tournament, user_id: Snowflake) -> No
 
 def _withdraw_entry(session: Session, entry: TournamentEntry) -> None:
     """Soft-delete ``entry`` and every player in it."""
-    for player in _players_of_entry(session, _id(entry)):
+    for player in _players_of_entry(session, entry):
         soft_delete(session, player)
     soft_delete(session, entry)
 
@@ -269,7 +268,7 @@ class WithdrawHiddenMember(MemberHiddenHook):
                 soft_delete(session, player)
                 session.flush()
                 entry = alive_by_id(session, TournamentEntry, player.entry_id)
-                if entry is not None and not roster(session, player.entry_id):
+                if entry is not None and not roster(session, entry):
                     _withdraw_entry(session, entry)
 
     @classmethod
@@ -317,10 +316,10 @@ def enter(session: Session, tournament: Tournament, team: Team, captain_id: Snow
     if team.kind is not TeamKind.LASTING or team.captain_id != int(captain_id):
         msg = "Only the team's captain can enter it."
         raise Refused(msg)
-    if any(entry.team_id == _id(team) for entry in entries_of(session, _id(tournament))):
+    if any(entry.team_id == _id(team) for entry in entries_of(session, tournament)):
         msg = "That team has entered already."
         raise Refused(msg)
-    if any(entry.name.casefold() == team.name.casefold() for entry in entries_of(session, _id(tournament))):
+    if any(entry.name.casefold() == team.name.casefold() for entry in entries_of(session, tournament)):
         msg = "An entry has that name already."
         raise Refused(msg)
     entry = TournamentEntry(tournament_id=_id(tournament), team_id=_id(team), name=team.name)
@@ -351,13 +350,13 @@ def add_player(
         msg = "The tournament has started; entries can't change any more."
         raise Refused(msg)
     team = _captain_of(session, entry, captain_id)
-    if membership(session, team, int(user_id)) is None:
+    if membership(session, team, user_id) is None:
         msg = "They aren't in your team."
         raise Refused(msg)
-    if _player_of_entry(session, _id(entry), user_id) is not None:
+    if _player_of_entry(session, entry, user_id) is not None:
         msg = "They're in this entry already."
         raise Refused(msg)
-    if len(roster(session, _id(entry))) >= tournament.team_size:
+    if len(roster(session, entry)) >= tournament.team_size:
         msg = f"Your entry is full: entries have {tournament.team_size} players."
         raise Refused(msg)
     create_or_restore(session, EntryPlayer(entry_id=_id(entry), user_id=int(user_id)))
@@ -375,7 +374,7 @@ def remove_player(
         msg = "The tournament has started; entries can't change any more."
         raise Refused(msg)
     _captain_of(session, entry, captain_id)
-    player = _player_of_entry(session, _id(entry), user_id)
+    player = _player_of_entry(session, entry, user_id)
     if player is None or user_id == captain_id:
         msg = "They aren't a player you can remove from your entry."
         raise Refused(msg)
@@ -407,50 +406,51 @@ def start(session: Session, tournament: Tournament, rng: Random) -> None:
     tournament_id = _id(tournament)
     if tournament.mode is TeamMode.SOLO:
         _draw_teams(session, tournament, rng)
-    teams = entries_of(session, tournament_id)
+    teams = entries_of(session, tournament)
     if len(teams) < 2:  # noqa: PLR2004 - a match needs two teams
         msg = "I need at least two teams."
         raise Refused(msg)
-    entry_ids = [_id(team) for team in teams]
-    rng.shuffle(entry_ids)
-    rounds = round_count(len(entry_ids))
+    rng.shuffle(teams)
+    rounds = round_count(len(teams))
     for round_ in range(rounds):
         for slot in range(2 ** (rounds - round_ - 1)):
             session.add(TournamentMatch(tournament_id=tournament_id, round=round_, slot=slot))
     session.flush()
-    for slot, (team_a, team_b) in enumerate(first_round(entry_ids)):
-        match = _match_at(session, tournament_id, 0, slot)
-        match.entry_a_id, match.entry_b_id = team_a, team_b
+    for slot, pairing in enumerate(first_round(teams)):
+        match = _match_at(session, tournament, BracketSlot(0, slot))
+        match.entry_a_id = _id(pairing.first)
+        match.entry_b_id = None if pairing.second is None else _id(pairing.second)
         match.phase = MatchPhase.READY
         _copy_lineups(session, match)
-        if team_b is None:
-            _decide(session, tournament, match, team_a, MatchPhase.FINISHED)
+        if pairing.bye:
+            _decide(session, tournament, match, _id(pairing.first), MatchPhase.FINISHED)
     tournament.status = TournamentStatus.RUNNING
 
 
 def _draw_teams(session: Session, tournament: Tournament, rng: Random) -> None:
     """Shuffle a solo tournament's sign-ups into temporary teams, one entry each; the first member drawn captains."""
-    signups = signups_of(session, _id(tournament))
-    split = split_into_teams([signup.user_id for signup in signups], tournament.team_size, rng)
+    signups = signups_of(session, tournament)
+    split = split_into_teams([Snowflake(signup.user_id) for signup in signups], tournament.team_size, rng)
     if not split:
         msg = f"I need at least {2 * tournament.team_size} players for two teams of {tournament.team_size}."
         raise Refused(msg)
     teams = create_temporary_teams(session, split, TeamOrigin.SOLO_TOURNAMENT)
     for team, members in zip(teams, split, strict=True):
-        team.captain_id = members[0]
+        team.captain_id = int(members[0])
         session.add(team)
         entry = TournamentEntry(tournament_id=_id(tournament), team_id=_id(team), name=team.name)
         session.add(entry)
         session.flush()
         for user_id in members:
-            session.add(EntryPlayer(entry_id=_id(entry), user_id=user_id))
+            session.add(EntryPlayer(entry_id=_id(entry), user_id=int(user_id)))
 
 
-def _match_at(session: Session, tournament_id: int, round_: int, slot: int) -> TournamentMatch:
+def _match_at(session: Session, tournament: Tournament, at: BracketSlot) -> TournamentMatch:
+    """Return the alive match at ``at`` in ``tournament``."""
     query = alive(TournamentMatch).where(
-        TournamentMatch.tournament_id == tournament_id,
-        TournamentMatch.round == round_,
-        TournamentMatch.slot == slot,
+        TournamentMatch.tournament_id == _id(tournament),
+        TournamentMatch.round == at.round,
+        TournamentMatch.slot == at.slot,
     )
     return session.exec(query).one()
 
@@ -472,7 +472,7 @@ def _decide(  # noqa: PLR0913 - a decision needs the session, tournament, match,
     match.decided_at = utc_now()
     match.decided_by = None if actor_id is None else int(actor_id)
     session.add(match)
-    entries = entries_of(session, _id(tournament))
+    entries = entries_of(session, tournament)
     rounds = round_count(len(entries))
     if match.round == rounds - 1:
         tournament.winner_entry_id = winner_id
@@ -480,9 +480,9 @@ def _decide(  # noqa: PLR0913 - a decision needs the session, tournament, match,
         session.add(tournament)
         _end_temporary_teams(session, entries)
         return
-    round_, slot, as_team_a = next_match(match.round, match.slot)
-    following = _match_at(session, _id(tournament), round_, slot)
-    if as_team_a:
+    advance_to = next_match(BracketSlot(match.round, match.slot))
+    following = _match_at(session, tournament, advance_to.at)
+    if advance_to.as_entry_a:
         following.entry_a_id = winner_id
     else:
         following.entry_b_id = winner_id
@@ -544,10 +544,10 @@ def _end_temporary_teams(session: Session, entries: Sequence[TournamentEntry]) -
 def cancel(session: Session, tournament: Tournament) -> None:
     """Call the tournament off: soft-delete it and everything in it, so none of it is seen again."""
     tournament_id = _id(tournament)
-    match_ids = [_id(match) for match in matches_of(session, tournament_id)]
+    match_ids = [_id(match) for match in matches_of(session, tournament)]
     votes = list(session.exec(alive(MatchVote).where(col(MatchVote.match_id).in_(match_ids))))
     vote_ids = [_id(vote) for vote in votes]
-    entries = entries_of(session, tournament_id)
+    entries = entries_of(session, tournament)
     entry_ids = [_id(entry) for entry in entries]
     _end_temporary_teams(session, entries)
     rows: list[LifecycleModel] = [
@@ -560,7 +560,7 @@ def cancel(session: Session, tournament: Tournament) -> None:
         *session.exec(alive(TournamentPost).where(TournamentPost.tournament_id == tournament_id)),
         *session.exec(alive(TournamentMatch).where(TournamentMatch.tournament_id == tournament_id)),
         *session.exec(alive(EntryPlayer).where(col(EntryPlayer.entry_id).in_(entry_ids))),
-        *signups_of(session, tournament_id),
+        *signups_of(session, tournament),
         *entries,
     ]
     for row in rows:
@@ -572,54 +572,56 @@ def cancel(session: Session, tournament: Tournament) -> None:
 # --- Lineups ---------------------------------------------------------------------------------------------------------
 
 
-def lineup(session: Session, match_id: int, entry_id: int) -> list[int]:
-    """Return the user IDs playing for ``entry_id`` in match ``match_id``."""
+def lineup(session: Session, match: TournamentMatch, entry: TournamentEntry) -> list[Snowflake]:
+    """Return the user IDs playing for ``entry`` in ``match``."""
     query = (
         alive(MatchLineup)
-        .where(MatchLineup.match_id == match_id, MatchLineup.entry_id == entry_id)
+        .where(MatchLineup.match_id == _id(match), MatchLineup.entry_id == _id(entry))
         .order_by(col(MatchLineup.id))
     )
-    return [row.user_id for row in session.exec(query)]
+    return [Snowflake(row.user_id) for row in session.exec(query)]
 
 
 def _copy_lineups(session: Session, match: TournamentMatch) -> None:
     """Copy each of the match's entries' current players into its lineup."""
     for entry_id in (match.entry_a_id, match.entry_b_id):
-        if entry_id is None:
+        entry = None if entry_id is None else alive_by_id(session, TournamentEntry, entry_id)
+        if entry is None:
             continue
-        for user_id in roster(session, entry_id):
-            _lineup_row(session, _id(match), entry_id, user_id)
+        for user_id in roster(session, entry):
+            _lineup_row(session, match, entry, user_id)
 
 
-def _lineup_row(session: Session, match_id: int, entry_id: int, user_id: int) -> MatchLineup:
-    """Return the alive lineup row of ``user_id`` for the entry in match ``match_id``, adding one if there's none."""
+def _lineup_row(session: Session, match: TournamentMatch, entry: TournamentEntry, user_id: Snowflake) -> MatchLineup:
+    """Return the alive lineup row of ``user_id`` for ``entry`` in ``match``, adding one if there's none."""
     query = alive(MatchLineup).where(
-        MatchLineup.match_id == match_id,
-        MatchLineup.entry_id == entry_id,
-        MatchLineup.user_id == user_id,
+        MatchLineup.match_id == _id(match),
+        MatchLineup.entry_id == _id(entry),
+        MatchLineup.user_id == int(user_id),
     )
     if (row := session.exec(query).first()) is not None:
         return row
-    row = MatchLineup(match_id=match_id, entry_id=entry_id, user_id=user_id)
+    row = MatchLineup(match_id=_id(match), entry_id=_id(entry), user_id=int(user_id))
     session.add(row)
     return row
 
 
-def clashes(session: Session, match: TournamentMatch) -> list[int]:
+def clashes(session: Session, match: TournamentMatch) -> list[Snowflake]:
     """Return the members in both lineups of ``match``, ignoring anonymised ones: their deleted IDs don't match."""
     if match.entry_a_id is None or match.entry_b_id is None:
         return []
-    match_id = _id(match)
-    side_b = set(lineup(session, match_id, match.entry_b_id))
-    return [
-        user_id for user_id in lineup(session, match_id, match.entry_a_id) if user_id in side_b and user_id != DELETED_MEMBER
-    ]
+    entry_a = alive_by_id(session, TournamentEntry, match.entry_a_id)
+    entry_b = alive_by_id(session, TournamentEntry, match.entry_b_id)
+    if entry_a is None or entry_b is None:
+        return []
+    side_b = set(lineup(session, match, entry_b))
+    return [user_id for user_id in lineup(session, match, entry_a) if user_id in side_b and int(user_id) != DELETED_MEMBER]
 
 
 def _next_match(session: Session, tournament: Tournament, entry: TournamentEntry) -> TournamentMatch | None:
     """Return the entry's lowest-round match that isn't decided yet, if it has one."""
     entry_id = _id(entry)
-    for match in matches_of(session, _id(tournament)):
+    for match in matches_of(session, tournament):
         if not match.phase.decided and entry_id in (match.entry_a_id, match.entry_b_id):
             return match
     return None
@@ -649,12 +651,12 @@ def change_lineup(session: Session, tournament: Tournament, entry: TournamentEnt
         msg = "Only the entry's captain can change its lineup."
         raise Refused(msg)
     entry_id = _id(entry)
-    _change_entry_players(session, tournament, entry_id, change.user_id, playing=change.playing)
+    _change_entry_players(session, tournament, entry, change.user_id, playing=change.playing)
     match = _next_match(session, tournament, entry)
     match_id = None
     if match is not None and match.phase in (MatchPhase.READY, MatchPhase.BAN, MatchPhase.PICK):
         match_id = _id(match)
-        _change_match_lineup(session, match_id, entry_id, change.user_id, playing=change.playing)
+        _change_match_lineup(session, match, entry, change.user_id, playing=change.playing)
     session.add(
         LineupChange(
             entry_id=entry_id,
@@ -671,39 +673,46 @@ def change_lineup(session: Session, tournament: Tournament, entry: TournamentEnt
 def _change_entry_players(
     session: Session,
     tournament: Tournament,
-    entry_id: int,
+    entry: TournamentEntry,
     user_id: Snowflake,
     *,
     playing: bool,
 ) -> None:
     """Add ``user_id`` to the entry's players, or remove them; refuse a full entry, a non-player or the last player."""
-    player = _player_of_entry(session, entry_id, user_id)
+    player = _player_of_entry(session, entry, user_id)
     if playing:
         if player is not None:
             msg = "They're in this entry already."
             raise Refused(msg)
-        if len(roster(session, entry_id)) >= tournament.team_size:
+        if len(roster(session, entry)) >= tournament.team_size:
             msg = f"Your entry is full: entries have {tournament.team_size} players."
             raise Refused(msg)
-        create_or_restore(session, EntryPlayer(entry_id=entry_id, user_id=int(user_id)))
+        create_or_restore(session, EntryPlayer(entry_id=_id(entry), user_id=int(user_id)))
         return
     if player is None:
         msg = "They aren't playing for your entry."
         raise Refused(msg)
-    if len(roster(session, entry_id)) <= 1:
+    if len(roster(session, entry)) <= 1:
         msg = "An entry needs at least one player."
         raise Refused(msg)
     soft_delete(session, player)
 
 
-def _change_match_lineup(session: Session, match_id: int, entry_id: int, user_id: Snowflake, *, playing: bool) -> None:
-    """Add ``user_id`` to the entry's lineup in match ``match_id``, or remove them from it."""
+def _change_match_lineup(
+    session: Session,
+    match: TournamentMatch,
+    entry: TournamentEntry,
+    user_id: Snowflake,
+    *,
+    playing: bool,
+) -> None:
+    """Add ``user_id`` to the entry's lineup in ``match``, or remove them from it."""
     if playing:
-        _lineup_row(session, match_id, entry_id, int(user_id))
+        _lineup_row(session, match, entry, user_id)
         return
     query = alive(MatchLineup).where(
-        MatchLineup.match_id == match_id,
-        MatchLineup.entry_id == entry_id,
+        MatchLineup.match_id == _id(match),
+        MatchLineup.entry_id == _id(entry),
         MatchLineup.user_id == int(user_id),
     )
     for row in session.exec(query):
@@ -721,13 +730,13 @@ def drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry,
         raise Refused(msg)
     match_id = _id(match)
     dropped = set(clashes(session, match))
-    if all(user_id in dropped for user_id in lineup(session, match_id, entry_id)):
+    if all(user_id in dropped for user_id in lineup(session, match, entry)):
         msg = "An entry needs at least one player."
         raise Refused(msg)
     for row in session.exec(
         alive(MatchLineup).where(MatchLineup.match_id == match_id, MatchLineup.entry_id == entry_id),
     ):
-        if row.user_id in dropped:
+        if Snowflake(row.user_id) in dropped:
             soft_delete(session, row)
     record_event(session, match, MatchEventKind.CLASH_DROPPED, actor_id, entry.name)
 
@@ -769,9 +778,9 @@ def draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind:
     record_event(session, match, MatchEventKind.DRAFT, captain_id, f"{kind.value}: {value}")
 
 
-def drafts_of(session: Session, match_id: int) -> list[DraftChoice]:
+def drafts_of(session: Session, match: TournamentMatch) -> list[DraftChoice]:
     """Return the bans and picks made in the match, in the order they were made."""
-    return list(session.exec(alive(DraftChoice).where(DraftChoice.match_id == match_id).order_by(col(DraftChoice.id))))
+    return list(session.exec(alive(DraftChoice).where(DraftChoice.match_id == _id(match)).order_by(col(DraftChoice.id))))
 
 
 def open_vote(
@@ -815,6 +824,6 @@ def cast(session: Session, vote: MatchVote, user_id: Snowflake, choice: int) -> 
     upsert(session, MatchBallot(vote_id=_id(vote), user_id=int(user_id), choice=choice))
 
 
-def choices_of(session: Session, vote_id: int) -> list[int]:
+def choices_of(session: Session, vote: MatchVote) -> list[int]:
     """Return every answer given to the vote."""
-    return [ballot.choice for ballot in session.exec(alive(MatchBallot).where(MatchBallot.vote_id == vote_id))]
+    return [ballot.choice for ballot in session.exec(alive(MatchBallot).where(MatchBallot.vote_id == _id(vote)))]
