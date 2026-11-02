@@ -787,19 +787,27 @@ A Steam store URL.
 - `@property store_item -> StoreItemID | None` — The store item this URL's page is for, or ``None`` for a page that isn't one item's.
 
 ## `winter_dragon.cogs.team.cog` — `src/winter_dragon/cogs/team/cog.py`
-The /team command group: create a lasting team, invite and manage its members, and leave it.
+The /team command group: create a lasting team, split members into temporary ones, invite, manage and leave teams.
+
+- module names: KEEP_NAME_INPUT
 
 ### `class TeamSettings`
 Settings for /team, in its ``cogs.ini`` section.
 
-- attributes: max_name_length
+- attributes: max_name_length, temporary_lifetime_hours
 
 ### `class Teams(GroupCog, name='team', description='Teams of members that outlast any one tournament', contexts=[InteractionContextType.GUILD])`
-Lasting teams: create one, see who is in it, and leave it.
+Lasting teams: create one, see who is in it, and leave it. Temporary teams come from a split and can be kept.
 
+- attributes: rng
 - `async load() -> None` — Create the team tables if missing.
 - `async team_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the invoker's teams whose name contains what was typed.
 - `@Cog.command async create(interaction: GuildCommandInteraction, name: str) -> None` — Create the lasting team ``name`` with the invoker as its captain.
+- `@Cog.command async split(interaction: GuildCommandInteraction, teams: int=2) -> None` — Ask for the members to split, with a user select menu taking at least ``teams`` and at most 25 of them.
+- `@Cog.component async split_select(interaction: GuildComponentInteraction, teams: str) -> None` — Draw temporary teams from the picked members and post them publicly, each with a Keep button.
+- `@Cog.component async keep_button(interaction: GuildComponentInteraction, team_id: str) -> None` — Open the modal asking for a name, when the presser may keep the temporary team.
+- `@Cog.modal async keep_modal(interaction: ModalSubmitInteraction, team_id: str) -> None` — Make the temporary team lasting under the submitted name, with the presser as captain.
+- `@Cog.periodic async end_expired_teams() -> None` — End the temporary teams nobody kept within ``temporary_lifetime_hours``.
 - `@Cog.command async show(interaction: GuildCommandInteraction, team: Team) -> None` — Post the team's name, captain and members.
 - `@Cog.command async leave_team(interaction: GuildCommandInteraction, team: Team) -> None` — Take the invoker out of the team.
 - `@Cog.command async invite(interaction: GuildCommandInteraction, team: Team, member: User) -> None` — Post a public invite with a Join button that only ``member`` can press.
@@ -835,9 +843,13 @@ A member of a team, since ``joined_at``; the longest-standing member takes over 
   datetime
 
 ## `winter_dragon.cogs.team.service` — `src/winter_dragon/cogs/team/service.py`
-What can happen to a lasting team: creating it, listing its members, and members leaving it.
+What can happen to a team: creating it, keeping a temporary one, listing its members, and members leaving it.
 
 - `create_team(session: Session, name: str, captain_id: int) -> Team` — Create the lasting team ``name`` with ``captain_id`` as its captain and first member.
+- `create_temporary_teams(session: Session, groups: Sequence[Sequence[int]], origin: TeamOrigin) -> list[Team]` — Store one temporary team per group, named Team 1, Team 2, ..., with no captain; return them in order.
+- `require_keepable(session: Session, team: Team, user_id: int) -> None` — Refuse unless ``user_id`` is a member of ``team``, which must be temporary and unended, so they may keep it.
+- `keep(session: Session, team: Team, user_id: int, name: str) -> None` — Make the temporary ``team`` lasting under ``name``, with ``user_id`` as its captain; only its members may.
+- `end_expired(session: Session, now: datetime, lifetime: timedelta) -> int` — End every alive temporary team, except a solo tournament's, made at or before ``now - lifetime``; return how many.
 - `members_of(session: Session, team_id: int) -> Generator[TeamMember]` — Yield the team's members, longest-standing first.
 - `teams_of(session: Session, user_id: int) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name.
 - `membership(session: Session, team: Team, user_id: int) -> TeamMember | None` — Return ``user_id``'s alive membership of ``team``, if they're in it.

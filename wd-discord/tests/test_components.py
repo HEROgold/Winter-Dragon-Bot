@@ -1,4 +1,4 @@
-"""Unit tests: legacy message components (buttons, action rows) and their message-wide limits."""
+"""Unit tests: legacy message components (buttons, select menus, action rows) and their message-wide limits."""
 
 import pytest
 from pydantic import ValidationError
@@ -6,6 +6,7 @@ from wd_discord.components import (
     ActionRow,
     Button,
     ButtonStyle,
+    UserSelect,
     components_payload,
 )
 from wd_discord.limits import MAX_MESSAGE_COMPONENTS
@@ -54,6 +55,18 @@ def test_action_row_holds_one_to_five_buttons() -> None:
         ActionRow(components=[_button(str(index)) for index in range(6)])
     with pytest.raises(ValidationError):
         ActionRow(components=[])
+
+
+def test_user_select_serializes_as_type_5() -> None:
+    dumped = UserSelect(custom_id="pick", placeholder="Members", max_values=25).model_dump(mode="json", exclude_none=True)
+    assert dumped == {"type": 5, "custom_id": "pick", "placeholder": "Members", "max_values": 25, "disabled": False}
+
+
+def test_a_select_must_be_alone_in_its_action_row() -> None:
+    select = UserSelect(custom_id="pick")
+    assert ActionRow(components=[select]).components == [select]
+    with pytest.raises(ValidationError, match="A select menu must be alone in its action row"):
+        ActionRow(components=[select, _button("a")])
 
 
 def test_components_payload_serializes_rows() -> None:
