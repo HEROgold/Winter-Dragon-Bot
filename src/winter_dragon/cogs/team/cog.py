@@ -1,10 +1,12 @@
-"""The /team command group: create a lasting team, invite and manage its members, and leave it."""
+"""The /team command group: create a lasting team, split members into temporary ones, invite, manage and leave teams."""
 
 from typing import Annotated
+lazy from datetime import timedelta
+lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
-from wd_bot.commands import Describe, Length, Lookup
+from wd_bot.commands import Describe, Length, Lookup, Range
 lazy from wd_bot.cogs import Cog, GroupCog
 
 # Command resolves option annotations from module globals at runtime, so these types must be available here.
@@ -13,32 +15,43 @@ lazy from wd_discord import (  # noqa: TC002 - wd_bot reads the handler's intera
     GuildComponentInteraction,
     User,
 )
-lazy from wd_discord.components import ActionRow, Button, ButtonStyle
+lazy from wd_discord.components import ActionRow, Button, ButtonStyle, Label, Modal, TextInput, UserSelect
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
 lazy from wd_errors import Refused
+lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed, mentions
 
-lazy from .models import TEAM_TABLES, Team
+lazy from .cards import split_post
+lazy from .models import TEAM_TABLES, Team, TeamOrigin
 lazy from .service import (
     create_team,
+    create_temporary_teams,
     disband,
+    end_expired,
     hand_over,
     join,
+    keep,
     kick,
     leave,
     members_of,
     membership,
     require_captain,
+    require_keepable,
     teams_of,
 )
+lazy from .split import split_into
 
 
 if TYPE_CHECKING:
-    lazy from wd_discord import AutocompleteInteraction
+    lazy from wd_discord import AutocompleteInteraction, ModalSubmitInteraction
+
+
+KEEP_NAME_INPUT = "name"
+"""The ``custom_id`` of the text input in the Keep modal."""
 
 
 class TeamSettings:
@@ -46,6 +59,8 @@ class TeamSettings:
 
     max_name_length = CogConfig(100)
     """The longest team name accepted."""
+    temporary_lifetime_hours = CogConfig(24)
+    """How long a temporary team nobody keeps lasts."""
 
 
 def _unended(team: Team) -> None:
@@ -61,10 +76,13 @@ class Teams(
     description="Teams of members that outlast any one tournament",
     contexts=[InteractionContextType.GUILD],
 ):
-    """Lasting teams: create one, see who is in it, and leave it.
+    """Lasting teams: create one, see who is in it, and leave it. Temporary teams come from a split and can be kept.
 
     Every action refuses with :class:`~wd_errors.Refused` from inside its session, which drops the session's changes.
     """
+
+    rng = Random()  # noqa: S311 - drawing teams isn't cryptography
+    """Draws the teams of a split; tests replace it with a seeded one."""
 
     @override
     async def load(self) -> None:
@@ -99,6 +117,81 @@ class Teams(
             embeds=[CreatedEmbed(description=f"Created **{label}**; you're its captain.")],
             ephemeral=True,
         )
+
+    @Cog.command(name="split", description="Split members into random temporary teams")
+    async def split(
+        self,
+        interaction: GuildCommandInteraction,
+        teams: Annotated[int, Describe("How many teams to split into"), Range(min_value=2, max_value=10)] = 2,
+    ) -> None:
+        """Ask for the members to split, with a user select menu taking at least ``teams`` and at most 25 of them."""
+        select = UserSelect(
+            custom_id=self.split_select.custom_id(teams),
+            placeholder="Members",
+            min_values=teams,
+            max_values=25,
+        )
+        await interaction.respond(
+            content=f"Pick the members to split into {teams} teams.",
+            components=[ActionRow(components=[select])],
+            ephemeral=True,
+        )
+
+    @Cog.component("team-split")
+    async def split_select(self, interaction: GuildComponentInteraction, teams: str) -> None:
+        """Draw temporary teams from the picked members and post them publicly, each with a Keep button."""
+        count = int(teams)
+        member_ids = [int(value) for value in interaction.values]
+        if len(member_ids) < count:
+            msg = f"Pick at least {count} members for {count} teams."
+            raise Refused(msg)
+        groups = split_into(member_ids, count, self.rng)
+        with Session(self.bind) as session:
+            stored_teams = create_temporary_teams(session, groups, TeamOrigin.TEXT_SPLIT)
+            session.commit()
+            embed, rows = split_post(list(zip(stored_teams, groups, strict=True)), self.keep_button)
+        await interaction.respond(embeds=[embed], components=rows)
+
+    @Cog.component("team-keep")
+    async def keep_button(self, interaction: GuildComponentInteraction, team_id: str) -> None:
+        """Open the modal asking for a name, when the presser may keep the temporary team."""
+        with Session(self.bind) as session:
+            current = stored(session, Team, int(team_id), "That team is gone.")
+            require_keepable(session, current, int(interaction.user.id))
+        modal = Modal(
+            custom_id=self.keep_modal.custom_id(team_id),
+            title="Keep this team",
+            components=[
+                Label(
+                    label="Team name",
+                    component=TextInput(custom_id=KEEP_NAME_INPUT, min_length=1, max_length=100),
+                ),
+            ],
+        )
+        await interaction.show_modal(modal)
+
+    @Cog.modal("team-keep-name")
+    async def keep_modal(self, interaction: ModalSubmitInteraction, team_id: str) -> None:
+        """Make the temporary team lasting under the submitted name, with the presser as captain."""
+        user = interaction.user
+        if user is None:
+            return
+        with Session(self.bind) as session:
+            current = stored(session, Team, int(team_id), "That team is gone.")
+            keep(session, current, int(user.id), interaction.values.get(KEEP_NAME_INPUT, ""))
+            session.commit()
+            label = current.name
+        await interaction.respond(
+            embeds=[CreatedEmbed(description=f"Kept as **{label}**; you're its captain.")],
+            ephemeral=True,
+        )
+
+    @Cog.periodic(seconds=600)
+    async def end_expired_teams(self) -> None:
+        """End the temporary teams nobody kept within ``temporary_lifetime_hours``."""
+        with Session(self.bind) as session:
+            end_expired(session, utc_now(), timedelta(hours=TeamSettings.temporary_lifetime_hours))
+            session.commit()
 
     @Cog.command(name="show", description="Show a team's captain and members")
     async def show(

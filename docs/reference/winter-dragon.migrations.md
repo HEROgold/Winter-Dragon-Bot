@@ -102,3 +102,10 @@ feat(autochannel): remember settings owners change in Discord.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_02_c17c3335ce1d_feat_team_split_and_voice_split_with_` — `src/winter_dragon/migrations/versions/2026_11_02_c17c3335ce1d_feat_team_split_and_voice_split_with_.py`
+feat: /team split and /voice split with Keep and Move (#426, #427).
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
