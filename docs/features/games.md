@@ -108,11 +108,15 @@ Team tournaments with a single-elimination bracket. A guild can run several at o
 
 Starting draws the seeds and lays out every round. The bracket is padded to a power of two with byes for the top seeds, which win at once, so two byes never meet. Each match card walks through ready → bans → picks → live, and the organiser's buttons move it on, report the winner once it's live, or record a forfeit at any point. A team's captain bans and picks with commands during those phases, and the card lists them. Winners move on to their next match, and the final's winner is the champion.
 
+Each match has a lineup: the players who play for each entry in that match. When a match becomes ready, it copies each entry's current players into its lineup. A captain changes an entry's lineup with `/tournament lineup-in` and `/tournament lineup-out`, for stand-ins or illness. `lineup-in` takes a server member, who doesn't need to be in the team. A change updates the entry's players and the lineup of its next match, while that match is ready or in its draft. A live or decided match keeps its lineup, so the change applies from the match after. Later matches copy the players as they are when they become ready.
+
+A member in both lineups of a ready match is a clash. The match can't move on until the organiser, or a captain of either entry, drops the member from one side with the card's Drop clash button.
+
 The organiser can open a vote for a match (e.g. which map), answered with buttons by that match's players only. Voting again changes your answer, and the organiser closes the vote to show the final tally.
 
 Everything is stored, so a tournament survives a restart.
 
-Surface: `/tournament create | post | join | leave | enter | entry-add | entry-remove | start | bracket | match | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
+Surface: `/tournament create | post | join | leave | enter | entry-add | entry-remove | lineup-in | lineup-out | start | bracket | match | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
 
 **Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open (HER-355).
 **Source on `main`:** `src/winter_dragon/bot/extensions/tournament/`

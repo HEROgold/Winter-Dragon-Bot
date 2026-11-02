@@ -156,7 +156,7 @@ def match_embed(
     rosters: Mapping[int, Sequence[int]],
     drafts: Sequence[DraftChoice],
 ) -> Embed:
-    """Return a match card: its round, phase, the teams' players, and what each team banned and picked."""
+    """Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash."""
     fields: list[EmbedField] = []
     for entry_id in (match.entry_a_id, match.entry_b_id):
         if entry_id is None:
@@ -172,15 +172,40 @@ def match_embed(
     description = PHASE_LABELS[match.phase]
     if match.phase.decided and match.winner_id is not None:
         description += f": **{names.get(match.winner_id, '?')}** wins"
+    if match.phase is MatchPhase.READY and match.entry_a_id is not None and match.entry_b_id is not None:
+        other_side = set(rosters.get(match.entry_b_id, []))
+        clash = [user_id for user_id in rosters.get(match.entry_a_id, []) if user_id in other_side]
+        if clash:
+            mentioned = ", ".join(f"<@{user_id}>" for user_id in clash)
+            description += f"\nClash: {mentioned} play for both sides."
     return Embed(title=title, description=description, fields=fields)
 
 
-def match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str]) -> list[ActionRow]:
-    """Return the organiser's controls under a match card: next phase, report a winner, or a forfeit."""
+def match_buttons(
+    handler: ComponentHandler,
+    match: TournamentMatch,
+    names: Mapping[int, str],
+    clash_handler: ComponentHandler,
+    clash: Sequence[int] = (),
+) -> list[ActionRow]:
+    """Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit."""
     if match.phase.decided or match.entry_a_id is None or match.entry_b_id is None or match.id is None:
         return []
     teams = (match.entry_a_id, match.entry_b_id)
     rows: list[ActionRow] = []
+    if match.phase is MatchPhase.READY and clash:
+        rows.append(
+            ActionRow(
+                components=[
+                    Button(
+                        style=ButtonStyle.DANGER,
+                        label=f"Drop clash from {names.get(team, '?')}"[:MAX_BUTTON_LABEL_LENGTH],
+                        custom_id=clash_handler.custom_id(match.id, team),
+                    )
+                    for team in teams
+                ],
+            ),
+        )
     following = match.phase.next
     if following is not None:
         label = f"Next: {PHASE_LABELS[following]}"
