@@ -4,9 +4,7 @@ The member's channel is created next to the hub, the member is moved into it, an
 Who is in which voice channel is tracked from GUILD_CREATE's voice states and every VOICE_STATE_UPDATE since.
 """
 
-from dataclasses import dataclass, field
 lazy import asyncio
-lazy from collections import defaultdict
 lazy from typing import TYPE_CHECKING, Annotated, ClassVar, Unpack, override
 
 from sqlalchemy import BigInteger
@@ -26,7 +24,6 @@ lazy from wd_discord import (
     GuildCommandInteraction,
     Member,
     Permissions,
-    is_gone,
     is_network_error,
 )
 lazy from wd_discord.errors import ApiResponseError
@@ -36,6 +33,7 @@ lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
+lazy from winter_dragon.voice_channels import EmptiedChannels, VoiceOccupancy
 
 
 if TYPE_CHECKING:
@@ -110,29 +108,6 @@ class AutoChannelOverwrite(LifecycleModel, table=True):
 
 
 AUTOCHANNEL_TABLES = (AutoChannelHub, AutoChannel, AutoChannelSettings, AutoChannelOverwrite)
-
-
-@dataclass
-class VoiceOccupancy:
-    """Who is in which voice channel, per guild, as far as the gateway told."""
-
-    _channels: defaultdict[Snowflake, dict[Snowflake, Snowflake]] = field(default_factory=lambda: defaultdict(dict))
-    """Per guild, the voice channel each connected member is in."""
-
-    def reset(self, guild_id: Snowflake, states: Iterable[VoiceState]) -> None:
-        """Forget what was known about ``guild_id``, and learn ``states`` instead."""
-        self._channels[guild_id] = {state.user.id: state.channel.id for state in states if state.channel is not None}
-
-    def move(self, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None:
-        """Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were."""
-        before = self._channels[guild_id].pop(user_id, None)
-        if channel_id is not None:
-            self._channels[guild_id][user_id] = channel_id
-        return before
-
-    def occupied(self, guild_id: Snowflake, channel_id: Snowflake) -> bool:
-        """Whether anyone is in the voice channel ``channel_id``."""
-        return channel_id in self._channels[guild_id].values()
 
 
 def owner_overwrite(user_id: Snowflake) -> OverwriteParams:
@@ -238,6 +213,11 @@ class AutoChannels(
         self.voice = VoiceOccupancy()
         self._lock = asyncio.Lock()
 
+    @property
+    def channels(self) -> EmptiedChannels[AutoChannel]:
+        """The automatic channels, deleted once empty."""
+        return EmptiedChannels(AutoChannel, self.bind, self.bot.client, self.logger, "Automatic channel is empty")
+
     @override
     async def load(self) -> None:
         """Create the autochannel tables if missing."""
@@ -248,11 +228,7 @@ class AutoChannels(
         """Learn who is in which voice channel, then delete the automatic channels that emptied while offline."""
         guild_id = guild.id
         self.voice.reset(guild_id, guild.voice_states)
-        with Session(self.bind) as session:
-            channels = list(session.exec(owned_by(AutoChannel, guild=guild_id)))
-        for channel in channels:
-            if not self.voice.occupied(guild_id, Snowflake(channel.id)):
-                await self.delete_channel(channel)
+        await self.channels.sweep(self.voice, guild_id)
 
     @Cog.listener(EventName.VOICE_STATE_UPDATE)
     async def on_voice_state_update(self, state: VoiceState) -> None:
@@ -265,11 +241,9 @@ class AutoChannels(
             before = self.voice.move(guild_id, user_id, after)
             with Session(self.bind) as session:
                 hub = hub_of(session, guild_id)
-                left = None if before is None or before == after else self._auto_channel(session, before)
             if hub is not None and after == Snowflake(hub.channel_id) and state.member is not None:
                 await self.give_channel(state.member, hub)
-            if left is not None and not self.voice.occupied(guild_id, Snowflake(left.id)):
-                await self.delete_channel(left)
+            await self.channels.left(self.voice, guild_id, before, after)
 
     @Cog.listener(EventName.CHANNEL_UPDATE)
     async def on_channel_update(self, channel: Channel) -> None:
@@ -311,7 +285,7 @@ class AutoChannels(
             if not (isinstance(found, ApiResponseError) and found.unknown_resource):
                 self.logger.debug(t"Could not move {user_id} to their channel {existing.id}: {moved}")
                 return
-            self._forget(existing)
+            self.channels.forget(existing)
             count -= 1
         if hub.max_channels and count >= hub.max_channels:
             await self._tell(member, "This server has as many automatic channels as it allows; try again later.")
@@ -351,7 +325,7 @@ class AutoChannels(
             return channel
         record = AutoChannel(id=int(channel.id), guild_id=hub.id, owner_id=int(full.id))
         with Session(self.bind) as session:
-            session.add(record)
+            record = create_or_restore(session, record)  # a channel ID can come back after its row was soft-deleted
             session.commit()
             session.refresh(record)
         moved = await full.move_to(channel, reason=CREATE_REASON)
@@ -362,19 +336,7 @@ class AutoChannels(
 
     async def delete_channel(self, channel: AutoChannel) -> None:
         """Delete the automatic ``channel`` and forget it once it's gone; one that's left is tried again later."""
-        deleted = await self.bot.client.channels.partial(channel.id).delete(reason="Automatic channel is empty")
-        if not is_gone(deleted):
-            self.logger.warning(t"Could not delete automatic channel {channel.id}: {deleted}")
-            return
-        self._forget(channel)
-
-    def _forget(self, channel: AutoChannel) -> None:
-        """Forget the automatic ``channel``, which is gone: soft-delete its record."""
-        with Session(self.bind) as session:
-            found = alive_by_id(session, AutoChannel, channel.id)
-            if found is not None:
-                soft_delete(session, found)
-                session.commit()
+        await self.channels.delete(channel)
 
     async def _tell(self, member: Member | PartialMember, message: str) -> None:
         """DM ``member`` ``message``; members with closed DMs just don't hear it."""

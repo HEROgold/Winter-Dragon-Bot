@@ -54,11 +54,16 @@ class Ownership:
     through: Through | None = None
 
 
+DELETED_MEMBER = 0
+"""The member ID an :attr:`LifecycleModel.anonymised` column holds once that member's data was deleted."""
+
+
 class LifecycleModel(BaseModel):
     """The base of every bot table: ``created_at``, ``updated_at`` and ``deleted_at``, all aware UTC.
 
     ``deleted_at`` is ``None`` while the row is alive. Subclasses declare :attr:`ownership`, and a table keyed by
-    several IDs lists them in :attr:`natural_key`, which gets a unique index.
+    several IDs lists them in :attr:`natural_key`, which gets a unique index. Member ID columns that a deletion
+    anonymises instead of hiding are listed in :attr:`anonymised`.
     """
 
     ownership: ClassVar[Ownership] = Ownership()
@@ -68,6 +73,8 @@ class LifecycleModel(BaseModel):
     alive_unique: ClassVar[tuple[str, ...]] = ()
     """Columns that together are unique among alive rows only, so a soft-deleted row and the one replacing it may share
     them; unlike :attr:`natural_key`, :func:`create_or_restore` doesn't match on them."""
+    anonymised: ClassVar[tuple[str, ...]] = ()
+    """Columns holding a member's ID that a deletion request anonymises: set to :data:`DELETED_MEMBER`, row kept."""
 
     created_at: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime)
     updated_at: datetime = Field(default_factory=utc_now, sa_type=AwareDateTime, sa_column_kwargs={"onupdate": utc_now})
@@ -79,7 +86,19 @@ class LifecycleModel(BaseModel):
     @declared_attr.directive
     @classmethod
     def __table_args__(cls) -> tuple[Index, ...]:
-        """Index the alive rows, as herogold's base does, make :attr:`natural_key` unique, and :attr:`alive_unique` unique among alive rows."""
+        """Index the alive rows, as herogold's base does, and make :attr:`natural_key` and :attr:`alive_unique` unique.
+
+        :attr:`alive_unique` is unique among alive rows only.
+
+        Raises:
+            TypeError: a column is in :attr:`anonymised` and also in :attr:`natural_key` or :attr:`alive_unique`, since
+                anonymising two rows sets the column to the same :data:`DELETED_MEMBER` and breaks the unique index.
+
+        """
+        for column in cls.anonymised:
+            if column in cls.natural_key or column in cls.alive_unique:
+                msg = f"{cls.__name__} anonymises {column}, so it can't be part of a unique key"
+                raise TypeError(msg)
         alive_only = col(cls.deleted_at).is_(None)
         indexes = [Index(f"idx_{cls.__tablename__}_alive_only", "id", postgresql_where=alive_only, sqlite_where=alive_only)]
         if cls.natural_key:

@@ -1,32 +1,50 @@
 """Unit tests: tournament sign-up, team forming, the bracket, drafts and votes, and the /tournament cog (no network)."""
 
 import re
+from datetime import timedelta
 from random import Random
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlmodel import Session
+from sqlmodel import Session, col
+from wd_bot.commands import Lookup
 from wd_bot.testing import detached_cog
-from wd_db.extension.lifecycle import alive, owned_by
-from wd_discord.gateway.events import InteractionDataOption
+from wd_db.extension.lifecycle import DELETED_MEMBER, alive, owned_by, soft_delete
+from wd_discord import AutocompleteInteraction
+from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
+from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType, ResolvedData
 from wd_discord.permissions import Permissions
+from wd_discord.resources.user import User
+from wd_discord.testing import message_json, user_json
+from wd_discord.snowflake import Snowflake
 from wd_errors import Refused
+from wd_types.clock import utc_now
 
+from winter_dragon.cogs.privacy.domain import anonymise_member, hide_member_data
+from winter_dragon.cogs.team import service as team_service
+from winter_dragon.cogs.team.models import Team, TeamKind, TeamOrigin
+from winter_dragon.cogs.team.split import split_into_teams
 from winter_dragon.cogs.tournament import service
-from winter_dragon.cogs.tournament.bracket import first_round, parse_options, round_name, split_into_teams, tally
+from winter_dragon.cogs.tournament.bracket import Pairing, first_round, parse_options, round_name, tally
 from winter_dragon.cogs.tournament.cog import Tournaments
 from winter_dragon.cogs.tournament.models import (
     DraftChoice,
     DraftKind,
+    EntryPlayer,
+    LineupChange,
     MatchBallot,
+    MatchEvent,
+    MatchEventKind,
+    MatchLineup,
     MatchPhase,
     MatchVote,
     TeamMode,
     Tournament,
+    TournamentEntry,
     TournamentMatch,
-    TournamentPlayer,
+    TournamentPost,
+    TournamentSignup,
     TournamentStatus,
-    TournamentTeam,
 )
 
 
@@ -44,7 +62,6 @@ ORGANISER = 3
 def _tournament(session: Session, mode: TeamMode = TeamMode.SOLO, team_size: int = 1) -> Tournament:
     tournament = Tournament(
         guild_id=GUILD_ID,
-        channel_id=20,
         organiser_id=ORGANISER,
         name="Cup",
         mode=mode,
@@ -56,6 +73,28 @@ def _tournament(session: Session, mode: TeamMode = TeamMode.SOLO, team_size: int
     return tournament
 
 
+def _named(
+    session: Session,
+    name: str,
+    *,
+    organiser_id: int = 50,
+    guild_id: int = GUILD_ID,
+    status: TournamentStatus = TournamentStatus.SIGNUP,
+) -> Tournament:
+    tournament = Tournament(
+        guild_id=guild_id, organiser_id=organiser_id, name=name, mode=TeamMode.SOLO, team_size=1, status=status
+    )
+    session.add(tournament)
+    session.commit()
+    session.refresh(tournament)
+    return tournament
+
+
+def _pick(tournament: Tournament) -> InteractionDataOption:
+    """The ``tournament`` option as the autocomplete suggests it for ``tournament``; read it while its session is open."""
+    return InteractionDataOption(name="tournament", type=3, value=Lookup.choice(tournament, tournament.name).value)
+
+
 def _solo(session: Session, players: int, team_size: int = 1) -> Tournament:
     tournament = _tournament(session, team_size=team_size)
     for user_id in range(100, 100 + players):
@@ -64,13 +103,32 @@ def _solo(session: Session, players: int, team_size: int = 1) -> Tournament:
     return tournament
 
 
+def _entered(session: Session, tournament: Tournament, captain_id: int, name: str) -> TournamentEntry:
+    """Create the lasting team ``name`` captained by ``captain_id``, and enter it into ``tournament``."""
+    team = team_service.create_team(session, name, captain_id)
+    session.commit()
+    entry = service.enter(session, tournament, team, captain_id)
+    session.commit()
+    return entry
+
+
 def _refused(message: str) -> pytest.RaisesExc[Refused]:
     """Expect a refusal with ``message``."""
     return pytest.raises(Refused, match=re.escape(message))
 
 
 def _round(session: Session, tournament: Tournament, round_: int) -> list[TournamentMatch]:
-    return [match for match in service.matches_of(session, tournament.id or 0) if match.round == round_]
+    return [match for match in service.matches_of(session, tournament) if match.round == round_]
+
+
+def _finish(session: Session, tournament: Tournament) -> None:
+    """Play the tournament's final, live, to its end, with the first team of the final winning."""
+    final = service.matches_of(session, tournament)[-1]
+    final.phase = MatchPhase.LIVE
+    session.add(final)
+    session.commit()
+    service.report(session, tournament, final, final.entry_a_id or 0, ORGANISER)
+    session.commit()
 
 
 # --- Pure bracket arithmetic -----------------------------------------------------------------------------------------
@@ -84,8 +142,8 @@ def test_split_into_teams_spreads_leftover_players() -> None:
 
 
 def test_first_round_gives_byes_to_top_seeds_and_never_pairs_two_byes() -> None:
-    assert first_round([1, 2, 3, 4, 5]) == [(1, None), (2, None), (3, None), (4, 5)]
-    assert first_round([1, 2]) == [(1, 2)]
+    assert first_round([1, 2, 3, 4, 5]) == [Pairing(1, None), Pairing(2, None), Pairing(3, None), Pairing(4, 5)]
+    assert first_round([1, 2]) == [Pairing(1, 2)]
 
 
 def test_round_names_count_back_from_the_final() -> None:
@@ -103,44 +161,114 @@ def test_vote_options_and_tally() -> None:
 def test_solo_sign_up_refuses_twice_and_captains_tournaments(engine: Engine) -> None:
     with Session(engine) as session:
         solo = _tournament(session)
-        service.sign_up(session, solo, 5)
+        service.sign_up(session, solo, Snowflake(5))
         session.commit()
         with _refused("You're signed up already."):
-            service.sign_up(session, solo, 5)
+            service.sign_up(session, solo, Snowflake(5))
         captains = _tournament(session, TeamMode.CAPTAINS)
         with pytest.raises(Refused):
-            service.sign_up(session, captains, 6)
+            service.sign_up(session, captains, Snowflake(6))
 
 
 def test_captains_build_teams_within_the_size(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
-        service.create_team(session, tournament, 10, "Reds")
-        with _refused("A team has that name already."):
-            service.create_team(session, tournament, 11, "reds")
-        service.add_to_team(session, tournament, 10, 12)
-        with _refused("Your team is full: teams have 2 players."):
-            service.add_to_team(session, tournament, 10, 13)
-        with _refused("Only a team's captain can add players to it."):
-            service.add_to_team(session, tournament, 12, 13)
-        with _refused("They aren't a player you can remove from your team."):
-            service.remove_from_team(session, tournament, 10, 10)
-        service.remove_from_team(session, tournament, 10, 12)
+        reds = _entered(session, tournament, 10, "Reds")
+        team_service.join(session, session.get_one(Team, reds.team_id), Snowflake(12))
         session.commit()
-        (team,) = service.teams_of(session, tournament.id or 0)
-        assert service.roster(session, team.id or 0) == [10]
+        service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
+        with _refused("Only a team's captain can change its entry."):
+            service.add_player(session, tournament, reds, Snowflake(12), Snowflake(12))
+        with _refused("They're in this entry already."):
+            service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
+        with _refused("They aren't a player you can remove from your entry."):
+            service.remove_player(session, tournament, reds, Snowflake(10), Snowflake(10))
+        service.remove_player(session, tournament, reds, Snowflake(10), Snowflake(12))
+        session.commit()
+        assert service.roster(session, reds) == [Snowflake(10)]
 
 
-def test_a_captain_leaving_disbands_their_team(engine: Engine) -> None:
+def test_enter_refuses_a_temporary_team_a_non_captain_a_second_entry_and_a_duplicate_name(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS)
+        (temporary,) = team_service.create_temporary_teams(
+            session, [[Snowflake(20), Snowflake(21)]], TeamOrigin.SOLO_TOURNAMENT
+        )
+        with _refused("Only the team's captain can enter it."):
+            service.enter(session, tournament, temporary, Snowflake(20))
+        reds = team_service.create_team(session, "Reds", Snowflake(10))
+        with _refused("Only the team's captain can enter it."):
+            service.enter(session, tournament, reds, Snowflake(11))
+        service.enter(session, tournament, reds, Snowflake(10))
+        session.commit()
+        with _refused("That team has entered already."):
+            service.enter(session, tournament, reds, Snowflake(10))
+        blues = team_service.create_team(session, "reds", Snowflake(11))
+        with _refused("An entry has that name already."):
+            service.enter(session, tournament, blues, Snowflake(11))
+
+
+def test_add_player_refuses_someone_outside_the_team_and_a_full_entry(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        team = session.get_one(Team, reds.team_id)
+        team_service.join(session, team, Snowflake(12))
+        session.commit()
+        with _refused("They aren't in your team."):
+            service.add_player(session, tournament, reds, Snowflake(10), Snowflake(13))
+        service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
+        team_service.join(session, team, Snowflake(13))
+        session.commit()
+        with _refused("Your entry is full: entries have 2 players."):
+            service.add_player(session, tournament, reds, Snowflake(10), Snowflake(13))
+
+
+def test_a_member_can_play_for_two_entries_of_one_tournament(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        blues = _entered(session, tournament, 11, "Blues")
+        for entry, captain_id in ((reds, 10), (blues, 11)):
+            team_service.join(session, session.get_one(Team, entry.team_id), Snowflake(12))
+            session.commit()
+            service.add_player(session, tournament, entry, captain_id, Snowflake(12))
+            session.commit()
+        assert service.roster(session, reds) == [Snowflake(10), Snowflake(12)]
+        assert service.roster(session, blues) == [Snowflake(11), Snowflake(12)]
+        assert service.entry_of_captain(session, tournament, 11) == blues
+
+
+def test_hiding_a_member_withdraws_only_the_entries_left_without_players(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        blues = _entered(session, tournament, 11, "Blues")
+        team_service.join(session, session.get_one(Team, blues.team_id), Snowflake(10))
+        session.commit()
+        service.add_player(session, tournament, blues, Snowflake(11), Snowflake(10))
+        session.commit()
+
+        service.WithdrawHiddenMember.on_member_hidden(session, Snowflake(10))
+        session.commit()
+
+        assert [entry.name for entry in service.entries_of(session, tournament)] == ["Blues"]
+        assert service.roster(session, blues) == [Snowflake(11)]
+
+
+def test_a_captain_leaving_withdraws_their_entry(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=3)
-        service.create_team(session, tournament, 10, "Reds")
-        service.add_to_team(session, tournament, 10, 12)
+        reds = _entered(session, tournament, 10, "Reds")
+        team_service.join(session, session.get_one(Team, reds.team_id), Snowflake(12))
         session.commit()
-        service.withdraw(session, tournament, 10)
+        service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
         session.commit()
-        assert service.teams_of(session, tournament.id or 0) == []
-        assert service.players_of(session, tournament.id or 0) == []
+        service.withdraw(session, tournament, Snowflake(10))
+        session.commit()
+        assert service.entries_of(session, tournament) == []
+        assert session.exec(alive(EntryPlayer)).all() == []
+        assert session.get_one(Team, reds.team_id).ended_at is None
 
 
 # --- The bracket -----------------------------------------------------------------------------------------------------
@@ -160,14 +288,14 @@ def test_start_draws_teams_and_gives_byes_their_wins(engine: Engine) -> None:
         session.commit()
 
         assert tournament.status is TournamentStatus.RUNNING
-        assert len(service.teams_of(session, tournament.id or 0)) == 5
-        assert all(player.team_id is not None for player in service.players_of(session, tournament.id or 0))
+        assert len(service.entries_of(session, tournament)) == 5
+        assert len(session.exec(alive(EntryPlayer)).all()) == 5
         first = _round(session, tournament, 0)
         assert [match.phase for match in first] == [MatchPhase.FINISHED] * 3 + [MatchPhase.READY]
         semis = _round(session, tournament, 1)
         assert semis[0].phase is MatchPhase.READY  # both bye winners arrived
-        assert semis[1].team_a_id is not None
-        assert semis[1].team_b_id is None
+        assert semis[1].entry_a_id is not None
+        assert semis[1].entry_b_id is None
         assert len(_round(session, tournament, 2)) == 1
 
 
@@ -176,25 +304,25 @@ def test_a_match_moves_through_its_phases_and_the_final_crowns_a_champion(engine
         tournament = _solo(session, players=2)
         service.start(session, tournament, Random(0))
         (final,) = _round(session, tournament, 0)
-        winner = final.team_a_id or 0
+        winner = final.entry_a_id or 0
 
         with _refused("The match isn't live yet; a team can forfeit, though."):
-            service.report(session, tournament, final, winner)
+            service.report(session, tournament, final, winner, ORGANISER)
         phases = []
         while final.phase is not MatchPhase.LIVE:
-            service.advance(session, final)
+            service.advance(session, final, ORGANISER)
             phases.append(final.phase)
         assert phases == [MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE]
         with _refused("Report the winner to finish this match."):
-            service.advance(session, final)
+            service.advance(session, final, ORGANISER)
         with _refused("That team doesn't play this match."):
-            service.report(session, tournament, final, 999)
-        service.report(session, tournament, final, winner)
+            service.report(session, tournament, final, 999, ORGANISER)
+        service.report(session, tournament, final, winner, ORGANISER)
 
         assert (final.phase, final.winner_id) == (MatchPhase.FINISHED, winner)
-        assert (tournament.status, tournament.winner_team_id) == (TournamentStatus.FINISHED, winner)
+        assert (tournament.status, tournament.winner_entry_id) == (TournamentStatus.FINISHED, winner)
         with _refused("This match is decided already."):
-            service.report(session, tournament, final, winner)
+            service.report(session, tournament, final, winner, ORGANISER)
 
 
 def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
@@ -202,10 +330,10 @@ def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
         tournament = _solo(session, players=4)
         service.start(session, tournament, Random(0))
         match = _round(session, tournament, 0)[1]
-        service.report(session, tournament, match, match.team_b_id or 0, forfeit=True)
+        service.report(session, tournament, match, match.entry_b_id or 0, ORGANISER, forfeit=True)
         assert match.phase is MatchPhase.FORFEIT
         (final,) = _round(session, tournament, 1)
-        assert final.team_b_id == match.team_b_id
+        assert final.entry_b_id == match.entry_b_id
 
 
 # --- Drafts and votes ------------------------------------------------------------------------------------------------
@@ -216,21 +344,21 @@ def test_only_a_playing_captain_drafts_in_the_right_phase(engine: Engine) -> Non
         tournament = _solo(session, players=4, team_size=2)
         service.start(session, tournament, Random(0))
         (match,) = _round(session, tournament, 0)
-        team_a = session.get(TournamentTeam, match.team_a_id)
-        assert team_a is not None
-        captain = team_a.captain_id
-        teammate = next(user for user in service.roster(session, team_a.id or 0) if user != captain)
+        entry_a = session.get(TournamentEntry, match.entry_a_id)
+        assert entry_a is not None
+        captain = Snowflake(session.get_one(Team, entry_a.team_id).captain_id or 0)
+        teammate = next(user for user in service.roster(session, entry_a) if user != captain)
 
         with _refused("This match isn't in its ban phase."):
             service.draft(session, match, captain, DraftKind.BAN, "Dust")
-        service.advance(session, match)
+        service.advance(session, match, ORGANISER)
         with _refused("Only a captain playing this match can ban."):
             service.draft(session, match, teammate, DraftKind.BAN, "Dust")
         service.draft(session, match, captain, DraftKind.BAN, "Dust")
         session.flush()
         with _refused("Dust is banned already."):
             service.draft(session, match, captain, DraftKind.BAN, "Dust")
-        assert [draft.value for draft in service.drafts_of(session, match.id or 0)] == ["Dust"]
+        assert [draft.value for draft in service.drafts_of(session, match)] == ["Dust"]
 
 
 def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -> None:
@@ -238,9 +366,9 @@ def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -
         tournament = _solo(session, players=2)
         service.start(session, tournament, Random(0))
         (match,) = _round(session, tournament, 0)
-        vote = service.open_vote(session, match, "Map?", ["Dust", "Mirage"])
+        vote = service.open_vote(session, match, "Map?", ["Dust", "Mirage"], ORGANISER)
         with _refused("Give between 2 and 10 different answers"):
-            service.open_vote(session, match, "Map?", ["Dust"])
+            service.open_vote(session, match, "Map?", ["Dust"], ORGANISER)
 
         with _refused("Only the players of this match can vote."):
             service.cast(session, vote, 999, 0)
@@ -248,7 +376,7 @@ def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -
         session.flush()
         service.cast(session, vote, 100, 1)
         session.flush()
-        assert service.choices_of(session, vote.id or 0) == [1]
+        assert service.choices_of(session, vote) == [1]
         vote.open = False
         with _refused("This vote is closed."):
             service.cast(session, vote, 101, 0)
@@ -272,8 +400,7 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
 ) -> None:
-    from wd_discord.gateway.events import InteractionDataOption  # noqa: PLC0415
-
+    discord_client.reply("POST", "/channels/20/messages", message_json(id="200", channel_id="20"))
     options = [
         InteractionDataOption(name="name", type=3, value="Cup"),
         InteractionDataOption(name="team_size", type=4, value=2),
@@ -295,13 +422,88 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     )
     await Tournaments.create.invoke(cog, interaction, options)
 
-    data = _response(discord_client)["data"]
-    (embed,) = data["embeds"]
+    (post,) = discord_client.requests_to("POST", "/channels/20/messages")
+    (embed,) = post.json["embeds"]
     assert embed["title"] == "🏆 Cup"
-    labels = [button["label"] for button in data["components"][0]["components"]]
+    labels = [button["label"] for button in post.json["components"][0]["components"]]
     assert labels == ["Join", "Leave", "Participants"]
+    assert _response(discord_client)["type"] == 5  # DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    (followup,) = discord_client.requests_to("POST", "/webhooks/2/tok")
+    assert followup.json["embeds"][0]["description"] == "**Cup** is open for sign-up."
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().organiser_id == ORGANISER
+        (row,) = session.exec(alive(TournamentPost)).all()
+        assert (row.channel_id, row.message_id) == (20, 200)
+
+
+async def test_a_guild_can_run_two_tournaments_at_once(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("POST", "/channels/20/messages", message_json(id="200", channel_id="20"))
+    cog = _cog(engine, discord_client)
+    for name in ("Cup", "League"):
+        options = [InteractionDataOption(name="name", type=3, value=name)]
+        interaction = make_interaction(
+            "tournament",
+            options=options,
+            guild_id=GUILD_ID,
+            channel_id=20,
+            permissions=Permissions.MANAGE_GUILD,
+        )
+        await Tournaments.create.invoke(cog, interaction, options)
+
+    with Session(engine) as session:
+        assert sorted(found.name for found in session.exec(alive(Tournament))) == ["Cup", "League"]
+
+
+async def test_post_shows_a_tournament_in_this_channel_and_refuses_another_server(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("POST", "/channels/21/messages", message_json(id="210", channel_id="21"))
+    with Session(engine) as session:
+        tournament = _named(session, "Cup", organiser_id=ORGANISER)
+        foreign = _named(session, "Foreign", guild_id=GUILD_ID + 1, organiser_id=ORGANISER)
+        tournament_id = tournament.id or 0
+        options = [_pick(tournament)]
+        foreign_options = [_pick(foreign)]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.post_tournament.invoke(
+        cog,
+        make_interaction(
+            "tournament", options=options, guild_id=GUILD_ID, channel_id=21, permissions=Permissions.MANAGE_MESSAGES
+        ),
+        options,
+    )
+
+    assert _response(discord_client)["type"] == 5  # DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    (followup,) = discord_client.requests_to("POST", "/webhooks/2/tok")
+    assert followup.json["embeds"][0]["description"] == "Posted **Cup** here."
+    with Session(engine) as session:
+        (row,) = session.exec(alive(TournamentPost)).all()
+        assert (row.tournament_id, row.channel_id, row.message_id) == (tournament_id, 21, 210)
+
+    await Tournaments.post_tournament.invoke(
+        cog,
+        make_interaction(
+            "tournament",
+            options=foreign_options,
+            guild_id=GUILD_ID,
+            channel_id=21,
+            permissions=Permissions.MANAGE_MESSAGES,
+        ),
+        foreign_options,
+    )
+
+    assert (
+        discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json["content"]
+        == "That tournament belongs to another server."
+    )
+    assert len(discord_client.requests_to("POST", "/channels/21/messages")) == 1
 
 
 async def test_the_join_button_signs_up_and_refreshes_the_card(
@@ -323,7 +525,7 @@ async def test_the_join_button_signs_up_and_refreshes_the_card(
     assert update["type"] == 7  # UPDATE_MESSAGE
     assert update["data"]["embeds"][0]["fields"][0] == {"name": "Players (1)", "value": "<@3>", "inline": False}
     with Session(engine) as session:
-        assert session.exec(alive(TournamentPlayer)).one().user_id == ORGANISER
+        assert session.exec(alive(TournamentSignup)).one().user_id == ORGANISER
 
 
 async def test_the_organiser_reports_the_final_winner_from_the_match_card(
@@ -338,7 +540,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
         final.phase = MatchPhase.LIVE
         session.add(final)
         session.commit()
-        match_id, winner = final.id, final.team_a_id
+        match_id, winner = final.id, final.entry_a_id
     cog = _cog(engine, discord_client)
 
     args = [str(match_id), "win", str(winner)]
@@ -352,7 +554,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
     assert followup["content"] == "🏆 **Cup** is over!"
     with Session(engine) as session:
-        assert session.exec(alive(Tournament)).one().winner_team_id == winner
+        assert session.exec(alive(Tournament)).one().winner_entry_id == winner
 
 
 async def test_only_match_players_can_use_the_vote_buttons(
@@ -364,7 +566,7 @@ async def test_only_match_players_can_use_the_vote_buttons(
         tournament = _solo(session, players=2)
         service.start(session, tournament, Random(0))
         (final,) = _round(session, tournament, 0)
-        vote = service.open_vote(session, final, "Map?", ["Dust", "Mirage"])
+        vote = service.open_vote(session, final, "Map?", ["Dust", "Mirage"], ORGANISER)
         assert not isinstance(vote, str)
         session.commit()
         vote_id = vote.id
@@ -397,8 +599,7 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
 ) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
-        service.create_team(session, tournament, 5, "Reds")
-        session.commit()
+        _entered(session, tournament, 5, "Reds")
         tournament_id = tournament.id
     cog = _cog(engine, discord_client)
 
@@ -415,15 +616,15 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
     assert embed["description"] == "**Reds** (1/2): <@5>"
 
 
-def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, int]:
+def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, Snowflake]:
     """Start a two-player solo tournament whose final had a ban and a vote; return it, the final and a captain."""
     tournament = _solo(session, players=2)
     service.start(session, tournament, Random(0))
     (final,) = _round(session, tournament, 0)
     final.phase = MatchPhase.BAN
-    (captain,) = service.roster(session, final.team_a_id or 0)
+    (captain,) = service.roster(session, session.get_one(TournamentEntry, final.entry_a_id or 0))
     service.draft(session, final, captain, DraftKind.BAN, "Dust")
-    vote = service.open_vote(session, final, "Map?", ["Mirage", "Nuke"])
+    vote = service.open_vote(session, final, "Map?", ["Mirage", "Nuke"], ORGANISER)
     service.cast(session, vote, captain, 0)
     session.commit()
     return tournament, final, captain
@@ -436,8 +637,10 @@ def test_drafts_votes_and_ballots_belong_to_the_tournaments_guild(engine: Engine
         for model in (DraftChoice, MatchVote, MatchBallot):
             assert len(session.exec(owned_by(model, guild=GUILD_ID)).all()) == 1
             assert session.exec(owned_by(model, guild=GUILD_ID + 1)).all() == []
-        assert [ballot.user_id for ballot in session.exec(owned_by(MatchBallot, member=captain, guild=GUILD_ID))] == [captain]
-        assert [player.user_id for player in session.exec(owned_by(TournamentPlayer, member=captain))] == [captain]
+        assert [ballot.user_id for ballot in session.exec(owned_by(MatchBallot, member=captain, guild=GUILD_ID))] == [
+            int(captain)
+        ]
+        assert [player.user_id for player in session.exec(owned_by(EntryPlayer, member=captain))] == [int(captain)]
 
 
 async def test_join_leave_join_signs_up_once(
@@ -446,17 +649,21 @@ async def test_join_leave_join_signs_up_once(
     discord_client: RecordingClient,
 ) -> None:
     with Session(engine) as session:
-        tournament_id = _tournament(session, team_size=2).id or 0
+        tournament = _tournament(session, team_size=2)
+        tournament_id = tournament.id or 0
+        options = [_pick(tournament)]
     cog = _cog(engine, discord_client)
 
     for command in (Tournaments.join, Tournaments.leave, Tournaments.join):
-        await command.invoke(cog, make_interaction("tournament", guild_id=GUILD_ID), [])
+        await command.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     with Session(engine) as session:
-        assert [player.user_id for player in service.players_of(session, tournament_id)] == [ORGANISER]
+        assert [signup.user_id for signup in service.signups_of(session, session.get_one(Tournament, tournament_id))] == [
+            ORGANISER
+        ]
 
 
-async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
+async def test_cancel_hides_the_tournament(
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -464,31 +671,18 @@ async def test_cancel_hides_the_whole_tournament_and_frees_the_guild(
     with Session(engine) as session:
         tournament, _, _ = _played_final(session)
         tournament_id = tournament.id or 0
+        options = [_pick(tournament)]
     cog = _cog(engine, discord_client)
 
-    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", guild_id=GUILD_ID), [])
+    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     with Session(engine) as session:
-        assert service.active_tournament(session, GUILD_ID) is None
-        assert service.players_of(session, tournament_id) == []
-        assert service.teams_of(session, tournament_id) == []
-        assert service.matches_of(session, tournament_id) == []
+        assert list(service.visible_tournaments(session, GUILD_ID, ORGANISER, None)) == []
+        assert service.signups_of(session, session.get_one(Tournament, tournament_id)) == []
+        assert service.entries_of(session, session.get_one(Tournament, tournament_id)) == []
+        assert service.matches_of(session, session.get_one(Tournament, tournament_id)) == []
         for model in (Tournament, DraftChoice, MatchVote, MatchBallot):
             assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
-    options = [
-        InteractionDataOption(name="name", type=3, value="Rematch"),
-        InteractionDataOption(name="team_size", type=4, value=1),
-    ]
-    interaction = make_interaction(
-        "tournament",
-        options=options,
-        guild_id=GUILD_ID,
-        channel_id=20,
-        permissions=Permissions.MANAGE_GUILD,
-    )
-    await Tournaments.create.invoke(cog, interaction, options)
-    with Session(engine) as session:
-        assert [found.name for found in session.exec(alive(Tournament))] == ["Rematch"]
 
 
 async def test_vote_takes_the_match_from_a_lookup_value(
@@ -548,7 +742,7 @@ async def test_match_card_takes_the_match_from_a_lookup_value(
     assert "Dust" in str(embed)
 
 
-async def test_match_card_refuses_a_match_when_the_guild_has_no_tournament(
+async def test_match_card_refuses_a_match_of_another_server(
     engine: Engine,
     make_interaction: InteractionFactory,
     discord_client: RecordingClient,
@@ -565,4 +759,802 @@ async def test_match_card_refuses_a_match_when_the_guild_has_no_tournament(
         options,
     )
 
-    assert _response(discord_client)["data"]["content"].startswith("There's no tournament here;")
+    assert _response(discord_client)["data"]["content"] == "That tournament belongs to another server."
+
+
+def _autocomplete(client: RecordingClient) -> AutocompleteInteraction:
+    """An autocomplete interaction from the organiser in ``GUILD_ID``, typing into the tournament option."""
+    model = AutocompleteInteractionModel(
+        id="1",
+        application_id="2",
+        type=InteractionType.APPLICATION_COMMAND_AUTOCOMPLETE,
+        token="tok",  # noqa: S106
+        version=1,
+        guild_id=str(GUILD_ID),
+        user=User.model_validate(user_json(id=str(ORGANISER), username="organiser")),
+        data=InteractionData(id="10", name="tournament", type=1),
+    )
+    return AutocompleteInteraction(client, model)
+
+
+async def test_tournament_choices_suggests_the_visible_tournaments_that_match(
+    engine: Engine,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _named(session, "Spring Cup", organiser_id=ORGANISER)
+        _named(session, "Autumn Cup", organiser_id=ORGANISER)
+        _named(session, "Winter League", organiser_id=ORGANISER)
+        _named(session, "Hidden Cup")
+    cog = _cog(engine, discord_client)
+
+    choices = await cog.tournament_choices(_autocomplete(discord_client), "cup")
+
+    assert sorted(choice.name for choice in choices) == ["Autumn Cup", "Spring Cup"]
+
+
+async def test_the_join_button_edits_every_post_of_the_tournament(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/20/messages/200", message_json(id="200", channel_id="20"))
+    discord_client.reply("PATCH", "/channels/21/messages/210", message_json(id="210", channel_id="21"))
+    with Session(engine) as session:
+        tournament = _tournament(session, team_size=2)
+        service.add_post(session, tournament, 20, 200)
+        service.add_post(session, tournament, 21, 210)
+        session.commit()
+        tournament_id = tournament.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.join_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+
+    for channel_id, message_id in ((20, 200), (21, 210)):
+        (edit,) = discord_client.requests_to("PATCH", f"/channels/{channel_id}/messages/{message_id}")
+        assert edit.json["embeds"][0]["fields"][0]["name"] == "Players (1)"
+
+
+def test_visible_tournaments_are_the_organisers_signed_up_and_posted_ones(engine: Engine) -> None:
+    with Session(engine) as session:
+        _named(session, "Organised", organiser_id=ORGANISER)
+        signed_up = _named(session, "Signed")
+        service.sign_up(session, signed_up, ORGANISER)
+        posted = _named(session, "Posted")
+        service.add_post(session, posted, 20, 200)
+        _named(session, "Hidden")
+        _named(session, "Finished", organiser_id=ORGANISER, status=TournamentStatus.FINISHED)
+        _named(session, "Elsewhere", guild_id=GUILD_ID + 1, organiser_id=ORGANISER)
+        session.commit()
+
+        assert [found.name for found in service.visible_tournaments(session, GUILD_ID, ORGANISER, 99)] == [
+            "Organised",
+            "Signed",
+        ]
+        assert [found.name for found in service.visible_tournaments(session, GUILD_ID, 7, 20)] == ["Posted"]
+
+
+# --- Solo teams and their ends ---------------------------------------------------------------------------------------
+
+
+def test_a_solo_start_makes_temporary_teams_with_their_first_drawn_captains(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=4, team_size=2)
+        service.start(session, tournament, Random(0))
+        session.commit()
+
+        teams = list(session.exec(alive(Team).where(Team.origin == TeamOrigin.SOLO_TOURNAMENT)))
+        entries = service.entries_of(session, tournament)
+        assert len(teams) == len(entries) == 2
+        assert all(team.kind is TeamKind.TEMPORARY and team.ended_at is None for team in teams)
+        for entry in entries:
+            team = session.get_one(Team, entry.team_id)
+            assert entry.name == team.name
+            assert team.captain_id == int(service.roster(session, entry)[0])
+        players = [user for entry in entries for user in service.roster(session, entry)]
+        assert sorted(int(user) for user in players) == [100, 101, 102, 103]
+
+
+def test_finishing_and_cancelling_end_a_solo_tournaments_temporary_teams(engine: Engine) -> None:
+    with Session(engine) as session:
+        finished = _solo(session, players=2)
+        service.start(session, finished, Random(0))
+        session.commit()
+        _finish(session, finished)
+        assert [team.ended_at is not None for team in session.exec(alive(Team))] == [True, True]
+
+        cancelled = _solo(session, players=2)
+        service.start(session, cancelled, Random(0))
+        session.commit()
+        service.cancel(session, cancelled)
+        session.commit()
+        assert [team.ended_at is not None for team in session.exec(alive(Team))] == [True, True, True, True]
+
+
+def test_a_lasting_team_stays_unended_when_its_tournament_ends(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS)
+        reds = _entered(session, tournament, 10, "Reds")
+        blues = _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        _finish(session, tournament)
+
+        assert tournament.status is TournamentStatus.FINISHED
+        assert [session.get_one(Team, entry.team_id).ended_at for entry in (reds, blues)] == [None, None]
+
+
+async def test_entry_add_refuses_a_player_who_is_not_in_the_server(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}/members/4", {"code": 10007, "message": "Unknown Member"}, status=404)
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        _entered(session, tournament, ORGANISER, "Reds")
+        pick = _pick(tournament)
+    player = InteractionDataOption(name="player", type=6, value="4")
+    resolved = ResolvedData(users={"4": User.model_validate({"id": "4", "username": "user4", "discriminator": "0"})})
+    options = [pick, player]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.entry_add.invoke(
+        cog,
+        make_interaction("tournament", options=options, resolved=resolved, guild_id=GUILD_ID),
+        options,
+    )
+
+    assert _response(discord_client)["data"]["content"] == "They aren't in this server, so they can't play in its tournament."
+    with Session(engine) as session:
+        assert session.exec(alive(EntryPlayer)).one().user_id == ORGANISER
+
+
+# --- Lineups and clashes ---------------------------------------------------------------------------------------------
+
+
+def _add_to_entry(session: Session, tournament: Tournament, entry: TournamentEntry, captain_id: int, user_id: int) -> None:
+    """Make ``user_id`` a member of the entry's team, then add them to the entry as its captain."""
+    team_service.join(session, session.get_one(Team, entry.team_id), user_id)
+    session.commit()
+    service.add_player(session, tournament, entry, captain_id, user_id)
+    session.commit()
+
+
+def _play(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int) -> None:
+    """Play ``match`` live to a win for ``winner_id``, skipping its draft."""
+    match.phase = MatchPhase.LIVE
+    session.add(match)
+    session.commit()
+    service.report(session, tournament, match, winner_id, ORGANISER)
+    session.commit()
+
+
+def _change(
+    session: Session,
+    tournament: Tournament,
+    entry: TournamentEntry,
+    captain_id: int,
+    user_id: int,
+    *,
+    playing: bool,
+    reason: str | None = None,
+) -> None:
+    """Request a lineup change for ``entry`` from its captain ``captain_id``."""
+    service.change_lineup(
+        session,
+        tournament,
+        entry,
+        service.LineupRequest(captain_id=captain_id, user_id=user_id, playing=playing, reason=reason),
+    )
+
+
+def _undecided_match(session: Session, tournament: Tournament, entry: TournamentEntry) -> TournamentMatch:
+    """Return the lowest-round match of ``entry`` that isn't decided."""
+    return next(
+        match
+        for match in service.matches_of(session, tournament)
+        if not match.phase.decided and entry.id in (match.entry_a_id, match.entry_b_id)
+    )
+
+
+def test_a_match_copies_its_entries_players_into_its_lineup_once_ready(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        _entered(session, tournament, 11, "Blues")
+        _entered(session, tournament, 12, "Greens")
+        _entered(session, tournament, 13, "Golds")
+        service.start(session, tournament, Random(0))
+        session.commit()
+
+        for match in _round(session, tournament, 0):
+            assert match.phase is MatchPhase.READY
+            for entry_id in (match.entry_a_id or 0, match.entry_b_id or 0):
+                assert service.lineup(session, match, session.get_one(TournamentEntry, entry_id)) == service.roster(
+                    session, session.get_one(TournamentEntry, entry_id)
+                )
+        (final,) = _round(session, tournament, 1)
+        assert final.phase is MatchPhase.WAITING
+        assert service.lineup(session, final, reds) == []
+
+        for match in _round(session, tournament, 0):
+            _play(session, tournament, match, match.entry_a_id or 0)
+        (final,) = _round(session, tournament, 1)
+        assert final.phase is MatchPhase.READY
+        for entry_id in (final.entry_a_id or 0, final.entry_b_id or 0):
+            assert service.lineup(session, final, session.get_one(TournamentEntry, entry_id)) == service.roster(
+                session, session.get_one(TournamentEntry, entry_id)
+            )
+
+
+def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        _entered(session, tournament, 11, "Blues")
+        _entered(session, tournament, 12, "Greens")
+        _entered(session, tournament, 13, "Golds")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        match = _undecided_match(session, tournament, reds)
+        match_id, reds_id = match.id or 0, reds.id or 0
+
+        # 21 isn't in the team, so a stand-in is allowed.
+        _change(session, tournament, reds, 10, 20, playing=False)
+        _change(session, tournament, reds, 10, 21, playing=True)
+        session.commit()
+        assert service.roster(session, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10), Snowflake(21)]
+        assert service.lineup(
+            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+        ) == [Snowflake(10), Snowflake(21)]
+
+        # A live match keeps its lineup; the change applies from the match after.
+        match.phase = MatchPhase.LIVE
+        session.add(match)
+        session.commit()
+        _change(session, tournament, reds, 10, 21, playing=False)
+        session.commit()
+        assert service.roster(session, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10)]
+        assert service.lineup(
+            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+        ) == [Snowflake(10), Snowflake(21)]
+
+        # A decided match never changes; the final copies the players as they are when it becomes ready.
+        _play(session, tournament, match, reds_id)
+        _change(session, tournament, reds, 10, 22, playing=True)
+        session.commit()
+        assert service.lineup(
+            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+        ) == [Snowflake(10), Snowflake(21)]
+        final = _undecided_match(session, tournament, reds)
+        assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == []
+        other = next(found for found in _round(session, tournament, 0) if found.id != match_id)
+        _play(session, tournament, other, other.entry_a_id or 0)
+        assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10), Snowflake(22)]
+
+
+def test_a_lineup_change_refuses_a_non_captain_an_over_full_entry_and_taking_out_the_last_player(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+
+        with _refused("Only the entry's captain can change its lineup."):
+            _change(session, tournament, reds, 20, 21, playing=True)
+        with _refused("Your entry is full: entries have 2 players."):
+            _change(session, tournament, reds, 10, 21, playing=True)
+        with _refused("They're in this entry already."):
+            _change(session, tournament, reds, 10, 20, playing=True)
+        with _refused("They aren't playing for your entry."):
+            _change(session, tournament, reds, 10, 21, playing=False)
+        _change(session, tournament, reds, 10, 20, playing=False)
+        with _refused("An entry needs at least one player."):
+            _change(session, tournament, reds, 10, 10, playing=False)
+        service.cancel(session, tournament)
+        with _refused("That tournament is over."):
+            _change(session, tournament, reds, 10, 21, playing=True)
+
+
+def test_a_stand_in_on_both_sides_is_a_clash_that_blocks_the_advance_until_dropped(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        blues = _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (match,) = _round(session, tournament, 0)
+
+        _change(session, tournament, blues, 11, 20, playing=True)
+        session.commit()
+        assert service.clashes(session, match) == [Snowflake(20)]
+        with _refused("A player is in both lineups; drop them from one side first."):
+            service.advance(session, match, ORGANISER)
+
+        service.drop_clash(session, match, blues, ORGANISER)
+        session.commit()
+        assert service.lineup(session, match, blues) == [Snowflake(11)]
+        assert service.clashes(session, match) == []
+        service.advance(session, match, ORGANISER)
+        assert match.phase is MatchPhase.BAN
+        with _refused("Clashes are resolved before the draft starts."):
+            service.drop_clash(session, match, reds, ORGANISER)
+
+
+def test_a_clash_is_not_dropped_from_a_side_that_would_be_left_empty(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        blues = _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (match,) = _round(session, tournament, 0)
+        _change(session, tournament, blues, 11, 10, playing=True)
+        session.commit()
+
+        with _refused("An entry needs at least one player."):
+            service.drop_clash(session, match, reds, ORGANISER)
+        service.drop_clash(session, match, blues, ORGANISER)
+        session.commit()
+        assert service.lineup(session, match, blues) == [Snowflake(11)]
+
+
+def test_a_member_deletion_anonymises_their_lineup_rows(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (match,) = _round(session, tournament, 0)
+        match_id, reds_id = match.id or 0, reds.id or 0
+
+    assert hide_member_data(engine, 20, utc_now())
+
+    with Session(engine) as session:
+        rows = list(session.exec(alive(MatchLineup).where(MatchLineup.match_id == match_id, MatchLineup.entry_id == reds_id)))
+        assert sorted(row.user_id for row in rows) == [DELETED_MEMBER, 10]
+
+
+def _clash_match(engine: Engine) -> tuple[int, int]:
+    """Start a two-entry tournament where member 20 plays for both sides; return the match's and Blues' IDs."""
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        blues = _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        _change(session, tournament, blues, 11, 20, playing=True)
+        session.commit()
+        (match,) = _round(session, tournament, 0)
+        return match.id or 0, blues.id or 0
+
+
+async def test_the_clash_button_refuses_a_bystander_and_resolves_for_a_captain(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    match_id, blues_id = _clash_match(engine)
+    cog = _cog(engine, discord_client)
+    bystander = User.model_validate(user_json(id="77", username="bystander"))
+    captain = User.model_validate(user_json(id="11", username="blues"))
+    args = [str(match_id), str(blues_id)]
+
+    await Tournaments.clash_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-clash:{match_id}:{blues_id}", user=bystander, guild_id=GUILD_ID),
+        args,
+    )
+
+    assert _response(discord_client)["data"]["content"] == "Only the organiser or a captain of this match can resolve a clash."
+    with Session(engine) as session:
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [Snowflake(20)]
+
+    await Tournaments.clash_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-clash:{match_id}:{blues_id}", user=captain, guild_id=GUILD_ID),
+        args,
+    )
+
+    assert "Clash" not in _response(discord_client)["data"]["embeds"][0]["description"]
+    with Session(engine) as session:
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == []
+
+
+async def test_lineup_in_refuses_a_player_who_is_not_in_the_server(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}/members/4", {"code": 10007, "message": "Unknown Member"}, status=404)
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        _entered(session, tournament, ORGANISER, "Reds")
+        pick = _pick(tournament)
+    player = InteractionDataOption(name="player", type=6, value="4")
+    resolved = ResolvedData(users={"4": User.model_validate({"id": "4", "username": "user4", "discriminator": "0"})})
+    options = [pick, player]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.lineup_in.invoke(
+        cog,
+        make_interaction("tournament", options=options, resolved=resolved, guild_id=GUILD_ID),
+        options,
+    )
+
+    assert _response(discord_client)["data"]["content"] == "They aren't in this server, so they can't play in its tournament."
+
+
+# --- Match log -------------------------------------------------------------------------------------------------------
+
+
+def test_match_events_record_who_did_what_and_when(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=4)
+        service.start(session, tournament, Random(0))
+        first, second = _round(session, tournament, 0)
+        captain = service.roster(session, session.get_one(TournamentEntry, first.entry_a_id or 0))[0]
+        winner_name = session.get_one(TournamentEntry, first.entry_a_id or 0).name
+        forfeited_name = session.get_one(TournamentEntry, second.entry_b_id or 0).name
+
+        service.advance(session, first, ORGANISER)
+        service.draft(session, first, captain, DraftKind.BAN, "Dust")
+        service.advance(session, first, ORGANISER)
+        service.advance(session, first, ORGANISER)
+        assert first.started_at is not None
+        vote = service.open_vote(session, first, "Map?", ["Dust", "Mirage"], ORGANISER)
+        service.close_vote(session, vote, ORGANISER)
+        service.report(session, tournament, first, first.entry_a_id or 0, ORGANISER)
+        service.report(session, tournament, second, second.entry_b_id or 0, ORGANISER, forfeit=True)
+        session.commit()
+
+        first_events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == first.id).order_by(col(MatchEvent.id))))
+        second_events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == second.id)))
+        assert [(event.kind, event.actor_id, event.detail) for event in first_events] == [
+            (MatchEventKind.PHASE, ORGANISER, "ban"),
+            (MatchEventKind.DRAFT, int(captain), "ban: Dust"),
+            (MatchEventKind.PHASE, ORGANISER, "pick"),
+            (MatchEventKind.PHASE, ORGANISER, "live"),
+            (MatchEventKind.VOTE_OPENED, ORGANISER, "Map?"),
+            (MatchEventKind.VOTE_CLOSED, ORGANISER, "Map?"),
+            (MatchEventKind.WINNER, ORGANISER, winner_name),
+        ]
+        assert [(event.kind, event.actor_id, event.detail) for event in second_events] == [
+            (MatchEventKind.FORFEIT, ORGANISER, forfeited_name),
+        ]
+        assert first.decided_at is not None
+        assert first.decided_by == ORGANISER
+        assert second.decided_by == ORGANISER
+
+
+def test_a_bye_is_decided_by_the_draw_with_no_reporter_and_no_event(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=3)
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (bye,) = [match for match in _round(session, tournament, 0) if match.entry_b_id is None]
+
+        assert bye.phase is MatchPhase.FINISHED
+        assert bye.decided_at is not None
+        assert bye.decided_by is None
+        assert list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == bye.id))) == []
+
+
+def test_dropping_a_clash_records_the_entry_and_who_dropped_it(engine: Engine) -> None:
+    match_id, blues_id = _clash_match(engine)
+    with Session(engine) as session:
+        match = session.get_one(TournamentMatch, match_id)
+        service.drop_clash(session, match, session.get_one(TournamentEntry, blues_id), Snowflake(11))
+        session.commit()
+
+        events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == match_id)))
+        assert [(event.kind, event.actor_id, event.detail) for event in events] == [
+            (MatchEventKind.CLASH_DROPPED, 11, "Blues"),
+        ]
+
+
+def test_a_lineup_change_is_logged_with_its_reason_and_the_match_it_changed(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        _entered(session, tournament, 10, "Reds")
+        blues = _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (final,) = _round(session, tournament, 0)
+        final_id, blues_id = final.id or 0, blues.id or 0
+
+        _change(session, tournament, blues, 11, 21, playing=True, reason="stand-in")
+        session.commit()
+        final.phase = MatchPhase.LIVE
+        session.add(final)
+        session.commit()
+        _change(session, tournament, blues, 11, 21, playing=False, reason="illness")
+        session.commit()
+
+        changes = list(
+            session.exec(alive(LineupChange).where(LineupChange.entry_id == blues_id).order_by(col(LineupChange.id)))
+        )
+        assert [(change.user_id, change.playing, change.changed_by, change.reason, change.match_id) for change in changes] == [
+            (21, True, 11, "stand-in", final_id),
+            (21, False, 11, "illness", None),
+        ]
+
+
+def test_match_log_orders_events_and_lineup_changes_by_time(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        _entered(session, tournament, 10, "Reds")
+        blues = _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (final,) = _round(session, tournament, 0)
+
+        service.advance(session, final, ORGANISER)
+        _change(session, tournament, blues, 11, 21, playing=True)
+        service.advance(session, final, ORGANISER)
+        session.commit()
+        assert [type(row) for row in service.match_log(session, final)] == [MatchEvent, LineupChange, MatchEvent]
+
+        (change,) = [row for row in service.match_log(session, final) if isinstance(row, LineupChange)]
+        change.changed_at = change.changed_at - timedelta(days=1)
+        session.add(change)
+        session.commit()
+        assert isinstance(service.match_log(session, final)[0], LineupChange)
+
+
+async def test_the_log_is_shown_to_the_organiser_and_captains_of_the_match_only(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=1)
+        _entered(session, tournament, 10, "Reds")
+        _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (final,) = _round(session, tournament, 0)
+        service.advance(session, final, ORGANISER)
+        session.commit()
+        pick = _pick(tournament)
+        match_option = InteractionDataOption(name="match", type=3, value=f"tournamentmatch:{final.id}")
+    options = [pick, match_option]
+    cog = _cog(engine, discord_client)
+    bystander = User.model_validate(user_json(id="77", username="bystander"))
+    captain = User.model_validate(user_json(id="11", username="blues"))
+
+    await Tournaments.log.invoke(
+        cog,
+        make_interaction("tournament", options=options, user=bystander, guild_id=GUILD_ID),
+        options,
+    )
+    assert _response(discord_client)["data"]["content"] == "Only the organiser or a captain of this match can see its log."
+
+    await Tournaments.log.invoke(
+        cog,
+        make_interaction("tournament", options=options, user=captain, guild_id=GUILD_ID),
+        options,
+    )
+    (embed,) = _response(discord_client)["data"]["embeds"]
+    assert embed["title"].startswith("Log: ")
+    assert "phase: ban" in embed["description"]
+
+
+def test_a_member_deletion_anonymises_the_match_audit(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        _entered(session, tournament, 11, "Blues")
+        _entered(session, tournament, 12, "Greens")
+        _entered(session, tournament, 13, "Golds")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        match = _undecided_match(session, tournament, reds)
+        match_id, reds_id = match.id or 0, reds.id or 0
+
+        service.advance(session, match, 20)
+        service.advance(session, match, 20)
+        service.advance(session, match, 20)
+        service.report(session, tournament, match, match.entry_a_id or 0, 20)
+        _change(session, tournament, reds, 10, 20, playing=False)
+        session.add(LineupChange(entry_id=reds_id, user_id=12, playing=True, changed_by=20, changed_at=utc_now()))
+        session.commit()
+
+    assert hide_member_data(engine, 20, utc_now())
+
+    with Session(engine) as session:
+        events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == match_id)))
+        changes = list(session.exec(alive(LineupChange).where(LineupChange.entry_id == reds_id)))
+        decided = session.get_one(TournamentMatch, match_id)
+        assert {event.actor_id for event in events} == {DELETED_MEMBER}
+        assert sorted((change.user_id, change.changed_by) for change in changes) == sorted(
+            [(DELETED_MEMBER, 10), (12, DELETED_MEMBER)]
+        )
+        assert decided.decided_by == DELETED_MEMBER
+
+
+# --- Review fixes: cancel, posts, lineups, clashes, votes and the log ------------------------------------------------
+
+
+def test_cancel_soft_deletes_the_posts_match_events_and_lineup_changes(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament, _, _ = _played_final(session)
+        service.add_post(session, tournament, 20, 200)
+        entry = service.entries_of(session, tournament)[0]
+        session.add(LineupChange(entry_id=entry.id or 0, user_id=100, playing=True, changed_by=ORGANISER, changed_at=utc_now()))
+        session.commit()
+        assert session.exec(owned_by(MatchEvent, guild=GUILD_ID)).first() is not None
+
+        service.cancel(session, tournament)
+        session.commit()
+
+        for model in (TournamentPost, MatchEvent, LineupChange):
+            assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
+
+
+async def test_cancel_edits_each_post_to_the_bracket_without_buttons(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/20/messages/200", message_json(id="200", channel_id="20"))
+    with Session(engine) as session:
+        tournament, _, _ = _played_final(session)
+        service.add_post(session, tournament, 20, 200)
+        session.commit()
+        options = [_pick(tournament)]
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
+
+    (edit,) = discord_client.requests_to("PATCH", "/channels/20/messages/200")
+    assert not edit.json.get("components")
+    assert edit.json["embeds"]
+    assert "called off" in _response(discord_client)["data"]["embeds"][0]["description"]
+
+
+async def test_a_click_does_not_edit_the_message_it_just_updated(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/21/messages/210", message_json(id="210", channel_id="21"))
+    with Session(engine) as session:
+        tournament = _tournament(session, team_size=2)
+        service.add_post(session, tournament, 20, 11)  # the component factory's clicked message is 11
+        service.add_post(session, tournament, 21, 210)
+        session.commit()
+        tournament_id = tournament.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.join_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-join:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+
+    assert discord_client.requests_to("PATCH", "/channels/20/messages/11") == []
+    assert len(discord_client.requests_to("PATCH", "/channels/21/messages/210")) == 1
+
+
+def test_anonymising_two_members_of_one_lineup_keeps_both_rows(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=3)
+        reds = _entered(session, tournament, 10, "Reds")
+        _add_to_entry(session, tournament, reds, 10, 20)
+        _add_to_entry(session, tournament, reds, 10, 21)
+        _entered(session, tournament, 11, "Blues")
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (match,) = _round(session, tournament, 0)
+        match_id, reds_id = match.id or 0, reds.id or 0
+
+        anonymise_member(session, [MatchLineup], 20)
+        anonymise_member(session, [MatchLineup], 21)
+        session.commit()
+
+        rows = list(session.exec(alive(MatchLineup).where(MatchLineup.match_id == match_id, MatchLineup.entry_id == reds_id)))
+        assert sorted(row.user_id for row in rows) == [DELETED_MEMBER, DELETED_MEMBER, 10]
+
+
+def test_anonymised_members_are_not_a_clash(engine: Engine) -> None:
+    match_id, _ = _clash_match(engine)
+    with Session(engine) as session:
+        anonymise_member(session, [MatchLineup], 20)
+        session.commit()
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == []
+
+
+async def test_a_captain_cannot_drop_players_from_the_other_side(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    match_id, blues_id = _clash_match(engine)
+    cog = _cog(engine, discord_client)
+    reds_captain = User.model_validate(user_json(id="10", username="reds"))
+
+    await Tournaments.clash_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-clash:{match_id}:{blues_id}", user=reds_captain, guild_id=GUILD_ID),
+        [str(match_id), str(blues_id)],
+    )
+
+    assert _response(discord_client)["data"]["content"] == "You can only drop players from your own entry."
+    with Session(engine) as session:
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [Snowflake(20)]
+
+
+def test_only_the_match_lineup_votes_not_every_entry_player(engine: Engine) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        (match,) = _round(session, tournament, 0)
+        vote = service.open_vote(session, match, "Map?", ["Dust", "Mirage"], ORGANISER)
+        for row in session.exec(alive(MatchLineup).where(MatchLineup.user_id == 100)):
+            soft_delete(session, row)
+        session.commit()
+
+        with _refused("Only the players of this match can vote."):
+            service.cast(session, vote, 100, 0)
+        service.cast(session, vote, 101, 0)
+
+
+def test_include_over_shows_finished_tournaments_too(engine: Engine) -> None:
+    with Session(engine) as session:
+        _named(session, "Old", organiser_id=ORGANISER, status=TournamentStatus.FINISHED)
+
+        assert list(service.visible_tournaments(session, GUILD_ID, ORGANISER, None)) == []
+        found = service.visible_tournaments(session, GUILD_ID, ORGANISER, None, include_over=True)
+        assert [tournament.name for tournament in found] == ["Old"]
+
+
+async def test_log_match_choices_offers_decided_matches_of_finished_tournaments(
+    engine: Engine,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        _finish(session, tournament)
+    cog = _cog(engine, discord_client)
+
+    assert await cog.match_choices(_autocomplete(discord_client), "") == []
+    assert len(await cog.log_match_choices(_autocomplete(discord_client), "")) == 1
+
+
+async def test_log_shows_the_match_of_a_finished_tournament(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        _finish(session, tournament)
+        (final,) = _round(session, tournament, 0)
+        pick = _pick(tournament)
+        match_option = InteractionDataOption(name="match", type=3, value=f"tournamentmatch:{final.id}")
+    options = [pick, match_option]
+    cog = _cog(engine, discord_client)
+    organiser = User.model_validate(user_json(id=str(ORGANISER), username="organiser"))
+
+    await Tournaments.log.invoke(
+        cog,
+        make_interaction("tournament", options=options, user=organiser, guild_id=GUILD_ID),
+        options,
+    )
+
+    (embed,) = _response(discord_client)["data"]["embeds"]
+    assert embed["title"].startswith("Log: ")

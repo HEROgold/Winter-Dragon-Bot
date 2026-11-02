@@ -1,0 +1,33 @@
+{% extends "profile/base.html" %}
+
+{% block profile %}
+  <h2 class="profile-heading">Teams</h2>
+  <p>Teams formed: {{ formed }}.</p>
+  {% if not teams %}
+    <p class="profile-empty">You are not in any team yet. Use <code>/team create</code> in Discord to start one.</p>
+  {% else %}
+    <table class="table">
+      <thead><tr><th>Team</th><th>Captain</th><th>Members</th><th>Tournaments</th></tr></thead>
+      <tbody>
+        {% for row in teams %}
+          <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.captain_id or '—' }}</td>
+            <td>{{ row.member_ids | join(", ") }}</td>
+            <td>
+              {% if row.entries %}
+                <ul>
+                  {% for entry in row.entries %}
+                    <li>{{ entry.tournament }} — {{ entry.result }}</li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}

@@ -177,7 +177,7 @@ async def _no_rows(self: object, interaction: AutocompleteInteraction, current: 
 
 
 def _cup(session: Session, name: str = "Cup") -> Tournament:
-    cup = Tournament(guild_id=1, channel_id=20, organiser_id=3, name=name, mode=TeamMode.SOLO, team_size=1)
+    cup = Tournament(guild_id=1, organiser_id=3, name=name, mode=TeamMode.SOLO, team_size=1)
     session.add(cup)
     session.commit()
     session.refresh(cup)

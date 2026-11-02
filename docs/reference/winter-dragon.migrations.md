@@ -88,3 +88,39 @@ Incremental game.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_10_30_2dbbfb633e0d_feat_autochannel_remember_settings_` — `src/winter_dragon/migrations/versions/2026_10_30_2dbbfb633e0d_feat_autochannel_remember_settings_.py`
+feat(autochannel): remember settings owners change in Discord.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_02_3e73a57c5c77_feat_tournaments_without_a_channel_` — `src/winter_dragon/migrations/versions/2026_11_02_3e73a57c5c77_feat_tournaments_without_a_channel_.py`
+feat: tournaments without a channel, several per guild, with posts (#428).
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_02_4f7b28620752_353_team_model` — `src/winter_dragon/migrations/versions/2026_11_02_4f7b28620752_353_team_model.py`
+353 team model.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_02_8b4ae287fd47_feat_tournament_entries_lineups_and_` — `src/winter_dragon/migrations/versions/2026_11_02_8b4ae287fd47_feat_tournament_entries_lineups_and_.py`
+feat: tournament entries, lineups and match audit (#429, #430, #431, #432).
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None,
+  RESUME_SEQUENCE
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision, moving entries back into tournament teams; the Teams made by the upgrade stay.
+
+## `winter_dragon.migrations.versions.2026_11_02_c17c3335ce1d_feat_team_split_and_voice_split_with_` — `src/winter_dragon/migrations/versions/2026_11_02_c17c3335ce1d_feat_team_split_and_voice_split_with_.py`
+feat: /team split and /voice split with Keep and Move (#426, #427).
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.

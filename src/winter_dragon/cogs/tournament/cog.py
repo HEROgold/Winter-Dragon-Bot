@@ -9,18 +9,29 @@ from wd_bot.commands import Describe, Length, Lookup, Range
 from wd_discord.permissions import Permissions
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive_by_id
+lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive_by_id
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
 lazy from wd_discord import (
     GuildCommandInteraction,
     GuildComponentInteraction,
     User,
+    is_network_error,
 )
+lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
 lazy from wd_errors import Refused
 
 from winter_dragon.config import CogConfig
+lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, truncate
+lazy from wd_discord.permissions import Permissions
+lazy from wd_discord.snowflake import Snowflake
+lazy from wd_errors import Refused, unwrap
+
+lazy from winter_dragon.cogs.team.models import Team, TeamKind
+lazy from winter_dragon.cogs.team.service import teams_of
+lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 lazy from .bracket import MAX_QUESTION_LENGTH, parse_options, round_count
@@ -36,35 +47,59 @@ lazy from .cards import (
     vote_buttons,
     vote_embed,
 )
-lazy from .models import TOURNAMENT_TABLES, DraftKind, MatchVote, TeamMode, Tournament, TournamentMatch, TournamentStatus
+lazy from .models import (
+    ACTIVE,
+    TOURNAMENT_TABLES,
+    DraftKind,
+    LineupChange,
+    MatchEvent,
+    MatchPhase,
+    MatchVote,
+    TeamMode,
+    Tournament,
+    TournamentEntry,
+    TournamentMatch,
+    TournamentStatus,
+)
 lazy from .service import (
-    active_tournament,
-    add_to_team,
+    LineupRequest,
+    add_player,
+    add_post,
     advance,
     cancel,
     cast,
+    change_lineup,
     choices_of,
-    create_team,
+    clashes,
+    close_vote,
     draft,
     drafts_of,
+    drop_clash,
+    entries_of,
+    entry_in_match,
+    entry_of_captain,
+    lineup,
+    match_log,
     matches_of,
     open_vote,
-    players_of,
-    remove_from_team,
+    posts_of,
+    remove_player,
     report,
     roster,
     sign_up,
+    signups_of,
     start,
-    teams_of,
+    visible_tournaments,
     withdraw,
+)
+lazy from .service import (
+    enter as enter_team,
 )
 
 
 if TYPE_CHECKING:
-    lazy from wd_db.extension.lifecycle import LifecycleModel
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import ActionRow
-    lazy from wd_discord.embed import Embed
 
 
 class TournamentSettings:
@@ -88,31 +123,64 @@ def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) 
         raise Refused(msg)
 
 
-def stored[M: LifecycleModel](session: Session, model: type[M], record_id: int, gone: str) -> M:
-    """Return the alive ``model`` stored as ``record_id``; refuse with ``gone`` when there's none."""
-    record = alive_by_id(session, model, record_id)
-    if record is None:
-        raise Refused(gone)
-    return record
+async def require_server_member(interaction: GuildCommandInteraction, player: User) -> None:
+    """Refuse unless ``player`` is a member of the invoker's server, the only members who can play in its tournaments."""
+    member = await interaction.guild.member(player.id).fetch()
+    if is_network_error(member):
+        msg = "They aren't in this server, so they can't play in its tournament."
+        raise Refused(msg)
 
 
-def team_names(session: Session, tournament_id: int) -> dict[int, str]:
+def entry_names(session: Session, tournament: Tournament) -> dict[int, str]:
     """Return each team's name by its ID."""
-    return {team.id: team.name for team in teams_of(session, tournament_id) if team.id is not None}
+    return {team.id: team.name for team in entries_of(session, tournament) if team.id is not None}
 
 
-def play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, team_id: str) -> None:
-    """Do what the organiser's button ``action`` under the match card says, for the team ``team_id`` if it names one."""
+def captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry:
+    """Return the entry whose team ``captain_id`` captains in ``tournament``; refuse when there's none."""
+    entry = entry_of_captain(session, tournament, captain_id)
+    if entry is None:
+        msg = "You don't captain an entry in this tournament."
+        raise Refused(msg)
+    return entry
+
+
+def play(  # noqa: PLR0913 - each step needs its session, tournament, match, target and actor to record who did it
+    session: Session,
+    tournament: Tournament,
+    match: TournamentMatch,
+    action: MatchAction,
+    entry_id: str,
+    actor_id: Snowflake,
+) -> None:
+    """Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one."""
     if action is MatchAction.NEXT:
-        advance(session, match)
+        advance(session, match, actor_id)
         return
-    team = int(team_id)
-    other = match.team_b_id if team == match.team_a_id else match.team_a_id
+    team = int(entry_id)
+    other = match.entry_b_id if team == match.entry_a_id else match.entry_a_id
     winner = team if action is MatchAction.WIN else other
     if winner is None:
         msg = "That team doesn't play this match."
         raise Refused(msg)
-    report(session, tournament, match, winner, forfeit=action is MatchAction.FORFEIT)
+    report(session, tournament, match, winner, actor_id, forfeit=action is MatchAction.FORFEIT)
+
+
+def _person(user_id: int) -> str:
+    """Return a mention of ``user_id``, or ``deleted player`` once their data is deleted."""
+    return "deleted player" if user_id == DELETED_MEMBER else f"<@{user_id}>"
+
+
+def _logged_line(row: MatchEvent | LineupChange) -> str:
+    """Return one line of a match's log: when it happened, who did it, and what."""
+    if isinstance(row, MatchEvent):
+        when = f"<t:{int(row.at.timestamp())}:t>"
+        detail = f": {row.detail}" if row.detail else ""
+        return f"{when} {_person(row.actor_id)} {row.kind}{detail}"
+    when = f"<t:{int(row.changed_at.timestamp())}:t>"
+    verb = "put {player} in" if row.playing else "took {player} out"
+    reason = f" ({row.reason})" if row.reason else ""
+    return f"{when} {_person(row.changed_by)} {verb.format(player=_person(row.user_id))}{reason}"
 
 
 class Tournaments(
@@ -121,9 +189,10 @@ class Tournaments(
     description="Run a team tournament: sign-up, a bracket, drafts and votes",
     contexts=[InteractionContextType.GUILD],
 ):
-    """Runs one tournament per guild: players sign up, teams form, and a single-elimination bracket plays out.
+    """Runs tournaments per guild: players sign up, teams form, and a single-elimination bracket plays out.
 
-    Every action refuses with :class:`~wd_errors.Refused` from inside its session, which drops the session's changes.
+    A guild can run several at once. Every action refuses with :class:`~wd_errors.Refused` from inside its session,
+    which drops the session's changes.
     """
 
     rng = Random()  # noqa: S311 - drawing teams and seeds isn't cryptography
@@ -134,22 +203,76 @@ class Tournaments(
         """Create the tournament tables if missing."""
         self.create_tables(*TOURNAMENT_TABLES)
 
-    def _active(self, interaction: AnyGuildInteraction, session: Session) -> Tournament:
-        """Return the guild's running or signing-up tournament; refuse when there's none."""
-        tournament = active_tournament(session, interaction.guild_id)
-        if tournament is None:
-            msg = f"There's no tournament here; {self.mention(self.create)} starts one."
+    def _tournament(
+        self,
+        interaction: AnyGuildInteraction,
+        session: Session,
+        picked: Tournament,
+        *,
+        over_ok: bool = False,
+    ) -> Tournament:
+        """Reload the picked tournament in ``session``; refuse when it's gone, over, or belongs to another server."""
+        tournament = stored(session, Tournament, picked.id or 0, "That tournament is gone.")
+        if tournament.guild_id != int(interaction.guild_id):
+            msg = "That tournament belongs to another server."
+            raise Refused(msg)
+        if not over_ok and tournament.status not in ACTIVE:
+            msg = "That tournament is over."
             raise Refused(msg)
         return tournament
+
+    async def tournament_choices(
+        self,
+        interaction: AutocompleteInteraction,
+        current: str,
+    ) -> list[ApplicationCommandOptionChoice]:
+        """Suggest the tournaments the invoker can see that aren't over, whose name contains what was typed."""
+        return self._tournament_options(interaction, current, include_over=False)
+
+    async def log_tournament_choices(
+        self,
+        interaction: AutocompleteInteraction,
+        current: str,
+    ) -> list[ApplicationCommandOptionChoice]:
+        """Suggest every tournament the invoker can see, finished ones too, whose name contains what was typed."""
+        return self._tournament_options(interaction, current, include_over=True)
+
+    def _tournament_options(
+        self,
+        interaction: AutocompleteInteraction,
+        current: str,
+        *,
+        include_over: bool,
+    ) -> list[ApplicationCommandOptionChoice]:
+        """Return the tournaments the invoker can see whose name contains ``current``, as choices."""
+        guild = interaction.guild
+        user = interaction.user
+        if guild is None or user is None:
+            return []
+        channel = interaction.channel
+        with Session(self.bind) as session:
+            tournaments = list(
+                visible_tournaments(
+                    session,
+                    guild.id,
+                    user.id,
+                    None if channel is None else channel.id,
+                    include_over=include_over,
+                ),
+            )
+        return [
+            Lookup.choice(tournament, tournament.name)
+            for tournament in tournaments
+            if current.casefold() in tournament.name.casefold()
+        ]
 
     # --- Sign-up ---------------------------------------------------------------------------------------------------
 
     @staticmethod
-    def _participants(session: Session, tournament: Tournament) -> tuple[dict[str, list[int]], list[int]]:
+    def _participants(session: Session, tournament: Tournament) -> tuple[dict[str, list[Snowflake]], list[Snowflake]]:
         """Return each team's players by team name, and the players signed up alone."""
-        tournament_id = tournament.id or 0
-        rosters = {team.name: roster(session, team.id) for team in teams_of(session, tournament_id) if team.id is not None}
-        solo = [player.user_id for player in players_of(session, tournament_id)]
+        rosters = {entry.name: roster(session, entry) for entry in entries_of(session, tournament) if entry.id is not None}
+        solo = [Snowflake(signup.user_id) for signup in signups_of(session, tournament)]
         return rosters, solo
 
     def _signup_card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
@@ -164,14 +287,47 @@ class Tournaments(
             tournament,
             rosters,
             solo,
-            team_create=self.mention(self.team_create),
-            team_add=self.mention(self.team_add),
+            enter=self.mention(self.enter),
+            entry_add=self.mention(self.entry_add),
         )
         return embed, buttons
 
+    def _card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
+        """Return what a post shows: the sign-up card while signing up, else the bracket."""
+        if tournament.status is TournamentStatus.SIGNUP:
+            return self._signup_card(session, tournament)
+        embed = bracket_embed(tournament, matches_of(session, tournament), entry_names(session, tournament))
+        return embed, []
+
+    async def _refresh_posts(self, tournament_id: int, *, skip_message_id: int | None = None) -> None:
+        """Edit every post of the tournament to show it as it is now, except ``skip_message_id``, which the caller updated."""
+        with Session(self.bind) as session:
+            tournament = stored(session, Tournament, tournament_id, "This tournament is gone.")
+            embed, rows = self._card(session, tournament)
+            posts = [(post.channel_id, post.message_id) for post in posts_of(session, tournament)]
+        await self._edit_posts(posts, embed, rows, skip_message_id=skip_message_id)
+
+    async def _edit_posts(
+        self,
+        posts: list[tuple[int, int]],
+        embed: Embed,
+        rows: list[ActionRow],
+        *,
+        skip_message_id: int | None = None,
+    ) -> None:
+        """Edit each ``(channel_id, message_id)`` post to show ``embed`` and ``rows``, skipping ``skip_message_id``."""
+        for channel_id, message_id in posts:
+            if message_id == skip_message_id:
+                continue
+            edited = (
+                await self.bot.client.channels.partial(channel_id).message(message_id).edit(embeds=[embed], components=rows)
+            )
+            if is_network_error(edited):
+                self.logger.debug(t"Could not edit tournament post {message_id} in channel {channel_id}: {edited}")
+
     @Cog.command(
         name="create",
-        description="Open sign-up for a tournament in this channel",
+        description="Open sign-up for a tournament, shown in this channel",
         requires=Permissions.MANAGE_GUILD,
     )
     async def create(
@@ -191,41 +347,85 @@ class Tournaments(
     ) -> None:
         """Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
 
-        The creator organises it.
+        The creator organises it. The sign-up card is posted in this channel.
         """
+        await interaction.defer(ephemeral=True)
         with Session(self.bind) as session:
-            if active_tournament(session, interaction.guild_id) is not None:
-                msg = f"This server has a tournament going; {self.mention(self.cancel_tournament)} ends it."
-                raise Refused(msg)
             tournament = Tournament(
                 guild_id=int(interaction.guild_id),
-                channel_id=int(interaction.channel.id),
                 organiser_id=int(interaction.user.id),
                 name=name,
                 mode=TeamMode.CAPTAINS if captains else TeamMode.SOLO,
                 team_size=team_size,
             )
             session.add(tournament)
+            session.flush()
+            embed, buttons = self._card(session, tournament)
+            sent = unwrap(
+                await self.bot.client.channels.partial(interaction.channel.id).send(embeds=[embed], components=buttons),
+                "I couldn't post the tournament here.",
+            )
+            add_post(session, tournament, interaction.channel.id, sent.id)
             session.commit()
-            session.refresh(tournament)
-            embed, buttons = self._signup_card(session, tournament)
-        await interaction.respond(embeds=[embed], components=buttons)
+            tournament_name = tournament.name
+        await interaction.followup(
+            embeds=[CreatedEmbed(description=f"**{tournament_name}** is open for sign-up.")],
+            ephemeral=True,
+        )
 
-    @Cog.command(name="join", description="Sign up for this server's tournament")
-    async def join(self, interaction: GuildCommandInteraction) -> None:
-        """Sign the invoker up for the guild's solo tournament."""
+    @Cog.command(
+        name="post",
+        description="Show a tournament in this channel, and keep the post up to date",
+        requires=Permissions.MANAGE_MESSAGES,
+    )
+    async def post_tournament(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament to show here")],
+    ) -> None:
+        """Post ``tournament`` in this channel; every change to the tournament edits the post."""
+        await interaction.defer(ephemeral=True)
         with Session(self.bind) as session:
-            sign_up(session, self._active(interaction, session), interaction.user.id)
+            found = self._tournament(interaction, session, tournament)
+            embed, buttons = self._card(session, found)
+            sent = unwrap(
+                await self.bot.client.channels.partial(interaction.channel.id).send(embeds=[embed], components=buttons),
+                "I couldn't post the tournament here.",
+            )
+            add_post(session, found, interaction.channel.id, sent.id)
             session.commit()
-        await interaction.respond(embeds=[CreatedEmbed(description="You're signed up!")], ephemeral=True)
+            tournament_name = found.name
+        await interaction.followup(embeds=[CreatedEmbed(description=f"Posted **{tournament_name}** here.")], ephemeral=True)
 
-    @Cog.command(name="leave", description="Withdraw from this server's tournament before it starts")
-    async def leave(self, interaction: GuildCommandInteraction) -> None:
+    @Cog.command(name="join", description="Sign up for a tournament")
+    async def join(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+    ) -> None:
+        """Sign the invoker up for the tournament."""
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament)
+            sign_up(session, found, interaction.user.id)
+            session.commit()
+            tournament_id = found.id or 0
+        await interaction.respond(embeds=[CreatedEmbed(description="You're signed up!")], ephemeral=True)
+        await self._refresh_posts(tournament_id)
+
+    @Cog.command(name="leave", description="Withdraw from a tournament before it starts")
+    async def leave(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+    ) -> None:
         """Take the invoker out of the tournament; a captain leaving disbands their team."""
         with Session(self.bind) as session:
-            withdraw(session, self._active(interaction, session), interaction.user.id)
+            found = self._tournament(interaction, session, tournament)
+            withdraw(session, found, interaction.user.id)
             session.commit()
+            tournament_id = found.id or 0
         await interaction.respond(embeds=[DeletedEmbed(description="You've left the tournament.")], ephemeral=True)
+        await self._refresh_posts(tournament_id)
 
     @Cog.component("tourney-join")
     async def join_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
@@ -257,100 +457,216 @@ class Tournaments(
             session.commit()
             embed, buttons = self._signup_card(session, tournament)
         await interaction.update(embeds=[embed], components=buttons)
+        await self._refresh_posts(int(tournament_id), skip_message_id=int(interaction.message.id))
 
-    @Cog.command(name="team-create", description="Register a team for this server's tournament, as its captain")
-    async def team_create(
+    async def team_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
+        """Suggest the lasting teams the invoker captains whose name contains what was typed."""
+        user = interaction.user
+        if user is None:
+            return []
+        with Session(self.bind) as session:
+            teams = [team for team in teams_of(session, user.id) if team.kind is TeamKind.LASTING]
+        return [
+            Lookup.choice(team, team.name)
+            for team in teams
+            if team.captain_id == int(user.id) and current.casefold() in team.name.casefold()
+        ]
+
+    @Cog.command(name="enter", description="Enter one of your teams into a tournament, as its captain")
+    async def enter(
         self,
         interaction: GuildCommandInteraction,
-        name: Annotated[
-            str,
-            Describe("The name of the team"),
-            Length(min_length=1, max_length=TournamentSettings.max_name_length),
-        ],
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        team: Annotated[Team, Lookup(team_choices), Describe("Your team to enter")],
     ) -> None:
-        """Register the team ``name`` captained by the invoker."""
+        """Enter the invoker's team into the tournament, with the invoker as its first player."""
         with Session(self.bind) as session:
-            create_team(session, self._active(interaction, session), interaction.user.id, name)
+            found = self._tournament(interaction, session, tournament)
+            enter_team(session, found, stored(session, Team, team.id or 0, "That team is gone."), interaction.user.id)
             session.commit()
-        message = f"Team **{name}** is registered; add players with {self.mention(self.team_add)}."
+            tournament_id = found.id or 0
+        message = f"Your team **{team.name}** is entered; add players with {self.mention(self.entry_add)}."
         await interaction.respond(embeds=[CreatedEmbed(description=message)], ephemeral=True)
+        await self._refresh_posts(tournament_id)
 
-    @Cog.command(name="team-add", description="Add a player to the team you captain")
-    async def team_add(
+    @Cog.command(name="entry-add", description="Add a server member to the entry you captain")
+    async def entry_add(
         self,
         interaction: GuildCommandInteraction,
-        player: Annotated[User, Describe("The player to add to the team")],
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        player: Annotated[User, Describe("The player to add to your entry")],
     ) -> None:
-        """Add ``player`` to the invoker's team."""
+        """Add ``player``, a member of this server and of your team, to the entry you captain."""
+        await require_server_member(interaction, player)
         with Session(self.bind) as session:
-            add_to_team(session, self._active(interaction, session), interaction.user.id, player.id)
+            found = self._tournament(interaction, session, tournament)
+            add_player(session, found, captained_entry(session, found, interaction.user.id), interaction.user.id, player.id)
             session.commit()
-        await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your team.")], ephemeral=True)
+            tournament_id = found.id or 0
+        await interaction.respond(embeds=[ChangedEmbed(description=f"Added {player.mention} to your entry.")], ephemeral=True)
+        await self._refresh_posts(tournament_id)
 
-    @Cog.command(name="team-remove", description="Remove a player from the team you captain")
-    async def team_remove(
+    @Cog.command(name="entry-remove", description="Remove a player from the entry you captain")
+    async def entry_remove(
         self,
         interaction: GuildCommandInteraction,
-        player: Annotated[User, Describe("The player to remove from the team")],
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        player: Annotated[User, Describe("The player to remove from your entry")],
     ) -> None:
-        """Remove ``player`` from the invoker's team."""
+        """Remove ``player`` from the entry you captain."""
         with Session(self.bind) as session:
-            remove_from_team(session, self._active(interaction, session), interaction.user.id, player.id)
+            found = self._tournament(interaction, session, tournament)
+            remove_player(session, found, captained_entry(session, found, interaction.user.id), interaction.user.id, player.id)
             session.commit()
-        message = f"Removed {player.mention} from your team."
+            tournament_id = found.id or 0
+        message = f"Removed {player.mention} from your entry."
         await interaction.respond(embeds=[ChangedEmbed(description=message)], ephemeral=True)
+        await self._refresh_posts(tournament_id)
+
+    @Cog.command(name="lineup-in", description="Put a server member in your entry's lineup, from its next match not yet live")
+    async def lineup_in(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        player: Annotated[User, Describe("The member to put in your lineup")],
+        reason: Annotated[
+            str | None,
+            Describe("Why, e.g. stand-in or illness"),
+            Length(min_length=1, max_length=100),
+        ] = None,
+    ) -> None:
+        """Put ``player``, a server member, in the lineup of the entry you captain; a stand-in needn't be in your team."""
+        await require_server_member(interaction, player)
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament)
+            change_lineup(
+                session,
+                found,
+                captained_entry(session, found, interaction.user.id),
+                LineupRequest(
+                    captain_id=interaction.user.id,
+                    user_id=player.id,
+                    playing=True,
+                    reason=reason,
+                ),
+            )
+            session.commit()
+            tournament_id = found.id or 0
+        await interaction.respond(embeds=[ChangedEmbed(description=f"Put {player.mention} in your lineup.")], ephemeral=True)
+        await self._refresh_posts(tournament_id)
+
+    @Cog.command(name="lineup-out", description="Take a player out of your entry's lineup, from its next match not yet live")
+    async def lineup_out(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        player: Annotated[User, Describe("The player to take out of your lineup")],
+        reason: Annotated[
+            str | None,
+            Describe("Why, e.g. stand-in or illness"),
+            Length(min_length=1, max_length=100),
+        ] = None,
+    ) -> None:
+        """Take ``player`` out of the lineup of the entry you captain, for its next match not yet live."""
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament)
+            change_lineup(
+                session,
+                found,
+                captained_entry(session, found, interaction.user.id),
+                LineupRequest(
+                    captain_id=interaction.user.id,
+                    user_id=player.id,
+                    playing=False,
+                    reason=reason,
+                ),
+            )
+            session.commit()
+            tournament_id = found.id or 0
+        await interaction.respond(
+            embeds=[ChangedEmbed(description=f"Took {player.mention} out of your lineup.")],
+            ephemeral=True,
+        )
+        await self._refresh_posts(tournament_id)
 
     # --- Running it ------------------------------------------------------------------------------------------------
 
     @Cog.command(name="start", description="Close sign-up, form the teams and draw the bracket")
-    async def start_tournament(self, interaction: GuildCommandInteraction) -> None:
+    async def start_tournament(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+    ) -> None:
         """Start the tournament and show its bracket; organisers only."""
         with Session(self.bind) as session:
-            tournament = self._active(interaction, session)
-            require_organiser(interaction, tournament)
-            start(session, tournament, self.rng)
+            found = self._tournament(interaction, session, tournament)
+            require_organiser(interaction, found)
+            start(session, found, self.rng)
             session.commit()
-            embed = bracket_embed(tournament, matches_of(session, tournament.id or 0), team_names(session, tournament.id or 0))
+            tournament_id = found.id or 0
+            embed = bracket_embed(found, matches_of(session, found), entry_names(session, found))
+            tournament_name = found.name
         await interaction.respond(
-            f"**{tournament.name}** has started! {self.mention(self.match_card)} shows a match.",
+            f"**{tournament_name}** has started! {self.mention(self.match_card)} shows a match.",
             embeds=[embed],
         )
+        await self._refresh_posts(tournament_id)
 
-    @Cog.command(name="bracket", description="Show the tournament's bracket")
-    async def bracket(self, interaction: GuildCommandInteraction) -> None:
+    @Cog.command(name="bracket", description="Show a tournament's bracket")
+    async def bracket(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+    ) -> None:
         """Show the bracket, or the sign-up card before the tournament starts."""
         with Session(self.bind) as session:
-            tournament = self._active(interaction, session)
-            if tournament.status is TournamentStatus.SIGNUP:
-                embed, _ = self._signup_card(session, tournament)
-            else:
-                embed = bracket_embed(
-                    tournament,
-                    matches_of(session, tournament.id or 0),
-                    team_names(session, tournament.id or 0),
-                )
+            found = self._tournament(interaction, session, tournament, over_ok=True)
+            embed, _ = self._card(session, found)
         await interaction.respond(embeds=[embed])
 
-    @Cog.command(name="cancel", description="Call off this server's tournament")
-    async def cancel_tournament(self, interaction: GuildCommandInteraction) -> None:
+    @Cog.command(name="cancel", description="Call off a tournament")
+    async def cancel_tournament(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+    ) -> None:
         """Cancel the tournament; organisers only."""
         with Session(self.bind) as session:
-            tournament = self._active(interaction, session)
-            require_organiser(interaction, tournament)
-            cancel(session, tournament)
+            found = self._tournament(interaction, session, tournament)
+            require_organiser(interaction, found)
+            posts = [(post.channel_id, post.message_id) for post in posts_of(session, found)]
+            found.status = TournamentStatus.CANCELLED
+            embed, rows = self._card(session, found)
+            cancel(session, found)
             session.commit()
-            name = tournament.name
+            name = found.name
         await interaction.respond(embeds=[DeletedEmbed(description=f"**{name}** is called off.")])
+        await self._edit_posts(posts, embed, rows)
 
     # --- Matches ---------------------------------------------------------------------------------------------------
 
-    def _match(self, interaction: AnyGuildInteraction, session: Session, match_id: int) -> tuple[Tournament, TournamentMatch]:
-        """Return the guild's running tournament and its match ``match_id``; refuse when there's no such match."""
-        tournament = self._active(interaction, session)
+    def _match(
+        self,
+        interaction: AnyGuildInteraction,
+        session: Session,
+        match_id: int,
+        *,
+        over_ok: bool = False,
+    ) -> tuple[Tournament, TournamentMatch]:
+        """Return the match ``match_id`` and its tournament; refuse when there's no such match or the tournament is unusable.
+
+        A tournament that is over is refused too, unless ``over_ok``.
+        """
         match = alive_by_id(session, TournamentMatch, match_id)
-        if match is None or match.tournament_id != tournament.id:
-            msg = f"This tournament has no match #{match_id}; {self.mention(self.bracket)} lists them."
+        if match is None:
+            msg = f"There's no match #{match_id}; {self.mention(self.bracket)} lists them."
             raise Refused(msg)
+        tournament = self._tournament(
+            interaction,
+            session,
+            stored(session, Tournament, match.tournament_id, "This match's tournament is gone."),
+            over_ok=over_ok,
+        )
         return tournament, match
 
     @staticmethod
@@ -365,25 +681,62 @@ class Tournaments(
 
     def _match_card(self, session: Session, tournament: Tournament, match: TournamentMatch) -> tuple[Embed, list[ActionRow]]:
         """Return the match's card and its controls, as they are now."""
-        tournament_id = tournament.id or 0
-        names = team_names(session, tournament_id)
-        rosters = {team: roster(session, team) for team in (match.team_a_id, match.team_b_id) if team is not None}
-        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match.id or 0))
-        return embed, match_buttons(self.match_control, match, names)
+        names = entry_names(session, tournament)
+        entries = {entry.id: entry for entry in entries_of(session, tournament) if entry.id is not None}
+        # A match has no lineups until it's ready; until then its entries' current players stand in.
+        rosters = {
+            team: roster(session, entries[team]) if match.phase is MatchPhase.WAITING else lineup(session, match, entries[team])
+            for team in (match.entry_a_id, match.entry_b_id)
+            if team is not None and team in entries
+        }
+        clash = clashes(session, match) if match.phase is MatchPhase.READY else []
+        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match))
+        return embed, match_buttons(self.match_control, match, names, self.clash_button, clash)
 
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
-        """Suggest the tournament's undecided matches whose line contains what was typed."""
+        """Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed."""
+        return self._match_options(interaction, current, include_over=False, include_decided=False)
+
+    async def log_match_choices(
+        self,
+        interaction: AutocompleteInteraction,
+        current: str,
+    ) -> list[ApplicationCommandOptionChoice]:
+        """Suggest every match, decided or not, of the tournaments the invoker can see, finished ones too."""
+        return self._match_options(interaction, current, include_over=True, include_decided=True)
+
+    def _match_options(
+        self,
+        interaction: AutocompleteInteraction,
+        current: str,
+        *,
+        include_over: bool,
+        include_decided: bool,
+    ) -> list[ApplicationCommandOptionChoice]:
+        """Return the matches of the visible tournaments whose label contains ``current``, as choices."""
         guild = interaction.guild
+        user = interaction.user
+        choices: list[ApplicationCommandOptionChoice] = []
+        if guild is None or user is None:
+            return choices
+        channel = interaction.channel
         with Session(self.bind) as session:
-            tournament = None if guild is None else active_tournament(session, guild.id)
-            if tournament is None:
-                return []
-            names = team_names(session, tournament.id or 0)
-            matches = [
-                match for match in matches_of(session, tournament.id or 0) if not match.phase.decided and match.id is not None
-            ]
-        lines = ((match, match_line(match, names).replace("`", "")) for match in matches)
-        return [Lookup.choice(match, line) for match, line in lines if current.casefold() in line.casefold()]
+            visible = visible_tournaments(
+                session,
+                guild.id,
+                user.id,
+                None if channel is None else channel.id,
+                include_over=include_over,
+            )
+            for tournament in visible:
+                names = entry_names(session, tournament)
+                for match in matches_of(session, tournament):
+                    if (match.phase.decided and not include_decided) or match.id is None:
+                        continue
+                    label = f"{tournament.name}: {match_line(match, names).replace('`', '')}"
+                    if current.casefold() in label.casefold():
+                        choices.append(Lookup.choice(match, label))
+        return choices
 
     @Cog.command(name="match", description="Show a match's card, with the organiser's controls")
     async def match_card(
@@ -396,26 +749,69 @@ class Tournaments(
             embed, buttons = self._match_card(session, *self._match(interaction, session, match.id or 0))
         await interaction.respond(embeds=[embed], components=buttons)
 
+    @Cog.command(name="log", description="Show what happened in a match: its phases, drafts, votes, lineups and result")
+    async def log(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(log_tournament_choices), Describe("The tournament")],
+        match: Annotated[TournamentMatch, Lookup(log_match_choices), Describe("The match to show the log of")],
+    ) -> None:
+        """Post the log of ``match`` to the invoker only; its organiser and the captains of its two entries can see it."""
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament, over_ok=True)
+            _, found_match = self._match(interaction, session, match.id or 0, over_ok=True)
+            if found_match.tournament_id != found.id:
+                msg = "That match isn't in this tournament."
+                raise Refused(msg)
+            if not is_organiser(interaction, found) and entry_in_match(session, found_match, interaction.user.id) is None:
+                msg = "Only the organiser or a captain of this match can see its log."
+                raise Refused(msg)
+            title = f"Log: {match_line(found_match, entry_names(session, found)).replace('`', '')}"
+            lines = [_logged_line(row) for row in match_log(session, found_match)]
+        description = truncate("\n".join(lines) or "Nothing has been logged yet.", MAX_EMBED_DESCRIPTION_LENGTH)
+        await interaction.respond(embeds=[Embed(title=title, description=description)], ephemeral=True)
+
     @Cog.component("tourney-match")
     async def match_control(
         self,
         interaction: GuildComponentInteraction,
         match_id: str,
         action: str,
-        team_id: str = "",
+        entry_id: str = "",
     ) -> None:
         """Move a match to its next phase, report its winner, or record a forfeit; organisers only."""
         with Session(self.bind) as session:
             tournament, match = self._running_match(session, int(match_id))
             require_organiser(interaction, tournament)
-            play(session, tournament, match, MatchAction(action), team_id)
+            play(session, tournament, match, MatchAction(action), entry_id, interaction.user.id)
             session.commit()
+            tournament_id = tournament.id or 0
             embed, buttons = self._match_card(session, tournament, match)
             finished = tournament.status is TournamentStatus.FINISHED
-            final = bracket_embed(tournament, matches_of(session, tournament.id or 0), team_names(session, tournament.id or 0))
+            final = bracket_embed(tournament, matches_of(session, tournament), entry_names(session, tournament))
         await interaction.update(embeds=[embed], components=buttons)
+        await self._refresh_posts(tournament_id, skip_message_id=int(interaction.message.id))
         if finished:
             await interaction.followup(f"🏆 **{tournament.name}** is over!", embeds=[final])
+
+    @Cog.component("tourney-clash")
+    async def clash_button(self, interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None:
+        """Drop the clashing members from one side of a ready match; its organiser or a captain of either side only."""
+        with Session(self.bind) as session:
+            tournament, match = self._running_match(session, int(match_id))
+            entry = stored(session, TournamentEntry, int(entry_id), "That entry is gone.")
+            if not is_organiser(interaction, tournament):
+                own = entry_in_match(session, match, interaction.user.id)
+                if own is None:
+                    msg = "Only the organiser or a captain of this match can resolve a clash."
+                    raise Refused(msg)
+                if own.id != entry.id:
+                    msg = "You can only drop players from your own entry."
+                    raise Refused(msg)
+            drop_clash(session, match, entry, interaction.user.id)
+            session.commit()
+            embed, buttons = self._match_card(session, tournament, match)
+        await interaction.update(embeds=[embed], components=buttons)
 
     async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
         with Session(self.bind) as session:
@@ -460,7 +856,7 @@ class Tournaments(
         with Session(self.bind) as session:
             tournament, found = self._match(interaction, session, match.id or 0)
             require_organiser(interaction, tournament)
-            opened = open_vote(session, found, question, parse_options(answers))
+            opened = open_vote(session, found, question, parse_options(answers), interaction.user.id)
             session.commit()
             session.refresh(opened)
             embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
@@ -473,7 +869,7 @@ class Tournaments(
             vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
             cast(session, vote, interaction.user.id, int(choice))
             session.commit()
-            embed = vote_embed(vote, choices_of(session, int(vote_id)))
+            embed = vote_embed(vote, choices_of(session, vote))
             buttons = vote_buttons(self.vote_button, self.close_vote_button, vote)
         await interaction.update(embeds=[embed], components=buttons)
 
@@ -484,8 +880,7 @@ class Tournaments(
             vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
             match = stored(session, TournamentMatch, vote.match_id, "This vote is gone.")
             require_organiser(interaction, stored(session, Tournament, match.tournament_id, "This vote is gone."))
-            vote.open = False
-            session.add(vote)
+            close_vote(session, vote, interaction.user.id)
             session.commit()
-            embed = vote_embed(vote, choices_of(session, int(vote_id)))
+            embed = vote_embed(vote, choices_of(session, vote))
         await interaction.update(embeds=[embed], components=[])

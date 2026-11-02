@@ -13,7 +13,7 @@ lazy from wd_discord.gateway.events import ModalSubmitInteraction as ModalSubmit
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.guild import GuildMember
 lazy from wd_discord.resources.user import User
-lazy from wd_discord.testing import RecordingClient, user_json
+lazy from wd_discord.testing import RecordingClient, message_json, user_json
 
 
 if TYPE_CHECKING:
@@ -132,7 +132,7 @@ def make_interaction(discord_client: RecordingClient) -> InteractionFactory:
 
 
 class ComponentInteractionFactory(Protocol):
-    """Builds a button-click interaction, as the ``make_component_interaction`` fixture returns."""
+    """Builds a button-click or select-menu interaction, as the ``make_component_interaction`` fixture returns."""
 
     def __call__(
         self,
@@ -141,6 +141,7 @@ class ComponentInteractionFactory(Protocol):
         user: User | None = ...,
         guild_id: int | None = None,
         permissions: Permissions | None = None,
+        values: Sequence[str] | None = None,
     ) -> ComponentInteraction:
         """Build the interaction."""
         ...
@@ -148,9 +149,10 @@ class ComponentInteractionFactory(Protocol):
 
 @pytest.fixture
 def make_component_interaction(discord_client: RecordingClient) -> ComponentInteractionFactory:
-    """Return a builder for a click on the button ``custom_id``, by ``user``, bound to ``discord_client``.
+    """Return a builder for a click on the component ``custom_id``, by ``user``, bound to ``discord_client``.
 
     ``guild_id`` makes it a click on a message in that guild, by a member holding ``permissions``.
+    ``values`` makes it a pick in a user select menu, with those chosen IDs, instead of a button click.
     """
 
     def build(
@@ -159,7 +161,13 @@ def make_component_interaction(discord_client: RecordingClient) -> ComponentInte
         user: User | None = ASKER,
         guild_id: int | None = None,
         permissions: Permissions | None = None,
+        values: Sequence[str] | None = None,
     ) -> ComponentInteraction:
+        data = (
+            MessageComponentData(custom_id=custom_id, component_type=ComponentType.USER_SELECT, values=list(values))
+            if values is not None
+            else MessageComponentData(custom_id=custom_id, component_type=ComponentType.BUTTON)
+        )
         model = ComponentInteractionModel(
             id="1",
             application_id="2",
@@ -167,8 +175,8 @@ def make_component_interaction(discord_client: RecordingClient) -> ComponentInte
             token="tok",  # noqa: S106
             version=1,
             **_sender(user, guild_id, None, permissions),
-            data=MessageComponentData(custom_id=custom_id, component_type=ComponentType.BUTTON),
-            message={"id": "11"},
+            data=data,
+            message=message_json(id="11"),
         )
         return ComponentInteraction(discord_client, model)
 

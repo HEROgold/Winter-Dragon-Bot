@@ -286,7 +286,9 @@ def _group(*subcommands: Command) -> CommandGroup:
 
 
 def test_group_options_nest_subcommand_options() -> None:
-    group = _group(cog_command(_count_handler, CommandDefinition("add", "Add")), cog_command(_noop, CommandDefinition("list", "List")))
+    group = _group(
+        cog_command(_count_handler, CommandDefinition("add", "Add")), cog_command(_noop, CommandDefinition("list", "List"))
+    )
     options = list(group.options())
     assert [(o.name, o.type) for o in options] == [
         ("add", ApplicationCommandOptionType.SUB_COMMAND),

@@ -96,12 +96,15 @@ def _removed_by_deletion[M: LifecycleModel](
     member_id: Snowflake,
     stored: Collection[type[LifecycleModel]],
 ) -> SelectOfScalar[M]:
-    """Select the ``model`` rows a deletion request by ``member_id`` removes: those they own, and those a hook removes."""
+    """Select the ``model`` rows a deletion request by ``member_id`` removes: owned, hook-removed and anonymised rows."""
     owned = owned_by(model, member=member_id)
     hooked = [rows.ids for rows in MemberHiddenHook.removed_by_all(member_id, stored) if rows.model is model]
-    if not hooked:
+    anonymised = [
+        alive(model).where(getattr(model, name) == int(member_id)).with_only_columns(col(model.id)) for name in model.anonymised
+    ]
+    if not hooked and not anonymised:
         return owned
-    ids = (owned.with_only_columns(col(model.id)), *hooked)
+    ids = (owned.with_only_columns(col(model.id)), *hooked, *anonymised)
     return alive(model).where(or_(*(col(model.id).in_(selected) for selected in ids)))
 
 
