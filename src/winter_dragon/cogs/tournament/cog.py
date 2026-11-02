@@ -8,7 +8,7 @@ from sqlmodel import Session
 from wd_bot.commands import Describe, Length, Lookup, Range
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive_by_id
+lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive_by_id
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
 lazy from wd_discord import (
@@ -17,7 +17,9 @@ lazy from wd_discord import (
     User,
     is_network_error,
 )
+lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
+lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, truncate
 lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused, unwrap
 
@@ -44,6 +46,8 @@ lazy from .models import (
     ACTIVE,
     TOURNAMENT_TABLES,
     DraftKind,
+    LineupChange,
+    MatchEvent,
     MatchPhase,
     MatchVote,
     TeamMode,
@@ -53,6 +57,7 @@ lazy from .models import (
     TournamentStatus,
 )
 lazy from .service import (
+    LineupRequest,
     add_player,
     add_post,
     advance,
@@ -61,6 +66,7 @@ lazy from .service import (
     change_lineup,
     choices_of,
     clashes,
+    close_vote,
     draft,
     drafts_of,
     drop_clash,
@@ -68,6 +74,7 @@ lazy from .service import (
     entry_in_match,
     entry_of_captain,
     lineup,
+    match_log,
     matches_of,
     open_vote,
     posts_of,
@@ -88,7 +95,6 @@ lazy from .service import (
 if TYPE_CHECKING:
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import ActionRow
-    lazy from wd_discord.embed import Embed
     lazy from wd_discord.snowflake import Snowflake
 
 
@@ -135,10 +141,17 @@ def captained_entry(session: Session, tournament: Tournament, captain_id: Snowfl
     return entry
 
 
-def play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, entry_id: str) -> None:
+def play(  # noqa: PLR0913 - each step needs its session, tournament, match, target and actor to record who did it
+    session: Session,
+    tournament: Tournament,
+    match: TournamentMatch,
+    action: MatchAction,
+    entry_id: str,
+    actor_id: Snowflake,
+) -> None:
     """Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one."""
     if action is MatchAction.NEXT:
-        advance(session, match)
+        advance(session, match, actor_id)
         return
     team = int(entry_id)
     other = match.entry_b_id if team == match.entry_a_id else match.entry_a_id
@@ -146,7 +159,24 @@ def play(session: Session, tournament: Tournament, match: TournamentMatch, actio
     if winner is None:
         msg = "That team doesn't play this match."
         raise Refused(msg)
-    report(session, tournament, match, winner, forfeit=action is MatchAction.FORFEIT)
+    report(session, tournament, match, winner, actor_id, forfeit=action is MatchAction.FORFEIT)
+
+
+def _person(user_id: int) -> str:
+    """Return a mention of ``user_id``, or ``deleted player`` once their data is deleted."""
+    return "deleted player" if user_id == DELETED_MEMBER else f"<@{user_id}>"
+
+
+def _logged_line(row: MatchEvent | LineupChange) -> str:
+    """Return one line of a match's log: when it happened, who did it, and what."""
+    if isinstance(row, MatchEvent):
+        when = f"<t:{int(row.at.timestamp())}:t>"
+        detail = f": {row.detail}" if row.detail else ""
+        return f"{when} {_person(row.actor_id)} {row.kind}{detail}"
+    when = f"<t:{int(row.changed_at.timestamp())}:t>"
+    verb = "put {player} in" if row.playing else "took {player} out"
+    reason = f" ({row.reason})" if row.reason else ""
+    return f"{when} {_person(row.changed_by)} {verb.format(player=_person(row.user_id))}{reason}"
 
 
 class Tournaments(
@@ -455,6 +485,11 @@ class Tournaments(
         interaction: GuildCommandInteraction,
         tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
         player: Annotated[User, Describe("The member to put in your lineup")],
+        reason: Annotated[
+            str | None,
+            Describe("Why, e.g. stand-in or illness"),
+            Length(min_length=1, max_length=100),
+        ] = None,
     ) -> None:
         """Put ``player``, a server member, in the lineup of the entry you captain; a stand-in needn't be in your team."""
         await require_server_member(interaction, player)
@@ -464,9 +499,12 @@ class Tournaments(
                 session,
                 found,
                 captained_entry(session, found, interaction.user.id),
-                interaction.user.id,
-                player.id,
-                playing=True,
+                LineupRequest(
+                    captain_id=interaction.user.id,
+                    user_id=player.id,
+                    playing=True,
+                    reason=reason,
+                ),
             )
             session.commit()
             tournament_id = found.id or 0
@@ -479,6 +517,11 @@ class Tournaments(
         interaction: GuildCommandInteraction,
         tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
         player: Annotated[User, Describe("The player to take out of your lineup")],
+        reason: Annotated[
+            str | None,
+            Describe("Why, e.g. stand-in or illness"),
+            Length(min_length=1, max_length=100),
+        ] = None,
     ) -> None:
         """Take ``player`` out of the lineup of the entry you captain, for its next match not yet live."""
         with Session(self.bind) as session:
@@ -487,9 +530,12 @@ class Tournaments(
                 session,
                 found,
                 captained_entry(session, found, interaction.user.id),
-                interaction.user.id,
-                player.id,
-                playing=False,
+                LineupRequest(
+                    captain_id=interaction.user.id,
+                    user_id=player.id,
+                    playing=False,
+                    reason=reason,
+                ),
             )
             session.commit()
             tournament_id = found.id or 0
@@ -628,6 +674,28 @@ class Tournaments(
             embed, buttons = self._match_card(session, *self._match(interaction, session, match.id or 0))
         await interaction.respond(embeds=[embed], components=buttons)
 
+    @Cog.command(name="log", description="Show what happened in a match: its phases, drafts, votes, lineups and result")
+    async def log(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        match: Annotated[TournamentMatch, Lookup(match_choices), Describe("The match to show the log of")],
+    ) -> None:
+        """Post the log of ``match`` to the invoker only; its organiser and the captains of its two entries can see it."""
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament)
+            _, found_match = self._match(interaction, session, match.id or 0)
+            if found_match.tournament_id != found.id:
+                msg = "That match isn't in this tournament."
+                raise Refused(msg)
+            if not is_organiser(interaction, found) and entry_in_match(session, found_match, interaction.user.id) is None:
+                msg = "Only the organiser or a captain of this match can see its log."
+                raise Refused(msg)
+            title = f"Log: {match_line(found_match, entry_names(session, found.id or 0)).replace('`', '')}"
+            lines = [_logged_line(row) for row in match_log(session, found_match)]
+        description = truncate("\n".join(lines) or "Nothing has been logged yet.", MAX_EMBED_DESCRIPTION_LENGTH)
+        await interaction.respond(embeds=[Embed(title=title, description=description)], ephemeral=True)
+
     @Cog.component("tourney-match")
     async def match_control(
         self,
@@ -640,7 +708,7 @@ class Tournaments(
         with Session(self.bind) as session:
             tournament, match = self._running_match(session, int(match_id))
             require_organiser(interaction, tournament)
-            play(session, tournament, match, MatchAction(action), entry_id)
+            play(session, tournament, match, MatchAction(action), entry_id, interaction.user.id)
             session.commit()
             tournament_id = tournament.id or 0
             embed, buttons = self._match_card(session, tournament, match)
@@ -659,7 +727,12 @@ class Tournaments(
             if not is_organiser(interaction, tournament) and entry_in_match(session, match, interaction.user.id) is None:
                 msg = "Only the organiser or a captain of this match can resolve a clash."
                 raise Refused(msg)
-            drop_clash(session, match, stored(session, TournamentEntry, int(entry_id), "That entry is gone."))
+            drop_clash(
+                session,
+                match,
+                stored(session, TournamentEntry, int(entry_id), "That entry is gone."),
+                interaction.user.id,
+            )
             session.commit()
             embed, buttons = self._match_card(session, tournament, match)
         await interaction.update(embeds=[embed], components=buttons)
@@ -707,7 +780,7 @@ class Tournaments(
         with Session(self.bind) as session:
             tournament, found = self._match(interaction, session, match.id or 0)
             require_organiser(interaction, tournament)
-            opened = open_vote(session, found, question, parse_options(answers))
+            opened = open_vote(session, found, question, parse_options(answers), interaction.user.id)
             session.commit()
             session.refresh(opened)
             embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
@@ -731,8 +804,7 @@ class Tournaments(
             vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
             match = stored(session, TournamentMatch, vote.match_id, "This vote is gone.")
             require_organiser(interaction, stored(session, Tournament, match.tournament_id, "This vote is gone."))
-            vote.open = False
-            session.add(vote)
+            close_vote(session, vote, interaction.user.id)
             session.commit()
             embed = vote_embed(vote, choices_of(session, int(vote_id)))
         await interaction.update(embeds=[embed], components=[])
