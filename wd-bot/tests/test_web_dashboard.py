@@ -29,6 +29,7 @@ from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member
 
 from winter_dragon.cogs.fuel import CarFuels
 from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
+from winter_dragon.cogs.team.models import TeamKind
 
 
 from winter_dragon.cogs.incremental import game
@@ -196,7 +197,13 @@ def test_the_oauth_access_token_is_a_token_hidden_from_repr() -> None:
     from wd_discord.oauth import AccessToken
 
     granted = AccessToken.model_validate(
-        {"access_token": "secret-access", "token_type": "Bearer", "expires_in": 604800, "scope": "identify", "refresh_token": "secret-refresh"},
+        {
+            "access_token": "secret-access",
+            "token_type": "Bearer",
+            "expires_in": 604800,
+            "scope": "identify",
+            "refresh_token": "secret-refresh",
+        },
     )
 
     assert isinstance(granted.access_token, Token)
@@ -226,7 +233,9 @@ def test_the_data_page_lists_only_what_the_bot_stores_about_you(member: TestClie
 def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestClient, bind: Engine) -> None:
     with Session(bind) as session:
         for name, status in (("open", TournamentStatus.SIGNUP), ("started", TournamentStatus.RUNNING)):
-            tournament = Tournament(guild_id=1, channel_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2)
+            tournament = Tournament(
+                guild_id=1, channel_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2
+            )
             session.add(tournament)
             session.commit()
             tournaments.create_team(session, tournament, Snowflake(MEMBER_ID), f"{name} team")
@@ -598,7 +607,9 @@ def _hangman_game(
     members: tuple[int, ...] = (MEMBER_ID,),
 ) -> None:
     finished = None if status is HangmanStatus.ACTIVE else NOW - timedelta(days=days_ago)
-    game = HangmanGame(guild_id=1, channel_id=2, word=word, letters=letters, wrong_words=wrong_words, status=status, finished_at=finished)
+    game = HangmanGame(
+        guild_id=1, channel_id=2, word=word, letters=letters, wrong_words=wrong_words, status=status, finished_at=finished
+    )
     with Session(bind) as session:
         session.add(game)
         session.commit()
@@ -632,6 +643,43 @@ def test_the_hangman_page_without_games_is_an_empty_state(member: TestClient) ->
 
     assert response.status_code == 200
     assert "not taken part" in response.text
+
+
+def _team(bind: Engine, name: str, kind: TeamKind, member_ids: tuple[int, ...], *, captain_id: int | None) -> None:
+    from winter_dragon.cogs.team.models import Team, TeamMember, TeamOrigin
+
+    team = Team(name=name, kind=kind, origin=TeamOrigin.CREATED, captain_id=captain_id)
+    with Session(bind) as session:
+        session.add(team)
+        session.commit()
+        session.refresh(team)
+        assert team.id is not None
+        session.add_all(TeamMember(team_id=team.id, user_id=member, joined_at=NOW) for member in member_ids)
+        session.commit()
+
+
+def test_the_profile_lists_the_teams_page(member: TestClient) -> None:
+    assert 'href="/profile/teams"' in member.get("/profile").text
+
+
+def test_the_teams_page_lists_lasting_teams_and_counts_them(member: TestClient, bind: Engine) -> None:
+    _team(bind, "Ironclad", TeamKind.LASTING, (MEMBER_ID, OTHER_ID), captain_id=MEMBER_ID)
+    _team(bind, "Sprint", TeamKind.TEMPORARY, (MEMBER_ID,), captain_id=MEMBER_ID)
+    _team(bind, "Harbour", TeamKind.LASTING, (OTHER_ID,), captain_id=OTHER_ID)
+
+    page = member.get("/profile/teams").text
+
+    assert "Teams formed: 1." in page
+    assert "Ironclad" in page
+    assert "Sprint" not in page
+    assert "Harbour" not in page
+
+
+def test_the_teams_page_without_teams_is_an_empty_state(member: TestClient) -> None:
+    response = member.get("/profile/teams")
+
+    assert response.status_code == 200
+    assert "not in any team" in response.text
 
 
 def test_a_profile_page_that_does_not_exist_is_not_found(member: TestClient) -> None:

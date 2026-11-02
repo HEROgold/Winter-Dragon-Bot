@@ -174,6 +174,16 @@ The Profile's Steam page: the sales Steam DMs told the member about, newest firs
 
 - `@profile_page steam(context: ProfileContext) -> dict[str, object]` — Return the Steam page's context: the member's sale notifications, newest first.
 
+## `winter_dragon.web.profile_pages.teams` — `src/winter_dragon/web/profile_pages/teams.py`
+The Profile's teams page: the member's lasting teams, with their captain and members, and how many they formed.
+
+- `@profile_page teams(context: ProfileContext) -> dict[str, object]` — Return the teams page's context: the member's lasting teams by name, each with its captain and member IDs.
+
+### `@dataclass class TeamRow`
+One lasting team: its name, its captain's user ID (None if unset), and its members' user IDs, longest-standing first.
+
+- fields: name: str, captain_id: int | None, member_ids: tuple[int, ...]
+
 ## `winter_dragon.web.profile_pages.urban` — `src/winter_dragon/web/profile_pages/urban.py`
 The Profile's Urban Dictionary page: the member's lookups, newest first, with a total.
 
