@@ -96,6 +96,8 @@ Who is in which voice channel, per guild, as far as the gateway told.
 - `reset(guild_id: Snowflake, states: Iterable[VoiceState]) -> None` — Forget what was known about ``guild_id``, and learn ``states`` instead.
 - `move(guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None` — Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were.
 - `occupied(guild_id: Snowflake, channel_id: Snowflake) -> bool` — Whether anyone is in the voice channel ``channel_id``.
+- `channel_of(guild_id: Snowflake, user_id: Snowflake) -> Snowflake | None` — Return the voice channel ``user_id`` is in, if the gateway told.
+- `members_in(guild_id: Snowflake, channel_id: Snowflake) -> list[Snowflake]` — Return who is in the voice channel ``channel_id``.
 
 ### `@dataclass class EmptiedChannels[M: DiscordKeyedModel]`
 Voice channels a cog created and records as ``model`` rows (``id`` is the channel's), deleted once empty.

@@ -101,6 +101,31 @@ async def test_sweep_deletes_only_the_unoccupied_channels_of_its_guild(engine: E
     assert _ids(engine) == [61, 62]
 
 
+def test_channel_of_and_members_in_follow_the_moves() -> None:
+    voice = VoiceOccupancy()
+    guild_id = Snowflake(GUILD_ID)
+    voice.move(guild_id, Snowflake(MEMBER_ID), Snowflake(60))
+    voice.move(guild_id, Snowflake(OTHER_MEMBER_ID), Snowflake(61))
+
+    assert voice.channel_of(guild_id, Snowflake(MEMBER_ID)) == Snowflake(60)
+    assert voice.channel_of(guild_id, Snowflake(99)) is None
+    assert voice.members_in(guild_id, Snowflake(60)) == [Snowflake(MEMBER_ID)]
+    assert voice.members_in(guild_id, Snowflake(62)) == []
+
+    voice.move(guild_id, Snowflake(MEMBER_ID), None)
+
+    assert voice.channel_of(guild_id, Snowflake(MEMBER_ID)) is None
+    assert voice.members_in(guild_id, Snowflake(60)) == []
+
+
+def test_channel_of_is_per_guild() -> None:
+    voice = VoiceOccupancy()
+    voice.move(Snowflake(GUILD_ID), Snowflake(MEMBER_ID), Snowflake(60))
+
+    assert voice.channel_of(Snowflake(OTHER_GUILD_ID), Snowflake(MEMBER_ID)) is None
+    assert voice.members_in(Snowflake(OTHER_GUILD_ID), Snowflake(60)) == []
+
+
 async def test_on_forgotten_is_called_once_with_the_row(engine: Engine) -> None:
     seed(engine, AutoChannel(id=60, guild_id=GUILD_ID, owner_id=MEMBER_ID))
     forgotten: list[tuple[bool, int]] = []
