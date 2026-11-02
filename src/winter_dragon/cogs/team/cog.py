@@ -18,6 +18,7 @@ lazy from wd_discord import (  # noqa: TC002 - wd_bot reads the handler's intera
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle, Label, Modal, TextInput, UserSelect
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -95,7 +96,7 @@ class Teams(
         if user is None:
             return []
         with Session(self.bind) as session:
-            teams = list(teams_of(session, int(user.id)))
+            teams = list(teams_of(session, user.id))
         return [Lookup.choice(team, team.name) for team in teams if current.casefold() in team.name.casefold()]
 
     @Cog.command(name="create", description="Create a team, with you as its captain")
@@ -110,7 +111,7 @@ class Teams(
     ) -> None:
         """Create the lasting team ``name`` with the invoker as its captain."""
         with Session(self.bind) as session:
-            team = create_team(session, name, int(interaction.user.id))
+            team = create_team(session, name, interaction.user.id)
             session.commit()
             label = team.name
         await interaction.respond(
@@ -141,7 +142,7 @@ class Teams(
     async def split_select(self, interaction: GuildComponentInteraction, teams: str) -> None:
         """Draw temporary teams from the picked members and post them publicly, each with a Keep button."""
         count = int(teams)
-        member_ids = [int(value) for value in interaction.values]
+        member_ids = [Snowflake.coerce(value) for value in interaction.values]
         if len(member_ids) < count:
             msg = f"Pick at least {count} members for {count} teams."
             raise Refused(msg)
@@ -157,7 +158,7 @@ class Teams(
         """Open the modal asking for a name, when the presser may keep the temporary team."""
         with Session(self.bind) as session:
             current = stored(session, Team, int(team_id), "That team is gone.")
-            require_keepable(session, current, int(interaction.user.id))
+            require_keepable(session, current, interaction.user.id)
         modal = Modal(
             custom_id=self.keep_modal.custom_id(team_id),
             title="Keep this team",
@@ -178,7 +179,7 @@ class Teams(
             return
         with Session(self.bind) as session:
             current = stored(session, Team, int(team_id), "That team is gone.")
-            keep(session, current, int(user.id), interaction.values.get(KEEP_NAME_INPUT, ""))
+            keep(session, current, user.id, interaction.values.get(KEEP_NAME_INPUT, ""))
             session.commit()
             label = current.name
         await interaction.respond(
@@ -203,8 +204,8 @@ class Teams(
         with Session(self.bind) as session:
             current = stored(session, Team, team.id or 0, "That team is gone.")
             _unended(current)
-            member_ids = [member.user_id for member in members_of(session, current.id or 0)]
-            captain = [] if current.captain_id is None else [current.captain_id]
+            member_ids = [Snowflake(member.user_id) for member in members_of(session, current)]
+            captain = [] if current.captain_id is None else [Snowflake(current.captain_id)]
             embed = Embed(
                 title=current.name,
                 fields=[
@@ -224,7 +225,7 @@ class Teams(
         with Session(self.bind) as session:
             current = stored(session, Team, team.id or 0, "That team is gone.")
             _unended(current)
-            leave(session, current, int(interaction.user.id))
+            leave(session, current, interaction.user.id)
             session.commit()
             label = current.name
         await interaction.respond(embeds=[DeletedEmbed(description=f"You left **{label}**.")], ephemeral=True)
@@ -237,8 +238,8 @@ class Teams(
         member: Annotated[User, Describe("The member to invite")],
     ) -> None:
         """Post a public invite with a Join button that only ``member`` can press."""
-        captain_id = int(interaction.user.id)
-        invitee_id = int(member.id)
+        captain_id = interaction.user.id
+        invitee_id = member.id
         with Session(self.bind) as session:
             current = stored(session, Team, team.id or 0, "That team is gone.")
             _unended(current)
@@ -264,13 +265,14 @@ class Teams(
     @Cog.component("team-invite")
     async def accept_invite(self, interaction: GuildComponentInteraction, team_id: str, invitee_id: str) -> None:
         """Join the invitee to the team when the invitee presses Join."""
-        if int(interaction.user.id) != int(invitee_id):
+        invitee = Snowflake.coerce(invitee_id)
+        if interaction.user.id != invitee:
             msg = "This invite isn't for you."
             raise Refused(msg)
         with Session(self.bind) as session:
             current = stored(session, Team, int(team_id), "That team is gone.")
             _unended(current)
-            join(session, current, int(invitee_id))
+            join(session, current, invitee)
             session.commit()
             label = current.name
         await interaction.update(
@@ -289,7 +291,7 @@ class Teams(
         with Session(self.bind) as session:
             current = stored(session, Team, team.id or 0, "That team is gone.")
             _unended(current)
-            kick(session, current, int(interaction.user.id), int(member.id))
+            kick(session, current, interaction.user.id, member.id)
             session.commit()
             label = current.name
         await interaction.respond(
@@ -308,7 +310,7 @@ class Teams(
         with Session(self.bind) as session:
             current = stored(session, Team, team.id or 0, "That team is gone.")
             _unended(current)
-            hand_over(session, current, int(interaction.user.id), int(member.id))
+            hand_over(session, current, interaction.user.id, member.id)
             session.commit()
             label = current.name
         await interaction.respond(
@@ -326,7 +328,7 @@ class Teams(
         with Session(self.bind) as session:
             current = stored(session, Team, team.id or 0, "That team is gone.")
             _unended(current)
-            disband(session, current, int(interaction.user.id))
+            disband(session, current, interaction.user.id)
             session.commit()
             label = current.name
         await interaction.respond(embeds=[DeletedEmbed(description=f"Disbanded **{label}**.")], ephemeral=True)

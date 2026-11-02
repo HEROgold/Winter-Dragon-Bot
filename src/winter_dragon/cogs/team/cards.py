@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Callable, Sequence
 
     lazy from wd_bot.components import ComponentHandler
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from .models import Team
 
@@ -21,7 +22,7 @@ BUTTONS_PER_ROW = 5
 
 
 def split_post(
-    teams: Sequence[tuple[Team, Sequence[int]]],
+    teams: Sequence[tuple[Team, Sequence[Snowflake]]],
     keep: ComponentHandler,
     move: Callable[[Team], str] | None = None,
 ) -> tuple[Embed, list[ActionRow]]:

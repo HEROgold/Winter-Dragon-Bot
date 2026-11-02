@@ -21,6 +21,7 @@ lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
 lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, truncate
 lazy from wd_discord.permissions import Permissions
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.cogs.team.models import Team, TeamKind
@@ -95,7 +96,6 @@ lazy from .service import (
 if TYPE_CHECKING:
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import ActionRow
-    lazy from wd_discord.snowflake import Snowflake
 
 
 class TournamentSettings:
@@ -127,9 +127,9 @@ async def require_server_member(interaction: GuildCommandInteraction, player: Us
         raise Refused(msg)
 
 
-def entry_names(session: Session, tournament_id: int) -> dict[int, str]:
+def entry_names(session: Session, tournament: Tournament) -> dict[int, str]:
     """Return each team's name by its ID."""
-    return {team.id: team.name for team in entries_of(session, tournament_id) if team.id is not None}
+    return {team.id: team.name for team in entries_of(session, tournament) if team.id is not None}
 
 
 def captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry:
@@ -265,11 +265,10 @@ class Tournaments(
     # --- Sign-up ---------------------------------------------------------------------------------------------------
 
     @staticmethod
-    def _participants(session: Session, tournament: Tournament) -> tuple[dict[str, list[int]], list[int]]:
+    def _participants(session: Session, tournament: Tournament) -> tuple[dict[str, list[Snowflake]], list[Snowflake]]:
         """Return each team's players by team name, and the players signed up alone."""
-        tournament_id = tournament.id or 0
-        rosters = {team.name: roster(session, team.id) for team in entries_of(session, tournament_id) if team.id is not None}
-        solo = [signup.user_id for signup in signups_of(session, tournament_id)]
+        rosters = {entry.name: roster(session, entry) for entry in entries_of(session, tournament) if entry.id is not None}
+        solo = [Snowflake(signup.user_id) for signup in signups_of(session, tournament)]
         return rosters, solo
 
     def _signup_card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
@@ -293,7 +292,7 @@ class Tournaments(
         """Return what a post shows: the sign-up card while signing up, else the bracket."""
         if tournament.status is TournamentStatus.SIGNUP:
             return self._signup_card(session, tournament)
-        embed = bracket_embed(tournament, matches_of(session, tournament.id or 0), entry_names(session, tournament.id or 0))
+        embed = bracket_embed(tournament, matches_of(session, tournament), entry_names(session, tournament))
         return embed, []
 
     async def _refresh_posts(self, tournament_id: int, *, skip_message_id: int | None = None) -> None:
@@ -301,7 +300,7 @@ class Tournaments(
         with Session(self.bind) as session:
             tournament = stored(session, Tournament, tournament_id, "This tournament is gone.")
             embed, rows = self._card(session, tournament)
-            posts = [(post.channel_id, post.message_id) for post in posts_of(session, tournament_id)]
+            posts = [(post.channel_id, post.message_id) for post in posts_of(session, tournament)]
         await self._edit_posts(posts, embed, rows, skip_message_id=skip_message_id)
 
     async def _edit_posts(
@@ -462,7 +461,7 @@ class Tournaments(
         if user is None:
             return []
         with Session(self.bind) as session:
-            teams = [team for team in teams_of(session, int(user.id)) if team.kind is TeamKind.LASTING]
+            teams = [team for team in teams_of(session, user.id) if team.kind is TeamKind.LASTING]
         return [
             Lookup.choice(team, team.name)
             for team in teams
@@ -601,7 +600,7 @@ class Tournaments(
             start(session, found, self.rng)
             session.commit()
             tournament_id = found.id or 0
-            embed = bracket_embed(found, matches_of(session, tournament_id), entry_names(session, tournament_id))
+            embed = bracket_embed(found, matches_of(session, found), entry_names(session, found))
             tournament_name = found.name
         await interaction.respond(
             f"**{tournament_name}** has started! {self.mention(self.match_card)} shows a match.",
@@ -631,7 +630,7 @@ class Tournaments(
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
             require_organiser(interaction, found)
-            posts = [(post.channel_id, post.message_id) for post in posts_of(session, found.id or 0)]
+            posts = [(post.channel_id, post.message_id) for post in posts_of(session, found)]
             found.status = TournamentStatus.CANCELLED
             embed, rows = self._card(session, found)
             cancel(session, found)
@@ -678,17 +677,16 @@ class Tournaments(
 
     def _match_card(self, session: Session, tournament: Tournament, match: TournamentMatch) -> tuple[Embed, list[ActionRow]]:
         """Return the match's card and its controls, as they are now."""
-        tournament_id = tournament.id or 0
-        match_id = match.id or 0
-        names = entry_names(session, tournament_id)
+        names = entry_names(session, tournament)
+        entries = {entry.id: entry for entry in entries_of(session, tournament) if entry.id is not None}
         # A match has no lineups until it's ready; until then its entries' current players stand in.
         rosters = {
-            team: roster(session, team) if match.phase is MatchPhase.WAITING else lineup(session, match_id, team)
+            team: roster(session, entries[team]) if match.phase is MatchPhase.WAITING else lineup(session, match, entries[team])
             for team in (match.entry_a_id, match.entry_b_id)
-            if team is not None
+            if team is not None and team in entries
         }
         clash = clashes(session, match) if match.phase is MatchPhase.READY else []
-        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match_id))
+        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match))
         return embed, match_buttons(self.match_control, match, names, self.clash_button, clash)
 
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
@@ -727,8 +725,8 @@ class Tournaments(
                 include_over=include_over,
             )
             for tournament in visible:
-                names = entry_names(session, tournament.id or 0)
-                for match in matches_of(session, tournament.id or 0):
+                names = entry_names(session, tournament)
+                for match in matches_of(session, tournament):
                     if (match.phase.decided and not include_decided) or match.id is None:
                         continue
                     label = f"{tournament.name}: {match_line(match, names).replace('`', '')}"
@@ -764,7 +762,7 @@ class Tournaments(
             if not is_organiser(interaction, found) and entry_in_match(session, found_match, interaction.user.id) is None:
                 msg = "Only the organiser or a captain of this match can see its log."
                 raise Refused(msg)
-            title = f"Log: {match_line(found_match, entry_names(session, found.id or 0)).replace('`', '')}"
+            title = f"Log: {match_line(found_match, entry_names(session, found)).replace('`', '')}"
             lines = [_logged_line(row) for row in match_log(session, found_match)]
         description = truncate("\n".join(lines) or "Nothing has been logged yet.", MAX_EMBED_DESCRIPTION_LENGTH)
         await interaction.respond(embeds=[Embed(title=title, description=description)], ephemeral=True)
@@ -786,7 +784,7 @@ class Tournaments(
             tournament_id = tournament.id or 0
             embed, buttons = self._match_card(session, tournament, match)
             finished = tournament.status is TournamentStatus.FINISHED
-            final = bracket_embed(tournament, matches_of(session, tournament_id), entry_names(session, tournament_id))
+            final = bracket_embed(tournament, matches_of(session, tournament), entry_names(session, tournament))
         await interaction.update(embeds=[embed], components=buttons)
         await self._refresh_posts(tournament_id, skip_message_id=int(interaction.message.id))
         if finished:
@@ -867,7 +865,7 @@ class Tournaments(
             vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
             cast(session, vote, interaction.user.id, int(choice))
             session.commit()
-            embed = vote_embed(vote, choices_of(session, int(vote_id)))
+            embed = vote_embed(vote, choices_of(session, vote))
             buttons = vote_buttons(self.vote_button, self.close_vote_button, vote)
         await interaction.update(embeds=[embed], components=buttons)
 
@@ -880,5 +878,5 @@ class Tournaments(
             require_organiser(interaction, stored(session, Tournament, match.tournament_id, "This vote is gone."))
             close_vote(session, vote, interaction.user.id)
             session.commit()
-            embed = vote_embed(vote, choices_of(session, int(vote_id)))
+            embed = vote_embed(vote, choices_of(session, vote))
         await interaction.update(embeds=[embed], components=[])

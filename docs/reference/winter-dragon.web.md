@@ -187,7 +187,7 @@ One tournament a team entered, and how it went for the team.
 ### `@dataclass class TeamRow`
 One lasting team: its name, captain ID (None if unset), member IDs longest-standing first, and its tournament entries.
 
-- fields: name: str, captain_id: int | None, member_ids: tuple[int, ...], entries: tuple[EntryRow, ...]
+- fields: name: str, captain_id: Snowflake | None, member_ids: tuple[Snowflake, ...], entries: tuple[EntryRow, ...]
 
 ## `winter_dragon.web.profile_pages.urban` — `src/winter_dragon/web/profile_pages/urban.py`
 The Profile's Urban Dictionary page: the member's lookups, newest first, with a total.

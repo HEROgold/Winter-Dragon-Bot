@@ -130,7 +130,7 @@ class Voice(
         if len(members) < teams:
             msg = f"There aren't enough people in your voice channel for {teams} teams."
             raise Refused(msg)
-        groups = split_into([int(member) for member in members], teams, self.rng)
+        groups = split_into(members, teams, self.rng)
         with Session(self.bind) as session:
             stored_teams = create_temporary_teams(session, groups, TeamOrigin.VOICE_SPLIT)
             session.commit()
@@ -146,10 +146,9 @@ class Voice(
     @Cog.component("team-move")
     async def move_button(self, interaction: GuildComponentInteraction, team_id: str, split_channel_id: str) -> None:
         """Move the presser to their team's voice channel, creating it on the team's first press."""
-        user_id = int(interaction.user.id)
         with Session(self.bind) as session:
             team = stored(session, Team, int(team_id), "That team is gone.")
-            if membership(session, team, user_id) is None:
+            if membership(session, team, interaction.user.id) is None:
                 msg = "Only this team's members can move to its channel."
                 raise Refused(msg)
             if team.ended_at is not None:

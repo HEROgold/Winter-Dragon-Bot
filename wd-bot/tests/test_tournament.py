@@ -25,7 +25,7 @@ from winter_dragon.cogs.team import service as team_service
 from winter_dragon.cogs.team.models import Team, TeamKind, TeamOrigin
 from winter_dragon.cogs.team.split import split_into_teams
 from winter_dragon.cogs.tournament import service
-from winter_dragon.cogs.tournament.bracket import first_round, parse_options, round_name, tally
+from winter_dragon.cogs.tournament.bracket import Pairing, first_round, parse_options, round_name, tally
 from winter_dragon.cogs.tournament.cog import Tournaments
 from winter_dragon.cogs.tournament.models import (
     DraftChoice,
@@ -118,12 +118,12 @@ def _refused(message: str) -> pytest.RaisesExc[Refused]:
 
 
 def _round(session: Session, tournament: Tournament, round_: int) -> list[TournamentMatch]:
-    return [match for match in service.matches_of(session, tournament.id or 0) if match.round == round_]
+    return [match for match in service.matches_of(session, tournament) if match.round == round_]
 
 
 def _finish(session: Session, tournament: Tournament) -> None:
     """Play the tournament's final, live, to its end, with the first team of the final winning."""
-    final = service.matches_of(session, tournament.id or 0)[-1]
+    final = service.matches_of(session, tournament)[-1]
     final.phase = MatchPhase.LIVE
     session.add(final)
     session.commit()
@@ -142,8 +142,8 @@ def test_split_into_teams_spreads_leftover_players() -> None:
 
 
 def test_first_round_gives_byes_to_top_seeds_and_never_pairs_two_byes() -> None:
-    assert first_round([1, 2, 3, 4, 5]) == [(1, None), (2, None), (3, None), (4, 5)]
-    assert first_round([1, 2]) == [(1, 2)]
+    assert first_round([1, 2, 3, 4, 5]) == [Pairing(1, None), Pairing(2, None), Pairing(3, None), Pairing(4, 5)]
+    assert first_round([1, 2]) == [Pairing(1, 2)]
 
 
 def test_round_names_count_back_from_the_final() -> None:
@@ -161,49 +161,51 @@ def test_vote_options_and_tally() -> None:
 def test_solo_sign_up_refuses_twice_and_captains_tournaments(engine: Engine) -> None:
     with Session(engine) as session:
         solo = _tournament(session)
-        service.sign_up(session, solo, 5)
+        service.sign_up(session, solo, Snowflake(5))
         session.commit()
         with _refused("You're signed up already."):
-            service.sign_up(session, solo, 5)
+            service.sign_up(session, solo, Snowflake(5))
         captains = _tournament(session, TeamMode.CAPTAINS)
         with pytest.raises(Refused):
-            service.sign_up(session, captains, 6)
+            service.sign_up(session, captains, Snowflake(6))
 
 
 def test_captains_build_teams_within_the_size(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
         reds = _entered(session, tournament, 10, "Reds")
-        team_service.join(session, session.get_one(Team, reds.team_id), 12)
+        team_service.join(session, session.get_one(Team, reds.team_id), Snowflake(12))
         session.commit()
-        service.add_player(session, tournament, reds, 10, 12)
+        service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
         with _refused("Only a team's captain can change its entry."):
-            service.add_player(session, tournament, reds, 12, 12)
+            service.add_player(session, tournament, reds, Snowflake(12), Snowflake(12))
         with _refused("They're in this entry already."):
-            service.add_player(session, tournament, reds, 10, 12)
+            service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
         with _refused("They aren't a player you can remove from your entry."):
-            service.remove_player(session, tournament, reds, 10, 10)
-        service.remove_player(session, tournament, reds, 10, 12)
+            service.remove_player(session, tournament, reds, Snowflake(10), Snowflake(10))
+        service.remove_player(session, tournament, reds, Snowflake(10), Snowflake(12))
         session.commit()
-        assert service.roster(session, reds.id or 0) == [10]
+        assert service.roster(session, reds) == [Snowflake(10)]
 
 
 def test_enter_refuses_a_temporary_team_a_non_captain_a_second_entry_and_a_duplicate_name(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS)
-        (temporary,) = team_service.create_temporary_teams(session, [[20, 21]], TeamOrigin.SOLO_TOURNAMENT)
+        (temporary,) = team_service.create_temporary_teams(
+            session, [[Snowflake(20), Snowflake(21)]], TeamOrigin.SOLO_TOURNAMENT
+        )
         with _refused("Only the team's captain can enter it."):
-            service.enter(session, tournament, temporary, 20)
-        reds = team_service.create_team(session, "Reds", 10)
+            service.enter(session, tournament, temporary, Snowflake(20))
+        reds = team_service.create_team(session, "Reds", Snowflake(10))
         with _refused("Only the team's captain can enter it."):
-            service.enter(session, tournament, reds, 11)
-        service.enter(session, tournament, reds, 10)
+            service.enter(session, tournament, reds, Snowflake(11))
+        service.enter(session, tournament, reds, Snowflake(10))
         session.commit()
         with _refused("That team has entered already."):
-            service.enter(session, tournament, reds, 10)
-        blues = team_service.create_team(session, "reds", 11)
+            service.enter(session, tournament, reds, Snowflake(10))
+        blues = team_service.create_team(session, "reds", Snowflake(11))
         with _refused("An entry has that name already."):
-            service.enter(session, tournament, blues, 11)
+            service.enter(session, tournament, blues, Snowflake(11))
 
 
 def test_add_player_refuses_someone_outside_the_team_and_a_full_entry(engine: Engine) -> None:
@@ -211,15 +213,15 @@ def test_add_player_refuses_someone_outside_the_team_and_a_full_entry(engine: En
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
         reds = _entered(session, tournament, 10, "Reds")
         team = session.get_one(Team, reds.team_id)
-        team_service.join(session, team, 12)
+        team_service.join(session, team, Snowflake(12))
         session.commit()
         with _refused("They aren't in your team."):
-            service.add_player(session, tournament, reds, 10, 13)
-        service.add_player(session, tournament, reds, 10, 12)
-        team_service.join(session, team, 13)
+            service.add_player(session, tournament, reds, Snowflake(10), Snowflake(13))
+        service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
+        team_service.join(session, team, Snowflake(13))
         session.commit()
         with _refused("Your entry is full: entries have 2 players."):
-            service.add_player(session, tournament, reds, 10, 13)
+            service.add_player(session, tournament, reds, Snowflake(10), Snowflake(13))
 
 
 def test_a_member_can_play_for_two_entries_of_one_tournament(engine: Engine) -> None:
@@ -228,12 +230,12 @@ def test_a_member_can_play_for_two_entries_of_one_tournament(engine: Engine) -> 
         reds = _entered(session, tournament, 10, "Reds")
         blues = _entered(session, tournament, 11, "Blues")
         for entry, captain_id in ((reds, 10), (blues, 11)):
-            team_service.join(session, session.get_one(Team, entry.team_id), 12)
+            team_service.join(session, session.get_one(Team, entry.team_id), Snowflake(12))
             session.commit()
-            service.add_player(session, tournament, entry, captain_id, 12)
+            service.add_player(session, tournament, entry, captain_id, Snowflake(12))
             session.commit()
-        assert service.roster(session, reds.id or 0) == [10, 12]
-        assert service.roster(session, blues.id or 0) == [11, 12]
+        assert service.roster(session, reds) == [Snowflake(10), Snowflake(12)]
+        assert service.roster(session, blues) == [Snowflake(11), Snowflake(12)]
         assert service.entry_of_captain(session, tournament, 11) == blues
 
 
@@ -242,29 +244,29 @@ def test_hiding_a_member_withdraws_only_the_entries_left_without_players(engine:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
         reds = _entered(session, tournament, 10, "Reds")
         blues = _entered(session, tournament, 11, "Blues")
-        team_service.join(session, session.get_one(Team, blues.team_id), 10)
+        team_service.join(session, session.get_one(Team, blues.team_id), Snowflake(10))
         session.commit()
-        service.add_player(session, tournament, blues, 11, 10)
+        service.add_player(session, tournament, blues, Snowflake(11), Snowflake(10))
         session.commit()
 
         service.WithdrawHiddenMember.on_member_hidden(session, Snowflake(10))
         session.commit()
 
-        assert [entry.name for entry in service.entries_of(session, tournament.id or 0)] == ["Blues"]
-        assert service.roster(session, blues.id or 0) == [11]
+        assert [entry.name for entry in service.entries_of(session, tournament)] == ["Blues"]
+        assert service.roster(session, blues) == [Snowflake(11)]
 
 
 def test_a_captain_leaving_withdraws_their_entry(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=3)
         reds = _entered(session, tournament, 10, "Reds")
-        team_service.join(session, session.get_one(Team, reds.team_id), 12)
+        team_service.join(session, session.get_one(Team, reds.team_id), Snowflake(12))
         session.commit()
-        service.add_player(session, tournament, reds, 10, 12)
+        service.add_player(session, tournament, reds, Snowflake(10), Snowflake(12))
         session.commit()
-        service.withdraw(session, tournament, 10)
+        service.withdraw(session, tournament, Snowflake(10))
         session.commit()
-        assert service.entries_of(session, tournament.id or 0) == []
+        assert service.entries_of(session, tournament) == []
         assert session.exec(alive(EntryPlayer)).all() == []
         assert session.get_one(Team, reds.team_id).ended_at is None
 
@@ -286,7 +288,7 @@ def test_start_draws_teams_and_gives_byes_their_wins(engine: Engine) -> None:
         session.commit()
 
         assert tournament.status is TournamentStatus.RUNNING
-        assert len(service.entries_of(session, tournament.id or 0)) == 5
+        assert len(service.entries_of(session, tournament)) == 5
         assert len(session.exec(alive(EntryPlayer)).all()) == 5
         first = _round(session, tournament, 0)
         assert [match.phase for match in first] == [MatchPhase.FINISHED] * 3 + [MatchPhase.READY]
@@ -344,8 +346,8 @@ def test_only_a_playing_captain_drafts_in_the_right_phase(engine: Engine) -> Non
         (match,) = _round(session, tournament, 0)
         entry_a = session.get(TournamentEntry, match.entry_a_id)
         assert entry_a is not None
-        captain = session.get_one(Team, entry_a.team_id).captain_id or 0
-        teammate = next(user for user in service.roster(session, entry_a.id or 0) if user != captain)
+        captain = Snowflake(session.get_one(Team, entry_a.team_id).captain_id or 0)
+        teammate = next(user for user in service.roster(session, entry_a) if user != captain)
 
         with _refused("This match isn't in its ban phase."):
             service.draft(session, match, captain, DraftKind.BAN, "Dust")
@@ -356,7 +358,7 @@ def test_only_a_playing_captain_drafts_in_the_right_phase(engine: Engine) -> Non
         session.flush()
         with _refused("Dust is banned already."):
             service.draft(session, match, captain, DraftKind.BAN, "Dust")
-        assert [draft.value for draft in service.drafts_of(session, match.id or 0)] == ["Dust"]
+        assert [draft.value for draft in service.drafts_of(session, match)] == ["Dust"]
 
 
 def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -> None:
@@ -374,7 +376,7 @@ def test_only_players_vote_and_voting_again_changes_the_answer(engine: Engine) -
         session.flush()
         service.cast(session, vote, 100, 1)
         session.flush()
-        assert service.choices_of(session, vote.id or 0) == [1]
+        assert service.choices_of(session, vote) == [1]
         vote.open = False
         with _refused("This vote is closed."):
             service.cast(session, vote, 101, 0)
@@ -614,13 +616,13 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
     assert embed["description"] == "**Reds** (1/2): <@5>"
 
 
-def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, int]:
+def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, Snowflake]:
     """Start a two-player solo tournament whose final had a ban and a vote; return it, the final and a captain."""
     tournament = _solo(session, players=2)
     service.start(session, tournament, Random(0))
     (final,) = _round(session, tournament, 0)
     final.phase = MatchPhase.BAN
-    (captain,) = service.roster(session, final.entry_a_id or 0)
+    (captain,) = service.roster(session, session.get_one(TournamentEntry, final.entry_a_id or 0))
     service.draft(session, final, captain, DraftKind.BAN, "Dust")
     vote = service.open_vote(session, final, "Map?", ["Mirage", "Nuke"], ORGANISER)
     service.cast(session, vote, captain, 0)
@@ -635,8 +637,10 @@ def test_drafts_votes_and_ballots_belong_to_the_tournaments_guild(engine: Engine
         for model in (DraftChoice, MatchVote, MatchBallot):
             assert len(session.exec(owned_by(model, guild=GUILD_ID)).all()) == 1
             assert session.exec(owned_by(model, guild=GUILD_ID + 1)).all() == []
-        assert [ballot.user_id for ballot in session.exec(owned_by(MatchBallot, member=captain, guild=GUILD_ID))] == [captain]
-        assert [player.user_id for player in session.exec(owned_by(EntryPlayer, member=captain))] == [captain]
+        assert [ballot.user_id for ballot in session.exec(owned_by(MatchBallot, member=captain, guild=GUILD_ID))] == [
+            int(captain)
+        ]
+        assert [player.user_id for player in session.exec(owned_by(EntryPlayer, member=captain))] == [int(captain)]
 
 
 async def test_join_leave_join_signs_up_once(
@@ -654,7 +658,9 @@ async def test_join_leave_join_signs_up_once(
         await command.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     with Session(engine) as session:
-        assert [signup.user_id for signup in service.signups_of(session, tournament_id)] == [ORGANISER]
+        assert [signup.user_id for signup in service.signups_of(session, session.get_one(Tournament, tournament_id))] == [
+            ORGANISER
+        ]
 
 
 async def test_cancel_hides_the_tournament(
@@ -672,9 +678,9 @@ async def test_cancel_hides_the_tournament(
 
     with Session(engine) as session:
         assert list(service.visible_tournaments(session, GUILD_ID, ORGANISER, None)) == []
-        assert service.signups_of(session, tournament_id) == []
-        assert service.entries_of(session, tournament_id) == []
-        assert service.matches_of(session, tournament_id) == []
+        assert service.signups_of(session, session.get_one(Tournament, tournament_id)) == []
+        assert service.entries_of(session, session.get_one(Tournament, tournament_id)) == []
+        assert service.matches_of(session, session.get_one(Tournament, tournament_id)) == []
         for model in (Tournament, DraftChoice, MatchVote, MatchBallot):
             assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
 
@@ -842,15 +848,15 @@ def test_a_solo_start_makes_temporary_teams_with_their_first_drawn_captains(engi
         session.commit()
 
         teams = list(session.exec(alive(Team).where(Team.origin == TeamOrigin.SOLO_TOURNAMENT)))
-        entries = service.entries_of(session, tournament.id or 0)
+        entries = service.entries_of(session, tournament)
         assert len(teams) == len(entries) == 2
         assert all(team.kind is TeamKind.TEMPORARY and team.ended_at is None for team in teams)
         for entry in entries:
             team = session.get_one(Team, entry.team_id)
             assert entry.name == team.name
-            assert team.captain_id == service.roster(session, entry.id or 0)[0]
-        players = [user for entry in entries for user in service.roster(session, entry.id or 0)]
-        assert sorted(players) == [100, 101, 102, 103]
+            assert team.captain_id == int(service.roster(session, entry)[0])
+        players = [user for entry in entries for user in service.roster(session, entry)]
+        assert sorted(int(user) for user in players) == [100, 101, 102, 103]
 
 
 def test_finishing_and_cancelling_end_a_solo_tournaments_temporary_teams(engine: Engine) -> None:
@@ -951,7 +957,7 @@ def _undecided_match(session: Session, tournament: Tournament, entry: Tournament
     """Return the lowest-round match of ``entry`` that isn't decided."""
     return next(
         match
-        for match in service.matches_of(session, tournament.id or 0)
+        for match in service.matches_of(session, tournament)
         if not match.phase.decided and entry.id in (match.entry_a_id, match.entry_b_id)
     )
 
@@ -970,17 +976,21 @@ def test_a_match_copies_its_entries_players_into_its_lineup_once_ready(engine: E
         for match in _round(session, tournament, 0):
             assert match.phase is MatchPhase.READY
             for entry_id in (match.entry_a_id or 0, match.entry_b_id or 0):
-                assert service.lineup(session, match.id or 0, entry_id) == service.roster(session, entry_id)
+                assert service.lineup(session, match, session.get_one(TournamentEntry, entry_id)) == service.roster(
+                    session, session.get_one(TournamentEntry, entry_id)
+                )
         (final,) = _round(session, tournament, 1)
         assert final.phase is MatchPhase.WAITING
-        assert service.lineup(session, final.id or 0, reds.id or 0) == []
+        assert service.lineup(session, final, reds) == []
 
         for match in _round(session, tournament, 0):
             _play(session, tournament, match, match.entry_a_id or 0)
         (final,) = _round(session, tournament, 1)
         assert final.phase is MatchPhase.READY
         for entry_id in (final.entry_a_id or 0, final.entry_b_id or 0):
-            assert service.lineup(session, final.id or 0, entry_id) == service.roster(session, entry_id)
+            assert service.lineup(session, final, session.get_one(TournamentEntry, entry_id)) == service.roster(
+                session, session.get_one(TournamentEntry, entry_id)
+            )
 
 
 def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engine: Engine) -> None:
@@ -1000,8 +1010,10 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         _change(session, tournament, reds, 10, 20, playing=False)
         _change(session, tournament, reds, 10, 21, playing=True)
         session.commit()
-        assert service.roster(session, reds_id) == [10, 21]
-        assert service.lineup(session, match_id, reds_id) == [10, 21]
+        assert service.roster(session, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10), Snowflake(21)]
+        assert service.lineup(
+            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+        ) == [Snowflake(10), Snowflake(21)]
 
         # A live match keeps its lineup; the change applies from the match after.
         match.phase = MatchPhase.LIVE
@@ -1009,19 +1021,23 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         session.commit()
         _change(session, tournament, reds, 10, 21, playing=False)
         session.commit()
-        assert service.roster(session, reds_id) == [10]
-        assert service.lineup(session, match_id, reds_id) == [10, 21]
+        assert service.roster(session, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10)]
+        assert service.lineup(
+            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+        ) == [Snowflake(10), Snowflake(21)]
 
         # A decided match never changes; the final copies the players as they are when it becomes ready.
         _play(session, tournament, match, reds_id)
         _change(session, tournament, reds, 10, 22, playing=True)
         session.commit()
-        assert service.lineup(session, match_id, reds_id) == [10, 21]
+        assert service.lineup(
+            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+        ) == [Snowflake(10), Snowflake(21)]
         final = _undecided_match(session, tournament, reds)
-        assert service.lineup(session, final.id or 0, reds_id) == []
+        assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == []
         other = next(found for found in _round(session, tournament, 0) if found.id != match_id)
         _play(session, tournament, other, other.entry_a_id or 0)
-        assert service.lineup(session, final.id or 0, reds_id) == [10, 22]
+        assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10), Snowflake(22)]
 
 
 def test_a_lineup_change_refuses_a_non_captain_an_over_full_entry_and_taking_out_the_last_player(engine: Engine) -> None:
@@ -1058,13 +1074,13 @@ def test_a_stand_in_on_both_sides_is_a_clash_that_blocks_the_advance_until_dropp
 
         _change(session, tournament, blues, 11, 20, playing=True)
         session.commit()
-        assert service.clashes(session, match) == [20]
+        assert service.clashes(session, match) == [Snowflake(20)]
         with _refused("A player is in both lineups; drop them from one side first."):
             service.advance(session, match, ORGANISER)
 
         service.drop_clash(session, match, blues, ORGANISER)
         session.commit()
-        assert service.lineup(session, match.id or 0, blues.id or 0) == [11]
+        assert service.lineup(session, match, blues) == [Snowflake(11)]
         assert service.clashes(session, match) == []
         service.advance(session, match, ORGANISER)
         assert match.phase is MatchPhase.BAN
@@ -1087,7 +1103,7 @@ def test_a_clash_is_not_dropped_from_a_side_that_would_be_left_empty(engine: Eng
             service.drop_clash(session, match, reds, ORGANISER)
         service.drop_clash(session, match, blues, ORGANISER)
         session.commit()
-        assert service.lineup(session, match.id or 0, blues.id or 0) == [11]
+        assert service.lineup(session, match, blues) == [Snowflake(11)]
 
 
 def test_a_member_deletion_anonymises_their_lineup_rows(engine: Engine) -> None:
@@ -1142,7 +1158,7 @@ async def test_the_clash_button_refuses_a_bystander_and_resolves_for_a_captain(
 
     assert _response(discord_client)["data"]["content"] == "Only the organiser or a captain of this match can resolve a clash."
     with Session(engine) as session:
-        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [20]
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [Snowflake(20)]
 
     await Tournaments.clash_button.invoke(
         cog,
@@ -1187,7 +1203,7 @@ def test_match_events_record_who_did_what_and_when(engine: Engine) -> None:
         tournament = _solo(session, players=4)
         service.start(session, tournament, Random(0))
         first, second = _round(session, tournament, 0)
-        captain = service.roster(session, first.entry_a_id or 0)[0]
+        captain = service.roster(session, session.get_one(TournamentEntry, first.entry_a_id or 0))[0]
         winner_name = session.get_one(TournamentEntry, first.entry_a_id or 0).name
         forfeited_name = session.get_one(TournamentEntry, second.entry_b_id or 0).name
 
@@ -1206,7 +1222,7 @@ def test_match_events_record_who_did_what_and_when(engine: Engine) -> None:
         second_events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == second.id)))
         assert [(event.kind, event.actor_id, event.detail) for event in first_events] == [
             (MatchEventKind.PHASE, ORGANISER, "ban"),
-            (MatchEventKind.DRAFT, captain, "ban: Dust"),
+            (MatchEventKind.DRAFT, int(captain), "ban: Dust"),
             (MatchEventKind.PHASE, ORGANISER, "pick"),
             (MatchEventKind.PHASE, ORGANISER, "live"),
             (MatchEventKind.VOTE_OPENED, ORGANISER, "Map?"),
@@ -1238,7 +1254,7 @@ def test_dropping_a_clash_records_the_entry_and_who_dropped_it(engine: Engine) -
     match_id, blues_id = _clash_match(engine)
     with Session(engine) as session:
         match = session.get_one(TournamentMatch, match_id)
-        service.drop_clash(session, match, session.get_one(TournamentEntry, blues_id), 11)
+        service.drop_clash(session, match, session.get_one(TournamentEntry, blues_id), Snowflake(11))
         session.commit()
 
         events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == match_id)))
@@ -1375,7 +1391,7 @@ def test_cancel_soft_deletes_the_posts_match_events_and_lineup_changes(engine: E
     with Session(engine) as session:
         tournament, _, _ = _played_final(session)
         service.add_post(session, tournament, 20, 200)
-        entry = service.entries_of(session, tournament.id or 0)[0]
+        entry = service.entries_of(session, tournament)[0]
         session.add(LineupChange(entry_id=entry.id or 0, user_id=100, playing=True, changed_by=ORGANISER, changed_at=utc_now()))
         session.commit()
         assert session.exec(owned_by(MatchEvent, guild=GUILD_ID)).first() is not None
@@ -1477,7 +1493,7 @@ async def test_a_captain_cannot_drop_players_from_the_other_side(
 
     assert _response(discord_client)["data"]["content"] == "You can only drop players from your own entry."
     with Session(engine) as session:
-        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [20]
+        assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == [Snowflake(20)]
 
 
 def test_only_the_match_lineup_votes_not_every_entry_player(engine: Engine) -> None:
