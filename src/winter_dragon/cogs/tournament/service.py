@@ -4,6 +4,7 @@ Each action takes an open session and leaves committing to the caller. An action
 :class:`~wd_errors.Refused` saying why, for the player; the caller then drops the session's changes.
 """
 
+from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session, col, select
@@ -17,6 +18,7 @@ lazy from winter_dragon.cogs.team.models import Team, TeamKind, TeamOrigin
 lazy from winter_dragon.cogs.team.service import create_temporary_teams, end_team, membership
 lazy from winter_dragon.cogs.team.split import split_into_teams
 lazy from winter_dragon.member_hidden import MemberHiddenHook, RemovedRows
+lazy from winter_dragon.stored import stored
 
 lazy from .bracket import first_round, next_match, round_count, valid_options
 lazy from .models import (
@@ -24,7 +26,10 @@ lazy from .models import (
     DraftChoice,
     DraftKind,
     EntryPlayer,
+    LineupChange,
     MatchBallot,
+    MatchEvent,
+    MatchEventKind,
     MatchLineup,
     MatchPhase,
     MatchVote,
@@ -40,11 +45,12 @@ lazy from .models import (
 
 if TYPE_CHECKING:
     lazy from collections.abc import Generator, Sequence
+    lazy from datetime import datetime
     lazy from random import Random
 
+    from wd_discord.snowflake import Snowflake
     lazy from sqlmodel.sql.expression import SelectOfScalar
     lazy from wd_db.extension.lifecycle import LifecycleModel
-    lazy from wd_discord.snowflake import Snowflake
 
 
 def visible_tournaments(
@@ -155,6 +161,34 @@ def _id(record: Tournament | Team | TournamentEntry | TournamentMatch | MatchVot
         msg = f"{type(record).__name__} isn't stored yet"
         raise ValueError(msg)
     return record.id
+
+
+def record_event(
+    session: Session,
+    match: TournamentMatch,
+    kind: MatchEventKind,
+    actor_id: Snowflake,
+    detail: str = "",
+) -> None:
+    """Record that ``actor_id`` did ``kind`` in ``match`` now, with a short ``detail``."""
+    session.add(MatchEvent(match_id=_id(match), kind=kind, actor_id=int(actor_id), at=utc_now(), detail=detail))
+
+
+def match_log(session: Session, match: TournamentMatch) -> list[MatchEvent | LineupChange]:
+    """Return what happened in ``match``: its events, and the lineup changes made for it, oldest first."""
+    match_id = _id(match)
+    entry_ids = [entry_id for entry_id in (match.entry_a_id, match.entry_b_id) if entry_id is not None]
+    events = session.exec(alive(MatchEvent).where(MatchEvent.match_id == match_id))
+    changes = session.exec(
+        alive(LineupChange).where(LineupChange.match_id == match_id, col(LineupChange.entry_id).in_(entry_ids)),
+    )
+    logged: list[MatchEvent | LineupChange] = [*events, *changes]
+    return sorted(logged, key=_logged_at)
+
+
+def _logged_at(row: MatchEvent | LineupChange) -> datetime:
+    """Return when a logged row happened."""
+    return row.at if isinstance(row, MatchEvent) else row.changed_at
 
 
 # --- Sign-up ---------------------------------------------------------------------------------------------------------
@@ -421,10 +455,22 @@ def _match_at(session: Session, tournament_id: int, round_: int, slot: int) -> T
     return session.exec(query).one()
 
 
-def _decide(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, phase: MatchPhase) -> None:
-    """Record ``winner_id`` as the match's winner, and move them on to their next match or crown them."""
+def _decide(  # noqa: PLR0913 - a decision needs the session, tournament, match, winner, phase and who reported it
+    session: Session,
+    tournament: Tournament,
+    match: TournamentMatch,
+    winner_id: int,
+    phase: MatchPhase,
+    actor_id: Snowflake | None = None,
+) -> None:
+    """Record ``winner_id`` as the match's winner, and move them on to their next match or crown them.
+
+    ``actor_id`` is who reported the winner; ``None`` for a bye, which nobody reports.
+    """
     match.winner_id = winner_id
     match.phase = phase
+    match.decided_at = utc_now()
+    match.decided_by = None if actor_id is None else int(actor_id)
     session.add(match)
     entries = entries_of(session, _id(tournament))
     rounds = round_count(len(entries))
@@ -446,7 +492,7 @@ def _decide(session: Session, tournament: Tournament, match: TournamentMatch, wi
     session.add(following)
 
 
-def advance(session: Session, match: TournamentMatch) -> None:
+def advance(session: Session, match: TournamentMatch, actor_id: Snowflake) -> None:
     """Move ``match`` on to its next phase: from ready to the bans, the picks, and live."""
     if match.phase is MatchPhase.READY and clashes(session, match):
         msg = "A player is in both lineups; drop them from one side first."
@@ -456,14 +502,18 @@ def advance(session: Session, match: TournamentMatch) -> None:
         msg = "Report the winner to finish this match." if match.phase is MatchPhase.LIVE else "This match can't move on."
         raise Refused(msg)
     match.phase = following
+    if following is MatchPhase.LIVE:
+        match.started_at = utc_now()
     session.add(match)
+    record_event(session, match, MatchEventKind.PHASE, actor_id, following.value)
 
 
-def report(
+def report(  # noqa: PLR0913 - a report needs the session, tournament, match, winner, reporter and whether it is a forfeit
     session: Session,
     tournament: Tournament,
     match: TournamentMatch,
     winner_id: int,
+    actor_id: Snowflake,
     *,
     forfeit: bool = False,
 ) -> None:
@@ -477,7 +527,9 @@ def report(
     if not forfeit and match.phase is not MatchPhase.LIVE:
         msg = "The match isn't live yet; a team can forfeit, though."
         raise Refused(msg)
-    _decide(session, tournament, match, winner_id, MatchPhase.FORFEIT if forfeit else MatchPhase.FINISHED)
+    _decide(session, tournament, match, winner_id, MatchPhase.FORFEIT if forfeit else MatchPhase.FINISHED, actor_id)
+    winner = stored(session, TournamentEntry, winner_id, "That team is gone.")
+    record_event(session, match, MatchEventKind.FORFEIT if forfeit else MatchEventKind.WINNER, actor_id, winner.name)
 
 
 def _end_temporary_teams(session: Session, entries: Sequence[TournamentEntry]) -> None:
@@ -554,32 +606,47 @@ def _next_match(session: Session, tournament: Tournament, entry: TournamentEntry
     return None
 
 
-def change_lineup(  # noqa: PLR0913 - the brief fixes these parameters: the tournament, the entry, its captain, the member and the direction
-    session: Session,
-    tournament: Tournament,
-    entry: TournamentEntry,
-    captain_id: Snowflake,
-    user_id: Snowflake,
-    *,
-    playing: bool,
-) -> None:
-    """Put ``user_id`` in (or take them out of) ``entry``'s lineup for its captain, from its next match not yet live.
+@dataclass(frozen=True)
+class LineupRequest:
+    """A captain's request to put a member in or take them out of their entry's lineup."""
+
+    captain_id: Snowflake
+    user_id: Snowflake
+    playing: bool
+    reason: str | None = None
+
+
+def change_lineup(session: Session, tournament: Tournament, entry: TournamentEntry, change: LineupRequest) -> None:
+    """Put ``change.user_id`` in (or take them out of) ``entry``'s lineup for its captain, from its next match not yet live.
 
     The entry's players change, and so does the lineup of its next match while that match is ready or in its draft.
-    A live or decided match keeps its lineup.
+    A live or decided match keeps its lineup. The change is logged, with the match it applied to if any.
     """
     if tournament.status not in ACTIVE:
         msg = "That tournament is over."
         raise Refused(msg)
     team = alive_by_id(session, Team, entry.team_id)
-    if team is None or team.captain_id != int(captain_id):
+    if team is None or team.captain_id != int(change.captain_id):
         msg = "Only the entry's captain can change its lineup."
         raise Refused(msg)
     entry_id = _id(entry)
-    _change_entry_players(session, tournament, entry_id, user_id, playing=playing)
+    _change_entry_players(session, tournament, entry_id, change.user_id, playing=change.playing)
     match = _next_match(session, tournament, entry)
+    match_id = None
     if match is not None and match.phase in (MatchPhase.READY, MatchPhase.BAN, MatchPhase.PICK):
-        _change_match_lineup(session, _id(match), entry_id, user_id, playing=playing)
+        match_id = _id(match)
+        _change_match_lineup(session, match_id, entry_id, change.user_id, playing=change.playing)
+    session.add(
+        LineupChange(
+            entry_id=entry_id,
+            match_id=match_id,
+            user_id=int(change.user_id),
+            playing=change.playing,
+            changed_by=int(change.captain_id),
+            changed_at=utc_now(),
+            reason=change.reason,
+        ),
+    )
 
 
 def _change_entry_players(
@@ -624,8 +691,8 @@ def _change_match_lineup(session: Session, match_id: int, entry_id: int, user_id
         soft_delete(session, row)
 
 
-def drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry) -> None:
-    """Drop the clashing members from ``entry``'s side of ``match``."""
+def drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry, actor_id: Snowflake) -> None:
+    """Drop the clashing members from ``entry``'s side of ``match``, recording who did it."""
     if match.phase is not MatchPhase.READY:
         msg = "Clashes are resolved before the draft starts."
         raise Refused(msg)
@@ -643,6 +710,7 @@ def drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry)
     ):
         if row.user_id in dropped:
             soft_delete(session, row)
+    record_event(session, match, MatchEventKind.CLASH_DROPPED, actor_id, entry.name)
 
 
 # --- Drafts and votes ------------------------------------------------------------------------------------------------
@@ -681,6 +749,7 @@ def draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind:
         msg = f"{value} is {'banned' if taken.kind is DraftKind.BAN else 'picked'} already."
         raise Refused(msg)
     session.add(DraftChoice(match_id=_id(match), entry_id=_id(entry), kind=kind, value=value))
+    record_event(session, match, MatchEventKind.DRAFT, captain_id, f"{kind.value}: {value}")
 
 
 def drafts_of(session: Session, match_id: int) -> list[DraftChoice]:
@@ -688,8 +757,14 @@ def drafts_of(session: Session, match_id: int) -> list[DraftChoice]:
     return list(session.exec(alive(DraftChoice).where(DraftChoice.match_id == match_id).order_by(col(DraftChoice.id))))
 
 
-def open_vote(session: Session, match: TournamentMatch, question: str, options: Sequence[str]) -> MatchVote:
-    """Open a vote on ``question`` among ``options`` for the players of ``match``."""
+def open_vote(
+    session: Session,
+    match: TournamentMatch,
+    question: str,
+    options: Sequence[str],
+    actor_id: Snowflake,
+) -> MatchVote:
+    """Open a vote on ``question`` among ``options`` for the players of ``match``, recording who opened it."""
     if match.phase.decided:
         msg = "This match is decided already."
         raise Refused(msg)
@@ -699,7 +774,16 @@ def open_vote(session: Session, match: TournamentMatch, question: str, options: 
     vote = MatchVote(match_id=_id(match), question=question, options="\n".join(options))
     session.add(vote)
     session.flush()
+    record_event(session, match, MatchEventKind.VOTE_OPENED, actor_id, question)
     return vote
+
+
+def close_vote(session: Session, vote: MatchVote, actor_id: Snowflake) -> None:
+    """Close ``vote`` so it takes no more answers, recording who closed it."""
+    vote.open = False
+    session.add(vote)
+    match = stored(session, TournamentMatch, vote.match_id, "This vote is gone.")
+    record_event(session, match, MatchEventKind.VOTE_CLOSED, actor_id, vote.question)
 
 
 def cast(session: Session, vote: MatchVote, user_id: Snowflake, choice: int) -> None:
