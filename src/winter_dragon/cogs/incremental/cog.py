@@ -2,8 +2,8 @@
 
 lazy from typing import TYPE_CHECKING, override
 
+from wd_bot.cogs import Cog
 lazy from sqlmodel import Session
-lazy from wd_bot.cogs import Cog
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 

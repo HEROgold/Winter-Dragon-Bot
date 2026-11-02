@@ -1,6 +1,6 @@
 """The /uptime command group: how long the bot has been running."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord.timestamp import DiscordTime

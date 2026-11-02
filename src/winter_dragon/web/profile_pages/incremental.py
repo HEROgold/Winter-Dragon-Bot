@@ -10,9 +10,9 @@ lazy from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends
 lazy from fastapi import Request
-lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from sqlalchemy import Engine
 lazy from sqlmodel import Session
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.cogs.incremental import game

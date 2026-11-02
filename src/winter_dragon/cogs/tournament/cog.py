@@ -1,26 +1,26 @@
 """The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes."""
 
+from random import Random
 from typing import Annotated
-lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
 from wd_bot.commands import Describe, Length, Lookup, Range
+from wd_discord.permissions import Permissions
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import alive_by_id
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
-lazy from wd_discord import (  # noqa: TC002 - wd_bot reads the handler's interaction type at runtime
+lazy from wd_discord import (
     GuildCommandInteraction,
     GuildComponentInteraction,
     User,
 )
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
-lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 lazy from .bracket import MAX_QUESTION_LENGTH, parse_options, round_count

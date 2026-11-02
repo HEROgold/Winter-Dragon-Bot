@@ -1,7 +1,7 @@
 """The Profile's fuel page: an efficiency graph over time and a table of the member's refuels, newest first."""
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import owned_by

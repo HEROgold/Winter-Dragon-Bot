@@ -18,8 +18,8 @@ lazy from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends
 lazy from fastapi import HTTPException, Request, status
-lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from sqlalchemy import Engine
+lazy from starlette.responses import Response
 
 lazy from winter_dragon.web.accounts import Account, signed_in, visitor_zone
 lazy from winter_dragon.web.responses import database, render, render_mapping
@@ -27,9 +27,9 @@ lazy from winter_dragon.web.responses import database, render, render_mapping
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+    from zoneinfo import ZoneInfo
 
     from wd_discord.snowflake import Snowflake
-    from zoneinfo import ZoneInfo
 
 
 router = APIRouter(prefix="/profile")

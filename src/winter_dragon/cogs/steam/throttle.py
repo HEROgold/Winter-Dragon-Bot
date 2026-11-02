@@ -1,9 +1,9 @@
 """Space out requests to Steam, and stop sending them for a while once Steam rate-limits us."""
 
-lazy import asyncio
-lazy import time
+import asyncio
+import time
+from typing import TYPE_CHECKING
 lazy from dataclasses import dataclass, field
-lazy from typing import TYPE_CHECKING
 
 lazy from winter_dragon.cogs.steam.settings import SteamSettings
 

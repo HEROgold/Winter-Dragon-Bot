@@ -7,7 +7,7 @@ from their scopes: importing a scope reads and writes its file, and migration ha
 old file, so they need no entry.
 """
 
-lazy import re
+import re
 
 lazy from wd_config.constants import (
     APP_CONFIG_FILE,

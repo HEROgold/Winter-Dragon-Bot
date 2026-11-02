@@ -3,6 +3,7 @@
 lazy from typing import TYPE_CHECKING, Annotated
 
 from wd_bot.commands import Describe
+from wd_discord.interactions import InteractionContextType
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_bot.commands import ChannelTypes
 
@@ -14,7 +15,6 @@ lazy from wd_discord import (
     User,
     is_gone,
 )
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.permission_solver import PermissionSolver
 lazy from wd_discord.permissions import ChannelType, Permissions
 lazy from wd_errors import Refused, unwrap

@@ -2,9 +2,9 @@
 
 from uuid import uuid4
 
-lazy from wd_config import Config
-lazy from wd_config.constants import DASHBOARD_CONFIG_FILE
-lazy from wd_config.parser import required
+from wd_config import Config
+from wd_config.constants import DASHBOARD_CONFIG_FILE
+from wd_config.parser import required
 
 
 class DashboardConfig[T](Config[T]):

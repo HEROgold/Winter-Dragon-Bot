@@ -1,14 +1,14 @@
 """The Discord side of the Incremental game: the save embed and its buttons."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-lazy from confkit.data_types import Hex
+from confkit.data_types import Hex
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import Embed, EmbedField, EmbedFooter
 lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS
 
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.cogs.incremental.catalogue import catalogue
-lazy from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:
