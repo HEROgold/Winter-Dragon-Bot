@@ -220,6 +220,31 @@ async def test_the_first_move_press_creates_the_team_channel_and_moves_the_press
     assert _content(client) == f"Moved you to <#{NEW_CHANNEL_ID}>."
 
 
+async def test_a_failed_move_deletes_the_channel_it_just_created(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    make_component_interaction: ComponentInteractionFactory,
+    client: RecordingClient,
+) -> None:
+    cog = _cog(engine, client)
+    _occupy(cog, *MEMBERS)
+    await _split(cog, make_interaction, _split_options(teams=2, move=True))
+    team_id = _team_with(engine, 3)
+    client.reply(
+        "PATCH",
+        f"/guilds/{GUILD_ID}/members/3",
+        {"code": 40032, "message": "Target user is not connected to voice."},
+        status=400,
+    )
+    client.reply("DELETE", f"/channels/{NEW_CHANNEL_ID}", {"id": str(NEW_CHANNEL_ID), "type": 2, "guild_id": str(GUILD_ID)})
+
+    await _press(cog, make_component_interaction, team_id, 3)
+
+    assert len(client.requests_to("DELETE", f"/channels/{NEW_CHANNEL_ID}")) == 1
+    assert _team_channels(engine) == []
+    assert _content(client).startswith("I couldn't move you")
+
+
 async def test_a_second_press_by_a_teammate_reuses_the_channel(
     engine: Engine,
     make_interaction: InteractionFactory,
