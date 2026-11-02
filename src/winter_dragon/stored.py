@@ -1,6 +1,6 @@
 """Loading a stored row a command needs, refusing when it's gone."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_db.extension.lifecycle import alive_by_id
 lazy from wd_errors import Refused

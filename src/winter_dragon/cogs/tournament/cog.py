@@ -20,17 +20,13 @@ lazy from wd_discord import (
 )
 lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
-lazy from wd_errors import Refused
-
-from winter_dragon.config import CogConfig
 lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, truncate
-lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.cogs.team.models import Team, TeamKind
 lazy from winter_dragon.cogs.team.service import teams_of
-lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
