@@ -85,6 +85,14 @@ Requires a Riot API key, supplied through configuration.
 
 ---
 
+## Teams
+
+A lasting team is a group of members that exists apart from any tournament and may span guilds. You create one and become its captain, and anyone in it can leave. When the captain leaves, the longest-standing member takes over; when the last member leaves, the team is disbanded.
+
+Surface: `/team create | show | leave`
+
+**Status:** 🟡 New in `src/winter_dragon/cogs/team/`. Invites, splits and tournament entries follow in #424, #426, #427 and #429.
+
 ## Tournaments
 
 Team tournaments with a single-elimination bracket; a guild runs one at a time, in the channel it was opened in. The organiser (whoever opened it, or anyone who can manage the server) opens sign-up with a team size and one of two ways to form teams:

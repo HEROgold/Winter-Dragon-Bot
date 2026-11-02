@@ -13,7 +13,8 @@ from wd_discord.permissions import Permissions
 from wd_errors import Refused
 
 from winter_dragon.cogs.tournament import service
-from winter_dragon.cogs.tournament.bracket import first_round, parse_options, round_name, split_into_teams, tally
+from winter_dragon.cogs.team.split import split_into_teams
+from winter_dragon.cogs.tournament.bracket import first_round, parse_options, round_name, tally
 from winter_dragon.cogs.tournament.cog import Tournaments
 from winter_dragon.cogs.tournament.models import (
     DraftChoice,
