@@ -40,7 +40,7 @@ from winter_dragon.cogs.tournament.models import (
     TournamentMatch,
     TournamentPlayer,
     TournamentStatus,
-    TournamentTeam,
+    TournamentEntry,
 )
 
 
@@ -226,20 +226,20 @@ def _seed_guild(engine: Engine, guild_id: int = GUILD_ID) -> int:
         session.flush()
         assert tournament.id is not None
         teams = [
-            TournamentTeam(tournament_id=tournament.id, name=name, captain_id=user)
+            TournamentEntry(tournament_id=tournament.id, name=name, captain_id=user)
             for name, user in (("a", MEMBER_ID), ("b", RIVAL_ID))
         ]
         session.add_all(teams)
         session.flush()
         for team in teams:
-            session.add(TournamentPlayer(tournament_id=tournament.id, user_id=team.captain_id, team_id=team.id))
+            session.add(TournamentPlayer(tournament_id=tournament.id, user_id=team.captain_id, entry_id=team.id))
         tournament.status = TournamentStatus.RUNNING
         match = TournamentMatch(
             tournament_id=tournament.id,
             round=0,
             slot=0,
-            team_a_id=teams[0].id,
-            team_b_id=teams[1].id,
+            entry_a_id=teams[0].id,
+            entry_b_id=teams[1].id,
             phase=MatchPhase.LIVE,
         )
         session.add(match)
@@ -274,7 +274,7 @@ def _guild_data(engine: Engine, vote_id: int, guild_id: int = GUILD_ID) -> dict[
             "remembered": [role.role_id for role in remembered_roles(session, guild_id, MEMBER_ID)],
             "stats": [stat.kind for stat in guild_stat_channels(session, guild_id)],
             "tournament": None if tournament is None else tournament.name,
-            "teams": [] if tournament_id is None else [team.name for team in tournaments.teams_of(session, tournament_id)],
+            "teams": [] if tournament_id is None else [team.name for team in tournaments.entries_of(session, tournament_id)],
             "matches": 0 if tournament_id is None else len(tournaments.matches_of(session, tournament_id)),
             "ballots": tournaments.choices_of(session, vote_id),
         }
@@ -444,7 +444,7 @@ def _seed_signup(engine: Engine, guild_id: int, mode: TeamMode) -> int:
 def _signups(engine: Engine, tournament_id: int) -> tuple[list[str], list[int]]:
     """Return the tournament's team names and signed-up players."""
     with Session(engine) as session:
-        teams = [team.name for team in tournaments.teams_of(session, tournament_id)]
+        teams = [team.name for team in tournaments.entries_of(session, tournament_id)]
         return teams, [player.user_id for player in tournaments.players_of(session, tournament_id)]
 
 

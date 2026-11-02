@@ -33,7 +33,7 @@ from winter_dragon.cogs.tournament.models import (
     TournamentPlayer,
     TournamentPost,
     TournamentStatus,
-    TournamentTeam,
+    TournamentEntry,
 )
 
 
@@ -155,7 +155,7 @@ def test_captains_build_teams_within_the_size(engine: Engine) -> None:
             service.remove_from_team(session, tournament, 10, 10)
         service.remove_from_team(session, tournament, 10, 12)
         session.commit()
-        (team,) = service.teams_of(session, tournament.id or 0)
+        (team,) = service.entries_of(session, tournament.id or 0)
         assert service.roster(session, team.id or 0) == [10]
 
 
@@ -167,7 +167,7 @@ def test_a_captain_leaving_disbands_their_team(engine: Engine) -> None:
         session.commit()
         service.withdraw(session, tournament, 10)
         session.commit()
-        assert service.teams_of(session, tournament.id or 0) == []
+        assert service.entries_of(session, tournament.id or 0) == []
         assert service.players_of(session, tournament.id or 0) == []
 
 
@@ -188,14 +188,14 @@ def test_start_draws_teams_and_gives_byes_their_wins(engine: Engine) -> None:
         session.commit()
 
         assert tournament.status is TournamentStatus.RUNNING
-        assert len(service.teams_of(session, tournament.id or 0)) == 5
-        assert all(player.team_id is not None for player in service.players_of(session, tournament.id or 0))
+        assert len(service.entries_of(session, tournament.id or 0)) == 5
+        assert all(player.entry_id is not None for player in service.players_of(session, tournament.id or 0))
         first = _round(session, tournament, 0)
         assert [match.phase for match in first] == [MatchPhase.FINISHED] * 3 + [MatchPhase.READY]
         semis = _round(session, tournament, 1)
         assert semis[0].phase is MatchPhase.READY  # both bye winners arrived
-        assert semis[1].team_a_id is not None
-        assert semis[1].team_b_id is None
+        assert semis[1].entry_a_id is not None
+        assert semis[1].entry_b_id is None
         assert len(_round(session, tournament, 2)) == 1
 
 
@@ -204,7 +204,7 @@ def test_a_match_moves_through_its_phases_and_the_final_crowns_a_champion(engine
         tournament = _solo(session, players=2)
         service.start(session, tournament, Random(0))
         (final,) = _round(session, tournament, 0)
-        winner = final.team_a_id or 0
+        winner = final.entry_a_id or 0
 
         with _refused("The match isn't live yet; a team can forfeit, though."):
             service.report(session, tournament, final, winner)
@@ -220,7 +220,7 @@ def test_a_match_moves_through_its_phases_and_the_final_crowns_a_champion(engine
         service.report(session, tournament, final, winner)
 
         assert (final.phase, final.winner_id) == (MatchPhase.FINISHED, winner)
-        assert (tournament.status, tournament.winner_team_id) == (TournamentStatus.FINISHED, winner)
+        assert (tournament.status, tournament.winner_entry_id) == (TournamentStatus.FINISHED, winner)
         with _refused("This match is decided already."):
             service.report(session, tournament, final, winner)
 
@@ -230,10 +230,10 @@ def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
         tournament = _solo(session, players=4)
         service.start(session, tournament, Random(0))
         match = _round(session, tournament, 0)[1]
-        service.report(session, tournament, match, match.team_b_id or 0, forfeit=True)
+        service.report(session, tournament, match, match.entry_b_id or 0, forfeit=True)
         assert match.phase is MatchPhase.FORFEIT
         (final,) = _round(session, tournament, 1)
-        assert final.team_b_id == match.team_b_id
+        assert final.entry_b_id == match.entry_b_id
 
 
 # --- Drafts and votes ------------------------------------------------------------------------------------------------
@@ -244,7 +244,7 @@ def test_only_a_playing_captain_drafts_in_the_right_phase(engine: Engine) -> Non
         tournament = _solo(session, players=4, team_size=2)
         service.start(session, tournament, Random(0))
         (match,) = _round(session, tournament, 0)
-        team_a = session.get(TournamentTeam, match.team_a_id)
+        team_a = session.get(TournamentEntry, match.entry_a_id)
         assert team_a is not None
         captain = team_a.captain_id
         teammate = next(user for user in service.roster(session, team_a.id or 0) if user != captain)
@@ -433,7 +433,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
         final.phase = MatchPhase.LIVE
         session.add(final)
         session.commit()
-        match_id, winner = final.id, final.team_a_id
+        match_id, winner = final.id, final.entry_a_id
     cog = _cog(engine, discord_client)
 
     args = [str(match_id), "win", str(winner)]
@@ -447,7 +447,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
     assert followup["content"] == "🏆 **Cup** is over!"
     with Session(engine) as session:
-        assert session.exec(alive(Tournament)).one().winner_team_id == winner
+        assert session.exec(alive(Tournament)).one().winner_entry_id == winner
 
 
 async def test_only_match_players_can_use_the_vote_buttons(
@@ -516,7 +516,7 @@ def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, int]:
     service.start(session, tournament, Random(0))
     (final,) = _round(session, tournament, 0)
     final.phase = MatchPhase.BAN
-    (captain,) = service.roster(session, final.team_a_id or 0)
+    (captain,) = service.roster(session, final.entry_a_id or 0)
     service.draft(session, final, captain, DraftKind.BAN, "Dust")
     vote = service.open_vote(session, final, "Map?", ["Mirage", "Nuke"])
     service.cast(session, vote, captain, 0)
@@ -569,7 +569,7 @@ async def test_cancel_hides_the_tournament(
     with Session(engine) as session:
         assert list(service.visible_tournaments(session, GUILD_ID, ORGANISER, None)) == []
         assert service.players_of(session, tournament_id) == []
-        assert service.teams_of(session, tournament_id) == []
+        assert service.entries_of(session, tournament_id) == []
         assert service.matches_of(session, tournament_id) == []
         for model in (Tournament, DraftChoice, MatchVote, MatchBallot):
             assert session.exec(owned_by(model, guild=GUILD_ID)).all() == []
