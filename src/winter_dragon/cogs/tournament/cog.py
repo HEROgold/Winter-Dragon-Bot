@@ -44,6 +44,7 @@ lazy from .models import (
     ACTIVE,
     TOURNAMENT_TABLES,
     DraftKind,
+    MatchPhase,
     MatchVote,
     TeamMode,
     Tournament,
@@ -57,11 +58,16 @@ lazy from .service import (
     advance,
     cancel,
     cast,
+    change_lineup,
     choices_of,
+    clashes,
     draft,
     drafts_of,
+    drop_clash,
     entries_of,
+    entry_in_match,
     entry_of_captain,
+    lineup,
     matches_of,
     open_vote,
     posts_of,
@@ -104,6 +110,14 @@ def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) 
     """Refuse unless the invoker runs ``tournament``."""
     if not is_organiser(interaction, tournament):
         msg = "Only the tournament's organiser, or someone who can manage the server, can do that."
+        raise Refused(msg)
+
+
+async def require_server_member(interaction: GuildCommandInteraction, player: User) -> None:
+    """Refuse unless ``player`` is a member of the invoker's server, the only members who can play in its tournaments."""
+    member = await interaction.guild.member(player.id).fetch()
+    if is_network_error(member):
+        msg = "They aren't in this server, so they can't play in its tournament."
         raise Refused(msg)
 
 
@@ -409,10 +423,7 @@ class Tournaments(
         player: Annotated[User, Describe("The player to add to your entry")],
     ) -> None:
         """Add ``player``, a member of this server and of your team, to the entry you captain."""
-        member = await interaction.guild.member(player.id).fetch()
-        if is_network_error(member):
-            msg = "They aren't in this server, so they can't play in its tournament."
-            raise Refused(msg)
+        await require_server_member(interaction, player)
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
             add_player(session, found, captained_entry(session, found, interaction.user.id), interaction.user.id, player.id)
@@ -437,6 +448,56 @@ class Tournaments(
         await self._refresh_posts(tournament_id)
         message = f"Removed {player.mention} from your entry."
         await interaction.respond(embeds=[ChangedEmbed(description=message)], ephemeral=True)
+
+    @Cog.command(name="lineup-in", description="Put a server member in your entry's lineup, from its next match not yet live")
+    async def lineup_in(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        player: Annotated[User, Describe("The member to put in your lineup")],
+    ) -> None:
+        """Put ``player``, a server member, in the lineup of the entry you captain; a stand-in needn't be in your team."""
+        await require_server_member(interaction, player)
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament)
+            change_lineup(
+                session,
+                found,
+                captained_entry(session, found, interaction.user.id),
+                interaction.user.id,
+                player.id,
+                playing=True,
+            )
+            session.commit()
+            tournament_id = found.id or 0
+        await self._refresh_posts(tournament_id)
+        await interaction.respond(embeds=[ChangedEmbed(description=f"Put {player.mention} in your lineup.")], ephemeral=True)
+
+    @Cog.command(name="lineup-out", description="Take a player out of your entry's lineup, from its next match not yet live")
+    async def lineup_out(
+        self,
+        interaction: GuildCommandInteraction,
+        tournament: Annotated[Tournament, Lookup(tournament_choices), Describe("The tournament")],
+        player: Annotated[User, Describe("The player to take out of your lineup")],
+    ) -> None:
+        """Take ``player`` out of the lineup of the entry you captain, for its next match not yet live."""
+        with Session(self.bind) as session:
+            found = self._tournament(interaction, session, tournament)
+            change_lineup(
+                session,
+                found,
+                captained_entry(session, found, interaction.user.id),
+                interaction.user.id,
+                player.id,
+                playing=False,
+            )
+            session.commit()
+            tournament_id = found.id or 0
+        await self._refresh_posts(tournament_id)
+        await interaction.respond(
+            embeds=[ChangedEmbed(description=f"Took {player.mention} out of your lineup.")],
+            ephemeral=True,
+        )
 
     # --- Running it ------------------------------------------------------------------------------------------------
 
@@ -525,10 +586,17 @@ class Tournaments(
     def _match_card(self, session: Session, tournament: Tournament, match: TournamentMatch) -> tuple[Embed, list[ActionRow]]:
         """Return the match's card and its controls, as they are now."""
         tournament_id = tournament.id or 0
+        match_id = match.id or 0
         names = entry_names(session, tournament_id)
-        rosters = {team: roster(session, team) for team in (match.entry_a_id, match.entry_b_id) if team is not None}
-        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match.id or 0))
-        return embed, match_buttons(self.match_control, match, names)
+        # A match has no lineups until it's ready; until then its entries' current players stand in.
+        rosters = {
+            team: roster(session, team) if match.phase is MatchPhase.WAITING else lineup(session, match_id, team)
+            for team in (match.entry_a_id, match.entry_b_id)
+            if team is not None
+        }
+        clash = clashes(session, match) if match.phase is MatchPhase.READY else []
+        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match_id))
+        return embed, match_buttons(self.match_control, match, names, self.clash_button, clash)
 
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed."""
@@ -582,6 +650,19 @@ class Tournaments(
         await interaction.update(embeds=[embed], components=buttons)
         if finished:
             await interaction.followup(f"🏆 **{tournament.name}** is over!", embeds=[final])
+
+    @Cog.component("tourney-clash")
+    async def clash_button(self, interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None:
+        """Drop the clashing members from one side of a ready match; its organiser or a captain of either side only."""
+        with Session(self.bind) as session:
+            tournament, match = self._running_match(session, int(match_id))
+            if not is_organiser(interaction, tournament) and entry_in_match(session, match, interaction.user.id) is None:
+                msg = "Only the organiser or a captain of this match can resolve a clash."
+                raise Refused(msg)
+            drop_clash(session, match, stored(session, TournamentEntry, int(entry_id), "That entry is gone."))
+            session.commit()
+            embed, buttons = self._match_card(session, tournament, match)
+        await interaction.update(embeds=[embed], components=buttons)
 
     async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
         with Session(self.bind) as session:

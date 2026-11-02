@@ -25,6 +25,7 @@ lazy from .models import (
     DraftKind,
     EntryPlayer,
     MatchBallot,
+    MatchLineup,
     MatchPhase,
     MatchVote,
     TeamMode,
@@ -387,6 +388,7 @@ def start(session: Session, tournament: Tournament, rng: Random) -> None:
         match = _match_at(session, tournament_id, 0, slot)
         match.entry_a_id, match.entry_b_id = team_a, team_b
         match.phase = MatchPhase.READY
+        _copy_lineups(session, match)
         if team_b is None:
             _decide(session, tournament, match, team_a, MatchPhase.FINISHED)
     tournament.status = TournamentStatus.RUNNING
@@ -440,11 +442,15 @@ def _decide(session: Session, tournament: Tournament, match: TournamentMatch, wi
         following.entry_b_id = winner_id
     if following.entry_a_id is not None and following.entry_b_id is not None:
         following.phase = MatchPhase.READY
+        _copy_lineups(session, following)
     session.add(following)
 
 
 def advance(session: Session, match: TournamentMatch) -> None:
     """Move ``match`` on to its next phase: from ready to the bans, the picks, and live."""
+    if match.phase is MatchPhase.READY and clashes(session, match):
+        msg = "A player is in both lineups; drop them from one side first."
+        raise Refused(msg)
     following = match.phase.next
     if following is None:
         msg = "Report the winner to finish this match." if match.phase is MatchPhase.LIVE else "This match can't move on."
@@ -496,6 +502,7 @@ def cancel(session: Session, tournament: Tournament) -> None:
         *session.exec(alive(MatchBallot).where(col(MatchBallot.vote_id).in_(vote_ids))),
         *votes,
         *session.exec(alive(DraftChoice).where(col(DraftChoice.match_id).in_(match_ids))),
+        *session.exec(alive(MatchLineup).where(col(MatchLineup.match_id).in_(match_ids))),
         *session.exec(alive(TournamentMatch).where(TournamentMatch.tournament_id == tournament_id)),
         *session.exec(alive(EntryPlayer).where(col(EntryPlayer.entry_id).in_(entry_ids))),
         *signups_of(session, tournament_id),
@@ -505,6 +512,137 @@ def cancel(session: Session, tournament: Tournament) -> None:
         soft_delete(session, row)
     tournament.status = TournamentStatus.CANCELLED
     soft_delete(session, tournament)
+
+
+# --- Lineups ---------------------------------------------------------------------------------------------------------
+
+
+def lineup(session: Session, match_id: int, entry_id: int) -> list[int]:
+    """Return the user IDs playing for ``entry_id`` in match ``match_id``."""
+    query = (
+        alive(MatchLineup)
+        .where(MatchLineup.match_id == match_id, MatchLineup.entry_id == entry_id)
+        .order_by(col(MatchLineup.id))
+    )
+    return [row.user_id for row in session.exec(query)]
+
+
+def _copy_lineups(session: Session, match: TournamentMatch) -> None:
+    """Copy each of the match's entries' current players into its lineup."""
+    for entry_id in (match.entry_a_id, match.entry_b_id):
+        if entry_id is None:
+            continue
+        for user_id in roster(session, entry_id):
+            create_or_restore(session, MatchLineup(match_id=_id(match), entry_id=entry_id, user_id=user_id))
+
+
+def clashes(session: Session, match: TournamentMatch) -> list[int]:
+    """Return the members in both lineups of ``match``."""
+    if match.entry_a_id is None or match.entry_b_id is None:
+        return []
+    match_id = _id(match)
+    side_b = set(lineup(session, match_id, match.entry_b_id))
+    return [user_id for user_id in lineup(session, match_id, match.entry_a_id) if user_id in side_b]
+
+
+def _next_match(session: Session, tournament: Tournament, entry: TournamentEntry) -> TournamentMatch | None:
+    """Return the entry's lowest-round match that isn't decided yet, if it has one."""
+    entry_id = _id(entry)
+    for match in matches_of(session, _id(tournament)):
+        if not match.phase.decided and entry_id in (match.entry_a_id, match.entry_b_id):
+            return match
+    return None
+
+
+def change_lineup(  # noqa: PLR0913 - the brief fixes these parameters: the tournament, the entry, its captain, the member and the direction
+    session: Session,
+    tournament: Tournament,
+    entry: TournamentEntry,
+    captain_id: Snowflake,
+    user_id: Snowflake,
+    *,
+    playing: bool,
+) -> None:
+    """Put ``user_id`` in (or take them out of) ``entry``'s lineup for its captain, from its next match not yet live.
+
+    The entry's players change, and so does the lineup of its next match while that match is ready or in its draft.
+    A live or decided match keeps its lineup.
+    """
+    if tournament.status not in ACTIVE:
+        msg = "That tournament is over."
+        raise Refused(msg)
+    team = alive_by_id(session, Team, entry.team_id)
+    if team is None or team.captain_id != int(captain_id):
+        msg = "Only the entry's captain can change its lineup."
+        raise Refused(msg)
+    entry_id = _id(entry)
+    _change_entry_players(session, tournament, entry_id, user_id, playing=playing)
+    match = _next_match(session, tournament, entry)
+    if match is not None and match.phase in (MatchPhase.READY, MatchPhase.BAN, MatchPhase.PICK):
+        _change_match_lineup(session, _id(match), entry_id, user_id, playing=playing)
+
+
+def _change_entry_players(
+    session: Session,
+    tournament: Tournament,
+    entry_id: int,
+    user_id: Snowflake,
+    *,
+    playing: bool,
+) -> None:
+    """Add ``user_id`` to the entry's players, or remove them; refuse a full entry, a non-player or the last player."""
+    player = _player_of_entry(session, entry_id, user_id)
+    if playing:
+        if player is not None:
+            msg = "They're in this entry already."
+            raise Refused(msg)
+        if len(roster(session, entry_id)) >= tournament.team_size:
+            msg = f"Your entry is full: entries have {tournament.team_size} players."
+            raise Refused(msg)
+        create_or_restore(session, EntryPlayer(entry_id=entry_id, user_id=int(user_id)))
+        return
+    if player is None:
+        msg = "They aren't playing for your entry."
+        raise Refused(msg)
+    if len(roster(session, entry_id)) <= 1:
+        msg = "An entry needs at least one player."
+        raise Refused(msg)
+    soft_delete(session, player)
+
+
+def _change_match_lineup(session: Session, match_id: int, entry_id: int, user_id: Snowflake, *, playing: bool) -> None:
+    """Add ``user_id`` to the entry's lineup in match ``match_id``, or remove them from it."""
+    if playing:
+        create_or_restore(session, MatchLineup(match_id=match_id, entry_id=entry_id, user_id=int(user_id)))
+        return
+    query = alive(MatchLineup).where(
+        MatchLineup.match_id == match_id,
+        MatchLineup.entry_id == entry_id,
+        MatchLineup.user_id == int(user_id),
+    )
+    for row in session.exec(query):
+        soft_delete(session, row)
+
+
+def drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry) -> None:
+    """Drop the clashing members from ``entry``'s side of ``match``."""
+    if match.phase is not MatchPhase.READY:
+        msg = "Clashes are resolved before the draft starts."
+        raise Refused(msg)
+    entry_id = _id(entry)
+    if entry_id not in (match.entry_a_id, match.entry_b_id):
+        msg = "That entry doesn't play this match."
+        raise Refused(msg)
+    match_id = _id(match)
+    dropped = set(clashes(session, match))
+    if all(user_id in dropped for user_id in lineup(session, match_id, entry_id)):
+        msg = "An entry needs at least one player."
+        raise Refused(msg)
+    for row in session.exec(
+        alive(MatchLineup).where(MatchLineup.match_id == match_id, MatchLineup.entry_id == entry_id),
+    ):
+        if row.user_id in dropped:
+            soft_delete(session, row)
 
 
 # --- Drafts and votes ------------------------------------------------------------------------------------------------

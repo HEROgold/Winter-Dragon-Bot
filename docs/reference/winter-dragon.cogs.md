@@ -901,8 +901,8 @@ The messages a tournament shows: its sign-up card, bracket, match cards and vote
 - `participants_embed(tournament: Tournament, rosters: Mapping[str, Sequence[int]], solo_players: Sequence[int]) -> Embed` — Return everyone signed up to ``tournament``: one line per player, or one line per team with its players.
 - `match_line(match: TournamentMatch, names: Mapping[int, str]) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
 - `bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Embed` — Return the bracket: every round's matches, and the champion once there is one.
-- `match_embed(match: TournamentMatch, rounds: int, names: Mapping[int, str], rosters: Mapping[int, Sequence[int]], drafts: Sequence[DraftChoice]) -> Embed` — Return a match card: its round, phase, the teams' players, and what each team banned and picked.
-- `match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str]) -> list[ActionRow]` — Return the organiser's controls under a match card: next phase, report a winner, or a forfeit.
+- `match_embed(match: TournamentMatch, rounds: int, names: Mapping[int, str], rosters: Mapping[int, Sequence[int]], drafts: Sequence[DraftChoice]) -> Embed` — Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash.
+- `match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str], clash_handler: ComponentHandler, clash: Sequence[int]=()) -> list[ActionRow]` — Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit.
 - `vote_options(vote: MatchVote) -> list[str]` — Return the vote's answers.
 - `vote_embed(vote: MatchVote, choices: Sequence[int]) -> Embed` — Return a vote: its question, and each answer's votes so far.
 - `vote_buttons(choose: ComponentHandler, close: ComponentHandler, vote: MatchVote) -> list[ActionRow]` — Return one button per answer, then the organiser's Close button; none once the vote is closed.
@@ -917,6 +917,7 @@ The /tournament command group: sign-up, teams, a single-elimination bracket, mat
 
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
+- `async require_server_member(interaction: GuildCommandInteraction, player: User) -> None` — Refuse unless ``player`` is a member of the invoker's server, the only members who can play in its tournaments.
 - `entry_names(session: Session, tournament_id: int) -> dict[int, str]` — Return each team's name by its ID.
 - `captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry` — Return the entry whose team ``captain_id`` captains in ``tournament``; refuse when there's none.
 - `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, entry_id: str) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one.
@@ -943,12 +944,15 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.command async enter(interaction: GuildCommandInteraction, tournament: Tournament, team: Team) -> None` — Enter the invoker's team into the tournament, with the invoker as its first player.
 - `@Cog.command async entry_add(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Add ``player``, a member of this server and of your team, to the entry you captain.
 - `@Cog.command async entry_remove(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Remove ``player`` from the entry you captain.
+- `@Cog.command async lineup_in(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Put ``player``, a server member, in the lineup of the entry you captain; a stand-in needn't be in your team.
+- `@Cog.command async lineup_out(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Take ``player`` out of the lineup of the entry you captain, for its next match not yet live.
 - `@Cog.command async start_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Start the tournament and show its bracket; organisers only.
 - `@Cog.command async bracket(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Show the bracket, or the sign-up card before the tournament starts.
 - `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Cancel the tournament; organisers only.
 - `async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: TournamentMatch) -> None` — Post the card of match ``match``.
 - `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, entry_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
+- `@Cog.component async clash_button(interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None` — Drop the clashing members from one side of a ready match; its organiser or a captain of either side only.
 - `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
 - `@Cog.command async pick(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
 - `@Cog.command async vote(interaction: GuildCommandInteraction, match: TournamentMatch, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
@@ -1014,6 +1018,12 @@ One match of a tournament's single-elimination bracket; round 0 is the first.
 - fields: ownership: ClassVar[Ownership], tournament_id: int, round: int, slot: int, entry_a_id: int | None, entry_b_id:
   int | None, phase: MatchPhase, winner_id: int | None
 
+### `class MatchLineup(LifecycleModel, table=True)`
+A member playing for an entry in one match; a decided match's lineup is what was played.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], anonymised: ClassVar[tuple[str, ...]],
+  match_id: int, entry_id: int, user_id: int
+
 ### `class DraftChoice(LifecycleModel, table=True)`
 Something a team banned from, or picked for, a match.
 
@@ -1052,6 +1062,10 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `advance(session: Session, match: TournamentMatch) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
 - `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
+- `lineup(session: Session, match_id: int, entry_id: int) -> list[int]` — Return the user IDs playing for ``entry_id`` in match ``match_id``.
+- `clashes(session: Session, match: TournamentMatch) -> list[int]` — Return the members in both lineups of ``match``.
+- `change_lineup(session: Session, tournament: Tournament, entry: TournamentEntry, captain_id: Snowflake, user_id: Snowflake, *, playing: bool) -> None` — Put ``user_id`` in (or take them out of) ``entry``'s lineup for its captain, from its next match not yet live.
+- `drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry) -> None` — Drop the clashing members from ``entry``'s side of ``match``.
 - `entry_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentEntry | None` — Return the entry in ``match`` whose team ``user_id`` captains, if they captain one of the two.
 - `draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind: DraftKind, value: str) -> None` — Record ``captain_id``'s team banning or picking ``value`` in ``match``, during that phase.
 - `drafts_of(session: Session, match_id: int) -> list[DraftChoice]` — Return the bans and picks made in the match, in the order they were made.
