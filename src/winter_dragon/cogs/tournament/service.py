@@ -10,7 +10,7 @@ lazy from typing import TYPE_CHECKING, override
 from sqlmodel import Session, col, select
 lazy from sqlalchemy import exists
 lazy from sqlalchemy.orm import aliased
-lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
+lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, alive_by_id, create_or_restore, soft_delete, upsert
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -58,16 +58,16 @@ def visible_tournaments(
     guild_id: Snowflake,
     user_id: Snowflake,
     channel_id: Snowflake | None,
+    *,
+    include_over: bool = False,
 ) -> Generator[Tournament]:
-    """Yield the guild's tournaments that aren't over and that ``user_id`` organises or signed up for.
+    """Yield the guild's tournaments that ``user_id`` organises, signed up for, or that are posted in ``channel_id``, by name.
 
-    Also yields the ones posted in ``channel_id``, by name.
+    Only the tournaments that aren't over, unless ``include_over`` yields every status.
     """
-    query = (
-        alive(Tournament)
-        .where(Tournament.guild_id == int(guild_id), col(Tournament.status).in_(ACTIVE))
-        .order_by(col(Tournament.name))
-    )
+    query = alive(Tournament).where(Tournament.guild_id == int(guild_id)).order_by(col(Tournament.name))
+    if not include_over:
+        query = query.where(col(Tournament.status).in_(ACTIVE))
     signed_up = _joined_tournament_ids(session, user_id)
     posted = set()
     if channel_id is not None:
@@ -555,6 +555,9 @@ def cancel(session: Session, tournament: Tournament) -> None:
         *votes,
         *session.exec(alive(DraftChoice).where(col(DraftChoice.match_id).in_(match_ids))),
         *session.exec(alive(MatchLineup).where(col(MatchLineup.match_id).in_(match_ids))),
+        *session.exec(alive(MatchEvent).where(col(MatchEvent.match_id).in_(match_ids))),
+        *session.exec(alive(LineupChange).where(col(LineupChange.entry_id).in_(entry_ids))),
+        *session.exec(alive(TournamentPost).where(TournamentPost.tournament_id == tournament_id)),
         *session.exec(alive(TournamentMatch).where(TournamentMatch.tournament_id == tournament_id)),
         *session.exec(alive(EntryPlayer).where(col(EntryPlayer.entry_id).in_(entry_ids))),
         *signups_of(session, tournament_id),
@@ -585,16 +588,32 @@ def _copy_lineups(session: Session, match: TournamentMatch) -> None:
         if entry_id is None:
             continue
         for user_id in roster(session, entry_id):
-            create_or_restore(session, MatchLineup(match_id=_id(match), entry_id=entry_id, user_id=user_id))
+            _lineup_row(session, _id(match), entry_id, user_id)
+
+
+def _lineup_row(session: Session, match_id: int, entry_id: int, user_id: int) -> MatchLineup:
+    """Return the alive lineup row of ``user_id`` for the entry in match ``match_id``, adding one if there's none."""
+    query = alive(MatchLineup).where(
+        MatchLineup.match_id == match_id,
+        MatchLineup.entry_id == entry_id,
+        MatchLineup.user_id == user_id,
+    )
+    if (row := session.exec(query).first()) is not None:
+        return row
+    row = MatchLineup(match_id=match_id, entry_id=entry_id, user_id=user_id)
+    session.add(row)
+    return row
 
 
 def clashes(session: Session, match: TournamentMatch) -> list[int]:
-    """Return the members in both lineups of ``match``."""
+    """Return the members in both lineups of ``match``, ignoring anonymised ones: their deleted IDs don't match."""
     if match.entry_a_id is None or match.entry_b_id is None:
         return []
     match_id = _id(match)
     side_b = set(lineup(session, match_id, match.entry_b_id))
-    return [user_id for user_id in lineup(session, match_id, match.entry_a_id) if user_id in side_b]
+    return [
+        user_id for user_id in lineup(session, match_id, match.entry_a_id) if user_id in side_b and user_id != DELETED_MEMBER
+    ]
 
 
 def _next_match(session: Session, tournament: Tournament, entry: TournamentEntry) -> TournamentMatch | None:
@@ -680,7 +699,7 @@ def _change_entry_players(
 def _change_match_lineup(session: Session, match_id: int, entry_id: int, user_id: Snowflake, *, playing: bool) -> None:
     """Add ``user_id`` to the entry's lineup in match ``match_id``, or remove them from it."""
     if playing:
-        create_or_restore(session, MatchLineup(match_id=match_id, entry_id=entry_id, user_id=int(user_id)))
+        _lineup_row(session, match_id, entry_id, int(user_id))
         return
     query = alive(MatchLineup).where(
         MatchLineup.match_id == match_id,
@@ -726,12 +745,10 @@ def entry_in_match(session: Session, match: TournamentMatch, user_id: Snowflake)
     return None
 
 
-def _plays_in(session: Session, match: TournamentMatch, user_id: Snowflake) -> bool:
-    """Whether ``user_id`` is a player of either entry in ``match``."""
-    return any(
-        entry_id is not None and _player_of_entry(session, entry_id, user_id) is not None
-        for entry_id in (match.entry_a_id, match.entry_b_id)
-    )
+def _in_lineup(session: Session, match: TournamentMatch, user_id: Snowflake) -> bool:
+    """Whether ``user_id`` is in the lineup of either entry in ``match``, the players actually playing it."""
+    query = alive(MatchLineup).where(MatchLineup.match_id == _id(match), MatchLineup.user_id == int(user_id))
+    return session.exec(query).first() is not None
 
 
 def draft(session: Session, match: TournamentMatch, captain_id: Snowflake, kind: DraftKind, value: str) -> None:
@@ -792,7 +809,7 @@ def cast(session: Session, vote: MatchVote, user_id: Snowflake, choice: int) -> 
         msg = "This vote is closed."
         raise Refused(msg)
     match = alive_by_id(session, TournamentMatch, vote.match_id)
-    if match is None or not _plays_in(session, match, user_id):
+    if match is None or not _in_lineup(session, match, user_id):
         msg = "Only the players of this match can vote."
         raise Refused(msg)
     upsert(session, MatchBallot(vote_id=_id(vote), user_id=int(user_id), choice=choice))

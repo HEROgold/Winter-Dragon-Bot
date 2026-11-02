@@ -932,7 +932,8 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 
 - attributes: rng
 - `async load() -> None` — Create the tournament tables if missing.
-- `async tournament_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournaments the invoker can see whose name contains what was typed.
+- `async tournament_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the tournaments the invoker can see that aren't over, whose name contains what was typed.
+- `async log_tournament_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest every tournament the invoker can see, finished ones too, whose name contains what was typed.
 - `@Cog.command async create(interaction: GuildCommandInteraction, name: str, team_size: int=1, captains: bool=False) -> None` — Open a tournament: solo sign-up into drawn teams of ``team_size``, or teams registered by ``captains``.
 - `@Cog.command async post_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Post ``tournament`` in this channel; every change to the tournament edits the post.
 - `@Cog.command async join(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Sign the invoker up for the tournament.
@@ -950,6 +951,7 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.command async bracket(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Show the bracket, or the sign-up card before the tournament starts.
 - `@Cog.command async cancel_tournament(interaction: GuildCommandInteraction, tournament: Tournament) -> None` — Cancel the tournament; organisers only.
 - `async match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed.
+- `async log_match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest every match, decided or not, of the tournaments the invoker can see, finished ones too.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: TournamentMatch) -> None` — Post the card of match ``match``.
 - `@Cog.command async log(interaction: GuildCommandInteraction, tournament: Tournament, match: TournamentMatch) -> None` — Post the log of ``match`` to the invoker only; its organiser and the captains of its two entries can see it.
 - `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, entry_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
@@ -1028,8 +1030,8 @@ One match of a tournament's single-elimination bracket; round 0 is the first.
 ### `class MatchLineup(LifecycleModel, table=True)`
 A member playing for an entry in one match; a decided match's lineup is what was played.
 
-- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], anonymised: ClassVar[tuple[str, ...]],
-  match_id: int, entry_id: int, user_id: int
+- fields: ownership: ClassVar[Ownership], anonymised: ClassVar[tuple[str, ...]], match_id: int, entry_id: int, user_id:
+  int
 
 ### `class MatchEvent(LifecycleModel, table=True)`
 Something someone did in a match, and when.
@@ -1062,7 +1064,7 @@ One player's answer to a vote; voting again changes it.
 ## `winter_dragon.cogs.tournament.service` — `src/winter_dragon/cogs/tournament/service.py`
 What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
-- `visible_tournaments(session: Session, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Generator[Tournament]` — Yield the guild's tournaments that aren't over and that ``user_id`` organises or signed up for.
+- `visible_tournaments(session: Session, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None, *, include_over: bool=False) -> Generator[Tournament]` — Yield the guild's tournaments that ``user_id`` organises, signed up for, or that are posted in ``channel_id``, by name.
 - `posts_of(session: Session, tournament_id: int) -> Generator[TournamentPost]` — Yield the tournament's posts.
 - `add_post(session: Session, tournament: Tournament, channel_id: Snowflake, message_id: Snowflake) -> None` — Record that the tournament is shown by ``message_id`` in ``channel_id``.
 - `signups_of(session: Session, tournament_id: int) -> list[TournamentSignup]` — Return everyone signed up alone for the tournament, in sign-up order.
@@ -1084,7 +1086,7 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, actor_id: Snowflake, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
 - `lineup(session: Session, match_id: int, entry_id: int) -> list[int]` — Return the user IDs playing for ``entry_id`` in match ``match_id``.
-- `clashes(session: Session, match: TournamentMatch) -> list[int]` — Return the members in both lineups of ``match``.
+- `clashes(session: Session, match: TournamentMatch) -> list[int]` — Return the members in both lineups of ``match``, ignoring anonymised ones: their deleted IDs don't match.
 - `change_lineup(session: Session, tournament: Tournament, entry: TournamentEntry, change: LineupRequest) -> None` — Put ``change.user_id`` in (or take them out of) ``entry``'s lineup for its captain, from its next match not yet live.
 - `drop_clash(session: Session, match: TournamentMatch, entry: TournamentEntry, actor_id: Snowflake) -> None` — Drop the clashing members from ``entry``'s side of ``match``, recording who did it.
 - `entry_in_match(session: Session, match: TournamentMatch, user_id: Snowflake) -> TournamentEntry | None` — Return the entry in ``match`` whose team ``user_id`` captains, if they captain one of the two.

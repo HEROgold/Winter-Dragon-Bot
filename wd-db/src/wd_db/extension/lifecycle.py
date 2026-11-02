@@ -86,7 +86,19 @@ class LifecycleModel(BaseModel):
     @declared_attr.directive
     @classmethod
     def __table_args__(cls) -> tuple[Index, ...]:
-        """Index the alive rows, as herogold's base does, make :attr:`natural_key` unique, and :attr:`alive_unique` unique among alive rows."""
+        """Index the alive rows, as herogold's base does, and make :attr:`natural_key` and :attr:`alive_unique` unique.
+
+        :attr:`alive_unique` is unique among alive rows only.
+
+        Raises:
+            TypeError: a column is in :attr:`anonymised` and also in :attr:`natural_key` or :attr:`alive_unique`, since
+                anonymising two rows sets the column to the same :data:`DELETED_MEMBER` and breaks the unique index.
+
+        """
+        for column in cls.anonymised:
+            if column in cls.natural_key or column in cls.alive_unique:
+                msg = f"{cls.__name__} anonymises {column}, so it can't be part of a unique key"
+                raise TypeError(msg)
         alive_only = col(cls.deleted_at).is_(None)
         indexes = [Index(f"idx_{cls.__tablename__}_alive_only", "id", postgresql_where=alive_only, sqlite_where=alive_only)]
         if cls.natural_key:
