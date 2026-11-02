@@ -74,16 +74,10 @@ A permission overwrite a member set on their automatic channel in a guild, for t
 - fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], guild_id: int, owner_id: int,
   target_id: int, target_type: int, allow: int, deny: int
 
-### `@dataclass class VoiceOccupancy`
-Who is in which voice channel, per guild, as far as the gateway told.
-
-- `reset(guild_id: Snowflake, states: Iterable[VoiceState]) -> None` — Forget what was known about ``guild_id``, and learn ``states`` instead.
-- `move(guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None) -> Snowflake | None` — Record that ``user_id`` is now in ``channel_id``, or left voice when ``None``; return where they were.
-- `occupied(guild_id: Snowflake, channel_id: Snowflake) -> bool` — Whether anyone is in the voice channel ``channel_id``.
-
 ### `class AutoChannels(GroupCog, name='autochannel', description='Voice channels of your own, made by joining the hub channel', contexts=[InteractionContextType.GUILD])`
 Gives a member who joins the hub their own voice channel, and deletes it once it's empty.
 
+- `@property channels -> EmptiedChannels[AutoChannel]` — The automatic channels, deleted once empty.
 - `async load() -> None` — Create the autochannel tables if missing.
 - `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Learn who is in which voice channel, then delete the automatic channels that emptied while offline.
 - `@Cog.listener async on_voice_state_update(state: VoiceState) -> None` — Give a member joining the hub their own channel, and delete an automatic channel the member left empty.
