@@ -38,6 +38,7 @@ from winter_dragon.cogs.tournament.models import (
     EntryPlayer,
     MatchLineup,
     MatchPhase,
+    MatchVote,
     TeamMode,
     Tournament,
     TournamentMatch,
@@ -271,7 +272,7 @@ def _guild_data(engine: Engine, vote_id: int, guild_id: int = GUILD_ID) -> dict[
     """Return what the guild's commands and listeners see of its data."""
     with Session(engine) as session:
         tournament = next(iter(tournaments.visible_tournaments(session, guild_id, MEMBER_ID, None)), None)
-        tournament_id = None if tournament is None else tournament.id
+        vote = session.get(MatchVote, vote_id)
         return {
             "hub": hub_of(session, guild_id) is not None,
             "own channel": owned_channel(session, guild_id, MEMBER_ID) is not None,
@@ -279,9 +280,9 @@ def _guild_data(engine: Engine, vote_id: int, guild_id: int = GUILD_ID) -> dict[
             "remembered": [role.role_id for role in remembered_roles(session, guild_id, MEMBER_ID)],
             "stats": [stat.kind for stat in guild_stat_channels(session, guild_id)],
             "tournament": None if tournament is None else tournament.name,
-            "teams": [] if tournament_id is None else [team.name for team in tournaments.entries_of(session, tournament_id)],
-            "matches": 0 if tournament_id is None else len(tournaments.matches_of(session, tournament_id)),
-            "ballots": tournaments.choices_of(session, vote_id),
+            "teams": [] if tournament is None else [team.name for team in tournaments.entries_of(session, tournament)],
+            "matches": 0 if tournament is None else len(tournaments.matches_of(session, tournament)),
+            "ballots": [] if vote is None else tournaments.choices_of(session, vote),
         }
 
 
@@ -452,8 +453,9 @@ def _seed_signup(engine: Engine, guild_id: int, mode: TeamMode) -> int:
 def _signups(engine: Engine, tournament_id: int) -> tuple[list[str], list[int]]:
     """Return the tournament's team names and signed-up players."""
     with Session(engine) as session:
-        teams = [team.name for team in tournaments.entries_of(session, tournament_id)]
-        return teams, [signup.user_id for signup in tournaments.signups_of(session, tournament_id)]
+        tournament = session.get_one(Tournament, tournament_id)
+        teams = [team.name for team in tournaments.entries_of(session, tournament)]
+        return teams, [signup.user_id for signup in tournaments.signups_of(session, tournament)]
 
 
 async def _send_due(engine: Engine, now: datetime) -> int:

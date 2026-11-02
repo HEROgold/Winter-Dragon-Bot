@@ -30,4 +30,4 @@ Confirms that something was deleted, in ``Settings.deleted_color``.
 ## `winter_dragon.ui.text` — `src/winter_dragon/ui/text.py`
 Text the bot's messages share.
 
-- `mentions(user_ids: Sequence[int]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.
+- `mentions(user_ids: Iterable[Snowflake]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.

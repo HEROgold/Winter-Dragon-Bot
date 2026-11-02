@@ -4,6 +4,7 @@ lazy from dataclasses import dataclass
 
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive
+lazy from wd_discord.snowflake import Snowflake
 
 lazy from winter_dragon.cogs.team.models import TeamKind
 lazy from winter_dragon.cogs.team.service import members_of, teams_of
@@ -24,8 +25,8 @@ class TeamRow:
     """One lasting team: its name, captain ID (None if unset), member IDs longest-standing first, and its tournament entries."""
 
     name: str
-    captain_id: int | None
-    member_ids: tuple[int, ...]
+    captain_id: Snowflake | None
+    member_ids: tuple[Snowflake, ...]
     entries: tuple[EntryRow, ...] = ()
 
 
@@ -65,11 +66,11 @@ def teams(context: ProfileContext) -> dict[str, object]:
         rows = [
             TeamRow(
                 name=team.name,
-                captain_id=team.captain_id,
-                member_ids=tuple(member.user_id for member in members_of(session, team.id)),
+                captain_id=None if team.captain_id is None else Snowflake(team.captain_id),
+                member_ids=tuple(Snowflake(member.user_id) for member in members_of(session, team)),
                 entries=_entries_of(session, team.id),
             )
-            for team in teams_of(session, int(context.member_id))
+            for team in teams_of(session, context.member_id)
             if team.kind is TeamKind.LASTING and team.id is not None
         ]
     return {"teams": rows, "formed": len(rows)}

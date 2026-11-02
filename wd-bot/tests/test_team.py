@@ -48,7 +48,7 @@ def _seed(engine: Engine, captain: int, *others: tuple[int, int], name: str = "C
 
 def _member_ids(engine: Engine, team_id: int) -> list[int]:
     with Session(engine) as session:
-        return [member.user_id for member in service.members_of(session, team_id)]
+        return [member.user_id for member in service.members_of(session, session.get_one(Team, team_id))]
 
 
 def _captain(engine: Engine, team_id: int) -> int | None:
@@ -61,7 +61,7 @@ def _captain(engine: Engine, team_id: int) -> int | None:
 
 def test_create_makes_a_lasting_team_with_the_captain_as_only_member(engine: Engine) -> None:
     with Session(engine) as session:
-        team = service.create_team(session, "  Crew  ", captain_id=INVOKER)
+        team = service.create_team(session, "  Crew  ", captain_id=Snowflake(INVOKER))
         session.commit()
         team_id = team.id or 0
     with Session(engine) as session:
@@ -76,13 +76,13 @@ def test_create_makes_a_lasting_team_with_the_captain_as_only_member(engine: Eng
 
 def test_create_refuses_an_empty_name(engine: Engine) -> None:
     with Session(engine) as session, pytest.raises(Refused, match="A team needs a name."):
-        service.create_team(session, "   ", captain_id=INVOKER)
+        service.create_team(session, "   ", captain_id=Snowflake(INVOKER))
 
 
 def test_a_non_captain_leaving_keeps_the_captain(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1))
     with Session(engine) as session:
-        service.leave(session, session.get_one(Team, team_id), 4)
+        service.leave(session, session.get_one(Team, team_id), Snowflake(4))
         session.commit()
     assert _captain(engine, team_id) == INVOKER
     assert _member_ids(engine, team_id) == [INVOKER]
@@ -92,7 +92,7 @@ def test_captain_leaving_hands_over_to_the_longest_standing_member(engine: Engin
     # Member 4 is stored before member 5 but joined later, so the handover must follow joined_at, not the row order.
     team_id = _seed(engine, INVOKER, (4, 2), (5, 1))
     with Session(engine) as session:
-        service.leave(session, session.get_one(Team, team_id), INVOKER)
+        service.leave(session, session.get_one(Team, team_id), Snowflake(INVOKER))
         session.commit()
     assert _captain(engine, team_id) == 5
     assert _member_ids(engine, team_id) == [5, 4]
@@ -101,7 +101,7 @@ def test_captain_leaving_hands_over_to_the_longest_standing_member(engine: Engin
 def test_the_last_member_leaving_soft_deletes_the_team(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER)
     with Session(engine) as session:
-        service.leave(session, session.get_one(Team, team_id), INVOKER)
+        service.leave(session, session.get_one(Team, team_id), Snowflake(INVOKER))
         session.commit()
     with Session(engine) as session:
         assert session.exec(alive(Team)).all() == []
@@ -111,7 +111,7 @@ def test_the_last_member_leaving_soft_deletes_the_team(engine: Engine) -> None:
 def test_a_non_member_leaving_is_refused(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1))
     with Session(engine) as session, pytest.raises(Refused, match="You aren't in that team."):
-        service.leave(session, session.get_one(Team, team_id), 9)
+        service.leave(session, session.get_one(Team, team_id), Snowflake(9))
 
 
 # --- The split helpers -----------------------------------------------------------------------------------------------
@@ -243,26 +243,26 @@ def _member_option(user_id: int) -> tuple[InteractionDataOption, ResolvedData]:
 def test_join_adds_the_member_and_refuses_one_already_in_the_team(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER)
     with Session(engine) as session:
-        service.join(session, session.get_one(Team, team_id), 4)
+        service.join(session, session.get_one(Team, team_id), Snowflake(4))
         session.commit()
     assert _member_ids(engine, team_id) == [INVOKER, 4]
     with Session(engine) as session, pytest.raises(Refused, match="You're in that team already."):
-        service.join(session, session.get_one(Team, team_id), 4)
+        service.join(session, session.get_one(Team, team_id), Snowflake(4))
 
 
 def test_only_the_captain_passes_require_captain(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1))
     with Session(engine) as session:
         team = session.get_one(Team, team_id)
-        service.require_captain(team, INVOKER)
+        service.require_captain(team, Snowflake(INVOKER))
         with pytest.raises(Refused, match="Only the team's captain can do that."):
-            service.require_captain(team, 4)
+            service.require_captain(team, Snowflake(4))
 
 
 def test_kick_takes_a_member_out_for_the_captain(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1), (5, 2))
     with Session(engine) as session:
-        service.kick(session, session.get_one(Team, team_id), INVOKER, 4)
+        service.kick(session, session.get_one(Team, team_id), Snowflake(INVOKER), Snowflake(4))
         session.commit()
     assert _member_ids(engine, team_id) == [INVOKER, 5]
 
@@ -272,17 +272,17 @@ def test_kick_refuses_a_non_captain_a_self_kick_and_a_non_member(engine: Engine)
     with Session(engine) as session:
         team = session.get_one(Team, team_id)
         with pytest.raises(Refused, match="Only the team's captain can do that."):
-            service.kick(session, team, 4, INVOKER)
+            service.kick(session, team, Snowflake(4), Snowflake(INVOKER))
         with pytest.raises(Refused, match="Use leave to leave your own team."):
-            service.kick(session, team, INVOKER, INVOKER)
+            service.kick(session, team, Snowflake(INVOKER), Snowflake(INVOKER))
         with pytest.raises(Refused, match="They aren't in that team."):
-            service.kick(session, team, INVOKER, 9)
+            service.kick(session, team, Snowflake(INVOKER), Snowflake(9))
 
 
 def test_hand_over_makes_a_member_the_captain(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1))
     with Session(engine) as session:
-        service.hand_over(session, session.get_one(Team, team_id), INVOKER, 4)
+        service.hand_over(session, session.get_one(Team, team_id), Snowflake(INVOKER), Snowflake(4))
         session.commit()
     assert _captain(engine, team_id) == 4
 
@@ -292,15 +292,15 @@ def test_hand_over_refuses_a_non_captain_and_a_non_member(engine: Engine) -> Non
     with Session(engine) as session:
         team = session.get_one(Team, team_id)
         with pytest.raises(Refused, match="Only the team's captain can do that."):
-            service.hand_over(session, team, 4, 4)
+            service.hand_over(session, team, Snowflake(4), Snowflake(4))
         with pytest.raises(Refused, match="They aren't in that team."):
-            service.hand_over(session, team, INVOKER, 9)
+            service.hand_over(session, team, Snowflake(INVOKER), Snowflake(9))
 
 
 def test_disband_soft_deletes_the_team_and_every_membership(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1))
     with Session(engine) as session:
-        service.disband(session, session.get_one(Team, team_id), INVOKER)
+        service.disband(session, session.get_one(Team, team_id), Snowflake(INVOKER))
         session.commit()
     with Session(engine) as session:
         assert session.get_one(Team, team_id).deleted_at is not None
@@ -310,7 +310,7 @@ def test_disband_soft_deletes_the_team_and_every_membership(engine: Engine) -> N
 def test_disband_refuses_a_non_captain(engine: Engine) -> None:
     team_id = _seed(engine, INVOKER, (4, 1))
     with Session(engine) as session, pytest.raises(Refused, match="Only the team's captain can do that."):
-        service.disband(session, session.get_one(Team, team_id), 4)
+        service.disband(session, session.get_one(Team, team_id), Snowflake(4))
 
 
 def test_a_hidden_captain_hands_the_captaincy_over(engine: Engine) -> None:
@@ -394,7 +394,7 @@ async def test_a_non_captain_cannot_kick(
 def _split_teams(engine: Engine, groups: list[list[int]], origin: TeamOrigin = TeamOrigin.TEXT_SPLIT) -> list[int]:
     """Store one temporary team per group through the service; return their IDs."""
     with Session(engine) as session:
-        teams = service.create_temporary_teams(session, groups, origin)
+        teams = service.create_temporary_teams(session, [[Snowflake(user_id) for user_id in group] for group in groups], origin)
         session.commit()
         return [team.id or 0 for team in teams]
 
@@ -429,7 +429,7 @@ def test_create_temporary_teams_stores_numbered_unended_teams_with_their_members
 def test_keep_makes_the_team_lasting_with_the_presser_as_captain(engine: Engine) -> None:
     (team_id,) = _split_teams(engine, [[3, 4, 5]])
     with Session(engine) as session:
-        service.keep(session, session.get_one(Team, team_id), 4, "  Owls  ")
+        service.keep(session, session.get_one(Team, team_id), Snowflake(4), "  Owls  ")
         session.commit()
     with Session(engine) as session:
         team = session.get_one(Team, team_id)
@@ -442,9 +442,9 @@ def test_keep_makes_the_team_lasting_with_the_presser_as_captain(engine: Engine)
 def test_keep_refuses_a_non_member_and_an_empty_name(engine: Engine) -> None:
     (team_id,) = _split_teams(engine, [[3, 4]])
     with Session(engine) as session, pytest.raises(Refused, match="Only this team's members can keep it."):
-        service.keep(session, session.get_one(Team, team_id), 9, "Owls")
+        service.keep(session, session.get_one(Team, team_id), Snowflake(9), "Owls")
     with Session(engine) as session, pytest.raises(Refused, match="A team needs a name."):
-        service.keep(session, session.get_one(Team, team_id), 3, "   ")
+        service.keep(session, session.get_one(Team, team_id), Snowflake(3), "   ")
 
 
 def test_keep_refuses_an_ended_team_and_one_kept_already(engine: Engine) -> None:
@@ -455,14 +455,14 @@ def test_keep_refuses_an_ended_team_and_one_kept_already(engine: Engine) -> None
         session.add(team)
         session.commit()
     with Session(engine) as session, pytest.raises(Refused, match="That team has ended."):
-        service.keep(session, session.get_one(Team, ended_id), 3, "Owls")
+        service.keep(session, session.get_one(Team, ended_id), Snowflake(3), "Owls")
 
     (kept_id,) = _split_teams(engine, [[3, 4]])
     with Session(engine) as session:
-        service.keep(session, session.get_one(Team, kept_id), 3, "Owls")
+        service.keep(session, session.get_one(Team, kept_id), Snowflake(3), "Owls")
         session.commit()
     with Session(engine) as session, pytest.raises(Refused, match="That team is kept already."):
-        service.keep(session, session.get_one(Team, kept_id), 4, "Hawks")
+        service.keep(session, session.get_one(Team, kept_id), Snowflake(4), "Hawks")
 
 
 def test_end_expired_ends_old_temporary_teams_and_spares_the_rest(engine: Engine) -> None:
@@ -519,7 +519,7 @@ async def test_picking_members_posts_two_teams_with_a_keep_button_each(
     with Session(engine) as session:
         teams = list(session.exec(alive(Team)))
         ids = {team.name: team.id for team in teams}
-        members = sorted(member.user_id for team in teams for member in service.members_of(session, team.id or 0))
+        members = sorted(member.user_id for team in teams for member in service.members_of(session, team))
     buttons = data["components"][0]["components"]
     assert [button["custom_id"] for button in buttons] == [f"team-keep:{ids['Team 1']}", f"team-keep:{ids['Team 2']}"]
     assert [button["label"] for button in buttons] == ["Keep Team 1", "Keep Team 2"]
