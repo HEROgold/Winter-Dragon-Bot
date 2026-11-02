@@ -13,7 +13,7 @@ lazy from wd_discord.gateway.events import ModalSubmitInteraction as ModalSubmit
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.guild import GuildMember
 lazy from wd_discord.resources.user import User
-lazy from wd_discord.testing import RecordingClient, user_json
+lazy from wd_discord.testing import RecordingClient, message_json, user_json
 
 
 if TYPE_CHECKING:
@@ -176,7 +176,7 @@ def make_component_interaction(discord_client: RecordingClient) -> ComponentInte
             version=1,
             **_sender(user, guild_id, None, permissions),
             data=data,
-            message={"id": "11"},
+            message=message_json(id="11"),
         )
         return ComponentInteraction(discord_client, model)
 

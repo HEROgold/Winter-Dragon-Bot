@@ -32,9 +32,7 @@ if TYPE_CHECKING:
 
 GUILD_ID = 1
 COUNTED_GUILD = {**GUILD_JSON, "approximate_member_count": 10, "approximate_presence_count": 6, "afk_channel_id": "30"}
-MEMBERS = [
-    member_json(user=user_json(id=str(user_id), username=f"u{user_id}", bot=user_id > 7)) for user_id in range(3, 10)
-]
+MEMBERS = [member_json(user=user_json(id=str(user_id), username=f"u{user_id}", bot=user_id > 7)) for user_id in range(3, 10)]
 """Seven members, two of them (8 and 9) bots."""
 APPLICATION = {
     "id": "2",

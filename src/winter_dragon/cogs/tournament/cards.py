@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     lazy from wd_bot.components import ComponentHandler
     lazy from wd_bot.registry import CommandMention
+    lazy from wd_discord.snowflake import Snowflake
 
     lazy from .models import DraftChoice, MatchVote, Tournament, TournamentMatch
 
@@ -54,23 +55,23 @@ class MatchAction(StrEnum):
 
 def signup_embed(
     tournament: Tournament,
-    rosters: Mapping[str, Sequence[int]],
-    solo_players: Sequence[int],
+    rosters: Mapping[str, Sequence[Snowflake]],
+    solo_players: Sequence[Snowflake],
     *,
-    team_create: CommandMention,
-    team_add: CommandMention,
+    enter: CommandMention,
+    entry_add: CommandMention,
 ) -> Embed:
-    """Return the sign-up card: the format, and who signed up, alone or per team.
+    """Return the sign-up card: the format, and who signed up, alone or per entry.
 
-    ``team_create`` and ``team_add`` are mentions of the commands that join a captains' tournament.
+    ``enter`` and ``entry_add`` are mentions of the commands that enter a team into a captains' tournament and add its players.
     """
     if tournament.mode is TeamMode.SOLO:
         how = f"Sign up alone; teams of {tournament.team_size} are drawn when the tournament starts."
         fields = [EmbedField(name=f"Players ({len(solo_players)})", value=mentions(solo_players))]
     else:
         how = (
-            f"Captains register a team of up to {tournament.team_size} players with {team_create}, "
-            f"then add their teammates with {team_add}."
+            f"Captains enter a team of up to {tournament.team_size} players with {enter}, "
+            f"then add their players with {entry_add}."
         )
         fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:MAX_EMBED_FIELDS]
     status = "open" if tournament.status is TournamentStatus.SIGNUP else tournament.status.value
@@ -99,8 +100,8 @@ def signup_buttons(
 
 def participants_embed(
     tournament: Tournament,
-    rosters: Mapping[str, Sequence[int]],
-    solo_players: Sequence[int],
+    rosters: Mapping[str, Sequence[Snowflake]],
+    solo_players: Sequence[Snowflake],
 ) -> Embed:
     """Return everyone signed up to ``tournament``: one line per player, or one line per team with its players."""
     if tournament.mode is TeamMode.SOLO:
@@ -116,16 +117,16 @@ def participants_embed(
     return Embed(title=f"🏆 {tournament.name}: {count} participant{'' if count == 1 else 's'}", description=text)
 
 
-def _team(names: Mapping[int, str], team_id: int | None, *, bye: bool) -> str:
-    if team_id is None:
+def _team(names: Mapping[int, str], entry_id: int | None, *, bye: bool) -> str:
+    if entry_id is None:
         return "bye" if bye else "TBD"
-    return names.get(team_id, f"Team {team_id}")
+    return names.get(entry_id, f"Team {entry_id}")
 
 
 def match_line(match: TournamentMatch, names: Mapping[int, str]) -> str:
     """Return one line of the bracket: the match's number, its teams, and its state or winner."""
     bye = match.round == 0
-    teams = f"{_team(names, match.team_a_id, bye=False)} vs {_team(names, match.team_b_id, bye=bye)}"
+    teams = f"{_team(names, match.entry_a_id, bye=False)} vs {_team(names, match.entry_b_id, bye=bye)}"
     if match.phase.decided and match.winner_id is not None:
         return f"`#{match.id}` {teams} — 🏆 {names.get(match.winner_id, '?')}"
     return f"`#{match.id}` {teams} — {PHASE_LABELS[match.phase]}"
@@ -144,7 +145,7 @@ def bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], na
         )
         for round_ in range(rounds)
     ]
-    champion = tournament.winner_team_id
+    champion = tournament.winner_entry_id
     description = f"🏆 Champion: **{names.get(champion, '?')}**" if champion is not None else "Single elimination."
     return Embed(title=f"{tournament.name} — bracket", description=description, fields=fields)
 
@@ -153,34 +154,59 @@ def match_embed(
     match: TournamentMatch,
     rounds: int,
     names: Mapping[int, str],
-    rosters: Mapping[int, Sequence[int]],
+    rosters: Mapping[int, Sequence[Snowflake]],
     drafts: Sequence[DraftChoice],
 ) -> Embed:
-    """Return a match card: its round, phase, the teams' players, and what each team banned and picked."""
+    """Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash."""
     fields: list[EmbedField] = []
-    for team_id in (match.team_a_id, match.team_b_id):
-        if team_id is None:
+    for entry_id in (match.entry_a_id, match.entry_b_id):
+        if entry_id is None:
             continue
-        own = [draft for draft in drafts if draft.team_id == team_id]
+        own = [draft for draft in drafts if draft.entry_id == entry_id]
         bans = ", ".join(draft.value for draft in own if draft.kind is DraftKind.BAN) or "—"
         picks = ", ".join(draft.value for draft in own if draft.kind is DraftKind.PICK) or "—"
-        value = f"{mentions(rosters.get(team_id, []))}\nBans: {bans}\nPicks: {picks}"
+        value = f"{mentions(rosters.get(entry_id, []))}\nBans: {bans}\nPicks: {picks}"
         fields.append(
-            EmbedField(name=names.get(team_id, "?"), value=truncate(value, MAX_EMBED_FIELD_VALUE_LENGTH), inline=True),
+            EmbedField(name=names.get(entry_id, "?"), value=truncate(value, MAX_EMBED_FIELD_VALUE_LENGTH), inline=True),
         )
     title = f"Match #{match.id} — {round_name(match.round, rounds)}"
     description = PHASE_LABELS[match.phase]
     if match.phase.decided and match.winner_id is not None:
         description += f": **{names.get(match.winner_id, '?')}** wins"
+    if match.phase is MatchPhase.READY and match.entry_a_id is not None and match.entry_b_id is not None:
+        other_side = set(rosters.get(match.entry_b_id, []))
+        clash = [user_id for user_id in rosters.get(match.entry_a_id, []) if user_id in other_side]
+        if clash:
+            mentioned = ", ".join(f"<@{user_id}>" for user_id in clash)
+            description += f"\nClash: {mentioned} play for both sides."
     return Embed(title=title, description=description, fields=fields)
 
 
-def match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str]) -> list[ActionRow]:
-    """Return the organiser's controls under a match card: next phase, report a winner, or a forfeit."""
-    if match.phase.decided or match.team_a_id is None or match.team_b_id is None or match.id is None:
+def match_buttons(
+    handler: ComponentHandler,
+    match: TournamentMatch,
+    names: Mapping[int, str],
+    clash_handler: ComponentHandler,
+    clash: Sequence[Snowflake] = (),
+) -> list[ActionRow]:
+    """Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit."""
+    if match.phase.decided or match.entry_a_id is None or match.entry_b_id is None or match.id is None:
         return []
-    teams = (match.team_a_id, match.team_b_id)
+    teams = (match.entry_a_id, match.entry_b_id)
     rows: list[ActionRow] = []
+    if match.phase is MatchPhase.READY and clash:
+        rows.append(
+            ActionRow(
+                components=[
+                    Button(
+                        style=ButtonStyle.DANGER,
+                        label=f"Drop clash from {names.get(team, '?')}"[:MAX_BUTTON_LABEL_LENGTH],
+                        custom_id=clash_handler.custom_id(match.id, team),
+                    )
+                    for team in teams
+                ],
+            ),
+        )
     following = match.phase.next
     if following is not None:
         label = f"Next: {PHASE_LABELS[following]}"

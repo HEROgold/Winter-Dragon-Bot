@@ -99,8 +99,7 @@ def _teams_by_members(engine: Engine) -> dict[int, list[int]]:
     """Return each alive team's ID mapped to its member IDs."""
     with Session(engine) as session:
         return {
-            team.id or 0: [member.user_id for member in service.members_of(session, team.id or 0)]
-            for team in session.exec(alive(Team))
+            team.id or 0: [member.user_id for member in service.members_of(session, team)] for team in session.exec(alive(Team))
         }
 
 
