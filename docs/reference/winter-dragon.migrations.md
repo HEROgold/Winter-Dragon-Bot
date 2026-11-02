@@ -88,3 +88,10 @@ Incremental game.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_10_30_2dbbfb633e0d_feat_autochannel_remember_settings_` — `src/winter_dragon/migrations/versions/2026_10_30_2dbbfb633e0d_feat_autochannel_remember_settings_.py`
+feat(autochannel): remember settings owners change in Discord.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.

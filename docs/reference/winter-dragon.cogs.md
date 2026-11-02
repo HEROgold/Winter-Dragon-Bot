@@ -45,9 +45,12 @@ The /autochannel command group: joining a guild's hub voice channel gives a memb
 - module names: OWNER_PERMISSIONS, CREATE_REASON, AUTOCHANNEL_TABLES
 - `owner_overwrite(user_id: Snowflake) -> OverwriteParams` — Return the overwrite letting the member ``user_id`` run their own channel.
 - `default_name(display_name: str) -> str` — Return the name of a member's channel when they didn't choose one.
-- `channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings) -> GuildChannelParams` — Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
+- `channel_params(member: Member, parent_id: Snowflake | None, settings: AutoChannelSettings, remembered: Iterable[OverwriteParams]=()) -> GuildChannelParams` — Return ``member``'s new channel: under ``parent_id``, named and limited as their ``settings`` say.
 - `hub_of(session: Session, guild_id: Snowflake) -> AutoChannelHub | None` — Return the guild ``guild_id``'s hub, if it has one.
 - `owned_channel(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> AutoChannel | None` — Return the automatic channel the member ``owner_id`` has in the guild ``guild_id``, if any.
+- `remembered_overwrites(session: Session, guild_id: Snowflake, owner_id: Snowflake) -> list[AutoChannelOverwrite]` — Return the overwrites the member ``owner_id`` set on their channel in the guild ``guild_id``.
+- `remember_overwrites(session: Session, record: AutoChannel, overwrites: Iterable[PermissionOverwrite]) -> None` — Make the overwrites remembered for ``record``'s owner exactly ``overwrites``, minus the owner's own; caller commits.
+- `usable_overwrites(rows: Iterable[AutoChannelOverwrite], role_ids: Container[Snowflake] | None) -> list[OverwriteParams]` — Return ``rows`` as overwrites to set, without those for roles not in ``role_ids`` (``None`` if unknown: all stay).
 - `settings_of(session: Session, user_id: Snowflake) -> AutoChannelSettings` — Return the member ``user_id``'s channel settings; new defaults, not in ``session``, when they have none.
 
 ### `class AutoChannelHub(DiscordKeyedModel, table=True)`
@@ -65,6 +68,12 @@ How a member wants their automatic channels: its name and user limit, in every g
 
 - fields: ownership: ClassVar[Ownership], name: str | None, user_limit: int
 
+### `class AutoChannelOverwrite(LifecycleModel, table=True)`
+A permission overwrite a member set on their automatic channel in a guild, for their next channel there.
+
+- fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], guild_id: int, owner_id: int,
+  target_id: int, target_type: int, allow: int, deny: int
+
 ### `@dataclass class VoiceOccupancy`
 Who is in which voice channel, per guild, as far as the gateway told.
 
@@ -78,8 +87,9 @@ Gives a member who joins the hub their own voice channel, and deletes it once it
 - `async load() -> None` — Create the autochannel tables if missing.
 - `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Learn who is in which voice channel, then delete the automatic channels that emptied while offline.
 - `@Cog.listener async on_voice_state_update(state: VoiceState) -> None` — Give a member joining the hub their own channel, and delete an automatic channel the member left empty.
+- `@Cog.listener async on_channel_update(channel: Channel) -> None` — Remember the name, user limit and permission overwrites an owner gave their automatic channel, for the next.
 - `async give_channel(member: Member | PartialMember, hub: AutoChannelHub) -> None` — Move ``member`` into their automatic channel, creating it next to ``hub`` when they have none.
-- `async create_channel(member: Member | PartialMember, hub: AutoChannelHub, settings: AutoChannelSettings) -> NetworkError | None` — Create ``member``'s channel in the hub's category, remember it and move them into it.
+- `async create_channel(member: Member | PartialMember, hub: AutoChannelHub, settings: AutoChannelSettings, remembered: Iterable[AutoChannelOverwrite]=()) -> NetworkError | None` — Create ``member``'s channel in the hub's category, remember it and move them into it.
 - `async delete_channel(channel: AutoChannel) -> None` — Delete the automatic ``channel`` and forget it once it's gone; one that's left is tried again later.
 - `@Cog.command async setup(interaction: GuildCommandInteraction, category_name: str, hub_name: str) -> None` — Create the category ``category_name`` holding the hub voice channel ``hub_name``.
 - `@Cog.command async mark(interaction: GuildCommandInteraction, channel: Channel) -> None` — Make ``channel`` the guild's hub, replacing the one it had.
