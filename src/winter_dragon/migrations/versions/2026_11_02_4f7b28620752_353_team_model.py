@@ -27,7 +27,9 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("kind", sa.Enum("TEMPORARY", "LASTING", name="teamkind"), nullable=False),
         sa.Column(
-            "origin", sa.Enum("CREATED", "VOICE_SPLIT", "TEXT_SPLIT", "SOLO_TOURNAMENT", name="teamorigin"), nullable=False
+            "origin",
+            sa.Enum("CREATED", "VOICE_SPLIT", "TEXT_SPLIT", "SOLO_TOURNAMENT", name="teamorigin"),
+            nullable=False,
         ),
         sa.Column("captain_id", sa.BigInteger(), nullable=True),
         sa.Column("ended_at", sa.DateTime(timezone=True), nullable=True),
