@@ -134,7 +134,7 @@ An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the 
 Legacy message components: action rows, buttons and select menus (https://docs.discord.com/developers/components/reference).
 
 - `type CustomId = str`
-- `components_payload(rows: Sequence[ActionRow]) -> list[dict[str, Any]]` — Return the ``components`` JSON for a message, checking the message-wide limits.
+- `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
 ### `class ComponentType(OpenIntEnum)`
 The type of a component.
