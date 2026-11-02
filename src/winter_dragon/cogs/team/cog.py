@@ -25,6 +25,7 @@ lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed, mentions
 
+lazy from .cards import split_post
 lazy from .models import TEAM_TABLES, Team, TeamOrigin
 lazy from .service import (
     create_team,
@@ -148,17 +149,7 @@ class Teams(
         with Session(self.bind) as session:
             stored_teams = create_temporary_teams(session, groups, TeamOrigin.TEXT_SPLIT)
             session.commit()
-            names = [team.name for team in stored_teams]
-            team_ids = [team.id or 0 for team in stored_teams]
-        embed = Embed(
-            title="Teams",
-            fields=[EmbedField(name=name, value=mentions(group)) for name, group in zip(names, groups, strict=True)],
-        )
-        buttons = [
-            Button(style=ButtonStyle.SECONDARY, label=f"Keep {name}", custom_id=self.keep_button.custom_id(team_id))
-            for name, team_id in zip(names, team_ids, strict=True)
-        ]
-        rows = [ActionRow(components=buttons[start : start + 5]) for start in range(0, len(buttons), 5)]
+            embed, rows = split_post(list(zip(stored_teams, groups, strict=True)), self.keep_button)
         await interaction.respond(embeds=[embed], components=rows)
 
     @Cog.component("team-keep")

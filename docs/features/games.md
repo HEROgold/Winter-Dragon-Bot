@@ -95,7 +95,9 @@ An invite is a public message with a Join button that only the invitee can press
 
 `/team split` picks members from a menu and posts random temporary teams, with a Keep button under each. Keep names the team and makes it lasting, with the presser as captain. A temporary team nobody keeps ends after `temporary_lifetime_hours` (24 by default).
 
-**Status:** 🟡 New in `src/winter_dragon/cogs/team/`. Tournament entries follow in #427 and #429.
+`/voice split` splits the members of your voice channel into random teams and posts them in that channel's chat. Move on a team creates the team's voice channel on its first press and moves only the presser there. A team's channel is deleted once it is empty, and the team ends when it has no channel left. With `move:False` the post has only Keep buttons and no Move buttons.
+
+**Status:** 🟡 New in `src/winter_dragon/cogs/team/` and `src/winter_dragon/cogs/voice.py`. Tournament entries follow in #429.
 
 ## Tournaments
 

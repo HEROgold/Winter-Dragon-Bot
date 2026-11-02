@@ -44,6 +44,14 @@ class VoiceOccupancy:
         """Whether anyone is in the voice channel ``channel_id``."""
         return channel_id in self._channels[guild_id].values()
 
+    def channel_of(self, guild_id: Snowflake, user_id: Snowflake) -> Snowflake | None:
+        """Return the voice channel ``user_id`` is in, if the gateway told."""
+        return self._channels[guild_id].get(user_id)
+
+    def members_in(self, guild_id: Snowflake, channel_id: Snowflake) -> list[Snowflake]:
+        """Return who is in the voice channel ``channel_id``."""
+        return [user_id for user_id, channel in self._channels[guild_id].items() if channel == channel_id]
+
 
 @dataclass
 class EmptiedChannels[M: DiscordKeyedModel]:
