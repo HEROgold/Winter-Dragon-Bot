@@ -30,17 +30,19 @@ from winter_dragon.cogs.reminder.domain import Reminder, owned_reminders
 from winter_dragon.cogs.stats import PeakOnline, StatChannel, StatKind, guild_stat_channels
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 from winter_dragon.cogs.steam.store import SteamSaleStore
+from winter_dragon.cogs.team import service as team_service
 from winter_dragon.cogs.tournament import service as tournaments
 from winter_dragon.member_hidden import MemberHiddenHook
 from winter_dragon.web.records import member_records
 from winter_dragon.cogs.tournament.models import (
+    EntryPlayer,
     MatchPhase,
     TeamMode,
     Tournament,
     TournamentMatch,
-    TournamentPlayer,
     TournamentStatus,
     TournamentEntry,
+    TournamentSignup,
 )
 
 
@@ -225,14 +227,14 @@ def _seed_guild(engine: Engine, guild_id: int = GUILD_ID) -> int:
         session.add(tournament)
         session.flush()
         assert tournament.id is not None
-        teams = [
-            TournamentEntry(tournament_id=tournament.id, name=name, captain_id=user)
-            for name, user in (("a", MEMBER_ID), ("b", RIVAL_ID))
-        ]
-        session.add_all(teams)
-        session.flush()
-        for team in teams:
-            session.add(TournamentPlayer(tournament_id=tournament.id, user_id=team.captain_id, entry_id=team.id))
+        teams: list[TournamentEntry] = []
+        for name, captain in (("a", MEMBER_ID), ("b", RIVAL_ID)):
+            team = team_service.create_team(session, name, captain)
+            entry = TournamentEntry(tournament_id=tournament.id, team_id=team.id or 0, name=name)
+            session.add(entry)
+            session.flush()
+            session.add(EntryPlayer(entry_id=entry.id or 0, user_id=captain))
+            teams.append(entry)
         tournament.status = TournamentStatus.RUNNING
         match = TournamentMatch(
             tournament_id=tournament.id,
@@ -431,8 +433,11 @@ def _seed_signup(engine: Engine, guild_id: int, mode: TeamMode) -> int:
         session.add(tournament)
         session.commit()
         if mode is TeamMode.CAPTAINS:
-            tournaments.create_team(session, tournament, MEMBER_ID, "a")
-            tournaments.add_to_team(session, tournament, MEMBER_ID, RIVAL_ID)
+            team = team_service.create_team(session, "a", MEMBER_ID)
+            session.commit()
+            entry = tournaments.enter(session, tournament, team, MEMBER_ID)
+            team_service.join(session, team, RIVAL_ID)
+            tournaments.add_player(session, tournament, entry, MEMBER_ID, RIVAL_ID)
         else:
             tournaments.sign_up(session, tournament, MEMBER_ID)
             tournaments.sign_up(session, tournament, RIVAL_ID)
@@ -445,7 +450,7 @@ def _signups(engine: Engine, tournament_id: int) -> tuple[list[str], list[int]]:
     """Return the tournament's team names and signed-up players."""
     with Session(engine) as session:
         teams = [team.name for team in tournaments.entries_of(session, tournament_id)]
-        return teams, [player.user_id for player in tournaments.players_of(session, tournament_id)]
+        return teams, [signup.user_id for signup in tournaments.signups_of(session, tournament_id)]
 
 
 async def _send_due(engine: Engine, now: datetime) -> int:
@@ -472,7 +477,7 @@ async def test_a_deletion_request_takes_the_member_out_of_tournaments_that_have_
 
     await _cog(engine).request_deletion(MEMBER_ID, DAY_0)
 
-    assert _signups(engine, captained) == ([], [])  # their team is disbanded
+    assert _signups(engine, captained) == (["a"], [])  # the team hands over to the rival, and its entry stays with it
     assert _signups(engine, solo) == ([], [RIVAL_ID])
 
 

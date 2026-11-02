@@ -29,6 +29,7 @@ from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member
 
 from winter_dragon.cogs.fuel import CarFuels
 from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
+from winter_dragon.cogs.team import service as team_service
 from winter_dragon.cogs.team.models import TeamKind
 
 
@@ -236,7 +237,9 @@ def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestC
             tournament = Tournament(guild_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2)
             session.add(tournament)
             session.commit()
-            tournaments.create_team(session, tournament, Snowflake(MEMBER_ID), f"{name} team")
+            team = team_service.create_team(session, f"{name} team", MEMBER_ID)
+            session.commit()
+            tournaments.enter(session, tournament, team, MEMBER_ID)
             tournament.status = status
             session.commit()
 
