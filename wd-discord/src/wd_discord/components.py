@@ -5,7 +5,7 @@ The ``IS_COMPONENTS_V2`` flag would disable ``content`` and ``embeds`` entirely,
 """
 
 lazy from collections import Counter
-lazy from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
+lazy from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -136,7 +136,7 @@ class ActionRow(BaseModel):
         return self
 
 
-def components_payload(rows: Sequence[ActionRow]) -> list[dict[str, Any]]:
+def components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]:
     """Return the ``components`` JSON for a message, checking the message-wide limits.
 
     Raises :class:`ValueError` when the message has more than 40 components or reuses a ``custom_id``,
