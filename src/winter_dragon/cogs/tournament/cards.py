@@ -15,6 +15,8 @@ lazy from wd_discord.limits import (
     truncate,
 )
 
+lazy from winter_dragon.ui import mentions
+
 lazy from .bracket import round_name, tally
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
 
@@ -48,12 +50,6 @@ class MatchAction(StrEnum):
     """Report the button's team as the winner."""
     FORFEIT = "forfeit"
     """Record the button's team forfeiting."""
-
-
-def mentions(user_ids: Sequence[int]) -> str:
-    """Return the users as mentions, or a dash for nobody; cut to fit an embed field."""
-    text = ", ".join(f"<@{user_id}>" for user_id in user_ids) or "—"
-    return truncate(text, MAX_EMBED_FIELD_VALUE_LENGTH)
 
 
 def signup_embed(

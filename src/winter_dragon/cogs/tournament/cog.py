@@ -21,6 +21,7 @@ lazy from wd_discord.permissions import Permissions
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 lazy from .bracket import MAX_QUESTION_LENGTH, parse_options, round_count
@@ -61,7 +62,6 @@ lazy from .service import (
 
 
 if TYPE_CHECKING:
-    lazy from wd_db.extension.lifecycle import LifecycleModel
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import ActionRow
     lazy from wd_discord.embed import Embed
@@ -86,14 +86,6 @@ def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) 
     if not is_organiser(interaction, tournament):
         msg = "Only the tournament's organiser, or someone who can manage the server, can do that."
         raise Refused(msg)
-
-
-def stored[M: LifecycleModel](session: Session, model: type[M], record_id: int, gone: str) -> M:
-    """Return the alive ``model`` stored as ``record_id``; refuse with ``gone`` when there's none."""
-    record = alive_by_id(session, model, record_id)
-    if record is None:
-        raise Refused(gone)
-    return record
 
 
 def team_names(session: Session, tournament_id: int) -> dict[int, str]:

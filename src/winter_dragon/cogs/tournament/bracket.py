@@ -5,33 +5,17 @@ lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_BUTTON_LABEL_LENGTH
 
+lazy from winter_dragon.cogs.team.split import MIN_TEAMS
+
 
 if TYPE_CHECKING:
     lazy from collections.abc import Iterable, Sequence
-    lazy from random import Random
 
 
-MIN_TEAMS = 2
 MAX_VOTE_OPTIONS = 2 * MAX_ACTION_ROW_BUTTONS
 """The most answers a vote offers: two rows of buttons."""
 MAX_QUESTION_LENGTH = 200
 """The longest vote question; it fits in the vote embed's title (``MAX_EMBED_TITLE_LENGTH``) with its prefix."""
-
-
-def split_into_teams(user_ids: Sequence[int], team_size: int, rng: Random) -> list[list[int]]:
-    """Shuffle ``user_ids`` into teams of ``team_size``; players left over join the first teams, one each.
-
-    Returns no teams when there are too few players for two.
-    """
-    if team_size < 1 or len(user_ids) < MIN_TEAMS * team_size:
-        return []
-    shuffled = list(user_ids)
-    rng.shuffle(shuffled)
-    count = len(shuffled) // team_size
-    teams = [shuffled[index * team_size : (index + 1) * team_size] for index in range(count)]
-    for index, user_id in enumerate(shuffled[count * team_size :]):
-        teams[index].append(user_id)
-    return teams
 
 
 def round_count(teams: int) -> int:

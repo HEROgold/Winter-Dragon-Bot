@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `winter_dragon.ui` — `src/winter_dragon/ui/__init__.py`
 
-- exports: ChangedEmbed, CreatedEmbed, DeletedEmbed
+- exports: ChangedEmbed, CreatedEmbed, DeletedEmbed, mentions
 
 ## `winter_dragon.ui.embeds` — `src/winter_dragon/ui/embeds.py`
 Confirmation embeds for something created, changed or deleted, in the colors set in ``config.ini``.
@@ -26,3 +26,8 @@ Confirms that something was changed, in ``Settings.changed_color``.
 Confirms that something was deleted, in ``Settings.deleted_color``.
 
 - fields: color: Color | None
+
+## `winter_dragon.ui.text` — `src/winter_dragon/ui/text.py`
+Text the bot's messages share.
+
+- `mentions(user_ids: Sequence[int]) -> str` — Return the users as mentions, or a dash for nobody; cut to fit an embed field.
