@@ -428,6 +428,7 @@ The privacy tables, and the rules for hiding a member's or a guild's data, for t
 - `purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]` — Return ``models`` children first: a table that points at another (by foreign key) comes before it.
 - `stored_models(bind: Engine | Connection) -> list[type[LifecycleModel]]` — Return every lifecycle model whose table exists in ``bind``, children first.
 - `hide_owned(session: Session, models: Iterable[type[LifecycleModel]], now: datetime, *, member: Snowflake | None=None, guild: Snowflake | None=None) -> None` — Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``.
+- `anonymise_member(session: Session, models: Iterable[type[LifecycleModel]], member_id: Snowflake) -> None` — Replace ``member_id`` with :data:`~wd_db.extension.lifecycle.DELETED_MEMBER` in every alive row's anonymised columns.
 - `hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> bool` — Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
 - `deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 
