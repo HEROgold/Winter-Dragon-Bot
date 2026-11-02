@@ -21,6 +21,7 @@ lazy from wd_discord import (
 lazy from wd_discord.gateway import EventName
 lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import GuildChannelParams
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 lazy from wd_types.clock import utc_now
 
@@ -159,12 +160,22 @@ class Voice(
             channel_id = await self._team_channel(interaction, int(team_id), label, split_channel_id)
         moved = await interaction.member.move_to(self.bot.client.channels.partial(channel_id), reason="Voice split")
         if is_network_error(moved):
+            await self._drop_if_empty(interaction.guild_id, channel_id)
             await interaction.respond(
                 content="I couldn't move you; are you in a voice channel, and may I move members there?",
                 ephemeral=True,
             )
             return
         await interaction.respond(content=f"Moved you to <#{channel_id}>.", ephemeral=True)
+
+    async def _drop_if_empty(self, guild_id: Snowflake, channel_id: int) -> None:
+        """Delete the team channel ``channel_id`` when nobody is in it, as after a move that failed into a new channel."""
+        if self.voice.occupied(guild_id, Snowflake(channel_id)):
+            return
+        with Session(self.bind) as session:
+            record = self.channels.record(session, Snowflake(channel_id))
+        if record is not None:
+            await self.channels.delete(record)
 
     async def _team_channel(
         self,
