@@ -63,3 +63,5 @@ def downgrade() -> None:
     op.drop_index('idx_team_alive_only', table_name='team', postgresql_where=sa.text('deleted_at IS NULL'), sqlite_where=sa.text('deleted_at IS NULL'))
     op.drop_table('team')
     # ### end Alembic commands ###
+    sa.Enum(name="teamorigin").drop(op.get_bind(), checkfirst=True)
+    sa.Enum(name="teamkind").drop(op.get_bind(), checkfirst=True)
