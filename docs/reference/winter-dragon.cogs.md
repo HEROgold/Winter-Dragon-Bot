@@ -786,6 +786,12 @@ A Steam store URL.
 - `@property is_bundle -> bool` — Whether this URL points at a bundle (``/bundle/``) or a package (``/sub/``).
 - `@property store_item -> StoreItemID | None` — The store item this URL's page is for, or ``None`` for a page that isn't one item's.
 
+## `winter_dragon.cogs.team.cards` — `src/winter_dragon/cogs/team/cards.py`
+The messages the team features post: the split teams, with the buttons under them.
+
+- module names: BUTTONS_PER_ROW
+- `split_post(teams: Sequence[tuple[Team, Sequence[int]]], keep: ComponentHandler, move: Callable[[Team], str] | None=None) -> tuple[Embed, list[ActionRow]]` — Return the post showing freshly split teams: a field per team, with Keep buttons under it.
+
 ## `winter_dragon.cogs.team.cog` — `src/winter_dragon/cogs/team/cog.py`
 The /team command group: create a lasting team, split members into temporary ones, invite, manage and leave teams.
 
@@ -850,6 +856,7 @@ What can happen to a team: creating it, keeping a temporary one, listing its mem
 - `require_keepable(session: Session, team: Team, user_id: int) -> None` — Refuse unless ``user_id`` is a member of ``team``, which must be temporary and unended, so they may keep it.
 - `keep(session: Session, team: Team, user_id: int, name: str) -> None` — Make the temporary ``team`` lasting under ``name``, with ``user_id`` as its captain; only its members may.
 - `end_expired(session: Session, now: datetime, lifetime: timedelta) -> int` — End every alive temporary team, except a solo tournament's, made at or before ``now - lifetime``; return how many.
+- `end_team(session: Session, team: Team, now: datetime) -> None` — End the temporary ``team`` at ``now``; a lasting or already ended team stays as it is.
 - `members_of(session: Session, team_id: int) -> Generator[TeamMember]` — Yield the team's members, longest-standing first.
 - `teams_of(session: Session, user_id: int) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name.
 - `membership(session: Session, team: Team, user_id: int) -> TeamMember | None` — Return ``user_id``'s alive membership of ``team``, if they're in it.
@@ -1097,3 +1104,24 @@ Looks up terms on Urban Dictionary.
 - `async load() -> None` — Create the lookup table if missing.
 - `@Cog.command async search(interaction: CommandInteraction, query: str) -> None` — Reply with the definitions of ``query``.
 - `@Cog.command async random(interaction: CommandInteraction) -> None` — Reply with definitions of random terms, unless that's turned off.
+
+## `winter_dragon.cogs.voice` — `src/winter_dragon/cogs/voice.py`
+The /voice command group: split a voice channel into teams that each get a voice channel of their own.
+
+- module names: VOICE_TABLES, CHANNEL_REFUSAL
+
+### `class TeamVoiceChannel(DiscordKeyedModel, table=True)`
+A voice channel made for a team of a voice split; ``id`` is the channel's, deleted once empty.
+
+- fields: ownership: ClassVar[Ownership], guild_id: int, team_id: int
+
+### `class Voice(GroupCog, name='voice', description='Voice channel tools: split everyone in your channel into teams', contexts=[InteractionContextType.GUILD])`
+Splits the members of a voice channel into random teams, and gives each team a voice channel to move to.
+
+- attributes: rng
+- `@property channels -> EmptiedChannels[TeamVoiceChannel]` — The team voice channels, deleted once empty.
+- `async load() -> None` — Create the voice tables if missing.
+- `@Cog.listener async on_guild_create(guild: GatewayGuild) -> None` — Learn who is in which voice channel, then delete the team channels that emptied while offline.
+- `@Cog.listener async on_voice_state_update(state: VoiceState) -> None` — Track who joins and leaves voice, and delete a team channel the member left empty.
+- `@Cog.command async split(interaction: GuildCommandInteraction, teams: int=2, move: bool=True) -> None` — Draw temporary teams from the members of the caller's voice channel and post them in its chat.
+- `@Cog.component async move_button(interaction: GuildComponentInteraction, team_id: str, split_channel_id: str) -> None` — Move the presser to their team's voice channel, creating it on the team's first press.

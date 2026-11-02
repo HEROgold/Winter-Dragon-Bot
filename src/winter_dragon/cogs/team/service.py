@@ -92,6 +92,14 @@ def end_expired(session: Session, now: datetime, lifetime: timedelta) -> int:
     return len(expired)
 
 
+def end_team(session: Session, team: Team, now: datetime) -> None:
+    """End the temporary ``team`` at ``now``; a lasting or already ended team stays as it is."""
+    if team.kind is TeamKind.LASTING or team.ended_at is not None:
+        return
+    team.ended_at = now
+    session.add(team)
+
+
 def members_of(session: Session, team_id: int) -> Generator[TeamMember]:
     """Yield the team's members, longest-standing first."""
     query = alive(TeamMember).where(TeamMember.team_id == team_id).order_by(col(TeamMember.joined_at), col(TeamMember.id))
