@@ -42,7 +42,10 @@ if TYPE_CHECKING:
 router = APIRouter()
 SLUG = "reminders"
 """The page's path segment under the Profile: ``/profile/reminders``."""
+PATH = f"{profile_router.prefix}/{SLUG}"
+"""The page's URL, where a plain form post is sent back to."""
 BOARD = "reminders/_board.html"
+LIST = "reminders/_list.html"
 
 
 class Repeat(StrEnum):
@@ -163,7 +166,7 @@ def reminders(context: ProfileContext) -> dict[str, object]:
     return _context(context.bind, context.member_id, context.zone, utc_now())
 
 
-def _page(  # noqa: PLR0913 - the form's state is part of what's rendered
+def _respond(  # noqa: PLR0913 - the form's state is part of what's rendered
     request: Request,
     account: Account,
     bind: Engine,
@@ -202,7 +205,7 @@ def add_reminder(  # noqa: PLR0913 - one parameter per form field
         draft = replace(draft, repeat=Repeat(repeat))
     reminder = draft.reminder(account.id, visitor_zone(request), utc_now())
     if isinstance(reminder, Refused):
-        return _page(
+        return _respond(
             request,
             account,
             bind,
@@ -216,8 +219,8 @@ def add_reminder(  # noqa: PLR0913 - one parameter per form field
         session.commit()
     return after_post(
         request,
-        f"{profile_router.prefix}/{SLUG}",
-        lambda: _page(request, account, bind, fragment=BOARD),
+        PATH,
+        lambda: _respond(request, account, bind, fragment=BOARD),
     )
 
 
@@ -236,6 +239,6 @@ def remove_reminder(
             session.commit()
     return after_post(
         request,
-        f"{profile_router.prefix}/{SLUG}",
-        lambda: _page(request, account, bind, fragment="reminders/_list.html"),
+        PATH,
+        lambda: _respond(request, account, bind, fragment=LIST),
     )

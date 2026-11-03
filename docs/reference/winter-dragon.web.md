@@ -172,7 +172,7 @@ The Profile's love page: everyone the member has checked their compatibility wit
 ## `winter_dragon.web.profile_pages.reminders` — `src/winter_dragon/web/profile_pages/reminders.py`
 The Profile's reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord.
 
-- module names: router, SLUG, BOARD
+- module names: router, SLUG, PATH, BOARD, LIST
 - `blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft` — Return an empty add form, due tomorrow morning in ``zone``.
 - `reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]` — Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first.
 - `@profile_page reminders(context: ProfileContext) -> dict[str, object]` — Return the page's context: the member's reminders and an empty add form, due tomorrow morning.

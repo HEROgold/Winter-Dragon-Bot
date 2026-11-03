@@ -378,6 +378,13 @@ def test_reminders_is_a_profile_tab_not_a_top_nav_link(member: TestClient) -> No
     assert 'href="/reminders"' not in member.get("/me").text
 
 
+def test_the_top_nav_lists_the_sections(member: TestClient) -> None:
+    page = member.get("/me").text
+    nav = page[page.index('<nav class="site-nav"') :]
+
+    assert re.findall(r'href="([^"]*)"', nav[: nav.index("</nav>")]) == ["/profile", "/me"]
+
+
 def test_the_signpost_links_to_the_profile_reminders(member: TestClient) -> None:
     assert 'href="/profile/reminders"' in member.get("/").text
 
