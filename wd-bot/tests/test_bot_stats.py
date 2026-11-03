@@ -4,17 +4,19 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
+from sqlmodel import SQLModel
 from wd_bot.testing import detached_cog
 from wd_discord.cache import StateCache
 from wd_discord.gateway.dispatch import parse_dispatch
 from wd_discord.testing import RecordingClient, guild_create_json, member_json, user_json
 
-from winter_dragon.bot_stats import BotStats, ShardStats
+from winter_dragon.bot_stats import BotStats, BotStatsSnapshot, ShardStats, latest_snapshot
 from winter_dragon.cogs.bot_stats import MAX_SHARD_LINES, BotStatsCommand, shard_line, shards_value
 
 
 if TYPE_CHECKING:
     from conftest import InteractionFactory
+    from sqlalchemy import Engine
     from wd_discord.gateway.sharding import ShardManager
 
 
@@ -134,3 +136,21 @@ async def test_botstats_refuses_everyone_else(
     await BotStatsCommand.botstats.invoke(cog, make_interaction("botstats"), [])
 
     assert discord_client.interaction_responses()[0]["data"]["content"] == "Only the bot's owners can do that."
+
+
+async def test_the_cog_stores_a_snapshot_for_the_dashboard(engine: Engine, discord_client: RecordingClient) -> None:
+    cog = detached_cog(BotStatsCommand, engine=engine, client=discord_client, shard_manager=None, launch_time=LAUNCH)
+    cog.create_tables(BotStatsSnapshot)
+
+    await cog.store()
+    await cog.store()
+
+    stored = latest_snapshot(engine)
+    assert stored is not None
+    assert stored.launch_time == LAUNCH
+
+
+def test_there_is_no_snapshot_before_the_first(engine: Engine) -> None:
+    SQLModel.metadata.create_all(engine, tables=[BotStatsSnapshot.__table__])
+
+    assert latest_snapshot(engine) is None

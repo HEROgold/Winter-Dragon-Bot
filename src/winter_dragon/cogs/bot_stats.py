@@ -1,20 +1,29 @@
-"""The /botstats command: what the bot serves right now, for its owners."""
+"""The /botstats command: what the bot serves right now, for its owners; and the snapshot the dashboard reads."""
 
-lazy from typing import TYPE_CHECKING
+lazy from typing import TYPE_CHECKING, override
 
+lazy from sqlmodel import Session
 lazy from wd_bot.checks import is_owner
 lazy from wd_bot.cogs import Cog
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.bot_stats import BotStats
+lazy from winter_dragon.bot_stats import BotStats, BotStatsSnapshot, store_snapshot
+lazy from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:
     lazy from wd_discord import CommandInteraction
 
     lazy from winter_dragon.bot_stats import ShardStats
+
+
+class BotStatsSettings:
+    """Settings for the bot stats, in their ``cogs.ini`` section."""
+
+    snapshot_interval = CogConfig(30)
+    """Seconds between two snapshots stored for the dashboard."""
 
 
 MAX_SHARD_LINES = 25
@@ -53,7 +62,22 @@ def stats_embed(stats: BotStats) -> Embed:
 
 
 class BotStatsCommand(Cog):
-    """Shows the bot's owners what it serves: guilds, channels, members, shards and uptime."""
+    """Shows the bot's owners what it serves: guilds, channels, members, shards and uptime.
+
+    Stores a snapshot every :attr:`BotStatsSettings.snapshot_interval` seconds for the dashboard's stats page.
+    """
+
+    @override
+    async def load(self) -> None:
+        """Create the snapshot table if missing."""
+        self.create_tables(BotStatsSnapshot)
+
+    @Cog.periodic(seconds=lambda: BotStatsSettings.snapshot_interval)
+    async def store(self) -> None:
+        """Store a snapshot for the dashboard."""
+        with Session(self.bind) as session:
+            store_snapshot(session, BotStats.of(self.bot))
+            session.commit()
 
     @Cog.command(name="botstats", description="Show what the bot serves right now (bot owners only)")
     async def botstats(self, interaction: CommandInteraction) -> None:

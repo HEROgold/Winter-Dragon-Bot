@@ -43,6 +43,7 @@ through the descriptor (`row.name = target`) writes through herogold's own sessi
 
 | Table | Owner | Purpose |
 |---|---|---|
+| `BotStatsSnapshot` | `winter_dragon.bot_stats` | The bot's latest stats snapshot (one row, as JSON), read by the dashboard's `/bot` page. |
 | `CarFuels` | `winter_dragon.cogs.fuel` | Refuel log per user. |
 | `Reminder`, `TimedReminder` | `winter_dragon.cogs.reminder.domain` | One-off and repeating reminders. |
 | `SteamSale`, `SteamSaleProperties`, `SteamUsers` | `winter_dragon.cogs.steam.models` | Known Steam sales and the users subscribed to them. |

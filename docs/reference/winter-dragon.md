@@ -8,7 +8,10 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `winter_dragon.bot_stats` — `src/winter_dragon/bot_stats.py`
 What the bot serves right now, read from its gateway cache: guilds, channels, members, shards and uptime.
 
+- module names: SNAPSHOT_ID
 - `member_count(state: GuildState) -> int` — Return how many members ``state``'s guild has: as GUILD_CREATE or a counted fetch said, else as cached.
+- `store_snapshot(session: Session, stats: BotStats) -> None` — Make ``stats`` the latest snapshot. The caller commits.
+- `latest_snapshot(bind: Engine) -> BotStats | None` — Return the latest snapshot the bot stored; ``None`` before its first.
 
 ### `class ShardStats(BaseModel, frozen=True)`
 One gateway shard: whether Discord still acknowledges its heartbeats, and how fast.
@@ -25,6 +28,11 @@ A snapshot of what the bot serves, built from the cache without a request to Dis
 - `@property shards_alive -> int` — How many shards Discord still acknowledges.
 - `@classmethod of(bot: Bot) -> BotStats` — Take a snapshot of ``bot``: its client's cache and its shards.
 - `@classmethod from_cache(cache: StateCache, shards: ShardManager | None, *, launch_time: datetime) -> BotStats` — Take a snapshot of ``cache`` and ``shards`` (``None`` before the gateway connects).
+
+### `class BotStatsSnapshot(LifecycleModel, table=True)`
+The bot's latest :class:`BotStats`, for the dashboard; shared data, owned by no one.
+
+- fields: stats: str
 
 ## `winter_dragon.config` — `src/winter_dragon/config.py`
 The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``.

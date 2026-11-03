@@ -6,7 +6,7 @@ Core bot functionality.
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
 ## `wd_bot.application` — `wd-bot/src/wd_bot/application.py`
-The bot's application ID: asked from Discord once at startup, never configured.
+The bot's application ID and owners: asked from Discord once at startup, never configured.
 
 ### `class ApplicationId`
 The ID of the application the bot token belongs to, kept for the rest of the process.
@@ -14,6 +14,12 @@ The ID of the application the bot token belongs to, kept for the rest of the pro
 - fields: value: ClassVar[Snowflake | None]
 - `@classmethod async load(client: Client) -> Snowflake` — Fetch the ID of ``client``'s application, keep it in :attr:`value` and return it.
 - `@classmethod get() -> Snowflake` — Return the ID :meth:`load` fetched.
+
+### `class ApplicationOwners`
+The users owning the bot's application, asked from Discord once at startup, for a process without a gateway.
+
+- fields: value: ClassVar[frozenset[Snowflake]]
+- `@classmethod async load(client: Client) -> frozenset[Snowflake]` — Fetch who owns ``client``'s application, keep their IDs in :attr:`value` and return them.
 
 ## `wd_bot.auto_reload` — `wd-bot/src/wd_bot/auto_reload.py`
 File-watcher based hot reload utilities for Discord cogs.

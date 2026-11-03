@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% set active = "bot" %}
+
+{% block title %}Bot stats · {% endblock %}
+
+{% block main %}
+<main class="page">
+  <h1 class="page-title">Bot stats</h1>
+  <p class="page-lead">What Winter Dragon serves right now, from the snapshot it stores every few seconds.</p>
+
+  {% set stats = view.stats %}
+  {% if stats is none %}
+    <p class="status-line stale"><span class="live-dot" aria-hidden="true"></span>The bot hasn't stored a snapshot yet.</p>
+  {% else %}
+    <p class="status-line{% if view.stale %} stale{% endif %}">
+      <span class="live-dot" aria-hidden="true"></span>
+      {% if view.stale %}
+        The latest snapshot is {{ span(view.age) }} old. The bot stores one every {{ interval }} seconds, so it may be down.
+      {% else %}
+        Taken {{ span(view.age) }} ago.
+      {% endif %}
+    </p>
+
+    <section class="panel bot-stats">
+      <dl class="facts facts-wrap">
+        <div><dt>Guilds</dt><dd>{{ stats.guilds }}</dd></div>
+        <div><dt>Channels</dt><dd>{{ stats.channels }}</dd></div>
+        <div><dt>Threads</dt><dd>{{ stats.threads }}</dd></div>
+        <div><dt>Members (approx.)</dt><dd>{{ stats.members }}</dd></div>
+        <div><dt>Unique cached users</dt><dd>{{ stats.cached_users }}</dd></div>
+        <div><dt>Shards up</dt><dd>{{ stats.shards_alive }}/{{ stats.shards | length }}</dd></div>
+      </dl>
+      {% if stats.unavailable_guilds %}
+        <p class="secondary">{{ stats.unavailable_guilds }} of the guilds are unavailable in a Discord outage.</p>
+      {% endif %}
+      <p class="secondary">
+        Version {{ stats.version }}. Up for {{ span(stats.uptime) }}, since {{ stats.launch_time | shown(zone) }}.
+      </p>
+    </section>
+
+    <h2>Shards</h2>
+    {% if stats.shards %}
+      <table class="table">
+        <thead><tr><th>Shard</th><th>State</th><th>Heartbeat latency</th></tr></thead>
+        <tbody>
+          {% for shard in stats.shards %}
+            <tr>
+              <td class="num">#{{ shard.id }}</td>
+              <td>{{ "Up" if shard.alive else "Down" }}</td>
+              <td class="num">{{ "No heartbeat yet" if shard.latency is none else "%.0f ms" % (shard.latency * 1000) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="secondary">Not connected to the gateway.</p>
+    {% endif %}
+  {% endif %}
+</main>
+{% endblock %}

@@ -3,12 +3,13 @@
 lazy import secrets
 lazy from functools import cache
 lazy from typing import TYPE_CHECKING, Annotated, Self
+lazy from zoneinfo import ZoneInfo, available_timezones
 
 from fastapi import Depends
 from pydantic import BaseModel, ConfigDict
 from wd_discord.snowflake import Snowflake
 lazy from fastapi import HTTPException, Request, status
-lazy from zoneinfo import ZoneInfo, available_timezones
+lazy from wd_bot.application import ApplicationOwners
 
 
 if TYPE_CHECKING:
@@ -74,6 +75,27 @@ def signed_in(request: Request) -> Account:
 
 SignedIn = Annotated[Account, Depends(signed_in)]
 """The signed-in account, as a route parameter's annotation; a visitor who isn't signed in is sent to sign in."""
+
+
+def is_bot_owner(account: Account | None) -> bool:
+    """Whether ``account`` owns the bot, as :class:`~wd_bot.application.ApplicationOwners` read it at startup."""
+    return account is not None and account.id in ApplicationOwners.value
+
+
+def bot_owner(account: SignedIn) -> Account:
+    """Return the signed-in account when it owns the bot; the FastAPI dependency of the owners' pages.
+
+    Raises:
+        HTTPException: 403, the account doesn't own the bot.
+
+    """
+    if not is_bot_owner(account):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the bot's owners can see this page.")
+    return account
+
+
+BotOwner = Annotated[Account, Depends(bot_owner)]
+"""The signed-in account of a bot owner, as a route parameter's annotation; anyone else gets 403."""
 
 
 def sign_in(request: Request, account: Account) -> None:

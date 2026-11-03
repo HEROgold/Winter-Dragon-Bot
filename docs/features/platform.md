@@ -59,7 +59,7 @@ A reusable layer over Discord's component API — buttons, selects, modals, menu
 
 ## Observability
 
-- **Bot stats** (`/botstats`, owners only): guilds, channels, approximate members, unique cached users, each shard's state and heartbeat latency, uptime and version. It shows one `BotStats` snapshot ([`bot_stats.py`](../../src/winter_dragon/bot_stats.py)), read from the gateway cache without a request.
+- **Bot stats** (`/botstats`, owners only): guilds, channels, approximate members, unique cached users, each shard's state and heartbeat latency, uptime and version. It shows one `BotStats` snapshot ([`bot_stats.py`](../../src/winter_dragon/bot_stats.py)), read from the gateway cache without a request. The cog stores the snapshot every `snapshot_interval` seconds (`cogs.ini`, default 30), and the dashboard's `/bot` page shows it to the bot's owners, with a warning when it's older than three intervals.
 - **Prometheus** — exposes bot metrics on a scrape endpoint (enabled in debug environments on `main`).
 - **Bot performance** — in-Discord resource and latency reporting, including a rendered graph.
 - **Grafana** — dashboards over logs and the Postgres database.
