@@ -4,6 +4,7 @@ A template keeps the route's literal shape apart from its parameters, so the req
 rate-limit key both come from the same object without parsing a finished string back apart:
 
 - :attr:`Route.path` percent-encodes every parameter, so a value can never add a path segment or query.
+- :attr:`Route.shape` names each parameter instead, so it carries no ID or token.
 - :meth:`Route.key` keeps only the major parameter (https://docs.discord.com/developers/topics/rate-limits)
   and collapses every other parameter to ``{id}``.
 """
@@ -37,6 +38,14 @@ class Route:
             else:
                 parts.append(item)
         return "".join(parts)
+
+    @property
+    def shape(self) -> str:
+        """The route with each parameter as its name: ``/channels/{channel_id}/messages``.
+
+        It names the route without its IDs or tokens, for traces and metrics that group requests by route.
+        """
+        return "".join(f"{{{item.expression}}}" if isinstance(item, Interpolation) else item for item in self.template)
 
     def key(self, method: str) -> RouteKey:
         """Collapse this route to Discord's rate-limit route shape for ``method``.

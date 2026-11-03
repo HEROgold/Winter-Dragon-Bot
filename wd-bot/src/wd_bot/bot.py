@@ -20,6 +20,7 @@ lazy from wd_discord import (
 )
 lazy from wd_discord.intents import Intents
 lazy from wd_discord.permissions import Permissions
+lazy from wd_discord.sentry import TraceOp, transaction
 lazy from wd_errors.startup import StartupError
 lazy from wd_types.clock import utc_now
 
@@ -30,6 +31,7 @@ lazy from wd_bot.extensions import ExtensionLoader
 lazy from wd_bot.guard import dispatch_guard
 lazy from wd_bot.handlers import HandlerRegistry
 lazy from wd_bot.registry import CommandRegistry
+lazy from wd_bot.tracing import interaction_name
 
 lazy from .settings import BotConfig, BotSettings
 
@@ -130,18 +132,21 @@ class Bot(LoggerMixin):
         A command or component handler that refused or raised is answered by :data:`~wd_bot.guard.dispatch_guard`, so an
         interaction never goes unanswered. A failed autocomplete has no message to reply with: the user just sees no
         suggestions.
+
+        Each one is a Sentry transaction named after what it ran (:func:`~wd_bot.tracing.interaction_name`).
         """
-        match interaction:
-            case CommandInteraction():
-                await self._dispatch_command(interaction)
-            case ComponentInteraction():
-                await self._dispatch_component(interaction)
-            case ModalSubmitInteraction():
-                await self._dispatch_modal(interaction)
-            case AutocompleteInteraction():
-                await self._dispatch_autocomplete(interaction)
-            case _:
-                return
+        with transaction(TraceOp.INTERACTION, interaction_name(interaction)):
+            match interaction:
+                case CommandInteraction():
+                    await self._dispatch_command(interaction)
+                case ComponentInteraction():
+                    await self._dispatch_component(interaction)
+                case ModalSubmitInteraction():
+                    await self._dispatch_modal(interaction)
+                case AutocompleteInteraction():
+                    await self._dispatch_autocomplete(interaction)
+                case _:
+                    return
 
     async def _dispatch_command(self, interaction: CommandInteraction) -> bool:
         """Invoke the command ``interaction`` names; ``False`` only if its handler raised."""
@@ -219,11 +224,16 @@ class Bot(LoggerMixin):
         ):
             self.loop.create_task(self._dispatch_interaction(event))
         for handler in self.handlers.listeners(event_name):
-            self.loop.create_task(self._invoke_listener(handler, event))
+            self.loop.create_task(self._invoke_listener(handler, event_name, event))
 
-    async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], payload: object) -> None:
-        """Run the listener ``handler`` on ``payload`` through :data:`~wd_bot.guard.dispatch_guard`."""
-        await dispatch_guard.run(f"listener '{handler.__qualname__}'", lambda: handler(payload))
+    async def _invoke_listener(self, handler: Callable[..., Awaitable[None]], event_name: str, payload: object) -> None:
+        """Run the listener ``handler`` on the ``event_name`` ``payload`` through :data:`~wd_bot.guard.dispatch_guard`.
+
+        Each call is a Sentry transaction named after the listener, tagged with the event.
+        """
+        with transaction(TraceOp.LISTENER, handler.__qualname__) as traced:
+            traced.set_tag("discord.event", event_name)
+            await dispatch_guard.run(f"listener '{handler.__qualname__}'", lambda: handler(payload))
 
     async def reload_extension(self, module_name: str) -> None:
         """Reload the extension module ``module_name`` via :attr:`extensions`, then sync the command scopes it changed.

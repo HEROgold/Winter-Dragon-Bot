@@ -8737,7 +8737,7 @@
       "severity": "error"
     },
     {
-      "column": 43,
+      "column": 47,
       "path": "wd-discord/src/wd_discord/client.py",
       "name": "bad-argument-type",
       "concise_description": "Argument `() -> Coroutine[Unknown, Unknown, Response]` is not assignable to parameter `func` with type `() -> CoroutineType[Any, Any, @_]` in function `wd_discord.rate_limit.RateLimitHandler.send`",

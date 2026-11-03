@@ -10,6 +10,8 @@ lazy import asyncio
 lazy from functools import partial
 lazy from typing import TYPE_CHECKING, Self, overload
 
+lazy from wd_discord.sentry import TraceOp, transaction
+
 lazy from wd_bot.guard import dispatch_guard
 
 
@@ -57,7 +59,10 @@ class PeriodicTask:
         return cog.bot.loop.create_task(self._run(cog), name=f"{cog.__cog_name__}.{self.name}")
 
     async def _run(self, cog: Cog) -> None:
-        """Tick, then wait, forever; a tick that raises is logged and the next one runs as usual."""
+        """Tick, then wait, forever; a tick that raises is logged and the next one runs as usual.
+
+        Each tick is a Sentry transaction named ``Cog.task``.
+        """
         wait: float | None = None
 
         async def tick() -> None:
@@ -66,5 +71,7 @@ class PeriodicTask:
 
         while True:
             wait = None
-            await dispatch_guard.run(f"periodic task '{cog.__cog_name__}.{self.name}'", tick)
+            name = f"{cog.__cog_name__}.{self.name}"
+            with transaction(TraceOp.PERIODIC, name):
+                await dispatch_guard.run(f"periodic task '{name}'", tick)
             await asyncio.sleep(self.interval() if wait is None else wait)

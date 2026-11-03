@@ -28,6 +28,7 @@ lazy from dataclasses import dataclass
 lazy from functools import wraps
 lazy from typing import TYPE_CHECKING, Self, TypeIs, Unpack
 
+lazy import sentry_sdk
 lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, QueryParams, RequestError
 lazy from wd_config.discord import URLS, RateLimit, RestCache, UserAgent
@@ -292,11 +293,15 @@ class Client(LoggerMixin):
                 self.logger.exception(t"Request error for {method} {path}")
                 raise
 
-        try:
-            response = await handler.send(send_once)
-        except MaxRetriesExceededError:
-            self.logger.exception(t"Giving up on {method} {path} after {RateLimit.max_retries} rate-limit retries")
-            return ApiResponseError(code=0, message="Exceeded rate-limit retries")
+        with sentry_sdk.start_span(op="http.client", name=f"{method} {resolved.shape}") as span:
+            span.set_data("http.request.method", method)
+            try:
+                response = await handler.send(send_once)
+            except MaxRetriesExceededError:
+                self.logger.exception(t"Giving up on {method} {path} after {RateLimit.max_retries} rate-limit retries")
+                span.set_status("resource_exhausted")
+                return ApiResponseError(code=0, message="Exceeded rate-limit retries")
+            span.set_http_status(response.status_code)
 
         if response.is_success:
             self.logger.debug(t"{response.status_code} {method} {path}")
