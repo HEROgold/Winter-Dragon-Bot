@@ -5,7 +5,7 @@ default_language_version:
   python: python3.15
 # pre-commit.ci has no uv and no network, so the hooks that run uv/uvx only run in the Pre-commit workflow.
 ci:
-  skip: [pyrefly-check, api-reference-check, doc-links-check]
+  skip: [pyrefly-check, api-reference-check, command-docs-check, doc-links-check]
 default_install_hook_types:
   - pre-commit
   - post-checkout
@@ -150,6 +150,14 @@ repos:
         entry: uv run python scripts/generate_api_reference.py --check
         pass_filenames: false
         files: ^((src|wd-[a-z]+/src)/.*\.pyi?|scripts/generate_api_reference\.py|docs/reference/.*\.md)$
+        stages: [pre-commit, pre-push]
+      # docs/commands/ is generated from the cogs' command metadata plus the replies in docs/commands/examples.toml.
+      - id: command-docs-check
+        name: docs/commands up to date
+        language: system
+        entry: uv run python scripts/generate_command_docs.py --check
+        pass_filenames: false
+        files: ^(src/winter_dragon/cogs/.*\.py|scripts/generate_command_docs\.py|docs/commands/.*)$
         stages: [pre-commit, pre-push]
       - id: doc-links-check
         name: doc and skill links resolve, no line anchors in skills

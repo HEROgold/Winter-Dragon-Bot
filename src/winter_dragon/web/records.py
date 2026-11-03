@@ -31,6 +31,9 @@ if TYPE_CHECKING:
     from zoneinfo import ZoneInfo
 
 
+DOCS_URL = "https://herogold.github.io/Winter-Dragon-Bot"
+"""Where the documentation site lives, the same address as ``site_url`` in ``zensical.toml``."""
+
 HIDDEN_FIELDS = frozenset(("id", "updated_at", "deleted_at"))
 """Columns of a record the data page leaves out: internal keys and bookkeeping, not the member's data."""
 
@@ -46,6 +49,11 @@ class Feature:
 
     name: str
     description: str
+
+    @property
+    def docs_url(self) -> str:
+        """The address of this group's page on the documentation site."""
+        return f"{DOCS_URL}/commands/{self.name}/"
 
 
 def features() -> Generator[Feature]:

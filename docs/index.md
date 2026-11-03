@@ -20,6 +20,7 @@ The full steps are in [Getting Started](guide/getting-started.md).
 - **[Feature Inventory](features/index.md)** — everything the bot offers on `main`, and how much is ported to `v2`.
 - **[Architecture](dev/architecture.md)** — packages, layering and the runtime flow.
 - **[Setup](dev/setup.md)** — development environment, adding a cog, tests and code quality.
+- **[Command pages](commands/index.md)**: every command group the bot offers, with its options and an example reply.
 - **[Commands](dev/commands.md)**: slash command options, their types, and option descriptions with `Describe`.
 - **[Database](dev/database.md)** — connection, how tables are declared, current tables.
 - **[Dashboard](dev/dashboard.md)**: where a feature page goes, and the dashboard navigation.

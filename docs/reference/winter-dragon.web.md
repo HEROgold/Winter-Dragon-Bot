@@ -246,7 +246,7 @@ The Profile's Urban Dictionary page: the member's lookups, newest first, with a 
 ## `winter_dragon.web.records` — `src/winter_dragon/web/records.py`
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
-- module names: HIDDEN_FIELDS
+- module names: DOCS_URL, HIDDEN_FIELDS
 - `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do.
 - `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first.
 - `member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]` — Yield a record for every table holding rows a deletion request by the member ``member_id`` removes, by name.
@@ -256,6 +256,7 @@ What the dashboard shows of the bot: the features its cogs define, and every rec
 A command group the bot offers: ``/name``, and what it does.
 
 - fields: name: str, description: str
+- `@property docs_url -> str` — The address of this group's page on the documentation site.
 
 ### `@dataclass class DataRecord`
 One table's worth of what the bot stores about a member: which table, and how many rows.
