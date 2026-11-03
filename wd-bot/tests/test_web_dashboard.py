@@ -521,7 +521,9 @@ def test_the_profile_shows_its_intro_on_a_first_visit(member: TestClient) -> Non
 
 
 def test_the_profile_reopens_the_page_you_last_opened(member: TestClient) -> None:
-    member.get("/profile/fuel")
+    opened = member.get("/profile/fuel")
+
+    assert f"{profile.LAST_TAB_COOKIE}=fuel" in opened.headers["set-cookie"]
 
     response = member.get("/profile", follow_redirects=False)
 

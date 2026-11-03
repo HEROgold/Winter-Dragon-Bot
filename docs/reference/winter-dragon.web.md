@@ -86,7 +86,7 @@ What the landing page's signpost arms say a signed-in member will find down each
 ## `winter_dragon.web.profile` — `src/winter_dragon/web/profile.py`
 The Profile: a member's own pages, one per feature, across every guild.
 
-- module names: router, LAST_TAB_COOKIE
+- module names: router, LAST_TAB_COOKIE, LAST_TAB_LIFETIME
 - `type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]`
 - `profile_page(*, slug: str, title: str, template: str, router: APIRouter | None=None) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
 - `profile_pages() -> list[ProfilePage]` — Return every registered page, by title.

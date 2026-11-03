@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 router = APIRouter(prefix="/profile")
 LAST_TAB_COOKIE = "profile_tab"
 """Holds the slug of the Profile page the member last opened."""
+LAST_TAB_LIFETIME = 60 * 60 * 24 * 365
+"""How long, in seconds, the browser keeps :data:`LAST_TAB_COOKIE`: a year."""
 
 type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]
 
@@ -114,8 +116,9 @@ def load_profile_pages() -> None:
 def profile(request: Request) -> Response:
     """Reopen the Profile page the member last opened; without one, show the intro under the tab bar."""
     last = request.cookies.get(LAST_TAB_COOKIE)
-    if last is not None and any(page.slug == last for page in profile_pages()):
-        return see_other(_page(last).path)
+    page = next((page for page in profile_pages() if page.slug == last), None)
+    if page is not None:
+        return see_other(page.path)
     return render(request, "profile/index.html", pages=profile_pages(), page=None)
 
 
@@ -133,7 +136,7 @@ def profile_page_view(
     response.set_cookie(
         LAST_TAB_COOKIE,
         page.slug,
-        max_age=60 * 60 * 24 * 365,
+        max_age=LAST_TAB_LIFETIME,
         path=router.prefix,
         httponly=True,
         samesite="lax",
