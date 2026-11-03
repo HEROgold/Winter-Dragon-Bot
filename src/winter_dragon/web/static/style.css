@@ -290,9 +290,10 @@ textarea.input { resize: vertical; min-height: 6rem; }
   transition: translate 160ms ease-out;
 }
 
-.arm-right { margin-inline-start: 12%; }
+/* Arms alternate by position: odd ones point right, even ones point left. */
+.signpost-arms li:nth-child(odd) .arm { margin-inline-start: 12%; }
 
-.arm-left {
+.signpost-arms li:nth-child(even) .arm {
   flex-direction: row-reverse;
   padding: 0.85rem 1.1rem 0.85rem 2.6rem;
   clip-path: polygon(1.7rem 0, 100% 0, 100% 100%, 1.7rem 100%, 0 50%);
@@ -300,10 +301,10 @@ textarea.input { resize: vertical; min-height: 6rem; }
 
 .arm-name { font-size: var(--step-2); font-stretch: var(--narrow); font-weight: 700; line-height: 1; }
 .arm-time { margin-inline-start: auto; color: var(--slate); font-stretch: var(--narrow); font-size: var(--step-1); white-space: nowrap; }
-.arm-left .arm-time { margin-inline: 0 auto; }
+.signpost-arms li:nth-child(even) .arm-time { margin-inline: 0 auto; }
 
-.arm-right:hover { translate: 6px 0; }
-.arm-left:hover { translate: -6px 0; }
+.signpost-arms li:nth-child(odd) .arm:hover { translate: 6px 0; }
+.signpost-arms li:nth-child(even) .arm:hover { translate: -6px 0; }
 .arm:focus-visible { outline-offset: -3px; }
 
 @keyframes swing-in {
