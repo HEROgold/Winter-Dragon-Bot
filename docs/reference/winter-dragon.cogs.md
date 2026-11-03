@@ -918,7 +918,7 @@ Draw a tournament's bracket as a PNG: each round a column of match boxes, joined
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, BRACKET_IMAGE, ROUTE, ROUTE_NAMES, NEXT_STEPS
+- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, BRACKET_IMAGE, ROUTE, ROUTE_NAMES, NEXT_STEPS, VOTE_BAR_LENGTH
 - `plural(count: int, noun: str) -> str` — Return ``count`` with ``noun``, adding an ``s`` unless there's exactly one.
 - `solo_progress(players: int, team_size: int) -> str` — Return how far solo sign-up is: the teams it makes so far, and how many more players make the next one.
 - `signup_card(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake], controls: SignupControls) -> Container` — Return the sign-up card: what the format is, who signed up, and the buttons to join, enter a team or leave.
@@ -930,8 +930,7 @@ The messages a tournament shows: its sign-up card, bracket, match cards and vote
 - `card_of_match(view: MatchView, controls: MatchControls | None) -> Container` — Return a match card: its teams, a route line through its phases, where it stands, and each team's players and drafts.
 - `manage_panel(view: MatchView, act: ComponentHandler, card_at: tuple[Snowflake, Snowflake]) -> Container` — Return the organiser's panel for a match: each action beside a line saying when to use it.
 - `vote_options(vote: MatchVote) -> list[str]` — Return the vote's answers.
-- `vote_embed(vote: MatchVote, choices: Sequence[int]) -> Embed` — Return a vote: its question, and each answer's votes so far.
-- `vote_buttons(choose: ComponentHandler, close: ComponentHandler, vote: MatchVote) -> list[ActionRow]` — Return one button per answer, then the organiser's Close button; none once the vote is closed.
+- `vote_card(vote: MatchVote, choices: Sequence[int], choose: ComponentHandler, close: ComponentHandler) -> Container` — Return a vote: its question, how many voted, and each answer with its share of the votes and a Vote button.
 
 ### `class MatchAction(StrEnum)`
 What one of the organiser's buttons under a match card does; it's part of the button's custom ID.
@@ -1011,7 +1010,7 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
 - `@Cog.command async pick(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.
 - `@Cog.command async vote(interaction: GuildCommandInteraction, match: TournamentMatch, question: str, answers: str) -> None` — Post a vote on ``question`` for the players of ``match``; organisers only.
-- `@Cog.component async vote_button(interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None` — Record the clicker's answer, then refresh the tally.
+- `@Cog.component async vote_button(interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None` — Record the clicker's answer, refresh the tally, and tell the clicker, and only them, what they voted.
 - `@Cog.component async close_vote_button(interaction: GuildComponentInteraction, vote_id: str) -> None` — Close the vote and show the final tally; organisers only.
 
 ## `winter_dragon.cogs.tournament.models` — `src/winter_dragon/cogs/tournament/models.py`

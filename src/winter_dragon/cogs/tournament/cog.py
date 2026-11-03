@@ -46,8 +46,8 @@ lazy from .cards import (
     participants_card,
     plural,
     signup_card,
-    vote_buttons,
-    vote_embed,
+    vote_card,
+    vote_options,
 )
 lazy from .models import (
     ACTIVE,
@@ -1003,19 +1003,21 @@ class Tournaments(
             opened = open_vote(session, found, question, parse_options(answers), interaction.user.id)
             session.commit()
             session.refresh(opened)
-            embed, buttons = vote_embed(opened, []), vote_buttons(self.vote_button, self.close_vote_button, opened)
-        await interaction.respond(embeds=[embed], components=buttons)
+            shown = vote_card(opened, [], self.vote_button, self.close_vote_button)
+        await interaction.respond(components=[shown])
 
     @Cog.component("tourney-vote")
     async def vote_button(self, interaction: GuildComponentInteraction, vote_id: str, choice: str) -> None:
-        """Record the clicker's answer, then refresh the tally."""
+        """Record the clicker's answer, refresh the tally, and tell the clicker, and only them, what they voted."""
         with Session(self.bind) as session:
             vote = stored(session, MatchVote, int(vote_id), "This vote is gone.")
             cast(session, vote, interaction.user.id, int(choice))
             session.commit()
-            embed = vote_embed(vote, choices_of(session, vote))
-            buttons = vote_buttons(self.vote_button, self.close_vote_button, vote)
-        await interaction.update(embeds=[embed], components=buttons)
+            shown = vote_card(vote, choices_of(session, vote), self.vote_button, self.close_vote_button)
+            answer = vote_options(vote)[int(choice)]
+        await interaction.update(components=[shown])
+        voted = block(f"You voted **{answer}**. Vote for another answer to change it.")
+        await interaction.followup(components=[card(Tone.WAIT, voted)], ephemeral=True)
 
     @Cog.component("tourney-close")
     async def close_vote_button(self, interaction: GuildComponentInteraction, vote_id: str) -> None:
@@ -1026,5 +1028,5 @@ class Tournaments(
             require_organiser(interaction, stored(session, Tournament, match.tournament_id, "This vote is gone."))
             close_vote(session, vote, interaction.user.id)
             session.commit()
-            embed = vote_embed(vote, choices_of(session, vote))
-        await interaction.update(embeds=[embed], components=[])
+            shown = vote_card(vote, choices_of(session, vote), self.vote_button, self.close_vote_button)
+        await interaction.update(components=[shown])

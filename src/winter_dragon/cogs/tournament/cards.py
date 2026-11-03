@@ -16,7 +16,6 @@ lazy from wd_discord.components import (
     SeparatorSpacing,
     UnfurledMediaItem,
 )
-lazy from wd_discord.embed import Embed
 lazy from wd_discord.files import File
 lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_BUTTON_LABEL_LENGTH, MAX_MEDIA_DESCRIPTION_LENGTH, truncate
 
@@ -446,32 +445,42 @@ def manage_panel(view: MatchView, act: ComponentHandler, card_at: tuple[Snowflak
     return card(Tone.WAIT, *body)
 
 
-# Maybe namespace vote_ into a vote class?
 def vote_options(vote: MatchVote) -> list[str]:
     """Return the vote's answers."""
     return vote.options.split("\n")
 
 
-def vote_embed(vote: MatchVote, choices: Sequence[int]) -> Embed:
-    """Return a vote: its question, and each answer's votes so far."""
+VOTE_BAR_LENGTH = 6
+"""How many marks the bar under each answer has; the filled ones show its share of the votes."""
+
+
+def _bar(count: int, total: int) -> str:
+    """Return a bar of marks, filled for ``count``'s share of ``total``."""
+    filled = round(VOTE_BAR_LENGTH * count / total) if total else 0
+    return f"{Mark.HERE}" * filled + f"{Mark.NEXT}" * (VOTE_BAR_LENGTH - filled)
+
+
+def vote_card(vote: MatchVote, choices: Sequence[int], choose: ComponentHandler, close: ComponentHandler) -> Container:
+    """Return a vote: its question, how many voted, and each answer with its share of the votes and a Vote button.
+
+    Once the vote is closed, the buttons are gone and the winning answer, or answers on a tie, carry the winner mark.
+    """
     options = vote_options(vote)
     counts = tally(len(options), choices)
-    lines = [f"**{option}** — {count} vote{'s' if count != 1 else ''}" for option, count in zip(options, counts, strict=True)]
-    state = "Players of the match: pick an answer below." if vote.open else "This vote is closed."
-    return Embed(title=f"🗳️ {vote.question}", description="\n".join([*lines, "", state]))
-
-
-def vote_buttons(choose: ComponentHandler, close: ComponentHandler, vote: MatchVote) -> list[ActionRow]:
-    """Return one button per answer, then the organiser's Close button; none once the vote is closed."""
-    if not vote.open or vote.id is None:
-        return []
-    vote_id = vote.id
-    answers = [
-        Button(style=ButtonStyle.SECONDARY, label=option, custom_id=choose.custom_id(vote_id, index))
-        for index, option in enumerate(vote_options(vote))
-    ]
-    rows = [ActionRow(components=list(row)) for row in batched(answers, MAX_ACTION_ROW_BUTTONS, strict=False)]
-    rows.append(
-        ActionRow(components=[Button(style=ButtonStyle.DANGER, label="Close vote", custom_id=close.custom_id(vote_id))]),
-    )
-    return rows
+    total = sum(counts)
+    who = f"Only the players of match {vote.match_id} can vote."
+    state = f"{plural(total, 'vote')} so far. {who}" if vote.open else f"This vote is closed with {plural(total, 'vote')}."
+    body: list[TextDisplay | Section | Separator | ActionRow] = [block(f"## {vote.question}", state), Separator()]
+    top = max(counts, default=0)
+    for index, (option, count) in enumerate(zip(options, counts, strict=True)):
+        won = not vote.open and total > 0 and count == top
+        answer = block(f"**{option}**{f' {Mark.WINNER}' if won else ''}, {plural(count, 'vote')}", _bar(count, total))
+        if vote.open and vote.id is not None:
+            button = Button(style=ButtonStyle.SECONDARY, label="Vote", custom_id=choose.custom_id(vote.id, index))
+            body.append(Section(components=[answer], accessory=button))
+        else:
+            body.append(answer)
+    if vote.open and vote.id is not None:
+        closing = Button(style=ButtonStyle.SECONDARY, label="Close vote", custom_id=close.custom_id(vote.id))
+        body += [Separator(), ActionRow(components=[closing])]
+    return card(Tone.ACT if vote.open else Tone.WAIT, *body)
