@@ -86,12 +86,12 @@ What the landing page's signpost arms say a signed-in member will find down each
 ## `winter_dragon.web.profile` — `src/winter_dragon/web/profile.py`
 The Profile: a member's own pages, one per feature, across every guild.
 
-- module names: router
+- module names: router, LAST_TAB_COOKIE
 - `type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]`
 - `profile_page(*, slug: str, title: str, template: str, router: APIRouter | None=None) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
 - `profile_pages() -> list[ProfilePage]` — Return every registered page, by title.
 - `load_profile_pages() -> None` — Import every module in ``web/profile_pages/``, so each registers its page.
-- `@router.get profile(request: Request) -> Response` — Show the signed-in member's Profile: a link to each feature's page.
+- `@router.get profile(request: Request) -> Response` — Reopen the Profile page the member last opened; without one, show the intro under the tab bar.
 - `@router.get profile_page_view(request: Request, slug: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's page ``slug`` of the Profile.
 - `render_profile_page(request: Request, slug: str, context: Mapping[str, object], *, fragment: str | None=None) -> Response` — Render page ``slug`` with ``context`` plus ``pages`` and ``page`` (whose ``path`` builds its URLs).
 

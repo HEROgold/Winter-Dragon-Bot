@@ -513,6 +513,31 @@ def test_every_profile_tab_opens_its_page_with_the_tab_marked(member: TestClient
         assert f'href="{href}" aria-current="page"' in response.text
 
 
+def test_the_profile_shows_its_intro_on_a_first_visit(member: TestClient) -> None:
+    response = member.get("/profile", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert "Pick a feature" in response.text
+
+
+def test_the_profile_reopens_the_page_you_last_opened(member: TestClient) -> None:
+    member.get("/profile/fuel")
+
+    response = member.get("/profile", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/profile/fuel"
+
+
+def test_the_profile_ignores_a_remembered_page_that_is_gone(member: TestClient) -> None:
+    member.cookies.set(profile.LAST_TAB_COOKIE, "gone", path="/profile")
+
+    response = member.get("/profile", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert "Pick a feature" in response.text
+
+
 def test_the_dashboard_links_to_the_profile(member: TestClient) -> None:
     assert 'href="/profile"' in member.get("/").text
     assert 'href="/profile"' in member.get("/me").text
