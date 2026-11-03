@@ -158,6 +158,7 @@ def render_profile_page(
     context: Mapping[str, object],
     *,
     fragment: str | None = None,
+    status_code: int = status.HTTP_200_OK,
 ) -> Response:
     """Render page ``slug`` with ``context`` plus ``pages`` and ``page`` (whose ``path`` builds its URLs).
 
@@ -165,5 +166,10 @@ def render_profile_page(
     """
     page = _page(slug)
     if fragment is not None:
-        return render_mapping(request, fragment, {"page": page, **context})
-    return render_mapping(request, page.template, {"pages": profile_pages(), "page": page, **context})
+        return render_mapping(request, fragment, {"page": page, **context}, status_code=status_code)
+    return render_mapping(
+        request,
+        page.template,
+        {"pages": profile_pages(), "page": page, **context},
+        status_code=status_code,
+    )

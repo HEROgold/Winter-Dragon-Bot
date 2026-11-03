@@ -1,4 +1,4 @@
-"""The reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord."""
+"""The Profile's reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord."""
 
 from dataclasses import dataclass, replace
 from enum import StrEnum, auto
@@ -24,7 +24,9 @@ lazy from winter_dragon.cogs.reminder.domain import (
 )
 lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, visitor_zone
 lazy from winter_dragon.web.formatting import day_label, every
-lazy from winter_dragon.web.responses import Database, after_post, page_or_fragment
+lazy from winter_dragon.web.profile import ProfileContext, profile_page, render_profile_page
+lazy from winter_dragon.web.profile import router as profile_router
+lazy from winter_dragon.web.responses import Database, after_post, is_htmx
 
 
 if TYPE_CHECKING:
@@ -37,7 +39,10 @@ if TYPE_CHECKING:
     from winter_dragon.web.accounts import Account
 
 
-router = APIRouter(prefix="/reminders")
+router = APIRouter()
+SLUG = "reminders"
+"""The page's path segment under the Profile: ``/profile/reminders``."""
+BOARD = "reminders/_board.html"
 
 
 class Repeat(StrEnum):
@@ -133,40 +138,51 @@ def reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetim
         yield ReminderDay(label=day_label(day, today), stops=tuple(stops_on_day))
 
 
+def _context(  # noqa: PLR0913 - the page context takes the form's state as well as the member's
+    bind: Engine,
+    user_id: Snowflake,
+    zone: ZoneInfo,
+    now: datetime,
+    draft: ReminderDraft | None = None,
+    error: str | None = None,
+) -> dict[str, object]:
+    """Return the template context of the reminders page for the user ``user_id``, with the form ``draft`` filled in."""
+    return {
+        "days": list(reminder_days(bind, user_id, zone, now)),
+        "draft": draft or blank_draft(zone, now),
+        "error": error,
+        "zone_name": zone.key,
+        "max_length": ReminderSettings.max_content_length,
+        "repeats": Repeat,
+    }
+
+
+@profile_page(slug=SLUG, title="Reminders", template="profile/reminders.html", router=router)
+def reminders(context: ProfileContext) -> dict[str, object]:
+    """Return the page's context: the member's reminders and an empty add form, due tomorrow morning."""
+    return _context(context.bind, context.member_id, context.zone, utc_now())
+
+
 def _page(  # noqa: PLR0913 - the form's state is part of what's rendered
     request: Request,
     account: Account,
     bind: Engine,
     draft: ReminderDraft | None = None,
     *,
-    fragment: str = "reminders/page.html",
+    fragment: str = BOARD,
     error: str | None = None,
     status_code: int = 200,
 ) -> Response:
     """Render the reminders page, or the part of it the template ``fragment`` holds for an htmx swap."""
     zone, now = visitor_zone(request), utc_now()
-    return page_or_fragment(
+    context = _context(bind, account.id, zone, now, draft, error)
+    return render_profile_page(
         request,
-        "reminders/page.html",
-        fragment,
+        SLUG,
+        context,
+        fragment=fragment if is_htmx(request) else None,
         status_code=status_code,
-        days=list(reminder_days(bind, account.id, zone, now)),
-        draft=draft or blank_draft(zone, now),
-        error=error,
-        zone_name=zone.key,
-        max_length=ReminderSettings.max_content_length,
-        repeats=Repeat,
     )
-
-
-@router.get("")
-def reminders_page(
-    request: Request,
-    account: SignedIn,
-    bind: Database,
-) -> Response:
-    """Show the signed-in member's reminders and the form to add one."""
-    return _page(request, account, bind)
 
 
 @router.post("", dependencies=[Depends(checked_csrf)])
@@ -184,7 +200,6 @@ def add_reminder(  # noqa: PLR0913 - one parameter per form field
     draft = ReminderDraft(content=content, day=day, at=at, every_days=every_days)
     if repeat in Repeat:
         draft = replace(draft, repeat=Repeat(repeat))
-    board = "reminders/_board.html"
     reminder = draft.reminder(account.id, visitor_zone(request), utc_now())
     if isinstance(reminder, Refused):
         return _page(
@@ -192,14 +207,18 @@ def add_reminder(  # noqa: PLR0913 - one parameter per form field
             account,
             bind,
             draft,
-            fragment=board,
+            fragment=BOARD,
             error=reminder.message,
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
     with Session(bind) as session:
         create_or_restore(session, reminder)
         session.commit()
-    return after_post(request, router.prefix, lambda: _page(request, account, bind, fragment=board))
+    return after_post(
+        request,
+        f"{profile_router.prefix}/{SLUG}",
+        lambda: _page(request, account, bind, fragment=BOARD),
+    )
 
 
 @router.post("/{key}/delete", dependencies=[Depends(checked_csrf)])
@@ -215,4 +234,8 @@ def remove_reminder(
         if found is not None and found.user_id == int(account.id):
             soft_delete(session, found)
             session.commit()
-    return after_post(request, router.prefix, lambda: _page(request, account, bind, fragment="reminders/_list.html"))
+    return after_post(
+        request,
+        f"{profile_router.prefix}/{SLUG}",
+        lambda: _page(request, account, bind, fragment="reminders/_list.html"),
+    )

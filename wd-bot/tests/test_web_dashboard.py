@@ -47,10 +47,11 @@ from winter_dragon.cogs.tournament.models import TeamMode, Tournament, Tournamen
 
 
 from winter_dragon.cogs.urban import Lookup
-from winter_dragon.web import auth, pages, profile, reminders
+from winter_dragon.web import auth, pages, profile
 from winter_dragon.web.app import create_app
 from winter_dragon.web.profile_pages import incremental as incremental_page
-from winter_dragon.web.reminders import ReminderDraft, Repeat
+from winter_dragon.web.profile_pages import reminders
+from winter_dragon.web.profile_pages.reminders import ReminderDraft, Repeat
 
 
 if TYPE_CHECKING:
@@ -105,7 +106,7 @@ def member(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def _csrf(client: TestClient) -> str:
-    match = CSRF.search(client.get("/reminders").text)
+    match = CSRF.search(client.get("/profile/reminders").text)
     assert match is not None
     return match.group(1)
 
@@ -286,7 +287,7 @@ def test_deleting_your_data_hides_it_and_shows_how_far_it_got(member: TestClient
 
 def test_adding_a_reminder_stores_it_due_at_the_time_in_your_zone(member: TestClient, bind: Engine) -> None:
     response = member.post(
-        "/reminders",
+        "/profile/reminders",
         data={"csrf_token": _csrf(member), "content": "Water the plants", "day": "2026-10-09", "at": "09:00"},
         headers=HTMX,
     )
@@ -301,7 +302,7 @@ def test_adding_a_reminder_stores_it_due_at_the_time_in_your_zone(member: TestCl
 
 def test_a_reminder_can_repeat_every_few_days(member: TestClient, bind: Engine) -> None:
     response = member.post(
-        "/reminders",
+        "/profile/reminders",
         data={
             "csrf_token": _csrf(member),
             "content": "Water the plants",
@@ -320,7 +321,7 @@ def test_a_reminder_can_repeat_every_few_days(member: TestClient, bind: Engine) 
 
 def test_a_reminder_in_the_past_is_refused_and_the_form_kept(member: TestClient, bind: Engine) -> None:
     response = member.post(
-        "/reminders",
+        "/profile/reminders",
         data={"csrf_token": _csrf(member), "content": "Too late", "day": "2026-10-08", "at": "09:00"},
         headers=HTMX,
     )
@@ -332,7 +333,7 @@ def test_a_reminder_in_the_past_is_refused_and_the_form_kept(member: TestClient,
 
 
 def test_a_form_without_the_csrf_token_is_refused(member: TestClient, bind: Engine) -> None:
-    response = member.post("/reminders", data={"content": "Forged", "day": "2026-10-09", "at": "09:00"}, headers=HTMX)
+    response = member.post("/profile/reminders", data={"content": "Forged", "day": "2026-10-09", "at": "09:00"}, headers=HTMX)
 
     assert response.status_code == 403
     assert _alive_contents(bind) == []
@@ -340,12 +341,12 @@ def test_a_form_without_the_csrf_token_is_refused(member: TestClient, bind: Engi
 
 def test_without_htmx_a_form_redirects_back_to_its_page(member: TestClient) -> None:
     response = member.post(
-        "/reminders",
+        "/profile/reminders",
         data={"csrf_token": _csrf(member), "content": "Plain form", "day": "2026-10-09", "at": "09:00"},
         follow_redirects=False,
     )
 
-    assert (response.status_code, response.headers["location"]) == (303, "/reminders")
+    assert (response.status_code, response.headers["location"]) == (303, "/profile/reminders")
 
 
 def test_you_can_only_delete_your_own_reminders(member: TestClient, bind: Engine) -> None:
@@ -356,12 +357,29 @@ def test_you_can_only_delete_your_own_reminders(member: TestClient, bind: Engine
     )
     token = _csrf(member)
 
-    member.post(f"/reminders/reminder:{theirs}/delete", data={"csrf_token": token}, headers=HTMX)
+    member.post(f"/profile/reminders/reminder:{theirs}/delete", data={"csrf_token": token}, headers=HTMX)
     assert sorted(_alive_contents(bind)) == ["mine", "theirs"]
 
-    response = member.post(f"/reminders/reminder:{mine}/delete", data={"csrf_token": token}, headers=HTMX)
+    response = member.post(f"/profile/reminders/reminder:{mine}/delete", data={"csrf_token": token}, headers=HTMX)
     assert _alive_contents(bind) == ["theirs"]
     assert "No reminders coming up" in response.text
+
+
+def test_the_old_reminder_urls_are_gone(member: TestClient) -> None:
+    assert member.get("/reminders").status_code == 404
+    assert member.post("/reminders", data={"content": "x"}, headers=HTMX).status_code == 404
+    assert member.post("/reminders/reminder:1/delete", headers=HTMX).status_code == 404
+
+
+def test_reminders_is_a_profile_tab_not_a_top_nav_link(member: TestClient) -> None:
+    page = member.get("/profile").text
+    subnav = page[page.index('<nav class="subnav"') :]
+    assert 'href="/profile/reminders"' in subnav[: subnav.index("</nav>")]
+    assert 'href="/reminders"' not in member.get("/me").text
+
+
+def test_the_signpost_links_to_the_profile_reminders(member: TestClient) -> None:
+    assert 'href="/profile/reminders"' in member.get("/").text
 
 
 @pytest.mark.parametrize(
@@ -410,7 +428,7 @@ async def test_the_dashboard_and_the_reminder_command_accept_and_refuse_the_same
     bot_engine = sqlite_engine()
     cog = detached_cog(Reminders, engine=bot_engine, client=discord_client)
 
-    response = member.post("/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX)
+    response = member.post("/profile/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX)
     options = [InteractionDataOption(name="reminder", type=3, value=content)]
     options += [InteractionDataOption(name=unit, type=4, value=amount) for unit, amount in command_time.items()]
     await Reminders.add.invoke(cog, make_interaction("reminder"), options)
@@ -437,7 +455,8 @@ from sqlmodel import Session
 from wd_db.testing import sqlite_engine
 from wd_discord.snowflake import Snowflake
 
-from winter_dragon.web import pages, reminders
+from winter_dragon.web import pages
+from winter_dragon.web.profile_pages import reminders
 from winter_dragon.web.records import create_dashboard_tables
 
 now, member = datetime(2026, 10, 8, 12, tzinfo=UTC), Snowflake(42)
