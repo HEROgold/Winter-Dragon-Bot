@@ -1,7 +1,8 @@
 """What the bot serves right now, read from its gateway cache: guilds, channels, members, shards and uptime.
 
 ``/botstats``, the dashboard's stats page and the Prometheus exporter all show one :class:`BotStats`, so their numbers
-agree.
+agree. The dashboard runs in another process without a gateway, so the bot stores its latest snapshot in
+:class:`BotStatsSnapshot` for it to read.
 """
 
 from datetime import datetime, timedelta
@@ -9,11 +10,16 @@ lazy from importlib.metadata import version
 lazy from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
+from sqlmodel import Field
+from wd_db.extension.lifecycle import LifecycleModel
+lazy from sqlmodel import Session
+lazy from wd_db.extension.lifecycle import alive_by_id, upsert
 lazy from wd_discord.gateway.events import GuildCreate
 lazy from wd_types.clock import utc_now
 
 
 if TYPE_CHECKING:
+    lazy from sqlalchemy import Engine
     lazy from wd_bot.bot import Bot
     lazy from wd_discord.cache import GuildState, StateCache
     lazy from wd_discord.gateway.connection import Gateway
@@ -92,3 +98,29 @@ def member_count(state: GuildState) -> int:
     if guild.approximate_member_count is not None:
         return guild.approximate_member_count
     return len(state.members)
+
+
+SNAPSHOT_ID = 1
+"""The ID of the one :class:`BotStatsSnapshot` row; each snapshot overwrites the one before."""
+
+
+class BotStatsSnapshot(LifecycleModel, table=True):
+    """The bot's latest :class:`BotStats`, for the dashboard; shared data, owned by no one.
+
+    The snapshot is kept as JSON, so a new :class:`BotStats` field needs no migration.
+    """
+
+    stats: str = Field(default="")
+    """The :class:`BotStats`, as JSON."""
+
+
+def store_snapshot(session: Session, stats: BotStats) -> None:
+    """Make ``stats`` the latest snapshot. The caller commits."""
+    upsert(session, BotStatsSnapshot(id=SNAPSHOT_ID, stats=stats.model_dump_json()))
+
+
+def latest_snapshot(bind: Engine) -> BotStats | None:
+    """Return the latest snapshot the bot stored; ``None`` before its first."""
+    with Session(bind) as session:
+        row = alive_by_id(session, BotStatsSnapshot, SNAPSHOT_ID)
+    return None if row is None else BotStats.model_validate_json(row.stats)

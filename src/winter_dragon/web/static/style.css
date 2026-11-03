@@ -638,3 +638,9 @@ img.avatar { object-fit: cover; }
 .game-rate, .game-wait, .game-note { color: var(--slate); font-size: 0.9rem; }
 .game-message { margin: 0 0 1rem; }
 .game-refused { color: var(--ember); }
+
+/* Bot stats */
+
+.facts-wrap { flex-wrap: wrap; row-gap: 1.25rem; }
+.bot-stats { margin: 1.5rem 0 2.5rem; }
+.status-line.stale .live-dot { background: var(--ember); box-shadow: 0 0 0 4px #b83a2b33; }

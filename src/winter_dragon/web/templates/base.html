@@ -21,6 +21,7 @@
       <nav class="site-nav" aria-label="Dashboard">
         <a href="/profile" {% if active == "profile" %}aria-current="page"{% endif %}>Profile</a>
         <a href="/me" {% if active == "data" %}aria-current="page"{% endif %}>Your data</a>
+        {% if bot_owner %}<a href="/bot" {% if active == "bot" %}aria-current="page"{% endif %}>Bot stats</a>{% endif %}
       </nav>
       <div class="account">
         {% if account.avatar_url %}

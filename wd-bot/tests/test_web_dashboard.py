@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
-from wd_bot.application import ApplicationId
+from wd_bot.application import ApplicationId, ApplicationOwners
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
 from wd_db.testing import seed, sqlite_engine
@@ -23,6 +23,7 @@ from wd_discord.snowflake import Snowflake
 from wd_discord.testing import RecordingClient, user_json
 from wd_errors import Refused
 
+from winter_dragon.bot_stats import BotStats, ShardStats, store_snapshot
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
 
@@ -47,8 +48,9 @@ from winter_dragon.cogs.tournament.models import TeamMode, Tournament, Tournamen
 
 
 from winter_dragon.cogs.urban import Lookup
-from winter_dragon.web import auth, pages, profile
+from winter_dragon.web import auth, bot_status, pages, profile
 from winter_dragon.web.app import create_app
+from winter_dragon.web.formatting import plural, span
 from winter_dragon.web.profile_pages import incremental as incremental_page
 from winter_dragon.web.profile_pages import reminders
 from winter_dragon.web.profile_pages.reminders import ReminderDraft, Repeat
@@ -83,6 +85,7 @@ def client(bind: Engine, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     monkeypatch.setattr(ApplicationId, "value", Snowflake(2))
     monkeypatch.setattr(reminders, "utc_now", lambda: NOW)
     monkeypatch.setattr(pages, "utc_now", lambda: NOW)
+    monkeypatch.setattr(bot_status, "utc_now", lambda: NOW)
     browser = TestClient(create_app(bind=bind, session_secret="test-secret"))
     browser.cookies.set("tz", ZONE)
     return browser
@@ -435,7 +438,9 @@ async def test_the_dashboard_and_the_reminder_command_accept_and_refuse_the_same
     bot_engine = sqlite_engine()
     cog = detached_cog(Reminders, engine=bot_engine, client=discord_client)
 
-    response = member.post("/profile/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX)
+    response = member.post(
+        "/profile/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX
+    )
     options = [InteractionDataOption(name="reminder", type=3, value=content)]
     options += [InteractionDataOption(name=unit, type=4, value=amount) for unit, amount in command_time.items()]
     await Reminders.add.invoke(cog, make_interaction("reminder"), options)
@@ -994,3 +999,81 @@ def test_the_teams_page_shows_no_tournaments_for_a_team_that_entered_none(member
     assert "Harbour Lads" in page
     assert "Spring Cup" not in page
     assert "Playing" not in page
+
+
+def _store_stats(bind: Engine, taken_at: datetime) -> None:
+    stats = BotStats(
+        taken_at=taken_at,
+        launch_time=taken_at - timedelta(days=3, hours=4),
+        version="0.9.2",
+        guilds=12,
+        unavailable_guilds=0,
+        channels=140,
+        threads=6,
+        members=5321,
+        cached_users=870,
+        shards=(ShardStats(id=0, alive=True, latency=0.0421), ShardStats(id=1, alive=False, latency=None)),
+    )
+    with Session(bind) as session:
+        store_snapshot(session, stats)
+        session.commit()
+
+
+@pytest.fixture
+def owner(member: TestClient, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    """Return the browser signed in as :data:`USER`, who owns the bot."""
+    monkeypatch.setattr(ApplicationOwners, "value", frozenset({Snowflake(MEMBER_ID)}))
+    return member
+
+
+def test_the_bot_stats_page_is_for_owners_only(member: TestClient) -> None:
+    assert member.get("/bot").status_code == 403
+    assert 'href="/bot"' not in member.get("/me").text
+
+
+def test_owners_see_the_bot_stats_link(owner: TestClient) -> None:
+    assert 'href="/bot"' in owner.get("/me").text
+
+
+def test_the_bot_stats_page_shows_the_latest_snapshot(owner: TestClient, bind: Engine) -> None:
+    _store_stats(bind, NOW - timedelta(seconds=10))
+
+    page = html.unescape(owner.get("/bot").text)
+
+    assert "5321" in page
+    assert "1/2" in page
+    assert "42 ms" in page
+    assert "No heartbeat yet" in page
+    assert "3 days, 4 hours" in page
+    assert "may be down" not in page
+
+
+def test_an_old_snapshot_warns_the_bot_may_be_down(owner: TestClient, bind: Engine) -> None:
+    _store_stats(bind, NOW - timedelta(minutes=5))
+
+    assert "may be down" in owner.get("/bot").text
+
+
+def test_before_the_first_snapshot_the_page_says_so(owner: TestClient) -> None:
+    assert "hasn't stored a snapshot yet" in html.unescape(owner.get("/bot").text)
+
+
+@pytest.mark.parametrize(
+    ("count", "noun", "shown"),
+    [(1, "entry", "1 entry"), (3, "entry", "3 entries"), (2, "day", "2 days"), (2, "reminder", "2 reminders")],
+)
+def test_plural(count: int, noun: str, shown: str) -> None:
+    assert plural(count, noun) == shown
+
+
+@pytest.mark.parametrize(
+    ("length", "shown"),
+    [
+        (timedelta(days=3, hours=4, minutes=5), "3 days, 4 hours"),
+        (timedelta(minutes=5), "5 minutes"),
+        (timedelta(seconds=42), "42 seconds"),
+        (timedelta(weeks=1, minutes=1), "1 week, 1 minute"),
+    ],
+)
+def test_span_shows_the_two_largest_units(length: timedelta, shown: str) -> None:
+    assert span(length) == shown

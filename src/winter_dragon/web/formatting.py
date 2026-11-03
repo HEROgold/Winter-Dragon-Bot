@@ -24,10 +24,12 @@ def humanized_name(name: str) -> str:
 
 
 def plural(count: int, noun: str) -> str:
-    """Return ``count`` with ``noun``, plural unless there's one: ``1 entry``, ``3 entries``, ``2 reminders``."""
+    """Return ``count`` with ``noun``, plural unless there's one: ``1 entry``, ``3 entries``, ``2 days``, ``2 reminders``."""
     if count == 1:
         return f"1 {noun}"
-    return f"{count} {noun[:-1]}ies" if noun.endswith("y") else f"{count} {noun}s"
+    if noun.endswith("y") and noun[-2:-1] not in "aeiou":
+        return f"{count} {noun[:-1]}ies"
+    return f"{count} {noun}s"
 
 
 def every(interval: timedelta) -> str:
@@ -37,6 +39,19 @@ def every(interval: timedelta) -> str:
             count = interval // length
             return f"Every {unit}" if count == 1 else f"Every {count} {unit}s"
     return f"Every {int(interval.total_seconds())} seconds"
+
+
+def span(length: timedelta) -> str:
+    """Return how long ``length`` is in its two largest units: ``3 days, 4 hours``, ``5 minutes``, ``42 seconds``."""
+    parts: list[str] = []
+    rest = length
+    for unit, size in _UNITS:
+        if rest >= size:
+            parts.append(plural(rest // size, unit))
+            rest %= size
+        if len(parts) == 2:  # noqa: PLR2004 - the two largest units
+            break
+    return ", ".join(parts) or plural(int(length.total_seconds()), "second")
 
 
 def day_label(day: date, today: date) -> str:

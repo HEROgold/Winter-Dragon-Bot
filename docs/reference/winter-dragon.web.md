@@ -8,9 +8,11 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `winter_dragon.web.accounts` — `src/winter_dragon/web/accounts.py`
 Who is signed in to the dashboard, kept in the signed session cookie, and the CSRF token their forms carry.
 
-- module names: ACCOUNT_KEY, CSRF_KEY, STATE_KEY, CSRF_FIELD, ZONE_COOKIE, SignedIn
+- module names: ACCOUNT_KEY, CSRF_KEY, STATE_KEY, CSRF_FIELD, ZONE_COOKIE, SignedIn, BotOwner
 - `current_account(request: Request) -> Account | None` — Return the account signed in on ``request``, if any.
 - `signed_in(request: Request) -> Account` — Return the signed-in account; the FastAPI dependency of every page that needs one.
+- `is_bot_owner(account: Account | None) -> bool` — Whether ``account`` owns the bot, as :class:`~wd_bot.application.ApplicationOwners` read it at startup.
+- `bot_owner(account: SignedIn) -> Account` — Return the signed-in account when it owns the bot; the FastAPI dependency of the owners' pages.
 - `sign_in(request: Request, account: Account) -> None` — Start a fresh session for ``account``, dropping whatever the old one held.
 - `sign_out(request: Request) -> None` — End the session on ``request``.
 - `csrf_token(request: Request) -> str` — Return the session's CSRF token, creating it on first use.
@@ -42,6 +44,18 @@ Signing in with Discord and out again; the callback sets the HttpOnly session co
 - `@router.get async callback(request: Request, code: str | None=None, state: str | None=None, error: str | None=None) -> Response` — Finish signing in with the ``code`` Discord sent back, if its ``state`` is the one this session asked for.
 - `@router.post logout(request: Request) -> Response` — Sign out, and go back to the landing page.
 
+## `winter_dragon.web.bot_status` — `src/winter_dragon/web/bot_status.py`
+The owners' stats page: what the bot serves, from the latest snapshot it stored.
+
+- module names: router, STALE_INTERVALS
+- `@router.get bot_stats_page(request: Request, _: BotOwner, bind: Database) -> Response` — Show the bot's owners what it serves: the counts, each shard, uptime and version.
+
+### `@dataclass class StatsView`
+The latest snapshot, and whether it's too old to trust.
+
+- fields: stats: BotStats | None, age: timedelta | None, stale: bool
+- `@classmethod at(stats: BotStats | None, now: datetime, interval: float) -> StatsView` — Return the view of ``stats`` at ``now``, stale past :data:`STALE_INTERVALS` times ``interval`` seconds.
+
 ## `winter_dragon.web.discord_oauth` — `src/winter_dragon/web/discord_oauth.py`
 Signing in with Discord: the OAuth2 authorization code grant, used only to learn who is signing in.
 
@@ -54,8 +68,9 @@ Signing in with Discord: the OAuth2 authorization code grant, used only to learn
 How the dashboard writes stored values for people: times in their zone, intervals and table names in words.
 
 - `humanized_name(name: str) -> str` — Return a class or field name as words: ``TimedReminder`` is ``Timed reminder``, ``repeat_every`` ``Repeat every``.
-- `plural(count: int, noun: str) -> str` — Return ``count`` with ``noun``, plural unless there's one: ``1 entry``, ``3 entries``, ``2 reminders``.
+- `plural(count: int, noun: str) -> str` — Return ``count`` with ``noun``, plural unless there's one: ``1 entry``, ``3 entries``, ``2 days``, ``2 reminders``.
 - `every(interval: timedelta) -> str` — Return how often something repeating every ``interval`` happens: ``Every day``, ``Every 3 days``.
+- `span(length: timedelta) -> str` — Return how long ``length`` is in its two largest units: ``3 days, 4 hours``, ``5 minutes``, ``42 seconds``.
 - `day_label(day: date, today: date) -> str` — Return ``day`` as a heading on ``today``: ``Today``, ``Tomorrow``, or ``Tuesday 21 October`` (with any other year).
 - `shown_value(value: object, zone: ZoneInfo) -> str` — Return a stored ``value`` as the data page shows it: times in ``zone``, intervals in words, nothing as a dash.
 
@@ -267,7 +282,7 @@ Rendering the dashboard's templates, as a whole page or as the fragment an htmx 
 
 - module names: TEMPLATES_DIR, STATIC_DIR, templates, Database
 - `is_htmx(request: Request) -> bool` — Whether ``request`` came from htmx, which swaps in a fragment instead of loading a page.
-- `render(request: Request, name: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the template ``name`` with ``context``, plus the signed-in account and the CSRF token every form carries.
+- `render(request: Request, name: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the template ``name`` with ``context``, plus what every page gets: the account, owner flag and CSRF token.
 - `render_mapping(request: Request, name: str, context: Mapping[str, object], *, status_code: int=status.HTTP_200_OK) -> Response` — Like :func:`render`, for a ``context`` built elsewhere, whose keys can't be passed as keyword arguments.
 - `page_or_fragment(request: Request, page: str, fragment: str, *, status_code: int=status.HTTP_200_OK, **context: object) -> Response` — Render the whole template ``page``, or only the template ``fragment`` when htmx asked, to swap it in.
 - `after_post(request: Request, url: str, fragment: Callable[[], Response]) -> Response` — Answer a form that went through: send a plain browser back to the page ``url``, or render htmx its ``fragment``.

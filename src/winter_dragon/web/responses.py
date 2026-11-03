@@ -9,7 +9,7 @@ lazy from fastapi import Request, status
 lazy from fastapi.responses import RedirectResponse
 lazy from sqlalchemy import Engine
 
-lazy from winter_dragon.web.accounts import CSRF_FIELD, csrf_token, current_account
+lazy from winter_dragon.web.accounts import CSRF_FIELD, csrf_token, current_account, is_bot_owner
 lazy from winter_dragon.web.formatting import shown_value
 
 
@@ -32,7 +32,7 @@ def is_htmx(request: Request) -> bool:
 
 
 def render(request: Request, name: str, *, status_code: int = status.HTTP_200_OK, **context: object) -> Response:
-    """Render the template ``name`` with ``context``, plus the signed-in account and the CSRF token every form carries."""
+    """Render the template ``name`` with ``context``, plus what every page gets: the account, owner flag and CSRF token."""
     return render_mapping(request, name, context, status_code=status_code)
 
 
@@ -44,7 +44,13 @@ def render_mapping(
     status_code: int = status.HTTP_200_OK,
 ) -> Response:
     """Like :func:`render`, for a ``context`` built elsewhere, whose keys can't be passed as keyword arguments."""
-    shared = {"account": current_account(request), "csrf_field": CSRF_FIELD, "csrf_token": csrf_token(request)}
+    account = current_account(request)
+    shared = {
+        "account": account,
+        "bot_owner": is_bot_owner(account),
+        "csrf_field": CSRF_FIELD,
+        "csrf_token": csrf_token(request),
+    }
     return templates.TemplateResponse(request, name, shared | dict(context), status_code=status_code)
 
 
