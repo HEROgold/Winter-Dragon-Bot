@@ -102,6 +102,19 @@ Admin ``/bot-commands`` group for inspecting/managing application-command sync.
 - `@Cog.command async list_commands(interaction: CommandInteraction) -> None` — Show every registered command's synced/pending state.
 - `@Cog.command async resync(interaction: CommandInteraction) -> None` — Acknowledge within Discord's 3s window, then re-read every scope from Discord and sync it; owners only.
 
+## `winter_dragon.cogs.bot_stats` — `src/winter_dragon/cogs/bot_stats.py`
+The /botstats command: what the bot serves right now, for its owners.
+
+- module names: MAX_SHARD_LINES
+- `shard_line(shard: ShardStats) -> str` — Return one shard as ``#0 up, 42 ms``.
+- `shards_value(stats: BotStats) -> str` — Return the embed's shard field: each shard, or only the dead ones when there are too many to list.
+- `stats_embed(stats: BotStats) -> Embed` — Return ``stats`` as the /botstats reply.
+
+### `class BotStatsCommand(Cog)`
+Shows the bot's owners what it serves: guilds, channels, members, shards and uptime.
+
+- `@Cog.command async botstats(interaction: CommandInteraction) -> None` — Reply, privately, with a :class:`BotStats` snapshot; only the bot's owners may.
+
 ## `winter_dragon.cogs.channel_utils` — `src/winter_dragon/cogs/channel_utils.py`
 The /channel-utils command group: delete a whole category, and lock or unlock a channel for a role or member.
 

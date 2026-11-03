@@ -238,6 +238,10 @@ class Gateway(LoggerMixin):
         self._heartbeat_interval: float | None = None
         self._last_ack: float | None = None
         """When Discord last acknowledged a heartbeat, in event loop time."""
+        self._last_heartbeat: float | None = None
+        """When the last heartbeat was sent, in event loop time."""
+        self.latency: float | None = None
+        """Seconds between the last acknowledged heartbeat and its acknowledgement; ``None`` before the first one."""
         self._seq: int | None = None
         self._presence: dict[str, Any] | None = None
         self._ready_dispatched = False
@@ -273,8 +277,13 @@ class Gateway(LoggerMixin):
         """
         await asyncio.sleep(interval * random.random())  # noqa: S311
         while True:
-            await self._send(Opcode.HEARTBEAT, self._seq)
+            await self._heartbeat()
             await asyncio.sleep(interval)
+
+    async def _heartbeat(self) -> None:
+        """Send one heartbeat (op 1) with the last sequence, noting when for :attr:`latency`."""
+        self._last_heartbeat = asyncio.get_running_loop().time()
+        await self._send(Opcode.HEARTBEAT, self._seq)
 
     async def connect(
         self,
@@ -386,9 +395,11 @@ class Gateway(LoggerMixin):
                 if isinstance(event, GuildCreate) and event.large and self.intents & Intents.GUILD_MEMBERS:
                     await self.request_guild_members(event.id)
             case {"op": Opcode.HEARTBEAT}:
-                await self._send(Opcode.HEARTBEAT, self._seq)
+                await self._heartbeat()
             case {"op": Opcode.HEARTBEAT_ACK}:
                 self._last_ack = asyncio.get_running_loop().time()
+                if self._last_heartbeat is not None:
+                    self.latency = self._last_ack - self._last_heartbeat
             case {"op": Opcode.RECONNECT}:
                 self.logger.info(t"Gateway requested a reconnect; resuming.")
                 return Disconnect.RESUME

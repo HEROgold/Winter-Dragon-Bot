@@ -5,6 +5,27 @@ Winter Dragon: the Discord bot and its web dashboard.
 
 Public names only — open the file when you need a body. Index: [API reference](index.md).
 
+## `winter_dragon.bot_stats` — `src/winter_dragon/bot_stats.py`
+What the bot serves right now, read from its gateway cache: guilds, channels, members, shards and uptime.
+
+- `member_count(state: GuildState) -> int` — Return how many members ``state``'s guild has: as GUILD_CREATE or a counted fetch said, else as cached.
+
+### `class ShardStats(BaseModel, frozen=True)`
+One gateway shard: whether Discord still acknowledges its heartbeats, and how fast.
+
+- fields: id: int, alive: bool, latency: float | None
+- `@classmethod of(gateway: Gateway, index: int) -> ShardStats` — Read ``gateway``, the ``index``-th shard; its ID is the one it identified with, else ``index``.
+
+### `class BotStats(BaseModel, frozen=True)`
+A snapshot of what the bot serves, built from the cache without a request to Discord.
+
+- fields: taken_at: datetime, launch_time: datetime, version: str, guilds: int, unavailable_guilds: int, channels: int,
+  threads: int, members: int, cached_users: int, shards: tuple[ShardStats, ...]
+- `@property uptime -> timedelta` — How long the bot had been running when the snapshot was taken.
+- `@property shards_alive -> int` — How many shards Discord still acknowledges.
+- `@classmethod of(bot: Bot) -> BotStats` — Take a snapshot of ``bot``: its client's cache and its shards.
+- `@classmethod from_cache(cache: StateCache, shards: ShardManager | None, *, launch_time: datetime) -> BotStats` — Take a snapshot of ``cache`` and ``shards`` (``None`` before the gateway connects).
+
 ## `winter_dragon.config` — `src/winter_dragon/config.py`
 The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``.
 
