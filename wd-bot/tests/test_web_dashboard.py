@@ -499,7 +499,7 @@ def test_pages_outside_the_profile_have_no_subnav(member: TestClient) -> None:
         assert 'class="subnav"' not in member.get(path).text
 
 
-def test_every_profile_tab_opens_a_page(member: TestClient) -> None:
+def test_every_profile_tab_opens_its_page_with_the_tab_marked(member: TestClient) -> None:
     text = member.get("/profile").text
     subnav = re.search(r'<nav class="subnav".*?</nav>', text, re.DOTALL)
     assert subnav is not None
@@ -507,7 +507,10 @@ def test_every_profile_tab_opens_a_page(member: TestClient) -> None:
 
     assert hrefs
     for href in hrefs:
-        assert member.get(href).status_code == 200
+        response = member.get(href)
+
+        assert response.status_code == 200
+        assert f'href="{href}" aria-current="page"' in response.text
 
 
 def test_the_dashboard_links_to_the_profile(member: TestClient) -> None:
