@@ -47,6 +47,17 @@ dc exec bot python -c "import urllib.request; print(urllib.request.urlopen('http
 
 Labels hold route shapes and command names, never IDs, so the number of series stays small.
 
+## Grafana
+
+`https://grafana.herogold.nl` answers over Tailscale only, through Traefik's `tailnet` entrypoint like Dozzle. It runs
+in its own stack with Prometheus, in `~/monitoring` on the VPS, from `hosts/ubuntu-4gb-hel1-1/monitoring/` in
+`HEROgold/ops`. Prometheus joins the `winter-dragon-bot_default` network to scrape `bot:9100` and `web:9100`, and keeps
+15 days of data.
+
+The **Winter Dragon** dashboard is [`grafana/dashboards/winter-dragon.json`](../../grafana/dashboards/winter-dragon.json).
+It reads the Prometheus datasource with uid `prometheus`. After changing it here, copy it to the stack in `ops` and to
+the server; Grafana picks up the new file within a minute.
+
 ## Traces in Sentry
 
 The bot reports to the Sentry environment set in `sentry.ini` (`production` on the VPS). Under **Performance**, each
