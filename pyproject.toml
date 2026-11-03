@@ -1,13 +1,13 @@
 [dependency-groups]
 dev = [
   "httpx2>=2.16.0",
-  "hypothesis>=6.170.14",
-  "pytest>=9.2.0",
+  "hypothesis>=6.170.9",
+  "pytest>=9.1.1",
   "pytest-cov>=7.1.0",
-  "zensical>=0.0.74"
+  "zensical>=0.0.72"
 ]
 docs = [
-  "zensical>=0.0.74"
+  "zensical>=0.0.72"
 ]
 
 [project]
@@ -41,16 +41,16 @@ dependencies = [
   "wd-cogs",
   "herogold==6.1.0",
   "httpxyz>=0.42.1",
-  "pydantic>=2.14.2",
+  "pydantic>=2.14.1",
   "matplotlib>=3.11.2",
   "fastapi>=0.162.0",
   "jinja2>=3.1.6",
   "uvicorn>=0.54.0",
   "itsdangerous>=2.2.0",
-  "python-multipart>=0.0.33",
-  "tzdata>=2026.6",
+  "python-multipart>=0.0.32",
+  "tzdata>=2026.5",
   "alembic>=1.20.1",
-  "psycopg[binary]>=3.3.7",
+  "psycopg[binary]>=3.3.6",
   "pillow>=13.0.0",
   "prometheus-client>=0.26.0"
 ]
@@ -74,6 +74,9 @@ markers = [
 
 [tool.uv]
 package = true
+# Ignore releases younger than a week, so a fresh compromised upload can't reach the lock file.
+exclude-newer = "1 week"
+exclude-newer-package = { herogold = false }
 
 [tool.uv.sources]
 wd-types = { workspace = true }
