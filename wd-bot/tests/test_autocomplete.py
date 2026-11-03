@@ -1,5 +1,6 @@
 """Unit tests: NUMBER options, and Lookup autocomplete on commands and subcommands (no network)."""
 
+import asyncio
 from typing import TYPE_CHECKING, Annotated, ClassVar
 
 import pytest
@@ -10,6 +11,7 @@ from wd_bot.commands import Command, CommandDefinition, Describe, Lookup
 from wd_bot.testing import cog_command, detached_cog
 from wd_db.extension.lifecycle import soft_delete
 from wd_discord import AutocompleteInteraction
+from wd_discord.gateway import EventName
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType
 from wd_discord.interactions import (
@@ -152,6 +154,17 @@ async def test_bot_dispatches_autocomplete_to_the_command(discord_client: Record
     bot.registry.register(cog)  # registering without add_cog's side effects
     options = [InteractionDataOption(name="name", type=3, value="d", focused=True)]
     await bot._dispatch_interaction(_autocomplete(discord_client, "pet", options))  # noqa: SLF001
+    assert discord_client.interaction_responses() == [{"type": 8, "data": {"choices": [{"name": "dog", "value": "dog"}]}}]
+
+
+async def test_gateway_autocomplete_reaches_the_command(discord_client: RecordingClient) -> None:
+    bot = Bot()
+    bot.loop = asyncio.get_running_loop()
+    bot.client = discord_client
+    bot.registry.register(_cog(_Pets))
+    options = [InteractionDataOption(name="name", type=3, value="d", focused=True)]
+    await bot._dispatch(EventName.INTERACTION_CREATE, _autocomplete(discord_client, "pet", options).model)  # noqa: SLF001
+    await asyncio.gather(*(task for task in asyncio.all_tasks() if task is not asyncio.current_task()))
     assert discord_client.interaction_responses() == [{"type": 8, "data": {"choices": [{"name": "dog", "value": "dog"}]}}]
 
 
