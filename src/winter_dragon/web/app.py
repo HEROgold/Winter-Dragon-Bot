@@ -10,6 +10,7 @@ lazy from starlette.middleware.sessions import SessionMiddleware
 lazy from starlette.responses import Response
 
 lazy from winter_dragon.cogs import import_cogs
+lazy from winter_dragon.metrics import observe_requests
 lazy from winter_dragon.web import auth, bot_status, pages, profile, redirect
 lazy from winter_dragon.web.accounts import SignInRequired
 lazy from winter_dragon.web.records import create_dashboard_tables
@@ -47,6 +48,7 @@ def create_app(
         same_site="lax",
         https_only=https_only,
     )
+    observe_requests(app)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     for router in (pages.router, auth.router, profile.router, bot_status.router, redirect.router):
         app.include_router(router)

@@ -21,6 +21,7 @@ lazy from wd_discord import (
 lazy from wd_discord.intents import Intents
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.sentry import TraceOp, transaction
+lazy from wd_discord.telemetry import Telemetry
 lazy from wd_errors.startup import StartupError
 lazy from wd_types.clock import utc_now
 
@@ -215,8 +216,10 @@ class Bot(LoggerMixin):
         :meth:`Client.receive <wd_discord.client.Client.receive>` updates the client's cache first, so listeners
         read state that already includes the event.
 
-        An interaction is also routed to its command or component handler.
+        An interaction is also routed to its command or component handler. Each event is counted in
+        :class:`~wd_discord.telemetry.Telemetry`.
         """
+        Telemetry.event(event_name)
         event = self.client.receive(payload).event
         if isinstance(
             event,
@@ -231,9 +234,10 @@ class Bot(LoggerMixin):
 
         Each call is a Sentry transaction named after the listener, tagged with the event.
         """
-        with transaction(TraceOp.LISTENER, handler.__qualname__) as traced:
+        name = handler.__qualname__
+        with transaction(TraceOp.LISTENER, name) as traced:
             traced.set_tag("discord.event", event_name)
-            await dispatch_guard.run(f"listener '{handler.__qualname__}'", lambda: handler(payload))
+            await dispatch_guard.run(f"listener '{name}'", lambda: handler(payload))
 
     async def reload_extension(self, module_name: str) -> None:
         """Reload the extension module ``module_name`` via :attr:`extensions`, then sync the command scopes it changed.

@@ -713,6 +713,26 @@ Represents a Discord Snowflake, which is a unique identifier used by Discord for
 - `@property process_id -> int` — Get the process ID from the snowflake.
 - `@property increment -> int` — Get the increment from the snowflake.
 
+## `wd_discord.telemetry` — `wd-discord/src/wd_discord/telemetry.py`
+Timings and counts the client and the bot report, for a metrics exporter to subscribe to.
+
+- module names: REST
+
+### `@dataclass class Timing`
+How long one piece of work took.
+
+- fields: kind: str, name: str, seconds: float, outcome: str
+
+### `class Telemetry`
+The subscribers to what the client and the bot report; a subscriber must be quick and must not raise.
+
+- fields: timing_observers: ClassVar[list[Callable[[Timing], None]]], event_observers: ClassVar[list[Callable[[str],
+  None]]]
+- `@classmethod subscribe(*, timings: Callable[[Timing], None] | None=None, events: Callable[[str], None] | None=None) -> None` — Call ``timings`` with each :class:`Timing` reported, and ``events`` with each gateway event's name.
+- `@classmethod unsubscribe_all() -> None` — Drop every subscriber.
+- `@classmethod timing(timing: Timing) -> None` — Report ``timing`` to every subscriber.
+- `@classmethod event(name: str) -> None` — Report that the gateway event ``name`` arrived.
+
 ## `wd_discord.timestamp` — `wd-discord/src/wd_discord/timestamp.py`
 Discord timestamp markup: ``<t:EPOCH:STYLE>``, shown in each reader's own timezone and locale.
 

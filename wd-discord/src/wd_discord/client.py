@@ -55,6 +55,7 @@ lazy from wd_discord.errors.api import ApiResponseError
 lazy from wd_discord.gateway.sharding import GatewayBotInfo
 lazy from wd_discord.rate_limit import MaxRetriesExceededError, RateLimitHandler, new_rate_limiters
 lazy from wd_discord.route import Route
+lazy from wd_discord.telemetry import REST, Telemetry, Timing
 
 
 if TYPE_CHECKING:
@@ -293,15 +294,21 @@ class Client(LoggerMixin):
                 self.logger.exception(t"Request error for {method} {path}")
                 raise
 
-        with sentry_sdk.start_span(op="http.client", name=f"{method} {resolved.shape}") as span:
+        name = f"{method} {resolved.shape}"
+        start = time.perf_counter()
+        with sentry_sdk.start_span(op=REST, name=name) as span:
             span.set_data("http.request.method", method)
             try:
                 response = await handler.send(send_once)
             except MaxRetriesExceededError:
                 self.logger.exception(t"Giving up on {method} {path} after {RateLimit.max_retries} rate-limit retries")
                 span.set_status("resource_exhausted")
+                Telemetry.timing(Timing(kind=REST, name=name, seconds=time.perf_counter() - start, outcome="429"))
                 return ApiResponseError(code=0, message="Exceeded rate-limit retries")
             span.set_http_status(response.status_code)
+        Telemetry.timing(
+            Timing(kind=REST, name=name, seconds=time.perf_counter() - start, outcome=str(response.status_code)),
+        )
 
         if response.is_success:
             self.logger.debug(t"{response.status_code} {method} {path}")

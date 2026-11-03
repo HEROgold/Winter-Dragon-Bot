@@ -18,6 +18,7 @@ lazy from wd_discord import Client, Token
 
 from winter_dragon.web.settings import DashboardSettings
 lazy from winter_dragon.cogs import import_cogs
+lazy from winter_dragon.metrics import Exporter
 lazy from winter_dragon.web.app import create_app
 
 
@@ -32,7 +33,7 @@ async def _load_application() -> None:
 
 
 def main() -> None:
-    """Check every operator file is filled in, learn the application ID and owners, then serve the dashboard until stopped."""
+    """Check the operator files, learn the application ID and owners, then serve the dashboard and its metrics."""
     # dashboard.ini is registered on import; importing the cogs registers config.ini and cogs.ini, so the check
     # covers every file the pages read.
     log.setup()
@@ -40,6 +41,7 @@ def main() -> None:
     OperatorFiles.check()
     Sentry()
     asyncio.run(_load_application())
+    Exporter.serve()
     app = create_app(
         bind=engine,
         session_secret=DashboardSettings.session_secret,

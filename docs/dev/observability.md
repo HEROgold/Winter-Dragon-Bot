@@ -27,6 +27,26 @@ page warns when the snapshot is older than three intervals, which means the bot 
 "Members (approx.)" adds up each guild's member count, so someone in two guilds counts twice. "Unique cached users"
 counts distinct cached members; a large guild only sends them all with the members intent.
 
+## Metrics
+
+The bot and the dashboard each serve Prometheus metrics on `/metrics`, port 9100 (`config.ini`
+`[MetricsSettings] port`). Compose doesn't publish the port, so only a container on the same network reaches it:
+
+```sh
+dc exec bot python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:9100/metrics').read().decode())"
+```
+
+| Metric | Labels | Meaning |
+|---|---|---|
+| `winter_dragon_guilds`, `_channels`, `_threads`, `_members`, `_cached_users`, `_uptime_seconds` | | The `BotStats` numbers, read at each scrape. |
+| `winter_dragon_shard_alive`, `winter_dragon_shard_latency_seconds` | `shard` | Each shard's state and heartbeat latency. |
+| `winter_dragon_work_seconds` | `kind`, `name`, `outcome` | How long each interaction, listener call and periodic tick took. |
+| `winter_dragon_rest_request_seconds` | `route`, `status` | How long each Discord REST call took, rate-limit waits included. |
+| `winter_dragon_gateway_events_total` | `event` | Gateway events received. |
+| `winter_dragon_web_request_seconds` | `method`, `route`, `status` | How long each dashboard request took. |
+
+Labels hold route shapes and command names, never IDs, so the number of series stays small.
+
 ## Traces in Sentry
 
 The bot reports to the Sentry environment set in `sentry.ini` (`production` on the VPS). Under **Performance**, each

@@ -13,6 +13,7 @@ With :attr:`~wd_config.sentry.SentrySettings.profile_session_sample_rate` above 
 """
 
 lazy import enum
+lazy import time
 lazy from contextlib import contextmanager
 lazy from importlib import import_module
 lazy from typing import TYPE_CHECKING, Any
@@ -20,6 +21,8 @@ lazy from typing import TYPE_CHECKING, Any
 lazy import sentry_sdk
 lazy from sentry_sdk.integrations import DidNotEnable
 lazy from wd_config.sentry import SentrySettings
+
+lazy from wd_discord.telemetry import Telemetry, Timing
 
 
 if TYPE_CHECKING:
@@ -75,10 +78,17 @@ def transaction(op: TraceOp, name: str) -> Generator[Span]:
     """Trace the block as one ``op`` transaction named ``name``, in a scope of its own.
 
     The bot runs each interaction, listener and tick in its own task; the isolation scope keeps the tags one sets from
-    leaking into the next.
+    leaking into the next. How long it took goes to :class:`~wd_discord.telemetry.Telemetry` too, ``error`` when the
+    block raised.
     """
-    with sentry_sdk.isolation_scope(), sentry_sdk.start_transaction(op=op, name=name, source="task") as traced:
-        yield traced
+    start = time.perf_counter()
+    outcome = "error"
+    try:
+        with sentry_sdk.isolation_scope(), sentry_sdk.start_transaction(op=op, name=name, source="task") as traced:
+            yield traced
+        outcome = "ok"
+    finally:
+        Telemetry.timing(Timing(kind=op, name=name, seconds=time.perf_counter() - start, outcome=outcome))
 
 
 class Sentry:

@@ -1,11 +1,11 @@
 """Package for Winter Dragon bot Extensions."""
+
 lazy from .bot_extension import (
     BotActivity,
     BotControl,
     BotMetrics,
     CogEvents,
     CommandManager,
-    Prometheus,
     Sync,
 )
 lazy from .games import (
@@ -55,7 +55,6 @@ __all__ = [
     "Invite",
     "LeagueOfLegends",
     "Love",
-    "Prometheus",
     "Purge",
     "Reminder",
     "Stats",
