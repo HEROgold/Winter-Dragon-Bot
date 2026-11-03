@@ -129,6 +129,13 @@ def test_fresh_boot_writes_app_settings_to_config_ini(boot_config: BootConfig) -
         "created_color",
         "changed_color",
         "deleted_color",
+        "act_color",
+        "wait_color",
+        "stop_color",
+        "step_done_mark",
+        "step_here_mark",
+        "step_next_mark",
+        "winner_mark",
         "bot_status_messages",
     }
 
