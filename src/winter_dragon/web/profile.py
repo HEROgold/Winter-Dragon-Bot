@@ -10,7 +10,8 @@ on start-up) and a template under ``templates/profile/``, then register the page
         return {"refuels": list(refuels(context.bind, context.member_id))}
 
 The template extends ``profile/base.html`` and gets the returned dict as its context, plus ``pages`` and ``page``.
-The Profile lists the page, serves it at ``/profile/<slug>`` and keeps it to the signed-in member.
+The Profile lists the page, serves it at ``/profile/<slug>`` and keeps it to the signed-in member. ``/profile``
+reopens the page the member last opened.
 """
 
 from dataclasses import dataclass
@@ -22,7 +23,7 @@ lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annot
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 
 lazy from winter_dragon.web.accounts import Account, signed_in, visitor_zone
-lazy from winter_dragon.web.responses import database, render, render_mapping
+lazy from winter_dragon.web.responses import database, render, render_mapping, see_other
 
 
 if TYPE_CHECKING:
@@ -33,6 +34,10 @@ if TYPE_CHECKING:
 
 
 router = APIRouter(prefix="/profile")
+LAST_TAB_COOKIE = "profile_tab"
+"""Holds the slug of the Profile page the member last opened."""
+LAST_TAB_LIFETIME = 60 * 60 * 24 * 365
+"""How long, in seconds, the browser keeps :data:`LAST_TAB_COOKIE`: a year."""
 
 type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]
 
@@ -109,7 +114,11 @@ def load_profile_pages() -> None:
 
 @router.get("", dependencies=[Depends(signed_in)])
 def profile(request: Request) -> Response:
-    """Show the signed-in member's Profile: a link to each feature's page."""
+    """Reopen the Profile page the member last opened; without one, show the intro under the tab bar."""
+    last = request.cookies.get(LAST_TAB_COOKIE)
+    page = next((page for page in profile_pages() if page.slug == last), None)
+    if page is not None:
+        return see_other(page.path)
     return render(request, "profile/index.html", pages=profile_pages(), page=None)
 
 
@@ -123,7 +132,16 @@ def profile_page_view(
     """Show the signed-in member's page ``slug`` of the Profile."""
     page = _page(slug)
     context = page.context(ProfileContext(bind=bind, member_id=account.id, zone=visitor_zone(request)))
-    return render_profile_page(request, slug, context)
+    response = render_profile_page(request, slug, context)
+    response.set_cookie(
+        LAST_TAB_COOKIE,
+        page.slug,
+        max_age=LAST_TAB_LIFETIME,
+        path=router.prefix,
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 def _page(slug: str) -> ProfilePage:
