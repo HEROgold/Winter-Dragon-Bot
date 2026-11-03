@@ -936,7 +936,7 @@ The /tournament command group: sign-up, teams, a single-elimination bracket, mat
 - `async require_server_member(interaction: GuildCommandInteraction, player: User) -> None` — Refuse unless ``player`` is a member of the invoker's server, the only members who can play in its tournaments.
 - `entry_names(session: Session, tournament: Tournament) -> dict[int, str]` — Return each team's name by its ID.
 - `captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry` — Return the entry whose team ``captain_id`` captains in ``tournament``; refuse when there's none.
-- `play(session: Session, tournament: Tournament, match: TournamentMatch, action: MatchAction, entry_id: str, actor_id: Snowflake) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one.
+- `play(session: Session, match: TournamentMatch, action: MatchAction, entry_id: str, actor_id: Snowflake) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one.
 
 ### `class TournamentSettings`
 Settings for /tournament, in its ``cogs.ini`` section.
@@ -998,7 +998,11 @@ Where a match is: waiting for its teams, through the draft, live, and decided.
 
 - attributes: WAITING, READY, BAN, PICK, LIVE, FINISHED, FORFEIT
 - `@property decided -> bool` — Whether the match has a winner.
-- `@property next -> MatchPhase | None` — The phase an organiser advances the match to; ``None`` when the next step is reporting a winner.
+
+### `class MatchStep(StrEnum)`
+What happens to a match: its teams become known, it advances, it is reported or forfeited, or a bye decides it.
+
+- attributes: TEAMS_KNOWN, ADVANCE, REPORT, FORFEIT, BYE
 
 ### `class DraftKind(StrEnum)`
 Whether a team bans something from the match, or picks it.
@@ -1080,6 +1084,7 @@ One player's answer to a vote; voting again changes it.
 ## `winter_dragon.cogs.tournament.service` — `src/winter_dragon/cogs/tournament/service.py`
 What can happen to a tournament: signing up, forming teams, running the bracket, drafting and voting.
 
+- module names: PHASES: StateMachine[MatchPhase, MatchStep, PhaseContext]
 - `visible_tournaments(session: Session, guild_id: Snowflake, user_id: Snowflake, channel_id: Snowflake | None, *, include_over: bool=False) -> Generator[Tournament]` — Yield the guild's tournaments that ``user_id`` organises, signed up for, or that are posted in ``channel_id``, by name.
 - `posts_of(session: Session, tournament: Tournament) -> Generator[TournamentPost]` — Yield the tournament's posts.
 - `add_post(session: Session, tournament: Tournament, channel_id: Snowflake, message_id: Snowflake) -> None` — Record that the tournament is shown by ``message_id`` in ``channel_id``.
@@ -1098,8 +1103,9 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `remove_player(session: Session, tournament: Tournament, entry: TournamentEntry, captain_id: Snowflake, user_id: Snowflake) -> None` — Take ``user_id`` off ``entry``'s players, for its captain; the captain stays.
 - `entry_of_captain(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry | None` — Return the entry whose team ``captain_id`` captains in ``tournament``, if any.
 - `start(session: Session, tournament: Tournament, rng: Random) -> None` — Form the teams of a solo tournament, then lay out the bracket and give the byes their wins.
+- `following_phase(phase: MatchPhase) -> MatchPhase | None` — Return the phase the next button moves a match in ``phase`` to; ``None`` when that step is reporting a winner.
 - `advance(session: Session, match: TournamentMatch, actor_id: Snowflake) -> None` — Move ``match`` on to its next phase: from ready to the bans, the picks, and live.
-- `report(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int, actor_id: Snowflake, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
+- `report(session: Session, match: TournamentMatch, winner_id: int, actor_id: Snowflake, *, forfeit: bool=False) -> None` — Record ``winner_id`` as the winner of ``match``: by playing it live, or because the other team forfeited.
 - `cancel(session: Session, tournament: Tournament) -> None` — Call the tournament off: soft-delete it and everything in it, so none of it is seen again.
 - `lineup(session: Session, match: TournamentMatch, entry: TournamentEntry) -> list[Snowflake]` — Return the user IDs playing for ``entry`` in ``match``.
 - `clashes(session: Session, match: TournamentMatch) -> list[Snowflake]` — Return the members in both lineups of ``match``, ignoring anonymised ones: their deleted IDs don't match.
@@ -1119,6 +1125,11 @@ A member whose data is hidden leaves each tournament that hasn't started.
 - attributes: tables
 - `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Take the member ``member_id`` out of every tournament they're in that hasn't started.
 - `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the entries the member ``member_id`` is the only player of, in tournaments that haven't started.
+
+### `@dataclass class PhaseContext`
+What a match step acts on: the session, the match, who took the step, and the winner it names.
+
+- fields: session: Session, match: TournamentMatch, actor_id: Snowflake | None, winner_id: int | None
 
 ### `@dataclass class LineupRequest`
 A captain's request to put a member in or take them out of their entry's lineup.

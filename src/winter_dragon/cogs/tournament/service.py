@@ -8,6 +8,7 @@ from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session, col, select
+lazy from herogold.state import StateMachine
 lazy from sqlalchemy import exists
 lazy from sqlalchemy.orm import aliased
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, alive_by_id, create_or_restore, soft_delete, upsert
@@ -33,6 +34,7 @@ lazy from .models import (
     MatchEventKind,
     MatchLineup,
     MatchPhase,
+    MatchStep,
     MatchVote,
     TeamMode,
     Tournament,
@@ -420,10 +422,9 @@ def start(session: Session, tournament: Tournament, rng: Random) -> None:
         match = _match_at(session, tournament, BracketSlot(0, slot))
         match.entry_a_id = _id(pairing.first)
         match.entry_b_id = None if pairing.second is None else _id(pairing.second)
-        match.phase = MatchPhase.READY
-        _copy_lineups(session, match)
+        _move(PhaseContext(session, match), MatchStep.TEAMS_KNOWN)
         if pairing.bye:
-            _decide(session, tournament, match, _id(pairing.first), MatchPhase.FINISHED)
+            _move(PhaseContext(session, match, winner_id=_id(pairing.first)), MatchStep.BYE)
     tournament.status = TournamentStatus.RUNNING
 
 
@@ -455,23 +456,18 @@ def _match_at(session: Session, tournament: Tournament, at: BracketSlot) -> Tour
     return session.exec(query).one()
 
 
-def _decide(  # noqa: PLR0913 - a decision needs the session, tournament, match, winner, phase and who reported it
-    session: Session,
-    tournament: Tournament,
-    match: TournamentMatch,
-    winner_id: int,
-    phase: MatchPhase,
-    actor_id: Snowflake | None = None,
-) -> None:
-    """Record ``winner_id`` as the match's winner, and move them on to their next match or crown them.
+def _decide(ctx: PhaseContext) -> None:
+    """Record the winner ``ctx`` names as the match's winner, and move them on to their next match or crown them.
 
-    ``actor_id`` is who reported the winner; ``None`` for a bye, which nobody reports.
+    A bye has no actor, because nobody reports it.
     """
+    session, match = ctx.session, ctx.match
+    winner_id = _winner(ctx)
     match.winner_id = winner_id
-    match.phase = phase
     match.decided_at = utc_now()
-    match.decided_by = None if actor_id is None else int(actor_id)
+    match.decided_by = None if ctx.actor_id is None else int(ctx.actor_id)
     session.add(match)
+    tournament = stored(session, Tournament, match.tournament_id, "That tournament is gone.")
     entries = entries_of(session, tournament)
     rounds = round_count(len(entries))
     if match.round == rounds - 1:
@@ -487,9 +483,127 @@ def _decide(  # noqa: PLR0913 - a decision needs the session, tournament, match,
     else:
         following.entry_b_id = winner_id
     if following.entry_a_id is not None and following.entry_b_id is not None:
-        following.phase = MatchPhase.READY
-        _copy_lineups(session, following)
+        _move(PhaseContext(session, following), MatchStep.TEAMS_KNOWN)
     session.add(following)
+
+
+# --- Phases ----------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class PhaseContext:
+    """What a match step acts on: the session, the match, who took the step, and the winner it names."""
+
+    session: Session
+    match: TournamentMatch
+    actor_id: Snowflake | None = None
+    winner_id: int | None = None
+
+
+PHASES: StateMachine[MatchPhase, MatchStep, PhaseContext] = StateMachine()
+"""Every step a match may take: from which phase, on which step, to which phase, and what the step does."""
+
+
+def _winner(ctx: PhaseContext) -> int:
+    """Return the winner a decision names; a step that decides a match must name one."""
+    if ctx.winner_id is None:
+        msg = "a decided match needs its winner"
+        raise ValueError(msg)
+    return ctx.winner_id
+
+
+def _record(ctx: PhaseContext, kind: MatchEventKind, detail: str = "") -> None:
+    """Log ``kind`` in the match's audit trail, unless no member did it: the draw gives a bye, and nobody reports it."""
+    if ctx.actor_id is not None:
+        record_event(ctx.session, ctx.match, kind, ctx.actor_id, detail)
+
+
+def _winner_entry(ctx: PhaseContext) -> TournamentEntry:
+    """Return the entry ``ctx`` names as the winner; refuse when that team is gone."""
+    return stored(ctx.session, TournamentEntry, _winner(ctx), "That team is gone.")
+
+
+@PHASES.add(MatchPhase.WAITING, event=MatchStep.TEAMS_KNOWN, to_state=MatchPhase.READY)
+def _teams_known(ctx: PhaseContext) -> None:
+    """Copy each entry's players into the match's lineup once its teams are known."""
+    _copy_lineups(ctx.session, ctx.match)
+
+
+@PHASES.add(MatchPhase.READY, event=MatchStep.ADVANCE, to_state=MatchPhase.BAN)
+def _ready_to_ban(ctx: PhaseContext) -> None:
+    """Start the bans."""
+    _record(ctx, MatchEventKind.PHASE, MatchPhase.BAN.value)
+
+
+@PHASES.add(MatchPhase.BAN, event=MatchStep.ADVANCE, to_state=MatchPhase.PICK)
+def _ban_to_pick(ctx: PhaseContext) -> None:
+    """Start the picks."""
+    _record(ctx, MatchEventKind.PHASE, MatchPhase.PICK.value)
+
+
+@PHASES.add(MatchPhase.PICK, event=MatchStep.ADVANCE, to_state=MatchPhase.LIVE)
+def _pick_to_live(ctx: PhaseContext) -> None:
+    """Start the match, and time it."""
+    ctx.match.started_at = utc_now()
+    _record(ctx, MatchEventKind.PHASE, MatchPhase.LIVE.value)
+
+
+@PHASES.add(MatchPhase.READY, event=MatchStep.BYE, to_state=MatchPhase.FINISHED)
+def _bye(ctx: PhaseContext) -> None:
+    """Give the bye's team the match, without anyone reporting it."""
+    _decide(ctx)
+
+
+@PHASES.add(MatchPhase.LIVE, event=MatchStep.REPORT, to_state=MatchPhase.FINISHED)
+def _report_winner(ctx: PhaseContext) -> None:
+    """Decide a live match by the reported winner."""
+    winner = _winner_entry(ctx)
+    _decide(ctx)
+    _record(ctx, MatchEventKind.WINNER, winner.name)
+
+
+@PHASES.add(
+    MatchPhase.READY,
+    MatchPhase.BAN,
+    MatchPhase.PICK,
+    MatchPhase.LIVE,
+    event=MatchStep.FORFEIT,
+    to_state=MatchPhase.FORFEIT,
+)
+def _forfeit(ctx: PhaseContext) -> None:
+    """Decide a match because the other team forfeited, whether or not it is live."""
+    winner = _winner_entry(ctx)
+    _decide(ctx)
+    _record(ctx, MatchEventKind.FORFEIT, winner.name)
+
+
+def _refusal(phase: MatchPhase, step: MatchStep) -> str:
+    """Return what a member is told when ``step`` can't happen to a match in ``phase``."""
+    if phase.decided:
+        return "This match is decided already."
+    if step is MatchStep.REPORT:
+        return "The match isn't live yet; a team can forfeit, though."
+    if step is MatchStep.ADVANCE and phase is MatchPhase.LIVE:
+        return "Report the winner to finish this match."
+    return "This match can't move on."
+
+
+def _move(ctx: PhaseContext, step: MatchStep) -> None:
+    """Take ``step`` on ``ctx``'s match, then store the phase it leads to; refuse a step its phase doesn't allow."""
+    phase = ctx.match.phase
+    if (phase, step) not in PHASES.transitions:
+        msg = _refusal(phase, step)
+        raise Refused(msg)
+    ctx.match.phase = PHASES.handle(ctx, phase, step)
+    ctx.session.add(ctx.match)
+
+
+def following_phase(phase: MatchPhase) -> MatchPhase | None:
+    """Return the phase the next button moves a match in ``phase`` to; ``None`` when that step is reporting a winner."""
+    for (from_, step), (to, _) in PHASES.transitions.items():
+        if from_ is phase and step is MatchStep.ADVANCE:
+            return to
+    return None
 
 
 def advance(session: Session, match: TournamentMatch, actor_id: Snowflake) -> None:
@@ -497,20 +611,11 @@ def advance(session: Session, match: TournamentMatch, actor_id: Snowflake) -> No
     if match.phase is MatchPhase.READY and clashes(session, match):
         msg = "A player is in both lineups; drop them from one side first."
         raise Refused(msg)
-    following = match.phase.next
-    if following is None:
-        msg = "Report the winner to finish this match." if match.phase is MatchPhase.LIVE else "This match can't move on."
-        raise Refused(msg)
-    match.phase = following
-    if following is MatchPhase.LIVE:
-        match.started_at = utc_now()
-    session.add(match)
-    record_event(session, match, MatchEventKind.PHASE, actor_id, following.value)
+    _move(PhaseContext(session, match, actor_id), MatchStep.ADVANCE)
 
 
-def report(  # noqa: PLR0913 - a report needs the session, tournament, match, winner, reporter and whether it is a forfeit
+def report(
     session: Session,
-    tournament: Tournament,
     match: TournamentMatch,
     winner_id: int,
     actor_id: Snowflake,
@@ -524,12 +629,8 @@ def report(  # noqa: PLR0913 - a report needs the session, tournament, match, wi
     if winner_id not in (match.entry_a_id, match.entry_b_id) or None in (match.entry_a_id, match.entry_b_id):
         msg = "That team doesn't play this match."
         raise Refused(msg)
-    if not forfeit and match.phase is not MatchPhase.LIVE:
-        msg = "The match isn't live yet; a team can forfeit, though."
-        raise Refused(msg)
-    _decide(session, tournament, match, winner_id, MatchPhase.FORFEIT if forfeit else MatchPhase.FINISHED, actor_id)
-    winner = stored(session, TournamentEntry, winner_id, "That team is gone.")
-    record_event(session, match, MatchEventKind.FORFEIT if forfeit else MatchEventKind.WINNER, actor_id, winner.name)
+    step = MatchStep.FORFEIT if forfeit else MatchStep.REPORT
+    _move(PhaseContext(session, match, actor_id, winner_id), step)
 
 
 def _end_temporary_teams(session: Session, entries: Sequence[TournamentEntry]) -> None:
