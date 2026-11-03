@@ -2,6 +2,7 @@
 
 import json
 
+import pytest
 from wd_discord import (
     AutocompleteInteraction,
     CommandInteraction,
@@ -12,7 +13,19 @@ from wd_discord import (
     User,
     bind,
 )
-from wd_discord.components import ActionRow, Button, ButtonStyle, ComponentType, Label, Modal, TextInput
+from wd_discord.components import (
+    ActionRow,
+    Button,
+    ButtonStyle,
+    ComponentType,
+    Label,
+    MediaGallery,
+    MediaGalleryItem,
+    Modal,
+    TextDisplay,
+    TextInput,
+    UnfurledMediaItem,
+)
 from wd_discord.embed import Embed
 from wd_discord.errors.api import ApiResponseError
 from wd_discord.files import File
@@ -114,6 +127,34 @@ async def test_respond_after_answering_sends_a_followup() -> None:
     await interaction.respond("oops", ephemeral=True)
     assert [sent.path for sent in client.sent] == [CALLBACK, FOLLOWUP]
     assert client.sent[1].json == {"content": "oops", "flags": 64}
+
+
+async def test_respond_with_a_layout_sets_the_components_v2_flag() -> None:
+    client = RecordingClient()
+    await _command(client).respond(components=[TextDisplay(content="hi")], ephemeral=True)
+    assert client.sent[0].json == {
+        "type": 4,
+        "data": {"content": None, "embeds": [], "components": [{"type": 10, "content": "hi"}], "flags": 64 | 32768},
+    }
+
+
+async def test_a_layout_refuses_content_next_to_it() -> None:
+    client = RecordingClient()
+    with pytest.raises(ValueError, match="components v2"):
+        await _command(client).respond("hi", components=[TextDisplay(content="hi")])
+    assert client.sent == []
+
+
+async def test_update_with_files_sends_multipart() -> None:
+    client = RecordingClient()
+    gallery = MediaGallery(items=[MediaGalleryItem(media=UnfurledMediaItem(url="attachment://bracket.png"))])
+    await _component(client).update(components=[gallery], files=[File("bracket.png", b"png", content_type="image/png")])
+    sent = client.requests_to("POST", CALLBACK)[0]
+    body = json.loads(sent.data["payload_json"])
+    assert body["type"] == 7
+    assert body["data"]["flags"] == 32768
+    assert body["data"]["attachments"] == [{"id": 0, "filename": "bracket.png"}]
+    assert sent.files == [("files[0]", ("bracket.png", b"png", "image/png"))]
 
 
 async def test_respond_with_files_sends_multipart() -> None:

@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
     from wd_discord.authenticate import Token
     from wd_discord.client import Client, NetworkError
-    from wd_discord.components import ActionRow, ComponentType, Modal
+    from wd_discord.components import ComponentType, MessageComponent, Modal
     from wd_discord.embed import Embed
     from wd_discord.files import File
     from wd_discord.gateway.events import InteractionDataOption, InteractionType, SubmittedComponent
@@ -173,7 +173,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
         files: Sequence[File] = (),
         ephemeral: bool = False,
     ) -> NetworkError | None:
@@ -205,7 +205,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
         files: Sequence[File] = (),
     ) -> Message | NetworkError:
         """PATCH /webhooks/{application_id}/{token}/messages/@original - edit the initial response.
@@ -226,7 +226,7 @@ class Interaction[M: InteractionModel](Entity[M]):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
         files: Sequence[File] = (),
         ephemeral: bool = False,
     ) -> Message | NetworkError:
@@ -270,18 +270,20 @@ class _UpdatesMessage[M: InteractionModel](Interaction[M]):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
+        files: Sequence[File] = (),
     ) -> NetworkError | None:
         """Edit the message the interaction came from as the initial response.
 
         A modal only comes from a message when it was opened from a component on one. A ``None`` argument leaves
-        that part of the message unchanged. Once the interaction was answered, edits the original response instead.
+        that part of the message unchanged; any ``files`` replace its attachments. Once the interaction was answered,
+        edits the original response instead.
         """
         if self.responded:
-            message = await self.edit_original(content, embeds=embeds, components=components)
+            message = await self.edit_original(content, embeds=embeds, components=components, files=files)
             return message if is_network_error(message) else None
-        data = message_data(content=content, embeds=embeds, components=components)
-        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data)
+        data = message_data(content=content, embeds=embeds, components=components, files=files)
+        return await self._callback(InteractionCallbackType.UPDATE_MESSAGE, data, files)
 
     async def defer_update(self) -> NetworkError | None:
         """Acknowledge now, without a loading state, and edit the source message later; no-op once answered."""

@@ -12,6 +12,18 @@ MAX_ACTION_ROW_BUTTONS = 5
 """An action row holds up to 5 buttons (https://docs.discord.com/developers/components/reference#action-row)."""
 MAX_MESSAGE_COMPONENTS = 40
 """A message holds up to 40 components in total, counting nested ones (https://docs.discord.com/developers/components/reference)."""
+MAX_TEXT_DISPLAY_CHARACTERS = 4000
+"""The text displays of a components v2 message hold up to 4000 characters together (https://docs.discord.com/developers/components/reference#text-display)."""
+MAX_SECTION_TEXT_DISPLAYS = 3
+"""A section holds one to three text displays (https://docs.discord.com/developers/components/reference#section)."""
+MAX_MEDIA_GALLERY_ITEMS = 10
+"""A media gallery holds one to ten items (https://docs.discord.com/developers/components/reference#media-gallery)."""
+MAX_SELECT_OPTIONS = 25
+"""A string select offers up to 25 options (https://docs.discord.com/developers/components/reference#string-select)."""
+MAX_SELECT_OPTION_LENGTH = 100
+"""A select option's label, value and description hold up to 100 characters each (https://docs.discord.com/developers/components/reference#string-select-select-option-structure)."""
+MAX_MEDIA_DESCRIPTION_LENGTH = 1024
+"""A thumbnail's or media gallery item's alt text holds up to 1024 characters (https://docs.discord.com/developers/components/reference#thumbnail)."""
 MAX_CUSTOM_ID_LENGTH = 100
 """A component's ``custom_id`` holds up to 100 characters (https://docs.discord.com/developers/components/reference#anatomy-of-a-component-custom-id)."""
 MAX_BUTTON_LABEL_LENGTH = 80

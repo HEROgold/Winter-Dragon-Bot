@@ -1,5 +1,7 @@
 """Unit tests: stores and entities for commands, users, channels, guilds and messages (no network)."""
 
+import json
+
 from wd_discord import (
     Channel,
     CurrentUser,
@@ -10,10 +12,11 @@ from wd_discord import (
     User,
     is_network_error,
 )
-from wd_discord.components import ActionRow, Button, ButtonStyle
+from wd_discord.components import ActionRow, Button, ButtonStyle, MediaGallery, MediaGalleryItem, UnfurledMediaItem
 from wd_discord.embed import Embed
 from wd_discord.entities import Invite
 from wd_discord.errors.api import ApiResponseError
+from wd_discord.files import File
 from wd_discord.interactions import ApplicationCommand, ApplicationCommandParams
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import RecordingClient, message_json, user_json
@@ -168,6 +171,22 @@ async def test_channel_send_and_invite() -> None:
     assert isinstance(invite, Invite)
     assert invite.url == "https://discord.gg/abc"
     assert client.sent[1].json == {"max_age": 86400, "max_uses": 1, "temporary": False, "unique": True}
+
+
+async def test_channel_send_and_message_edit_upload_files_with_a_layout() -> None:
+    client = RecordingClient()
+    client.reply("POST", "/channels/6/messages", message_json(content=""))
+    client.reply("PATCH", "/channels/6/messages/1", message_json(content=""))
+    gallery = MediaGallery(items=[MediaGalleryItem(media=UnfurledMediaItem(url="attachment://bracket.png"))])
+    image = File("bracket.png", b"png", content_type="image/png")
+
+    sent = await client.channels.partial("6").send(components=[gallery], files=[image])
+    assert isinstance(sent, Message)
+    await sent.edit(components=[gallery], files=[image])
+
+    for request in client.sent:
+        assert json.loads(request.data["payload_json"])["flags"] == 32768
+        assert request.files == [("files[0]", ("bracket.png", b"png", "image/png"))]
 
 
 async def test_message_edit_and_delete_target_its_channel() -> None:
