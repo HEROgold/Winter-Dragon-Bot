@@ -114,5 +114,5 @@ Enum for different environments.
 ### `class SentrySettings`
 Configurable Sentry settings.
 
-- attributes: Telemetry, dsn, environment
+- attributes: Telemetry, dsn, environment, traces_sample_rate, listener_traces_sample_rate
 - `@classmethod resolved_dsn() -> str | None` — Return the DSN to pass to ``sentry_sdk.init``: ``None`` while it's empty or still :data:`REQUIRED`.

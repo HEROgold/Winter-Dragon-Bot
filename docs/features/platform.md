@@ -64,7 +64,7 @@ A reusable layer over Discord's component API — buttons, selects, modals, menu
 - **Bot performance** — in-Discord resource and latency reporting, including a rendered graph.
 - **Grafana** — dashboards over logs and the Postgres database.
 - **pgAdmin / redis-commander** — administrative UIs for the datastores.
-- **Sentry** — error reporting (see [Bot Core](bot-core.md)).
+- **Sentry** — error reporting (see [Bot Core](bot-core.md)) and tracing. Each interaction, listener call and periodic tick is one transaction ([`sentry.py`](../../wd-discord/src/wd_discord/sentry.py)), named after the command path, custom ID prefix, listener or `Cog.task`. Inside it, each REST call is a span named by its route shape (`GET /channels/{channel_id}`), and each database query a span. `sentry.ini` sets `traces_sample_rate` (default 1.0) and `listener_traces_sample_rate` (default 0.05). Sentry's httpx integrations are off, because they would record full URLs, interaction tokens included.
 
 **Status:** 🟡 for the Prometheus and metrics cogs (copied into `wd-cogs`, unwired). ✅ for Sentry. Grafana, pgAdmin, and redis-commander are compose services and are present on `v2`.
 **Source on `main`:** `src/winter_dragon/bot/extensions/bot_extension/prometheus.py`, `bot_metrics.py`, `docker-compose.yml`

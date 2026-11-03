@@ -680,10 +680,21 @@ One REST route: a template whose literal parts are the route and whose interpola
 
 - fields: template: Template
 - `@property path -> str` — The request path, with each parameter formatted and percent-encoded as one path segment.
+- `@property shape -> str` — The route with each parameter as its name: ``/channels/{channel_id}/messages``.
 - `key(method: str) -> RouteKey` — Collapse this route to Discord's rate-limit route shape for ``method``.
 
 ## `wd_discord.sentry` — `wd-discord/src/wd_discord/sentry.py`
-Sentry setup for the bot, the web dashboard and the client library.
+Sentry setup for the bot, the web dashboard and the client library, and the transactions the bot traces.
+
+- module names: HTTPX_INTEGRATIONS
+- `traces_sampler(context: dict[str, Any]) -> float` — Return the share of transactions like ``context`` to send: listeners at their own rate, the rest at the main one.
+- `httpx_integrations() -> Generator[Integration]` — Yield each of :data:`HTTPX_INTEGRATIONS` that can load; one that can't wouldn't be enabled anyway.
+- `@contextmanager transaction(op: TraceOp, name: str) -> Generator[Span]` — Trace the block as one ``op`` transaction named ``name``, in a scope of its own.
+
+### `class TraceOp(enum.StrEnum)`
+What a transaction traces; Sentry groups and samples transactions by it.
+
+- attributes: INTERACTION, LISTENER, PERIODIC
 
 ### `class Sentry`
 A class to handle Sentry setup.

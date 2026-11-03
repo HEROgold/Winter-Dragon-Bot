@@ -33,6 +33,10 @@ class SentrySettings:
     dsn = SentryConfig(REQUIRED)
     """The project DSN; the operator fills it in."""
     environment = SentryConfig(Enum(Environments.development))
+    traces_sample_rate = SentryConfig(1.0)
+    """The share of interactions and periodic ticks traced, from 0 (none) to 1 (all)."""
+    listener_traces_sample_rate = SentryConfig(0.05)
+    """The share of listener calls traced; lower, since some gateway events arrive many times a second."""
 
     @classmethod
     def resolved_dsn(cls) -> str | None:

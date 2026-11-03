@@ -362,3 +362,9 @@ Test helpers for cogs: build one to call its handlers on, without a running bot.
 
 - `detached_cog[C: Cog](cls: type[C], *, engine: Engine | None=None, **bot: object) -> C` — Return a ``cls`` built without :meth:`Cog.__init <wd_bot.cogs.Cog.__init__>`: no auto-load task, no hot reload.
 - `cog_command(func: Callable[..., Awaitable[None]], definition: CommandDefinition, /) -> Command` — Return ``func`` as a :class:`~wd_bot.commands.Command` on a throwaway cog class, built as ``@Cog.command`` builds it.
+
+## `wd_bot.tracing` — `wd-bot/src/wd_bot/tracing.py`
+What the bot names each traced interaction: the command path it ran, or the custom ID prefix it hit.
+
+- `subcommand_path(options: Sequence[InteractionDataOption]) -> Generator[str]` — Yield the subcommand group and subcommand ``options`` choose, outermost first.
+- `interaction_name(interaction: AnyInteraction) -> str` — Return the transaction name of ``interaction``: ``/stats reset``, ``/remind (autocomplete)``, ``modal tourney``.
