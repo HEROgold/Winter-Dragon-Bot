@@ -1797,3 +1797,40 @@ async def test_the_bracket_shows_its_image_and_a_button_per_match_being_played(
     assert shown["flags"] == 64 | 32768  # EPHEMERAL, IS_COMPONENTS_V2
     assert "Picks are open for both captains." in _shown(shown)
     assert _labels(shown) == []
+
+
+async def test_a_vote_shows_each_answers_share_tells_the_voter_and_marks_the_winner_once_closed(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        _, _, captain = _played_final(session)
+        vote_id = session.exec(alive(MatchVote)).one().id
+    cog = _cog(engine, discord_client)
+    voter = User.model_validate(user_json(id=str(captain)))
+
+    await Tournaments.vote_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-vote:{vote_id}:1", user=voter, guild_id=GUILD_ID),
+        [str(vote_id), "1"],
+    )
+
+    shown = _response(discord_client)["data"]
+    assert "1 vote so far." in _shown(shown)
+    assert "**Nuke**, 1 vote" in _shown(shown)
+    assert _labels(shown) == ["Vote", "Vote", "Close vote"]
+    told = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
+    assert told["flags"] == 64 | 32768  # EPHEMERAL, IS_COMPONENTS_V2
+    assert _shown(told) == "You voted **Nuke**. Vote for another answer to change it."
+
+    await Tournaments.close_vote_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-close:{vote_id}", guild_id=GUILD_ID),
+        [str(vote_id)],
+    )
+
+    closed = _response(discord_client)["data"]
+    assert "This vote is closed with 1 vote." in _shown(closed)
+    assert "**Nuke** ⚑, 1 vote" in _shown(closed)
+    assert _labels(closed) == []
