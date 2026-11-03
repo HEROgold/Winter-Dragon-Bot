@@ -399,6 +399,14 @@ Logs every READY/MESSAGE_CREATE/GUILD_CREATE it's dispatched, at DEBUG level.
 - `@Cog.listener async on_message_create(message: Message) -> None` — Log a dispatched MESSAGE_CREATE event.
 - `@Cog.listener async on_guild_create(guild: Guild) -> None` — Log a dispatched GUILD_CREATE event.
 
+## `winter_dragon.cogs.metrics` — `src/winter_dragon/cogs/metrics.py`
+Serves the bot's Prometheus metrics on ``/metrics``; see :mod:`winter_dragon.metrics`.
+
+### `class Metrics(Cog)`
+Starts the ``/metrics`` endpoint with the bot's stats, timings and gateway event counts.
+
+- `async load() -> None` — Serve the bot's metrics, read from this cog's bot at each scrape.
+
 ## `winter_dragon.cogs.percentage` — `src/winter_dragon/cogs/percentage.py`
 A cog with a single command: a random compatibility percentage between two users.
 

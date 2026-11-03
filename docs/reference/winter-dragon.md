@@ -90,6 +90,31 @@ A feature's own cleanup when a member's data is hidden; defining a subclass regi
 - `@staticmethod run_all(session: Session, member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> None` — Call every registered hook whose :attr:`tables` are all in ``stored``, for the member ``member_id``.
 - `@staticmethod removed_by_all(member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> Generator[RemovedRows]` — Yield the rows the hooks :meth:`run_all` calls remove for the member ``member_id``, beyond what they own.
 
+## `winter_dragon.metrics` — `src/winter_dragon/metrics.py`
+The Prometheus metrics the bot and the dashboard serve on ``/metrics``, inside the compose network only.
+
+- module names: BUCKETS, WORK_SECONDS, REST_SECONDS, GATEWAY_EVENTS, WEB_REQUEST_SECONDS
+- `observe(timing: Timing) -> None` — Record ``timing`` in :data:`REST_SECONDS` or :data:`WORK_SECONDS`.
+- `count_event(name: str) -> None` — Count the gateway event ``name`` in :data:`GATEWAY_EVENTS`.
+- `observe_requests(app: FastAPI) -> None` — Time each request ``app`` answers in :data:`WEB_REQUEST_SECONDS`, labelled by its route's path template.
+
+### `class MetricsSettings`
+Where the ``/metrics`` endpoint listens, in ``config.ini``.
+
+- attributes: port
+
+### `class BotStatsCollector(Collector)`
+Reads a fresh :class:`~winter_dragon.bot_stats.BotStats` at each scrape and serves it as gauges.
+
+- `collect() -> Generator[Metric]` — Yield the snapshot's counts, and each shard's state and latency.
+
+### `class Exporter`
+The ``/metrics`` endpoint of this process: started once, whatever reloads the cogs do.
+
+- fields: serving: ClassVar[bool], collector: ClassVar[BotStatsCollector | None]
+- `@classmethod serve() -> None` — Serve ``/metrics`` on :attr:`MetricsSettings.port`, unless this process already does.
+- `@classmethod serve_bot(take: Callable[[], BotStats]) -> None` — Serve the bot's metrics: what ``take`` returns at each scrape, and what :class:`Telemetry` reports.
+
 ## `winter_dragon.redirect_link` — `src/winter_dragon/redirect_link.py`
 Links to the dashboard's ``/redirect`` page, which opens an app link (``steam://...``) Discord won't make clickable.
 

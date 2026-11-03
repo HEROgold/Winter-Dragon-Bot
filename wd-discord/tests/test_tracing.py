@@ -9,6 +9,7 @@ from wd_config.sentry import SentrySettings
 from wd_discord import Client, Token
 from wd_discord.route import Route
 from wd_discord.sentry import Sentry, TraceOp, httpx_integrations, traces_sampler, transaction
+from wd_discord.telemetry import Telemetry, Timing
 
 
 if TYPE_CHECKING:
@@ -123,3 +124,30 @@ def test_profiling_follows_sentry_ini_during_transactions_only(monkeypatch: pyte
     Sentry()
 
     assert (seen["profile_session_sample_rate"], seen["profile_lifecycle"]) == (rate, "trace")
+
+
+@pytest.fixture
+def reported() -> Generator[list[Timing]]:
+    """Collect the timings :class:`Telemetry` reports."""
+    timings: list[Timing] = []
+    Telemetry.subscribe(timings=timings.append)
+    yield timings
+    Telemetry.timing_observers.remove(timings.append)
+
+
+@pytest.mark.usefixtures("traced")
+async def test_transactions_and_rest_calls_report_their_timings(reported: list[Timing]) -> None:
+    client = Client(Token("token"))
+    client._client = AsyncClient(base_url=client.base_url, transport=MockTransport(lambda _: Response(204)))  # noqa: SLF001 - swap the transport
+    channel_id = 5
+
+    with transaction(TraceOp.INTERACTION, "/ping"):
+        await client.delete(t"/channels/{channel_id}")
+    with pytest.raises(RuntimeError), transaction(TraceOp.PERIODIC, "Cog.task"):
+        raise RuntimeError
+
+    assert [(timing.kind, timing.name, timing.outcome) for timing in reported] == [
+        ("http.client", "DELETE /channels/{channel_id}", "204"),
+        ("discord.interaction", "/ping", "ok"),
+        ("task.periodic", "Cog.task", "error"),
+    ]

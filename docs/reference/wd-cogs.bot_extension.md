@@ -7,7 +7,7 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `wd_cogs.bot_extension` — `wd-cogs/src/wd_cogs/bot_extension/__init__.py`
 
-- exports: BotActivity, BotControl, BotMetrics, CogEvents , CommandManager, Prometheus, Sync
+- exports: BotActivity, BotControl, BotMetrics, CogEvents , CommandManager, Sync
 
 ## `wd_cogs.bot_extension.bot_activity` — `wd-cogs/src/wd_cogs/bot_extension/bot_activity.py`
 Module for bot activity and status management.
@@ -136,15 +136,6 @@ Cog to register event listeners for audit log events, that are unable to be trac
 
 - `@Cog.listener async on_message(message: discord.Message) -> None` — When a message is sent by any user, add it to the database.
 - `@Cog.listener async on_interaction(interaction: discord.Interaction) -> None` — Log interaction usage to the database.
-
-## `wd_cogs.bot_extension.prometheus` — `wd-cogs/src/wd_cogs/bot_extension/prometheus.py`
-.
-
-### `class Prometheus(Cog, auto_load=False)`
-Prometheus integration for the bot.
-
-- `@loop async init() -> None` — Initialize the Prometheus cog.
-- `@init.before_loop async before_init() -> None` — Wait until the bot is ready before starting the loops.
 
 ## `wd_cogs.bot_extension.sync` — `wd-cogs/src/wd_cogs/bot_extension/sync.py`
 Module to sync slash commands with the Discord API.
