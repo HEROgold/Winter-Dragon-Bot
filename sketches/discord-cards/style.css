@@ -1,0 +1,158 @@
+/* Page chrome uses the dashboard tokens; the mocks imitate Discord's dark theme. */
+:root {
+  --snow: #F4F7F9;
+  --granite: #26323B;
+  --slate: #5E6B74;
+  --ice: #DCE8EF;
+  --route: #1E5AA0;
+  --ember: #B83A2B;
+
+  --dc-bg: #313338;
+  --dc-embed: #2B2D31;
+  --dc-text: #DBDEE1;
+  --dc-muted: #949BA4;
+  --dc-head: #F2F3F5;
+  --dc-mention: rgba(88, 101, 242, .3);
+  --dc-mention-text: #C9CDFB;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--snow);
+  color: var(--granite);
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.intro { max-width: 70ch; padding: 48px 32px 16px; }
+.intro h1 { font-stretch: 75%; font-weight: 800; font-size: 2.6rem; line-height: 1.05; margin: 0 0 12px; }
+.intro p { margin: 0 0 8px; }
+.legend { color: var(--slate); }
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(240px, 34ch) minmax(0, 560px);
+  gap: 32px;
+  padding: 28px 32px;
+  border-top: 1px solid var(--ice);
+  align-items: start;
+}
+.notes h2 { font-stretch: 85%; font-weight: 700; font-size: 1.25rem; margin: 0 0 8px; }
+.notes p { margin: 0 0 10px; }
+.notes.wide { grid-column: 1 / -1; max-width: 75ch; }
+.cost { color: var(--slate); font-size: .9rem; border-left: 3px solid var(--ice); padding-left: 10px; }
+code { font-size: .85em; background: var(--ice); padding: 1px 4px; border-radius: 3px; }
+
+@media (max-width: 860px) {
+  .row { grid-template-columns: 1fr; gap: 16px; padding: 24px 16px; }
+}
+
+/* --- Discord imitation ------------------------------------------------------ */
+
+.discord {
+  background: var(--dc-bg);
+  color: var(--dc-text);
+  font-family: "gg sans", "Noto Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.375;
+  border-radius: 8px;
+  padding: 16px 16px 16px 8px;
+}
+.msg { display: flex; gap: 14px; }
+.avatar { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.avatar.bot { background: var(--route); color: var(--snow); }
+.body { min-width: 0; flex: 1; }
+.who { color: var(--dc-head); font-weight: 600; margin-bottom: 4px; }
+.tag { background: #5865F2; color: #fff; font-size: 10px; padding: 1px 4px; border-radius: 3px; vertical-align: 2px; }
+.time, .edited { color: var(--dc-muted); font-size: 12px; font-weight: 400; margin-left: 4px; }
+.ephemeral-note { color: var(--dc-muted); font-size: 12px; margin-bottom: 4px; }
+
+.embed {
+  background: var(--dc-embed);
+  border-left: 4px solid var(--bar);
+  border-radius: 4px;
+  padding: 10px 16px 14px 12px;
+  max-width: 520px;
+}
+.e-title { color: var(--dc-head); font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+.e-desc p { margin: 0 0 8px; }
+.e-desc p:last-child { margin-bottom: 0; }
+.sub { color: var(--dc-muted); font-size: 13px; }
+.muted { color: var(--dc-muted); }
+.team-line { margin-bottom: 10px; }
+.route { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: center; }
+.games { line-height: 1.7; }
+
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 16px; margin: 8px 0; }
+.f-name { color: var(--dc-head); font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+.f-val { font-size: 14px; }
+.h1 { color: var(--dc-head); font-size: 32px; font-weight: 700; line-height: 1.1; }
+
+.e-image { margin-top: 12px; border-radius: 4px; overflow: hidden; }
+.e-image svg { display: block; width: 100%; height: auto; }
+.e-footer { color: var(--dc-muted); font-size: 12px; margin-top: 10px; }
+
+.mention { background: var(--dc-mention); color: var(--dc-mention-text); border-radius: 3px; padding: 0 2px; font-weight: 500; }
+.ts { background: rgba(255, 255, 255, .06); border-radius: 3px; padding: 0 2px; }
+
+.emo { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -.25em; }
+.emo svg { width: 100%; height: 100%; }
+.intro .emo { width: 1.1em; height: 1.1em; }
+
+pre.code {
+  background: #1E1F22;
+  border: 1px solid #232428;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 8px 0 0;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.25;
+  overflow-x: auto;
+  color: var(--dc-text);
+}
+
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.b {
+  font: inherit; font-size: 14px; font-weight: 500;
+  border: 0; border-radius: 8px; padding: 0 16px; height: 32px; color: #fff; cursor: pointer;
+}
+.b.primary { background: #5865F2; }
+.b.secondary { background: #4E5058; }
+.b.success { background: #248046; }
+.b.danger { background: #DA373C; }
+.b:focus-visible { outline: 2px solid var(--snow); outline-offset: 2px; }
+
+.select {
+  margin-top: 8px; max-width: 400px; height: 40px; background: #1E1F22; border-radius: 4px;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 12px; color: var(--dc-muted);
+}
+.select-open { max-width: 400px; background: #2B2D31; border: 1px solid #1E1F22; border-radius: 0 0 4px 4px; }
+.opt { display: flex; flex-direction: column; padding: 8px 12px; }
+.opt span { color: var(--dc-muted); font-size: 13px; }
+.opt:first-child { background: rgba(255, 255, 255, .04); }
+
+/* --- Rendered images (what Pillow would draw) ------------------------------- */
+
+.bracket-img { font-family: "Archivo", sans-serif; }
+.bracket-img .rt text { font-size: 11px; font-weight: 600; fill: var(--slate); }
+.bracket-img .mb rect, .bracket-img .mbr { fill: #fff; stroke: var(--ice); stroke-width: 1.5; }
+.bracket-img .live { fill: #fff; stroke: var(--route); stroke-width: 2.5; }
+.bracket-img .dashed { stroke-dasharray: 4 3; }
+.bracket-img .tn text { font-size: 13px; font-stretch: 85%; font-weight: 600; fill: var(--granite); }
+.bracket-img .tn .lost { fill: var(--slate); font-weight: 400; }
+.bracket-img .tn.tbd text { fill: var(--slate); font-weight: 400; font-style: italic; }
+.bracket-img .mk rect { fill: var(--snow); stroke: var(--slate); stroke-width: .6; }
+.bracket-img .mkb rect { fill: var(--route); }
+.bracket-img .ln path { fill: none; stroke: var(--ice); stroke-width: 2; }
+.bracket-img .tag text { font-size: 10px; font-weight: 600; fill: var(--slate); }
+.bracket-img .tag .tag-live { fill: var(--route); }
+.bracket-img .summit { font-size: 11px; font-weight: 600; fill: var(--slate); }
+
+.champ-img { font-family: "Archivo", sans-serif; }
+.champ-sub { fill: var(--ice); font-size: 14px; font-weight: 500; }
+.champ-name { fill: var(--snow); font-size: 46px; font-weight: 800; font-stretch: 70%; }
+.champ-roster { fill: var(--snow); font-size: 14px; }

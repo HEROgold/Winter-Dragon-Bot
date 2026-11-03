@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 300">
+  <style>
+    text { font-family: Archivo, sans-serif; }
+    .rt { font-size: 11px; font-weight: 600; fill: #5E6B74; }
+    .box { fill: #fff; stroke: #DCE8EF; stroke-width: 1.5; }
+    .live { fill: #fff; stroke: #1E5AA0; stroke-width: 2.5; }
+    .tbd { stroke-dasharray: 4 3; }
+    .tn { font-size: 13px; font-stretch: 85%; font-weight: 600; fill: #26323B; }
+    .lost { fill: #5E6B74; font-weight: 400; }
+    .wait { fill: #5E6B74; font-weight: 400; font-style: italic; }
+    .mk { fill: #F4F7F9; stroke: #5E6B74; stroke-width: .6; }
+    .mkb { fill: #1E5AA0; }
+    .ln { fill: none; stroke: #DCE8EF; stroke-width: 2; }
+    .tag { font-size: 10px; font-weight: 600; fill: #5E6B74; }
+    .tag-live { fill: #1E5AA0; }
+  </style>
+  <rect width="520" height="300" fill="#F4F7F9"/>
+  <text x="16" y="24" class="rt">Quarter-finals</text><text x="196" y="24" class="rt">Semi-finals</text><text x="358" y="24" class="rt">Final</text>
+
+  <rect x="16" y="36" width="150" height="50" rx="4" class="box"/><rect x="16" y="100" width="150" height="50" rx="4" class="box"/>
+  <rect x="16" y="164" width="150" height="50" rx="4" class="box"/><rect x="16" y="228" width="150" height="50" rx="4" class="box"/>
+  <text x="26" y="56" class="tn">Ice Breakers</text><text x="26" y="77" class="tn lost">Night Owls</text>
+  <text x="26" y="120" class="tn lost">Slush Puppies</text><text x="26" y="141" class="tn">Avalanche</text>
+  <text x="26" y="184" class="tn">Frostbite</text><text x="26" y="205" class="tn lost">Polar Express</text><text x="164" y="160" text-anchor="end" class="tag">Forfeit</text>
+  <text x="26" y="248" class="tn">Snow Day</text><text x="26" y="269" class="tn lost">Cold Feet</text>
+
+  <rect x="142" y="47" width="16" height="10" rx="2" class="mk"/><rect x="142" y="50.5" width="16" height="3" class="mkb"/>
+  <rect x="142" y="132" width="16" height="10" rx="2" class="mk"/><rect x="142" y="135.5" width="16" height="3" class="mkb"/>
+  <rect x="142" y="175" width="16" height="10" rx="2" class="mk"/><rect x="142" y="178.5" width="16" height="3" class="mkb"/>
+  <rect x="142" y="239" width="16" height="10" rx="2" class="mk"/><rect x="142" y="242.5" width="16" height="3" class="mkb"/>
+
+  <path d="M166 61H180V125H166M180 93H196" class="ln"/>
+  <path d="M166 189H180V253H166M180 221H196" class="ln"/>
+  <path d="M340 93H348V221H340M348 157H358" class="ln"/>
+
+  <rect x="196" y="68" width="144" height="50" rx="4" class="live"/>
+  <rect x="196" y="196" width="144" height="50" rx="4" class="box"/>
+  <text x="206" y="88" class="tn">Ice Breakers</text><text x="206" y="109" class="tn">Avalanche</text>
+  <text x="206" y="216" class="tn">Frostbite</text><text x="206" y="237" class="tn">Snow Day</text>
+  <text x="338" y="62" text-anchor="end" class="tag tag-live">Match 5, live</text>
+  <text x="338" y="190" text-anchor="end" class="tag">Match 6, picks</text>
+
+  <rect x="358" y="132" width="146" height="50" rx="4" class="box tbd"/>
+  <text x="368" y="152" class="tn wait">Winner of 5</text><text x="368" y="173" class="tn wait">Winner of 6</text>
+
+  <path d="M412 284L440 238L468 284Z" fill="#DCE8EF"/>
+  <path d="M432 251L440 238L448 251L440 247Z" fill="#F4F7F9" stroke="#5E6B74" stroke-width=".6"/>
+  <text x="440" y="226" text-anchor="middle" class="rt">Champion</text>
+</svg>

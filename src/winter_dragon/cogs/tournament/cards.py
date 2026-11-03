@@ -1,46 +1,48 @@
 """The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons."""
 
+lazy from dataclasses import dataclass
 lazy from enum import StrEnum
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.components import ActionRow, Button, ButtonStyle
+lazy from wd_discord.components import ActionRow, Button, ButtonStyle, Section, Separator
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.limits import (
     MAX_ACTION_ROW_BUTTONS,
     MAX_BUTTON_LABEL_LENGTH,
-    MAX_EMBED_DESCRIPTION_LENGTH,
     MAX_EMBED_FIELD_VALUE_LENGTH,
-    MAX_EMBED_FIELDS,
     truncate,
 )
 
-lazy from winter_dragon.ui import mentions
+lazy from winter_dragon.ui import Mark, Tone, block, card, mentions
 
-lazy from .bracket import round_name, tally
+lazy from .bracket import BracketSlot, round_name, tally
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
 lazy from .service import following_phase
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Mapping, Sequence
+    lazy from collections.abc import Iterable, Mapping, Sequence
 
     lazy from wd_bot.components import ComponentHandler
-    lazy from wd_bot.registry import CommandMention
+    lazy from wd_discord.components import Container
     lazy from wd_discord.snowflake import Snowflake
 
     lazy from .models import DraftChoice, MatchVote, Tournament, TournamentMatch
 
 
 PHASE_LABELS = {
-    MatchPhase.WAITING: "⏳ Waiting for teams",
-    MatchPhase.READY: "🟦 Ready",
-    MatchPhase.BAN: "🚫 Bans",
-    MatchPhase.PICK: "✅ Picks",
-    MatchPhase.LIVE: "🔴 Live",
-    MatchPhase.FINISHED: "🏁 Finished",
-    MatchPhase.FORFEIT: "🏳️ Forfeit",
+    MatchPhase.WAITING: "Waiting for teams",
+    MatchPhase.READY: "Ready",
+    MatchPhase.BAN: "Bans",
+    MatchPhase.PICK: "Picks",
+    MatchPhase.LIVE: "Live",
+    MatchPhase.FINISHED: "Finished",
+    MatchPhase.FORFEIT: "Forfeit",
 }
+
+CARD_LIST_CHARACTERS = 3000
+"""How much of a card's 4000 characters of text its list of players or teams may take; the rest is for the card itself."""
 
 
 class MatchAction(StrEnum):
@@ -54,101 +56,172 @@ class MatchAction(StrEnum):
     """Record the button's team forfeiting."""
 
 
-def signup_embed(
+@dataclass(frozen=True)
+class SignupControls:
+    """The handlers behind a sign-up card's buttons; each button carries the tournament's ID."""
+
+    join: ComponentHandler
+    leave: ComponentHandler
+    participants: ComponentHandler
+    enter: ComponentHandler
+    add_player: ComponentHandler
+
+
+def _fit(items: Sequence[str], separator: str) -> tuple[str, int]:
+    """Join as many of ``items`` as fit in :data:`CARD_LIST_CHARACTERS`; return the text and how many were left out."""
+    shown: list[str] = []
+    length = 0
+    for item in items:
+        length += len(item) + len(separator)
+        if length > CARD_LIST_CHARACTERS:
+            break
+        shown.append(item)
+    return separator.join(shown), len(items) - len(shown)
+
+
+def plural(count: int, noun: str) -> str:
+    """Return ``count`` with ``noun``, adding an ``s`` unless there's exactly one."""
+    return f"{count} {noun}{'' if count == 1 else 's'}"
+
+
+def solo_progress(players: int, team_size: int) -> str:
+    """Return how far solo sign-up is: the teams it makes so far, and how many more players make the next one."""
+    if team_size == 1:
+        return f"**{plural(players, 'player')}** signed up."
+    teams = players // team_size
+    missing = team_size - players % team_size
+    more = "1 more player makes" if missing == 1 else f"{missing} more players make"
+    return f"**{plural(players, 'player')}**, enough for {plural(teams, 'team')}. {more} team {teams + 1}."
+
+
+def _team_line(name: str, players: Sequence[Snowflake], team_size: int) -> str:
+    full = f" {Mark.WINNER}" if len(players) >= team_size else ""
+    who = " ".join(f"<@{user_id}>" for user_id in players) or "No players yet."
+    return f"**{name}** {len(players)} of {team_size}{full}\n{who}"
+
+
+def _button(handler: ComponentHandler, tournament_id: int, label: str, style: ButtonStyle) -> Button:
+    return Button(style=style, label=label, custom_id=handler.custom_id(tournament_id))
+
+
+def signup_card(
     tournament: Tournament,
     rosters: Mapping[str, Sequence[Snowflake]],
     solo_players: Sequence[Snowflake],
-    *,
-    enter: CommandMention,
-    entry_add: CommandMention,
-) -> Embed:
-    """Return the sign-up card: the format, and who signed up, alone or per entry.
+    controls: SignupControls,
+) -> Container:
+    """Return the sign-up card: what the format is, who signed up, and the buttons to join, enter a team or leave.
 
-    ``enter`` and ``entry_add`` are mentions of the commands that enter a team into a captains' tournament and add its players.
-    """
-    if tournament.mode is TeamMode.SOLO:
-        how = f"Sign up alone; teams of {tournament.team_size} are drawn when the tournament starts."
-        fields = [EmbedField(name=f"Players ({len(solo_players)})", value=mentions(solo_players))]
-    else:
-        how = (
-            f"Captains enter a team of up to {tournament.team_size} players with {enter}, "
-            f"then add their players with {entry_add}."
-        )
-        fields = [EmbedField(name=name, value=mentions(players)) for name, players in rosters.items()][:MAX_EMBED_FIELDS]
-    status = "open" if tournament.status is TournamentStatus.SIGNUP else tournament.status.value
-    return Embed(title=f"🏆 {tournament.name}", description=f"{how}\nSign-up is {status}.", fields=fields)
-
-
-def signup_buttons(
-    join: ComponentHandler,
-    leave: ComponentHandler,
-    participants: ComponentHandler,
-    tournament: Tournament,
-) -> list[ActionRow]:
-    """Return the Join, Leave and Participants buttons under a sign-up card.
-
-    Captains' tournaments join by command, not button, so they have no Join button.
+    The list of players or teams is cut to fit the card; only then does it get a Participants button showing all of them.
     """
     tournament_id = tournament.id or 0
-    buttons = [
-        Button(style=ButtonStyle.DANGER, label="Leave", custom_id=leave.custom_id(tournament_id)),
-        Button(style=ButtonStyle.SECONDARY, label="Participants", custom_id=participants.custom_id(tournament_id)),
-    ]
+    leave = _button(controls.leave, tournament_id, "Leave", ButtonStyle.DANGER)
     if tournament.mode is TeamMode.SOLO:
-        buttons.insert(0, Button(style=ButtonStyle.SUCCESS, label="Join", custom_id=join.custom_id(tournament_id)))
-    return [ActionRow(components=buttons)]
+        listed, hidden = _fit([f"<@{user_id}>" for user_id in solo_players], " ")
+        join = _button(controls.join, tournament_id, "Join", ButtonStyle.SUCCESS)
+        body = [
+            block(f"## {tournament.name}", f"Sign-up is open. Teams of {tournament.team_size} are drawn when it starts."),
+            Section(components=[block(solo_progress(len(solo_players), tournament.team_size))], accessory=join),
+            Separator(),
+        ]
+        if listed:
+            body.append(block(listed, f"-# +{plural(hidden, 'more player')}." if hidden else ""))
+        buttons = [leave]
+        counts = ""
+    else:
+        lines = [_team_line(name, players, tournament.team_size) for name, players in rosters.items()]
+        listed, hidden = _fit(lines, "\n")
+        body = [
+            block(f"## {tournament.name}", f"Sign-up is open. Captains enter a team of up to {tournament.team_size} players."),
+            Separator(),
+        ]
+        if listed:
+            body += [block(listed, f"-# +{plural(hidden, 'more team')}." if hidden else ""), Separator()]
+        buttons = [
+            _button(controls.enter, tournament_id, "Enter my team", ButtonStyle.PRIMARY),
+            _button(controls.add_player, tournament_id, "Add a player", ButtonStyle.SECONDARY),
+            leave,
+        ]
+        players = sum(len(players) for players in rosters.values())
+        counts = f"-# {plural(len(rosters), 'team')}, {plural(players, 'player')}."
+    if hidden:
+        buttons.append(_button(controls.participants, tournament_id, "Participants", ButtonStyle.SECONDARY))
+    footer = block(counts, f"-# Organised by <@{tournament.organiser_id}>.")
+    return card(Tone.ACT, *body, ActionRow(components=buttons), footer)
 
 
-def participants_embed(
+def participants_card(
     tournament: Tournament,
     rosters: Mapping[str, Sequence[Snowflake]],
     solo_players: Sequence[Snowflake],
-) -> Embed:
-    """Return everyone signed up to ``tournament``: one line per player, or one line per team with its players."""
+) -> Container:
+    """Return everyone signed up to ``tournament``: the players, or each team with its players."""
     if tournament.mode is TeamMode.SOLO:
-        count = len(solo_players)
         lines = [f"<@{user_id}>" for user_id in solo_players]
+        count = plural(len(solo_players), "player")
     else:
-        count = sum(len(players) for players in rosters.values())
-        lines = [
-            f"**{name}** ({len(players)}/{tournament.team_size}): {', '.join(f'<@{user_id}>' for user_id in players) or '—'}"
-            for name, players in rosters.items()
-        ]
-    text = truncate("\n".join(lines) or "Nobody has signed up yet.", MAX_EMBED_DESCRIPTION_LENGTH)
-    return Embed(title=f"🏆 {tournament.name}: {count} participant{'' if count == 1 else 's'}", description=text)
+        lines = [_team_line(name, players, tournament.team_size) for name, players in rosters.items()]
+        count = plural(len(rosters), "team")
+    listed = truncate("\n".join(lines) or "Nobody has signed up yet.", CARD_LIST_CHARACTERS)
+    return card(Tone.WAIT, block(f"## {tournament.name}", f"{count} signed up."), Separator(), block(listed))
 
 
-def _team(names: Mapping[int, str], entry_id: int | None, *, bye: bool) -> str:
-    if entry_id is None:
-        return "bye" if bye else "TBD"
-    return names.get(entry_id, f"Team {entry_id}")
+def match_ids(matches: Iterable[TournamentMatch]) -> dict[BracketSlot, int]:
+    """Return each match's ID by where it sits in the bracket."""
+    return {BracketSlot(match.round, match.slot): match.id for match in matches if match.id is not None}
 
 
-def match_line(match: TournamentMatch, names: Mapping[int, str]) -> str:
-    """Return one line of the bracket: the match's number, its teams, and its state or winner."""
-    bye = match.round == 0
-    teams = f"{_team(names, match.entry_a_id, bye=False)} vs {_team(names, match.entry_b_id, bye=bye)}"
+def _side(match: TournamentMatch, names: Mapping[int, str], ids: Mapping[BracketSlot, int], *, side_b: bool) -> str:
+    """Return who plays one side of ``match``: the team, a bye, or which earlier match decides it."""
+    entry_id = match.entry_b_id if side_b else match.entry_a_id
+    if entry_id is not None:
+        return names.get(entry_id, f"Team {entry_id}")
+    if match.round == 0:
+        return "a bye"
+    feeder = ids.get(BracketSlot(match.round - 1, 2 * match.slot + int(side_b)))
+    return "to be decided" if feeder is None else f"winner of #{feeder}"
+
+
+def match_line(match: TournamentMatch, names: Mapping[int, str], ids: Mapping[BracketSlot, int] | None = None) -> str:
+    """Return one line of the bracket: the match's number, its teams, and its state or winner.
+
+    ``ids`` (see :func:`match_ids`) names the matches whose winners fill a side that isn't known yet.
+    """
+    ids = ids or {}
+    teams = f"{_side(match, names, ids, side_b=False)} vs {_side(match, names, ids, side_b=True)}"
     if match.phase.decided and match.winner_id is not None:
-        return f"`#{match.id}` {teams} — 🏆 {names.get(match.winner_id, '?')}"
-    return f"`#{match.id}` {teams} — {PHASE_LABELS[match.phase]}"
+        return f"`#{match.id}` {teams}, {Mark.WINNER} {names.get(match.winner_id, '?')}"
+    return f"`#{match.id}` {teams}, {PHASE_LABELS[match.phase].lower()}"
 
 
-def bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Embed:
-    """Return the bracket: every round's matches, and the champion once there is one."""
+def _now(matches: Sequence[TournamentMatch]) -> str:
+    """Return the matches being drafted or played right now, as one line."""
+    playing = [match for match in matches if match.phase in {MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE}]
+    if not playing:
+        return "No match is being played right now."
+    parts = [f"match {match.id} is in {PHASE_LABELS[match.phase].lower()}" for match in playing]
+    return f"{Mark.HERE} Now: {', '.join(parts)}."
+
+
+def bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Container:
+    """Return the bracket: what's being played now or who won, then every round's matches."""
     rounds = max((match.round for match in matches), default=0) + 1
-    fields = [
-        EmbedField(
-            name=round_name(round_, rounds),
-            value=truncate(
-                "\n".join(match_line(match, names) for match in matches if match.round == round_),
-                MAX_EMBED_FIELD_VALUE_LENGTH,
-            ),
+    champion = tournament.winner_entry_id
+    if tournament.status is TournamentStatus.CANCELLED:
+        tone, state = Tone.STOP, "This tournament was called off."
+    elif champion is not None:
+        tone, state = Tone.WAIT, f"{Mark.WINNER} **{names.get(champion, '?')}** won."
+    else:
+        tone, state = Tone.ACT, _now(matches)
+    ids = match_ids(matches)
+    round_texts = [
+        block(
+            f"**{round_name(round_, rounds)}**",
+            *(match_line(match, names, ids) for match in matches if match.round == round_),
         )
         for round_ in range(rounds)
     ]
-    champion = tournament.winner_entry_id
-    description = f"🏆 Champion: **{names.get(champion, '?')}**" if champion is not None else "Single elimination."
-    return Embed(title=f"{tournament.name} — bracket", description=description, fields=fields)
+    return card(tone, block(f"## {tournament.name} bracket", state), Separator(), *round_texts)
 
 
 def match_embed(

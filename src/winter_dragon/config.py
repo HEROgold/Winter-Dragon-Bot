@@ -39,6 +39,20 @@ class Settings:
     """The embed color for something changed."""
     deleted_color = Config(Hex(0xFF0000))
     """The embed color for something deleted."""
+    act_color = Config(Hex(0x1E5AA0))
+    """A card's bar while it needs someone to act now: sign-up open, a match being played, a vote open."""
+    wait_color = Config(Hex(0x5E6B74))
+    """A card's bar while it waits, or once it's done."""
+    stop_color = Config(Hex(0xB83A2B))
+    """A card's bar once it's called off or forfeited."""
+    step_done_mark = Config("●")
+    """Marks a step already taken; a custom emoji as ``<:name:id>``, or any text."""
+    step_here_mark = Config("◉")
+    """Marks the step being taken now; a custom emoji as ``<:name:id>``, or any text."""
+    step_next_mark = Config("○")
+    """Marks a step still to come; a custom emoji as ``<:name:id>``, or any text."""
+    winner_mark = Config("⚑")
+    """Marks a winner or a full team; a custom emoji as ``<:name:id>``, or any text."""
     bot_status_messages = Config(
         List(
             [

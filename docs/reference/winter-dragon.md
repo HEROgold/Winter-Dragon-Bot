@@ -18,7 +18,7 @@ Config descriptor scoped to the cog settings file; every cog shares it, one sect
 Application-wide settings.
 
 - attributes: bot_name, support_guild_id, dashboard_url, log_level, created_color, changed_color, deleted_color,
-  bot_status_messages
+  act_color, wait_color, stop_color, step_done_mark, step_here_mark, step_next_mark, winner_mark, bot_status_messages
 
 ## `winter_dragon.config_migration` — `src/winter_dragon/config_migration.py`
 Where every section of the old single ``config.ini`` lives now, and the startup step that moves it there.

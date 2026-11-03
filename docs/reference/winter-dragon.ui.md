@@ -7,7 +7,25 @@ Public names only — open the file when you need a body. Index: [API reference]
 
 ## `winter_dragon.ui` — `src/winter_dragon/ui/__init__.py`
 
-- exports: ChangedEmbed, CreatedEmbed, DeletedEmbed, mentions
+- exports: ChangedEmbed, CreatedEmbed, DeletedEmbed, Mark, Tone, block, card, mentions, steps
+
+## `winter_dragon.ui.cards` — `src/winter_dragon/ui/cards.py`
+Components v2 cards: one colored container per message, and the marks that steps and winners share.
+
+- `steps(names: list[str], current: int) -> str` — Return ``names`` as one line of steps, marking those before ``current`` done and ``current`` itself in bold.
+- `card(tone: Tone, *components: ActionRow | TextDisplay | Section | MediaGallery | Separator | FileDisplay) -> Container` — Return ``components`` in one container, its bar colored for ``tone``.
+- `block(*lines: str) -> TextDisplay` — Return ``lines`` as one text display, one per line; empty lines are left out.
+
+### `class Tone(Enum)`
+What a card asks of whoever reads it, shown as the color of its bar.
+
+- attributes: ACT, WAIT, STOP
+- `@property color -> Color` — The bar color set for this tone in ``config.ini``.
+
+### `class Mark(Enum)`
+A mark put before text: where a sequence of steps stands, or who won.
+
+- attributes: DONE, HERE, NEXT, WINNER
 
 ## `winter_dragon.ui.embeds` — `src/winter_dragon/ui/embeds.py`
 Confirmation embeds for something created, changed or deleted, in the colors set in ``config.ini``.
