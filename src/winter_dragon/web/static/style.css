@@ -617,9 +617,9 @@ img.avatar { object-fit: cover; }
 .audit { margin-top: 1rem; }
 
 /* Profile */
-.profile-tabs { display: flex; gap: 1.25rem; margin: 2rem 0 1.5rem; border-bottom: 1px solid var(--line); }
-.profile-tabs a { padding: 0.4rem 0; color: var(--slate); text-decoration: none; border-bottom: 3px solid transparent; }
-.profile-tabs a[aria-current="page"] { color: var(--granite); border-bottom-color: var(--route); font-weight: 600; }
+.subnav { display: flex; gap: 1.25rem; padding: 0 clamp(1rem, 4vw, 3rem); border-bottom: 1px solid var(--line); background: var(--paper); overflow-x: auto; }
+.subnav a { padding: 0.6rem 0; color: var(--slate); text-decoration: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+.subnav a[aria-current="page"] { color: var(--granite); border-bottom-color: var(--route); font-weight: 600; }
 .profile-heading { font-size: var(--step-2); margin-bottom: 1rem; }
 .profile-empty { color: var(--slate); }
 .profile-graph { margin: 0 0 2rem; max-width: 40rem; }
