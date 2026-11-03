@@ -908,18 +908,26 @@ Where a match's winner plays next, and on which side.
 
 - fields: at: BracketSlot, as_entry_a: bool
 
+## `winter_dragon.cogs.tournament.bracket_image` — `src/winter_dragon/cogs/tournament/bracket_image.py`
+Draw a tournament's bracket as a PNG: each round a column of match boxes, joined to the next, climbing to the champion.
+
+- module names: FONT, SCALE, SNOW, WHITE, ICE, SLATE, GRANITE, BOX_WIDTH, BOX_HEIGHT, ROW_GAP, LINK, MARGIN, HEADER,
+  SUMMIT_WIDTH, PLAYING
+- `bracket_png(matches: Sequence[TournamentMatch], names: Mapping[int, str], champion: int | None) -> bytes` — Return the bracket of ``matches`` as a PNG, with the champion's name at its summit once there is one.
+
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, ROUTE, ROUTE_NAMES, NEXT_STEPS
+- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, BRACKET_IMAGE, ROUTE, ROUTE_NAMES, NEXT_STEPS
 - `plural(count: int, noun: str) -> str` — Return ``count`` with ``noun``, adding an ``s`` unless there's exactly one.
 - `solo_progress(players: int, team_size: int) -> str` — Return how far solo sign-up is: the teams it makes so far, and how many more players make the next one.
 - `signup_card(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake], controls: SignupControls) -> Container` — Return the sign-up card: what the format is, who signed up, and the buttons to join, enter a team or leave.
 - `participants_card(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake]) -> Container` — Return everyone signed up to ``tournament``: the players, or each team with its players.
 - `match_ids(matches: Iterable[TournamentMatch]) -> dict[BracketSlot, int]` — Return each match's ID by where it sits in the bracket.
 - `match_line(match: TournamentMatch, names: Mapping[int, str], ids: Mapping[BracketSlot, int] | None=None) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
-- `bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Container` — Return the bracket: what's being played now or who won, then every round's matches.
-- `card_of_match(view: MatchView, controls: MatchControls) -> Container` — Return a match card: its teams, a route line through its phases, where it stands, and each team's players and drafts.
+- `bracket_file(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> File` — Return the bracket drawn as an image, to send with :func:`bracket_card`.
+- `bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str], show_match: ComponentHandler) -> Container` — Return the bracket: what's being played now or who won, the bracket image, and a button per match being played.
+- `card_of_match(view: MatchView, controls: MatchControls | None) -> Container` — Return a match card: its teams, a route line through its phases, where it stands, and each team's players and drafts.
 - `manage_panel(view: MatchView, act: ComponentHandler, card_at: tuple[Snowflake, Snowflake]) -> Container` — Return the organiser's panel for a match: each action beside a line saying when to use it.
 - `vote_options(vote: MatchVote) -> list[str]` — Return the vote's answers.
 - `vote_embed(vote: MatchVote, choices: Sequence[int]) -> Embed` — Return a vote: its question, and each answer's votes so far.
@@ -997,6 +1005,7 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: TournamentMatch) -> None` — Post the card of match ``match``.
 - `@Cog.command async log(interaction: GuildCommandInteraction, tournament: Tournament, match: TournamentMatch) -> None` — Post the log of ``match`` to the invoker only; its organiser and the captains of its two entries can see it.
 - `@Cog.component async manage_button(interaction: GuildComponentInteraction, match_id: str) -> None` — Show the organiser, and only them, the panel to move the match on, report its winner or record a forfeit.
+- `@Cog.component async show_match_button(interaction: GuildComponentInteraction, match_id: str) -> None` — Show the clicker, and only them, the card of a match from the bracket.
 - `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, entry_id: str='', card_channel_id: str='', card_message_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
 - `@Cog.component async clash_button(interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None` — Drop the clashing members from one side of a ready match; its organiser or a captain of either side only.
 - `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.

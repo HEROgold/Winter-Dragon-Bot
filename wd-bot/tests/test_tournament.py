@@ -1,5 +1,6 @@
 """Unit tests: tournament sign-up, team forming, the bracket, drafts and votes, and the /tournament cog (no network)."""
 
+import json
 import re
 from datetime import timedelta
 from random import Random
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
     from wd_discord.testing import RecordingClient
+    from wd_discord.testing.client import SentRequest
 
 
 GUILD_ID = 1
@@ -443,6 +445,11 @@ def _labels(body: dict[str, object]) -> list[str]:
     return [component["label"] for component in _nested(body["components"]) if component["type"] == 2]
 
 
+def _body(request: SentRequest) -> dict[str, object]:
+    """Return the JSON body of a sent request, sent as JSON or, with files, as ``payload_json``."""
+    return request.json if request.json is not None else json.loads(request.data["payload_json"])
+
+
 async def test_create_needs_manage_server_and_posts_a_signup_card(
     engine: Engine,
     make_interaction: InteractionFactory,
@@ -599,7 +606,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
     )
 
     assert "won." in _shown(_response(discord_client)["data"])
-    followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
+    followup = _body(discord_client.requests_to("POST", "/webhooks/2/tok")[-1])
     assert _shown(followup).startswith("**Cup** is over.\n## Cup bracket")
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().winner_entry_id == winner
@@ -683,7 +690,7 @@ async def test_only_match_players_can_use_the_vote_buttons(
 def test_signup_buttons_depend_on_the_team_mode(engine: Engine, discord_client: RecordingClient, *, captains: bool) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS if captains else TeamMode.SOLO)
-        shown = _cog(engine, discord_client)._card(session, tournament)  # noqa: SLF001
+        shown = _cog(engine, discord_client)._card(session, tournament)[0]  # noqa: SLF001
     expected = ["Enter my team", "Add a player", "Leave"] if captains else ["Join", "Leave"]
     assert _labels({"components": [shown.model_dump(mode="json")]}) == expected
 
@@ -691,7 +698,7 @@ def test_signup_buttons_depend_on_the_team_mode(engine: Engine, discord_client: 
 def test_the_participants_button_only_shows_once_the_card_cuts_the_list(engine: Engine, discord_client: RecordingClient) -> None:
     with Session(engine) as session:
         tournament = _solo(session, players=600)
-        shown = _cog(engine, discord_client)._card(session, tournament)  # noqa: SLF001
+        shown = _cog(engine, discord_client)._card(session, tournament)[0]  # noqa: SLF001
     body = {"components": [shown.model_dump(mode="json")]}
     assert _labels(body) == ["Join", "Leave", "Participants"]
     assert re.search(r"\+\d+ more players\.", _shown(body))
@@ -1611,8 +1618,9 @@ async def test_cancel_edits_each_post_to_the_bracket_without_buttons(
     await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     (edit,) = discord_client.requests_to("PATCH", "/channels/20/messages/200")
-    assert _labels(edit.json) == []
-    assert "This tournament was called off." in _shown(edit.json)
+    assert _labels(_body(edit)) == []
+    assert "This tournament was called off." in _shown(_body(edit))
+    assert edit.files[0][1][0] == "bracket.png"
     assert "called off" in _response(discord_client)["data"]["embeds"][0]["description"]
 
 
@@ -1750,3 +1758,42 @@ async def test_log_shows_the_match_of_a_finished_tournament(
 
     (embed,) = _response(discord_client)["data"]["embeds"]
     assert embed["title"].startswith("Log: ")
+
+
+async def test_the_bracket_shows_its_image_and_a_button_per_match_being_played(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=4)
+        service.start(session, tournament, Random(0))
+        playing, waiting = _round(session, tournament, 0)
+        playing.phase = MatchPhase.PICK
+        session.add(playing)
+        session.commit()
+        options, playing_id, waiting_id = [_pick(tournament)], playing.id, waiting.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.bracket.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
+
+    (sent,) = discord_client.requests_to("POST", "/interactions/1/tok/callback")
+    data = _body(sent)["data"]
+    (gallery,) = [component for component in _nested(data["components"]) if component["type"] == 12]
+    assert gallery["items"][0]["media"]["url"] == "attachment://bracket.png"
+    assert f"#{waiting_id}" in gallery["items"][0]["description"]
+    assert sent.files[0][1][0] == "bracket.png"
+    assert sent.files[0][1][1].startswith(b"\x89PNG")
+    assert _labels(data) == [f"Match {playing_id}, picks"]
+
+    await Tournaments.show_match_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-show-match:{playing_id}", guild_id=GUILD_ID),
+        [str(playing_id)],
+    )
+
+    shown = _response(discord_client)["data"]
+    assert shown["flags"] == 64 | 32768  # EPHEMERAL, IS_COMPONENTS_V2
+    assert "Picks are open for both captains." in _shown(shown)
+    assert _labels(shown) == []

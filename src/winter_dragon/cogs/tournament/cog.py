@@ -39,6 +39,7 @@ lazy from .cards import (
     MatchView,
     SignupControls,
     bracket_card,
+    bracket_file,
     card_of_match,
     manage_panel,
     match_line,
@@ -101,6 +102,7 @@ lazy from .service import (
 if TYPE_CHECKING:
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
     lazy from wd_discord.components import Container
+    lazy from wd_discord.files import File
 
 
 class TournamentSettings:
@@ -275,8 +277,8 @@ class Tournaments(
         solo = [Snowflake(signup.user_id) for signup in signups_of(session, tournament)]
         return rosters, solo
 
-    def _card(self, session: Session, tournament: Tournament) -> Container:
-        """Return what a post shows: the sign-up card while signing up, else the bracket."""
+    def _card(self, session: Session, tournament: Tournament) -> tuple[Container, list[File]]:
+        """Return what a post shows, with the files to send along: the sign-up card, else the bracket and its image."""
         if tournament.status is TournamentStatus.SIGNUP:
             rosters, solo = self._participants(session, tournament)
             controls = SignupControls(
@@ -286,29 +288,32 @@ class Tournaments(
                 enter=self.enter_button,
                 add_player=self.add_player_button,
             )
-            return signup_card(tournament, rosters, solo, controls)
-        return bracket_card(tournament, matches_of(session, tournament), entry_names(session, tournament))
+            return signup_card(tournament, rosters, solo, controls), []
+        matches, names = list(matches_of(session, tournament)), entry_names(session, tournament)
+        return bracket_card(tournament, matches, names, self.show_match_button), [bracket_file(tournament, matches, names)]
 
     async def _refresh_posts(self, tournament_id: int, *, skip_message_id: int | None = None) -> None:
         """Edit every post of the tournament to show it as it is now, except ``skip_message_id``, which the caller updated."""
         with Session(self.bind) as session:
             tournament = stored(session, Tournament, tournament_id, "This tournament is gone.")
-            shown = self._card(session, tournament)
+            shown, files = self._card(session, tournament)
             posts = [(post.channel_id, post.message_id) for post in posts_of(session, tournament)]
-        await self._edit_posts(posts, shown, skip_message_id=skip_message_id)
+        await self._edit_posts(posts, shown, files, skip_message_id=skip_message_id)
 
     async def _edit_posts(
         self,
         posts: list[tuple[int, int]],
         shown: Container,
+        files: list[File],
         *,
         skip_message_id: int | None = None,
     ) -> None:
-        """Edit each ``(channel_id, message_id)`` post to show ``shown``, skipping ``skip_message_id``."""
+        """Edit each ``(channel_id, message_id)`` post to show ``shown`` and ``files``, skipping ``skip_message_id``."""
         for channel_id, message_id in posts:
             if message_id == skip_message_id:
                 continue
-            edited = await self.bot.client.channels.partial(channel_id).message(message_id).edit(components=[shown])
+            message = self.bot.client.channels.partial(channel_id).message(message_id)
+            edited = await message.edit(components=[shown], files=files)
             if is_network_error(edited):
                 self.logger.debug(t"Could not edit tournament post {message_id} in channel {channel_id}: {edited}")
 
@@ -347,10 +352,9 @@ class Tournaments(
             )
             session.add(tournament)
             session.flush()
+            shown, files = self._card(session, tournament)
             sent = unwrap(
-                await self.bot.client.channels.partial(interaction.channel.id).send(
-                    components=[self._card(session, tournament)],
-                ),
+                await self.bot.client.channels.partial(interaction.channel.id).send(components=[shown], files=files),
                 "I couldn't post the tournament here.",
             )
             add_post(session, tournament, interaction.channel.id, sent.id)
@@ -375,8 +379,9 @@ class Tournaments(
         await interaction.defer(ephemeral=True)
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
+            shown, files = self._card(session, found)
             sent = unwrap(
-                await self.bot.client.channels.partial(interaction.channel.id).send(components=[self._card(session, found)]),
+                await self.bot.client.channels.partial(interaction.channel.id).send(components=[shown], files=files),
                 "I couldn't post the tournament here.",
             )
             add_post(session, found, interaction.channel.id, sent.id)
@@ -442,8 +447,8 @@ class Tournaments(
             else:
                 withdraw(session, tournament, user_id)
             session.commit()
-            shown = self._card(session, tournament)
-        await interaction.update(components=[shown])
+            shown, files = self._card(session, tournament)
+        await interaction.update(components=[shown], files=files)
         await self._refresh_posts(int(tournament_id), skip_message_id=int(interaction.message.id))
 
     def _open_signup(self, session: Session, interaction: AnyGuildInteraction, tournament_id: str) -> Tournament:
@@ -691,10 +696,10 @@ class Tournaments(
             start(session, found, self.rng)
             session.commit()
             tournament_id = found.id or 0
-            shown = self._card(session, found)
+            shown, files = self._card(session, found)
             tournament_name = found.name
         started = block(f"**{tournament_name}** has started. {self.mention(self.match_card)} shows a match.")
-        await interaction.respond(components=[started, shown])
+        await interaction.respond(components=[started, shown], files=files)
         await self._refresh_posts(tournament_id)
 
     @Cog.command(name="bracket", description="Show a tournament's bracket")
@@ -706,12 +711,12 @@ class Tournaments(
         """Show the bracket, or the sign-up card before the tournament starts."""
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament, over_ok=True)
-            shown = (
-                participants_card(found, *self._participants(session, found))
-                if found.status is TournamentStatus.SIGNUP
-                else self._card(session, found)
-            )
-        await interaction.respond(components=[shown])
+            files: list[File] = []
+            if found.status is TournamentStatus.SIGNUP:
+                shown = participants_card(found, *self._participants(session, found))
+            else:
+                shown, files = self._card(session, found)
+        await interaction.respond(components=[shown], files=files)
 
     @Cog.command(name="cancel", description="Call off a tournament")
     async def cancel_tournament(
@@ -725,12 +730,12 @@ class Tournaments(
             require_organiser(interaction, found)
             posts = [(post.channel_id, post.message_id) for post in posts_of(session, found)]
             found.status = TournamentStatus.CANCELLED
-            shown = self._card(session, found)
+            shown, files = self._card(session, found)
             cancel(session, found)
             session.commit()
             name = found.name
         await interaction.respond(embeds=[DeletedEmbed(description=f"**{name}** is called off.")])
-        await self._edit_posts(posts, shown)
+        await self._edit_posts(posts, shown, files)
 
     # --- Matches ---------------------------------------------------------------------------------------------------
 
@@ -888,6 +893,14 @@ class Tournaments(
             )
         await interaction.respond(components=[panel], ephemeral=True)
 
+    @Cog.component("tourney-show-match")
+    async def show_match_button(self, interaction: GuildComponentInteraction, match_id: str) -> None:
+        """Show the clicker, and only them, the card of a match from the bracket."""
+        with Session(self.bind) as session:
+            tournament, match = self._match(interaction, session, int(match_id), over_ok=True)
+            shown = card_of_match(self._match_view(session, tournament, match), None)
+        await interaction.respond(components=[shown], ephemeral=True)
+
     @Cog.component("tourney-match")
     async def match_control(  # noqa: PLR0913 - a panel button carries the match, the action, its team and the card it edits
         self,
@@ -912,7 +925,7 @@ class Tournaments(
             view = self._match_view(session, tournament, match)
             shown = card_of_match(view, self._match_controls)
             finished = tournament.status is TournamentStatus.FINISHED
-            final = self._card(session, tournament)
+            final, final_files = self._card(session, tournament)
         if card_message_id:
             card_at = (Snowflake(int(card_channel_id)), Snowflake(int(card_message_id)))
             await interaction.update(components=[manage_panel(view, self.match_control, card_at)])
@@ -923,7 +936,7 @@ class Tournaments(
             await interaction.update(components=[shown])
         await self._refresh_posts(tournament_id, skip_message_id=int(interaction.message.id))
         if finished:
-            await interaction.followup(components=[block(f"**{tournament.name}** is over."), final])
+            await interaction.followup(components=[block(f"**{tournament.name}** is over."), final], files=final_files)
 
     @Cog.component("tourney-clash")
     async def clash_button(self, interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None:

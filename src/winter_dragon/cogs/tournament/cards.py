@@ -5,13 +5,25 @@ lazy from enum import StrEnum
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.components import ActionRow, Button, ButtonStyle, Section, Separator, SeparatorSpacing
+lazy from wd_discord.components import (
+    ActionRow,
+    Button,
+    ButtonStyle,
+    MediaGallery,
+    MediaGalleryItem,
+    Section,
+    Separator,
+    SeparatorSpacing,
+    UnfurledMediaItem,
+)
 lazy from wd_discord.embed import Embed
-lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_BUTTON_LABEL_LENGTH, truncate
+lazy from wd_discord.files import File
+lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_BUTTON_LABEL_LENGTH, MAX_MEDIA_DESCRIPTION_LENGTH, truncate
 
 lazy from winter_dragon.ui import Mark, Tone, block, card, steps
 
 lazy from .bracket import BracketSlot, round_name, tally
+lazy from .bracket_image import bracket_png
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
 lazy from .service import following_phase
 
@@ -198,9 +210,37 @@ def _now(matches: Sequence[TournamentMatch]) -> str:
     return f"{Mark.HERE} Now: {', '.join(parts)}."
 
 
-def bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Container:
-    """Return the bracket: what's being played now or who won, then every round's matches."""
+BRACKET_IMAGE = "bracket.png"
+"""The filename the bracket image is sent under, and the card shows through ``attachment://``."""
+
+
+def bracket_file(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> File:
+    """Return the bracket drawn as an image, to send with :func:`bracket_card`."""
+    image = bracket_png(matches, names, tournament.winner_entry_id)
+    return File(BRACKET_IMAGE, image, content_type="image/png")
+
+
+def _alt_text(matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> str:
+    """Return the bracket as text, round by round, for whoever can't see the image."""
     rounds = max((match.round for match in matches), default=0) + 1
+    ids = match_ids(matches)
+    lines = [
+        f"{round_name(match.round, rounds)}: {match_line(match, names, ids).replace('`', '')}."
+        for match in sorted(matches, key=lambda match: (match.round, match.slot))
+    ]
+    return truncate(" ".join(lines), MAX_MEDIA_DESCRIPTION_LENGTH)
+
+
+def bracket_card(
+    tournament: Tournament,
+    matches: Sequence[TournamentMatch],
+    names: Mapping[int, str],
+    show_match: ComponentHandler,
+) -> Container:
+    """Return the bracket: what's being played now or who won, the bracket image, and a button per match being played.
+
+    Send it with :func:`bracket_file`. Each button shows its match's card to whoever clicks it.
+    """
     champion = tournament.winner_entry_id
     if tournament.status is TournamentStatus.CANCELLED:
         tone, state = Tone.STOP, "This tournament was called off."
@@ -208,15 +248,26 @@ def bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], nam
         tone, state = Tone.WAIT, f"{Mark.WINNER} **{names.get(champion, '?')}** won."
     else:
         tone, state = Tone.ACT, _now(matches)
-    ids = match_ids(matches)
-    round_texts = [
-        block(
-            f"**{round_name(round_, rounds)}**",
-            *(match_line(match, names, ids) for match in matches if match.round == round_),
-        )
-        for round_ in range(rounds)
+    image = MediaGalleryItem(
+        media=UnfurledMediaItem(url=f"attachment://{BRACKET_IMAGE}"),
+        description=_alt_text(matches, names),
+    )
+    body: list[TextDisplay | MediaGallery | ActionRow] = [
+        block(f"## {tournament.name} bracket", state),
+        MediaGallery(items=[image]),
     ]
-    return card(tone, block(f"## {tournament.name} bracket", state), Separator(), *round_texts)
+    playing = [
+        Button(
+            style=ButtonStyle.SECONDARY,
+            label=f"Match {match.id}, {PHASE_LABELS[match.phase].lower()}",
+            custom_id=show_match.custom_id(match.id),
+        )
+        for match in matches
+        if match.phase in {MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE} and match.id is not None
+    ]
+    if tournament.status is TournamentStatus.RUNNING:
+        body += [ActionRow(components=list(row)) for row in batched(playing, MAX_ACTION_ROW_BUTTONS, strict=False)]
+    return card(tone, *body)
 
 
 ROUTE = (MatchPhase.READY, MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE)
@@ -318,10 +369,11 @@ def _tone(phase: MatchPhase) -> Tone:
     return Tone.ACT
 
 
-def card_of_match(view: MatchView, controls: MatchControls) -> Container:
+def card_of_match(view: MatchView, controls: MatchControls | None) -> Container:
     """Return a match card: its teams, a route line through its phases, where it stands, and each team's players and drafts.
 
-    Its only buttons are Manage match, which opens the organiser's panel, and a clash's drop buttons.
+    Its only buttons are Manage match, which opens the organiser's panel, and a clash's drop buttons; ``controls`` of
+    ``None`` leaves them out, for a copy shown to one person.
     """
     match = view.match
     sides = (match.entry_a_id, match.entry_b_id)
@@ -330,14 +382,14 @@ def card_of_match(view: MatchView, controls: MatchControls) -> Container:
         f"## {title}",
         f"-# {view.tournament_name}, {round_name(match.round, view.rounds).lower()}, match {match.id}",
     )
-    if view.playable:
+    if view.playable and controls is not None:
         manage = Button(style=ButtonStyle.SECONDARY, label="Manage match", custom_id=controls.manage.custom_id(match.id or 0))
         heading = Section(components=[heading], accessory=manage)
     clash = ""
     if view.clash:
         clash = f"Clash: {' '.join(f'<@{user_id}>' for user_id in view.clash)} play for both sides."
     body: list[ActionRow | TextDisplay | Section | Separator] = [heading, block(_route(match.phase), _state(view), clash)]
-    if view.clash and view.playable and match.id is not None:
+    if view.clash and view.playable and controls is not None and match.id is not None:
         body.append(
             ActionRow(
                 components=[
