@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from wd_discord.client import NetworkError
-    from wd_discord.components import ActionRow
+    from wd_discord.components import MessageComponent
     from wd_discord.embed import Embed
     from wd_discord.entities.message import Message
     from wd_discord.image import ImageHash
@@ -53,7 +53,7 @@ class BaseUser(ClientBound):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
     ) -> Message | NetworkError:
         """Send this user a direct message, opening the DM channel first.
 

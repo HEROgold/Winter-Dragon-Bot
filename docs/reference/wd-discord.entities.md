@@ -116,7 +116,7 @@ What can be done in a channel knowing only its ID: read, edit or delete it, send
 - `async fetch(*, reuse_response: bool=False) -> Channel | NetworkError` — GET /channels/{channel_id}.
 - `message(message_id: SnowflakeLike) -> PartialMessage` — Return a handle on the message ``message_id`` in this channel, without fetching it.
 - `async fetch_messages(*, before: BaseMessage | None=None, after: BaseMessage | None=None, around: BaseMessage | None=None, limit: int=MAX_MESSAGES_PER_PAGE, reuse_response: bool=False) -> Generator[Message] | NetworkError` — GET /channels/{channel_id}/messages - one page of messages, newest first; needs READ_MESSAGE_HISTORY.
-- `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — POST /channels/{channel_id}/messages - send a message; DM channels included.
+- `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None, files: Sequence[File]=()) -> Message | NetworkError` — POST /channels/{channel_id}/messages - send a message; DM channels included.
 - `async delete_messages(messages: Iterable[BaseMessage], *, reason: Reason=None) -> NetworkError | None` — POST /channels/{channel_id}/messages/bulk-delete - delete 2 to 100 messages at once; needs MANAGE_MESSAGES.
 - `async trigger_typing() -> NetworkError | None` — POST /channels/{channel_id}/typing - show the bot as typing for about 10 seconds, or until it sends.
 - `async create_invite(*, max_age: int=DEFAULT_INVITE_MAX_AGE, max_uses: int=1, temporary: bool=False, unique: bool=True) -> Invite | NetworkError` — POST /channels/{channel_id}/invites - create an invite to this channel.
@@ -608,11 +608,11 @@ The fields and responses every interaction shares.
 - `@property app_permissions -> Permissions | None` — What the app may do where the interaction was sent.
 - `@property context -> InteractionContextType | None` — Where the interaction was triggered from.
 - `@property responded -> bool` — Whether the interaction already got its initial response.
-- `async respond(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None, files: Sequence[File]=(), ephemeral: bool=False) -> NetworkError | None` — Reply with a message; ``ephemeral`` shows it only to the invoking user.
+- `async respond(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None, files: Sequence[File]=(), ephemeral: bool=False) -> NetworkError | None` — Reply with a message; ``ephemeral`` shows it only to the invoking user.
 - `async defer(*, ephemeral: bool=False) -> NetworkError | None` — Acknowledge now and show a loading state; does nothing when already answered.
-- `async edit_original(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None, files: Sequence[File]=()) -> Message | NetworkError` — PATCH /webhooks/{application_id}/{token}/messages/@original - edit the initial response.
+- `async edit_original(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None, files: Sequence[File]=()) -> Message | NetworkError` — PATCH /webhooks/{application_id}/{token}/messages/@original - edit the initial response.
 - `async delete_original() -> NetworkError | None` — DELETE /webhooks/{application_id}/{token}/messages/@original - remove the initial response.
-- `async followup(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None, files: Sequence[File]=(), ephemeral: bool=False) -> Message | NetworkError` — POST /webhooks/{application_id}/{token} - send another message after the initial response.
+- `async followup(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None, files: Sequence[File]=(), ephemeral: bool=False) -> Message | NetworkError` — POST /webhooks/{application_id}/{token} - send another message after the initial response.
 
 ### `class CommandInteraction(Interaction[CommandInteractionModel])`
 Someone ran an application command.
@@ -739,7 +739,7 @@ What can be done to a message knowing only its channel and ID: read, edit, delet
 - `@property channel -> PartialChannel` — The channel the message was sent in.
 - `@property jump_url -> str` — A link that opens the message; works in DMs and guilds alike.
 - `async fetch(*, reuse_response: bool=False) -> Message | NetworkError` — GET /channels/{channel_id}/messages/{message_id}; needs READ_MESSAGE_HISTORY in a guild.
-- `async edit(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — PATCH /channels/{channel_id}/messages/{message_id} - edit a message the bot sent.
+- `async edit(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None, files: Sequence[File]=()) -> Message | NetworkError` — PATCH /channels/{channel_id}/messages/{message_id} - edit a message the bot sent.
 - `async delete(*, reason: Reason=None) -> NetworkError | None` — DELETE /channels/{channel_id}/messages/{message_id}; someone else's message needs MANAGE_MESSAGES.
 - `async add_reaction(emoji: ReactionEmoji) -> NetworkError | None` — PUT /channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me - react as the bot.
 - `async remove_reaction(emoji: ReactionEmoji, user: BaseUser | BaseMember | None=None) -> NetworkError | None` — DELETE .../reactions/{emoji}/{user_id} - take back the bot's reaction, or ``user``'s (needs MANAGE_MESSAGES).
@@ -852,7 +852,7 @@ What can be done to a user knowing only their ID: read them, open a DM, message 
 - `@property mention -> str` — A clickable mention of the user, as ``<@id>``.
 - `async fetch(*, reuse_response: bool=False) -> User | NetworkError` — GET /users/{user_id}.
 - `async dm() -> Channel | NetworkError` — POST /users/@me/channels - open the DM channel with this user, or return the one already open.
-- `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None) -> Message | NetworkError` — Send this user a direct message, opening the DM channel first.
+- `async send(content: str | None=None, *, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None) -> Message | NetworkError` — Send this user a direct message, opening the DM channel first.
 
 ### `class User(Entity[UserModel], BaseUser)`
 A user, as Discord returned or sent them.

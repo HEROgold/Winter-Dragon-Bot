@@ -1,15 +1,30 @@
-"""Unit tests: legacy message components (buttons, select menus, action rows) and their message-wide limits."""
+"""Unit tests: message components, legacy and components v2, and their message-wide limits."""
 
 import pytest
 from pydantic import ValidationError
+from wd_discord.color import Color
 from wd_discord.components import (
     ActionRow,
     Button,
     ButtonStyle,
+    Container,
+    MediaGallery,
+    MediaGalleryItem,
+    Section,
+    SelectOption,
+    Separator,
+    SeparatorSpacing,
+    StringSelect,
+    TextDisplay,
+    Thumbnail,
+    UnfurledMediaItem,
     UserSelect,
     components_payload,
+    is_layout,
+    walk,
 )
-from wd_discord.limits import MAX_MESSAGE_COMPONENTS
+from wd_discord.limits import MAX_MESSAGE_COMPONENTS, MAX_TEXT_DISPLAY_CHARACTERS
+from wd_discord.partial_emoji import PartialEmoji
 
 
 def _button(custom_id: str) -> Button:
@@ -85,3 +100,104 @@ def test_components_payload_rejects_more_than_40_components() -> None:
     rows = [ActionRow(components=[_button(f"{row}-{index}") for index in range(5)]) for row in range(7)]
     with pytest.raises(ValueError, match=str(MAX_MESSAGE_COMPONENTS)):
         components_payload(rows)
+
+
+def test_button_emoji_serializes_as_a_partial_emoji() -> None:
+    button = Button(style=ButtonStyle.SECONDARY, custom_id="a", emoji=PartialEmoji(id=5, name="route"))
+    assert button.model_dump(mode="json", exclude_none=True)["emoji"] == {"id": "5", "name": "route"}
+
+
+def test_string_select_serializes_as_type_3_with_its_options() -> None:
+    select = StringSelect(custom_id="team", options=[SelectOption(label="Frostbite", value="7", description="4 members")])
+    assert select.model_dump(mode="json", exclude_none=True) == {
+        "type": 3,
+        "custom_id": "team",
+        "options": [{"label": "Frostbite", "value": "7", "description": "4 members"}],
+        "disabled": False,
+    }
+
+
+def test_a_string_select_must_be_alone_and_needs_an_option() -> None:
+    select = StringSelect(custom_id="team", options=[SelectOption(label="a", value="a")])
+    with pytest.raises(ValidationError, match="alone in its action row"):
+        ActionRow(components=[select, _button("b")])
+    with pytest.raises(ValidationError):
+        StringSelect(custom_id="team", options=[])
+
+
+def _text(content: str = "hi") -> TextDisplay:
+    return TextDisplay(content=content)
+
+
+def test_section_holds_one_to_three_texts_and_an_accessory() -> None:
+    thumbnail = Thumbnail(media=UnfurledMediaItem(url="attachment://a.png"))
+    Section(components=[_text()] * 3, accessory=thumbnail)
+    with pytest.raises(ValidationError):
+        Section(components=[_text()] * 4, accessory=thumbnail)
+    with pytest.raises(ValidationError):
+        Section(components=[], accessory=_button("a"))
+
+
+def test_container_serializes_its_children_and_accent_color() -> None:
+    container = Container(
+        components=[_text("## Spring Cup"), Separator(spacing=SeparatorSpacing.LARGE)],
+        accent_color=Color(0x1E5AA0),
+    )
+    assert components_payload([container]) == [
+        {
+            "type": 17,
+            "components": [
+                {"type": 10, "content": "## Spring Cup"},
+                {"type": 14, "divider": True, "spacing": 2},
+            ],
+            "accent_color": 0x1E5AA0,
+            "spoiler": False,
+        },
+    ]
+
+
+def test_media_gallery_holds_one_to_ten_items() -> None:
+    item = MediaGalleryItem(media=UnfurledMediaItem(url="attachment://bracket.png"))
+    MediaGallery(items=[item] * 10)
+    with pytest.raises(ValidationError):
+        MediaGallery(items=[item] * 11)
+
+
+def test_walk_yields_nested_components() -> None:
+    accessory = _button("join")
+    section = Section(components=[_text()], accessory=accessory)
+    row = ActionRow(components=[_button("leave")])
+    container = Container(components=[section, row])
+    assert [type(component).__name__ for component in walk([container])] == [
+        "Container",
+        "Section",
+        "TextDisplay",
+        "Button",
+        "ActionRow",
+        "Button",
+    ]
+
+
+def test_is_layout_only_for_components_beyond_action_rows() -> None:
+    assert not is_layout([ActionRow(components=[_button("a")])])
+    assert is_layout([_text()])
+
+
+def test_components_payload_counts_nested_components() -> None:
+    # A container of 39 text displays is 40 components; one more is too many.
+    components_payload([Container(components=[_text()] * 39)])
+    with pytest.raises(ValueError, match=str(MAX_MESSAGE_COMPONENTS)):
+        components_payload([Container(components=[_text()] * 40)])
+
+
+def test_components_payload_finds_duplicate_custom_ids_in_sections() -> None:
+    section = Section(components=[_text()], accessory=_button("same"))
+    with pytest.raises(ValueError, match="duplicated"):
+        components_payload([Container(components=[section, ActionRow(components=[_button("same")])])])
+
+
+def test_components_payload_limits_the_text_of_all_text_displays() -> None:
+    half = _text("a" * (MAX_TEXT_DISPLAY_CHARACTERS // 2))
+    components_payload([half, half])
+    with pytest.raises(ValueError, match=str(MAX_TEXT_DISPLAY_CHARACTERS)):
+        components_payload([half, half, _text("a")])

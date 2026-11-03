@@ -11,6 +11,7 @@ lazy from wd_discord.entities.member import PartialMember
 lazy from wd_discord.entities.message import Message, PartialMessage
 lazy from wd_discord.entities.role import BaseRole, PartialRole
 lazy from wd_discord.entities.user import PartialUser, User
+lazy from wd_discord.files import request_body
 lazy from wd_discord.gateway.events import Message as MessageModel
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.channel import Channel as ChannelModel
@@ -29,11 +30,12 @@ if TYPE_CHECKING:
 
     from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
-    from wd_discord.components import ActionRow
+    from wd_discord.components import MessageComponent
     from wd_discord.embed import Embed
     from wd_discord.entities.member import BaseMember
     from wd_discord.entities.message import BaseMessage
     from wd_discord.entities.user import BaseUser
+    from wd_discord.files import File
     from wd_discord.image import ImageHash
     from wd_discord.payloads import JsonPayload
     from wd_discord.permissions import ChannelType
@@ -109,14 +111,17 @@ class BaseChannel(ClientBound):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
+        files: Sequence[File] = (),
     ) -> Message | NetworkError:
         """POST /channels/{channel_id}/messages - send a message; DM channels included.
 
-        Discord needs at least one of ``content``, ``embeds`` or ``components``.
+        Discord needs at least one of ``content``, ``embeds``, ``components`` or ``files``. A component shows a file
+        through its ``attachment://<filename>`` URL.
         """
-        payload = message_data(content=content, embeds=embeds, components=components)
-        return self._entity(await self.client.post(t"/channels/{self.id}/messages", json=payload), MessageModel, Message)
+        payload = message_data(content=content, embeds=embeds, components=components, files=files)
+        result = await self.client.post(t"/channels/{self.id}/messages", **request_body(payload, files))
+        return self._entity(result, MessageModel, Message)
 
     async def delete_messages(
         self,

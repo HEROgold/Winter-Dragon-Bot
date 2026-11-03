@@ -131,10 +131,15 @@ An RGB color, ``0x000000`` to ``0xFFFFFF``; still an ``int``, so it goes on the 
 - `@classmethod from_hex(text: str) -> Color` — Parse ``"#00ff00"``, ``"00ff00"`` or ``"0x00ff00"``.
 
 ## `wd_discord.components` — `wd-discord/src/wd_discord/components.py`
-Legacy message components: action rows, buttons and select menus (https://docs.discord.com/developers/components/reference).
+Message components (https://docs.discord.com/developers/components/reference).
 
 - `type CustomId = str`
-- `components_payload(rows: Sequence[ActionRow]) -> list[ActionRow]` — Return the ``components`` JSON for a message, checking the message-wide limits.
+- `type SelectText = str`
+- `type MessageComponent = ActionRow | TextDisplay | Section | MediaGallery | Separator | FileDisplay | Container`
+- `type AnyComponent = MessageComponent | Button | UserSelect | StringSelect | Thumbnail`
+- `is_layout(components: Sequence[MessageComponent]) -> bool` — Return whether ``components`` need the components v2 flag: any top-level component that isn't an action row.
+- `walk(components: Sequence[AnyComponent]) -> Generator[AnyComponent]` — Yield every component in ``components``, each followed by the ones nested inside it.
+- `components_payload(components: Sequence[MessageComponent]) -> list[MessageComponent]` — Return the ``components`` JSON for a message, checking the message-wide limits.
 
 ### `class ComponentType(OpenIntEnum)`
 The type of a component.
@@ -152,7 +157,7 @@ How a button looks, and what clicking it does.
 A clickable button; must sit inside an :class:`ActionRow`.
 
 - fields: type: Literal[ComponentType.BUTTON], style: ButtonStyle, label: str | None, custom_id: CustomId | None,
-  sku_id: Snowflake | None, url: str | None, disabled: bool
+  sku_id: Snowflake | None, url: str | None, emoji: PartialEmoji | None, disabled: bool
 - attributes: model_config
 
 ### `class UserSelect(BaseModel)`
@@ -162,10 +167,84 @@ A menu picking users; must sit alone inside an :class:`ActionRow`.
   None, max_values: int | None, disabled: bool
 - attributes: model_config
 
-### `class ActionRow(BaseModel)`
-A row of up to 5 buttons, or one select menu, at the bottom of a message.
+### `class SelectOption(BaseModel)`
+One choice of a :class:`StringSelect`.
 
-- fields: type: Literal[ComponentType.ACTION_ROW], components: list[Button | UserSelect]
+- fields: label: SelectText, value: SelectText, description: str | None, emoji: PartialEmoji | None, default: bool |
+  None
+- attributes: model_config
+
+### `class StringSelect(BaseModel)`
+A menu of developer-defined options; must sit alone inside an :class:`ActionRow`.
+
+- fields: type: Literal[ComponentType.STRING_SELECT], custom_id: CustomId, options: list[SelectOption], placeholder: str
+  | None, min_values: int | None, max_values: int | None, disabled: bool
+- attributes: model_config
+
+### `class ActionRow(BaseModel)`
+A row of up to 5 buttons, or one select menu.
+
+- fields: type: Literal[ComponentType.ACTION_ROW], components: list[Button | UserSelect | StringSelect]
+- attributes: model_config
+
+### `class UnfurledMediaItem(BaseModel)`
+An image or file a component shows: a web URL, or ``attachment://<filename>`` for a file sent with the message.
+
+- fields: url: str
+- attributes: model_config
+
+### `class TextDisplay(BaseModel)`
+Markdown text in a components v2 message; mentions in it ping like message content.
+
+- fields: type: Literal[ComponentType.TEXT_DISPLAY], content: str
+- attributes: model_config
+
+### `class Thumbnail(BaseModel)`
+A small image beside a :class:`Section`'s text.
+
+- fields: type: Literal[ComponentType.THUMBNAIL], media: UnfurledMediaItem, description: str | None, spoiler: bool
+- attributes: model_config
+
+### `class Section(BaseModel)`
+One to three text displays with a button or thumbnail beside them.
+
+- fields: type: Literal[ComponentType.SECTION], components: list[TextDisplay], accessory: Button | Thumbnail
+- attributes: model_config
+
+### `class MediaGalleryItem(BaseModel)`
+One image of a :class:`MediaGallery`.
+
+- fields: media: UnfurledMediaItem, description: str | None, spoiler: bool
+- attributes: model_config
+
+### `class MediaGallery(BaseModel)`
+One to ten images shown as a grid, at the full width of the message.
+
+- fields: type: Literal[ComponentType.MEDIA_GALLERY], items: list[MediaGalleryItem]
+- attributes: model_config
+
+### `class SeparatorSpacing(IntEnum)`
+How much room a :class:`Separator` leaves.
+
+- attributes: SMALL, LARGE
+
+### `class Separator(BaseModel)`
+Vertical space between components, with a dividing line unless ``divider`` is off.
+
+- fields: type: Literal[ComponentType.SEPARATOR], divider: bool, spacing: SeparatorSpacing
+- attributes: model_config
+
+### `class FileDisplay(BaseModel)`
+A file sent with the message, shown as a download; ``file`` must be an ``attachment://`` reference.
+
+- fields: type: Literal[ComponentType.FILE], file: UnfurledMediaItem, spoiler: bool
+- attributes: model_config
+
+### `class Container(BaseModel)`
+A box around other components, with an optional colored bar on its left like an embed's.
+
+- fields: type: Literal[ComponentType.CONTAINER], components: list[ActionRow | TextDisplay | Section | MediaGallery |
+  Separator | FileDisplay], accent_color: Color | None, spoiler: bool
 - attributes: model_config
 
 ### `class TextInputStyle(OpenIntEnum)`
@@ -356,12 +435,13 @@ The JSON body for creating or editing an application command.
 ## `wd_discord.limits` — `wd-discord/src/wd_discord/limits.py`
 Discord's documented limits, and :func:`truncate` to fit text into one of them.
 
-- module names: ELLIPSIS, MAX_ACTION_ROWS, MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_CUSTOM_ID_LENGTH,
-  MAX_BUTTON_LABEL_LENGTH, MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH, MAX_EMBED_FIELDS,
-  MAX_EMBED_CHARACTERS, MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH, MAX_EMBED_FIELD_NAME_LENGTH,
-  MAX_EMBED_FIELD_VALUE_LENGTH, MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH, MAX_DESCRIPTION_LENGTH,
-  MAX_OPTION_VALUE_LENGTH, MAX_REASON_LENGTH, MAX_USER_LIMIT, MAX_CHANNEL_NAME_LENGTH, MIN_GUILD_NAME_LENGTH,
-  MAX_GUILD_NAME_LENGTH, MAX_MESSAGES_PER_PAGE, MAX_MEMBERS_PER_PAGE
+- module names: ELLIPSIS, MAX_ACTION_ROWS, MAX_ACTION_ROW_BUTTONS, MAX_MESSAGE_COMPONENTS, MAX_TEXT_DISPLAY_CHARACTERS,
+  MAX_SECTION_TEXT_DISPLAYS, MAX_MEDIA_GALLERY_ITEMS, MAX_SELECT_OPTIONS, MAX_SELECT_OPTION_LENGTH,
+  MAX_CUSTOM_ID_LENGTH, MAX_BUTTON_LABEL_LENGTH, MAX_MODAL_TITLE_LENGTH, MAX_LABEL_LENGTH, MAX_TEXT_INPUT_LENGTH,
+  MAX_EMBED_FIELDS, MAX_EMBED_CHARACTERS, MAX_EMBED_TITLE_LENGTH, MAX_EMBED_DESCRIPTION_LENGTH,
+  MAX_EMBED_FIELD_NAME_LENGTH, MAX_EMBED_FIELD_VALUE_LENGTH, MAX_OPTIONS, MAX_CHOICES, MAX_CHOICE_NAME_LENGTH,
+  MAX_DESCRIPTION_LENGTH, MAX_OPTION_VALUE_LENGTH, MAX_REASON_LENGTH, MAX_USER_LIMIT, MAX_CHANNEL_NAME_LENGTH,
+  MIN_GUILD_NAME_LENGTH, MAX_GUILD_NAME_LENGTH, MAX_MESSAGES_PER_PAGE, MAX_MEMBERS_PER_PAGE
 - `truncate(text: str, limit: int) -> str` — Return ``text``, or when it's longer than ``limit`` characters, its start cut to fit ``limit`` with :data:`ELLIPSIS`.
 
 ## `wd_discord.log` — `wd-discord/src/wd_discord/log.py`
@@ -568,7 +648,7 @@ Runs a single logical request through the rate-limit retry loop.
 ## `wd_discord.responses` — `wd-discord/src/wd_discord/responses.py`
 Interaction responses (https://docs.discord.com/developers/interactions/receiving-and-responding).
 
-- `message_data(*, content: str | None=None, embeds: Sequence[Embed] | None=None, components: Sequence[ActionRow] | None=None, flags: MessageFlags | None=None, files: Sequence[File]=()) -> MessageData` — Build a message body for sending or editing a message (object -> API).
+- `message_data(*, content: str | None=None, embeds: Sequence[Embed] | None=None, components: Sequence[MessageComponent] | None=None, flags: MessageFlags | None=None, files: Sequence[File]=()) -> MessageData` — Build a message body for sending or editing a message (object -> API).
 
 ### `class InteractionCallbackType(IntEnum)`
 The kind of initial response sent to an interaction.
@@ -579,13 +659,13 @@ The kind of initial response sent to an interaction.
 ### `class MessageFlags(IntFlag)`
 Message flags an app can set when sending a message (subset).
 
-- attributes: SUPPRESS_EMBEDS, EPHEMERAL, SUPPRESS_NOTIFICATIONS
+- attributes: SUPPRESS_EMBEDS, EPHEMERAL, SUPPRESS_NOTIFICATIONS, IS_COMPONENTS_V2
 
 ### `class MessageData(TypedDict, total=False)`
 The body of a response to an interaction (object -> API).
 
-- fields: content: str, embeds: list[Embed], components: list[ActionRow], flags: MessageFlags, attachments:
-  list[dict[str, object]], choices: list[dict[str, object]]
+- fields: content: str | None, embeds: list[Embed], components: list[MessageComponent], flags: MessageFlags,
+  attachments: list[dict[str, object]], choices: list[dict[str, object]]
 
 ### `class ModalData(TypedDict)`
 The body of a MODAL response to an interaction (object -> API).

@@ -11,6 +11,7 @@ lazy from wd_discord.entities.channel import PartialChannel
 lazy from wd_discord.entities.emoji import Emoji
 lazy from wd_discord.entities.guild import PartialGuild
 lazy from wd_discord.entities.user import User
+lazy from wd_discord.files import request_body
 lazy from wd_discord.gateway.events import Message as MessageModel
 lazy from wd_discord.partial_emoji import PartialEmoji
 lazy from wd_discord.responses import message_data
@@ -23,10 +24,11 @@ if TYPE_CHECKING:
 
     from wd_discord.audit import Reason
     from wd_discord.client import NetworkError
-    from wd_discord.components import ActionRow
+    from wd_discord.components import MessageComponent
     from wd_discord.embed import Embed
     from wd_discord.entities.member import BaseMember
     from wd_discord.entities.user import BaseUser
+    from wd_discord.files import File
     from wd_discord.resources.message import Attachment, Reaction
     from wd_discord.snowflake import Snowflake
 
@@ -85,14 +87,16 @@ class BaseMessage(ClientBound):
         content: str | None = None,
         *,
         embeds: Sequence[Embed] | None = None,
-        components: Sequence[ActionRow] | None = None,
+        components: Sequence[MessageComponent] | None = None,
+        files: Sequence[File] = (),
     ) -> Message | NetworkError:
         """PATCH /channels/{channel_id}/messages/{message_id} - edit a message the bot sent.
 
-        A ``None`` argument leaves that part of the message unchanged; an empty sequence clears it.
+        A ``None`` argument leaves that part of the message unchanged; an empty sequence clears it. Any ``files``
+        replace the message's attachments.
         """
-        payload = message_data(content=content, embeds=embeds, components=components)
-        return self._entity(await self.client.patch(self._path, json=payload), MessageModel, Message)
+        payload = message_data(content=content, embeds=embeds, components=components, files=files)
+        return self._entity(await self.client.patch(self._path, **request_body(payload, files)), MessageModel, Message)
 
     async def delete(self, *, reason: Reason = None) -> NetworkError | None:
         """DELETE /channels/{channel_id}/messages/{message_id}; someone else's message needs MANAGE_MESSAGES."""
