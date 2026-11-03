@@ -213,7 +213,10 @@ class Bot(LoggerMixin):
         An interaction is also routed to its command or component handler.
         """
         event = self.client.receive(payload).event
-        if isinstance(event, CommandInteraction | ComponentInteraction | ModalSubmitInteraction):
+        if isinstance(
+            event,
+            CommandInteraction | ComponentInteraction | ModalSubmitInteraction | AutocompleteInteraction,
+        ):
             self.loop.create_task(self._dispatch_interaction(event))
         for handler in self.handlers.listeners(event_name):
             self.loop.create_task(self._invoke_listener(handler, event))
