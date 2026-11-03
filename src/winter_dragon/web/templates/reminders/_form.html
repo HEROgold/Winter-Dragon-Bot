@@ -1,4 +1,4 @@
-<form class="panel add-form" aria-labelledby="add-title" method="post" action="/reminders" hx-post="/reminders" hx-target="#reminders" hx-swap="outerHTML">
+<form class="panel add-form" aria-labelledby="add-title" method="post" action="{{ page.path }}" hx-post="{{ page.path }}" hx-target="#reminders" hx-swap="outerHTML">
   <h2 id="add-title">Add a reminder</h2>
   <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
 

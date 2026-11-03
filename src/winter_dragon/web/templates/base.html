@@ -21,7 +21,6 @@
       <nav class="site-nav" aria-label="Dashboard">
         <a href="/profile" {% if active == "profile" %}aria-current="page"{% endif %}>Profile</a>
         <a href="/me" {% if active == "data" %}aria-current="page"{% endif %}>Your data</a>
-        <a href="/reminders" {% if active == "reminders" %}aria-current="page"{% endif %}>Reminders</a>
       </nav>
       <div class="account">
         {% if account.avatar_url %}

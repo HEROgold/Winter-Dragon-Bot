@@ -93,7 +93,7 @@ The Profile: a member's own pages, one per feature, across every guild.
 - `load_profile_pages() -> None` — Import every module in ``web/profile_pages/``, so each registers its page.
 - `@router.get profile(request: Request) -> Response` — Reopen the Profile page the member last opened; without one, show the intro under the tab bar.
 - `@router.get profile_page_view(request: Request, slug: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's page ``slug`` of the Profile.
-- `render_profile_page(request: Request, slug: str, context: Mapping[str, object], *, fragment: str | None=None) -> Response` — Render page ``slug`` with ``context`` plus ``pages`` and ``page`` (whose ``path`` builds its URLs).
+- `render_profile_page(request: Request, slug: str, context: Mapping[str, object], *, fragment: str | None=None, status_code: int=status.HTTP_200_OK) -> Response` — Render page ``slug`` with ``context`` plus ``pages`` and ``page`` (whose ``path`` builds its URLs).
 
 ### `@dataclass class ProfileContext`
 What a Profile page reads to build itself: the database, the member whose Profile it is, and their time zone.
@@ -169,6 +169,40 @@ The Profile's love page: everyone the member has checked their compatibility wit
 
 - `@profile_page love(context: ProfileContext) -> dict[str, object]` — Return the love page's context: the member's checks with their percentage, highest first, then newest.
 
+## `winter_dragon.web.profile_pages.reminders` — `src/winter_dragon/web/profile_pages/reminders.py`
+The Profile's reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord.
+
+- module names: router, SLUG, PATH, BOARD, LIST
+- `blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft` — Return an empty add form, due tomorrow morning in ``zone``.
+- `reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]` — Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first.
+- `@profile_page reminders(context: ProfileContext) -> dict[str, object]` — Return the page's context: the member's reminders and an empty add form, due tomorrow morning.
+- `@router.post add_reminder(request: Request, account: SignedIn, bind: Database, content: str='', day: str='', at: str='', repeat: str=Repeat.NEVER, every_days: str='3') -> Response` — Add the reminder the form describes, or show the form again with why it can't be set.
+- `@router.post remove_reminder(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be.
+
+### `class Repeat(StrEnum)`
+How often a reminder added on the page comes back.
+
+- attributes: NEVER, DAILY, WEEKLY, EVERY_DAYS
+
+### `@dataclass class ReminderDraft`
+What the add form holds, as typed, so a refused form comes back filled in.
+
+- fields: content: str, day: str, at: str, repeat: Repeat, every_days: str
+- `reminder(user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder | Refused` — Return the reminder this draft describes for the user ``user_id``, read in ``zone``, or why it can't be set.
+
+### `@dataclass class ReminderStop`
+One reminder on the page, with its due time in the visitor's zone.
+
+- fields: reminder: AnyReminder, zone: ZoneInfo
+- `@property key -> str` — The reminder's table and ID, which its delete button posts to.
+- `@property due -> datetime` — When it's due next, in the visitor's zone.
+- `@property repeat -> str | None` — How often it comes back, in words; ``None`` for a one-off.
+
+### `@dataclass class ReminderDay`
+The reminders due on one day, under its heading.
+
+- fields: label: str, stops: tuple[ReminderStop, ...]
+
 ## `winter_dragon.web.profile_pages.steam` — `src/winter_dragon/web/profile_pages/steam.py`
 The Profile's Steam page: the sales Steam DMs told the member about, newest first, with a total.
 
@@ -227,40 +261,6 @@ The redirect page: opens an app link (``steam://...``) from Discord, which only 
 - module names: router, MOBILE_HINT, PHONE_AGENTS
 - `is_phone(headers: Mapping[str, str]) -> bool` — Whether the request ``headers`` come from a phone: by its client hint, else by its ``User-Agent``.
 - `@router.get open_link(request: Request, uri: str='', mobile: str | None=None, fallback: str | None=None) -> Response` — Open ``uri``, or ``mobile`` on a phone, with a button in case the browser blocks it and a ``fallback`` page.
-
-## `winter_dragon.web.reminders` — `src/winter_dragon/web/reminders.py`
-The reminders page: a member's reminders by day, and adding or removing one, as ``/reminder`` does in Discord.
-
-- module names: router
-- `blank_draft(zone: ZoneInfo, now: datetime) -> ReminderDraft` — Return an empty add form, due tomorrow morning in ``zone``.
-- `reminder_days(bind: Engine, user_id: Snowflake, zone: ZoneInfo, now: datetime) -> Generator[ReminderDay]` — Yield the user ``user_id``'s reminders grouped by the day they're due in ``zone``, soonest first.
-- `@router.get reminders_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's reminders and the form to add one.
-- `@router.post add_reminder(request: Request, account: SignedIn, bind: Database, content: str='', day: str='', at: str='', repeat: str=Repeat.NEVER, every_days: str='3') -> Response` — Add the reminder the form describes, or show the form again with why it can't be set.
-- `@router.post remove_reminder(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Remove the signed-in member's reminder ``key``; someone else's, or one already gone, is left be.
-
-### `class Repeat(StrEnum)`
-How often a reminder added on the page comes back.
-
-- attributes: NEVER, DAILY, WEEKLY, EVERY_DAYS
-
-### `@dataclass class ReminderDraft`
-What the add form holds, as typed, so a refused form comes back filled in.
-
-- fields: content: str, day: str, at: str, repeat: Repeat, every_days: str
-- `reminder(user_id: Snowflake, zone: ZoneInfo, now: datetime) -> AnyReminder | Refused` — Return the reminder this draft describes for the user ``user_id``, read in ``zone``, or why it can't be set.
-
-### `@dataclass class ReminderStop`
-One reminder on the page, with its due time in the visitor's zone.
-
-- fields: reminder: AnyReminder, zone: ZoneInfo
-- `@property key -> str` — The reminder's table and ID, which its delete button posts to.
-- `@property due -> datetime` — When it's due next, in the visitor's zone.
-- `@property repeat -> str | None` — How often it comes back, in words; ``None`` for a one-off.
-
-### `@dataclass class ReminderDay`
-The reminders due on one day, under its heading.
-
-- fields: label: str, stops: tuple[ReminderStop, ...]
 
 ## `winter_dragon.web.responses` — `src/winter_dragon/web/responses.py`
 Rendering the dashboard's templates, as a whole page or as the fragment an htmx request swaps in.
