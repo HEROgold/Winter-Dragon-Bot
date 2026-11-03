@@ -5,16 +5,11 @@ lazy from enum import StrEnum
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING
 
-lazy from wd_discord.components import ActionRow, Button, ButtonStyle, Section, Separator
-lazy from wd_discord.embed import Embed, EmbedField
-lazy from wd_discord.limits import (
-    MAX_ACTION_ROW_BUTTONS,
-    MAX_BUTTON_LABEL_LENGTH,
-    MAX_EMBED_FIELD_VALUE_LENGTH,
-    truncate,
-)
+lazy from wd_discord.components import ActionRow, Button, ButtonStyle, Section, Separator, SeparatorSpacing
+lazy from wd_discord.embed import Embed
+lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_BUTTON_LABEL_LENGTH, truncate
 
-lazy from winter_dragon.ui import Mark, Tone, block, card, mentions
+lazy from winter_dragon.ui import Mark, Tone, block, card, steps
 
 lazy from .bracket import BracketSlot, round_name, tally
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
@@ -25,7 +20,7 @@ if TYPE_CHECKING:
     lazy from collections.abc import Iterable, Mapping, Sequence
 
     lazy from wd_bot.components import ComponentHandler
-    lazy from wd_discord.components import Container
+    lazy from wd_discord.components import Container, TextDisplay
     lazy from wd_discord.snowflake import Snowflake
 
     lazy from .models import DraftChoice, MatchVote, Tournament, TournamentMatch
@@ -224,97 +219,179 @@ def bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], nam
     return card(tone, block(f"## {tournament.name} bracket", state), Separator(), *round_texts)
 
 
-def match_embed(
-    match: TournamentMatch,
-    rounds: int,
-    names: Mapping[int, str],
-    rosters: Mapping[int, Sequence[Snowflake]],
-    drafts: Sequence[DraftChoice],
-) -> Embed:
-    """Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash."""
-    fields: list[EmbedField] = []
-    for entry_id in (match.entry_a_id, match.entry_b_id):
-        if entry_id is None:
-            continue
-        own = [draft for draft in drafts if draft.entry_id == entry_id]
-        bans = ", ".join(draft.value for draft in own if draft.kind is DraftKind.BAN) or "—"
-        picks = ", ".join(draft.value for draft in own if draft.kind is DraftKind.PICK) or "—"
-        value = f"{mentions(rosters.get(entry_id, []))}\nBans: {bans}\nPicks: {picks}"
-        fields.append(
-            EmbedField(name=names.get(entry_id, "?"), value=truncate(value, MAX_EMBED_FIELD_VALUE_LENGTH), inline=True),
-        )
-    title = f"Match #{match.id} — {round_name(match.round, rounds)}"
-    description = PHASE_LABELS[match.phase]
-    if match.phase.decided and match.winner_id is not None:
-        description += f": **{names.get(match.winner_id, '?')}** wins"
-    if match.phase is MatchPhase.READY and match.entry_a_id is not None and match.entry_b_id is not None:
-        other_side = set(rosters.get(match.entry_b_id, []))
-        clash = [user_id for user_id in rosters.get(match.entry_a_id, []) if user_id in other_side]
-        if clash:
-            mentioned = ", ".join(f"<@{user_id}>" for user_id in clash)
-            description += f"\nClash: {mentioned} play for both sides."
-    return Embed(title=title, description=description, fields=fields)
+ROUTE = (MatchPhase.READY, MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE)
+"""The phases a match goes through before its result, in order."""
+ROUTE_NAMES = ["Ready", "Bans", "Picks", "Live", "Result"]
+"""The steps of a match card's route line: its :data:`ROUTE`, then the result."""
+
+NEXT_STEPS = {
+    MatchPhase.BAN: ("Both teams are ready? Open the bans.", "Start bans"),
+    MatchPhase.PICK: ("Both teams have banned? Open the picks.", "Start picks"),
+    MatchPhase.LIVE: ("Both teams have picked? Start the match.", "Start the match"),
+}
+"""For each phase the organiser can move a match on to: when to do it, and the button that does it."""
 
 
-def match_buttons(
-    handler: ComponentHandler,
-    match: TournamentMatch,
-    names: Mapping[int, str],
-    clash_handler: ComponentHandler,
-    clash: Sequence[Snowflake] = (),
-) -> list[ActionRow]:
-    """Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit."""
-    if match.phase.decided or match.entry_a_id is None or match.entry_b_id is None or match.id is None:
-        return []
-    teams = (match.entry_a_id, match.entry_b_id)
-    rows: list[ActionRow] = []
-    if match.phase is MatchPhase.READY and clash:
-        rows.append(
+@dataclass(frozen=True)
+class MatchControls:
+    """The handlers behind a match card's buttons and its organiser's panel; each button carries the match's ID."""
+
+    manage: ComponentHandler
+    """Opens the organiser's panel."""
+    act: ComponentHandler
+    """Moves the match on, reports its winner or records a forfeit."""
+    clash: ComponentHandler
+    """Drops the players who play for both sides from one of them."""
+
+
+@dataclass(frozen=True)
+class MatchView:
+    """What a match card shows: the match, its tournament and round, the teams, their players and drafts."""
+
+    match: TournamentMatch
+    tournament_name: str
+    rounds: int
+    names: Mapping[int, str]
+    rosters: Mapping[int, Sequence[Snowflake]]
+    drafts: Sequence[DraftChoice]
+    clash: Sequence[Snowflake] = ()
+
+    @property
+    def teams(self) -> list[int]:
+        """The IDs of the match's teams known so far."""
+        return [team for team in (self.match.entry_a_id, self.match.entry_b_id) if team is not None]
+
+    def name(self, team: int | None) -> str:
+        """Return the team's name."""
+        return "?" if team is None else self.names.get(team, f"Team {team}")
+
+    @property
+    def playable(self) -> bool:
+        """Whether the organiser can still act on the match: both teams known, and no winner yet."""
+        return len(self.teams) == 2 and not self.match.phase.decided and self.match.id is not None  # noqa: PLR2004 - a match has two sides
+
+
+def _route(phase: MatchPhase) -> str:
+    """Return the match's route line, marking where ``phase`` is."""
+    if phase is MatchPhase.WAITING:
+        return steps(ROUTE_NAMES, -1)
+    if phase.decided:
+        return steps(ROUTE_NAMES, len(ROUTE_NAMES) - 1)
+    return steps(ROUTE_NAMES, ROUTE.index(phase))
+
+
+def _state(view: MatchView) -> str:
+    """Return one line saying where the match stands and who it waits for."""
+    match = view.match
+    winner = view.name(match.winner_id)
+    match match.phase:
+        case MatchPhase.WAITING:
+            return "Waiting for an earlier match to decide who plays."
+        case MatchPhase.READY:
+            return "Both teams are ready. The organiser opens the bans."
+        case MatchPhase.BAN | MatchPhase.PICK:
+            return f"{PHASE_LABELS[match.phase]} are open for both captains."
+        case MatchPhase.LIVE:
+            return "Being played now."
+        case MatchPhase.FINISHED:
+            return f"{Mark.WINNER} **{winner}** won."
+        case MatchPhase.FORFEIT:
+            loser = next((team for team in view.teams if team != match.winner_id), None)
+            return f"**{view.name(loser)}** forfeited, so **{winner}** goes through."
+
+
+def _team_block(view: MatchView, team: int) -> TextDisplay:
+    """Return one team's part of the card: its name, its players, and what it banned and picked."""
+    who = " ".join(f"<@{user_id}>" for user_id in view.rosters.get(team, [])) or "No players yet."
+    own = [draft for draft in view.drafts if draft.entry_id == team]
+    bans = ", ".join(draft.value for draft in own if draft.kind is DraftKind.BAN)
+    picks = ", ".join(draft.value for draft in own if draft.kind is DraftKind.PICK)
+    drafted = " ".join(part for part in (f"Banned {bans}." if bans else "", f"Picked {picks}." if picks else "") if part)
+    return block(f"**{view.name(team)}**", who, drafted)
+
+
+def _tone(phase: MatchPhase) -> Tone:
+    if phase is MatchPhase.FORFEIT:
+        return Tone.STOP
+    if phase in {MatchPhase.WAITING, MatchPhase.FINISHED}:
+        return Tone.WAIT
+    return Tone.ACT
+
+
+def card_of_match(view: MatchView, controls: MatchControls) -> Container:
+    """Return a match card: its teams, a route line through its phases, where it stands, and each team's players and drafts.
+
+    Its only buttons are Manage match, which opens the organiser's panel, and a clash's drop buttons.
+    """
+    match = view.match
+    sides = (match.entry_a_id, match.entry_b_id)
+    title = " vs ".join(view.name(team) if team is not None else "to be decided" for team in sides)
+    heading = block(
+        f"## {title}",
+        f"-# {view.tournament_name}, {round_name(match.round, view.rounds).lower()}, match {match.id}",
+    )
+    if view.playable:
+        manage = Button(style=ButtonStyle.SECONDARY, label="Manage match", custom_id=controls.manage.custom_id(match.id or 0))
+        heading = Section(components=[heading], accessory=manage)
+    clash = ""
+    if view.clash:
+        clash = f"Clash: {' '.join(f'<@{user_id}>' for user_id in view.clash)} play for both sides."
+    body: list[ActionRow | TextDisplay | Section | Separator] = [heading, block(_route(match.phase), _state(view), clash)]
+    if view.clash and view.playable and match.id is not None:
+        body.append(
             ActionRow(
                 components=[
                     Button(
                         style=ButtonStyle.DANGER,
-                        label=f"Drop clash from {names.get(team, '?')}"[:MAX_BUTTON_LABEL_LENGTH],
-                        custom_id=clash_handler.custom_id(match.id, team),
+                        label=f"Drop clash from {view.name(team)}"[:MAX_BUTTON_LABEL_LENGTH],
+                        custom_id=controls.clash.custom_id(match.id, team),
                     )
-                    for team in teams
+                    for team in view.teams
                 ],
             ),
         )
+    for index, team in enumerate(view.teams):
+        body += [Separator(divider=index == 0), _team_block(view, team)]
+    return card(_tone(match.phase), *body)
+
+
+def manage_panel(view: MatchView, act: ComponentHandler, card_at: tuple[Snowflake, Snowflake]) -> Container:
+    """Return the organiser's panel for a match: each action beside a line saying when to use it.
+
+    ``card_at`` is the channel and message of the match card the panel was opened from; its buttons carry it, so the
+    card is edited along with the panel.
+    """
+    match = view.match
+    if not view.playable or match.id is None:
+        return card(Tone.WAIT, block(f"**Match {match.id}** has nothing left to do."))
+    match_id = match.id
+
+    def button(style: ButtonStyle, label: str, action: MatchAction, team: int | str = "") -> Button:
+        custom_id = act.custom_id(match_id, action, team, *card_at)
+        return Button(style=style, label=label[:MAX_BUTTON_LABEL_LENGTH], custom_id=custom_id)
+
+    body: list[TextDisplay | Section | Separator] = [block(f"**Match {match_id}**: {_state(view)}"), Separator()]
     following = following_phase(match.phase)
     if following is not None:
-        label = f"Next: {PHASE_LABELS[following]}"
-        custom_id = handler.custom_id(match.id, MatchAction.NEXT)
-        rows.append(ActionRow(components=[Button(style=ButtonStyle.PRIMARY, label=label, custom_id=custom_id)]))
+        when, label = NEXT_STEPS[following]
+        body.append(Section(components=[block(when)], accessory=button(ButtonStyle.PRIMARY, label, MatchAction.NEXT)))
     if match.phase is MatchPhase.LIVE:
-        rows.append(_team_buttons(handler, match.id, teams, names, MatchAction.WIN))
-    rows.append(_team_buttons(handler, match.id, teams, names, MatchAction.FORFEIT))
-    return rows
-
-
-TEAM_BUTTONS = {MatchAction.WIN: (ButtonStyle.SUCCESS, "won"), MatchAction.FORFEIT: (ButtonStyle.DANGER, "forfeits")}
-"""The style and label ending of the per-team buttons under a match card."""
-
-
-def _team_buttons(
-    handler: ComponentHandler,
-    match_id: int,
-    teams: Sequence[int],
-    names: Mapping[int, str],
-    action: MatchAction,
-) -> ActionRow:
-    """Return a row with a button per team of the match doing ``action`` for that team."""
-    style, verb = TEAM_BUTTONS[action]
-    return ActionRow(
-        components=[
-            Button(
-                style=style,
-                label=f"{names.get(team, '?')} {verb}"[:MAX_BUTTON_LABEL_LENGTH],
-                custom_id=handler.custom_id(match_id, action, team),
+        body += [
+            Section(
+                components=[block(f"**{view.name(team)}** won the match?")],
+                accessory=button(ButtonStyle.SUCCESS, f"{view.name(team)} won", MatchAction.WIN, team),
             )
-            for team in teams
-        ],
-    )
+            for team in view.teams
+        ]
+    body.append(Separator(spacing=SeparatorSpacing.LARGE))
+    body += [
+        Section(
+            components=[block(f"**{view.name(team)}** can't play.")],
+            accessory=button(ButtonStyle.DANGER, f"{view.name(team)} forfeits", MatchAction.FORFEIT, team),
+        )
+        for team in view.teams
+    ]
+    return card(Tone.WAIT, *body)
 
 
 # Maybe namespace vote_ into a vote class?

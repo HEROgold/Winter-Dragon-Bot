@@ -35,10 +35,12 @@ lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed, Tone
 lazy from .bracket import MAX_QUESTION_LENGTH, parse_options, round_count
 lazy from .cards import (
     MatchAction,
+    MatchControls,
+    MatchView,
     SignupControls,
     bracket_card,
-    match_buttons,
-    match_embed,
+    card_of_match,
+    manage_panel,
     match_line,
     participants_card,
     plural,
@@ -766,8 +768,9 @@ class Tournaments(
             raise Refused(msg)
         return tournament, match
 
-    def _match_card(self, session: Session, tournament: Tournament, match: TournamentMatch) -> tuple[Embed, list[ActionRow]]:
-        """Return the match's card and its controls, as they are now."""
+    @staticmethod
+    def _match_view(session: Session, tournament: Tournament, match: TournamentMatch) -> MatchView:
+        """Return what the match's card shows, as it is now."""
         names = entry_names(session, tournament)
         entries = {entry.id: entry for entry in entries_of(session, tournament) if entry.id is not None}
         # A match has no lineups until it's ready; until then its entries' current players stand in.
@@ -776,9 +779,23 @@ class Tournaments(
             for team in (match.entry_a_id, match.entry_b_id)
             if team is not None and team in entries
         }
-        clash = clashes(session, match) if match.phase is MatchPhase.READY else []
-        embed = match_embed(match, round_count(len(names)), names, rosters, drafts_of(session, match))
-        return embed, match_buttons(self.match_control, match, names, self.clash_button, clash)
+        return MatchView(
+            match=match,
+            tournament_name=tournament.name,
+            rounds=round_count(len(names)),
+            names=names,
+            rosters=rosters,
+            drafts=list(drafts_of(session, match)),
+            clash=clashes(session, match) if match.phase is MatchPhase.READY else [],
+        )
+
+    @property
+    def _match_controls(self) -> MatchControls:
+        return MatchControls(manage=self.manage_button, act=self.match_control, clash=self.clash_button)
+
+    def _match_card(self, session: Session, tournament: Tournament, match: TournamentMatch) -> Container:
+        """Return the match's card, as it is now."""
+        return card_of_match(self._match_view(session, tournament, match), self._match_controls)
 
     async def match_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the undecided matches of the tournaments the invoker can see, whose label contains what was typed."""
@@ -825,7 +842,7 @@ class Tournaments(
                         choices.append(Lookup.choice(match, label))
         return choices
 
-    @Cog.command(name="match", description="Show a match's card, with the organiser's controls")
+    @Cog.command(name="match", description="Show a match's card; its organiser manages the match from it")
     async def match_card(
         self,
         interaction: GuildCommandInteraction,
@@ -833,8 +850,8 @@ class Tournaments(
     ) -> None:
         """Post the card of match ``match``."""
         with Session(self.bind) as session:
-            embed, buttons = self._match_card(session, *self._match(interaction, session, match.id or 0))
-        await interaction.respond(embeds=[embed], components=buttons)
+            shown = self._match_card(session, *self._match(interaction, session, match.id or 0))
+        await interaction.respond(components=[shown])
 
     @Cog.command(name="log", description="Show what happened in a match: its phases, drafts, votes, lineups and result")
     async def log(
@@ -858,25 +875,52 @@ class Tournaments(
         description = truncate("\n".join(lines) or "Nothing has been logged yet.", MAX_EMBED_DESCRIPTION_LENGTH)
         await interaction.respond(embeds=[Embed(title=title, description=description)], ephemeral=True)
 
+    @Cog.component("tourney-manage")
+    async def manage_button(self, interaction: GuildComponentInteraction, match_id: str) -> None:
+        """Show the organiser, and only them, the panel to move the match on, report its winner or record a forfeit."""
+        with Session(self.bind) as session:
+            tournament, match = self._running_match(session, int(match_id))
+            require_organiser(interaction, tournament)
+            panel = manage_panel(
+                self._match_view(session, tournament, match),
+                self.match_control,
+                (interaction.channel.id, interaction.message.id),
+            )
+        await interaction.respond(components=[panel], ephemeral=True)
+
     @Cog.component("tourney-match")
-    async def match_control(
+    async def match_control(  # noqa: PLR0913 - a panel button carries the match, the action, its team and the card it edits
         self,
         interaction: GuildComponentInteraction,
         match_id: str,
         action: str,
         entry_id: str = "",
+        card_channel_id: str = "",
+        card_message_id: str = "",
     ) -> None:
-        """Move a match to its next phase, report its winner, or record a forfeit; organisers only."""
+        """Move a match to its next phase, report its winner, or record a forfeit; organisers only.
+
+        A button on the organiser's panel names the match card it was opened from, and edits that card along with the
+        panel. A button without one sits on an older match card, and edits that card.
+        """
         with Session(self.bind) as session:
             tournament, match = self._running_match(session, int(match_id))
             require_organiser(interaction, tournament)
             play(session, match, MatchAction(action), entry_id, interaction.user.id)
             session.commit()
             tournament_id = tournament.id or 0
-            embed, buttons = self._match_card(session, tournament, match)
+            view = self._match_view(session, tournament, match)
+            shown = card_of_match(view, self._match_controls)
             finished = tournament.status is TournamentStatus.FINISHED
             final = self._card(session, tournament)
-        await interaction.update(embeds=[embed], components=buttons)
+        if card_message_id:
+            card_at = (Snowflake(int(card_channel_id)), Snowflake(int(card_message_id)))
+            await interaction.update(components=[manage_panel(view, self.match_control, card_at)])
+            edited = await self.bot.client.channels.partial(card_at[0]).message(card_at[1]).edit(components=[shown])
+            if is_network_error(edited):
+                self.logger.debug(t"Could not edit match card {card_message_id} in channel {card_channel_id}: {edited}")
+        else:
+            await interaction.update(components=[shown])
         await self._refresh_posts(tournament_id, skip_message_id=int(interaction.message.id))
         if finished:
             await interaction.followup(components=[block(f"**{tournament.name}** is over."), final])
@@ -897,8 +941,8 @@ class Tournaments(
                     raise Refused(msg)
             drop_clash(session, match, entry, interaction.user.id)
             session.commit()
-            embed, buttons = self._match_card(session, tournament, match)
-        await interaction.update(embeds=[embed], components=buttons)
+            shown = self._match_card(session, tournament, match)
+        await interaction.update(components=[shown])
 
     async def _draft(self, interaction: GuildCommandInteraction, match: int, choice: str, kind: DraftKind) -> None:
         with Session(self.bind) as session:
