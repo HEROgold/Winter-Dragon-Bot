@@ -37,6 +37,9 @@ class SentrySettings:
     """The share of interactions and periodic ticks traced, from 0 (none) to 1 (all)."""
     listener_traces_sample_rate = SentryConfig(0.05)
     """The share of listener calls traced; lower, since some gateway events arrive many times a second."""
+    profile_session_sample_rate = SentryConfig(0.0)
+    """The share of processes that profile their traced transactions, from 0 (off) to 1. Sentry bills profiling
+    separately, so it stays off until someone turns it on to find what's slow."""
 
     @classmethod
     def resolved_dsn(cls) -> str | None:
