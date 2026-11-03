@@ -911,7 +911,7 @@ Where a match's winner plays next, and on which side.
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, TEAM_BUTTONS
+- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, ROUTE, ROUTE_NAMES, NEXT_STEPS
 - `plural(count: int, noun: str) -> str` — Return ``count`` with ``noun``, adding an ``s`` unless there's exactly one.
 - `solo_progress(players: int, team_size: int) -> str` — Return how far solo sign-up is: the teams it makes so far, and how many more players make the next one.
 - `signup_card(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake], controls: SignupControls) -> Container` — Return the sign-up card: what the format is, who signed up, and the buttons to join, enter a team or leave.
@@ -919,8 +919,8 @@ The messages a tournament shows: its sign-up card, bracket, match cards and vote
 - `match_ids(matches: Iterable[TournamentMatch]) -> dict[BracketSlot, int]` — Return each match's ID by where it sits in the bracket.
 - `match_line(match: TournamentMatch, names: Mapping[int, str], ids: Mapping[BracketSlot, int] | None=None) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
 - `bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Container` — Return the bracket: what's being played now or who won, then every round's matches.
-- `match_embed(match: TournamentMatch, rounds: int, names: Mapping[int, str], rosters: Mapping[int, Sequence[Snowflake]], drafts: Sequence[DraftChoice]) -> Embed` — Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash.
-- `match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str], clash_handler: ComponentHandler, clash: Sequence[Snowflake]=()) -> list[ActionRow]` — Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit.
+- `card_of_match(view: MatchView, controls: MatchControls) -> Container` — Return a match card: its teams, a route line through its phases, where it stands, and each team's players and drafts.
+- `manage_panel(view: MatchView, act: ComponentHandler, card_at: tuple[Snowflake, Snowflake]) -> Container` — Return the organiser's panel for a match: each action beside a line saying when to use it.
 - `vote_options(vote: MatchVote) -> list[str]` — Return the vote's answers.
 - `vote_embed(vote: MatchVote, choices: Sequence[int]) -> Embed` — Return a vote: its question, and each answer's votes so far.
 - `vote_buttons(choose: ComponentHandler, close: ComponentHandler, vote: MatchVote) -> list[ActionRow]` — Return one button per answer, then the organiser's Close button; none once the vote is closed.
@@ -935,6 +935,20 @@ The handlers behind a sign-up card's buttons; each button carries the tournament
 
 - fields: join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, enter: ComponentHandler,
   add_player: ComponentHandler
+
+### `@dataclass class MatchControls`
+The handlers behind a match card's buttons and its organiser's panel; each button carries the match's ID.
+
+- fields: manage: ComponentHandler, act: ComponentHandler, clash: ComponentHandler
+
+### `@dataclass class MatchView`
+What a match card shows: the match, its tournament and round, the teams, their players and drafts.
+
+- fields: match: TournamentMatch, tournament_name: str, rounds: int, names: Mapping[int, str], rosters: Mapping[int,
+  Sequence[Snowflake]], drafts: Sequence[DraftChoice], clash: Sequence[Snowflake]
+- `@property teams -> list[int]` — The IDs of the match's teams known so far.
+- `name(team: int | None) -> str` — Return the team's name.
+- `@property playable -> bool` — Whether the organiser can still act on the match: both teams known, and no winner yet.
 
 ## `winter_dragon.cogs.tournament.cog` — `src/winter_dragon/cogs/tournament/cog.py`
 The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes.
@@ -982,7 +996,8 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `async log_match_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest every match, decided or not, of the tournaments the invoker can see, finished ones too.
 - `@Cog.command async match_card(interaction: GuildCommandInteraction, match: TournamentMatch) -> None` — Post the card of match ``match``.
 - `@Cog.command async log(interaction: GuildCommandInteraction, tournament: Tournament, match: TournamentMatch) -> None` — Post the log of ``match`` to the invoker only; its organiser and the captains of its two entries can see it.
-- `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, entry_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
+- `@Cog.component async manage_button(interaction: GuildComponentInteraction, match_id: str) -> None` — Show the organiser, and only them, the panel to move the match on, report its winner or record a forfeit.
+- `@Cog.component async match_control(interaction: GuildComponentInteraction, match_id: str, action: str, entry_id: str='', card_channel_id: str='', card_message_id: str='') -> None` — Move a match to its next phase, report its winner, or record a forfeit; organisers only.
 - `@Cog.component async clash_button(interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None` — Drop the clashing members from one side of a ready match; its organiser or a captain of either side only.
 - `@Cog.command async ban(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team banning ``choice`` in ``match``.
 - `@Cog.command async pick(interaction: GuildCommandInteraction, match: TournamentMatch, choice: str) -> None` — Record the invoker's team picking ``choice`` in ``match``.

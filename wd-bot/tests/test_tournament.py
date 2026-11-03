@@ -598,11 +598,59 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
         args,
     )
 
-    assert "wins" in _response(discord_client)["data"]["embeds"][0]["description"]
+    assert "won." in _shown(_response(discord_client)["data"])
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
     assert _shown(followup).startswith("**Cup** is over.\n## Cup bracket")
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().winner_entry_id == winner
+
+
+async def test_the_match_card_shows_players_only_manage_match_and_its_panel_edits_the_card(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("PATCH", "/channels/2/messages/11", message_json(id="11", channel_id="2"))
+    with Session(engine) as session:
+        tournament = _solo(session, players=2)
+        service.start(session, tournament, Random(0))
+        session.commit()
+        (final,) = _round(session, tournament, 0)
+        match_id = final.id
+        shown = _cog(engine, discord_client)._match_card(session, tournament, final)  # noqa: SLF001
+    assert _labels({"components": [shown.model_dump(mode="json")]}) == ["Manage match"]
+    cog = _cog(engine, discord_client)
+
+    bystander = User.model_validate(user_json(id="9"))
+    await Tournaments.manage_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-manage:{match_id}", user=bystander, guild_id=GUILD_ID),
+        [str(match_id)],
+    )
+    refusal = "Only the tournament's organiser, or someone who can manage the server, can do that."
+    assert _response(discord_client)["data"]["content"] == refusal
+
+    await Tournaments.manage_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-manage:{match_id}", guild_id=GUILD_ID),
+        [str(match_id)],
+    )
+    panel = _response(discord_client)["data"]
+    assert panel["flags"] == 64 | 32768  # EPHEMERAL, IS_COMPONENTS_V2
+    assert _labels(panel) == ["Start bans", "Team 1 forfeits", "Team 2 forfeits"]
+    (start_bans,) = [c for c in _nested(panel["components"]) if c.get("label") == "Start bans"]
+
+    args = start_bans["custom_id"].split(":")[1:]
+    await Tournaments.match_control.invoke(
+        cog,
+        make_component_interaction(start_bans["custom_id"], guild_id=GUILD_ID),
+        args,
+    )
+
+    assert "Bans are open for both captains." in _shown(_response(discord_client)["data"])
+    (edit,) = discord_client.requests_to("PATCH", "/channels/2/messages/11")
+    assert "Bans are open for both captains." in _shown(edit.json)
+    assert _labels(edit.json) == ["Manage match"]
 
 
 async def test_only_match_players_can_use_the_vote_buttons(
@@ -882,8 +930,8 @@ async def test_match_card_takes_the_match_from_a_lookup_value(
 
     await Tournaments.match_card.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
-    (embed,) = _response(discord_client)["data"]["embeds"]
-    assert "Dust" in str(embed)
+    shown = _shown(_response(discord_client)["data"])
+    assert "Dust" in shown
 
 
 async def test_match_card_refuses_a_match_of_another_server(
@@ -1310,7 +1358,7 @@ async def test_the_clash_button_refuses_a_bystander_and_resolves_for_a_captain(
         args,
     )
 
-    assert "Clash" not in _response(discord_client)["data"]["embeds"][0]["description"]
+    assert "Clash" not in _shown(_response(discord_client)["data"])
     with Session(engine) as session:
         assert service.clashes(session, session.get_one(TournamentMatch, match_id)) == []
 
