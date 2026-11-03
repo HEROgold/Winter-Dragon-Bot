@@ -23,6 +23,7 @@ The full steps are in [Getting Started](guide/getting-started.md).
 - **[Commands](dev/commands.md)**: slash command options, their types, and option descriptions with `Describe`.
 - **[Database](dev/database.md)** — connection, how tables are declared, current tables.
 - **[Dashboard](dev/dashboard.md)**: where a feature page goes, and the dashboard navigation.
+- **[Observability](dev/observability.md)**: logs, bot stats, Sentry traces and profiling on the VPS.
 - **[API Reference](reference/index.md)** — the public classes and functions of every package, generated from source.
 - **[Planned](planned.md)** — the web dashboard, HTTP API and workers, which aren't built yet.
 

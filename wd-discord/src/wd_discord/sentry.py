@@ -6,8 +6,10 @@ unknown-field telemetry in :mod:`wd_discord.models` starts delivering events ins
 
 Each interaction, listener call and periodic tick is one transaction (:class:`TraceOp`). Inside one, every REST call
 is an ``http.client`` span named by its route shape (:meth:`Client._send <wd_discord.client.Client._send>`) and every
-database query a ``db`` span (Sentry's SQLAlchemy integration, on by default). Sentry's httpx integrations stay off: they
-would name each call by its full URL, interaction tokens included.
+database query a ``db`` span (Sentry's SQLAlchemy integration, on by default). Sentry's httpx integrations stay off:
+they would name each call by its full URL, interaction tokens included.
+
+With :attr:`~wd_config.sentry.SentrySettings.profile_session_sample_rate` above 0, sampled transactions are profiled.
 """
 
 lazy import enum
@@ -94,6 +96,10 @@ class Sentry:
                 "enable_logs": True,
             },
             traces_sampler=traces_sampler,
+            # Profile only while a sampled transaction runs, in the share of processes sentry.ini asks for (none by
+            # default): docs/dev/observability.md says when to turn it on.
+            profile_session_sample_rate=SentrySettings.profile_session_sample_rate,
+            profile_lifecycle="trace",
             # httpxyz is httpx underneath, so these would trace each REST call again under its full URL, interaction
             # tokens included. Client._send traces it under its route shape instead.
             disabled_integrations=list(httpx_integrations()),

@@ -111,3 +111,15 @@ def test_sentry_leaves_the_httpx_integrations_off(monkeypatch: pytest.MonkeyPatc
         "Httpx2Integration",
     }
     assert seen["traces_sampler"] is traces_sampler
+
+
+@pytest.mark.parametrize("rate", [0.0, 1.0])
+def test_profiling_follows_sentry_ini_during_transactions_only(monkeypatch: pytest.MonkeyPatch, rate: float) -> None:
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(SentrySettings, "profile_session_sample_rate", rate)
+    monkeypatch.setattr(sentry_sdk, "init", lambda **options: seen.update(options))
+    monkeypatch.setattr(sentry_sdk, "set_user", lambda _: None)
+
+    Sentry()
+
+    assert (seen["profile_session_sample_rate"], seen["profile_lifecycle"]) == (rate, "trace")
