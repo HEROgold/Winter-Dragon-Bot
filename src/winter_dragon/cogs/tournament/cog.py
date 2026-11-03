@@ -141,9 +141,8 @@ def captained_entry(session: Session, tournament: Tournament, captain_id: Snowfl
     return entry
 
 
-def play(  # noqa: PLR0913 - each step needs its session, tournament, match, target and actor to record who did it
+def play(
     session: Session,
-    tournament: Tournament,
     match: TournamentMatch,
     action: MatchAction,
     entry_id: str,
@@ -159,7 +158,7 @@ def play(  # noqa: PLR0913 - each step needs its session, tournament, match, tar
     if winner is None:
         msg = "That team doesn't play this match."
         raise Refused(msg)
-    report(session, tournament, match, winner, actor_id, forfeit=action is MatchAction.FORFEIT)
+    report(session, match, winner, actor_id, forfeit=action is MatchAction.FORFEIT)
 
 
 def _person(user_id: int) -> str:
@@ -779,7 +778,7 @@ class Tournaments(
         with Session(self.bind) as session:
             tournament, match = self._running_match(session, int(match_id))
             require_organiser(interaction, tournament)
-            play(session, tournament, match, MatchAction(action), entry_id, interaction.user.id)
+            play(session, match, MatchAction(action), entry_id, interaction.user.id)
             session.commit()
             tournament_id = tournament.id or 0
             embed, buttons = self._match_card(session, tournament, match)

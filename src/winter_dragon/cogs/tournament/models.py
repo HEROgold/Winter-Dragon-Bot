@@ -46,10 +46,15 @@ class MatchPhase(StrEnum):
         """Whether the match has a winner."""
         return self in {MatchPhase.FINISHED, MatchPhase.FORFEIT}
 
-    @property
-    def next(self) -> MatchPhase | None:
-        """The phase an organiser advances the match to; ``None`` when the next step is reporting a winner."""
-        return {MatchPhase.READY: MatchPhase.BAN, MatchPhase.BAN: MatchPhase.PICK, MatchPhase.PICK: MatchPhase.LIVE}.get(self)
+
+class MatchStep(StrEnum):
+    """What happens to a match: its teams become known, it advances, it is reported or forfeited, or a bye decides it."""
+
+    TEAMS_KNOWN = "teams known"
+    ADVANCE = "advance"
+    REPORT = "report"
+    FORFEIT = "forfeit"
+    BYE = "bye"
 
 
 class DraftKind(StrEnum):

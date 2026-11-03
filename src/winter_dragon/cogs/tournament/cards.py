@@ -19,6 +19,7 @@ lazy from winter_dragon.ui import mentions
 
 lazy from .bracket import round_name, tally
 lazy from .models import DraftKind, MatchPhase, TeamMode, TournamentStatus
+lazy from .service import following_phase
 
 
 if TYPE_CHECKING:
@@ -207,7 +208,7 @@ def match_buttons(
                 ],
             ),
         )
-    following = match.phase.next
+    following = following_phase(match.phase)
     if following is not None:
         label = f"Next: {PHASE_LABELS[following]}"
         custom_id = handler.custom_id(match.id, MatchAction.NEXT)

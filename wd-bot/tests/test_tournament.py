@@ -37,6 +37,7 @@ from winter_dragon.cogs.tournament.models import (
     MatchEventKind,
     MatchLineup,
     MatchPhase,
+    MatchStep,
     MatchVote,
     TeamMode,
     Tournament,
@@ -127,7 +128,7 @@ def _finish(session: Session, tournament: Tournament) -> None:
     final.phase = MatchPhase.LIVE
     session.add(final)
     session.commit()
-    service.report(session, tournament, final, final.entry_a_id or 0, ORGANISER)
+    service.report(session, final, final.entry_a_id or 0, ORGANISER)
     session.commit()
 
 
@@ -307,7 +308,7 @@ def test_a_match_moves_through_its_phases_and_the_final_crowns_a_champion(engine
         winner = final.entry_a_id or 0
 
         with _refused("The match isn't live yet; a team can forfeit, though."):
-            service.report(session, tournament, final, winner, ORGANISER)
+            service.report(session, final, winner, ORGANISER)
         phases = []
         while final.phase is not MatchPhase.LIVE:
             service.advance(session, final, ORGANISER)
@@ -316,13 +317,13 @@ def test_a_match_moves_through_its_phases_and_the_final_crowns_a_champion(engine
         with _refused("Report the winner to finish this match."):
             service.advance(session, final, ORGANISER)
         with _refused("That team doesn't play this match."):
-            service.report(session, tournament, final, 999, ORGANISER)
-        service.report(session, tournament, final, winner, ORGANISER)
+            service.report(session, final, 999, ORGANISER)
+        service.report(session, final, winner, ORGANISER)
 
         assert (final.phase, final.winner_id) == (MatchPhase.FINISHED, winner)
         assert (tournament.status, tournament.winner_entry_id) == (TournamentStatus.FINISHED, winner)
         with _refused("This match is decided already."):
-            service.report(session, tournament, final, winner, ORGANISER)
+            service.report(session, final, winner, ORGANISER)
 
 
 def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
@@ -330,10 +331,36 @@ def test_a_forfeit_decides_a_match_before_it_is_live(engine: Engine) -> None:
         tournament = _solo(session, players=4)
         service.start(session, tournament, Random(0))
         match = _round(session, tournament, 0)[1]
-        service.report(session, tournament, match, match.entry_b_id or 0, ORGANISER, forfeit=True)
+        service.report(session, match, match.entry_b_id or 0, ORGANISER, forfeit=True)
         assert match.phase is MatchPhase.FORFEIT
         (final,) = _round(session, tournament, 1)
         assert final.entry_b_id == match.entry_b_id
+
+
+def test_the_phase_table_lists_every_step_a_match_can_take() -> None:
+    undecided = (MatchPhase.READY, MatchPhase.BAN, MatchPhase.PICK, MatchPhase.LIVE)
+    expected = {
+        (MatchPhase.WAITING, MatchStep.TEAMS_KNOWN): MatchPhase.READY,
+        (MatchPhase.READY, MatchStep.ADVANCE): MatchPhase.BAN,
+        (MatchPhase.BAN, MatchStep.ADVANCE): MatchPhase.PICK,
+        (MatchPhase.PICK, MatchStep.ADVANCE): MatchPhase.LIVE,
+        (MatchPhase.LIVE, MatchStep.REPORT): MatchPhase.FINISHED,
+        (MatchPhase.READY, MatchStep.BYE): MatchPhase.FINISHED,
+        **{(phase, MatchStep.FORFEIT): MatchPhase.FORFEIT for phase in undecided},
+    }
+    assert {key: to for key, (to, _) in service.PHASES.transitions.items()} == expected
+
+
+def test_following_phase_names_the_button_each_phase_leads_to() -> None:
+    assert [service.following_phase(phase) for phase in MatchPhase] == [
+        None,  # waiting: nothing to advance
+        MatchPhase.BAN,  # ready
+        MatchPhase.PICK,  # ban
+        MatchPhase.LIVE,  # pick
+        None,  # live: report a winner instead
+        None,  # finished
+        None,  # forfeit
+    ]
 
 
 # --- Drafts and votes ------------------------------------------------------------------------------------------------
@@ -925,12 +952,12 @@ def _add_to_entry(session: Session, tournament: Tournament, entry: TournamentEnt
     session.commit()
 
 
-def _play(session: Session, tournament: Tournament, match: TournamentMatch, winner_id: int) -> None:
+def _play(session: Session, match: TournamentMatch, winner_id: int) -> None:
     """Play ``match`` live to a win for ``winner_id``, skipping its draft."""
     match.phase = MatchPhase.LIVE
     session.add(match)
     session.commit()
-    service.report(session, tournament, match, winner_id, ORGANISER)
+    service.report(session, match, winner_id, ORGANISER)
     session.commit()
 
 
@@ -984,7 +1011,7 @@ def test_a_match_copies_its_entries_players_into_its_lineup_once_ready(engine: E
         assert service.lineup(session, final, reds) == []
 
         for match in _round(session, tournament, 0):
-            _play(session, tournament, match, match.entry_a_id or 0)
+            _play(session, match, match.entry_a_id or 0)
         (final,) = _round(session, tournament, 1)
         assert final.phase is MatchPhase.READY
         for entry_id in (final.entry_a_id or 0, final.entry_b_id or 0):
@@ -1027,7 +1054,7 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         ) == [Snowflake(10), Snowflake(21)]
 
         # A decided match never changes; the final copies the players as they are when it becomes ready.
-        _play(session, tournament, match, reds_id)
+        _play(session, match, reds_id)
         _change(session, tournament, reds, 10, 22, playing=True)
         session.commit()
         assert service.lineup(
@@ -1036,7 +1063,7 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         final = _undecided_match(session, tournament, reds)
         assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == []
         other = next(found for found in _round(session, tournament, 0) if found.id != match_id)
-        _play(session, tournament, other, other.entry_a_id or 0)
+        _play(session, other, other.entry_a_id or 0)
         assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10), Snowflake(22)]
 
 
@@ -1214,8 +1241,8 @@ def test_match_events_record_who_did_what_and_when(engine: Engine) -> None:
         assert first.started_at is not None
         vote = service.open_vote(session, first, "Map?", ["Dust", "Mirage"], ORGANISER)
         service.close_vote(session, vote, ORGANISER)
-        service.report(session, tournament, first, first.entry_a_id or 0, ORGANISER)
-        service.report(session, tournament, second, second.entry_b_id or 0, ORGANISER, forfeit=True)
+        service.report(session, first, first.entry_a_id or 0, ORGANISER)
+        service.report(session, second, second.entry_b_id or 0, ORGANISER, forfeit=True)
         session.commit()
 
         first_events = list(session.exec(alive(MatchEvent).where(MatchEvent.match_id == first.id).order_by(col(MatchEvent.id))))
@@ -1366,7 +1393,7 @@ def test_a_member_deletion_anonymises_the_match_audit(engine: Engine) -> None:
         service.advance(session, match, 20)
         service.advance(session, match, 20)
         service.advance(session, match, 20)
-        service.report(session, tournament, match, match.entry_a_id or 0, 20)
+        service.report(session, match, match.entry_a_id or 0, 20)
         _change(session, tournament, reds, 10, 20, playing=False)
         session.add(LineupChange(entry_id=reds_id, user_id=12, playing=True, changed_by=20, changed_at=utc_now()))
         session.commit()
