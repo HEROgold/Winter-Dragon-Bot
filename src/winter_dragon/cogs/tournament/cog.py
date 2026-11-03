@@ -17,29 +17,32 @@ lazy from wd_discord import (
     User,
     is_network_error,
 )
+lazy from wd_discord.components import ActionRow, SelectOption, StringSelect, UserSelect
 lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
-lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, truncate
+lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, MAX_SELECT_OPTIONS, truncate
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.cogs.team.cog import Teams
 lazy from winter_dragon.cogs.team.models import Team, TeamKind
-lazy from winter_dragon.cogs.team.service import teams_of
+lazy from winter_dragon.cogs.team.service import members_of, teams_of
 lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
-lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
+lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed, Tone, block, card
 
 lazy from .bracket import MAX_QUESTION_LENGTH, parse_options, round_count
 lazy from .cards import (
     MatchAction,
-    bracket_embed,
+    SignupControls,
+    bracket_card,
     match_buttons,
     match_embed,
     match_line,
-    participants_embed,
-    signup_buttons,
-    signup_embed,
+    participants_card,
+    plural,
+    signup_card,
     vote_buttons,
     vote_embed,
 )
@@ -95,7 +98,7 @@ lazy from .service import (
 
 if TYPE_CHECKING:
     lazy from wd_discord import AnyGuildInteraction, AutocompleteInteraction
-    lazy from wd_discord.components import ActionRow
+    lazy from wd_discord.components import Container
 
 
 class TournamentSettings:
@@ -119,9 +122,9 @@ def require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) 
         raise Refused(msg)
 
 
-async def require_server_member(interaction: GuildCommandInteraction, player: User) -> None:
-    """Refuse unless ``player`` is a member of the invoker's server, the only members who can play in its tournaments."""
-    member = await interaction.guild.member(player.id).fetch()
+async def require_server_member(interaction: AnyGuildInteraction, player_id: Snowflake) -> None:
+    """Refuse unless ``player_id`` is a member of the invoker's server, the only members who can play in its tournaments."""
+    member = await interaction.guild.member(player_id).fetch()
     if is_network_error(member):
         msg = "They aren't in this server, so they can't play in its tournament."
         raise Refused(msg)
@@ -270,53 +273,40 @@ class Tournaments(
         solo = [Snowflake(signup.user_id) for signup in signups_of(session, tournament)]
         return rosters, solo
 
-    def _signup_card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
-        """Return the tournament's sign-up card and its buttons, as they are now."""
-        rosters, solo = self._participants(session, tournament)
-        buttons = (
-            signup_buttons(self.join_button, self.leave_button, self.participants_button, tournament)
-            if tournament.status is TournamentStatus.SIGNUP
-            else []
-        )
-        embed = signup_embed(
-            tournament,
-            rosters,
-            solo,
-            enter=self.mention(self.enter),
-            entry_add=self.mention(self.entry_add),
-        )
-        return embed, buttons
-
-    def _card(self, session: Session, tournament: Tournament) -> tuple[Embed, list[ActionRow]]:
+    def _card(self, session: Session, tournament: Tournament) -> Container:
         """Return what a post shows: the sign-up card while signing up, else the bracket."""
         if tournament.status is TournamentStatus.SIGNUP:
-            return self._signup_card(session, tournament)
-        embed = bracket_embed(tournament, matches_of(session, tournament), entry_names(session, tournament))
-        return embed, []
+            rosters, solo = self._participants(session, tournament)
+            controls = SignupControls(
+                join=self.join_button,
+                leave=self.leave_button,
+                participants=self.participants_button,
+                enter=self.enter_button,
+                add_player=self.add_player_button,
+            )
+            return signup_card(tournament, rosters, solo, controls)
+        return bracket_card(tournament, matches_of(session, tournament), entry_names(session, tournament))
 
     async def _refresh_posts(self, tournament_id: int, *, skip_message_id: int | None = None) -> None:
         """Edit every post of the tournament to show it as it is now, except ``skip_message_id``, which the caller updated."""
         with Session(self.bind) as session:
             tournament = stored(session, Tournament, tournament_id, "This tournament is gone.")
-            embed, rows = self._card(session, tournament)
+            shown = self._card(session, tournament)
             posts = [(post.channel_id, post.message_id) for post in posts_of(session, tournament)]
-        await self._edit_posts(posts, embed, rows, skip_message_id=skip_message_id)
+        await self._edit_posts(posts, shown, skip_message_id=skip_message_id)
 
     async def _edit_posts(
         self,
         posts: list[tuple[int, int]],
-        embed: Embed,
-        rows: list[ActionRow],
+        shown: Container,
         *,
         skip_message_id: int | None = None,
     ) -> None:
-        """Edit each ``(channel_id, message_id)`` post to show ``embed`` and ``rows``, skipping ``skip_message_id``."""
+        """Edit each ``(channel_id, message_id)`` post to show ``shown``, skipping ``skip_message_id``."""
         for channel_id, message_id in posts:
             if message_id == skip_message_id:
                 continue
-            edited = (
-                await self.bot.client.channels.partial(channel_id).message(message_id).edit(embeds=[embed], components=rows)
-            )
+            edited = await self.bot.client.channels.partial(channel_id).message(message_id).edit(components=[shown])
             if is_network_error(edited):
                 self.logger.debug(t"Could not edit tournament post {message_id} in channel {channel_id}: {edited}")
 
@@ -355,9 +345,10 @@ class Tournaments(
             )
             session.add(tournament)
             session.flush()
-            embed, buttons = self._card(session, tournament)
             sent = unwrap(
-                await self.bot.client.channels.partial(interaction.channel.id).send(embeds=[embed], components=buttons),
+                await self.bot.client.channels.partial(interaction.channel.id).send(
+                    components=[self._card(session, tournament)],
+                ),
                 "I couldn't post the tournament here.",
             )
             add_post(session, tournament, interaction.channel.id, sent.id)
@@ -382,9 +373,8 @@ class Tournaments(
         await interaction.defer(ephemeral=True)
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
-            embed, buttons = self._card(session, found)
             sent = unwrap(
-                await self.bot.client.channels.partial(interaction.channel.id).send(embeds=[embed], components=buttons),
+                await self.bot.client.channels.partial(interaction.channel.id).send(components=[self._card(session, found)]),
                 "I couldn't post the tournament here.",
             )
             add_post(session, found, interaction.channel.id, sent.id)
@@ -438,8 +428,8 @@ class Tournaments(
         with Session(self.bind) as session:
             tournament = stored(session, Tournament, int(tournament_id), "This tournament is gone.")
             rosters, solo = self._participants(session, tournament)
-            embed = participants_embed(tournament, rosters, solo)
-        await interaction.respond(embeds=[embed], ephemeral=True)
+            shown = participants_card(tournament, rosters, solo)
+        await interaction.respond(components=[shown], ephemeral=True)
 
     async def _signup_click(self, interaction: GuildComponentInteraction, tournament_id: str, *, join: bool) -> None:
         with Session(self.bind) as session:
@@ -450,9 +440,109 @@ class Tournaments(
             else:
                 withdraw(session, tournament, user_id)
             session.commit()
-            embed, buttons = self._signup_card(session, tournament)
-        await interaction.update(embeds=[embed], components=buttons)
+            shown = self._card(session, tournament)
+        await interaction.update(components=[shown])
         await self._refresh_posts(int(tournament_id), skip_message_id=int(interaction.message.id))
+
+    def _open_signup(self, session: Session, interaction: AnyGuildInteraction, tournament_id: str) -> Tournament:
+        """Return the tournament ``tournament_id`` from a sign-up card's button; refuse unless captains can still sign up."""
+        tournament = self._tournament(
+            interaction,
+            session,
+            stored(session, Tournament, int(tournament_id), "This tournament is gone."),
+        )
+        if tournament.status is not TournamentStatus.SIGNUP:
+            msg = "Sign-up for this tournament has closed."
+            raise Refused(msg)
+        return tournament
+
+    @Cog.component("tourney-enter")
+    async def enter_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
+        """Enter the clicker's team; with more than one team they could enter, ask which first."""
+        user_id = interaction.user.id
+        with Session(self.bind) as session:
+            tournament = self._open_signup(session, interaction, tournament_id)
+            entered = {entry.team_id for entry in entries_of(session, tournament)}
+            teams = [
+                team
+                for team in teams_of(session, user_id)
+                if team.kind is TeamKind.LASTING and team.captain_id == int(user_id) and team.id not in entered
+            ]
+            if not teams:
+                msg = f"You don't captain a team that isn't entered yet; make one with {self.mention(Teams.create)}."
+                raise Refused(msg)
+            if len(teams) == 1:
+                team = teams[0]
+                enter_team(session, tournament, team, user_id)
+                session.commit()
+                name = team.name
+            else:
+                options = [
+                    SelectOption(
+                        label=team.name,
+                        value=str(team.id),
+                        description=plural(len(list(members_of(session, team))), "member"),
+                    )
+                    for team in teams[:MAX_SELECT_OPTIONS]
+                ]
+                select = StringSelect(
+                    custom_id=self.enter_pick.custom_id(tournament_id),
+                    options=options,
+                    placeholder="Choose a team",
+                )
+                prompt = block(f"Pick the team to enter into **{tournament.name}**. You'll be its first player.")
+                await interaction.respond(components=[card(Tone.ACT, prompt, ActionRow(components=[select]))], ephemeral=True)
+                return
+        await interaction.respond(embeds=[CreatedEmbed(description=f"**{name}** is entered.")], ephemeral=True)
+        await self._refresh_posts(int(tournament_id))
+
+    @Cog.component("tourney-enter-pick")
+    async def enter_pick(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
+        """Enter the team the clicker chose from the select of their teams."""
+        with Session(self.bind) as session:
+            tournament = self._open_signup(session, interaction, tournament_id)
+            team = stored(session, Team, int(interaction.values[0]), "That team is gone.")
+            enter_team(session, tournament, team, interaction.user.id)
+            session.commit()
+            name = team.name
+        await interaction.update(components=[card(Tone.WAIT, block(f"**{name}** is entered."))])
+        await self._refresh_posts(int(tournament_id))
+
+    @Cog.component("tourney-add")
+    async def add_player_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
+        """Ask the clicker which members to add to the entry they captain, up to the places it has left."""
+        with Session(self.bind) as session:
+            tournament = self._open_signup(session, interaction, tournament_id)
+            entry = captained_entry(session, tournament, interaction.user.id)
+            free = tournament.team_size - len(roster(session, entry))
+            name = entry.name
+        if free < 1:
+            msg = f"**{name}** is full."
+            raise Refused(msg)
+        select = UserSelect(
+            custom_id=self.add_player_pick.custom_id(tournament_id),
+            placeholder="Choose players",
+            max_values=min(free, MAX_SELECT_OPTIONS),
+        )
+        prompt = block(f"Pick up to {plural(free, 'player')} to add to **{name}**. They must be in your team.")
+        await interaction.respond(components=[card(Tone.ACT, prompt, ActionRow(components=[select]))], ephemeral=True)
+
+    @Cog.component("tourney-add-pick")
+    async def add_player_pick(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
+        """Add the members the clicker chose to the entry they captain."""
+        players = [Snowflake(int(user_id)) for user_id in interaction.values]
+        for player in players:
+            await require_server_member(interaction, player)
+        with Session(self.bind) as session:
+            tournament = self._open_signup(session, interaction, tournament_id)
+            entry = captained_entry(session, tournament, interaction.user.id)
+            for player in players:
+                add_player(session, tournament, entry, interaction.user.id, player)
+            session.commit()
+            name = entry.name
+        added = " ".join(f"<@{player}>" for player in players)
+        await interaction.update(components=[card(Tone.WAIT, block(f"Added {added} to **{name}**."))])
+        await self._refresh_posts(int(tournament_id))
 
     async def team_choices(self, interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]:
         """Suggest the lasting teams the invoker captains whose name contains what was typed."""
@@ -492,7 +582,7 @@ class Tournaments(
         player: Annotated[User, Describe("The player to add to your entry")],
     ) -> None:
         """Add ``player``, a member of this server and of your team, to the entry you captain."""
-        await require_server_member(interaction, player)
+        await require_server_member(interaction, player.id)
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
             add_player(session, found, captained_entry(session, found, interaction.user.id), interaction.user.id, player.id)
@@ -531,7 +621,7 @@ class Tournaments(
         ] = None,
     ) -> None:
         """Put ``player``, a server member, in the lineup of the entry you captain; a stand-in needn't be in your team."""
-        await require_server_member(interaction, player)
+        await require_server_member(interaction, player.id)
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
             change_lineup(
@@ -599,12 +689,10 @@ class Tournaments(
             start(session, found, self.rng)
             session.commit()
             tournament_id = found.id or 0
-            embed = bracket_embed(found, matches_of(session, found), entry_names(session, found))
+            shown = self._card(session, found)
             tournament_name = found.name
-        await interaction.respond(
-            f"**{tournament_name}** has started! {self.mention(self.match_card)} shows a match.",
-            embeds=[embed],
-        )
+        started = block(f"**{tournament_name}** has started. {self.mention(self.match_card)} shows a match.")
+        await interaction.respond(components=[started, shown])
         await self._refresh_posts(tournament_id)
 
     @Cog.command(name="bracket", description="Show a tournament's bracket")
@@ -616,8 +704,12 @@ class Tournaments(
         """Show the bracket, or the sign-up card before the tournament starts."""
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament, over_ok=True)
-            embed, _ = self._card(session, found)
-        await interaction.respond(embeds=[embed])
+            shown = (
+                participants_card(found, *self._participants(session, found))
+                if found.status is TournamentStatus.SIGNUP
+                else self._card(session, found)
+            )
+        await interaction.respond(components=[shown])
 
     @Cog.command(name="cancel", description="Call off a tournament")
     async def cancel_tournament(
@@ -631,12 +723,12 @@ class Tournaments(
             require_organiser(interaction, found)
             posts = [(post.channel_id, post.message_id) for post in posts_of(session, found)]
             found.status = TournamentStatus.CANCELLED
-            embed, rows = self._card(session, found)
+            shown = self._card(session, found)
             cancel(session, found)
             session.commit()
             name = found.name
         await interaction.respond(embeds=[DeletedEmbed(description=f"**{name}** is called off.")])
-        await self._edit_posts(posts, embed, rows)
+        await self._edit_posts(posts, shown)
 
     # --- Matches ---------------------------------------------------------------------------------------------------
 
@@ -783,11 +875,11 @@ class Tournaments(
             tournament_id = tournament.id or 0
             embed, buttons = self._match_card(session, tournament, match)
             finished = tournament.status is TournamentStatus.FINISHED
-            final = bracket_embed(tournament, matches_of(session, tournament), entry_names(session, tournament))
+            final = self._card(session, tournament)
         await interaction.update(embeds=[embed], components=buttons)
         await self._refresh_posts(tournament_id, skip_message_id=int(interaction.message.id))
         if finished:
-            await interaction.followup(f"🏆 **{tournament.name}** is over!", embeds=[final])
+            await interaction.followup(components=[block(f"**{tournament.name}** is over."), final])
 
     @Cog.component("tourney-clash")
     async def clash_button(self, interaction: GuildComponentInteraction, match_id: str, entry_id: str) -> None:

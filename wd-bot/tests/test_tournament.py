@@ -15,7 +15,7 @@ from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInt
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType, ResolvedData
 from wd_discord.permissions import Permissions
 from wd_discord.resources.user import User
-from wd_discord.testing import message_json, user_json
+from wd_discord.testing import member_json, message_json, user_json
 from wd_discord.snowflake import Snowflake
 from wd_errors import Refused
 from wd_types.clock import utc_now
@@ -50,6 +50,8 @@ from winter_dragon.cogs.tournament.models import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
     from wd_discord.testing import RecordingClient
@@ -422,6 +424,25 @@ def _response(discord_client: RecordingClient) -> dict[str, object]:
     return discord_client.interaction_responses()[-1]
 
 
+def _nested(components: list[dict[str, object]]) -> Generator[dict[str, object]]:
+    """Yield every component of a message's JSON, nested ones included."""
+    for component in components:
+        yield component
+        yield from _nested(component.get("components", []))
+        if "accessory" in component:
+            yield component["accessory"]
+
+
+def _shown(body: dict[str, object]) -> str:
+    """Return the text of every text display in a components v2 message body."""
+    return "\n".join(component["content"] for component in _nested(body["components"]) if component["type"] == 10)
+
+
+def _labels(body: dict[str, object]) -> list[str]:
+    """Return the labels of every button in a message body, in order."""
+    return [component["label"] for component in _nested(body["components"]) if component["type"] == 2]
+
+
 async def test_create_needs_manage_server_and_posts_a_signup_card(
     engine: Engine,
     make_interaction: InteractionFactory,
@@ -450,10 +471,9 @@ async def test_create_needs_manage_server_and_posts_a_signup_card(
     await Tournaments.create.invoke(cog, interaction, options)
 
     (post,) = discord_client.requests_to("POST", "/channels/20/messages")
-    (embed,) = post.json["embeds"]
-    assert embed["title"] == "🏆 Cup"
-    labels = [button["label"] for button in post.json["components"][0]["components"]]
-    assert labels == ["Join", "Leave", "Participants"]
+    assert post.json["flags"] == 32768  # IS_COMPONENTS_V2
+    assert _shown(post.json).startswith("## Cup\nSign-up is open.")
+    assert _labels(post.json) == ["Join", "Leave"]
     assert _response(discord_client)["type"] == 5  # DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
     (followup,) = discord_client.requests_to("POST", "/webhooks/2/tok")
     assert followup.json["embeds"][0]["description"] == "**Cup** is open for sign-up."
@@ -550,7 +570,8 @@ async def test_the_join_button_signs_up_and_refreshes_the_card(
 
     update = _response(discord_client)
     assert update["type"] == 7  # UPDATE_MESSAGE
-    assert update["data"]["embeds"][0]["fields"][0] == {"name": "Players (1)", "value": "<@3>", "inline": False}
+    assert "**1 player**, enough for 0 teams. 1 more player makes team 1." in _shown(update["data"])
+    assert "<@3>" in _shown(update["data"])
     with Session(engine) as session:
         assert session.exec(alive(TournamentSignup)).one().user_id == ORGANISER
 
@@ -579,7 +600,7 @@ async def test_the_organiser_reports_the_final_winner_from_the_match_card(
 
     assert "wins" in _response(discord_client)["data"]["embeds"][0]["description"]
     followup = discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json
-    assert followup["content"] == "🏆 **Cup** is over!"
+    assert _shown(followup).startswith("**Cup** is over.\n## Cup bracket")
     with Session(engine) as session:
         assert session.exec(alive(Tournament)).one().winner_entry_id == winner
 
@@ -614,9 +635,18 @@ async def test_only_match_players_can_use_the_vote_buttons(
 def test_signup_buttons_depend_on_the_team_mode(engine: Engine, discord_client: RecordingClient, *, captains: bool) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS if captains else TeamMode.SOLO)
-        _, rows = _cog(engine, discord_client)._signup_card(session, tournament)  # noqa: SLF001
-    expected = ["Leave", "Participants"] if captains else ["Join", "Leave", "Participants"]
-    assert [button.label for button in rows[0].components] == expected
+        shown = _cog(engine, discord_client)._card(session, tournament)  # noqa: SLF001
+    expected = ["Enter my team", "Add a player", "Leave"] if captains else ["Join", "Leave"]
+    assert _labels({"components": [shown.model_dump(mode="json")]}) == expected
+
+
+def test_the_participants_button_only_shows_once_the_card_cuts_the_list(engine: Engine, discord_client: RecordingClient) -> None:
+    with Session(engine) as session:
+        tournament = _solo(session, players=600)
+        shown = _cog(engine, discord_client)._card(session, tournament)  # noqa: SLF001
+    body = {"components": [shown.model_dump(mode="json")]}
+    assert _labels(body) == ["Join", "Leave", "Participants"]
+    assert re.search(r"\+\d+ more players\.", _shown(body))
 
 
 async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
@@ -637,10 +667,97 @@ async def test_the_participants_button_lists_the_teams_to_the_clicker_only(
     )
 
     data = _response(discord_client)["data"]
-    assert data["flags"] == 64  # EPHEMERAL
-    (embed,) = data["embeds"]
-    assert embed["title"] == "🏆 Cup: 1 participant"
-    assert embed["description"] == "**Reds** (1/2): <@5>"
+    assert data["flags"] == 64 | 32768  # EPHEMERAL, IS_COMPONENTS_V2
+    assert _shown(data) == "## Cup\n1 team signed up.\n**Reds** 1 of 2\n<@5>"
+
+
+async def test_enter_my_team_enters_the_clickers_only_team(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament_id = _tournament(session, TeamMode.CAPTAINS, team_size=2).id
+        team_service.create_team(session, "Reds", ORGANISER)
+        session.commit()
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.enter_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-enter:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+
+    assert _response(discord_client)["data"]["embeds"][0]["description"] == "**Reds** is entered."
+    with Session(engine) as session:
+        assert session.exec(alive(TournamentEntry)).one().name == "Reds"
+
+
+async def test_enter_my_team_asks_which_team_when_the_clicker_captains_several(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    with Session(engine) as session:
+        tournament_id = _tournament(session, TeamMode.CAPTAINS, team_size=2).id
+        team_service.create_team(session, "Reds", ORGANISER)
+        blues = team_service.create_team(session, "Blues", ORGANISER)
+        session.commit()
+        blues_id = blues.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.enter_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-enter:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+    asked = _response(discord_client)["data"]
+    (select,) = [component for component in _nested(asked["components"]) if component["type"] == 3]
+    assert sorted(option["label"] for option in select["options"]) == ["Blues", "Reds"]
+
+    await Tournaments.enter_pick.invoke(
+        cog,
+        make_component_interaction(f"tourney-enter-pick:{tournament_id}", guild_id=GUILD_ID, values=[str(blues_id)]),
+        [str(tournament_id)],
+    )
+
+    assert _shown(_response(discord_client)["data"]) == "**Blues** is entered."
+    with Session(engine) as session:
+        assert session.exec(alive(TournamentEntry)).one().name == "Blues"
+
+
+async def test_add_a_player_offers_the_places_left_then_adds_the_chosen_members(
+    engine: Engine,
+    make_component_interaction: ComponentInteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.reply("GET", f"/guilds/{GUILD_ID}/members/5", member_json(user=user_json(id="5")))
+    with Session(engine) as session:
+        tournament = _tournament(session, TeamMode.CAPTAINS, team_size=3)
+        entry = _entered(session, tournament, ORGANISER, "Reds")
+        team_service.join(session, session.get_one(Team, entry.team_id), 5)
+        session.commit()
+        tournament_id, entry_id = tournament.id, entry.id
+    cog = _cog(engine, discord_client)
+
+    await Tournaments.add_player_button.invoke(
+        cog,
+        make_component_interaction(f"tourney-add:{tournament_id}", guild_id=GUILD_ID),
+        [str(tournament_id)],
+    )
+    asked = _response(discord_client)["data"]
+    (select,) = [component for component in _nested(asked["components"]) if component["type"] == 5]
+    assert select["max_values"] == 2
+
+    await Tournaments.add_player_pick.invoke(
+        cog,
+        make_component_interaction(f"tourney-add-pick:{tournament_id}", guild_id=GUILD_ID, values=["5"]),
+        [str(tournament_id)],
+    )
+
+    assert _shown(_response(discord_client)["data"]) == "Added <@5> to **Reds**."
+    with Session(engine) as session:
+        assert service.roster(session, session.get_one(TournamentEntry, entry_id)) == [Snowflake(ORGANISER), Snowflake(5)]
 
 
 def _played_final(session: Session) -> tuple[Tournament, TournamentMatch, Snowflake]:
@@ -843,7 +960,7 @@ async def test_the_join_button_edits_every_post_of_the_tournament(
 
     for channel_id, message_id in ((20, 200), (21, 210)):
         (edit,) = discord_client.requests_to("PATCH", f"/channels/{channel_id}/messages/{message_id}")
-        assert edit.json["embeds"][0]["fields"][0]["name"] == "Players (1)"
+        assert "<@3>" in _shown(edit.json)
 
 
 def test_visible_tournaments_are_the_organisers_signed_up_and_posted_ones(engine: Engine) -> None:
@@ -1446,8 +1563,8 @@ async def test_cancel_edits_each_post_to_the_bracket_without_buttons(
     await Tournaments.cancel_tournament.invoke(cog, make_interaction("tournament", options=options, guild_id=GUILD_ID), options)
 
     (edit,) = discord_client.requests_to("PATCH", "/channels/20/messages/200")
-    assert not edit.json.get("components")
-    assert edit.json["embeds"]
+    assert _labels(edit.json) == []
+    assert "This tournament was called off." in _shown(edit.json)
     assert "called off" in _response(discord_client)["data"]["embeds"][0]["description"]
 
 

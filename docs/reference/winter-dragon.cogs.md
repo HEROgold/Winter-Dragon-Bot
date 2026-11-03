@@ -911,12 +911,14 @@ Where a match's winner plays next, and on which side.
 ## `winter_dragon.cogs.tournament.cards` — `src/winter_dragon/cogs/tournament/cards.py`
 The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons.
 
-- module names: PHASE_LABELS, TEAM_BUTTONS
-- `signup_embed(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake], *, enter: CommandMention, entry_add: CommandMention) -> Embed` — Return the sign-up card: the format, and who signed up, alone or per entry.
-- `signup_buttons(join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, tournament: Tournament) -> list[ActionRow]` — Return the Join, Leave and Participants buttons under a sign-up card.
-- `participants_embed(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake]) -> Embed` — Return everyone signed up to ``tournament``: one line per player, or one line per team with its players.
-- `match_line(match: TournamentMatch, names: Mapping[int, str]) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
-- `bracket_embed(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Embed` — Return the bracket: every round's matches, and the champion once there is one.
+- module names: PHASE_LABELS, CARD_LIST_CHARACTERS, TEAM_BUTTONS
+- `plural(count: int, noun: str) -> str` — Return ``count`` with ``noun``, adding an ``s`` unless there's exactly one.
+- `solo_progress(players: int, team_size: int) -> str` — Return how far solo sign-up is: the teams it makes so far, and how many more players make the next one.
+- `signup_card(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake], controls: SignupControls) -> Container` — Return the sign-up card: what the format is, who signed up, and the buttons to join, enter a team or leave.
+- `participants_card(tournament: Tournament, rosters: Mapping[str, Sequence[Snowflake]], solo_players: Sequence[Snowflake]) -> Container` — Return everyone signed up to ``tournament``: the players, or each team with its players.
+- `match_ids(matches: Iterable[TournamentMatch]) -> dict[BracketSlot, int]` — Return each match's ID by where it sits in the bracket.
+- `match_line(match: TournamentMatch, names: Mapping[int, str], ids: Mapping[BracketSlot, int] | None=None) -> str` — Return one line of the bracket: the match's number, its teams, and its state or winner.
+- `bracket_card(tournament: Tournament, matches: Sequence[TournamentMatch], names: Mapping[int, str]) -> Container` — Return the bracket: what's being played now or who won, then every round's matches.
 - `match_embed(match: TournamentMatch, rounds: int, names: Mapping[int, str], rosters: Mapping[int, Sequence[Snowflake]], drafts: Sequence[DraftChoice]) -> Embed` — Return a match card: its round, phase, the teams' lineups, what each team banned and picked, and any clash.
 - `match_buttons(handler: ComponentHandler, match: TournamentMatch, names: Mapping[int, str], clash_handler: ComponentHandler, clash: Sequence[Snowflake]=()) -> list[ActionRow]` — Return the controls under a match card: a clash's drop buttons, then the organiser's next phase, winner or forfeit.
 - `vote_options(vote: MatchVote) -> list[str]` — Return the vote's answers.
@@ -928,12 +930,18 @@ What one of the organiser's buttons under a match card does; it's part of the bu
 
 - attributes: NEXT, WIN, FORFEIT
 
+### `@dataclass class SignupControls`
+The handlers behind a sign-up card's buttons; each button carries the tournament's ID.
+
+- fields: join: ComponentHandler, leave: ComponentHandler, participants: ComponentHandler, enter: ComponentHandler,
+  add_player: ComponentHandler
+
 ## `winter_dragon.cogs.tournament.cog` — `src/winter_dragon/cogs/tournament/cog.py`
 The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes.
 
 - `is_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> bool` — Whether the invoker runs ``tournament``: they created it, or they may manage the server.
 - `require_organiser(interaction: AnyGuildInteraction, tournament: Tournament) -> None` — Refuse unless the invoker runs ``tournament``.
-- `async require_server_member(interaction: GuildCommandInteraction, player: User) -> None` — Refuse unless ``player`` is a member of the invoker's server, the only members who can play in its tournaments.
+- `async require_server_member(interaction: AnyGuildInteraction, player_id: Snowflake) -> None` — Refuse unless ``player_id`` is a member of the invoker's server, the only members who can play in its tournaments.
 - `entry_names(session: Session, tournament: Tournament) -> dict[int, str]` — Return each team's name by its ID.
 - `captained_entry(session: Session, tournament: Tournament, captain_id: Snowflake) -> TournamentEntry` — Return the entry whose team ``captain_id`` captains in ``tournament``; refuse when there's none.
 - `play(session: Session, match: TournamentMatch, action: MatchAction, entry_id: str, actor_id: Snowflake) -> None` — Do what the organiser's button ``action`` under the match card says, for the team ``entry_id`` if it names one.
@@ -957,6 +965,10 @@ Runs tournaments per guild: players sign up, teams form, and a single-eliminatio
 - `@Cog.component async join_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Sign the clicker up, then refresh the sign-up card.
 - `@Cog.component async leave_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Take the clicker out, then refresh the sign-up card.
 - `@Cog.component async participants_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Show the clicker, and only them, everyone signed up so far.
+- `@Cog.component async enter_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Enter the clicker's team; with more than one team they could enter, ask which first.
+- `@Cog.component async enter_pick(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Enter the team the clicker chose from the select of their teams.
+- `@Cog.component async add_player_button(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Ask the clicker which members to add to the entry they captain, up to the places it has left.
+- `@Cog.component async add_player_pick(interaction: GuildComponentInteraction, tournament_id: str) -> None` — Add the members the clicker chose to the entry they captain.
 - `async team_choices(interaction: AutocompleteInteraction, current: str) -> list[ApplicationCommandOptionChoice]` — Suggest the lasting teams the invoker captains whose name contains what was typed.
 - `@Cog.command async enter(interaction: GuildCommandInteraction, tournament: Tournament, team: Team) -> None` — Enter the invoker's team into the tournament, with the invoker as its first player.
 - `@Cog.command async entry_add(interaction: GuildCommandInteraction, tournament: Tournament, player: User) -> None` — Add ``player``, a member of this server and of your team, to the entry you captain.

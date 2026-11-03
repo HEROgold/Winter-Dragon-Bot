@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tournament cards, embeds next to Components V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="v2.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="e-done" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5" fill="#5E6B74"/></symbol>
+    <symbol id="e-here" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#F4F7F9"/><circle cx="10" cy="10" r="5" fill="#1E5AA0"/></symbol>
+    <symbol id="e-next" viewBox="0 0 20 20"><circle cx="10" cy="10" r="4.5" fill="none" stroke="#5E6B74" stroke-width="2"/></symbol>
+    <symbol id="e-marker" viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="10" rx="2" fill="#F4F7F9"/><rect x="2" y="8.3" width="16" height="3.4" fill="#1E5AA0"/></symbol>
+    <!-- Podium image, shared by both columns of card 7. -->
+    <symbol id="podium" viewBox="0 0 520 260">
+      <rect width="520" height="260" fill="#26323B"/>
+      <path d="M0 260L120 150L190 190L290 96L380 170L440 130L520 200V260Z" fill="#5E6B74" opacity=".55"/>
+      <!-- steps: 2nd left, 1st centre, 3rd right -->
+      <rect x="70" y="170" width="120" height="90" fill="#DCE8EF"/>
+      <rect x="200" y="130" width="120" height="130" fill="#F4F7F9"/>
+      <rect x="330" y="196" width="120" height="64" fill="#DCE8EF"/>
+      <g font-family="Archivo, sans-serif" font-weight="800" font-size="40" fill="#5E6B74" text-anchor="middle">
+        <text x="130" y="230">2</text><text x="260" y="200">1</text><text x="390" y="246">3</text>
+      </g>
+      <g font-family="Archivo, sans-serif" font-weight="700" font-stretch="75%" font-size="20" fill="#F4F7F9" text-anchor="middle">
+        <text x="130" y="158">Frostbite</text><text x="260" y="118">Avalanche</text><text x="390" y="184">Ice Breakers</text>
+      </g>
+      <!-- route-marker flag over the winner -->
+      <rect x="259" y="42" width="2" height="52" fill="#F4F7F9"/>
+      <rect x="261" y="42" width="30" height="18" fill="#F4F7F9"/><rect x="261" y="48.5" width="30" height="5" fill="#1E5AA0"/>
+      <text x="24" y="34" font-family="Archivo, sans-serif" font-size="14" font-weight="500" fill="#DCE8EF">Spring Cup, final standings</text>
+    </symbol>
+  </svg>
+
+  <header class="intro">
+    <h1>Embeds next to Components V2</h1>
+    <p>The cards you picked, each drawn twice: the embed version in the middle, and the same card built from Components V2 on the right. V2 support is tracked in <a href="https://github.com/HEROgold/Winter-Dragon-Bot/issues/468">#468</a>.</p>
+    <p class="legend">In V2, a <strong>container</strong> is the box with the colored bar. A <strong>section</strong> is text with one thing on its right, a button or a thumbnail. <strong>Separators</strong> are the dividing lines. A V2 message can't hold an embed, and V2 has no side-by-side columns.</p>
+  </header>
+
+  <div class="cols-head"><span></span><span>Embed</span><span>Components V2</span></div>
+
+  <!-- 1. Sign-up, captains -->
+  <section class="row3">
+    <div class="notes">
+      <h2>1. Sign-up, captains</h2>
+      <p>In V2, each team is a section with its captain's avatar beside it, and the separators set the team list apart from the actions.</p>
+      <p>The buttons sit inside the container, so the card reads as one block.</p>
+      <p>There's no Participants button while everyone fits on the card. It only appears once the card stops listing everyone (past 40 components or 4000 characters), and the card then ends with "+6 more teams".</p>
+      <p><strong>V2 is better here.</strong> The embed has no room for avatars per team.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 19:02</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Spring Cup</div>
+          <div class="e-desc">
+            <p>Sign-up is open. Captains enter a team of up to 5 players.</p>
+            <p class="team-line"><strong>Avalanche</strong> 5 of 5 <span class="emo"><svg><use href="#e-marker"/></svg></span><br><span class="mention">@rimewolf</span> <span class="mention">@tundra_tom</span> <span class="mention">@eli</span> <span class="mention">@fen</span> <span class="mention">@gus</span></p>
+            <p class="team-line"><strong>Frostbite</strong> 4 of 5<br><span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@ash</span> <span class="mention">@brin</span></p>
+            <p class="team-line"><strong>Snow Day</strong> 1 of 5<br><span class="mention">@hailey</span></p>
+            <p class="sub">3 teams, 10 players. Organised by <span class="mention">@Hero</span>. Opened <span class="ts">2 hours ago</span>.</p>
+          </div>
+        </div>
+        <div class="buttons">
+          <button class="b primary">Enter my team</button><button class="b secondary">Add a player</button>
+          <button class="b danger">Leave</button>
+        </div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 19:02</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Spring Cup</span><br>Sign-up is open. Captains enter a team of up to 5 players.</div>
+          <hr class="sep">
+          <div class="section"><div class="td"><strong>Avalanche</strong> 5 of 5 <span class="emo"><svg><use href="#e-marker"/></svg></span><br><span class="mention">@rimewolf</span> <span class="mention">@tundra_tom</span> <span class="mention">@eli</span> <span class="mention">@fen</span> <span class="mention">@gus</span></div><div class="thumb" style="--c:#7A8FA0">RW</div></div>
+          <div class="section"><div class="td"><strong>Frostbite</strong> 4 of 5<br><span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@ash</span> <span class="mention">@brin</span></div><div class="thumb" style="--c:#8C7AA0">YE</div></div>
+          <div class="section"><div class="td"><strong>Snow Day</strong> 1 of 5<br><span class="mention">@hailey</span></div><div class="thumb" style="--c:#A08C7A">HA</div></div>
+          <hr class="sep">
+          <div class="buttons">
+            <button class="b primary">Enter my team</button><button class="b secondary">Add a player</button>
+            <button class="b danger">Leave</button>
+          </div>
+          <div class="td sub">3 teams, 10 players. Organised by <span class="mention">@Hero</span>. Opened <span class="ts">2 hours ago</span>.</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 1b. Enter my team -->
+  <section class="row3">
+    <div class="notes">
+      <h2>1b. After "Enter my team"</h2>
+      <p>The two versions are nearly the same. In V2 the select sits inside the container with its prompt, which saves one block.</p>
+      <p><strong>Either works.</strong> I'd use V2 so all the cards match.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 19:04</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="embed" style="--bar:#1E5AA0"><div class="e-desc"><p>Pick the team to enter into <strong>Spring Cup</strong>. You'll be its first player.</p></div></div>
+        <div class="select">Choose a team<span class="chev">⌄</span></div>
+        <div class="select-open"><div class="opt"><strong>Frostbite</strong><span>4 members</span></div><div class="opt"><strong>Frost Pups</strong><span>2 members</span></div></div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 19:04</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td">Pick the team to enter into <strong>Spring Cup</strong>. You'll be its first player.</div>
+          <div class="select">Choose a team<span class="chev">⌄</span></div>
+          <div class="select-open"><div class="opt"><strong>Frostbite</strong><span>4 members</span></div><div class="opt"><strong>Frost Pups</strong><span>2 members</span></div></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 2. Sign-up, solo -->
+  <section class="row3">
+    <div class="notes">
+      <h2>2. Sign-up, solo</h2>
+      <p>In V2, Join sits beside the line telling you a fourth team is one player away, which is the reason to click it.</p>
+      <p>Leave comes after the player list, because you only need it once you're in.</p>
+      <p><strong>V2 is better here.</strong></p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 19:02</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Friday 2v2</div>
+          <div class="e-desc">
+            <p>Sign-up is open. Teams of 2 are drawn when the tournament starts.</p>
+            <p><strong>7 players</strong>, enough for 3 teams. One more makes a fourth.</p>
+            <p><span class="mention">@frostbyte</span> <span class="mention">@glacia</span> <span class="mention">@rimewolf</span> <span class="mention">@tundra_tom</span> <span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@hailey</span></p>
+            <p class="sub">Organised by <span class="mention">@Hero</span>.</p>
+          </div>
+        </div>
+        <div class="buttons"><button class="b success">Join</button><button class="b danger">Leave</button></div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 19:02</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Friday 2v2</span><br>Sign-up is open. Teams of 2 are drawn when the tournament starts.</div>
+          <div class="section"><div class="td"><strong>7 players</strong>, enough for 3 teams. One more makes a fourth.</div><button class="b success acc">Join</button></div>
+          <hr class="sep">
+          <div class="td"><span class="mention">@frostbyte</span> <span class="mention">@glacia</span> <span class="mention">@rimewolf</span> <span class="mention">@tundra_tom</span> <span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@hailey</span></div>
+          <div class="buttons"><button class="b danger">Leave</button></div>
+          <div class="td sub">Organised by <span class="mention">@Hero</span>.</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 3. Match, drafting -->
+  <section class="row3">
+    <div class="notes">
+      <h2>3. Match card, drafting</h2>
+      <p>V2 has no columns, so the teams stack. In exchange, "Manage match" moves up into the header section and becomes the first thing the organiser sees, and the heading can be larger than an embed title.</p>
+      <p>The draft turn the embed can't show gets its own line. Here, Snow Day's captain is the one holding the match up.</p>
+      <p><strong>About even.</strong> The embed fits desktop better, V2 fits phones better, where inline fields stack anyway.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:15</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Frostbite vs Snow Day</div>
+          <div class="e-desc">
+            <p class="sub">Spring Cup, semi-final, match 6</p>
+            <p class="route"><span class="emo"><svg><use href="#e-done"/></svg></span> Ready <span class="emo"><svg><use href="#e-done"/></svg></span> Bans <span class="emo"><svg><use href="#e-here"/></svg></span> <strong>Picks</strong> <span class="emo"><svg><use href="#e-next"/></svg></span> Live <span class="emo"><svg><use href="#e-next"/></svg></span> Result</p>
+          </div>
+          <div class="fields">
+            <div class="field inline"><div class="f-name">Frostbite</div><div class="f-val"><span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@ash</span> <span class="mention">@brin</span> <span class="mention">@cato</span><br>Banned Dust, Nuke<br>Picked Inferno</div></div>
+            <div class="field inline"><div class="f-name">Snow Day</div><div class="f-val"><span class="mention">@hailey</span> <span class="mention">@driftwood</span> <span class="mention">@hal</span> <span class="mention">@ivo</span> <span class="mention">@kai</span><br>Banned Mirage<br><span class="muted">Nothing picked yet</span></div></div>
+          </div>
+        </div>
+        <div class="buttons"><button class="b secondary">Manage match</button></div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:15</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="section"><div class="td"><span class="h2">Frostbite vs Snow Day</span><br><span class="sub">Spring Cup, semi-final, match 6</span></div><button class="b secondary acc">Manage match</button></div>
+          <div class="td route"><span class="emo"><svg><use href="#e-done"/></svg></span> Ready <span class="emo"><svg><use href="#e-done"/></svg></span> Bans <span class="emo"><svg><use href="#e-here"/></svg></span> <strong>Picks</strong> <span class="emo"><svg><use href="#e-next"/></svg></span> Live <span class="emo"><svg><use href="#e-next"/></svg></span> Result</div>
+          <div class="td">Waiting for <strong>Snow Day</strong> to pick.</div>
+          <hr class="sep">
+          <div class="td"><strong>Frostbite</strong><br><span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@ash</span> <span class="mention">@brin</span> <span class="mention">@cato</span><br>Banned Dust, Nuke. Picked Inferno.</div>
+          <hr class="sep small">
+          <div class="td"><strong>Snow Day</strong><br><span class="mention">@hailey</span> <span class="mention">@driftwood</span> <span class="mention">@hal</span> <span class="mention">@ivo</span> <span class="mention">@kai</span><br>Banned Mirage. <span class="muted">Nothing picked yet.</span></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 3b. Manage -->
+  <section class="row3">
+    <div class="notes">
+      <h2>3b. Manage match</h2>
+      <p>In V2, each action is a section with a sentence saying when to use it and its button beside it. The organiser doesn't need to know the phase order.</p>
+      <p>The forfeits sit below a large separator, apart from the buttons you use during a normal match.</p>
+      <p><strong>V2 is clearly better here.</strong></p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:16</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="embed" style="--bar:#5E6B74"><div class="e-desc"><p><strong>Match 6</strong> is in picks. Start it once both teams have picked.</p></div></div>
+        <div class="buttons"><button class="b primary">Start the match</button><button class="b secondary">Open a vote</button><button class="b secondary">Show the log</button></div>
+        <div class="buttons"><button class="b danger">Frostbite forfeit</button><button class="b danger">Snow Day forfeit</button></div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:16</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="container" style="--bar:#5E6B74">
+          <div class="td"><strong>Match 6</strong> is in picks.</div>
+          <hr class="sep">
+          <div class="section"><div class="td">Both teams have picked? Start the first game.</div><button class="b primary acc">Start the match</button></div>
+          <div class="section"><div class="td">Let the players decide something, like the next map.</div><button class="b secondary acc">Open a vote</button></div>
+          <div class="section"><div class="td">See who did what in this match, and when.</div><button class="b secondary acc">Show the log</button></div>
+          <hr class="sep large">
+          <div class="section"><div class="td">Frostbite can't play.</div><button class="b danger acc">Frostbite forfeit</button></div>
+          <div class="section"><div class="td">Snow Day can't play.</div><button class="b danger acc">Snow Day forfeit</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 4. Scoreboard -->
+  <section class="row3">
+    <div class="notes">
+      <h2>4. Live: the scoreboard</h2>
+      <p>V2 can't put the scores side by side, so it stacks them like a broadcast score bar: one row per team, with the score in a large heading first.</p>
+      <p>During a live match, Manage match puts "Record game 3" at the top. It opens a short form asking for the winner and the map, and the bot ends the match once a team reaches the win count.</p>
+      <p><strong>V2 is better here.</strong> Stacked rows read like a scoreboard on a phone as well.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:31</span> <span class="edited">(edited)</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Frostbite vs Snow Day</div>
+          <div class="e-desc"><p class="sub">Spring Cup, semi-final, match 6. Best of 3.</p></div>
+          <div class="fields">
+            <div class="field inline"><div class="f-name">Frostbite</div><div class="f-val"><span class="h1">1</span></div></div>
+            <div class="field inline"><div class="f-name">Snow Day</div><div class="f-val"><span class="h1">1</span></div></div>
+          </div>
+          <div class="e-desc"><p class="games">
+            1. <span class="emo"><svg><use href="#e-marker"/></svg></span> Frostbite on Inferno<br>
+            2. <span class="emo"><svg><use href="#e-marker"/></svg></span> Snow Day on Mirage<br>
+            3. <span class="emo"><svg><use href="#e-here"/></svg></span> <strong>Live on Ancient</strong>, started <span class="ts">4 minutes ago</span></p></div>
+        </div>
+        <div class="buttons"><button class="b secondary">Manage match</button></div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:31</span> <span class="edited">(edited)</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td sub">Spring Cup, semi-final, match 6. Best of 3.</div>
+          <div class="score-row"><span class="h1">1</span><span class="h2">Frostbite</span></div>
+          <div class="score-row"><span class="h1">1</span><span class="h2">Snow Day</span></div>
+          <hr class="sep">
+          <div class="td games">
+            1. <span class="emo"><svg><use href="#e-marker"/></svg></span> Frostbite on Inferno<br>
+            2. <span class="emo"><svg><use href="#e-marker"/></svg></span> Snow Day on Mirage<br>
+            3. <span class="emo"><svg><use href="#e-here"/></svg></span> <strong>Live on Ancient</strong>, started <span class="ts">4 minutes ago</span></div>
+          <div class="buttons"><button class="b secondary">Manage match</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 5. Bracket image -->
+  <section class="row3">
+    <div class="notes">
+      <h2>5. Bracket</h2>
+      <p>In V2 the image goes in a media gallery, which shows it at the container's full width. An embed image is drawn smaller.</p>
+      <p>Below the image, a button for each match being played opens that match's card for whoever clicks it, so nobody scrolls back through the channel to find it.</p>
+      <p><strong>V2 is better here.</strong></p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:31</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Spring Cup bracket</div>
+          <div class="e-desc"><p><span class="emo"><svg><use href="#e-here"/></svg></span> Semi-finals: match 5 is live, match 6 is in picks.</p></div>
+          <div class="e-image small"><img src="bracket.svg" alt="Bracket: quarter-finals decided, semi-finals under way, final waiting"></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:31</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Spring Cup bracket</span><br><span class="emo"><svg><use href="#e-here"/></svg></span> Semi-finals: match 5 is live, match 6 is in picks.</div>
+          <div class="gallery"><img src="bracket.svg" alt="Bracket: quarter-finals decided, semi-finals under way, final waiting"></div>
+          <div class="buttons"><button class="b secondary">Match 5, live</button><button class="b secondary">Match 6, picks</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 6. Vote -->
+  <section class="row3">
+    <div class="notes">
+      <h2>6. Vote</h2>
+      <p>In V2, each answer is a section with a bar of its share of the votes and a Vote button beside it. The labels stay short however long the answer is, which matters because button labels stop at 80 characters.</p>
+      <p>The bar uses the step emoji. A closed vote drops the buttons and gives the winning answer the marker.</p>
+      <p><strong>V2 is better here.</strong> It's the clearest of the vote designs.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:20</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Which map for game 3?</div>
+          <div class="e-desc"><p>6 of 10 players have voted. Only players in match 6 can vote.</p></div>
+        </div>
+        <div class="buttons"><button class="b secondary">Ancient (4)</button><button class="b secondary">Vertigo (2)</button><button class="b secondary">Anubis (0)</button></div>
+        <div class="buttons"><button class="b secondary">Close vote</button></div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 20:20</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Which map for game 3?</span><br>6 of 10 players have voted. Only players in match 6 can vote.</div>
+          <hr class="sep">
+          <div class="section"><div class="td"><strong>Ancient</strong>, 4 votes<br><span class="bar"><svg><use href="#e-here"/></svg><svg><use href="#e-here"/></svg><svg><use href="#e-here"/></svg><svg><use href="#e-here"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg></span></div><button class="b secondary acc">Vote</button></div>
+          <div class="section"><div class="td"><strong>Vertigo</strong>, 2 votes<br><span class="bar"><svg><use href="#e-here"/></svg><svg><use href="#e-here"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg></span></div><button class="b secondary acc">Vote</button></div>
+          <div class="section"><div class="td"><strong>Anubis</strong>, no votes<br><span class="bar"><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg><svg><use href="#e-next"/></svg></span></div><button class="b secondary acc">Vote</button></div>
+          <hr class="sep">
+          <div class="buttons"><button class="b secondary">Close vote</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 7. Podium -->
+  <section class="row3">
+    <div class="notes">
+      <h2>7. Podium</h2>
+      <p>The organiser sets the podium size per tournament: top 3, 5 or 10. This one is set to 5. The image always shows the three steps, and places 4 and up are listed below it.</p>
+      <p>Single elimination doesn't rank every team. Both losing semi-finalists finish "third", and all four losing quarter-finalists finish "fifth". This mock assumes a third-place match between the losing semi-finalists, so there's a real 3rd and 4th. Places from 5th down are always shared, so "top 5" here shows all four teams that finished fifth.</p>
+      <p>In V2, each listed team gets its captain's avatar.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 21:48</span></div>
+        <div class="embed" style="--bar:#1E5AA0">
+          <div class="e-title">Avalanche won Spring Cup</div>
+          <div class="e-desc"><p>They beat Frostbite 2 games to 1 in the final.</p></div>
+          <div class="e-image small"><svg viewBox="0 0 520 260"><use href="#podium"/></svg></div>
+          <div class="fields">
+            <div class="field"><div class="f-name">4th</div><div class="f-val">Snow Day</div></div>
+            <div class="field"><div class="f-name">Joint 5th</div><div class="f-val">Night Owls, Slush Puppies, Polar Express, Cold Feet</div></div>
+          </div>
+          <div class="e-footer">Organised by Hero. 8 teams, 8 matches.</div>
+        </div>
+      </div></div>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 21:48</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Avalanche won Spring Cup</span><br>They beat Frostbite 2 games to 1 in the final.</div>
+          <div class="gallery"><svg viewBox="0 0 520 260"><use href="#podium"/></svg></div>
+          <div class="section"><div class="td"><strong>4th</strong> Snow Day<br><span class="sub">Lost the third-place match to Ice Breakers.</span></div><div class="thumb small" style="--c:#A08C7A">HA</div></div>
+          <hr class="sep small">
+          <div class="td"><strong>Joint 5th</strong><br>Night Owls, Slush Puppies, Polar Express, Cold Feet</div>
+          <hr class="sep">
+          <div class="td sub">Organised by <span class="mention">@Hero</span>. 8 teams, 8 matches.</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row3">
+    <div class="notes wide">
+      <h2>Summary</h2>
+      <p>V2 is better for 1, 2, 3b, 4, 5 and 6, about even for 3, and the same for 1b. Since a message is either V2 or an embed, I'd build every tournament card in V2 so they all look alike, once <a href="https://github.com/HEROgold/Winter-Dragon-Bot/issues/468">#468</a> is done.</p>
+      <p>The podium needs two new tournament settings: the podium size (3, 5 or 10), and whether a third-place match is played.</p>
+    </div>
+  </section>
+</body>
+</html>
