@@ -51,7 +51,7 @@ dependencies = [
   "tzdata>=2026.5",
   "alembic>=1.20.1",
   "psycopg[binary]>=3.3.6",
-  "pillow>=13.0.0",
+  "pillow>=13.0.0"
 ]
 
 [tool.pytest.ini_options]
