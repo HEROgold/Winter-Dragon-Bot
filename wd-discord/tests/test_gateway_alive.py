@@ -45,6 +45,24 @@ async def test_a_gateway_whose_last_ack_is_two_intervals_old_is_not_alive() -> N
     assert not gateway.alive
 
 
+async def test_latency_is_unknown_before_the_first_acknowledgement() -> None:
+    gateway = _gateway()
+
+    await gateway._handle(cast("GatewayFrame", HEARTBEAT_ACK), _never)  # noqa: SLF001
+
+    assert gateway.latency is None
+
+
+async def test_latency_is_the_time_from_heartbeat_to_acknowledgement() -> None:
+    gateway = _gateway()
+    gateway._last_heartbeat = asyncio.get_running_loop().time() - 0.25  # noqa: SLF001 - what _heartbeat sets
+
+    await gateway._handle(cast("GatewayFrame", HEARTBEAT_ACK), _never)  # noqa: SLF001
+
+    assert gateway.latency is not None
+    assert 0.25 <= gateway.latency < 1
+
+
 def _manager(*shards: Gateway) -> ShardManager:
     manager = ShardManager("token", cast("GatewayBotInfo", SimpleNamespace(shards=len(shards))))
     manager.shards = list(shards)
